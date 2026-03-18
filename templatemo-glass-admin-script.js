@@ -231,8 +231,30 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
     }
 
+    function isSteveMedinaWorkspaceUser() {
+        const workspaceUser = getWorkspaceUserContext();
+        const aliases = Array.isArray(workspaceUser.aliases) ? workspaceUser.aliases : [];
+        return aliases.includes('steve-medina') || aliases.includes('medinafbg@gmail.com');
+    }
+
     function initMyAgentsAccessRules() {
-        // Access stays visible in navigation; row-level filtering happens inside my-agents.html.
+        if (isSteveMedinaWorkspaceUser()) {
+            return;
+        }
+
+        document.querySelectorAll('a[href="my-agents.html"]').forEach((link) => {
+            const navItem = link.closest('.nav-item');
+            if (navItem) {
+                navItem.remove();
+                return;
+            }
+            link.remove();
+        });
+
+        const currentPage = String(window.location.pathname || '').split('/').pop().toLowerCase();
+        if (currentPage === 'my-agents.html') {
+            window.location.replace('dashboard.html');
+        }
     }
 
     function getUserScopedObject(storageKey, userKey) {
@@ -5668,6 +5690,13 @@ function initNavbarDateTime() {
             const nearbyList = document.getElementById('comps-nearby-list');
             const summaryRow = document.getElementById('comps-applied-summary');
             const resultsMeta = document.getElementById('comps-results-meta');
+            const compsNarrative = document.getElementById('tab-content-comps');
+            const investorSummaryEl = document.getElementById('comps-investor-summary');
+            const acquisitionTagsEl = document.getElementById('comps-acquisition-tags');
+            const benchmarkGridEl = document.getElementById('comps-benchmark-grid');
+            const spreadGridEl = document.getElementById('comps-spread-grid');
+            const bestMatchEl = document.getElementById('comps-best-match');
+            const marketBreakdownEl = document.getElementById('comps-market-breakdown');
             const applyBtn = document.getElementById('comps-apply-filters');
             const resetBtn = document.getElementById('comps-reset-filters');
 
@@ -5760,6 +5789,301 @@ function initNavbarDateTime() {
                 return true;
             }
 
+            function escapeCompText(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function formatCurrency(value) {
+                const safeValue = Number(value) || 0;
+                return `$${safeValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+            }
+
+            function formatSignedPercent(value) {
+                const safeValue = Number(value) || 0;
+                return `${safeValue > 0 ? '+' : ''}${safeValue.toFixed(1)}%`;
+            }
+
+            function average(values) {
+                if (!Array.isArray(values) || values.length === 0) {
+                    return 0;
+                }
+                return values.reduce((sum, value) => sum + value, 0) / values.length;
+            }
+
+            function median(values) {
+                if (!Array.isArray(values) || values.length === 0) {
+                    return 0;
+                }
+                const sortedValues = [...values].sort((left, right) => left - right);
+                const midpoint = Math.floor(sortedValues.length / 2);
+                if (sortedValues.length % 2 === 0) {
+                    return (sortedValues[midpoint - 1] + sortedValues[midpoint]) / 2;
+                }
+                return sortedValues[midpoint];
+            }
+
+            function formatMetricMarkup(label, value, helper) {
+                const helperMarkup = helper ? `<span>${escapeCompText(helper)}</span>` : '';
+                return `
+                    <div class="comps-metric-item">
+                        <span class="comps-metric-label">${escapeCompText(label)}</span>
+                        <strong class="comps-metric-value">${escapeCompText(value)}</strong>
+                        ${helperMarkup}
+                    </div>
+                `;
+            }
+
+            function renderMetricGrid(target, items) {
+                if (!target) {
+                    return;
+                }
+                target.innerHTML = items.map(item => formatMetricMarkup(item.label, item.value, item.helper)).join('');
+            }
+
+            function parseSubjectSnapshot() {
+                const propertyDetailsText = String(detailData.propertyDetails || '');
+                const sqftMatches = Array.from(propertyDetailsText.matchAll(/([\d,]+)\s*ft²/gi));
+                const subjectSqft = sqftMatches.length > 0
+                    ? Number(String(sqftMatches[0][1] || '').replace(/,/g, '')) || 0
+                    : 0;
+                const bedsMatch = propertyDetailsText.match(/(\d+(?:\.\d+)?)\s*Br/i);
+                const bathsMatch = propertyDetailsText.match(/(\d+(?:\.\d+)?)\s*Ba/i);
+                const yearMatch = propertyDetailsText.match(/\/\s*(\d{4})\s*\//);
+
+                return {
+                    sqft: subjectSqft,
+                    beds: bedsMatch ? Number(bedsMatch[1]) || 0 : 0,
+                    baths: bathsMatch ? Number(bathsMatch[1]) || 0 : 0,
+                    year: yearMatch ? Number(yearMatch[1]) || 0 : 0,
+                    listPrice: parseMoney(detailData.listPrice || 0),
+                    arv: parseMoney(detailData.arv || 0),
+                    askingVsArv: Number(String(detailData.askingVsArv || '').replace(/[^0-9.-]/g, '')) || 0
+                };
+            }
+
+            function countBy(items, selector) {
+                return items.reduce((accumulator, item) => {
+                    const key = selector(item);
+                    accumulator[key] = (accumulator[key] || 0) + 1;
+                    return accumulator;
+                }, {});
+            }
+
+            function getLeaderText(counts) {
+                const entries = Object.entries(counts || {}).sort((left, right) => right[1] - left[1]);
+                if (entries.length === 0) {
+                    return 'No mix data';
+                }
+                return `${entries[0][0]} leads (${entries[0][1]})`;
+            }
+
+            function getAcquisitionLane(subject, medianPrice, averagePpsf) {
+                const grossSpread = Math.max(subject.arv - subject.listPrice, 0);
+                const subjectPpsf = subject.sqft > 0 ? subject.listPrice / subject.sqft : 0;
+
+                if (subject.askingVsArv > 0 && subject.askingVsArv <= 72 && grossSpread >= 150000) {
+                    return 'Prime wholesale and dispo lane';
+                }
+
+                if (medianPrice > 0 && subject.listPrice <= medianPrice && grossSpread >= 80000) {
+                    return 'Strong cash offer lane';
+                }
+
+                if (averagePpsf > 0 && subjectPpsf > 0 && subjectPpsf <= averagePpsf && grossSpread >= 50000) {
+                    return 'Viable negotiation lane';
+                }
+
+                return 'Needs tighter entry or terms';
+            }
+
+            function getBestMatchComp(items, subject) {
+                if (!Array.isArray(items) || items.length === 0) {
+                    return null;
+                }
+
+                return [...items]
+                    .map(comp => {
+                        let score = comp.distance;
+                        if (subject.sqft > 0) {
+                            score += Math.abs(comp.sqft - subject.sqft) / subject.sqft;
+                        }
+                        if (subject.beds > 0) {
+                            score += Math.abs(comp.beds - subject.beds) * 0.15;
+                        }
+                        if (subject.baths > 0) {
+                            score += Math.abs(comp.baths - subject.baths) * 0.18;
+                        }
+                        if (subject.year > 0) {
+                            score += Math.abs(comp.built - subject.year) / 50;
+                        }
+
+                        return { comp, score };
+                    })
+                    .sort((left, right) => left.score - right.score)[0].comp;
+            }
+
+            function renderIntelligence(filteredItems, topItems, filters) {
+                const subject = parseSubjectSnapshot();
+
+                if (filteredItems.length === 0) {
+                    if (investorSummaryEl) {
+                        investorSummaryEl.textContent = 'No comps match the current filter set. Open the radius, widen the date window, or loosen property type/condition filters.';
+                    }
+                    if (acquisitionTagsEl) {
+                        acquisitionTagsEl.innerHTML = '<span class="comps-tag">Broaden radius</span><span class="comps-tag">Open statuses</span><span class="comps-tag">Review property type filters</span>';
+                    }
+                    renderMetricGrid(benchmarkGridEl, []);
+                    renderMetricGrid(spreadGridEl, []);
+                    if (bestMatchEl) {
+                        bestMatchEl.innerHTML = '<p class="outreach-empty">No best-match comp yet because the current filters returned zero records.</p>';
+                    }
+                    if (marketBreakdownEl) {
+                        marketBreakdownEl.innerHTML = '<p class="outreach-empty">No market breakdown available until at least one comp matches.</p>';
+                    }
+                    if (compsNarrative && !String(detailData.comps || '').trim()) {
+                        compsNarrative.textContent = 'No comp-backed acquisition angle yet. Adjust filters to regenerate the FAST Bridge readout.';
+                    }
+                    return;
+                }
+
+                const prices = filteredItems.map(comp => comp.price);
+                const pricePerSqft = filteredItems.map(comp => comp.price / Math.max(comp.sqft, 1));
+                const distances = filteredItems.map(comp => comp.distance);
+                const domValues = filteredItems.map(comp => comp.dom);
+                const closedDays = filteredItems.map(comp => comp.closedDays);
+                const averagePrice = average(prices);
+                const medianPrice = median(prices);
+                const averagePpsf = average(pricePerSqft);
+                const medianPpsf = median(pricePerSqft);
+                const averageDistance = average(distances);
+                const averageDom = average(domValues);
+                const medianClosedDays = median(closedDays);
+                const priceRangeLow = Math.min(...prices);
+                const priceRangeHigh = Math.max(...prices);
+                const subjectPpsf = subject.sqft > 0 ? subject.listPrice / subject.sqft : 0;
+                const priceVsMedianPct = medianPrice > 0 ? ((subject.listPrice - medianPrice) / medianPrice) * 100 : 0;
+                const ppsfVsMarketPct = medianPpsf > 0 ? ((subjectPpsf - medianPpsf) / medianPpsf) * 100 : 0;
+                const grossSpread = subject.arv > 0 ? subject.arv - subject.listPrice : 0;
+                const lane = getAcquisitionLane(subject, medianPrice, averagePpsf);
+                const bestMatch = getBestMatchComp(filteredItems, subject);
+                const propertyMix = countBy(filteredItems, comp => comp.propertyType || 'Unknown');
+                const conditionMix = countBy(filteredItems, comp => comp.condition || 'Unknown');
+                const slcMix = countBy(filteredItems, comp => comp.slcType || 'Unknown');
+                const fixerShare = filteredItems.filter(comp => /fixer|as-is/i.test(String(comp.condition || ''))).length;
+                const topDistance = Math.min(...distances);
+                const topPpsf = Math.max(...pricePerSqft);
+                const tags = [
+                    `${filteredItems.length} filtered comps`,
+                    `Median close ${formatCurrency(medianPrice)}`,
+                    `Avg ${formatCurrency(Math.round(averagePpsf))}/sqft`,
+                    `${formatSignedPercent(priceVsMedianPct)} vs median`,
+                    `${formatCurrency(Math.max(grossSpread, 0))} gross spread`,
+                    `${fixerShare}/${filteredItems.length} distressed or as-is`,
+                    `${topDistance.toFixed(2)} mi tightest match`,
+                    lane
+                ];
+
+                if (investorSummaryEl) {
+                    investorSummaryEl.textContent = `FAST Bridge has ${filteredItems.length} comps backing this read. Average close is ${formatCurrency(Math.round(averagePrice))} at ${formatCurrency(Math.round(averagePpsf))}/sqft, the subject is ${priceVsMedianPct <= 0 ? 'below' : 'above'} the median by ${Math.abs(priceVsMedianPct).toFixed(1)}%, and the current lane reads as ${lane.toLowerCase()}.`;
+                }
+
+                if (acquisitionTagsEl) {
+                    acquisitionTagsEl.innerHTML = tags
+                        .map(tag => `<span class="comps-tag">${escapeCompText(tag)}</span>`)
+                        .join('');
+                }
+
+                renderMetricGrid(benchmarkGridEl, [
+                    { label: 'Comp count', value: String(filteredItems.length), helper: `${topItems.length} shown on board` },
+                    { label: 'Average close', value: formatCurrency(Math.round(averagePrice)), helper: `Median ${formatCurrency(Math.round(medianPrice))}` },
+                    { label: 'Average $/sqft', value: formatCurrency(Math.round(averagePpsf)), helper: `Median ${formatCurrency(Math.round(medianPpsf))}` },
+                    { label: 'Price range', value: `${formatCurrency(priceRangeLow)} - ${formatCurrency(priceRangeHigh)}`, helper: `${averageDistance.toFixed(2)} mi avg distance` },
+                    { label: 'Average DOM', value: `${averageDom.toFixed(1)} days`, helper: `Median closed ${medianClosedDays.toFixed(0)} days ago` },
+                    { label: 'Fastest signal', value: `${topDistance.toFixed(2)} mi / ${Math.min(...closedDays)} days`, helper: 'Closest and freshest closing' }
+                ]);
+
+                renderMetricGrid(spreadGridEl, [
+                    { label: 'Subject ask', value: formatCurrency(subject.listPrice), helper: subject.sqft > 0 ? `${formatCurrency(Math.round(subjectPpsf))}/sqft` : 'No sqft parsed' },
+                    { label: 'Vs median close', value: formatSignedPercent(priceVsMedianPct), helper: priceVsMedianPct <= 0 ? 'Priced below comp median' : 'Priced above comp median' },
+                    { label: 'Vs market $/sqft', value: formatSignedPercent(ppsfVsMarketPct), helper: ppsfVsMarketPct <= 0 ? 'Per-foot entry is favorable' : 'Per-foot entry is rich' },
+                    { label: 'ARV spread', value: formatCurrency(Math.round(grossSpread)), helper: `${subject.askingVsArv.toFixed(1)}% ask-to-ARV` },
+                    { label: 'Exit lane', value: lane, helper: 'Generated from pricing and spread' },
+                    { label: 'Top comp $/sqft', value: formatCurrency(Math.round(topPpsf)), helper: 'Highest quality pricing in current set' }
+                ]);
+
+                if (bestMatchEl && bestMatch) {
+                    const bestMatchPpsf = bestMatch.price / Math.max(bestMatch.sqft, 1);
+                    const bestMatchDelta = subject.listPrice - bestMatch.price;
+                    bestMatchEl.innerHTML = `
+                        <div class="comps-best-match-head">
+                            <strong>${escapeCompText(bestMatch.address)}</strong>
+                            <span>${escapeCompText(bestMatch.propertyType)} · ${escapeCompText(bestMatch.condition)} · ${escapeCompText(bestMatch.slcType)}</span>
+                        </div>
+                        <div class="comps-best-match-grid">
+                            <div>
+                                <span>Profile</span>
+                                <strong>${bestMatch.beds} Bd / ${bestMatch.baths} Ba / ${bestMatch.sqft.toLocaleString()} sqft</strong>
+                            </div>
+                            <div>
+                                <span>Close</span>
+                                <strong>${formatCurrency(bestMatch.price)}</strong>
+                            </div>
+                            <div>
+                                <span>Price / sqft</span>
+                                <strong>${formatCurrency(Math.round(bestMatchPpsf))}</strong>
+                            </div>
+                            <div>
+                                <span>Distance</span>
+                                <strong>${bestMatch.distance.toFixed(2)} mi</strong>
+                            </div>
+                            <div>
+                                <span>DOM / close age</span>
+                                <strong>${bestMatch.dom} DOM / ${bestMatch.closedDays} days</strong>
+                            </div>
+                            <div>
+                                <span>Ask delta</span>
+                                <strong>${bestMatchDelta >= 0 ? '+' : '-'}${formatCurrency(Math.abs(bestMatchDelta))}</strong>
+                            </div>
+                        </div>
+                        <p class="comps-best-match-note">This is the strongest likeness score in the current board based on distance, size, bed/bath count, and year built.</p>
+                    `;
+                }
+
+                if (marketBreakdownEl) {
+                    marketBreakdownEl.innerHTML = `
+                        <div class="comps-market-item">
+                            <span>Property mix leader</span>
+                            <strong>${escapeCompText(getLeaderText(propertyMix))}</strong>
+                            <small>${escapeCompText(Object.keys(propertyMix).join(' · '))}</small>
+                        </div>
+                        <div class="comps-market-item">
+                            <span>Condition leader</span>
+                            <strong>${escapeCompText(getLeaderText(conditionMix))}</strong>
+                            <small>${fixerShare} distressed/as-is comps in current board</small>
+                        </div>
+                        <div class="comps-market-item">
+                            <span>SLC signal</span>
+                            <strong>${escapeCompText(getLeaderText(slcMix))}</strong>
+                            <small>${filters.slcTypes.length} SLC types selected</small>
+                        </div>
+                        <div class="comps-market-item">
+                            <span>Why FAST Bridge wins</span>
+                            <strong>${escapeCompText(lane)}</strong>
+                            <small>We are stacking pricing, distress, speed, and radius in one board instead of eyeballing one comp at a time.</small>
+                        </div>
+                    `;
+                }
+
+                if (compsNarrative && !String(detailData.comps || '').trim()) {
+                    compsNarrative.textContent = `Current read: ${filteredItems.length} comps, median close ${formatCurrency(Math.round(medianPrice))}, average ${formatCurrency(Math.round(averagePpsf))}/sqft, lane ${lane.toLowerCase()}.`;
+                }
+            }
+
             function renderResults() {
                 const filters = {
                     sqftMin: inputNumber('comps-sqft-min'),
@@ -5789,7 +6113,7 @@ function initNavbarDateTime() {
                     conditions: checkedValues('.comps-condition')
                 };
 
-                const filtered = compsPool
+                const filteredPool = compsPool
                     .filter(comp => matchesMinMax(comp.sqft, filters.sqftMin, filters.sqftMax))
                     .filter(comp => matchesMinMax(comp.built, filters.builtMin, filters.builtMax))
                     .filter(comp => comp.distance <= filters.radius)
@@ -5807,20 +6131,23 @@ function initNavbarDateTime() {
                     .filter(comp => filters.propertyTypes.length === 0 || filters.propertyTypes.includes(comp.propertyType))
                     .filter(comp => filters.statuses.length === 0 || filters.statuses.includes(comp.status))
                     .filter(comp => filters.conditions.length === 0 || filters.conditions.includes(comp.condition))
-                    .sort((a, b) => a.distance - b.distance)
-                    .slice(0, 5);
+                    .sort((a, b) => a.distance - b.distance);
+                const filtered = filteredPool.slice(0, 5);
 
                 nearbyList.innerHTML = '';
                 if (filtered.length === 0) {
                     nearbyList.innerHTML = '<p class="outreach-empty">No nearby comps match your filters.</p>';
                 } else {
                     filtered.forEach(comp => {
+                        const compPpsf = Math.round(comp.price / Math.max(comp.sqft, 1));
                         const item = document.createElement('article');
                         item.className = 'comp-near-card';
                         item.innerHTML = `
                             <h5>${comp.address}</h5>
-                            <p>${comp.beds} Bd / ${comp.baths} Ba / ${comp.sqft} sqft / Built ${comp.built}</p>
-                            <p>$${comp.price.toLocaleString()} · ${comp.distance.toFixed(2)} mi · Closed ${comp.closedDays} days ago</p>
+                            <p class="comp-near-meta">${comp.propertyType} · ${comp.condition} · ${comp.slcType}</p>
+                            <p>${comp.beds} Bd / ${comp.baths} Ba / ${comp.sqft.toLocaleString()} sqft / Lot ${comp.lot.toLocaleString()} / Garage ${comp.garage}</p>
+                            <p>${formatCurrency(comp.price)} · ${formatCurrency(compPpsf)}/sqft · ${comp.distance.toFixed(2)} mi</p>
+                            <p>DOM ${comp.dom} · Closed ${comp.closedDays} days ago · ${comp.status}</p>
                         `;
                         nearbyList.appendChild(item);
                     });
@@ -5831,11 +6158,22 @@ function initNavbarDateTime() {
                     `<span class="comps-chip">Built ${filters.builtMin || 0}-${filters.builtMax || 9999}</span>`,
                     `<span class="comps-chip">${filters.radius} mile radius</span>`,
                     `<span class="comps-chip">Closed: Last ${filters.closedWithin} days</span>`,
-                    `<span class="comps-chip">Type: ${filters.propertyTypes.length} selected</span>`
+                    `<span class="comps-chip">Type: ${filters.propertyTypes.length} selected</span>`,
+                    `<span class="comps-chip">${filteredPool.length} comp(s) matched</span>`,
+                    filteredPool.length > 0 ? `<span class="comps-chip">Avg DOM ${average(filteredPool.map(comp => comp.dom)).toFixed(1)}</span>` : '',
+                    filteredPool.length > 0 ? `<span class="comps-chip">Median ${formatCurrency(Math.round(median(filteredPool.map(comp => comp.price))))}</span>` : ''
                 ].join('');
 
                 const advancedCount = [filters.bedMin, filters.bedMax, filters.bathMin, filters.bathMax, filters.priceMin, filters.priceMax, filters.lotMin, filters.lotMax, filters.garageMin, filters.garageMax, filters.domMin, filters.domMax, filters.area].filter(v => v !== null && v !== '').length;
-                resultsMeta.textContent = `Type: ${filters.propertyTypes.length} selected · Closed: Last ${filters.closedWithin} days · More Filters: ${advancedCount}`;
+                if (filteredPool.length > 0) {
+                    const averagePpsf = average(filteredPool.map(comp => comp.price / Math.max(comp.sqft, 1)));
+                    const medianPrice = median(filteredPool.map(comp => comp.price));
+                    resultsMeta.textContent = `${filteredPool.length} comps · Avg ${formatCurrency(Math.round(averagePpsf))}/sqft · Median ${formatCurrency(Math.round(medianPrice))} · More Filters: ${advancedCount}`;
+                } else {
+                    resultsMeta.textContent = `Type: ${filters.propertyTypes.length} selected · Closed: Last ${filters.closedWithin} days · More Filters: ${advancedCount}`;
+                }
+
+                renderIntelligence(filteredPool, filtered, filters);
 
                 if (compsMapFrame || compsMapOpenLink) {
                     const mapQueryCore = filtered.length > 0
