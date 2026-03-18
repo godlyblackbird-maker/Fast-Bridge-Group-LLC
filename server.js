@@ -409,6 +409,33 @@ function redirectOAuthError(res, message) {
 
 // Routes
 
+app.get('/api/auth/google', (req, res) => {
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const redirectUri = getGoogleRedirectUri(req);
+
+  if (!clientId) {
+    return res.status(503).json({
+      configured: false,
+      error: 'Google sign-in is not configured yet'
+    });
+  }
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'select_account',
+    state: createOAuthState('google')
+  });
+
+  return res.json({
+    configured: true,
+    url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  });
+});
+
 // OAuth - Google start
 app.get('/auth/google', (req, res) => {
   const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();

@@ -21,6 +21,51 @@ document.addEventListener('DOMContentLoaded', function() {
   const emailInput = document.getElementById('email');
   const googleSignInBtn = document.getElementById('google-signin-btn');
 
+  function getApiBaseOrigin() {
+    if (window.location.protocol === 'file:') {
+      return 'http://localhost:3000';
+    }
+
+    return window.location.origin || 'http://localhost:3000';
+  }
+
+  async function startGoogleSignIn() {
+    if (!googleSignInBtn) {
+      return;
+    }
+
+    const originalMarkup = googleSignInBtn.innerHTML;
+    googleSignInBtn.disabled = true;
+
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+    }
+
+    try {
+      const response = await fetch(`${getApiBaseOrigin()}/api/auth/google`, {
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.configured || !data.url) {
+        throw new Error(data.error || 'Google sign-in is not configured correctly.');
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      if (errorDiv) {
+        errorDiv.style.display = 'block';
+        errorDiv.style.color = '#ef4444';
+        errorDiv.textContent = String(error.message || 'Google sign-in failed to start.');
+      }
+      googleSignInBtn.disabled = false;
+      googleSignInBtn.innerHTML = originalMarkup;
+    }
+  }
+
   const params = new URLSearchParams(window.location.search);
   const oauthToken = params.get('token');
   const oauthError = params.get('oauth_error');
@@ -49,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   if (googleSignInBtn) {
     googleSignInBtn.addEventListener('click', function() {
-      window.location.href = '/auth/google';
+      startGoogleSignIn();
     });
   }
 
