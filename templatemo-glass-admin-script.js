@@ -7182,9 +7182,11 @@ function initNavbarDateTime() {
             function getSenderProfile() {
                 const profile = readLocalJson('userProfile');
                 const user = readLocalJson('user');
+                const smtpSettings = readLocalJson('smtpSettings');
+                const smtpUser = String(smtpSettings && smtpSettings.smtpUser ? smtpSettings.smtpUser : '').trim();
                 return {
                     name: String(savedDraft.senderName || profile.name || user.name || workspaceUser.name || '').trim(),
-                    email: String(savedDraft.senderEmail || profile.email || user.email || '').trim()
+                    email: String(savedDraft.senderEmail || smtpUser || profile.email || user.email || '').trim()
                 };
             }
 

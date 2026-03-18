@@ -99,16 +99,23 @@ function sendNewLeadEmail(lead = {}) {
 function sendAgentEmail({ fromName, fromEmail, toName, toEmail, subject, body, htmlBody, ecardAttachmentPath, ecardAttachmentName, attachments, smtpSignature, smtpUser, smtpPass }) {
   const resolvedUser = String(smtpUser || process.env.SMTP_USER || '').trim();
   const resolvedPass = String(smtpPass || process.env.SMTP_PASS || '').trim();
-  const replyTo = String(fromEmail || '').trim();
+  const requestedFromEmail = String(fromEmail || '').trim();
   const to = String(toEmail || '').trim();
   const resolvedSignature = String(smtpSignature || '').trim();
+  const normalizedResolvedUser = resolvedUser.toLowerCase();
+  const normalizedRequestedFromEmail = requestedFromEmail.toLowerCase();
 
   if (!resolvedUser) return Promise.reject(new Error('No Gmail account configured. Add your Gmail SMTP settings in Settings → Profile.'));
   if (!resolvedPass) return Promise.reject(new Error('No Gmail App Password configured. Add your Gmail SMTP settings in Settings → Profile.'));
   if (!to) return Promise.reject(new Error('Recipient email is required'));
+  if (requestedFromEmail && normalizedRequestedFromEmail !== normalizedResolvedUser) {
+    return Promise.reject(new Error(`The sender email must match the configured SMTP account (${resolvedUser}) to send from that address.`));
+  }
+
+  const actualFromEmail = requestedFromEmail || resolvedUser;
 
   const mailOptions = {
-    from: `"${String(fromName || 'Real Estate Investor').trim()}" <${resolvedUser}>`,
+    from: `"${String(fromName || 'Real Estate Investor').trim()}" <${actualFromEmail}>`,
     to: toName ? `"${String(toName).trim()}" <${to}>` : to,
     subject: String(subject || '(No Subject)').trim(),
     text: appendSignatureToText(body, resolvedSignature)
@@ -163,10 +170,6 @@ function sendAgentEmail({ fromName, fromEmail, toName, toEmail, subject, body, h
 
   if (mailAttachments.length > 0) {
     mailOptions.attachments = mailAttachments;
-  }
-
-  if (replyTo) {
-    mailOptions.replyTo = replyTo;
   }
 
   return makeTransporter(resolvedUser, resolvedPass).sendMail(mailOptions);
