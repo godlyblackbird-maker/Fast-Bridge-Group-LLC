@@ -168,6 +168,34 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }, 4000);
     }
 
+    function initBuildVersionLabel() {
+        const versionLabel = document.getElementById('build-version-label');
+        if (!versionLabel) {
+            return;
+        }
+
+        const apiBaseOrigin = window.location.protocol === 'file:'
+            ? 'http://localhost:3000'
+            : (window.location.origin || 'http://localhost:3000');
+
+        fetch(`${apiBaseOrigin}/api/build-version`, {
+            headers: {
+                Accept: 'application/json'
+            }
+        })
+            .then((response) => response.ok ? response.json() : Promise.reject(new Error('Build version unavailable')))
+            .then((data) => {
+                const version = String(data && data.version || '').trim();
+                if (!version) {
+                    throw new Error('Build version unavailable');
+                }
+                versionLabel.textContent = `v${version}`;
+            })
+            .catch(() => {
+                versionLabel.textContent = 'v1.1.6';
+            });
+    }
+
     function normalizeUserIdentityValue(value) {
         const normalizedValue = String(value || '').trim().toLowerCase();
         return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedValue) || normalizedValue;
@@ -1474,7 +1502,7 @@ function initNavbarDateTime() {
 
     function initMenuSoundEffects() {
         const hoverTargets = Array.from(document.querySelectorAll(
-            '.sidebar .nav-link, .settings-nav-link, .property-tab-btn, .piq-image-tab, .calendar-nav-btn, .calendar-back-btn, .calendar-ai-chip, .mls-page-btn, .mls-source-link, .tab-link, [data-tab], .btn, .nav-btn, button, [role="button"]'
+            '.sidebar .nav-link, .settings-nav-link, .property-tab-btn, .piq-image-tab, .calendar-nav-btn, .calendar-back-btn, .chatgpt-chip, .mls-page-btn, .mls-source-link, .tab-link, [data-tab], .btn, .nav-btn, button, [role="button"]'
         ));
         if (hoverTargets.length === 0) {
             return;
@@ -2365,11 +2393,12 @@ function initNavbarDateTime() {
         window.setInterval(checkReminders, 60000);
     }
 
-    function initCalendarAiHelper() {
-        const form = document.getElementById('calendar-ai-form');
-        const input = document.getElementById('calendar-ai-input');
-        const chat = document.getElementById('calendar-ai-chat');
-        const chips = Array.from(document.querySelectorAll('.calendar-ai-chip[data-ai-question]'));
+    function initDashboardChatGptWidget() {
+        const form = document.getElementById('chatgpt-form');
+        const input = document.getElementById('chatgpt-input');
+        const chat = document.getElementById('chatgpt-chat');
+        const status = document.getElementById('chatgpt-status');
+        const chips = Array.from(document.querySelectorAll('.chatgpt-chip[data-chatgpt-question]'));
 
         if (!form || !input || !chat) {
             return;
@@ -2377,7 +2406,7 @@ function initNavbarDateTime() {
 
         function pushMessage(role, html) {
             const message = document.createElement('div');
-            message.className = `calendar-ai-msg ${role}`;
+            message.className = `chatgpt-msg ${role}`;
             message.innerHTML = html;
             chat.appendChild(message);
             chat.scrollTop = chat.scrollHeight;
@@ -2407,9 +2436,24 @@ function initNavbarDateTime() {
             return paragraphs || '<p>I could not generate a response right now.</p>';
         }
 
+        function setAiStatus(text, mode) {
+            if (!status) {
+                return;
+            }
+
+            status.textContent = text;
+            status.classList.remove('live', 'fallback');
+            status.classList.add(mode === 'fallback' ? 'fallback' : 'live');
+        }
+
+        function wrapAiResponseMessage(answer, metaLabel) {
+            const meta = metaLabel ? `<p class="chatgpt-msg-meta">${escapeHtml(metaLabel)}</p>` : '';
+            return `${meta}${plainTextToMessageHtml(answer)}`;
+        }
+
         function showTyping() {
             const el = document.createElement('div');
-            el.className = 'calendar-ai-msg assistant calendar-ai-typing';
+            el.className = 'chatgpt-msg assistant chatgpt-typing';
             el.innerHTML = '<span></span><span></span><span></span>';
             chat.appendChild(el);
             chat.scrollTop = chat.scrollHeight;
@@ -2984,7 +3028,7 @@ function initNavbarDateTime() {
             ]);
         }
 
-        async function requestOpenAiResponse(question) {
+        async function requestAiResponse(question) {
             const token = localStorage.getItem('authToken');
             const headers = {
                 'Content-Type': 'application/json'
@@ -3011,7 +3055,11 @@ function initNavbarDateTime() {
                 throw new Error('AI response was empty');
             }
 
-            return answer;
+            return {
+                answer,
+                provider: String(payload?.provider || '').trim(),
+                model: String(payload?.model || '').trim()
+            };
         }
 
         async function ask(question) {
@@ -3024,9 +3072,11 @@ function initNavbarDateTime() {
             const typingEl = showTyping();
 
             try {
-                const aiAnswer = await requestOpenAiResponse(text);
+                const aiResponse = await requestAiResponse(text);
                 typingEl.remove();
-                pushMessage('assistant', plainTextToMessageHtml(aiAnswer));
+                const modelLabel = aiResponse.model || 'AI model live';
+                setAiStatus(`Live model: ${modelLabel}`, 'live');
+                pushMessage('assistant', wrapAiResponseMessage(aiResponse.answer, modelLabel));
                 return;
             } catch (error) {
                 // Fall through to built-in assistant knowledge when API is unavailable.
@@ -3034,6 +3084,7 @@ function initNavbarDateTime() {
 
             window.setTimeout(() => {
                 typingEl.remove();
+                setAiStatus('Local FAST backup guidance active', 'fallback');
                 pushMessage('assistant', buildResponse(text));
             }, 420);
         }
@@ -3047,7 +3098,7 @@ function initNavbarDateTime() {
 
         chips.forEach(chip => {
             chip.addEventListener('click', () => {
-                ask(chip.dataset.aiQuestion || '');
+                ask(chip.dataset.chatgptQuestion || '');
             });
         });
     }
@@ -8666,6 +8717,7 @@ function initNavbarDateTime() {
         initAccentPreference();
         initMyAgentsAccessRules();
         initThemeToggle();
+        initBuildVersionLabel();
         initNavbarDateTime();
         initNavbarSearch();
         initTiltEffect();
@@ -8680,7 +8732,7 @@ function initNavbarDateTime() {
         initLiveKpiStats();
         initWidgetControls();
         initInteractiveCalendar();
-        initCalendarAiHelper();
+        initDashboardChatGptWidget();
         initDailyBibleVerseWidget();
         initPersonalOutreachWorkspace();
         initAgentNotesWidget();

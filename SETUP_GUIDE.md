@@ -185,6 +185,8 @@ Edit `.env` file to customize:
 - **PORT:** Server port (default: 3000)
 - **JWT_SECRET:** Change this in production!
 - **DATABASE:** Path to SQLite database
+- **OPENAI_API_KEY:** Server-side key for the dashboard AI helper
+- **OPENAI_MODEL:** OpenAI model name for the AI helper (default: `gpt-5-nano`)
 
 ⚠️ **IMPORTANT FOR PRODUCTION:**
 - Change `JWT_SECRET` to a long random string

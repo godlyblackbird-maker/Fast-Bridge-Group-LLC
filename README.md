@@ -119,6 +119,8 @@ This account is automatically created when the server starts for the first time.
 - **Database:** SQLite (file-based, portable)
 - **Port:** 3000 (configurable in `.env`)
 - **JWT Secret:** Change in production!
+- **AI Model:** Set `OPENAI_MODEL` in `.env` if you want something other than `gpt-5-nano`
+- **AI Key:** Set `OPENAI_API_KEY` in `.env` for the dashboard AI helper
 - **Node Version:** v14+ recommended
 
 ---

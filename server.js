@@ -40,6 +40,7 @@ app.get('/api/build-version', (req, res) => {
 });
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
 
 let cachedOpenAiApiKey = null;
 
@@ -138,19 +139,41 @@ function readOpenAiKeysFromDisk() {
 }
 
 function getOpenAiApiKeyCandidates() {
+  const fromEnv = String(process.env.OPENAI_API_KEY || '').trim();
+  if (/^sk-[A-Za-z0-9._-]{20,}$/.test(fromEnv)) {
+    return [fromEnv];
+  }
+
   const keys = [];
 
   if (cachedOpenAiApiKey) {
     keys.push(cachedOpenAiApiKey);
   }
 
-  const fromEnv = String(process.env.OPENAI_API_KEY || '').trim();
-  if (/^sk-[A-Za-z0-9._-]{20,}$/.test(fromEnv)) {
-    keys.push(fromEnv);
-  }
-
   keys.push(...readOpenAiKeysFromDisk());
   return Array.from(new Set(keys));
+}
+
+function extractOpenAiResponseText(payload) {
+  const directText = String(payload?.output_text || '').trim();
+  if (directText) {
+    return directText;
+  }
+
+  const segments = [];
+  const outputs = Array.isArray(payload?.output) ? payload.output : [];
+
+  outputs.forEach(item => {
+    const contentParts = Array.isArray(item?.content) ? item.content : [];
+    contentParts.forEach(part => {
+      const text = String(part?.text || '').trim();
+      if (text) {
+        segments.push(text);
+      }
+    });
+  });
+
+  return segments.join('\n\n').trim();
 }
 
 async function queryOpenAiAssistant(question) {
@@ -174,18 +197,34 @@ async function queryOpenAiAssistant(question) {
 
   for (const apiKey of apiKeys) {
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          temperature: 0.4,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: String(question || '').slice(0, 4000) }
+          model: OPENAI_MODEL,
+          store: false,
+          input: [
+            {
+              role: 'system',
+              content: [
+                {
+                  type: 'input_text',
+                  text: systemPrompt
+                }
+              ]
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_text',
+                  text: String(question || '').slice(0, 4000)
+                }
+              ]
+            }
           ]
         })
       });
@@ -197,7 +236,7 @@ async function queryOpenAiAssistant(question) {
       }
 
       const payload = await response.json();
-      const answer = String(payload?.choices?.[0]?.message?.content || '').trim();
+      const answer = extractOpenAiResponseText(payload);
       if (!answer) {
         lastError = 'OpenAI response was empty.';
         continue;
@@ -910,6 +949,7 @@ app.post('/api/ai/chat', async (req, res) => {
   return res.json({
     success: true,
     provider: 'openai',
+    model: OPENAI_MODEL,
     answer: result.answer
   });
 });
