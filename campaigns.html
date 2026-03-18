@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaigns - FAST BRIDGE GROUP Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Campaign prep and SMS workflow planning for FAST BRIDGE GROUP agent outreach.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .campaigns-wrap {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .campaign-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .campaign-hero-card,
+        .campaign-side-card,
+        .campaign-section-card,
+        .campaign-copy-card {
+            padding: 24px;
+        }
+
+        .campaign-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.14);
+            border: 1px solid rgba(var(--accent-rgb), 0.26);
+            color: var(--text-primary);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .campaign-hero-title {
+            font-size: clamp(28px, 4vw, 40px);
+            line-height: 1.06;
+            margin-bottom: 14px;
+        }
+
+        .campaign-hero-copy {
+            max-width: 700px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 18px;
+        }
+
+        .campaign-pill-row,
+        .campaign-stack-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .campaign-pill,
+        .campaign-stack-tag {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .campaign-side-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: linear-gradient(155deg, rgba(var(--accent-rgb), 0.16), rgba(255, 255, 255, 0.04));
+        }
+
+        .campaign-side-card h3,
+        .campaign-section-card h3,
+        .campaign-copy-card h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .campaign-side-card p,
+        .campaign-section-card p,
+        .campaign-copy-card p,
+        .campaign-section-card li,
+        .campaign-copy-card li {
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .campaign-stack-list,
+        .campaign-checklist,
+        .campaign-rules,
+        .campaign-sequence-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .campaign-stack-item,
+        .campaign-checklist-item,
+        .campaign-rule,
+        .campaign-sequence-item {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .campaign-stack-item strong,
+        .campaign-checklist-item strong,
+        .campaign-rule strong,
+        .campaign-sequence-item strong,
+        .vendor-card strong {
+            color: var(--text-primary);
+        }
+
+        .campaign-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+            gap: 24px;
+        }
+
+        .campaign-main,
+        .campaign-rail {
+            display: grid;
+            gap: 24px;
+            align-content: start;
+        }
+
+        .vendor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .vendor-card {
+            padding: 18px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .vendor-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .vendor-name {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .vendor-fit {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .vendor-score {
+            padding: 8px 10px;
+            border-radius: 12px;
+            background: rgba(var(--accent-rgb), 0.14);
+            border: 1px solid rgba(var(--accent-rgb), 0.22);
+            font-family: 'Space Mono', monospace;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .vendor-card ul {
+            margin: 0;
+            padding-left: 18px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .campaign-copy-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .campaign-copy-block {
+            padding: 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .campaign-copy-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .campaign-copy-label {
+            font-size: 13px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .campaign-copy-text {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+
+        .campaign-note {
+            margin-top: 14px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .campaign-rule-list {
+            margin: 0;
+            padding-left: 18px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .campaign-section-card ol {
+            margin: 0;
+            padding-left: 20px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .campaign-badge-positive,
+        .campaign-badge-warning {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 74px;
+            padding: 8px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .campaign-badge-positive {
+            color: #d1fae5;
+            background: rgba(34, 197, 94, 0.18);
+            border: 1px solid rgba(34, 197, 94, 0.28);
+        }
+
+        .campaign-badge-warning {
+            color: #fef3c7;
+            background: rgba(245, 158, 11, 0.18);
+            border: 1px solid rgba(245, 158, 11, 0.28);
+        }
+
+        @media (max-width: 1180px) {
+            .campaign-hero,
+            .campaign-grid,
+            .vendor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .campaign-copy-top,
+            .vendor-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/Fast Logo - 111.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="dashboard.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="analytics.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                Analytics
+                                <span class="nav-badge">New</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2L3 14h7l-1 8 10-12h-7z"/>
+                                </svg>
+                                MLS Hot Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls-search.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="7"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                MLS Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="active-buyers.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 5h18"/>
+                                    <path d="M3 12h18"/>
+                                    <path d="M3 19h18"/>
+                                </svg>
+                                Active Buyers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link active">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4v16" />
+                                    <path d="M4 4h13l-2 5 2 5H4" />
+                                </svg>
+                                Campaigns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="admin-controls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                    <path d="M8 20h8"/>
+                                    <path d="M12 16v4"/>
+                                </svg>
+                                Admin Controls
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="login.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-header">
+                    <h1 class="page-title">Campaigns</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Dashboard</a>
+                        <span>/</span>
+                        <span>Campaigns</span>
+                    </div>
+                </div>
+                <div class="navbar-right">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" class="search-input" placeholder="Search anything...">
+                    </div>
+                    <button class="nav-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notification-dot"></span>
+                    </button>
+                    <button class="nav-btn" id="theme-toggle" title="Toggle Light/Dark Mode">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="4"/>
+                            <path d="M12 2v2"/><path d="M12 20v2"/>
+                            <path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/>
+                            <path d="M2 12h2"/><path d="M20 12h2"/>
+                            <path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>
+                        </svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                </div>
+            </nav>
+
+            <div class="campaigns-wrap">
+                <section class="campaign-hero">
+                    <div class="glass-card campaign-hero-card">
+                        <span class="campaign-kicker">Agent Outreach Engine</span>
+                        <h2 class="campaign-hero-title">Prep an SMS campaign that gets agent replies without wrecking deliverability.</h2>
+                        <p class="campaign-hero-copy">This page is built for investor outreach, not generic blast marketing. The goal is simple: route FAST BRIDGE GROUP deal opportunities to active agents with compliant, human-sounding texts, fast response handling, and enough personalization to create listing conversations instead of spam complaints.</p>
+                        <div class="campaign-pill-row">
+                            <span class="campaign-pill">A2P 10DLC registered before launch</span>
+                            <span class="campaign-pill">Segment by county, brokerage, and agent activity</span>
+                            <span class="campaign-pill">Reply handoff to a live acquisitions rep</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-card campaign-side-card">
+                        <div>
+                            <h3>Recommended Stack</h3>
+                            <p>Use one programmable carrier-grade provider as your main rail, a second as a fallback route, and a lightweight inbox layer only if your reps need a friendlier conversation view.</p>
+                        </div>
+                        <div class="campaign-stack-list">
+                            <div class="campaign-stack-item"><strong>Primary rail:</strong> Twilio for A2P tooling, webhook control, and mature app integrations.</div>
+                            <div class="campaign-stack-item"><strong>Backup rail:</strong> Telnyx for cost control and redundancy when volumes grow.</div>
+                            <div class="campaign-stack-item"><strong>Rep inbox:</strong> Salesmsg if you want a simple team inbox without building one.</div>
+                        </div>
+                        <div class="campaign-stack-tags">
+                            <span class="campaign-stack-tag">Best for dev control</span>
+                            <span class="campaign-stack-tag">Best for deliverability discipline</span>
+                            <span class="campaign-stack-tag">Best for team follow-up</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="stats-grid">
+                    <div class="glass-card glass-card-3d stat-card">
+                        <div class="stat-card-inner">
+                            <div class="stat-info">
+                                <h3>Target Send Window</h3>
+                                <div class="stat-value">9a-4p</div>
+                                <span class="stat-change positive">Local market time only</span>
+                            </div>
+                            <div class="stat-icon cyan">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald-light)" stroke-width="2">
+                                    <circle cx="12" cy="12" r="9"></circle>
+                                    <path d="M12 7v5l3 3"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card glass-card-3d stat-card">
+                        <div class="stat-card-inner">
+                            <div class="stat-info">
+                                <h3>Reply SLA</h3>
+                                <div class="stat-value">&lt; 5 min</div>
+                                <span class="stat-change positive">Warm replies die fast</span>
+                            </div>
+                            <div class="stat-icon magenta">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card glass-card-3d stat-card">
+                        <div class="stat-card-inner">
+                            <div class="stat-info">
+                                <h3>Daily Volume Target</h3>
+                                <div class="stat-value">40-60</div>
+                                <span class="stat-change positive">Per rep, per market segment</span>
+                            </div>
+                            <div class="stat-icon purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2">
+                                    <path d="M3 3v18h18"></path>
+                                    <path d="m7 14 4-4 3 3 5-6"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card glass-card-3d stat-card">
+                        <div class="stat-card-inner">
+                            <div class="stat-info">
+                                <h3>Opt-Out Guardrail</h3>
+                                <div class="stat-value">&lt; 2%</div>
+                                <span class="stat-change positive">Pause segments above this</span>
+                            </div>
+                            <div class="stat-icon success">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2">
+                                    <path d="M9 12l2 2 4-4"></path>
+                                    <circle cx="12" cy="12" r="9"></circle>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="campaign-grid">
+                    <div class="campaign-main">
+                        <article class="glass-card campaign-section-card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">SMS Launch Checklist</h3>
+                                    <p class="card-subtitle">Build the operating system before anyone touches send.</p>
+                                </div>
+                            </div>
+                            <ol>
+                                <li><strong>Clean the list:</strong> keep only active agents and brokers you genuinely want a relationship with. Remove duplicates, dead numbers, and anyone who already opted out.</li>
+                                <li><strong>Register your traffic:</strong> complete A2P 10DLC brand and campaign registration before launch. Unregistered 10DLC traffic will bottleneck or get filtered.</li>
+                                <li><strong>Segment the campaign:</strong> split by county, brokerage tier, listing side vs buyer-heavy agents, and recent transaction activity. One script should not hit every market.</li>
+                                <li><strong>Personalize the first line:</strong> include agent first name, target geography, and buyer type. The first 60 characters decide whether the message survives.</li>
+                                <li><strong>Set response ownership:</strong> every inbound needs a named human rep, response window, escalation path, and calendar-booking outcome.</li>
+                                <li><strong>Track outcomes:</strong> log reply status, referral source, stale listing flags, pocket listing mentions, and whether the agent is worth future outreach.</li>
+                            </ol>
+                        </article>
+
+                        <article class="glass-card campaign-section-card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Best Third Parties For Agent SMS</h3>
+                                    <p class="card-subtitle">Ranked for a small but serious acquisitions team that wants reliable delivery and developer control.</p>
+                                </div>
+                            </div>
+                            <div class="vendor-grid">
+                                <div class="vendor-card">
+                                    <div class="vendor-head">
+                                        <div>
+                                            <div class="vendor-name">Twilio</div>
+                                            <div class="vendor-fit">Best overall programmable option</div>
+                                        </div>
+                                        <div class="vendor-score">9.4 / 10</div>
+                                    </div>
+                                    <ul>
+                                        <li>Strong API ecosystem, webhooks, and compliance tooling.</li>
+                                        <li>Best choice if you plan to route replies into your own workflow later.</li>
+                                        <li>Use as the main rail when reliability matters more than being the cheapest.</li>
+                                    </ul>
+                                </div>
+                                <div class="vendor-card">
+                                    <div class="vendor-head">
+                                        <div>
+                                            <div class="vendor-name">Telnyx</div>
+                                            <div class="vendor-fit">Best backup rail and cost lever</div>
+                                        </div>
+                                        <div class="vendor-score">9.1 / 10</div>
+                                    </div>
+                                    <ul>
+                                        <li>Very good pricing and solid direct connectivity.</li>
+                                        <li>Useful as a second route when you want redundancy or regional testing.</li>
+                                        <li>Good fit if you expect tighter unit economics at higher send volume.</li>
+                                    </ul>
+                                </div>
+                                <div class="vendor-card">
+                                    <div class="vendor-head">
+                                        <div>
+                                            <div class="vendor-name">Salesmsg</div>
+                                            <div class="vendor-fit">Best team inbox for reps</div>
+                                        </div>
+                                        <div class="vendor-score">8.7 / 10</div>
+                                    </div>
+                                    <ul>
+                                        <li>Fast to deploy if you do not want to build a rep-facing inbox.</li>
+                                        <li>Useful for assigning replies and keeping outreach conversational.</li>
+                                        <li>Best layered on top of a real carrier strategy, not as the only architecture decision.</li>
+                                    </ul>
+                                </div>
+                                <div class="vendor-card">
+                                    <div class="vendor-head">
+                                        <div>
+                                            <div class="vendor-name">Sinch MessageMedia</div>
+                                            <div class="vendor-fit">Best enterprise-scale alternative</div>
+                                        </div>
+                                        <div class="vendor-score">8.5 / 10</div>
+                                    </div>
+                                    <ul>
+                                        <li>Strong when enterprise controls and broader messaging footprint matter.</li>
+                                        <li>Worth a look if this becomes multi-market and more compliance heavy.</li>
+                                        <li>Usually less attractive than Twilio or Telnyx for a lean custom build.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <p class="campaign-note">Practical recommendation: start with Twilio as primary, Telnyx as fallback, and only add a rep inbox product if the team needs easier conversation assignment.</p>
+                        </article>
+
+                        <article class="glass-card campaign-section-card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Suggested Agent SMS Sequence</h3>
+                                    <p class="card-subtitle">Short, respectful touches that feel like deal flow outreach rather than list spam.</p>
+                                </div>
+                            </div>
+                            <div class="campaign-sequence-list">
+                                <div class="campaign-sequence-item"><strong>Touch 1, Day 0:</strong> Ask for active/off-market inventory in a specific area and state your buying capability in one line.</div>
+                                <div class="campaign-sequence-item"><strong>Touch 2, Day 2:</strong> Follow up with a narrower ask, such as probate, fixer, stale listing, or failed escrow opportunities.</div>
+                                <div class="campaign-sequence-item"><strong>Touch 3, Day 5:</strong> Ask if they want your exact buy box and proof-of-funds ready list for faster matching.</div>
+                                <div class="campaign-sequence-item"><strong>Touch 4, Day 10:</strong> Close the loop politely and leave the door open for future pocket listings or problem sellers.</div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <aside class="campaign-rail">
+                        <article class="glass-card campaign-section-card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Go / No-Go Gates</h3>
+                                    <p class="card-subtitle">Do not launch until every item below is true.</p>
+                                </div>
+                            </div>
+                            <div class="campaign-checklist">
+                                <div class="campaign-checklist-item"><span class="campaign-badge-positive">Ready</span> <strong>Registered traffic:</strong> brand and use case approved for A2P 10DLC.</div>
+                                <div class="campaign-checklist-item"><span class="campaign-badge-positive">Ready</span> <strong>Opt-out handling:</strong> STOP, UNSUBSCRIBE, and equivalent keywords suppress immediately.</div>
+                                <div class="campaign-checklist-item"><span class="campaign-badge-warning">Watch</span> <strong>Inbox coverage:</strong> somebody owns inbound replies in real time during send windows.</div>
+                                <div class="campaign-checklist-item"><span class="campaign-badge-warning">Watch</span> <strong>Volume ramp:</strong> start small by market, then scale only after reply and opt-out metrics stabilize.</div>
+                            </div>
+                        </article>
+
+                        <article class="glass-card campaign-section-card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Compliance Rules</h3>
+                                    <p class="card-subtitle">Keep outreach useful, limited, and easy to exit.</p>
+                                </div>
+                            </div>
+                            <ul class="campaign-rule-list">
+                                <li>Stay in local business hours and avoid weekends unless there is an active conversation.</li>
+                                <li>Do not bury the sender identity. FAST BRIDGE GROUP should be recognizable in the message.</li>
+                                <li>Keep first touches short. Long promotional texts get filtered and ignored.</li>
+                                <li>Always include a simple opt-out path on campaign-style messages.</li>
+                                <li>Pause any segment that trends toward complaints, blocks, or heavy opt-outs.</li>
+                            </ul>
+                            <p class="campaign-note">This is operational guidance, not legal advice. If you scale aggressively, have counsel review your workflow and copy.</p>
+                        </article>
+
+                        <article class="glass-card campaign-copy-card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Copy-Ready SMS Blocks</h3>
+                                    <p class="card-subtitle">Use these as starting points for agent outreach.</p>
+                                </div>
+                            </div>
+                            <div class="campaign-copy-grid">
+                                <div class="campaign-copy-block">
+                                    <div class="campaign-copy-top">
+                                        <span class="campaign-copy-label">First Touch</span>
+                                        <button type="button" class="card-btn active" data-copy-target="sms-template-1">Copy</button>
+                                    </div>
+                                    <p class="campaign-copy-text" id="sms-template-1">Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.</p>
+                                </div>
+
+                                <div class="campaign-copy-block">
+                                    <div class="campaign-copy-top">
+                                        <span class="campaign-copy-label">Follow-Up</span>
+                                        <button type="button" class="card-btn active" data-copy-target="sms-template-2">Copy</button>
+                                    </div>
+                                    <p class="campaign-copy-text" id="sms-template-2">Checking back in, [Agent First Name]. We are still buying in [Area], especially probate, heavy fixer, and failed-escrow opportunities. If you want, I can text over our exact buy box and close timeline. Reply STOP to opt out.</p>
+                                </div>
+
+                                <div class="campaign-copy-block">
+                                    <div class="campaign-copy-top">
+                                        <span class="campaign-copy-label">Breakup / Keepalive</span>
+                                        <button type="button" class="card-btn active" data-copy-target="sms-template-3">Copy</button>
+                                    </div>
+                                    <p class="campaign-copy-text" id="sms-template-3">Last note from me for now, [Agent First Name]. If you ever have a seller who needs a quick as-is close in [Area], send it my way and I will respond fast. Happy to share proof of funds and our buy box when useful. Reply STOP to opt out.</p>
+                                </div>
+                            </div>
+                        </article>
+                    </aside>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <button class="mobile-menu-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    </button>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+    <script>
+        (function () {
+            const copyButtons = document.querySelectorAll('[data-copy-target]');
+
+            copyButtons.forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const targetId = button.getAttribute('data-copy-target');
+                    const target = targetId ? document.getElementById(targetId) : null;
+                    const text = target ? String(target.textContent || '').trim() : '';
+                    if (!text) {
+                        return;
+                    }
+
+                    const originalLabel = button.textContent;
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        button.textContent = 'Copied';
+                    } catch (error) {
+                        button.textContent = 'Copy Failed';
+                    }
+
+                    window.setTimeout(() => {
+                        button.textContent = originalLabel;
+                    }, 1200);
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

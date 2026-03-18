@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 260" role="img" aria-label="FAST logo">
+  <defs>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f9d94c"/>
+      <stop offset="1" stop-color="#f2b530"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff4d4d"/>
+      <stop offset="1" stop-color="#c91414"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect width="640" height="260" fill="none"/>
+  <circle cx="320" cy="110" r="86" fill="url(#sun)"/>
+
+  <path d="M30 195 C80 160, 130 170, 180 190 L180 220 L30 220 Z" fill="#1c8d47"/>
+  <path d="M460 190 C520 165, 575 160, 620 190 L620 220 L460 220 Z" fill="#c59a33"/>
+  <path d="M220 220 C270 196, 370 196, 420 220 Z" fill="#3db3de"/>
+
+  <g filter="url(#shadow)">
+    <text x="320" y="180" text-anchor="middle" font-family="Outfit, Arial, sans-serif" font-size="132" font-weight="800" fill="url(#red)" stroke="#ffffff" stroke-width="7" letter-spacing="2">FAST</text>
+  </g>
+</svg>

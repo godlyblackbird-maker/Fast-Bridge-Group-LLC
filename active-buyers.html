@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Buyers - FAST BRIDGE GROUP Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Active buyers tracking sheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .buyers-sheet-wrap {
+            margin-top: 24px;
+            --buyers-border: rgba(var(--accent-light-rgb), 0.22);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(13, 26, 20, 0.46), rgba(19, 36, 25, 0.32));
+            --buyers-head-bg: linear-gradient(135deg, rgba(var(--accent-rgb), 0.72), rgba(10, 20, 16, 0.9));
+            --buyers-head-text: #f8fafc;
+            --buyers-row-bg: rgba(255, 255, 255, 0.04);
+            --buyers-row-bg-alt: rgba(255, 255, 255, 0.08);
+            --buyers-focus-bg: rgba(var(--accent-light-rgb), 0.2);
+            --buyers-focus-ring: rgba(var(--accent-light-rgb), 0.52);
+            --buyers-note: var(--text-secondary);
+            --buyers-scroll-thumb: rgba(var(--accent-light-rgb), 0.58);
+            --buyers-scroll-track: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Responsive spreadsheet table */
+        .buyers-sheet-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            display: block;
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: auto;
+            scrollbar-color: var(--buyers-scroll-thumb) var(--buyers-scroll-track);
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar {
+            height: 14px;
+        }
+        .buyers-sheet-table-wrap::-webkit-scrollbar-thumb {
+            background: var(--buyers-scroll-thumb);
+            border-radius: 8px;
+        }
+        .buyers-sheet-table-wrap::-webkit-scrollbar-track {
+            background: var(--buyers-scroll-track);
+            border-radius: 8px;
+        }
+        
+
+        .buyers-sheet-table {
+            width: max-content;
+            min-width: 1220px;
+            max-width: none;
+            border-collapse: collapse;
+        }
+
+        @media (max-width: 1200px) {
+            .buyers-sheet-table {
+                min-width: 1220px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .buyers-sheet-table {
+                min-width: 1220px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .buyers-sheet-table {
+                min-width: 1220px;
+                font-size: 13px;
+            }
+            .buyers-sheet-table thead th, .buyers-sheet-table tbody td {
+                padding: 6px;
+            }
+        }
+
+        .buyers-sheet-card {
+            padding: 18px;
+            overflow: visible;
+        }
+
+        .buyers-sheet-wrap {
+            min-width: 0;
+        }
+
+        .buyers-sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .buyers-sheet-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--buyers-border);
+            border-radius: 16px;
+            background: var(--buyers-wrap-bg);
+            backdrop-filter: blur(8px);
+        }
+
+        .buyers-sheet-table {
+            width: max-content;
+            min-width: 1220px;
+            border-collapse: collapse;
+        }
+
+        .buyers-sheet-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--buyers-head-bg);
+            color: var(--buyers-head-text);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 12px;
+            text-align: left;
+            border-right: 1px solid var(--buyers-border);
+            white-space: nowrap;
+        }
+
+        .buyers-sheet-table thead th:last-child {
+            border-right: 0;
+        }
+
+        .buyers-sheet-table tbody td {
+            padding: 10px;
+            border-right: 1px solid var(--buyers-border);
+            border-top: 1px solid var(--buyers-border);
+            background: var(--buyers-row-bg);
+            color: var(--text-primary);
+            min-height: 42px;
+            vertical-align: top;
+        }
+
+        .buyers-sheet-table tbody td:last-child {
+            border-right: 0;
+        }
+
+        .buyers-sheet-table tbody tr:nth-child(even) td {
+            background: var(--buyers-row-bg-alt);
+        }
+
+        .buyers-sheet-table td[contenteditable="true"] {
+            outline: none;
+            min-width: 120px;
+            cursor: text;
+        }
+
+        .buyers-sheet-table td[contenteditable="true"]:focus {
+            box-shadow: inset 0 0 0 2px var(--buyers-focus-ring);
+            background: var(--buyers-focus-bg);
+        }
+
+        .buyers-sheet-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
+        .buyers-sheet-table td.active-buyer-cell.is-buyer {
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        [data-theme="light"] .buyers-sheet-wrap {
+            --buyers-border: rgba(6, 78, 59, 0.2);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(233, 246, 238, 0.9));
+            --buyers-head-bg: linear-gradient(135deg, rgba(6, 78, 59, 0.82), rgba(5, 46, 35, 0.9));
+            --buyers-head-text: #f8fafc;
+            --buyers-row-bg: rgba(255, 255, 255, 0.72);
+            --buyers-row-bg-alt: rgba(233, 245, 239, 0.9);
+            --buyers-focus-bg: rgba(209, 250, 229, 0.85);
+            --buyers-focus-ring: rgba(var(--accent-rgb), 0.36);
+            --buyers-note: rgba(18, 37, 30, 0.72);
+            --buyers-scroll-thumb: rgba(6, 78, 59, 0.42);
+            --buyers-scroll-track: rgba(222, 239, 231, 0.92);
+        }
+
+        [data-theme="beach"] .buyers-sheet-wrap {
+            --buyers-border: rgba(12, 74, 110, 0.24);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.44), rgba(214, 241, 249, 0.66));
+            --buyers-head-bg: linear-gradient(135deg, rgba(7, 89, 133, 0.88), rgba(12, 74, 110, 0.94));
+            --buyers-head-text: #f0fbff;
+            --buyers-row-bg: rgba(232, 248, 253, 0.72);
+            --buyers-row-bg-alt: rgba(252, 236, 206, 0.62);
+            --buyers-focus-bg: rgba(186, 230, 253, 0.7);
+            --buyers-focus-ring: rgba(2, 132, 199, 0.45);
+            --buyers-note: rgba(11, 58, 82, 0.75);
+            --buyers-scroll-thumb: rgba(7, 89, 133, 0.48);
+            --buyers-scroll-track: rgba(214, 241, 249, 0.84);
+        }
+
+        [data-theme="swamp"] .buyers-sheet-wrap {
+            --buyers-border: rgba(196, 167, 111, 0.24);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(49, 65, 31, 0.74), rgba(93, 68, 39, 0.48));
+            --buyers-head-bg: linear-gradient(135deg, rgba(93, 124, 46, 0.94), rgba(94, 67, 38, 0.94));
+            --buyers-head-text: #fff8df;
+            --buyers-row-bg: rgba(37, 48, 24, 0.72);
+            --buyers-row-bg-alt: rgba(73, 56, 32, 0.56);
+            --buyers-focus-bg: rgba(126, 162, 74, 0.22);
+            --buyers-focus-ring: rgba(196, 167, 111, 0.46);
+            --buyers-note: rgba(247, 243, 223, 0.76);
+            --buyers-scroll-thumb: rgba(196, 167, 111, 0.54);
+            --buyers-scroll-track: rgba(41, 53, 26, 0.74);
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/Fast Logo - 111.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="dashboard.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="analytics.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                Analytics
+                                <span class="nav-badge">New</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2L3 14h7l-1 8 10-12h-7z"/>
+                                </svg>
+                                MLS Hot Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls-search.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="7"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                MLS Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="active-buyers.html" class="nav-link active">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 5h18"/>
+                                    <path d="M3 12h18"/>
+                                    <path d="M3 19h18"/>
+                                </svg>
+                                Active Buyers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4v16" />
+                                    <path d="M4 4h13l-2 5 2 5H4" />
+                                </svg>
+                                Campaigns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="admin-controls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                    <path d="M8 20h8"/>
+                                    <path d="M12 16v4"/>
+                                </svg>
+                                Admin Controls
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="login.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <h1 class="page-title">Active Buyers</h1>
+                <div class="navbar-right">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" class="search-input" placeholder="Search anything...">
+                    </div>
+                    <button class="nav-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notification-dot"></span>
+                    </button>
+                    <button class="nav-btn" id="theme-toggle" title="Toggle Light/Dark Mode">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="4"/>
+                            <path d="M12 2v2"/><path d="M12 20v2"/>
+                            <path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/>
+                            <path d="M2 12h2"/><path d="M20 12h2"/>
+                            <path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>
+                        </svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                </div>
+            </nav>
+
+            <section class="buyers-sheet-wrap">
+                <div class="glass-card buyers-sheet-card">
+                    <div class="buyers-sheet-header">
+                        <div>
+                            <h2 class="card-title">Active Buyers Spreadsheet</h2>
+                            <p class="card-subtitle">Track current buyer contacts and notes.</p>
+                        </div>
+                        <div class="buyers-sheet-actions">
+                            <button id="buyers-add-row" class="card-btn active" type="button">Add Row</button>
+                            <button id="buyers-send-email-btn" class="card-btn" type="button">Send Email to All Buyers</button>
+                        </div>
+                        <!-- Bulk Email Modal -->
+                        <div id="buyers-email-modal" class="profile-modal" style="display: none;">
+                            <div class="profile-modal-overlay"></div>
+                            <div class="profile-modal-content" style="max-width: 480px;">
+                                <div class="profile-modal-header">
+                                    <h2>Email All Buyers</h2>
+                                    <button id="close-buyers-email-modal" class="profile-close-btn" type="button">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="profile-modal-body">
+                                    <form id="buyers-email-form" class="profile-form">
+                                        <div class="form-section">
+                                            <div class="form-group">
+                                                <label>Subject</label>
+                                                <input type="text" id="buyers-email-subject" class="form-input" placeholder="Enter email subject" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Message</label>
+                                                <textarea id="buyers-email-body" class="form-input" placeholder="Enter your message" style="resize: vertical; min-height: 100px;" required></textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                                                    Recipients
+                                                    <span>
+                                                        <button type="button" id="buyers-email-select-all" style="font-size:12px;padding:2px 8px;margin-right:4px;">Select All</button>
+                                                        <button type="button" id="buyers-email-deselect-all" style="font-size:12px;padding:2px 8px;">Deselect All</button>
+                                                    </span>
+                                                </label>
+                                                <div id="buyers-email-recipients-list" style="max-height:160px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px 6px 4px 6px;background:rgba(0,0,0,0.03);margin-bottom:4px;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="profile-modal-actions">
+                                            <button type="button" id="cancel-buyers-email" class="btn btn-secondary">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Send Email</button>
+                                        </div>
+                                    </form>
+                                    <div id="buyers-email-status" style="margin-top:10px;font-size:13px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="buyers-sheet-table-wrap">
+                        <table class="buyers-sheet-table" id="buyers-sheet-table">
+                            <thead>
+                                <tr>
+                                    <th>Active Buyer?</th>
+                                    <th>First Last Name</th>
+                                    <th>Email Categories</th>
+                                    <th>Cell Phone</th>
+                                    <th>Company Name</th>
+                                    <th>Contact</th>
+                                    <th>Comments</th>
+                                    <th>NOTES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="buyers-sheet-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="buyers-sheet-note">Tip: Click into any cell to edit. Data is saved automatically in this browser.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <button class="mobile-menu-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    </button>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+    <script>
+                // Select/Deselect All logic
+                function buyersEmailSelectAll(val) {
+                    const checkboxes = document.querySelectorAll('.buyers-email-recipient-toggle');
+                    checkboxes.forEach(cb => { cb.checked = val; });
+                }
+                document.addEventListener('click', function(e) {
+                    if (e.target && e.target.id === 'buyers-email-select-all') {
+                        e.preventDefault();
+                        buyersEmailSelectAll(true);
+                    } else if (e.target && e.target.id === 'buyers-email-deselect-all') {
+                        e.preventDefault();
+                        buyersEmailSelectAll(false);
+                    }
+                });
+        (function () {
+                    // --- Bulk Email Modal Logic ---
+                    const buyersSendEmailBtn = document.getElementById('buyers-send-email-btn');
+                    const buyersEmailModal = document.getElementById('buyers-email-modal');
+                    const closeBuyersEmailModal = document.getElementById('close-buyers-email-modal');
+                    const cancelBuyersEmail = document.getElementById('cancel-buyers-email');
+                    const buyersEmailForm = document.getElementById('buyers-email-form');
+                    const buyersEmailStatus = document.getElementById('buyers-email-status');
+
+                    function openBuyersEmailModal() {
+                        buyersEmailModal.style.display = 'flex';
+                        buyersEmailStatus.textContent = '';
+                        buyersEmailForm.reset();
+                        // Populate recipient toggles
+                        const recipientsList = document.getElementById('buyers-email-recipients-list');
+                        recipientsList.innerHTML = '';
+                        const rows = Array.from(document.getElementById('buyers-sheet-body').querySelectorAll('tr'));
+                        let count = 0;
+                        rows.forEach((tr, idx) => {
+                            const emailCell = tr.children[2];
+                            if (!emailCell) return;
+                            const email = String(emailCell.textContent || '').split('|')[0].trim();
+                            if (!/@/.test(email)) return;
+                            const name = tr.children[1] ? tr.children[1].textContent.trim() : '';
+                            const id = `buyers-email-recipient-${idx}`;
+                            const div = document.createElement('div');
+                            div.style.marginBottom = '4px';
+                            div.innerHTML = `<label style="display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;"><input type="checkbox" class="buyers-email-recipient-toggle" id="${id}" value="${email}" checked style="margin:0 4px 0 0;">${name ? `<span>${name}</span>` : ''}<span style="color:#666;font-size:13px;">${email}</span></label>`;
+                            recipientsList.appendChild(div);
+                            count++;
+                        });
+                        if (count === 0) {
+                            recipientsList.innerHTML = '<span style="color:#b91c1c;">No buyer emails found.</span>';
+                        }
+                    }
+                    function closeBuyersEmail() {
+                        buyersEmailModal.style.display = 'none';
+                    }
+                    buyersSendEmailBtn.addEventListener('click', openBuyersEmailModal);
+                    closeBuyersEmailModal.addEventListener('click', closeBuyersEmail);
+                    cancelBuyersEmail.addEventListener('click', closeBuyersEmail);
+
+                    buyersEmailForm.addEventListener('submit', async function (e) {
+                        e.preventDefault();
+                        buyersEmailStatus.textContent = 'Sending...';
+                        const subject = document.getElementById('buyers-email-subject').value.trim();
+                        const body = document.getElementById('buyers-email-body').value.trim();
+                        // Get checked emails only
+                        const checked = Array.from(document.querySelectorAll('.buyers-email-recipient-toggle:checked'));
+                        const emails = checked.map(cb => cb.value);
+                        if (emails.length === 0) {
+                            buyersEmailStatus.textContent = 'No recipients selected.';
+                            return;
+                        }
+                        try {
+                            // Send to server for bulk email
+                            const res = await fetch('/api/send-agent-email', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    toEmail: emails.join(','),
+                                    subject,
+                                    body
+                                })
+                            });
+                            const data = await res.json();
+                            if (res.ok && data.success) {
+                                buyersEmailStatus.textContent = 'Email sent!';
+                            } else {
+                                buyersEmailStatus.textContent = 'Error: ' + (data.error || 'Failed to send email.');
+                            }
+                        } catch (err) {
+                            buyersEmailStatus.textContent = 'Error: ' + (err.message || 'Failed to send email.');
+                        }
+                    });
+            const STORAGE_KEY_BASE = 'activeBuyersSheetRows';
+
+            function safeReadJson(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key) || '{}');
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function getUserStorageKey() {
+                const profile = safeReadJson('userProfile');
+                const user = safeReadJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'default-user').trim().toLowerCase();
+                const userKey = email || name.replace(/\s+/g, '-') || 'default-user';
+                return `${STORAGE_KEY_BASE}:${userKey}`;
+            }
+
+            const STORAGE_KEY = getUserStorageKey();
+            const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
+            const DEFAULT_ROWS = [
+                { activeBuyer: 'BUYER', name: 'Andrew Vakis', emailCategories: 'andrewvakis@yahoo.com | Investors', cellPhone: '9494234567', companyName: 'VR California Holdings, LLC', contact: 'ALL IN', comments: '', notes: 'SB / LA' },
+                { activeBuyer: 'BUYER', name: 'Art Acosta', emailCategories: 'artacosta33@gmail.com | Investors', cellPhone: '9099176091', companyName: 'Call To Get Name of Company', contact: 'ALL IN', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Brad Caimi', emailCategories: 'brad@105-west.com | Wholesaler', cellPhone: '', companyName: '', contact: 'ALL IN', comments: '', notes: 'BUYING' },
+                { activeBuyer: 'BUYER', name: 'Brett Hupe', emailCategories: 'bhupe@att.net | Investors', cellPhone: '9513331933', companyName: 'KMC Investment Corp/Jett parnters Lp', contact: 'ALL IN', comments: '', notes: 'BUYING' },
+                { activeBuyer: 'BUYER', name: 'Chris Sheppard', emailCategories: 'chris@cs7.biz | Investors', cellPhone: '949-433-7035', companyName: '', contact: 'ALL IN', comments: 'Buys up to $2m, similar box to ours, South Orange county', notes: 'BUYING' },
+                { activeBuyer: 'BUYER', name: 'Cory Chalker', emailCategories: 'corychalker@hotmail.com | Investors', cellPhone: '8057696776', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Daniel Valdivia', emailCategories: 'danielbuysproperties@gmail.com | Investors', cellPhone: '909-544-2266', companyName: 'D&A Investments', contact: '', comments: 'No LA City. East of 605. Anything IE.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'David Dgingeurian', emailCategories: 'david@justsold.com | Investors', cellPhone: '8184273131', companyName: 'DGINGER GROUP LLC', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'David Friedman', emailCategories: 'dfriedman@realicore.com | Investors', cellPhone: '', companyName: 'Inland Maple Partners, LLC', contact: 'NOT BUYING RIGHT NOW', comments: 'If anything in San Bernardino & Riverside multi-fam/units up to $1m, he will look at it.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Enrique Campos', emailCategories: 'ecampos@c21plaza.com | Investors', cellPhone: '8183001595', companyName: 'CAMPOS MANAGING GROUP CORP', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Eran Fattal', emailCategories: 'eranfattal@gmail.com | Investors', cellPhone: '8183355626', companyName: 'Call To Get Name of Company', contact: 'ALL IN', comments: '', notes: 'BUYING' },
+                { activeBuyer: 'BUYER', name: 'Ernesto Garcia', emailCategories: 'egarcia72@msn.com | Investors', cellPhone: '9516403557', companyName: 'SOUTH COUNTY REALTORS', contact: 'BUYING', comments: 'Still buying anything under 600k. Cookie cutter properties, SB, Riverside, anything before the 605 fwy, El Monte, HH.', notes: 'Buying sm' },
+                { activeBuyer: 'BUYER', name: 'Fabricio Badiola', emailCategories: 'fabib@elitepremierpropertiesinc.com | Investors', cellPhone: '9512025480', companyName: 'Elite Premier Investments Inc', contact: 'ALL IN', comments: '', notes: 'BUYING' },
+                { activeBuyer: 'BUYER', name: 'Gary Sorley', emailCategories: 'gary_sorley@email.com | Investors', cellPhone: '9512121772', companyName: 'Safe Harbor Lending, LLC', contact: 'ALL IN', comments: 'High Desert buyer', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Iris Veneracon', emailCategories: 'iris@investore.net | Investors', cellPhone: '7143808009', companyName: '', contact: 'ALL IN', comments: 'Buying mainly in Orange County. Will buy within 20 miles of Orange city. Will buy Glendora, West Covina, Covina, San Dimas, Azusa.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Jared Jones', emailCategories: 'jjones@powerof2realty.com | Investors', cellPhone: '9512550908', companyName: 'JSAMJ INC', contact: 'ALL IN', comments: '', notes: 'sm/lm' },
+                { activeBuyer: 'BUYER', name: 'Jessie Rodriguez', emailCategories: 'jessie@calamericanreo.com | Investors', cellPhone: '9095590815', companyName: 'Boulevard Investment Group Inc', contact: '', comments: '', notes: 'sm/lm' },
+                { activeBuyer: 'BUYER', name: 'Joshua Fard', emailCategories: 'josh@paliinv.com | Investors', cellPhone: '3234006664', companyName: 'Mell Investments', contact: 'BUYING', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Judi Reimer', emailCategories: 'judi@morgan55inc.com | Investors', cellPhone: '3109485755', companyName: '', contact: 'BUYING', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Leighton Silva', emailCategories: 'leightonsilva@gmail.com | Investors', cellPhone: '951-543-1061', companyName: '', contact: 'ALL IN', comments: 'Joaquin', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Michael DiCarlo', emailCategories: 'mdicarlo06@gmail.com | Investor', cellPhone: '909-229-3783', companyName: '', contact: 'BUYING', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Mac Salcido', emailCategories: 'mac@emmentalconstruction.com | Investors', cellPhone: '9097327434', companyName: 'YQUE PROPERTY ENTS LLC', contact: 'BUYING', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Ricardo Acevedo', emailCategories: 'RICARDOC21REO@GMAIL.COM | Investors', cellPhone: '9519034430', companyName: '', contact: 'ALL IN', comments: '', notes: 'BUYING' },
+                { activeBuyer: 'BUYER', name: 'Shawn Pfaff', emailCategories: 'bofadezz@yahoo.com | Investors', cellPhone: '9519069713', companyName: 'SM Desert Properties, LLC', contact: 'BUYING', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Roger Zapata', emailCategories: 'rogerzcard@gmail.com | Investors', cellPhone: '6266223219', companyName: 'SO CAL REALTY & LOANS', contact: 'ALL', comments: '', notes: 'BUYING' }
+            ];
+            const LA_ROWS = [
+                { activeBuyer: 'BUYER', name: 'Liron Avraham', emailCategories: 'LironAvraham@hotmail.com | Wholesaler', cellPhone: '323-247-8178', companyName: '', contact: 'BUYING', comments: 'Solid wholesaler; has vetted buyers.', notes: 'LA' },
+                { activeBuyer: 'BUYER', name: 'Lilly Williams', emailCategories: 'lilly@ccdlhomes.com | Investors', cellPhone: '9494817924', companyName: 'Angeleno Homes, LLC', contact: 'ALL IN', comments: 'South LA only, SFR & 4 units, no condos or townhomes, C4K, $700k max.', notes: 'LA' },
+                { activeBuyer: 'BUYER', name: 'Manuel Badiola', emailCategories: 'manny@monacorealtyca.com | Investors', cellPhone: '9095181576', companyName: 'Call To Get Name of Company', contact: '', comments: 'Cookie cutter properties, $200k-$800k, LA County, IE, Riverside & Orange, also heavy construction.', notes: 'LA' },
+                { activeBuyer: 'BUYER', name: 'Mike Ly', emailCategories: 'mike@calamericanhomes.com | Investors', cellPhone: '9099176643', companyName: 'Cal American Homes', contact: 'BUYING', comments: '', notes: 'sm' },
+                { activeBuyer: 'BUYER', name: 'Parker Tuck', emailCategories: 'parker@homelovelp.com | Investors', cellPhone: '5015905570', companyName: 'Sundae', contact: '', comments: 'West Side LA, higher end only.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Philip De Los Reyes', emailCategories: 'sellingsocal@yahoo.com | Investors', cellPhone: '9095604311', companyName: 'Kmd Group Llc', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Ricky Castellanos', emailCategories: 'ricky@refinedprojectsla.com | Investors', cellPhone: '3103435828', companyName: 'Black Diamond Capital LLC', contact: 'ALL IN', comments: 'West LA, Culver City SFRs.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Robert Phipps', emailCategories: 'rphipps9@gmail.com | Investors', cellPhone: '8058135626', companyName: 'Ramp Properties Inc.', contact: '', comments: 'Buys West LA, San Fernando, Valencia; about 1 property every month.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Robert Arrieta', emailCategories: 'RanchoRobert@hotmail.com | Investors', cellPhone: '9520000000', companyName: 'COAST AND COUNTRY REAL ESTATE', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Robert MAY', emailCategories: 'ROBERTJMAY1970@GMAIL.COM | Investors', cellPhone: '', companyName: 'UPTOWN REALTORS', contact: 'ALL IN', comments: '', notes: 'BUYING' },
+                { activeBuyer: 'BUYER', name: 'Sam Weaver', emailCategories: 'weavsam@gmail.com | Investors', cellPhone: '9494845114', companyName: 'Fortune Weavers Inc.', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Sean Brunske', emailCategories: 'seanbrunsk@aol.com | Investors', cellPhone: '9512881762', companyName: 'NICANTHONY LLC', contact: 'ALL IN', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Steve George', emailCategories: 'Sgeorge@morgan55inc.com | Investors', cellPhone: '9493948711', companyName: 'The Morgan Group', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Vinh Le', emailCategories: 'vinh.nrigroup@gmail.com | Investors', cellPhone: '7143344302', companyName: 'NRI Group', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Yolanda Oroz', emailCategories: 'yorozrealtor@gmail.com | Investors', cellPhone: '6262600044', companyName: 'Heart Properties LLC', contact: 'ALL IN', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Zully Gonzalez', emailCategories: 'zully@thehouseteaminc.com | Investors', cellPhone: '3107280414', companyName: '', contact: 'ALL IN', comments: 'LA buyer; need to call Sergio.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Kristina Koukladas', emailCategories: 'kristina.koukladas@krpmgroup.com | Investor', cellPhone: '', companyName: 'KRPM Investment Group', contact: '', comments: 'LA, Riverside, Orange. Pool of 50-60 investors through her property management company.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Tony Nelson', emailCategories: 'gosynergy@aol.com | Investor', cellPhone: '626-536-2225', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Mike Espinoza', emailCategories: 'mikensue2414@gmail.com | Investor', cellPhone: '909-952-3470', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Jose', emailCategories: 'centurianre@hotmail.com | Investor', cellPhone: '951-538-5495', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Jimmy', emailCategories: 'jespinoza@deorogroup.com | Investor', cellPhone: '909-376-5500', companyName: 'DeOro Group', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Art Ramos', emailCategories: 'artramosrealestate@gmail.com | Investor', cellPhone: '', companyName: '', contact: '', comments: 'Still buying.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Rashad Ryan', emailCategories: 'escrowcloser@gmail.com | Investor', cellPhone: '310-782-5681', companyName: '', contact: '', comments: 'Open to all situations in LA or Orange County.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Cris Cerritos', emailCategories: 'Investor', cellPhone: '213-409-9793', companyName: 'TonyBuysHomes Inc', contact: '', comments: 'SFR fixers & 2-4 units under $1.5M anywhere in LA for rehab and resale.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Jose Rosales', emailCategories: 'joserosalesremax@gmail.com | Investor', cellPhone: '714-851-1099', companyName: '', contact: '', comments: 'Buys SFR up to 3 units. Buy-and-hold and flips. Up to $750k.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Alma', emailCategories: 'alma_n@pacbell.net | Investor', cellPhone: '714-366-4344', companyName: '', contact: '', comments: 'Buy and hold, all 4 counties, units.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Norma Chavez', emailCategories: 'chnorma@me.com | Investor', cellPhone: '562-537-5636', companyName: '', contact: '', comments: 'Buys 4 units possibly more; mainly nice neighborhoods.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Kevin Finley', emailCategories: 'kevin@kevinfinleybroker.com | Investor', cellPhone: '626-343-7706', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Abbi Ilagan', emailCategories: 'abbi@chuckandjennbuyhomes.com | Investor', cellPhone: '949-979-6001', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Adam Sparks', emailCategories: 'adam@adamsparks.com | Investor', cellPhone: '951-522-0887', companyName: '', contact: '', comments: 'Temecula. 450k max. 3+ beds, 2+ baths.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Eddie Booth', emailCategories: 'boothemail@yahoo.com | Investor', cellPhone: '', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Leo', emailCategories: 'Investor', cellPhone: '951-456-4377', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Ruben Gutierrez', emailCategories: 'rrgutier@hotmail.com | Investor', cellPhone: '310-318-4265', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Jorge', emailCategories: 'Buyer', cellPhone: '909-503-4393', companyName: 'RTF investments', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'David Vellez', emailCategories: 'Buyer', cellPhone: '714-794-3919', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Jose', emailCategories: 'threekingsco@yahoo.com | Buyer', cellPhone: '626-529-4953', companyName: '', contact: 'BUYING', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Zach Myers', emailCategories: 'zachary@spvhomebuyers.com | Wholesaler', cellPhone: '714-392-4883', companyName: '', contact: 'BUYING', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Mack', emailCategories: 'mack@realepictrade.com | Buyer', cellPhone: '818-770-2083', companyName: 'Real Epic Trade', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Rick Vielma', emailCategories: 'rick.vielma@tbhgroup.net | Buyer', cellPhone: '619-473-2257', companyName: 'TBH Group', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'DBernal07', emailCategories: 'dbernal07.db@gmail.com | Buyer', cellPhone: '', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Caldera', emailCategories: 'Bryan@spgbuyer.com | Buyer', cellPhone: '213-449-6792', companyName: 'SPG Buyers', contact: '', comments: 'Inventory includes Orange, LA, Fresno, Riverside, and Sacramento counties; expanding to other CA cities.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Ilagan', emailCategories: 'Buyer', cellPhone: '949-979-6001', companyName: 'On Faith Properties', contact: '', comments: 'Buys SFRs and multi-units.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Perry Handy', emailCategories: 'PjHandy35@yahoo.com | Buyer', cellPhone: '714-204-5514', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Tony Perez', emailCategories: 'Buyer', cellPhone: '323-251-8300', companyName: '', contact: '', comments: 'Long Beach; likes units.', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Haig', emailCategories: 'haig@opuscrest.com | Buyer', cellPhone: '323-458-7910', companyName: '', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Matt Beard', emailCategories: 'mattbeard@mainplacehomes.com | Buyer', cellPhone: '469-484-7970', companyName: 'High Acheiver Homes', contact: '', comments: '', notes: '' },
+                { activeBuyer: 'BUYER', name: 'Kenneth', emailCategories: 'kenneths@toprankedhomebuyers.com | Buyer', cellPhone: '213-946-0664', companyName: 'Top Ranked Home Buyers', contact: '', comments: '', notes: '' }
+            ];
+            const SEEDED_ROWS = DEFAULT_ROWS.concat(LA_ROWS);
+            const body = document.getElementById('buyers-sheet-body');
+            const addRowBtn = document.getElementById('buyers-add-row');
+
+            if (!body || !addRowBtn) {
+                return;
+            }
+
+            function createRow(data) {
+                const tr = document.createElement('tr');
+
+                const activeCell = document.createElement('td');
+                activeCell.className = 'active-buyer-cell';
+                activeCell.contentEditable = 'true';
+                activeCell.spellcheck = false;
+                activeCell.textContent = (data && (data.activeBuyer || (data.active ? 'BUYER' : ''))) || '';
+                applyActiveBuyerCellStyle(activeCell);
+                activeCell.addEventListener('input', () => {
+                    applyActiveBuyerCellStyle(activeCell);
+                    saveRows();
+                });
+                tr.appendChild(activeCell);
+
+                ['name', 'emailCategories', 'cellPhone', 'companyName', 'contact', 'comments', 'notes'].forEach(key => {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.spellcheck = false;
+                    td.textContent = (data && data[key]) || '';
+                    td.addEventListener('input', saveRows);
+                    tr.appendChild(td);
+                });
+
+                return tr;
+            }
+
+            function applyActiveBuyerCellStyle(cell) {
+                if (!cell) {
+                    return;
+                }
+                const value = String(cell.textContent || '').trim();
+                const isBuyer = /^buyer$/i.test(value);
+                cell.classList.toggle('is-buyer', isBuyer);
+                if (isBuyer) {
+                    cell.textContent = 'BUYER';
+                }
+            }
+
+            function getRowsFromDom() {
+                return Array.from(body.querySelectorAll('tr')).map(tr => {
+                    const cells = tr.querySelectorAll('td');
+                    return {
+                        activeBuyer: cells[0] ? cells[0].textContent.trim() : 'BUYER',
+                        name: cells[1] ? cells[1].textContent.trim() : '',
+                        emailCategories: cells[2] ? cells[2].textContent.trim() : '',
+                        cellPhone: cells[3] ? cells[3].textContent.trim() : '',
+                        companyName: cells[4] ? cells[4].textContent.trim() : '',
+                        contact: cells[5] ? cells[5].textContent.trim() : '',
+                        comments: cells[6] ? cells[6].textContent.trim() : '',
+                        notes: cells[7] ? cells[7].textContent.trim() : ''
+                    };
+                });
+            }
+
+            function saveRows() {
+                const rows = getRowsFromDom();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+            }
+
+            function getRowKey(row) {
+                const name = String((row && row.name) || '').trim().toLowerCase();
+                const emailSource = String((row && row.emailCategories) || '').split('|')[0].trim().toLowerCase();
+                return `${name}::${emailSource}`;
+            }
+
+            function mergeMissingSeedRows(rows) {
+                const currentRows = Array.isArray(rows) ? rows.slice() : [];
+                const keySet = new Set(currentRows.map(getRowKey));
+
+                SEEDED_ROWS.forEach(seed => {
+                    const key = getRowKey(seed);
+                    if (!keySet.has(key)) {
+                        currentRows.push(seed);
+                        keySet.add(key);
+                    }
+                });
+
+                return currentRows;
+            }
+
+            function loadRows() {
+                let rows = [];
+                try {
+                    const stored = localStorage.getItem(STORAGE_KEY);
+                    if (stored) {
+                        rows = JSON.parse(stored);
+                    } else {
+                        const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
+                        rows = legacyStored ? JSON.parse(legacyStored) : [];
+                        if (Array.isArray(rows) && rows.length > 0) {
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+                        }
+                    }
+                } catch (error) {
+                    rows = [];
+                }
+
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    rows = SEEDED_ROWS;
+                }
+
+                if (rows.length === 1) {
+                    const single = rows[0] || {};
+                    const isSingleEmpty = !String(single.activeBuyer || '').trim()
+                        && !String(single.name || '').trim()
+                        && !String(single.emailCategories || '').trim()
+                        && !String(single.cellPhone || '').trim()
+                        && !String(single.companyName || '').trim()
+                        && !String(single.contact || '').trim()
+                        && !String(single.comments || '').trim()
+                        && !String(single.notes || '').trim();
+
+                    if (isSingleEmpty) {
+                        rows = SEEDED_ROWS;
+                    }
+                }
+
+                rows = mergeMissingSeedRows(rows);
+
+                body.innerHTML = '';
+                rows.forEach(row => {
+                    body.appendChild(createRow(row));
+                });
+            }
+
+            addRowBtn.addEventListener('click', function () {
+                body.appendChild(createRow({ activeBuyer: '' }));
+                saveRows();
+            });
+
+            window.addEventListener('beforeunload', saveRows);
+            window.addEventListener('pagehide', saveRows);
+
+            loadRows();
+        })();
+    </script>
+</body>
+</html>
+

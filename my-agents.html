@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Agents - FAST BRIDGE GROUP Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Private agent roster spreadsheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .buyers-sheet-wrap {
+            margin-top: 24px;
+            --buyers-border: rgba(var(--accent-light-rgb), 0.22);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(13, 26, 20, 0.46), rgba(19, 36, 25, 0.32));
+            --buyers-head-bg: linear-gradient(135deg, rgba(var(--accent-rgb), 0.72), rgba(10, 20, 16, 0.9));
+            --buyers-head-text: #f8fafc;
+            --buyers-row-bg: rgba(255, 255, 255, 0.04);
+            --buyers-row-bg-alt: rgba(255, 255, 255, 0.08);
+            --buyers-focus-bg: rgba(var(--accent-light-rgb), 0.2);
+            --buyers-focus-ring: rgba(var(--accent-light-rgb), 0.52);
+            --buyers-note: var(--text-secondary);
+            --buyers-scroll-thumb: rgba(var(--accent-light-rgb), 0.58);
+            --buyers-scroll-track: rgba(255, 255, 255, 0.08);
+            --buyers-count-bg: rgba(15, 23, 42, 0.72);
+            --buyers-count-border: rgba(148, 163, 184, 0.24);
+            --buyers-count-text: #f8fafc;
+        }
+
+        .buyers-sheet-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            display: block;
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: auto;
+            scrollbar-color: var(--buyers-scroll-thumb) var(--buyers-scroll-track);
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar {
+            height: 14px;
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar-thumb {
+            background: var(--buyers-scroll-thumb);
+            border-radius: 8px;
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar-track {
+            background: var(--buyers-scroll-track);
+            border-radius: 8px;
+        }
+
+        .buyers-sheet-table {
+            width: max-content;
+            min-width: 1280px;
+            max-width: none;
+            border-collapse: collapse;
+        }
+
+        @media (max-width: 1200px) {
+            .buyers-sheet-table {
+                min-width: 1280px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .buyers-sheet-table {
+                min-width: 1280px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .buyers-sheet-table {
+                min-width: 1280px;
+                font-size: 13px;
+            }
+
+            .buyers-sheet-table thead th,
+            .buyers-sheet-table tbody td {
+                padding: 6px;
+            }
+        }
+
+        .buyers-sheet-card {
+            padding: 18px;
+            overflow: visible;
+        }
+
+        .buyers-sheet-wrap {
+            min-width: 0;
+        }
+
+        .buyers-sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .buyers-sheet-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--buyers-border);
+            border-radius: 16px;
+            background: var(--buyers-wrap-bg);
+            backdrop-filter: blur(8px);
+        }
+
+        .buyers-sheet-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--buyers-head-bg);
+            color: var(--buyers-head-text);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 12px;
+            text-align: left;
+            border-right: 1px solid var(--buyers-border);
+            white-space: nowrap;
+        }
+
+        .buyers-sheet-table thead th:last-child {
+            border-right: 0;
+        }
+
+        .buyers-sheet-table tbody td {
+            padding: 10px;
+            border-right: 1px solid var(--buyers-border);
+            border-top: 1px solid var(--buyers-border);
+            background: var(--buyers-row-bg);
+            color: var(--text-primary);
+            min-height: 42px;
+            vertical-align: top;
+        }
+
+        .buyers-sheet-table tbody td:last-child {
+            border-right: 0;
+        }
+
+        .buyers-sheet-table tbody tr:nth-child(even) td {
+            background: var(--buyers-row-bg-alt);
+        }
+
+        .buyers-sheet-table td[contenteditable="true"] {
+            outline: none;
+            min-width: 140px;
+            cursor: text;
+        }
+
+        .buyers-sheet-table td[contenteditable="true"]:focus {
+            box-shadow: inset 0 0 0 2px var(--buyers-focus-ring);
+            background: var(--buyers-focus-bg);
+        }
+
+        .buyers-sheet-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
+        .buyers-sheet-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: var(--buyers-count-bg);
+            border: 1px solid var(--buyers-count-border);
+            color: var(--buyers-count-text);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        [data-theme="light"] .buyers-sheet-wrap {
+            --buyers-border: rgba(6, 78, 59, 0.2);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(233, 246, 238, 0.9));
+            --buyers-head-bg: linear-gradient(135deg, rgba(6, 78, 59, 0.82), rgba(5, 46, 35, 0.9));
+            --buyers-head-text: #f8fafc;
+            --buyers-row-bg: rgba(255, 255, 255, 0.72);
+            --buyers-row-bg-alt: rgba(233, 245, 239, 0.9);
+            --buyers-focus-bg: rgba(209, 250, 229, 0.85);
+            --buyers-focus-ring: rgba(var(--accent-rgb), 0.36);
+            --buyers-note: rgba(18, 37, 30, 0.72);
+            --buyers-scroll-thumb: rgba(6, 78, 59, 0.42);
+            --buyers-scroll-track: rgba(222, 239, 231, 0.92);
+            --buyers-count-bg: rgba(6, 78, 59, 0.78);
+            --buyers-count-border: rgba(6, 78, 59, 0.24);
+            --buyers-count-text: #f8fafc;
+        }
+
+        [data-theme="beach"] .buyers-sheet-wrap {
+            --buyers-border: rgba(12, 74, 110, 0.24);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.44), rgba(214, 241, 249, 0.66));
+            --buyers-head-bg: linear-gradient(135deg, rgba(7, 89, 133, 0.88), rgba(12, 74, 110, 0.94));
+            --buyers-head-text: #f0fbff;
+            --buyers-row-bg: rgba(232, 248, 253, 0.72);
+            --buyers-row-bg-alt: rgba(252, 236, 206, 0.62);
+            --buyers-focus-bg: rgba(186, 230, 253, 0.7);
+            --buyers-focus-ring: rgba(2, 132, 199, 0.45);
+            --buyers-note: rgba(11, 58, 82, 0.75);
+            --buyers-scroll-thumb: rgba(7, 89, 133, 0.48);
+            --buyers-scroll-track: rgba(214, 241, 249, 0.84);
+            --buyers-count-bg: rgba(7, 89, 133, 0.82);
+            --buyers-count-border: rgba(12, 74, 110, 0.24);
+            --buyers-count-text: #f0fbff;
+        }
+
+        [data-theme="swamp"] .buyers-sheet-wrap {
+            --buyers-border: rgba(196, 167, 111, 0.24);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(49, 65, 31, 0.74), rgba(93, 68, 39, 0.48));
+            --buyers-head-bg: linear-gradient(135deg, rgba(93, 124, 46, 0.94), rgba(94, 67, 38, 0.94));
+            --buyers-head-text: #fff8df;
+            --buyers-row-bg: rgba(37, 48, 24, 0.72);
+            --buyers-row-bg-alt: rgba(73, 56, 32, 0.56);
+            --buyers-focus-bg: rgba(126, 162, 74, 0.22);
+            --buyers-focus-ring: rgba(196, 167, 111, 0.46);
+            --buyers-note: rgba(247, 243, 223, 0.76);
+            --buyers-scroll-thumb: rgba(196, 167, 111, 0.54);
+            --buyers-scroll-track: rgba(41, 53, 26, 0.74);
+            --buyers-count-bg: rgba(77, 100, 41, 0.82);
+            --buyers-count-border: rgba(196, 167, 111, 0.3);
+            --buyers-count-text: #fff8df;
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/Fast Logo - 111.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="dashboard.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="analytics.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                Analytics
+                                <span class="nav-badge">New</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2L3 14h7l-1 8 10-12h-7z"/>
+                                </svg>
+                                MLS Hot Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls-search.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="7"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                MLS Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="active-buyers.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 5h18"/>
+                                    <path d="M3 12h18"/>
+                                    <path d="M3 19h18"/>
+                                </svg>
+                                Active Buyers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4v16" />
+                                    <path d="M4 4h13l-2 5 2 5H4" />
+                                </svg>
+                                Campaigns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="admin-controls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                    <path d="M8 20h8"/>
+                                    <path d="M12 16v4"/>
+                                </svg>
+                                Admin Controls
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link active">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="login.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <h1 class="page-title">My Agents</h1>
+                <div class="navbar-right">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" class="search-input" placeholder="Search agent roster...">
+                    </div>
+                    <button class="nav-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notification-dot"></span>
+                    </button>
+                    <button class="nav-btn" id="theme-toggle" title="Toggle Light/Dark Mode">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="4"/>
+                            <path d="M12 2v2"/><path d="M12 20v2"/>
+                            <path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/>
+                            <path d="M2 12h2"/><path d="M20 12h2"/>
+                            <path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>
+                        </svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                </div>
+            </nav>
+
+            <section class="buyers-sheet-wrap">
+                <div class="glass-card buyers-sheet-card">
+                    <div class="buyers-sheet-header">
+                        <div>
+                            <h2 class="card-title">My Agents Spreadsheet</h2>
+                            <p class="card-subtitle">Track the agents, brokerages, markets, and follow-up notes tied to your pipeline.</p>
+                        </div>
+                        <div class="buyers-sheet-actions">
+                            <span id="my-agents-count" class="buyers-sheet-count">0 Agents</span>
+                            <button id="my-agents-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="my-agents-add-row" class="card-btn active" type="button">Add Row</button>
+                        </div>
+                    </div>
+
+                    <div class="buyers-sheet-table-wrap">
+                        <table class="buyers-sheet-table" id="my-agents-sheet-table">
+                            <thead>
+                                <tr>
+                                    <th>Agent Name</th>
+                                    <th>Brokerage</th>
+                                    <th>Email</th>
+                                    <th>Cell Phone</th>
+                                    <th>Market</th>
+                                    <th>Specialty</th>
+                                    <th>Status</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="my-agents-sheet-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="buyers-sheet-note">Tip: Click into any cell to edit. Your agent roster saves automatically in this browser.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <button class="mobile-menu-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    </button>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+    <script>
+        (function () {
+            const STORAGE_KEY_BASE = 'myAgentsSheetRows';
+            const IMPORT_SOURCES = [
+                {
+                    matchers: ['isaacs.hesed@gmail.com', 'isaac haro', 'isaac'],
+                    paths: [
+                        'Isaac Haro (ADMIN)/Contacts/xvwss-k5487.csv',
+                        'Isaac Haro (ADMIN)/Contacts/3mta4-rqpln.csv'
+                    ]
+                },
+                {
+                    matchers: ['medinafbg@gmail.com', 'steve medina', 'steve'],
+                    paths: ['Steve Medina (ADMIN)/Contacts/Phone logs.csv']
+                }
+            ];
+
+            function safeReadJson(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key) || '{}');
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function getUserContext() {
+                const profile = safeReadJson('userProfile');
+                const user = safeReadJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'default-user').trim();
+                const normalizedName = name.toLowerCase();
+                const userKey = email || normalizedName.replace(/\s+/g, '-') || 'default-user';
+
+                return {
+                    email,
+                    name,
+                    normalizedName,
+                    userKey
+                };
+            }
+
+            function getUserIdentityAliases() {
+                const userContext = getUserContext();
+                const aliases = new Set();
+
+                if (userContext.email) {
+                    aliases.add(userContext.email);
+                    const localPart = userContext.email.split('@')[0];
+                    if (localPart) {
+                        aliases.add(localPart);
+                    }
+                }
+
+                if (userContext.normalizedName) {
+                    aliases.add(userContext.normalizedName);
+                    aliases.add(userContext.normalizedName.replace(/\s+/g, '-'));
+                    userContext.normalizedName.split(/\s+/g).filter(Boolean).forEach(part => aliases.add(part));
+                }
+
+                return aliases;
+            }
+
+            function normalizeIdentityMatcher(value) {
+                const normalized = String(value || '').trim().toLowerCase();
+                if (!normalized) {
+                    return '';
+                }
+
+                if (normalized.includes('@')) {
+                    return normalized;
+                }
+
+                return normalized.replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+
+            function getUserStorageKey() {
+                return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            const STORAGE_KEY = getUserStorageKey();
+            const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
+            const DEFAULT_ROWS = [
+                { agentName: '', brokerage: '', email: '', cellPhone: '', market: '', specialty: '', status: '', notes: '' }
+            ];
+            const body = document.getElementById('my-agents-sheet-body');
+            const countBadge = document.getElementById('my-agents-count');
+            const addRowBtn = document.getElementById('my-agents-add-row');
+            const exportCsvBtn = document.getElementById('my-agents-export-csv');
+            let hasLocalEdits = false;
+
+            if (!body || !countBadge || !addRowBtn || !exportCsvBtn) {
+                return;
+            }
+
+            function showToast(type, title, message) {
+                if (typeof window.showDashboardToast === 'function') {
+                    window.showDashboardToast(type, title, message);
+                }
+            }
+
+            function createCell(value) {
+                const td = document.createElement('td');
+                td.contentEditable = 'true';
+                td.spellcheck = false;
+                td.textContent = value || '';
+                td.addEventListener('input', saveRows);
+                td.addEventListener('blur', saveRows);
+                return td;
+            }
+
+            function createRow(data) {
+                const tr = document.createElement('tr');
+                ['agentName', 'brokerage', 'email', 'cellPhone', 'market', 'specialty', 'status', 'notes'].forEach(key => {
+                    tr.appendChild(createCell((data && data[key]) || ''));
+                });
+                return tr;
+            }
+
+            function getRowsFromDom() {
+                return Array.from(body.querySelectorAll('tr')).map(tr => {
+                    const cells = tr.querySelectorAll('td');
+                    return {
+                        agentName: cells[0] ? cells[0].textContent.trim() : '',
+                        brokerage: cells[1] ? cells[1].textContent.trim() : '',
+                        email: cells[2] ? cells[2].textContent.trim() : '',
+                        cellPhone: cells[3] ? cells[3].textContent.trim() : '',
+                        market: cells[4] ? cells[4].textContent.trim() : '',
+                        specialty: cells[5] ? cells[5].textContent.trim() : '',
+                        status: cells[6] ? cells[6].textContent.trim() : '',
+                        notes: cells[7] ? cells[7].textContent.trim() : ''
+                    };
+                });
+            }
+
+            function isMeaningfulValue(value) {
+                return String(value || '').trim().length > 0;
+            }
+
+            function isMeaningfulRow(row) {
+                return !!row && [
+                    row.agentName,
+                    row.brokerage,
+                    row.email,
+                    row.cellPhone,
+                    row.market,
+                    row.specialty,
+                    row.status,
+                    row.notes
+                ].some(isMeaningfulValue);
+            }
+
+            function normalizeTextToken(value) {
+                return String(value || '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            function normalizePhone(value) {
+                return String(value || '').replace(/\D+/g, '');
+            }
+
+            function normalizeEmail(value) {
+                return String(value || '').trim().toLowerCase();
+            }
+
+            function hasAgentLabel(value) {
+                return /\bagent\b/i.test(String(value || ''));
+            }
+
+            function isLikelyImportedContactRow(row) {
+                if (!row || !isMeaningfulValue(row.agentName)) {
+                    return false;
+                }
+
+                return !isMeaningfulValue(row.brokerage)
+                    && !isMeaningfulValue(row.market)
+                    && !isMeaningfulValue(row.specialty)
+                    && !isMeaningfulValue(row.status)
+                    && !isMeaningfulValue(row.notes)
+                    && (isMeaningfulValue(row.cellPhone) || isMeaningfulValue(row.email));
+            }
+
+            function shouldKeepImportedAgentRow(row) {
+                const agentName = String(row && row.agentName || '').trim();
+                if (!agentName || !hasAgentLabel(agentName)) {
+                    return false;
+                }
+
+                return !/^unknown\s+agent$/i.test(agentName);
+            }
+
+            function buildRowDedupKey(row) {
+                const normalizedName = normalizeTextToken(row && row.agentName);
+                if (normalizedName) {
+                    return `name:${normalizedName}`;
+                }
+
+                const email = normalizeEmail(row && row.email);
+                if (email) {
+                    return `email:${email}`;
+                }
+
+                const phone = normalizePhone(row && row.cellPhone);
+                if (phone) {
+                    return `phone:${phone}`;
+                }
+
+                return '';
+            }
+
+            function dedupeRows(rows) {
+                const seen = new Set();
+
+                return (Array.isArray(rows) ? rows : []).filter(row => {
+                    if (!isMeaningfulRow(row)) {
+                        return false;
+                    }
+
+                    const key = buildRowDedupKey(row);
+                    if (!key) {
+                        return true;
+                    }
+
+                    if (seen.has(key)) {
+                        return false;
+                    }
+
+                    seen.add(key);
+                    return true;
+                });
+            }
+
+            function sanitizeStoredRows(rows) {
+                return dedupeRows((Array.isArray(rows) ? rows : []).filter(row => {
+                    if (!isMeaningfulRow(row)) {
+                        return false;
+                    }
+
+                    if (isLikelyImportedContactRow(row) && !shouldKeepImportedAgentRow(row)) {
+                        return false;
+                    }
+
+                    return true;
+                }));
+            }
+
+            function mergeRows(existingRows, importedRows) {
+                return dedupeRows([
+                    ...(Array.isArray(existingRows) ? existingRows : []),
+                    ...(Array.isArray(importedRows) ? importedRows : [])
+                ]);
+            }
+
+            function normalizeRows(rows, fallbackRows) {
+                const cleanedRows = Array.isArray(rows) ? dedupeRows(rows) : [];
+                if (cleanedRows.length > 0) {
+                    return cleanedRows;
+                }
+                return Array.isArray(fallbackRows) ? fallbackRows.slice() : [];
+            }
+
+            function renderRows(rows) {
+                body.innerHTML = '';
+                rows.forEach(row => {
+                    body.appendChild(createRow(row));
+                });
+                updateAgentCount(rows);
+            }
+
+            function updateAgentCount(rows) {
+                const totalAgents = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
+                countBadge.textContent = `${totalAgents} Agent${totalAgents === 1 ? '' : 's'}`;
+            }
+
+            function persistRows(rows) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+                updateAgentCount(rows);
+            }
+
+            function saveRows() {
+                const normalizedRows = normalizeRows(getRowsFromDom(), []);
+                hasLocalEdits = true;
+                persistRows(normalizedRows);
+            }
+
+            function escapeCsvValue(value) {
+                const normalized = String(value || '').replace(/\r?\n/g, ' ').trim();
+                if (/["]/.test(normalized)) {
+                    return `"${normalized.replace(/"/g, '""')}"`;
+                }
+                if (/[",]/.test(normalized)) {
+                    return `"${normalized}"`;
+                }
+                return normalized;
+            }
+
+            function downloadCsvFile(fileName, content) {
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(url), 0);
+            }
+
+            function makeCsvFileName() {
+                const userContext = getUserContext();
+                const baseName = String(userContext.name || userContext.email || 'my-agents')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '') || 'my-agents';
+                return `${baseName}-my-agents.csv`;
+            }
+
+            function exportRowsToCsv() {
+                const rows = normalizeRows(getRowsFromDom(), []);
+                if (rows.length === 0) {
+                    showToast('error', 'No Agents To Export', 'Add at least one saved agent row before exporting a CSV.');
+                    return;
+                }
+
+                const headers = ['Agent Name', 'Brokerage', 'Email', 'Cell Phone', 'Market', 'Specialty', 'Status', 'Notes'];
+                const lines = [headers.join(',')];
+
+                rows.forEach((row) => {
+                    lines.push([
+                        row.agentName,
+                        row.brokerage,
+                        row.email,
+                        row.cellPhone,
+                        row.market,
+                        row.specialty,
+                        row.status,
+                        row.notes
+                    ].map(escapeCsvValue).join(','));
+                });
+
+                downloadCsvFile(makeCsvFileName(), lines.join('\r\n'));
+                showToast('success', 'CSV Saved', 'Your My Agents spreadsheet was downloaded as a CSV file.');
+            }
+
+            function getImportSource() {
+                const userAliases = getUserIdentityAliases();
+                return IMPORT_SOURCES.find(source =>
+                    source.matchers.some(matcher => userAliases.has(normalizeIdentityMatcher(matcher)))
+                ) || null;
+            }
+
+            function getRestrictedSourcesForViewer() {
+                if (getImportSource()) {
+                    return [];
+                }
+
+                return IMPORT_SOURCES.slice();
+            }
+
+            function parseCsv(text) {
+                const rows = [];
+                let current = '';
+                let row = [];
+                let inQuotes = false;
+
+                for (let index = 0; index < text.length; index += 1) {
+                    const character = text[index];
+                    const nextCharacter = text[index + 1];
+
+                    if (character === '"') {
+                        if (inQuotes && nextCharacter === '"') {
+                            current += '"';
+                            index += 1;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                        continue;
+                    }
+
+                    if (character === ',' && !inQuotes) {
+                        row.push(current);
+                        current = '';
+                        continue;
+                    }
+
+                    if ((character === '\n' || character === '\r') && !inQuotes) {
+                        if (character === '\r' && nextCharacter === '\n') {
+                            index += 1;
+                        }
+                        row.push(current);
+                        rows.push(row);
+                        row = [];
+                        current = '';
+                        continue;
+                    }
+
+                    current += character;
+                }
+
+                if (current.length > 0 || row.length > 0) {
+                    row.push(current);
+                    rows.push(row);
+                }
+
+                return rows.filter(columns => columns.some(value => String(value || '').trim().length > 0));
+            }
+
+            function pickFirstValue(record, keys) {
+                for (const key of keys) {
+                    const value = String(record[key] || '').trim();
+                    if (value) {
+                        return value;
+                    }
+                }
+                return '';
+            }
+
+            function mapCsvRows(text) {
+                const lines = parseCsv(text);
+                if (lines.length < 2) {
+                    return [];
+                }
+
+                const headers = lines[0].map(header => String(header || '').trim());
+                return dedupeRows(lines.slice(1).map(columns => {
+                    const record = {};
+                    headers.forEach((header, index) => {
+                        record[header] = columns[index] || '';
+                    });
+
+                    const firstName = String(record['First Name'] || '').trim();
+                    const lastName = String(record['Last Name'] || '').trim();
+                    const displayName = String(record['Display Name'] || '').trim();
+                    const fullName = displayName || [firstName, lastName].filter(Boolean).join(' ').trim();
+
+                    return {
+                        agentName: fullName,
+                        brokerage: pickFirstValue(record, ['Organization', 'Business Address 2']),
+                        email: pickFirstValue(record, ['E-mail Address', 'E-mail 2 Address', 'E-mail 3 Address']),
+                        cellPhone: pickFirstValue(record, ['Mobile Phone', 'Business Phone', 'Home Phone']),
+                        market: pickFirstValue(record, ['Business City', 'Home City', 'Categories']),
+                        specialty: pickFirstValue(record, ['Job Title', 'Department', 'Related name']),
+                        status: pickFirstValue(record, ['Categories']),
+                        notes: pickFirstValue(record, ['Notes'])
+                    };
+                }).filter(row => isMeaningfulRow(row) && shouldKeepImportedAgentRow(row)));
+            }
+
+            async function importRowsFromSources(sources) {
+                try {
+                    const collectedRows = [];
+
+                    for (const source of Array.isArray(sources) ? sources : []) {
+                        const paths = Array.isArray(source.paths) ? source.paths : [source.path].filter(Boolean);
+                        for (const path of paths) {
+                            const response = await fetch(encodeURI(path), { cache: 'no-store' });
+                            if (!response.ok) {
+                                continue;
+                            }
+
+                            const csvText = await response.text();
+                            const importedRows = mapCsvRows(csvText);
+                            if (importedRows.length > 0) {
+                                collectedRows.push(...importedRows);
+                            }
+                        }
+                    }
+
+                    return dedupeRows(collectedRows);
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            async function importRowsForUser() {
+                const source = getImportSource();
+                if (!source) {
+                    return [];
+                }
+
+                return importRowsFromSources([source]);
+            }
+
+            async function getRestrictedImportKeys() {
+                const restrictedSources = getRestrictedSourcesForViewer();
+                if (restrictedSources.length === 0) {
+                    return new Set();
+                }
+
+                const restrictedRows = await importRowsFromSources(restrictedSources);
+                return new Set(restrictedRows.map(buildRowDedupKey).filter(Boolean));
+            }
+
+            function stripRestrictedImportedRows(rows, restrictedKeys) {
+                if (!(restrictedKeys instanceof Set) || restrictedKeys.size === 0) {
+                    return Array.isArray(rows) ? rows : [];
+                }
+
+                return (Array.isArray(rows) ? rows : []).filter(row => {
+                    const dedupeKey = buildRowDedupKey(row);
+                    return !dedupeKey || !restrictedKeys.has(dedupeKey);
+                });
+            }
+
+            async function loadRows() {
+                let rows = [];
+                const canUseLegacySharedRows = !!getImportSource();
+                try {
+                    const stored = localStorage.getItem(STORAGE_KEY);
+                    if (stored) {
+                        rows = JSON.parse(stored);
+                    } else if (canUseLegacySharedRows) {
+                        const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
+                        rows = legacyStored ? JSON.parse(legacyStored) : [];
+                        if (Array.isArray(rows) && rows.length > 0) {
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+                        }
+                    }
+                } catch (error) {
+                    rows = [];
+                }
+
+                rows = sanitizeStoredRows(rows);
+                rows = stripRestrictedImportedRows(rows, await getRestrictedImportKeys());
+                rows = normalizeRows(rows, DEFAULT_ROWS);
+                renderRows(rows);
+                persistRows(rows.filter(isMeaningfulRow));
+
+                const importedRows = await importRowsForUser();
+                if (importedRows.length > 0) {
+                    if (hasLocalEdits) {
+                        return;
+                    }
+
+                    const mergedRows = normalizeRows(mergeRows(rows, importedRows), DEFAULT_ROWS);
+                    if (JSON.stringify(mergedRows) !== JSON.stringify(rows)) {
+                        rows = mergedRows;
+                        persistRows(rows.filter(isMeaningfulRow));
+                        renderRows(rows);
+                    }
+                }
+            }
+
+            addRowBtn.addEventListener('click', function () {
+                body.appendChild(createRow({}));
+                saveRows();
+                const lastRowFirstCell = body.querySelector('tr:last-child td:first-child');
+                if (lastRowFirstCell) {
+                    lastRowFirstCell.focus();
+                }
+            });
+
+            exportCsvBtn.addEventListener('click', exportRowsToCsv);
+
+            window.addEventListener('beforeunload', saveRows);
+            window.addEventListener('pagehide', saveRows);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    saveRows();
+                }
+            });
+
+            loadRows();
+        })();
+    </script>
+</body>
+</html>

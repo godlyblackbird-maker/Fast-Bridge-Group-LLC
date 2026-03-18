@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLS Hot Deals - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/Fast Logo - 111.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="dashboard.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="analytics.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls.html" class="nav-link active">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2L3 14h7l-1 8 10-12h-7z"/>
+                                </svg>
+                                MLS Hot Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls-search.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="7"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                MLS Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="active-buyers.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 5h18"/>
+                                    <path d="M3 12h18"/>
+                                    <path d="M3 19h18"/>
+                                </svg>
+                                Active Buyers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4v16" />
+                                    <path d="M4 4h13l-2 5 2 5H4" />
+                                </svg>
+                                Campaigns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="admin-controls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                    <path d="M8 20h8"/>
+                                    <path d="M12 16v4"/>
+                                </svg>
+                                Admin Controls
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="login.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <h1 class="page-title">MLS Hot Deals</h1>
+            </nav>
+            <section class="mls-deals-board">
+
+
+                <div class="glass-card mls-controls-card">
+                    <div class="mls-controls-grid">
+                        <div class="form-group">
+                            <label for="mls-sort-select">Sort By</label>
+                            <select id="mls-sort-select" class="form-input">
+                                <option value="hot">Hottest First (ROI)</option>
+                                <option value="low-ptfv">Low PTFV</option>
+                                <option value="high-ptfv">High PTFV</option>
+                                <option value="newest">Newest Listings</option>
+                                <option value="price-asc">Price: Low to High</option>
+                                <option value="price-desc">Price: High to Low</option>
+                                <option value="city">City A-Z</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="mls-county-filter">California County</label>
+                            <select id="mls-county-filter" class="form-input">
+                                <option value="all">All 4 Major Counties</option>
+                                <option value="los-angeles">Los Angeles County</option>
+                                <option value="orange">Orange County</option>
+                                <option value="san-diego">San Diego County</option>
+                                <option value="santa-clara">Santa Clara County</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="mls-keyword-category">Keyword Category</label>
+                            <select id="mls-keyword-category" class="form-input">
+                                <option value="all">All Fields</option>
+                                <option value="address">Address</option>
+                                <option value="location">Location</option>
+                                <option value="notes">Notes</option>
+                                <option value="status">Status</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="mls-search-input">Keywords</label>
+                            <input id="mls-search-input" class="form-input" type="text" placeholder="Search MLS listings...">
+                        </div>
+                        <div class="form-group">
+                            <label for="mls-listing-status">Status</label>
+                            <select id="mls-listing-status" class="form-input">
+                                <option value="all">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="pending">Pending</option>
+                                <option value="on-hold">On Hold</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mls-listings-grid" id="mls-listings-grid">
+                    <article class="glass-card mls-property-card" data-price="1175000" data-roi="7.3" data-listed-at="2026-03-10" data-city="Pasadena" data-county="los-angeles" data-search="1284 rosemont ave pasadena ca los angeles county duplex test property value add">
+                        <div class="mls-image-wrap">
+                            <img class="mls-property-image" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" alt="House exterior in Pasadena, California">
+                        </div>
+                        <div class="mls-card-top">
+                            <span class="mls-badge test">Test Property</span>
+                            <span class="mls-roi">ROI 7.3%</span>
+                        </div>
+                        <h3>1284 Rosemont Ave</h3>
+                        <p class="mls-location">Pasadena, CA · Los Angeles County</p>
+                        <div class="mls-metrics">
+                            <span>$1,175,000</span>
+                            <span>4 Beds</span>
+                            <span>3 Baths</span>
+                            <span>2,180 sqft</span>
+                        </div>
+                        <p class="mls-note">Demo clickable listing for validating deal flow before MLS credentials are connected.</p>
+                        <a href="#" class="card-btn active mls-test-link" data-property-name="1284 Rosemont Ave">Open Test Deal</a>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1485000" data-roi="6.8" data-listed-at="2026-03-07" data-city="Irvine" data-county="orange" data-search="4402 vista canyon irvine ca orange county turnkey">
+                        <div class="mls-image-wrap">
+                            <img class="mls-property-image" src="https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=80" alt="Modern home in Irvine, California">
+                        </div>
+                        <div class="mls-card-top">
+                            <span class="mls-badge turnkey">Turnkey</span>
+                            <span class="mls-roi">ROI 6.8%</span>
+                        </div>
+                        <h3>4402 Vista Canyon</h3>
+                        <p class="mls-location">Irvine, CA · Orange County</p>
+                        <div class="mls-metrics">
+                            <span>$1,485,000</span>
+                            <span>4 Beds</span>
+                            <span>3 Baths</span>
+                            <span>2,340 sqft</span>
+                        </div>
+                        <p class="mls-note">Turnkey condition with recent updates and low immediate capex needs.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="4402 Vista Canyon">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1299000" data-roi="7.9" data-listed-at="2026-03-12" data-city="San Diego" data-county="san-diego" data-search="7624 mariner point san diego ca san diego county coastal rental">
+                        <div class="mls-image-wrap">
+                            <img class="mls-property-image" src="https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=1200&q=80" alt="Single-family house in San Diego, California">
+                        </div>
+                        <div class="mls-card-top">
+                            <span class="mls-badge turnkey">Cash-Flow</span>
+                            <span class="mls-roi">ROI 7.9%</span>
+                        </div>
+                        <h3>7624 Mariner Point</h3>
+                        <p class="mls-location">San Diego, CA · San Diego County</p>
+                        <div class="mls-metrics">
+                            <span>$1,299,000</span>
+                            <span>3 Beds</span>
+                            <span>2 Baths</span>
+                            <span>1,965 sqft</span>
+                        </div>
+                        <p class="mls-note">Located in a high-demand rental pocket near transit and schools.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="7624 Mariner Point">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1695000" data-roi="6.2" data-listed-at="2026-03-02" data-city="Sunnyvale" data-county="santa-clara" data-search="1082 willow glen sunnyvale ca santa clara county silicon valley">
+                        <div class="mls-image-wrap">
+                            <img class="mls-property-image" src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80" alt="Residential property in Sunnyvale, California">
+                        </div>
+                        <div class="mls-card-top">
+                            <span class="mls-badge turnkey">Turnkey</span>
+                            <span class="mls-roi">ROI 6.2%</span>
+                        </div>
+                        <h3>1082 Willow Glen Ct</h3>
+                        <p class="mls-location">Sunnyvale, CA · Santa Clara County</p>
+                        <div class="mls-metrics">
+                            <span>$1,695,000</span>
+                            <span>4 Beds</span>
+                            <span>3 Baths</span>
+                            <span>2,015 sqft</span>
+                        </div>
+                        <p class="mls-note">Strong appreciation corridor with high-tech tenant demand.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="1082 Willow Glen Ct">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="985000" data-roi="8.4" data-listed-at="2026-03-11" data-city="Long Beach" data-county="los-angeles" data-search="920 harbor view long beach los angeles county duplex">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1605146769289-440113cc3d00?auto=format&fit=crop&w=1200&q=80" alt="Home in Long Beach California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Hot</span><span class="mls-roi">ROI 8.4%</span></div>
+                        <h3>920 Harbor View Dr</h3><p class="mls-location">Long Beach, CA · Los Angeles County</p>
+                        <div class="mls-metrics"><span>$985,000</span><span>3 Beds</span><span>2 Baths</span><span>1,744 sqft</span></div>
+                        <p class="mls-note">New listing with strong ADU potential and below-area average price per sqft.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="920 Harbor View Dr">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1525000" data-roi="6.6" data-listed-at="2026-03-09" data-city="Anaheim" data-county="orange" data-search="551 summit ridge anaheim orange county family rental">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb3?auto=format&fit=crop&w=1200&q=80" alt="House in Anaheim California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Turnkey</span><span class="mls-roi">ROI 6.6%</span></div>
+                        <h3>551 Summit Ridge</h3><p class="mls-location">Anaheim, CA · Orange County</p>
+                        <div class="mls-metrics"><span>$1,525,000</span><span>5 Beds</span><span>3 Baths</span><span>2,480 sqft</span></div>
+                        <p class="mls-note">Freshly renovated interiors with flexible rental strategy options.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="551 Summit Ridge">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1395000" data-roi="7.5" data-listed-at="2026-03-12" data-city="Chula Vista" data-county="san-diego" data-search="302 bay crest chula vista san diego county hot">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=1200&q=80" alt="Home in Chula Vista California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Newest</span><span class="mls-roi">ROI 7.5%</span></div>
+                        <h3>302 Bay Crest Way</h3><p class="mls-location">Chula Vista, CA · San Diego County</p>
+                        <div class="mls-metrics"><span>$1,395,000</span><span>4 Beds</span><span>3 Baths</span><span>2,260 sqft</span></div>
+                        <p class="mls-note">Just listed today with immediate showing demand and low days-on-market expectation.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="302 Bay Crest Way">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1820000" data-roi="6.4" data-listed-at="2026-03-08" data-city="San Jose" data-county="santa-clara" data-search="890 orchard line san jose santa clara county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=1200&q=80" alt="Property in San Jose California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Turnkey</span><span class="mls-roi">ROI 6.4%</span></div>
+                        <h3>890 Orchard Line Rd</h3><p class="mls-location">San Jose, CA · Santa Clara County</p>
+                        <div class="mls-metrics"><span>$1,820,000</span><span>4 Beds</span><span>3 Baths</span><span>2,240 sqft</span></div>
+                        <p class="mls-note">Tech corridor location with strong long-term appreciation profile.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="890 Orchard Line Rd">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1085000" data-roi="8.1" data-listed-at="2026-03-06" data-city="Glendale" data-county="los-angeles" data-search="330 park vista glendale los angeles county value add">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=1200&q=80" alt="House in Glendale California"></div>
+                        <div class="mls-card-top"><span class="mls-badge fixer">Value Add</span><span class="mls-roi">ROI 8.1%</span></div>
+                        <h3>330 Park Vista Ave</h3><p class="mls-location">Glendale, CA · Los Angeles County</p>
+                        <div class="mls-metrics"><span>$1,085,000</span><span>3 Beds</span><span>2 Baths</span><span>1,690 sqft</span></div>
+                        <p class="mls-note">Light rehab profile with high upside based on nearby closed comps.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="330 Park Vista Ave">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1590000" data-roi="6.5" data-listed-at="2026-03-01" data-city="Newport Beach" data-county="orange" data-search="216 coast line newport beach orange county rental">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" alt="Property in Newport Beach California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Premium</span><span class="mls-roi">ROI 6.5%</span></div>
+                        <h3>216 Coast Line Dr</h3><p class="mls-location">Newport Beach, CA · Orange County</p>
+                        <div class="mls-metrics"><span>$1,590,000</span><span>3 Beds</span><span>3 Baths</span><span>1,940 sqft</span></div>
+                        <p class="mls-note">Premium submarket listing with strong seasonal rental returns.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="216 Coast Line Dr">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1225000" data-roi="7.7" data-listed-at="2026-03-11" data-city="Oceanside" data-county="san-diego" data-search="72 mission grove oceanside san diego county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600047509358-9dc75507daeb?auto=format&fit=crop&w=1200&q=80" alt="Home in Oceanside California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Hot</span><span class="mls-roi">ROI 7.7%</span></div>
+                        <h3>72 Mission Grove</h3><p class="mls-location">Oceanside, CA · San Diego County</p>
+                        <div class="mls-metrics"><span>$1,225,000</span><span>3 Beds</span><span>2 Baths</span><span>1,802 sqft</span></div>
+                        <p class="mls-note">High demand coastal rental corridor with favorable cap-rate outlook.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="72 Mission Grove">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1895000" data-roi="6.1" data-listed-at="2026-03-05" data-city="Santa Clara" data-county="santa-clara" data-search="491 elm station santa clara county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=80" alt="House in Santa Clara California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Stable</span><span class="mls-roi">ROI 6.1%</span></div>
+                        <h3>491 Elm Station Ct</h3><p class="mls-location">Santa Clara, CA · Santa Clara County</p>
+                        <div class="mls-metrics"><span>$1,895,000</span><span>4 Beds</span><span>3 Baths</span><span>2,260 sqft</span></div>
+                        <p class="mls-note">Excellent school district and proximity to major employment hubs.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="491 Elm Station Ct">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1120000" data-roi="8.0" data-listed-at="2026-02-28" data-city="Burbank" data-county="los-angeles" data-search="221 media park burbank los angeles county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600210491892-03d54c0aaf87?auto=format&fit=crop&w=1200&q=80" alt="Home in Burbank California"></div>
+                        <div class="mls-card-top"><span class="mls-badge fixer">Hot</span><span class="mls-roi">ROI 8.0%</span></div>
+                        <h3>221 Media Park Ave</h3><p class="mls-location">Burbank, CA · Los Angeles County</p>
+                        <div class="mls-metrics"><span>$1,120,000</span><span>3 Beds</span><span>2 Baths</span><span>1,658 sqft</span></div>
+                        <p class="mls-note">Emerging pocket with attractive spread between acquisition and ARV.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="221 Media Park Ave">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1420000" data-roi="6.9" data-listed-at="2026-03-04" data-city="Costa Mesa" data-county="orange" data-search="83 harbor point costa mesa orange county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80" alt="Property in Costa Mesa California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Turnkey</span><span class="mls-roi">ROI 6.9%</span></div>
+                        <h3>83 Harbor Point Ln</h3><p class="mls-location">Costa Mesa, CA · Orange County</p>
+                        <div class="mls-metrics"><span>$1,420,000</span><span>4 Beds</span><span>3 Baths</span><span>2,120 sqft</span></div>
+                        <p class="mls-note">Recently listed and priced competitively for fast-moving buyer activity.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="83 Harbor Point Ln">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1325000" data-roi="7.6" data-listed-at="2026-03-10" data-city="Carlsbad" data-county="san-diego" data-search="440 canyon crest carlsbad san diego county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?auto=format&fit=crop&w=1200&q=80" alt="House in Carlsbad California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Newest</span><span class="mls-roi">ROI 7.6%</span></div>
+                        <h3>440 Canyon Crest Rd</h3><p class="mls-location">Carlsbad, CA · San Diego County</p>
+                        <div class="mls-metrics"><span>$1,325,000</span><span>3 Beds</span><span>3 Baths</span><span>1,998 sqft</span></div>
+                        <p class="mls-note">New inventory with strong weekend tour traffic and quick-close potential.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="440 Canyon Crest Rd">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1760000" data-roi="6.3" data-listed-at="2026-03-03" data-city="Mountain View" data-county="santa-clara" data-search="219 pioneer trail mountain view santa clara county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600607687645-c7171b42498f?auto=format&fit=crop&w=1200&q=80" alt="Property in Mountain View California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Stable</span><span class="mls-roi">ROI 6.3%</span></div>
+                        <h3>219 Pioneer Trail</h3><p class="mls-location">Mountain View, CA · Santa Clara County</p>
+                        <div class="mls-metrics"><span>$1,760,000</span><span>4 Beds</span><span>3 Baths</span><span>2,090 sqft</span></div>
+                        <p class="mls-note">Strong school district and walkable amenities support premium rents.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="219 Pioneer Trail">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1015000" data-roi="8.2" data-listed-at="2026-02-27" data-city="Inglewood" data-county="los-angeles" data-search="66 crescent field inglewood los angeles county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600607686527-6fb886090705?auto=format&fit=crop&w=1200&q=80" alt="Home in Inglewood California"></div>
+                        <div class="mls-card-top"><span class="mls-badge fixer">Hot</span><span class="mls-roi">ROI 8.2%</span></div>
+                        <h3>66 Crescent Field</h3><p class="mls-location">Inglewood, CA · Los Angeles County</p>
+                        <div class="mls-metrics"><span>$1,015,000</span><span>3 Beds</span><span>2 Baths</span><span>1,610 sqft</span></div>
+                        <p class="mls-note">High upside inventory in an active growth corridor near major transit.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="66 Crescent Field">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1545000" data-roi="6.7" data-listed-at="2026-03-01" data-city="Huntington Beach" data-county="orange" data-search="710 sandpoint huntington beach orange county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?auto=format&fit=crop&w=1200&q=80" alt="House in Huntington Beach California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Premium</span><span class="mls-roi">ROI 6.7%</span></div>
+                        <h3>710 Sandpoint Ct</h3><p class="mls-location">Huntington Beach, CA · Orange County</p>
+                        <div class="mls-metrics"><span>$1,545,000</span><span>4 Beds</span><span>3 Baths</span><span>2,205 sqft</span></div>
+                        <p class="mls-note">Coastal location with low vacancy and strong long-term tenant retention.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="710 Sandpoint Ct">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1275000" data-roi="7.8" data-listed-at="2026-03-08" data-city="La Mesa" data-county="san-diego" data-search="523 mesa ridge la mesa san diego county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=1200&q=80" alt="Property in La Mesa California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Hot</span><span class="mls-roi">ROI 7.8%</span></div>
+                        <h3>523 Mesa Ridge Dr</h3><p class="mls-location">La Mesa, CA · San Diego County</p>
+                        <div class="mls-metrics"><span>$1,275,000</span><span>3 Beds</span><span>2 Baths</span><span>1,855 sqft</span></div>
+                        <p class="mls-note">Recent listing with quick rental readiness and low deferred maintenance.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="523 Mesa Ridge Dr">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1935000" data-roi="6.0" data-listed-at="2026-02-26" data-city="Palo Alto" data-county="santa-clara" data-search="74 university grove palo alto santa clara county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=80" alt="House in Palo Alto California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Premium</span><span class="mls-roi">ROI 6.0%</span></div>
+                        <h3>74 University Grove</h3><p class="mls-location">Palo Alto, CA · Santa Clara County</p>
+                        <div class="mls-metrics"><span>$1,935,000</span><span>4 Beds</span><span>3 Baths</span><span>2,130 sqft</span></div>
+                        <p class="mls-note">Blue-chip location with exceptionally strong long-term value retention.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="74 University Grove">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1095000" data-roi="8.3" data-listed-at="2026-03-09" data-city="North Hollywood" data-county="los-angeles" data-search="611 studio point north hollywood los angeles county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80" alt="House in North Hollywood California"></div>
+                        <div class="mls-card-top"><span class="mls-badge fixer">Newest</span><span class="mls-roi">ROI 8.3%</span></div>
+                        <h3>611 Studio Point Rd</h3><p class="mls-location">North Hollywood, CA · Los Angeles County</p>
+                        <div class="mls-metrics"><span>$1,095,000</span><span>3 Beds</span><span>2 Baths</span><span>1,620 sqft</span></div>
+                        <p class="mls-note">Fresh to market and trending as one of the hotter listings this week.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="611 Studio Point Rd">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1460000" data-roi="6.9" data-listed-at="2026-03-06" data-city="Santa Ana" data-county="orange" data-search="804 garden stream santa ana orange county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600210492493-0946911123ea?auto=format&fit=crop&w=1200&q=80" alt="Property in Santa Ana California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Turnkey</span><span class="mls-roi">ROI 6.9%</span></div>
+                        <h3>804 Garden Stream Ln</h3><p class="mls-location">Santa Ana, CA · Orange County</p>
+                        <div class="mls-metrics"><span>$1,460,000</span><span>4 Beds</span><span>3 Baths</span><span>2,150 sqft</span></div>
+                        <p class="mls-note">Strong neighborhood fundamentals with favorable rent-growth trend.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="804 Garden Stream Ln">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1340000" data-roi="7.4" data-listed-at="2026-03-07" data-city="Encinitas" data-county="san-diego" data-search="37 pacific hill encinitas san diego county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600047509782-20d39509f26d?auto=format&fit=crop&w=1200&q=80" alt="Home in Encinitas California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Coastal</span><span class="mls-roi">ROI 7.4%</span></div>
+                        <h3>37 Pacific Hill Ave</h3><p class="mls-location">Encinitas, CA · San Diego County</p>
+                        <div class="mls-metrics"><span>$1,340,000</span><span>3 Beds</span><span>2 Baths</span><span>1,890 sqft</span></div>
+                        <p class="mls-note">Very strong short-term demand profile with premium nightly rates.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="37 Pacific Hill Ave">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1845000" data-roi="6.2" data-listed-at="2026-02-25" data-city="Cupertino" data-county="santa-clara" data-search="902 orchard ridge cupertino santa clara county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" alt="House in Cupertino California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Stable</span><span class="mls-roi">ROI 6.2%</span></div>
+                        <h3>902 Orchard Ridge Dr</h3><p class="mls-location">Cupertino, CA · Santa Clara County</p>
+                        <div class="mls-metrics"><span>$1,845,000</span><span>4 Beds</span><span>3 Baths</span><span>2,090 sqft</span></div>
+                        <p class="mls-note">Excellent school and commute profile helps maintain resilient demand.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="902 Orchard Ridge Dr">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1155000" data-roi="8.1" data-listed-at="2026-03-12" data-city="Downey" data-county="los-angeles" data-search="155 greenway downey los angeles county hottest">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=1200&q=80" alt="Home in Downey California"></div>
+                        <div class="mls-card-top"><span class="mls-badge fixer">Hottest</span><span class="mls-roi">ROI 8.1%</span></div>
+                        <h3>155 Greenway Blvd</h3><p class="mls-location">Downey, CA · Los Angeles County</p>
+                        <div class="mls-metrics"><span>$1,155,000</span><span>4 Beds</span><span>2 Baths</span><span>1,870 sqft</span></div>
+                        <p class="mls-note">One of the newest hot listings with immediate investor attention.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="155 Greenway Blvd">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1580000" data-roi="6.8" data-listed-at="2026-03-05" data-city="Tustin" data-county="orange" data-search="418 lemon crest tustin orange county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600566752227-8f3b7c5f7f8c?auto=format&fit=crop&w=1200&q=80" alt="Property in Tustin California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Turnkey</span><span class="mls-roi">ROI 6.8%</span></div>
+                        <h3>418 Lemon Crest Cir</h3><p class="mls-location">Tustin, CA · Orange County</p>
+                        <div class="mls-metrics"><span>$1,580,000</span><span>4 Beds</span><span>3 Baths</span><span>2,290 sqft</span></div>
+                        <p class="mls-note">Newly updated and positioned in a high absorption neighborhood.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="418 Lemon Crest Cir">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1305000" data-roi="7.6" data-listed-at="2026-03-03" data-city="Escondido" data-county="san-diego" data-search="904 hidden mesa escondido san diego county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=1200&q=80" alt="House in Escondido California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Hot</span><span class="mls-roi">ROI 7.6%</span></div>
+                        <h3>904 Hidden Mesa Rd</h3><p class="mls-location">Escondido, CA · San Diego County</p>
+                        <div class="mls-metrics"><span>$1,305,000</span><span>3 Beds</span><span>2 Baths</span><span>1,935 sqft</span></div>
+                        <p class="mls-note">Steady tenant demand with favorable rent-to-price positioning.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="904 Hidden Mesa Rd">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1795000" data-roi="6.3" data-listed-at="2026-03-02" data-city="Milpitas" data-county="santa-clara" data-search="56 oak summit milpitas santa clara county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=80" alt="Home in Milpitas California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Stable</span><span class="mls-roi">ROI 6.3%</span></div>
+                        <h3>56 Oak Summit Dr</h3><p class="mls-location">Milpitas, CA · Santa Clara County</p>
+                        <div class="mls-metrics"><span>$1,795,000</span><span>4 Beds</span><span>3 Baths</span><span>2,145 sqft</span></div>
+                        <p class="mls-note">High-demand area supported by strong local employment growth.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="56 Oak Summit Dr">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1135000" data-roi="8.0" data-listed-at="2026-02-24" data-city="Culver City" data-county="los-angeles" data-search="788 westpoint culver city los angeles county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" alt="Property in Culver City California"></div>
+                        <div class="mls-card-top"><span class="mls-badge fixer">Value Add</span><span class="mls-roi">ROI 8.0%</span></div>
+                        <h3>788 Westpoint Ave</h3><p class="mls-location">Culver City, CA · Los Angeles County</p>
+                        <div class="mls-metrics"><span>$1,135,000</span><span>3 Beds</span><span>2 Baths</span><span>1,705 sqft</span></div>
+                        <p class="mls-note">Well-located fixer with strong margin potential after light upgrades.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="788 Westpoint Ave">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1495000" data-roi="6.9" data-listed-at="2026-03-04" data-city="Mission Viejo" data-county="orange" data-search="315 silver crest mission viejo orange county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600210491892-03d54c0aaf87?auto=format&fit=crop&w=1200&q=80" alt="House in Mission Viejo California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Turnkey</span><span class="mls-roi">ROI 6.9%</span></div>
+                        <h3>315 Silver Crest Ln</h3><p class="mls-location">Mission Viejo, CA · Orange County</p>
+                        <div class="mls-metrics"><span>$1,495,000</span><span>4 Beds</span><span>3 Baths</span><span>2,210 sqft</span></div>
+                        <p class="mls-note">Balanced risk profile and strong owner-occupant resale demand.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="315 Silver Crest Ln">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1260000" data-roi="7.7" data-listed-at="2026-02-23" data-city="San Marcos" data-county="san-diego" data-search="889 canyon line san marcos san diego county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=1200&q=80" alt="Home in San Marcos California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Cash-Flow</span><span class="mls-roi">ROI 7.7%</span></div>
+                        <h3>889 Canyon Line Trl</h3><p class="mls-location">San Marcos, CA · San Diego County</p>
+                        <div class="mls-metrics"><span>$1,260,000</span><span>3 Beds</span><span>2 Baths</span><span>1,910 sqft</span></div>
+                        <p class="mls-note">Consistent rent performance with room for modest value enhancements.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="889 Canyon Line Trl">Quick View</button>
+                    </article>
+
+                    <article class="glass-card mls-property-card" data-price="1865000" data-roi="6.2" data-listed-at="2026-02-22" data-city="Campbell" data-county="santa-clara" data-search="144 heritage hill campbell santa clara county">
+                        <div class="mls-image-wrap"><img class="mls-property-image" src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80" alt="Property in Campbell California"></div>
+                        <div class="mls-card-top"><span class="mls-badge turnkey">Stable</span><span class="mls-roi">ROI 6.2%</span></div>
+                        <h3>144 Heritage Hill Rd</h3><p class="mls-location">Campbell, CA · Santa Clara County</p>
+                        <div class="mls-metrics"><span>$1,865,000</span><span>4 Beds</span><span>3 Baths</span><span>2,185 sqft</span></div>
+                        <p class="mls-note">Premium neighborhood exposure with excellent long-term hold fundamentals.</p>
+                        <button type="button" class="card-btn mls-property-peek" data-property-name="144 Heritage Hill Rd">Quick View</button>
+                    </article>
+                </div>
+                <p class="mls-empty-state" id="mls-empty-state" hidden>No properties match your filters.</p>
+                <div class="mls-pagination" id="mls-pagination" hidden></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    </button>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Detail - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="property-detail-shell">
+        <header class="property-detail-topbar glass-card">
+            <a href="dashboard.html" class="property-back-link" aria-label="Back dashboard">Back dashboard</a>
+            <h1 id="property-address-title">Property Address</h1>
+        </header>
+
+        <section class="property-detail-grid">
+            <article class="glass-card glass-card-3d property-detail-card">
+                <h2>Property Details</h2>
+                <p id="property-details-line">Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 ft² / 170,320 ft² / Pool: None</p>
+            </article>
+
+            <article class="glass-card glass-card-3d property-detail-card">
+                <h2>List Price</h2>
+                <p class="property-price" id="property-list-price">$780,000</p>
+                <div class="property-flag-list">
+                    <p>Propensity: <strong id="property-propensity">8</strong></p>
+                    <p id="property-moderate-pain">Moderate Pain</p>
+                    <p id="property-tax-delinquency">Tax Delinquency</p>
+                    <p id="property-high-debt">High Debt (LTV &gt;80%)</p>
+                </div>
+            </article>
+
+            <article class="glass-card glass-card-3d property-detail-card">
+                <h2>Market Info</h2>
+                <p id="property-market-info">41 Days / Active</p>
+                <p id="property-dom-cdom">DOM: 41 / CDOM: 41</p>
+            </article>
+
+            <article class="glass-card glass-card-3d property-detail-card">
+                <h2>Evaluation Metrics</h2>
+                <p>Asking VS ARV: <strong id="property-asking-vs-arv">70.35%</strong></p>
+                <p>ARV: <strong id="property-arv">$1,108,806</strong></p>
+                <p>Comp Data: <strong id="property-comp-data">A0, P1, B0, C1</strong></p>
+            </article>
+        </section>
+
+        <section class="property-status-inline">
+            <label class="property-status-label" for="piq-agent-status">
+                <span>Agent Status</span>
+                <select id="piq-agent-status" class="form-input">
+                    <option value="acquired">100% - Acquired</option>
+                    <option value="offer-accepted">80% - Offer Accepted</option>
+                    <option value="in-negotiations">60% - In Negotiations</option>
+                    <option value="contract-submitted">50% - Contract Submitted</option>
+                    <option value="back-up">30% - Back Up</option>
+                    <option value="offer-terms-sent">30% - Offer Terms Sent</option>
+                    <option value="continue-to-follow">20% - Continue to Follow</option>
+                    <option value="initial-contact-started">10% - Initial Contact Started</option>
+                    <option value="cancelled-fec">0% - Cancelled FEC</option>
+                    <option value="do-not-use">0% - DO NOT USE</option>
+                    <option value="none" selected>0% - None</option>
+                    <option value="pass">0% - Pass</option>
+                    <option value="sold-others-close">0% - Sold Others/Close</option>
+                </select>
+            </label>
+            <label class="property-status-label property-status-assign-label" for="property-assignee-select">
+                <span>Assign Property To</span>
+                <select id="property-assignee-select" class="form-input">
+                    <option value="">Unassigned</option>
+                </select>
+            </label>
+        </section>
+
+        <section class="glass-card property-tabs-card">
+            <div class="property-tabs-row">
+                <button class="property-tab-btn active" data-tab="piq" type="button">About Property</button>
+                <button class="property-tab-btn" data-tab="comps" type="button">Comps</button>
+                <button class="property-tab-btn" data-tab="ia" type="button">IA</button>
+                <button class="property-tab-btn" data-tab="agent" type="button">Agent workspace</button>
+                <button class="property-tab-btn" data-tab="offer" type="button">Offer</button>
+            </div>
+            <div class="property-tab-panels">
+                <article class="property-tab-panel active" data-panel="piq">
+                    <div class="piq-image-block">
+                        <div class="piq-image-block-head">
+                            <h5>Property Images</h5>
+                            <div class="piq-image-tabs" role="tablist" aria-label="Property image views">
+                                <button type="button" class="piq-image-tab active" data-piq-image-tab="preview">Preview</button>
+                                <button type="button" class="piq-image-tab" data-piq-image-tab="more">View more</button>
+                            </div>
+                        </div>
+                        <div class="piq-image-panel active" data-piq-image-panel="preview">
+                            <div id="piq-property-image-preview" class="piq-image-preview-grid">
+                                <p class="outreach-empty">No property images available.</p>
+                            </div>
+                        </div>
+                        <div class="piq-image-panel" data-piq-image-panel="more">
+                            <div id="piq-property-image-gallery" class="piq-image-gallery">
+                                <p class="outreach-empty">No property images available.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <section class="agent-record-section">
+                        <h4>BASIC INFORMATION</h4>
+                        <p>Offer Negotiator: <strong>Isaac Haro (USER)</strong></p>
+                        <p>Record Created: <strong>03/12/2026</strong></p>
+                        <p>Listing Date: <strong>03/12/2026</strong></p>
+                        <p>IDX: <strong>CCMA-CRMLS</strong></p>
+                        <p>Type: <strong>Residential</strong></p>
+                        <p>MLS#: <strong>V1-35086</strong></p>
+                        <p>Status: <strong>Active</strong></p>
+                        <p>Auto Tracker: <strong>Active 0Days</strong></p>
+                        <p>Area: <strong>-</strong></p>
+                        <p>Property cover: <strong>Property 2</strong></p>
+                    </section>
+
+                    <section class="agent-record-section">
+                        <h4>PROPERTY DETAILS</h4>
+                        <p><strong>Edit</strong></p>
+                        <p><strong>Public Comments</strong></p>
+                        <p>
+                            Opportunities like this don't come often. Nestled within the coveted gated enclave of Hillview Estates 55+ Community,
+                            this beautifully appointed 3-bedroom, 2-bath home offers over 1,800 square feet of easy, elegant living. Perfectly
+                            positioned to capture sweeping mountain vistas and those legendary Ventura evening sunsets from your own private patio.
+                            Inside, sunlight fills the open living areas throughout the day, creating a warm, inviting atmosphere whether you're
+                            curling up with a book or hosting friends for dinner. The spacious kitchen and dining area give you every reason to cook
+                            and gather, while the thoughtful layout keeps every room feeling bright, connected, and effortlessly livable. When it's
+                            time to wind down, the peaceful greenbelt setting provides a natural backdrop that makes every day feel like a retreat.
+                            Practical comforts including an attached two-car garage, air conditioning, and a dedicated interior laundry room mean
+                            you have everything you need right at your fingertips. Three-bedroom homes in Hillview Estates are a true rarity.
+                            If you've been waiting for one of the largest, most desirable floor plans in this sought-after community, your wait is over.
+                        </p>
+                        <p><strong>Agent Comments</strong></p>
+                        <p>Showings to begin Saturday March 14th after 12pm.</p>
+                        <p>
+                            Showings to begin March 14th. Property is held in a trust. Buyer and their agent to review the attached documents prior
+                            to showing and or submitting an offer.
+                        </p>
+                        <p>APN: <strong>0970085145</strong></p>
+                        <p>Unit Number: <strong>-</strong></p>
+                        <p>Total Floors or Levels: <strong>One</strong></p>
+                        <p>Sewer: <strong>Public Sewer</strong></p>
+                        <p>Property Condition: <strong>-</strong></p>
+                        <p>Zoning: <strong>-</strong></p>
+                        <p>Association Dues: <strong>255</strong></p>
+                        <p>Common Walls: <strong>-</strong></p>
+                        <p>Lock box type: <strong>-</strong></p>
+                        <p>Occupied: <strong>-</strong></p>
+                        <p>Showing: <strong>-</strong></p>
+                    </section>
+
+                    <p id="tab-content-piq"></p>
+                </article>
+                <article class="property-tab-panel" data-panel="comps">
+                    <div class="comps-panel">
+                        <section class="comps-quick-summary">
+                            <div class="comps-summary-card comps-summary-span-2">
+                                <h4>Property Details</h4>
+                                <p id="comps-summary-property-details">Single Family / 5 Br / 3 Ba / 3 Gar / 1978 / 2,480 ft² / 170,320 ft² / Pool: None</p>
+                            </div>
+
+                            <div class="comps-summary-card">
+                                <h4>List Price</h4>
+                                <p id="comps-summary-list-price">$1,525,000</p>
+                                <p>Propensity: <strong id="comps-summary-propensity">7</strong></p>
+                                <p id="comps-summary-moderate-pain">Moderate Pain</p>
+                                <p id="comps-summary-tax-delinquency">Tax Delinquency</p>
+                                <p id="comps-summary-high-debt">High Debt (LTV &gt;80%)</p>
+                            </div>
+
+                            <div class="comps-summary-card">
+                                <h4>Market Info</h4>
+                                <p id="comps-summary-market-info">3 Days / Pending</p>
+                                <p id="comps-summary-dom-cdom">DOM: 3 / CDOM: 3</p>
+                                <h4>Evaluation Metrics</h4>
+                                <p>Asking VS ARV: <strong id="comps-summary-asking-vs-arv">71.60%</strong></p>
+                                <p>ARV: <strong id="comps-summary-arv">$2,165,500</strong></p>
+                                <p>Comp Data: <strong id="comps-summary-comp-data">A0, P1, B0, C1</strong></p>
+                            </div>
+                        </section>
+
+                        <p id="tab-content-comps"></p>
+                        <section class="comps-filters-shell">
+                            <div class="comps-filters-head">
+                                <h4>Comps Filters</h4>
+                                <div class="comps-filter-actions">
+                                    <button id="comps-reset-filters" type="button" class="card-btn">Reset all</button>
+                                    <button id="comps-apply-filters" type="button" class="card-btn active">Apply Filters</button>
+                                </div>
+                            </div>
+
+                            <div class="comps-quick-filters">
+                                <label>Sqft Min
+                                    <input id="comps-sqft-min" type="number" class="form-input" value="1420">
+                                </label>
+                                <label>Sqft Max
+                                    <input id="comps-sqft-max" type="number" class="form-input" value="2070">
+                                </label>
+                                <label>Built Min
+                                    <input id="comps-built-min" type="number" class="form-input" value="1974">
+                                </label>
+                                <label>Built Max
+                                    <input id="comps-built-max" type="number" class="form-input" value="1989">
+                                </label>
+                                <label>Radius (miles)
+                                    <input id="comps-radius" type="number" class="form-input" value="1" step="0.1" min="0.1">
+                                </label>
+                                <label>Closed Within Days
+                                    <input id="comps-closed-within" type="number" class="form-input" value="180" min="1">
+                                </label>
+                            </div>
+
+                            <div class="comps-chip-row" id="comps-applied-summary"></div>
+
+                            <details class="comps-advanced-filters">
+                                <summary>Advanced Filters</summary>
+                                <div class="comps-advanced-grid">
+                                    <label>Bedrooms Min
+                                        <input id="comps-bed-min" type="number" class="form-input" min="0" placeholder="Min">
+                                    </label>
+                                    <label>Bedrooms Max
+                                        <input id="comps-bed-max" type="number" class="form-input" min="0" placeholder="Max">
+                                    </label>
+                                    <label>Bathrooms Min
+                                        <input id="comps-bath-min" type="number" class="form-input" min="0" step="0.5" placeholder="Min">
+                                    </label>
+                                    <label>Bathrooms Max
+                                        <input id="comps-bath-max" type="number" class="form-input" min="0" step="0.5" placeholder="Max">
+                                    </label>
+                                    <label>Min Price
+                                        <input id="comps-price-min" type="number" class="form-input" min="0" placeholder="Min Price">
+                                    </label>
+                                    <label>Max Price
+                                        <input id="comps-price-max" type="number" class="form-input" min="0" placeholder="Max Price">
+                                    </label>
+                                    <label>Lot Size Min (sqft)
+                                        <input id="comps-lot-min" type="number" class="form-input" min="0" placeholder="Min">
+                                    </label>
+                                    <label>Lot Size Max (sqft)
+                                        <input id="comps-lot-max" type="number" class="form-input" min="0" placeholder="Max">
+                                    </label>
+                                    <label>Garage Min
+                                        <input id="comps-garage-min" type="number" class="form-input" min="0" placeholder="Min">
+                                    </label>
+                                    <label>Garage Max
+                                        <input id="comps-garage-max" type="number" class="form-input" min="0" placeholder="Max">
+                                    </label>
+                                    <label>Days on Market Min
+                                        <input id="comps-dom-min" type="number" class="form-input" min="0" placeholder="Min">
+                                    </label>
+                                    <label>Days on Market Max
+                                        <input id="comps-dom-max" type="number" class="form-input" min="0" placeholder="Max">
+                                    </label>
+                                    <label>Zipcode
+                                        <input id="comps-zipcode" type="text" class="form-input" value="93060">
+                                    </label>
+                                    <label>Area
+                                        <input id="comps-area" type="text" class="form-input" placeholder="Area">
+                                    </label>
+                                    <label>City
+                                        <input id="comps-city" type="text" class="form-input" value="Santa Paula">
+                                    </label>
+                                </div>
+
+                                <div class="comps-advanced-groups">
+                                    <fieldset>
+                                        <legend>Property Type (SLC)</legend>
+                                        <div class="comps-check-grid">
+                                            <label><input type="checkbox" class="comps-slc" value="STD" checked> STD- Standard</label>
+                                            <label><input type="checkbox" class="comps-slc" value="SPAY"> SPAY- Short Sale</label>
+                                            <label><input type="checkbox" class="comps-slc" value="NOD"> NOD- Notice Of Default</label>
+                                            <label><input type="checkbox" class="comps-slc" value="REO"> REO- REO</label>
+                                            <label><input type="checkbox" class="comps-slc" value="PRO"> PRO- Probate Listing</label>
+                                            <label><input type="checkbox" class="comps-slc" value="AUC"> AUC- Auction</label>
+                                            <label><input type="checkbox" class="comps-slc" value="TRUS"> TRUS- Trust</label>
+                                            <label><input type="checkbox" class="comps-slc" value="TPA"> TPA- Third Party Approval</label>
+                                            <label><input type="checkbox" class="comps-slc" value="HUD"> HUD- HUD Owned</label>
+                                            <label><input type="checkbox" class="comps-slc" value="BK"> BK- Bankruptcy Property</label>
+                                            <label><input type="checkbox" class="comps-slc" value="FORC"> FORC- In Foreclosure</label>
+                                            <label><input type="checkbox" class="comps-slc" value="CONS"> CONS- Conservatorship</label>
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset>
+                                        <legend>Property Types</legend>
+                                        <div class="comps-check-grid">
+                                            <label><input type="checkbox" class="comps-type" value="Single Family" checked> Single Family</label>
+                                            <label><input type="checkbox" class="comps-type" value="Condo" checked> Condo</label>
+                                            <label><input type="checkbox" class="comps-type" value="Townhouse" checked> Townhouse</label>
+                                            <label><input type="checkbox" class="comps-type" value="Multi Family" checked> Multi Family</label>
+                                            <label><input type="checkbox" class="comps-type" value="Land" checked> Land</label>
+                                            <label><input type="checkbox" class="comps-type" value="Commercial" checked> Commercial</label>
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset>
+                                        <legend>Property Status</legend>
+                                        <div class="comps-check-grid">
+                                            <label><input type="checkbox" class="comps-status" value="Active"> Active</label>
+                                            <label><input type="checkbox" class="comps-status" value="Pending"> Pending</label>
+                                            <label><input type="checkbox" class="comps-status" value="Back Up Offer"> Back Up Offer</label>
+                                            <label><input type="checkbox" class="comps-status" value="Closed" checked> Closed</label>
+                                        </div>
+                                    </fieldset>
+
+                                    <fieldset>
+                                        <legend>Property Conditions</legend>
+                                        <div class="comps-check-grid">
+                                            <label><input type="checkbox" class="comps-condition" value="Fixer"> Fixer</label>
+                                            <label><input type="checkbox" class="comps-condition" value="As-Is"> As-Is</label>
+                                            <label><input type="checkbox" class="comps-condition" value="Standard High"> Standard High</label>
+                                            <label><input type="checkbox" class="comps-condition" value="Standard" checked> Standard</label>
+                                            <label><input type="checkbox" class="comps-condition" value="Low Flip"> Low Flip</label>
+                                            <label><input type="checkbox" class="comps-condition" value="Standard Flip"> Standard Flip</label>
+                                            <label><input type="checkbox" class="comps-condition" value="High Flip"> High Flip</label>
+                                            <label><input type="checkbox" class="comps-condition" value="Low Flip &amp; Staged"> Low Flip &amp; Staged</label>
+                                            <label><input type="checkbox" class="comps-condition" value="Standard Flip &amp; Staged"> Standard Flip &amp; Staged</label>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </details>
+                        </section>
+
+                        <section class="comps-results-shell">
+                            <div class="comps-results-head">
+                                <h4>Nearby Comps (Top 5)</h4>
+                                <p id="comps-results-meta">Type: 6 selected · Closed: Last 180 days</p>
+                            </div>
+                            <div id="comps-nearby-list" class="comps-nearby-list"></div>
+                        </section>
+
+                        <div class="comps-map-toolbar">
+                            <a id="comps-map-open-link" class="card-btn" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer">Open In Google Maps</a>
+                        </div>
+                        <div class="comps-map-wrap">
+                            <iframe
+                                id="comps-map-frame"
+                                title="Local comps map"
+                                loading="lazy"
+                                allowfullscreen
+                                referrerpolicy="no-referrer-when-downgrade"
+                                src="https://www.google.com/maps?q=california&output=embed"></iframe>
+                        </div>
+                    </div>
+                </article>
+                <article class="property-tab-panel" data-panel="ia">
+                    <div id="ia-calculator-root" class="ia-calculator">
+                        <section class="ia-section">
+                            <h3>Property &amp; Scope</h3>
+                            <div class="ia-grid">
+                                <label>List Price
+                                    <input id="ia-list-price" type="text" inputmode="numeric" autocomplete="off" value="574900">
+                                </label>
+                                <div class="ia-readout">ARV Ratio: <strong id="ia-list-price-arv">0.00%</strong></div>
+
+                                <div class="ia-readout">Buy-Side Closing Costs: <strong id="ia-buy-side-cost">$0</strong></div>
+                                <div class="ia-readout">Buy-Side % ARV: <strong id="ia-buy-side-cost-arv">0.00%</strong></div>
+
+                                <label>Renovation Budget
+                                    <input id="ia-renovation-budget" type="text" inputmode="numeric" autocomplete="off" value="0">
+                                </label>
+                                <div class="ia-readout">Reno % ARV: <strong id="ia-reno-arv">0.00%</strong></div>
+
+                                <div class="ia-readout">Total Acquisition Cost: <strong id="ia-total-acquisition">$0</strong></div>
+                                <div class="ia-readout">Acquisition % ARV: <strong id="ia-total-acquisition-arv">0.00%</strong></div>
+
+                                <label>After Repair Value (ARV)
+                                    <input id="ia-arv" type="text" inputmode="numeric" autocomplete="off" value="694592">
+                                </label>
+                                <label>Sell-Side Closing (%)
+                                    <input id="ia-sell-side-percent" type="text" inputmode="decimal" autocomplete="off" value="4">
+                                </label>
+
+                                <div class="ia-readout ia-span-2">Sell-Side Closing Amount: <strong id="ia-sell-side-amount">$0</strong></div>
+                            </div>
+                        </section>
+
+                        <section class="ia-section">
+                            <h3>Targets &amp; Results</h3>
+                            <div class="ia-grid">
+                                <div class="ia-other-costs ia-span-2">
+                                    <div class="ia-other-head">
+                                        <span>Other Costs</span>
+                                        <button id="ia-add-other-cost" type="button">Add</button>
+                                    </div>
+                                    <div class="ia-other-inputs">
+                                        <input id="ia-other-cost-name" type="text" list="ia-other-cost-presets" placeholder="Select or type cost...">
+                                        <datalist id="ia-other-cost-presets">
+                                            <option value="Whole sale"></option>
+                                            <option value="Cash for Keys"></option>
+                                        </datalist>
+                                        <input id="ia-other-cost-amount" type="text" inputmode="numeric" autocomplete="off" value="0" placeholder="0">
+                                    </div>
+                                    <ul id="ia-other-cost-list" class="ia-other-list"></ul>
+                                    <div class="ia-readout">Other Cost Total: <strong id="ia-other-cost-total">$0</strong></div>
+                                </div>
+
+                                <label>Target Profit Goal (%)
+                                    <input id="ia-target-profit-percent" type="text" inputmode="decimal" autocomplete="off" value="12">
+                                </label>
+                                <label>Target Profit Goal ($)
+                                    <input id="ia-target-profit-dollar" type="text" inputmode="numeric" autocomplete="off" value="70700">
+                                </label>
+
+                                <div class="ia-readout">$ Off Asking: <strong id="ia-off-asking-dollar">$0</strong></div>
+                                <div class="ia-readout">% Off Asking: <strong id="ia-off-asking-percent">0.00%</strong></div>
+
+                                <div class="ia-readout ia-span-2 ia-offer-price-readout">
+                                    <label class="ia-offer-price-field" for="ia-offer-price-input">
+                                        <span>Offer Price</span>
+                                        <input id="ia-offer-price-input" type="text" inputmode="numeric" autocomplete="off" value="0">
+                                    </label>
+                                </div>
+                                <div class="ia-readout ia-span-2 ia-strike-zone-readout">
+                                    <span class="ia-strike-zone-label">Strike Zone Max Buy %</span>
+                                    <strong id="ia-strike-zone-pct">NA</strong>
+                                    <small id="ia-strike-zone-area">Area: NA</small>
+                                </div>
+                                <div class="ia-readout">Offer % of ARV: <strong id="ia-offer-price-arv">0.00%</strong></div>
+                                <div class="ia-readout">Off Asking Summary: <strong id="ia-offer-off-asking">0.00%</strong></div>
+
+                                <div class="ia-readout ia-span-2">Total Acquisition Cost: <strong id="ia-summary-acq">$0</strong></div>
+                                <div class="ia-readout ia-span-2">Total Project Cost: <strong id="ia-summary-project">$0</strong></div>
+                                <div class="ia-readout ia-span-2">Total Project Cost w/ Financing: <strong id="ia-summary-project-fin">$0</strong></div>
+                                <div class="outreach-actions ia-span-2">
+                                    <button type="button" class="card-btn ia-calc-btn" id="ia-calc-btn">Calculate</button>
+                                    <button type="button" class="card-btn active" id="ia-summary-copy-btn">Copy IA Calculator Summary</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="ia-section">
+                            <h3>Financing &amp; Hold</h3>
+                            <div class="ia-grid">
+                                <label>Financing Program
+                                    <select id="ia-financing-mode">
+                                        <option value="100-100">100/100 - Kiavi 80% of ARV</option>
+                                        <option value="90-100">90/100 - Kiavi 75% of ARV</option>
+                                        <option value="custom">Custom Financing</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
+                                </label>
+                                <label>Hold Time (months)
+                                    <input id="ia-hold-months" type="text" inputmode="numeric" autocomplete="off" value="4">
+                                </label>
+
+                                <label>Loan to ARV (%)
+                                    <input id="ia-loan-to-arv" type="text" inputmode="decimal" autocomplete="off" value="80">
+                                </label>
+                                <label>Interest Rate Annual (%)
+                                    <input id="ia-interest-rate" type="text" inputmode="decimal" autocomplete="off" value="10.44">
+                                </label>
+
+                                <label>Origination Points (%)
+                                    <input id="ia-origination-points" type="text" inputmode="decimal" autocomplete="off" value="1.5">
+                                </label>
+                                <label>Lender Fees ($)
+                                    <input id="ia-lender-fees" type="text" inputmode="numeric" autocomplete="off" value="999">
+                                </label>
+
+                                <div class="ia-readout">Loan Amount: <strong id="ia-loan-amount">$0</strong></div>
+                                <div class="ia-readout">Origination Points: <strong id="ia-origination-amount">$0</strong></div>
+                                <div class="ia-readout">Interest Cost: <strong id="ia-interest-cost">$0</strong></div>
+                                <div class="ia-readout">Total Financing Cost: <strong id="ia-total-financing">$0</strong></div>
+                                <div class="ia-readout ia-span-2">Leveraged Profit: <strong id="ia-leveraged-profit">$0</strong></div>
+                                <div class="ia-readout ia-span-2 ia-cash-note" id="ia-cash-note" hidden>Cash: No financing costs for cash purchase.</div>
+                            </div>
+                        </section>
+
+                        <section class="ia-section investor-profits-shell">
+                            <h3>Net Profits</h3>
+                            <div class="ia-grid">
+                                <div class="ia-readout ia-span-2">Net Profit: <strong id="inv-net-profit">$0</strong></div>
+                                <div class="ia-readout ia-span-2">Net Profit %: <strong id="inv-net-profit-pct">0.00%</strong></div>
+                                <div class="ia-readout ia-span-2">Cash Profit: <strong id="inv-cash-profit">$0</strong></div>
+                                <div class="ia-readout ia-span-2">Cash Profit %: <strong id="inv-cash-profit-pct">0.00%</strong></div>
+                            </div>
+                            <div class="investor-summary-wrap">
+                                <div class="outreach-actions investor-summary-actions">
+                                    <button type="button" class="card-btn active" id="inv-summary-copy-btn">Copy Investor Summary (Email/SMS)</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </article>
+                <article class="property-tab-panel" data-panel="agent">
+                    <section class="agent-record">
+                        <header class="agent-record-header">
+                            <h3 id="agent-name">Brandon Wasilewski</h3>
+                            <p class="agent-record-label" id="agent-record-title">Agent Record</p>
+                            <p id="agent-phone">(805) 856-8773</p>
+                            <p id="agent-email">lewskisells@gmail.com</p>
+                            <p id="agent-brokerage">Realty ONE Group Summit</p>
+                        </header>
+
+                        <div class="agent-record-section">
+                            <h4>Last Communication</h4>
+                            <p>Agent Status: <strong id="agent-current-status">0% - None</strong></p>
+                            <p>Last Communication Date: <strong id="agent-last-communication-date">-</strong></p>
+                            <p>Last Address Discussed: <strong id="agent-last-address-discussed">-</strong></p>
+                            <p>Last Communicated AA: <strong id="agent-last-communicated-aa">-</strong></p>
+                        </div>
+
+                        <div class="agent-record-section">
+                            <h4>Performance</h4>
+                            <p>Active In Last 2 Years: <strong id="agent-active-last-2-years">TRUE</strong></p>
+                            <p>Average Deals Per Year: <strong id="agent-average-deals-per-year">3</strong></p>
+                            <p>Double Ended: <strong id="agent-double-ended">0</strong></p>
+                            <p>Investor Source: <strong id="agent-investor-source">0</strong></p>
+                        </div>
+
+                        <div class="agent-record-section">
+                            <h4>Agent Notes</h4>
+                            <p class="agent-note-help">Save notes for this agent on this property. They will appear on the dashboard widget.</p>
+                            <label class="agent-note-label" for="agent-note-input">New Note</label>
+                            <textarea id="agent-note-input" class="form-input agent-note-input" placeholder="Call outcome, motivation, preferred terms, follow-up date..."></textarea>
+                            <div class="outreach-actions">
+                                <button id="save-agent-note-btn" type="button" class="card-btn active">Save Agent Note</button>
+                            </div>
+                            <div id="agent-note-list" class="agent-note-list">
+                                <p class="outreach-empty">No notes for this agent/property yet.</p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+                <article class="property-tab-panel" data-panel="offer">
+                    <section class="offer-terms">
+                        <div class="offer-bubble offer-purchase-bubble">
+                        <h3>Purchase Terms</h3>
+
+                        <div class="offer-section">
+                            <h4>Entity</h4>
+                            <div class="offer-grid">
+                                <label>Entity
+                                    <select id="offer-entity">
+                                        <option value="fast-bridge-group-llc" selected>FAST BRIDGE GROUP LLC</option>
+                                    </select>
+                                </label>
+                                <label>Purchase Price*
+                                    <input id="offer-purchase-price" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 500000">
+                                </label>
+                                <label>Close of Escrow (Days)*
+                                    <input id="offer-close-escrow-days" type="text" inputmode="numeric" autocomplete="off" value="10" placeholder="e.g., 21">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="offer-section">
+                            <h4>Deposit Amount*</h4>
+                            <div class="offer-grid">
+                                <label>Deposit Amount Type
+                                    <select id="offer-deposit-amount-mode">
+                                        <option value="flat-fee" selected>Flat Fee</option>
+                                        <option value="percentage">Percentage</option>
+                                    </select>
+                                </label>
+                                <label id="offer-deposit-amount-label">Flat Fee
+                                    <input id="offer-deposit-flat-fee" type="text" inputmode="numeric" autocomplete="off" value="5000" placeholder="e.g., 5000">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="offer-section">
+                            <h4>Deposit Details</h4>
+                            <div class="offer-grid">
+                                <label>Deposit Type
+                                    <select id="offer-deposit-type">
+                                        <option value="">Select Deposit Type</option>
+                                        <option value="company-check">Company check</option>
+                                        <option value="cashiers-check">Cashiers Check</option>
+                                        <option value="wire-to-escrow" selected>Wire to escrow</option>
+                                        <option value="wire-to-broker">Wire to broker</option>
+                                        <option value="tbd">TBD</option>
+                                        <option value="object-object">Object Object</option>
+                                    </select>
+                                </label>
+                                <label>Deposit To Be
+                                    <select id="offer-deposit-to-be">
+                                        <option value="">Select Deposit To Be</option>
+                                        <option value="held-uncashed-until-bank-approval">Held Un-cashed until bank approval</option>
+                                        <option value="deposited-with-escrow" selected>Deposit through escrow</option>
+                                        <option value="wired-to-escrow-upon-bank-approval">Wired to escrow upon bank approval</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="offer-section">
+                            <h4>Offer Details</h4>
+                            <div class="offer-grid">
+                                <label>Offer Type
+                                    <select id="offer-type">
+                                        <option value="">Select Offer Type</option>
+                                        <option value="cash" selected>All cash offer</option>
+                                        <option value="hard-money">Hard Money</option>
+                                        <option value="conventional">Conventional</option>
+                                        <option value="fha-203k">FHA 203K</option>
+                                    </select>
+                                </label>
+                                <label>Other Offer
+                                    <select id="offer-other-offer">
+                                        <option value="">None</option>
+                                        <option value="wholesale">Whole sale</option>
+                                        <option value="cash-for-keys">Cash for Keys</option>
+                                    </select>
+                                </label>
+                                <label>Other Terms
+                                    <input id="offer-other-terms" type="text" placeholder="Add any additional terms">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="offer-section">
+                            <h4>Contingencies</h4>
+                            <div class="offer-grid">
+                                <label>Appraisal
+                                    <select id="offer-appraisal">
+                                        <option value="no-appraisal-contingencies" selected>No appraisal contingencies</option>
+                                        <option value="appraisal-contingency">appraisal contingency</option>
+                                    </select>
+                                </label>
+                                <label>Inspection Period
+                                    <select id="offer-inspection-period">
+                                        <option value="">Select Inspection Period</option>
+                                        <option value="1">1 Day</option>
+                                        <option value="2">2 Days</option>
+                                        <option value="3">3 Days</option>
+                                        <option value="4">4 Days</option>
+                                        <option value="5" selected>5 Days</option>
+                                        <option value="6">6 Days</option>
+                                        <option value="7">7 Days</option>
+                                        <option value="8">8 Days</option>
+                                        <option value="9">9 Days</option>
+                                        <option value="10">10 Days</option>
+                                        <option value="11">11 Days</option>
+                                        <option value="12">12 Days</option>
+                                        <option value="13">13 Days</option>
+                                        <option value="14">14 Days</option>
+                                        <option value="15">15 Days</option>
+                                        <option value="16">16 Days</option>
+                                        <option value="17">17 Days</option>
+                                    </select>
+                                </label>
+                                <label>Termite Inspection
+                                    <select id="offer-termite-inspection">
+                                        <option value="">Select Termite Inspection</option>
+                                        <option value="no-termite" selected>NO Termite Inspection</option>
+                                        <option value="section-1-seller">Section 1 Termite Paid by Seller</option>
+                                        <option value="section-1-2-seller">Section 1&2 Termite Paid by Seller</option>
+                                    </select>
+                                </label>
+                                <label>Assignment Request
+                                    <input id="offer-assignment-request" type="text" inputmode="numeric" autocomplete="off" value="17">
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="offer-section">
+                            <h4>Closing Terms</h4>
+                            <div class="offer-grid">
+                                <label>Escrow Fees
+                                    <select id="offer-escrow-fees">
+                                        <option value="">Select Escrow Fees</option>
+                                        <option value="seller">seller</option>
+                                        <option value="buyer">buyer</option>
+                                        <option value="both">both</option>
+                                        <option value="each-own-fees">Each to Pay Their Own Fees</option>
+                                    </select>
+                                </label>
+                                <label>Title Fees
+                                    <select id="offer-title-fees">
+                                        <option value="">Select Title Fees</option>
+                                        <option value="seller">seller</option>
+                                        <option value="buyer">buyer</option>
+                                        <option value="both">both</option>
+                                    </select>
+                                </label>
+                                <label>City Transfer Tax
+                                    <select id="offer-city-transfer-tax">
+                                        <option value="">Select City Transfer Tax</option>
+                                        <option value="seller">seller</option>
+                                        <option value="buyer">buyer</option>
+                                        <option value="both">both</option>
+                                    </select>
+                                </label>
+                                <label>County Transfer Tax
+                                    <select id="offer-county-transfer-tax">
+                                        <option value="">Select County Transfer Tax</option>
+                                        <option value="seller">seller</option>
+                                        <option value="buyer">buyer</option>
+                                        <option value="both">both</option>
+                                    </select>
+                                </label>
+                                <label>Escrow
+                                    <input id="offer-escrow" type="text" placeholder="Select or type escrow...">
+                                </label>
+                                <label>Title Company
+                                    <input id="offer-title-company" type="text" placeholder="Select or type title company...">
+                                </label>
+                                <label>Disclosures
+                                    <select id="offer-disclosures">
+                                        <option value="">Select Disclosures</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="7">7</option>
+                                        <option value="8">8</option>
+                                        <option value="9">9</option>
+                                        <option value="10">10</option>
+                                        <option value="11">11</option>
+                                        <option value="12">12</option>
+                                        <option value="13">13</option>
+                                        <option value="14">14</option>
+                                        <option value="15">15</option>
+                                        <option value="16">16</option>
+                                        <option value="17">17</option>
+                                    </select>
+                                </label>
+                                <label>Possession
+                                    <select id="offer-possession">
+                                        <option value="">Select Possession</option>
+                                        <option value="0">0</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                    </select>
+                                </label>
+                                <label>Representation Period
+                                    <div class="offer-date-row">
+                                        <input id="offer-rep-start" type="date" value="2026-03-12">
+                                        <input id="offer-rep-end" type="date" value="2026-06-10">
+                                    </div>
+                                </label>
+                                <div class="offer-seller-comp-box">
+                                    <label class="offer-seller-comp-check" for="offer-seller-comp-enabled">
+                                        <span>Seller agrees to pay buyers compensation</span>
+                                        <input id="offer-seller-comp-enabled" type="checkbox">
+                                        <span class="offer-toggle-slider" aria-hidden="true"></span>
+                                    </label>
+                                    <div id="offer-seller-comp-fields" class="offer-seller-comp-fields" hidden>
+                                        <label>%
+                                            <input id="offer-seller-comp-percent" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g., 2.5">
+                                        </label>
+                                        <label>$
+                                            <input id="offer-seller-comp-amount" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 7500">
+                                        </label>
+                                    </div>
+                                </div>
+                                <label>Multiple Buyers
+                                    <select id="offer-multiple-buyers">
+                                        <option value="">Select</option>
+                                        <option value="yes">Yes</option>
+                                        <option value="no">No</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <label class="offer-email-toggle-row">
+                            <span>Auto-include all offer terms in email</span>
+                            <input id="offer-email-include-terms" type="checkbox">
+                            <span class="offer-toggle-slider" aria-hidden="true"></span>
+                        </label>
+                        </div>
+
+                        <div class="offer-bubble offer-email-bubble">
+                        <h3>Email Prep</h3>
+                        <div class="offer-section">
+                            <div class="offer-email-card">
+                                <div class="offer-grid offer-email-grid">
+                                    <label>Sender
+                                        <input id="offer-email-sender-name" class="form-input" type="text" placeholder="Sender name">
+                                    </label>
+                                    <label>Sender Email
+                                        <input id="offer-email-sender" class="form-input" type="email" placeholder="sender@example.com">
+                                    </label>
+                                    <label>Recipient
+                                        <input id="offer-email-recipient-name" class="form-input" type="text" placeholder="Recipient name">
+                                    </label>
+                                    <label>Recipient Email
+                                        <input id="offer-email-recipient" class="form-input" type="email" placeholder="recipient@example.com">
+                                    </label>
+                                    <label>Template Category
+                                        <select id="offer-email-category" class="form-input">
+                                            <option value="">Select Category</option>
+                                        </select>
+                                    </label>
+                                    <label>Template Sub Category
+                                        <select id="offer-email-subcategory" class="form-input">
+                                            <option value="">Select Sub Category</option>
+                                        </select>
+                                    </label>
+                                    <label>Template
+                                        <select id="offer-email-template" class="form-input">
+                                            <option value="">Select Template</option>
+                                        </select>
+                                    </label>
+                                    <label>Investor Attachments
+                                        <select id="offer-email-investor-attachments" class="form-input">
+                                            <option value="">No investor package</option>
+                                        </select>
+                                    </label>
+                                    <label>Send Mode
+                                        <select id="offer-email-send-mode" class="form-input">
+                                            <option value="mailto">Open Email Draft</option>
+                                            <option value="copy">Copy Only</option>
+                                        </select>
+                                    </label>
+                                    <label>E-Card JPG
+                                        <div class="offer-email-ecard-row">
+                                            <select id="offer-email-ecard" class="form-input offer-email-ecard-select">
+                                                <option value="">Do not include E-card</option>
+                                            </select>
+                                            <label class="offer-email-toggle-row offer-email-ecard-toggle" for="offer-email-ecard-toggle">
+                                                <input type="checkbox" id="offer-email-ecard-toggle">
+                                                <span class="offer-email-toggle-text">Include My E-Card</span>
+                                                <span class="offer-toggle-slider" aria-hidden="true"></span>
+                                            </label>
+                                        </div>
+                                    </label>
+                                    <label class="offer-email-span-2">Subject
+                                        <input id="offer-email-subject" class="form-input" type="text" placeholder="Offer Terms - 123 Main St">
+                                    </label>
+                                    <div class="offer-email-span-2 offer-email-editor-wrap">
+                                        <span class="offer-email-editor-label">Email Body</span>
+                                        <div class="offer-email-toolbar" id="offer-email-toolbar">
+                                            <select id="offer-email-font-family" class="form-input">
+                                                <option value="Arial">Arial</option>
+                                                <option value="Georgia">Georgia</option>
+                                                <option value="Tahoma">Tahoma</option>
+                                                <option value="Trebuchet MS">Trebuchet MS</option>
+                                                <option value="Verdana">Verdana</option>
+                                            </select>
+                                            <select id="offer-email-font-size" class="form-input">
+                                                <option value="2">10 pt</option>
+                                                <option value="3" selected>12 pt</option>
+                                                <option value="4">14 pt</option>
+                                                <option value="5">18 pt</option>
+                                                <option value="6">24 pt</option>
+                                            </select>
+                                            <button type="button" class="offer-toolbar-btn" data-command="bold"><strong>B</strong></button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="italic"><em>I</em></button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="underline"><u>U</u></button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="insertUnorderedList">Bullets</button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="removeFormat">Clear</button>
+                                        </div>
+                                        <div id="offer-email-body" class="form-input offer-email-body offer-email-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Offer email body will be prepared here."></div>
+                                    </div>
+                                </div>
+                                <div id="offer-email-doc-summary" class="offer-email-doc-summary">No offer documents attached yet.</div>
+                                <p class="offer-docs-note" id="offer-email-note">Uploaded files in the Offer Documents section below will be sent automatically with Send To Agent. Browser-based email drafts still cannot auto-attach local files. Send To Agent can also embed the selected E-card JPG inline.</p>
+
+                                <div class="offer-email-attach-box" style="margin-top:18px;padding:16px 14px 14px 14px;border:1px solid #e5e7eb;border-radius:10px;background:rgba(0,0,0,0.03);">
+                                    <div style="font-weight:600;font-size:15px;margin-bottom:6px;">Offer Documents</div>
+                                    <div id="offer-docs-list">
+                                        <p class="outreach-empty">No documents attached yet.</p>
+                                    </div>
+                                    <p class="offer-docs-note" id="offer-docs-note">Select an entity first, then use Link, Upload, PDF Template, or Google Doc.</p>
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        <button type="button" class="card-btn" id="offer-link-document-btn">Link Document</button>
+                                        <button type="button" class="card-btn" id="offer-upload-files-btn">Upload Files</button>
+                                        <button type="button" class="card-btn" id="offer-pdf-template-btn">PDF Template</button>
+                                        <button type="button" class="card-btn" id="offer-google-doc-btn">Google Doc Link</button>
+                                    </div>
+                                    <input id="offer-upload-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.txt">
+                                </div>
+                                <div class="offer-docs-actions">
+                                    <button type="button" class="card-btn" id="offer-email-copy-subject-btn">Copy Subject</button>
+                                    <button type="button" class="card-btn" id="offer-email-copy-body-btn">Copy Body</button>
+                                    <button type="button" class="card-btn" id="offer-email-send-agent-btn">Send To Agent</button>
+                                    <button type="button" class="card-btn active" id="offer-email-open-btn">Open Email Draft</button>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </section>
+                </article>
+            </div>
+        </section>
+    </div>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+</body>
+</html>
+
