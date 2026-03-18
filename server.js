@@ -43,6 +43,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 let cachedOpenAiApiKey = null;
 
+const LEGACY_EMAIL_ALIASES = new Map([
+  ['isaacs.hesed@gmail.com', 'isaacs.hesed@fastbridgegroup.com']
+]);
+
+function normalizeKnownEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  return LEGACY_EMAIL_ALIASES.get(normalizedEmail) || normalizedEmail;
+}
+
 function getRequestOrigin(req) {
   const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
   const protocol = forwardedProto || req.protocol || 'http';
@@ -435,7 +444,7 @@ function listInvestorAttachmentPackages() {
 }
 
 async function completeOAuthLogin({ email, name }) {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedEmail = normalizeKnownEmail(email);
   if (!normalizedEmail) {
     throw new Error('OAuth provider did not return an email');
   }
@@ -601,7 +610,7 @@ app.post('/api/login', (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const normalizedEmail = String(email).trim().toLowerCase();
+  const normalizedEmail = normalizeKnownEmail(email);
   db.get('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail], async (err, user) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
