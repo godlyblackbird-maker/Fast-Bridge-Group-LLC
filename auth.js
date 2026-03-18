@@ -2,16 +2,47 @@
 // Include this in all pages that require authentication
 
 (function() {
-  const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
-  const ISAAC_EMAIL_ALIASES = [
-    CANONICAL_ISAAC_EMAIL,
-    'isaacs.hesed@fastbridgegroup.com',
-    'isaacs.hesed@gmail.com'
+  const KNOWN_EMAIL_GROUPS = [
+    {
+      canonical: 'isaac.haro@fastbridgegroupllc.com',
+      aliases: [
+        'isaac.haro@fastbridgegroupllc.com',
+        'isaacs.hesed@fastbridgegroup.com',
+        'isaacs.hesed@gmail.com'
+      ],
+      forceRole: 'admin'
+    },
+    {
+      canonical: 'steve.medina@fastbridgegroupllc.com',
+      aliases: [
+        'steve.medina@fastbridgegroupllc.com',
+        'medinafbg@gmail.com',
+        'medinastj@gmail.com'
+      ],
+      forceRole: 'admin'
+    }
   ];
+  const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+  const ADMIN_CANONICAL_EMAILS = new Set();
+
+  KNOWN_EMAIL_GROUPS.forEach((group) => {
+    if (group.forceRole === 'admin') {
+      ADMIN_CANONICAL_EMAILS.add(group.canonical);
+    }
+    group.aliases.forEach((alias) => {
+      KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
+    });
+  });
+
+  function getKnownEmailGroup(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const canonicalEmail = KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
+    return KNOWN_EMAIL_GROUPS.find((group) => group.canonical === canonicalEmail) || null;
+  }
 
   function normalizeKnownEmail(email) {
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    return ISAAC_EMAIL_ALIASES.includes(normalizedEmail) ? CANONICAL_ISAAC_EMAIL : normalizedEmail;
+    return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
   }
 
   function getKnownEmailCandidates(email) {
@@ -19,9 +50,8 @@
     if (!normalizedEmail) {
       return [];
     }
-    return ISAAC_EMAIL_ALIASES.includes(normalizedEmail)
-      ? ISAAC_EMAIL_ALIASES.slice()
-      : [normalizedEmail];
+    const group = getKnownEmailGroup(normalizedEmail);
+    return group ? group.aliases.slice() : [normalizedEmail];
   }
 
   function normalizeKnownUser(userLike) {
@@ -30,13 +60,12 @@
     }
 
     const normalizedEmail = normalizeKnownEmail(userLike.email || '');
-    const isIsaacAccount = ISAAC_EMAIL_ALIASES.includes(String(userLike.email || '').trim().toLowerCase())
-      || normalizedEmail === CANONICAL_ISAAC_EMAIL;
+    const isKnownAdminAccount = ADMIN_CANONICAL_EMAILS.has(normalizedEmail);
 
     return {
       ...userLike,
       email: normalizedEmail || String(userLike.email || '').trim().toLowerCase(),
-      role: isIsaacAccount ? 'admin' : String(userLike.role || '').trim().toLowerCase()
+      role: isKnownAdminAccount ? 'admin' : String(userLike.role || '').trim().toLowerCase()
     };
   }
 

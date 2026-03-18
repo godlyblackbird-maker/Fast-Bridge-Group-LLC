@@ -44,15 +44,26 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 let cachedOpenAiApiKey = null;
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
+const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
+const ADMIN_CANONICAL_EMAILS = new Set([
+  CANONICAL_ISAAC_EMAIL,
+  CANONICAL_STEVE_EMAIL
+]);
 
 const LEGACY_EMAIL_ALIASES = new Map([
   ['isaacs.hesed@gmail.com', CANONICAL_ISAAC_EMAIL],
-  ['isaacs.hesed@fastbridgegroup.com', CANONICAL_ISAAC_EMAIL]
+  ['isaacs.hesed@fastbridgegroup.com', CANONICAL_ISAAC_EMAIL],
+  ['medinafbg@gmail.com', CANONICAL_STEVE_EMAIL],
+  ['medinastj@gmail.com', CANONICAL_STEVE_EMAIL]
 ]);
 
 function normalizeKnownEmail(email) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   return LEGACY_EMAIL_ALIASES.get(normalizedEmail) || normalizedEmail;
+}
+
+function isKnownAdminEmail(email) {
+  return ADMIN_CANONICAL_EMAILS.has(normalizeKnownEmail(email));
 }
 
 function getRequestOrigin(req) {
@@ -79,8 +90,9 @@ function getGoogleRedirectUri(req) {
       const requestHost = String(requestUrl.hostname || '').trim().toLowerCase();
       const requestIsRemote = requestHost && !['localhost', '127.0.0.1'].includes(requestHost);
       const configuredIsLocal = ['localhost', '127.0.0.1'].includes(configuredHost);
+      const hostChanged = Boolean(requestHost && configuredHost && configuredHost !== requestHost);
 
-      if (requestIsRemote && configuredIsLocal) {
+      if (requestIsRemote && (configuredIsLocal || hostChanged)) {
         return fallback;
       }
     } catch (error) {
@@ -239,6 +251,7 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN smtp_pass TEXT`, () => {});
         db.run(`ALTER TABLE users ADD COLUMN smtp_signature TEXT`, () => {});
       syncIsaacAdminAccount();
+      syncSteveAdminAccount();
     }
   });
 
@@ -360,6 +373,45 @@ async function syncIsaacAdminAccount() {
   }
 }
 
+async function syncSteveAdminAccount() {
+  const canonicalEmail = CANONICAL_STEVE_EMAIL;
+  const legacyEmails = ['medinafbg@gmail.com', 'medinastj@gmail.com'];
+  const canonicalName = 'Steve Medina';
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) IN (?, ?, ?)
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 WHEN LOWER(email) = ? THEN 1 WHEN LOWER(email) = ? THEN 2 ELSE 3 END, id ASC`,
+      [canonicalEmail, legacyEmails[0], legacyEmails[1], canonicalName, canonicalEmail, legacyEmails[0], legacyEmails[1]]
+    );
+
+    if (!account) {
+      return;
+    }
+
+    const currentEmail = String(account.email || '').trim().toLowerCase();
+    const currentSmtpUser = String(account.smtp_user || '').trim().toLowerCase();
+    const shouldUpdateSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail || legacyEmails.includes(currentSmtpUser);
+
+    await dbRun(
+      'UPDATE users SET name = ?, email = ?, role = ?, smtp_user = ? WHERE id = ?',
+      [
+        canonicalName,
+        canonicalEmail,
+        'admin',
+        shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user,
+        account.id
+      ]
+    );
+
+    console.log('Steve admin account synced');
+  } catch (error) {
+    console.error('Failed to sync Steve admin account:', error);
+  }
+}
+
 function resolveWorkspaceAssetPath(relativePath) {
   const normalized = decodeURIComponent(String(relativePath || '').trim())
     .replace(/\\/g, '/')
@@ -455,18 +507,18 @@ async function completeOAuthLogin({ email, name }) {
   const normalizedName = String(name || '').trim() || normalizedEmail.split('@')[0] || 'User';
   const existingUser = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail]);
   let userId = existingUser ? existingUser.id : null;
-  let userRole = existingUser ? existingUser.role : 'user';
+  let userRole = isKnownAdminEmail(normalizedEmail) ? 'admin' : (existingUser ? existingUser.role : 'user');
 
   if (!existingUser) {
     const randomPassword = crypto.randomBytes(24).toString('hex');
     const hash = await bcrypt.hash(randomPassword, 10);
     const insertResult = await dbRun(
       'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [normalizedName, normalizedEmail, hash, 'user']
+      [normalizedName, normalizedEmail, hash, userRole]
     );
     userId = insertResult.lastID;
   } else {
-    await dbRun('UPDATE users SET name = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [normalizedName, existingUser.id]);
+    await dbRun('UPDATE users SET name = ?, role = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [normalizedName, userRole, existingUser.id]);
   }
 
   const userPayload = {

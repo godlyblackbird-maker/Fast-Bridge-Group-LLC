@@ -20,12 +20,36 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp'];
-    const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
-    const ISAAC_EMAIL_ALIASES = new Set([
-        CANONICAL_ISAAC_EMAIL,
-        'isaacs.hesed@fastbridgegroup.com',
-        'isaacs.hesed@gmail.com'
-    ]);
+    const KNOWN_EMAIL_GROUPS = [
+        {
+            canonical: 'isaac.haro@fastbridgegroupllc.com',
+            aliases: [
+                'isaac.haro@fastbridgegroupllc.com',
+                'isaacs.hesed@fastbridgegroup.com',
+                'isaacs.hesed@gmail.com'
+            ],
+            forceRole: 'admin'
+        },
+        {
+            canonical: 'steve.medina@fastbridgegroupllc.com',
+            aliases: [
+                'steve.medina@fastbridgegroupllc.com',
+                'medinafbg@gmail.com',
+                'medinastj@gmail.com'
+            ],
+            forceRole: 'admin'
+        }
+    ];
+    const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+    const ADMIN_CANONICAL_EMAILS = new Set();
+    KNOWN_EMAIL_GROUPS.forEach((group) => {
+        if (group.forceRole === 'admin') {
+            ADMIN_CANONICAL_EMAILS.add(group.canonical);
+        }
+        group.aliases.forEach((alias) => {
+            KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
+        });
+    });
     const BIBLE_MEMORY_VERSES = [
         { reference: 'Acts 16:31', text: 'Believe on the Lord Jesus Christ, and you will be saved.' },
         { reference: '1 John 4:19', text: 'We love because he first loved us.' },
@@ -146,10 +170,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function normalizeUserIdentityValue(value) {
         const normalizedValue = String(value || '').trim().toLowerCase();
-        if (ISAAC_EMAIL_ALIASES.has(normalizedValue)) {
-            return CANONICAL_ISAAC_EMAIL;
-        }
-        return normalizedValue;
+        return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedValue) || normalizedValue;
     }
 
     function normalizeUserNameKey(value) {
@@ -163,12 +184,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const name = String(userLike && userLike.name || '').trim();
         const normalizedName = normalizeUserNameKey(name);
         const key = normalizeUserIdentityValue(userLike && userLike.key);
+        const group = KNOWN_EMAIL_GROUPS.find((item) => item.canonical === email || item.aliases.includes(rawEmail));
 
         if (email) {
             aliases.add(email);
         }
-        if (ISAAC_EMAIL_ALIASES.has(rawEmail) || ISAAC_EMAIL_ALIASES.has(email)) {
-            ISAAC_EMAIL_ALIASES.forEach((alias) => aliases.add(alias));
+        if (group) {
+            group.aliases.forEach((alias) => aliases.add(alias));
         }
         if (normalizedName) {
             aliases.add(normalizedName);
@@ -213,7 +235,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             key: mergedKey,
             name: mergedName || mergedEmail || 'User',
             email: normalizeUserIdentityValue(mergedEmail),
-            role: normalizeUserIdentityValue(mergedRole)
+            role: ADMIN_CANONICAL_EMAILS.has(normalizeUserIdentityValue(mergedEmail)) ? 'admin' : normalizeUserIdentityValue(mergedRole)
         };
     }
 
@@ -234,7 +256,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
         const email = normalizeUserIdentityValue(user.email || profile.email || '');
         const name = String(user.name || profile.name || 'User').trim();
-        const role = normalizeUserIdentityValue(user.role || profile.role || '');
+        const role = ADMIN_CANONICAL_EMAILS.has(email) ? 'admin' : normalizeUserIdentityValue(user.role || profile.role || '');
         const key = email || normalizeUserNameKey(name) || 'default-user';
         return {
             key,
@@ -314,7 +336,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             key,
             name,
             email,
-            role
+            role: ADMIN_CANONICAL_EMAILS.has(email) ? 'admin' : role
         };
     }
 
@@ -3397,7 +3419,7 @@ function initNavbarDateTime() {
         const emailInput = document.getElementById('admin-new-user-email');
         const passwordInput = document.getElementById('admin-new-user-password');
         const roleInput = document.getElementById('admin-new-user-role');
-        const nextDomain = 'fastbridgegroup.com';
+                const nextDomain = 'fastbridgegroupllc.com';
         let loadedUsers = [];
 
         const token = localStorage.getItem('authToken');
@@ -3442,7 +3464,7 @@ function initNavbarDateTime() {
                     <p class="outreach-item-body">${item.email || ''}</p>
                     <p class="outreach-owner">Created: ${createdAt}</p>
                     <div class="outreach-item-actions admin-email-actions">
-                        <input class="form-input admin-user-email-input" type="email" value="${suggestedEmail || currentEmail}" placeholder="username@fastbridgegroup.com" data-user-id="${item.id}">
+                        <input class="form-input admin-user-email-input" type="email" value="${suggestedEmail || currentEmail}" placeholder="username@fastbridgegroupllc.com" data-user-id="${item.id}">
                         <button type="button" class="card-btn admin-suggest-email-btn" data-user-id="${item.id}">Use @${nextDomain}</button>
                         <button type="button" class="card-btn active admin-update-email-btn" data-user-id="${item.id}" data-current-email="${currentEmail}">Update Email</button>
                     </div>
@@ -3532,6 +3554,37 @@ function initNavbarDateTime() {
                 return;
             }
 
+            function scoreAdminUser(item) {
+                let score = 0;
+                const rawEmail = String(item?.email || '').trim().toLowerCase();
+                const canonicalEmail = normalizeUserIdentityValue(rawEmail);
+                if (String(item?.role || '').trim().toLowerCase() === 'admin') {
+                    score += 4;
+                }
+                if (rawEmail && rawEmail === canonicalEmail) {
+                    score += 2;
+                }
+                if (canonicalEmail.endsWith('@fastbridgegroupllc.com')) {
+                    score += 1;
+                }
+                return score;
+            }
+
+            function collapseAliasUsers(items) {
+                const byIdentity = new Map();
+
+                items.forEach((item) => {
+                    const identityKey = normalizeUserIdentityValue(item?.email || item?.name || item?.id || '');
+                    const existing = byIdentity.get(identityKey);
+
+                    if (!existing || scoreAdminUser(item) > scoreAdminUser(existing)) {
+                        byIdentity.set(identityKey, item);
+                    }
+                });
+
+                return Array.from(byIdentity.values());
+            }
+
             try {
                 const response = await fetch('/api/users', {
                     headers: {
@@ -3542,7 +3595,7 @@ function initNavbarDateTime() {
                 if (!response.ok) {
                     throw new Error(data.error || 'Unable to load users');
                 }
-                loadedUsers = Array.isArray(data.users) ? data.users : [];
+                loadedUsers = collapseAliasUsers(Array.isArray(data.users) ? data.users : []);
                 renderUsers(loadedUsers);
             } catch (error) {
                 usersList.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load users.')}</p>`;
@@ -4658,7 +4711,7 @@ function initNavbarDateTime() {
         };
 
         function normalizeEmail(value) {
-            return String(value || '').trim().toLowerCase();
+            return normalizeUserIdentityValue(value);
         }
 
         function normalizeName(value) {
@@ -4680,10 +4733,10 @@ function initNavbarDateTime() {
 
         function getUserPhoneHint(email, name) {
             const store = readUserProfileStore();
-            const emailKey = normalizeEmail(email);
+            const emailAliases = getUserIdentityAliases({ email, name });
             const nameKey = makeNameKey(name);
 
-            const fromEmail = emailKey ? store[emailKey] : null;
+            const fromEmail = emailAliases.map((alias) => store[alias]).find((entry) => entry && typeof entry === 'object') || null;
             const fromName = nameKey ? store[nameKey] : null;
             const profile = fromEmail || fromName || {};
             return String(profile.phone || '').trim();
@@ -4810,8 +4863,8 @@ function initNavbarDateTime() {
             // Keep core admins available in the flyer contact list even if API fetch is unavailable.
             fallbackContacts.push({
                 name: 'Steve Medina',
-                email: 'medinafbg@gmail.com',
-                phone: getUserPhoneHint('medinafbg@gmail.com', 'Steve Medina')
+                email: 'steve.medina@fastbridgegroupllc.com',
+                phone: getUserPhoneHint('steve.medina@fastbridgegroupllc.com', 'Steve Medina')
             });
 
             if (currentName || currentEmail) {
@@ -5549,7 +5602,7 @@ function initNavbarDateTime() {
                 },
                 {
                     name: 'Steve Medina',
-                    email: 'medinafbg@gmail.com',
+                    email: 'steve.medina@fastbridgegroupllc.com',
                     role: 'admin'
                 }
             ];

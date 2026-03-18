@@ -565,12 +565,30 @@
     <script>
         (function () {
             const STORAGE_KEY_BASE = 'myAgentsSheetRows';
-            const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
-            const ISAAC_EMAIL_ALIASES = [
-                CANONICAL_ISAAC_EMAIL,
-                'isaacs.hesed@fastbridgegroup.com',
-                'isaacs.hesed@gmail.com'
+            const KNOWN_EMAIL_GROUPS = [
+                {
+                    canonical: 'isaac.haro@fastbridgegroupllc.com',
+                    aliases: [
+                        'isaac.haro@fastbridgegroupllc.com',
+                        'isaacs.hesed@fastbridgegroup.com',
+                        'isaacs.hesed@gmail.com'
+                    ]
+                },
+                {
+                    canonical: 'steve.medina@fastbridgegroupllc.com',
+                    aliases: [
+                        'steve.medina@fastbridgegroupllc.com',
+                        'medinafbg@gmail.com',
+                        'medinastj@gmail.com'
+                    ]
+                }
             ];
+            const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+            KNOWN_EMAIL_GROUPS.forEach((group) => {
+                group.aliases.forEach((alias) => {
+                    KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
+                });
+            });
             const IMPORT_SOURCES = [
                 {
                     matchers: ['isaac.haro@fastbridgegroupllc.com', 'isaacs.hesed@fastbridgegroup.com', 'isaacs.hesed@gmail.com', 'isaac haro', 'isaac'],
@@ -580,7 +598,7 @@
                     ]
                 },
                 {
-                    matchers: ['medinafbg@gmail.com', 'steve medina', 'steve'],
+                    matchers: ['steve.medina@fastbridgegroupllc.com', 'medinafbg@gmail.com', 'medinastj@gmail.com', 'steve medina', 'steve'],
                     paths: ['Steve Medina (ADMIN)/Contacts/Phone logs.csv']
                 }
             ];
@@ -595,7 +613,7 @@
 
             function normalizeKnownEmail(email) {
                 const normalizedEmail = String(email || '').trim().toLowerCase();
-                return ISAAC_EMAIL_ALIASES.includes(normalizedEmail) ? CANONICAL_ISAAC_EMAIL : normalizedEmail;
+                return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
             }
 
             function getScopedEmailKeys(email) {
@@ -603,9 +621,9 @@
                 if (!normalizedEmail) {
                     return [];
                 }
-                return ISAAC_EMAIL_ALIASES.includes(normalizedEmail)
-                    ? ISAAC_EMAIL_ALIASES.slice()
-                    : [normalizedEmail];
+                const canonicalEmail = normalizeKnownEmail(normalizedEmail);
+                const group = KNOWN_EMAIL_GROUPS.find((item) => item.canonical === canonicalEmail);
+                return group ? group.aliases.slice() : [normalizedEmail];
             }
 
             function getUserContext() {

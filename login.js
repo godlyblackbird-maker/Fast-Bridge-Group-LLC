@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const errorDiv = document.getElementById('error-message');
   const emailInput = document.getElementById('email');
   const googleSignInBtn = document.getElementById('google-signin-btn');
+  const loginVersionLabel = document.getElementById('login-version-label');
 
   function getApiBaseOrigin() {
     if (window.location.protocol === 'file:') {
@@ -27,6 +28,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     return window.location.origin || 'http://localhost:3000';
+  }
+
+  async function loadBuildVersion() {
+    if (!loginVersionLabel) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${getApiBaseOrigin()}/api/build-version`, {
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+      const data = await response.json();
+      const version = String(data?.version || '').trim();
+      if (!response.ok || !version) {
+        throw new Error('Build version unavailable');
+      }
+
+      loginVersionLabel.textContent = `Version v${version}`;
+    } catch (error) {
+      loginVersionLabel.textContent = 'Version v1.1.5';
+    }
   }
 
   async function startGoogleSignIn() {
@@ -97,6 +121,8 @@ document.addEventListener('DOMContentLoaded', function() {
       startGoogleSignIn();
     });
   }
+
+  loadBuildVersion();
 
   if (loginForm) {
     loginForm.addEventListener('submit', async function(e) {
