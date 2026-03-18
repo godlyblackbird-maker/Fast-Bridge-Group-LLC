@@ -45,6 +45,7 @@ let cachedOpenAiApiKey = null;
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
+const CANONICAL_STEVE_PASSWORD = 'stevemedina';
 const ADMIN_CANONICAL_EMAILS = new Set([
   CANONICAL_ISAAC_EMAIL,
   CANONICAL_STEVE_EMAIL
@@ -377,6 +378,7 @@ async function syncSteveAdminAccount() {
   const canonicalEmail = CANONICAL_STEVE_EMAIL;
   const legacyEmails = ['medinafbg@gmail.com', 'medinastj@gmail.com'];
   const canonicalName = 'Steve Medina';
+  const canonicalPassword = CANONICAL_STEVE_PASSWORD;
 
   try {
     const account = await dbGet(
@@ -387,7 +389,14 @@ async function syncSteveAdminAccount() {
       [canonicalEmail, legacyEmails[0], legacyEmails[1], canonicalName, canonicalEmail, legacyEmails[0], legacyEmails[1]]
     );
 
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+
     if (!account) {
+      await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, smtp_user) VALUES (?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail]
+      );
+      console.log('Steve admin account created/synced');
       return;
     }
 
@@ -396,10 +405,11 @@ async function syncSteveAdminAccount() {
     const shouldUpdateSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail || legacyEmails.includes(currentSmtpUser);
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, role = ?, smtp_user = ? WHERE id = ?',
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
+        hash,
         'admin',
         shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user,
         account.id
