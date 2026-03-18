@@ -57,11 +57,28 @@ function getRequestOrigin(req) {
 
 function getGoogleRedirectUri(req) {
   const configured = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+  const fallback = `${getRequestOrigin(req)}/auth/google/callback`;
+
   if (configured) {
+    try {
+      const configuredUrl = new URL(configured);
+      const requestUrl = new URL(getRequestOrigin(req));
+      const configuredHost = String(configuredUrl.hostname || '').trim().toLowerCase();
+      const requestHost = String(requestUrl.hostname || '').trim().toLowerCase();
+      const requestIsRemote = requestHost && !['localhost', '127.0.0.1'].includes(requestHost);
+      const configuredIsLocal = ['localhost', '127.0.0.1'].includes(configuredHost);
+
+      if (requestIsRemote && configuredIsLocal) {
+        return fallback;
+      }
+    } catch (error) {
+      // Ignore parse failures and use the configured value.
+    }
+
     return configured;
   }
 
-  return `${getRequestOrigin(req)}/auth/google/callback`;
+  return fallback;
 }
 
 function readOpenAiKeysFromDisk() {
@@ -209,6 +226,7 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN smtp_user TEXT`, () => {});
       db.run(`ALTER TABLE users ADD COLUMN smtp_pass TEXT`, () => {});
         db.run(`ALTER TABLE users ADD COLUMN smtp_signature TEXT`, () => {});
+      syncIsaacAdminAccount();
     }
   });
 
@@ -280,6 +298,54 @@ function dbRun(sql, params) {
       resolve(this);
     });
   });
+}
+
+async function syncIsaacAdminAccount() {
+  const canonicalEmail = 'isaacs.hesed@fastbridgegroup.com';
+  const legacyEmails = ['isaacs.hesed@gmail.com'];
+  const canonicalName = 'ISAAC HARO';
+  const canonicalPassword = '315598';
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) IN (?, ?)
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
+      [canonicalEmail, legacyEmails[0], canonicalName, canonicalEmail]
+    );
+
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+
+    if (!account) {
+      await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, smtp_user) VALUES (?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail]
+      );
+      console.log('Isaac admin account created/synced');
+      return;
+    }
+
+    const currentEmail = String(account.email || '').trim().toLowerCase();
+    const currentSmtpUser = String(account.smtp_user || '').trim().toLowerCase();
+    const shouldUpdateSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail || legacyEmails.includes(currentSmtpUser);
+
+    await dbRun(
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ? WHERE id = ?',
+      [
+        canonicalName,
+        canonicalEmail,
+        hash,
+        'admin',
+        shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user,
+        account.id
+      ]
+    );
+
+    console.log('Isaac admin account synced');
+  } catch (error) {
+    console.error('Failed to sync Isaac admin account:', error);
+  }
 }
 
 function resolveWorkspaceAssetPath(relativePath) {
