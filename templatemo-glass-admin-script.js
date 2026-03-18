@@ -8111,6 +8111,16 @@ function initNavbarDateTime() {
             const otherCostAmountInput = document.getElementById('ia-other-cost-amount');
             const otherCostList = document.getElementById('ia-other-cost-list');
             const invSummaryCopyBtn = document.getElementById('inv-summary-copy-btn');
+            const invEscrowPctInput = document.getElementById('inv-escrow-pct');
+            const invProratedPctInput = document.getElementById('inv-prorated-pct');
+            const invConcessionsPctInput = document.getElementById('inv-concessions-pct');
+            const invBuyerAgentPctInput = document.getElementById('inv-buyer-agent-pct');
+            const invListingAgentPctInput = document.getElementById('inv-listing-agent-pct');
+            const invPerDiemPctInput = document.getElementById('inv-per-diem-pct');
+            const invAssetMgmtPctInput = document.getElementById('inv-asset-mgmt-pct');
+            const invDueDiligenceInput = document.getElementById('inv-due-diligence');
+            const invAcquisitionFeeInput = document.getElementById('inv-acquisition-fee');
+            const invCashForKeysInput = document.getElementById('inv-cash-for-keys');
 
             const investorDefaults = {
                 invEscrowPct: '1',
@@ -8195,11 +8205,40 @@ function initNavbarDateTime() {
                         .filter(item => item.amount > 0)
                     : [];
 
+                const savedInvestorDefaults = state.investorDefaults && typeof state.investorDefaults === 'object'
+                    ? state.investorDefaults
+                    : null;
+                if (savedInvestorDefaults) {
+                    investorDefaults.invEscrowPct = String(savedInvestorDefaults.invEscrowPct ?? investorDefaults.invEscrowPct);
+                    investorDefaults.invProratedPct = String(savedInvestorDefaults.invProratedPct ?? investorDefaults.invProratedPct);
+                    investorDefaults.invConcessionsPct = String(savedInvestorDefaults.invConcessionsPct ?? investorDefaults.invConcessionsPct);
+                    investorDefaults.invBuyerAgentPct = String(savedInvestorDefaults.invBuyerAgentPct ?? investorDefaults.invBuyerAgentPct);
+                    investorDefaults.invListingAgentPct = String(savedInvestorDefaults.invListingAgentPct ?? investorDefaults.invListingAgentPct);
+                    investorDefaults.invPerDiemPct = String(savedInvestorDefaults.invPerDiemPct ?? investorDefaults.invPerDiemPct);
+                    investorDefaults.invAssetMgmtPct = String(savedInvestorDefaults.invAssetMgmtPct ?? investorDefaults.invAssetMgmtPct);
+                    investorDefaults.invDueDiligence = String(savedInvestorDefaults.invDueDiligence ?? investorDefaults.invDueDiligence);
+                    investorDefaults.invAcquisitionFee = String(savedInvestorDefaults.invAcquisitionFee ?? investorDefaults.invAcquisitionFee);
+                    investorDefaults.invCashForKeys = String(savedInvestorDefaults.invCashForKeys ?? investorDefaults.invCashForKeys);
+                }
+
+                if (invEscrowPctInput) invEscrowPctInput.value = investorDefaults.invEscrowPct;
+                if (invProratedPctInput) invProratedPctInput.value = investorDefaults.invProratedPct;
+                if (invConcessionsPctInput) invConcessionsPctInput.value = investorDefaults.invConcessionsPct;
+                if (invBuyerAgentPctInput) invBuyerAgentPctInput.value = investorDefaults.invBuyerAgentPct;
+                if (invListingAgentPctInput) invListingAgentPctInput.value = investorDefaults.invListingAgentPct;
+                if (invPerDiemPctInput) invPerDiemPctInput.value = investorDefaults.invPerDiemPct;
+                if (invAssetMgmtPctInput) invAssetMgmtPctInput.value = investorDefaults.invAssetMgmtPct;
+                if (invDueDiligenceInput) invDueDiligenceInput.value = investorDefaults.invDueDiligence;
+                if (invAcquisitionFeeInput) invAcquisitionFeeInput.value = investorDefaults.invAcquisitionFee;
+                if (invCashForKeysInput) invCashForKeysInput.value = investorDefaults.invCashForKeys;
+
                 targetMode = state.targetMode === 'percent' ? 'percent' : 'dollar';
                 offerPriceMode = state.offerPriceMode === 'manual' ? 'manual' : 'target';
             }
 
             function buildIaCalculatorState() {
+                syncInvestorDefaultsFromInputs();
+
                 return {
                     listPrice: listPriceInput.value,
                     arv: arvInput.value,
@@ -8218,6 +8257,9 @@ function initNavbarDateTime() {
                         name: String(item.name || 'Other Cost').trim() || 'Other Cost',
                         amount: Math.max(parseMoneyValue(item.amount), 0)
                     })),
+                    investorDefaults: {
+                        ...investorDefaults
+                    },
                     targetMode,
                     offerPriceMode
                 };
@@ -8266,6 +8308,19 @@ function initNavbarDateTime() {
 
                 formatNumericInputValue(targetPercentInput, { allowNegative: true });
                 formatNumericInputValue(targetDollarInput, { allowNegative: true });
+            }
+
+            function syncInvestorDefaultsFromInputs() {
+                if (invEscrowPctInput) investorDefaults.invEscrowPct = String(invEscrowPctInput.value || investorDefaults.invEscrowPct);
+                if (invProratedPctInput) investorDefaults.invProratedPct = String(invProratedPctInput.value || investorDefaults.invProratedPct);
+                if (invConcessionsPctInput) investorDefaults.invConcessionsPct = String(invConcessionsPctInput.value || investorDefaults.invConcessionsPct);
+                if (invBuyerAgentPctInput) investorDefaults.invBuyerAgentPct = String(invBuyerAgentPctInput.value || investorDefaults.invBuyerAgentPct);
+                if (invListingAgentPctInput) investorDefaults.invListingAgentPct = String(invListingAgentPctInput.value || investorDefaults.invListingAgentPct);
+                if (invPerDiemPctInput) investorDefaults.invPerDiemPct = String(invPerDiemPctInput.value || investorDefaults.invPerDiemPct);
+                if (invAssetMgmtPctInput) investorDefaults.invAssetMgmtPct = String(invAssetMgmtPctInput.value || investorDefaults.invAssetMgmtPct);
+                if (invDueDiligenceInput) investorDefaults.invDueDiligence = String(invDueDiligenceInput.value || investorDefaults.invDueDiligence);
+                if (invAcquisitionFeeInput) investorDefaults.invAcquisitionFee = String(invAcquisitionFeeInput.value || investorDefaults.invAcquisitionFee);
+                if (invCashForKeysInput) investorDefaults.invCashForKeys = String(invCashForKeysInput.value || investorDefaults.invCashForKeys);
             }
 
             function applyFinancingModeDefaults(mode, options = {}) {
@@ -8374,6 +8429,8 @@ function initNavbarDateTime() {
             }
 
             function recalculate() {
+                syncInvestorDefaultsFromInputs();
+
                 const listPrice = asNumber(listPriceInput, 0);
                 const rawArv = Math.max(asNumber(arvInput, 0), 1);
                 const renovation = Math.max(asNumber(renovationInput, 0), 0);
@@ -8695,9 +8752,13 @@ function initNavbarDateTime() {
 
             if (persistedIaCalculatorState) {
                 applyPersistedIaCalculatorState(persistedIaCalculatorState);
-                renderOtherCosts();
-                applyFinancingModeDefaults(financingModeInput.value, { preserveValues: true });
             }
+
+            renderOtherCosts();
+            applyFinancingModeDefaults(financingModeInput.value, { preserveValues: !!persistedIaCalculatorState });
+            formatIaNumericInputs();
+            updateStrikeZoneReadout();
+            recalculate();
         }
 
         tabButtons.forEach(button => {
