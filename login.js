@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (devBypass === '1') {
       // Simulate successful login for Isaac
       const user = {
-        email: 'isaacs.hesed@fastbridgegroup.com',
+        email: 'isaac.haro@fastbridgegroupllc.com',
         name: 'Isaac',
         role: 'admin',
         id: 'dev-isaac',

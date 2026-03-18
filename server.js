@@ -43,8 +43,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 let cachedOpenAiApiKey = null;
 
+const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
+
 const LEGACY_EMAIL_ALIASES = new Map([
-  ['isaacs.hesed@gmail.com', 'isaacs.hesed@fastbridgegroup.com']
+  ['isaacs.hesed@gmail.com', CANONICAL_ISAAC_EMAIL],
+  ['isaacs.hesed@fastbridgegroup.com', CANONICAL_ISAAC_EMAIL]
 ]);
 
 function normalizeKnownEmail(email) {
@@ -310,18 +313,18 @@ function dbRun(sql, params) {
 }
 
 async function syncIsaacAdminAccount() {
-  const canonicalEmail = 'isaacs.hesed@fastbridgegroup.com';
-  const legacyEmails = ['isaacs.hesed@gmail.com'];
+  const canonicalEmail = CANONICAL_ISAAC_EMAIL;
+  const legacyEmails = ['isaacs.hesed@gmail.com', 'isaacs.hesed@fastbridgegroup.com'];
   const canonicalName = 'ISAAC HARO';
   const canonicalPassword = '315598';
 
   try {
     const account = await dbGet(
       `SELECT * FROM users
-       WHERE LOWER(email) IN (?, ?)
+       WHERE LOWER(email) IN (?, ?, ?)
           OR LOWER(name) = LOWER(?)
        ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
-      [canonicalEmail, legacyEmails[0], canonicalName, canonicalEmail]
+      [canonicalEmail, legacyEmails[0], legacyEmails[1], canonicalName, canonicalEmail]
     );
 
     const hash = await bcrypt.hash(canonicalPassword, 10);

@@ -15,8 +15,8 @@ A secure backend authentication system has been set up for your FAST BRIDGE GROU
 
 ## Admin Account Created
 - **Name:** Isaac Haro
-- **Email:** Isaacs.hesed@gmail.com
-- **Password:** Readyourbible21!
+- **Email:** isaac.haro@fastbridgegroupllc.com
+- **Password:** 315598
 - **Role:** Admin
 
 ---
@@ -73,8 +73,8 @@ http://localhost:3000
 ```
 
 Click "Sign In" and use:
-- **Email:** Isaacs.hesed@gmail.com
-- **Password:** Readyourbible21!
+- **Email:** isaac.haro@fastbridgegroupllc.com
+- **Password:** 315598
 
 ---
 
@@ -84,8 +84,8 @@ Click "Sign In" and use:
 **POST** `/api/login`
 ```json
 {
-  "email": "Isaacs.hesed@gmail.com",
-  "password": "Readyourbible21!"
+  "email": "isaac.haro@fastbridgegroupllc.com",
+  "password": "315598"
 }
 ```
 
@@ -97,7 +97,7 @@ Click "Sign In" and use:
   "user": {
     "id": 1,
     "name": "Isaac Haro",
-    "email": "Isaacs.hesed@gmail.com",
+    "email": "isaac.haro@fastbridgegroupllc.com",
     "role": "admin"
   }
 }

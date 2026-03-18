@@ -18,8 +18,8 @@ http://localhost:3000
 ```
 
 ### 4️⃣ Login with Admin Account
-- **Email:** `Isaacs.hesed@gmail.com`
-- **Password:** `Readyourbible21!`
+- **Email:** `isaac.haro@fastbridgegroupllc.com`
+- **Password:** `315598`
 
 ---
 
@@ -82,8 +82,8 @@ http://localhost:3000
 
 ```
 Name:     Isaac Haro
-Email:    Isaacs.hesed@gmail.com
-Password: Readyourbible21!
+Email:    isaac.haro@fastbridgegroupllc.com
+Password: 315598
 Role:     Admin
 ```
 
