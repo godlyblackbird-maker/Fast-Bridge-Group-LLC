@@ -562,18 +562,200 @@
         .section-card {
             border-radius: 24px;
             padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
+        }
+
+        .section-card::after {
+            content: '';
+            position: absolute;
+            inset: auto -30% -55% auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+            opacity: 0;
+            transform: scale(0.72);
+            transition: opacity 0.28s ease, transform 0.28s ease;
+            pointer-events: none;
         }
 
         .section-card h2 {
             margin: 0 0 12px;
             font-size: 22px;
             letter-spacing: -0.03em;
+            transition: transform 0.28s ease, color 0.28s ease;
         }
 
         .section-card p {
             margin: 0;
             color: var(--muted);
             line-height: 1.7;
+            transition: color 0.28s ease;
+        }
+
+        .section-card:hover,
+        .section-card:focus-within {
+            transform: translateY(-8px);
+            border-color: rgba(255, 255, 255, 0.24);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+            box-shadow: 0 28px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .section-card:hover::after,
+        .section-card:focus-within::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .section-card:hover h2,
+        .section-card:focus-within h2 {
+            transform: translateY(-2px);
+            color: #ffffff;
+        }
+
+        .section-card:hover p,
+        .section-card:focus-within p {
+            color: rgba(248, 252, 255, 0.88);
+        }
+
+        .access-request-modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(7, 16, 24, 0.68);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            z-index: 30;
+        }
+
+        .access-request-modal.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .access-request-dialog {
+            width: min(100%, 620px);
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: linear-gradient(180deg, rgba(12, 28, 41, 0.96), rgba(7, 18, 26, 0.98));
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+            overflow: hidden;
+        }
+
+        .access-request-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 24px 24px 16px;
+        }
+
+        .access-request-header h2 {
+            margin: 0 0 8px;
+            font-size: 28px;
+            letter-spacing: -0.04em;
+        }
+
+        .access-request-header p {
+            margin: 0;
+            color: rgba(226, 239, 245, 0.76);
+            line-height: 1.7;
+        }
+
+        .access-request-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #f5fbff;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .access-request-form {
+            padding: 0 24px 24px;
+        }
+
+        .access-request-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .access-request-field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .access-request-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .access-request-field label {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--sand);
+        }
+
+        .access-request-field input,
+        .access-request-field textarea {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #f7fbfd;
+            padding: 14px 16px;
+            font: inherit;
+        }
+
+        .access-request-field textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .access-request-field input::placeholder,
+        .access-request-field textarea::placeholder {
+            color: rgba(226, 239, 245, 0.46);
+        }
+
+        .access-request-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+
+        .access-request-feedback {
+            margin: 0;
+            min-height: 20px;
+            color: rgba(226, 239, 245, 0.74);
+            font-size: 14px;
+        }
+
+        .access-request-feedback.is-error {
+            color: #ffb8b8;
+        }
+
+        .access-request-feedback.is-success {
+            color: #b9ffd5;
         }
 
         .footer-note {
@@ -642,6 +824,20 @@
                 flex-direction: column;
                 align-items: flex-start;
             }
+
+            .access-request-modal {
+                padding: 14px;
+            }
+
+            .access-request-header,
+            .access-request-form {
+                padding-left: 18px;
+                padding-right: 18px;
+            }
+
+            .access-request-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -651,7 +847,7 @@
             <a class="brand" href="index.html" aria-label="FAST BRIDGE GROUP home page">
                 <img src="png photos/Fast Logo - 111.png" alt="FAST BRIDGE GROUP logo">
                 <div class="brand-copy">
-                    <p class="brand-kicker">Investor Operations System</p>
+                    <p class="brand-kicker">Next-Gen Real Estate Platform</p>
                     <p class="brand-name">FAST BRIDGE GROUP</p>
                 </div>
             </a>
@@ -661,46 +857,46 @@
         <main>
             <section class="hero">
                 <div class="hero-panel">
-                    <div class="eyebrow">Built for acquisitions, not generic CRM work</div>
-                    <h1>FAST runs the investor side of the deal.</h1>
+                    <div class="eyebrow">The platform serious agents plug into next</div>
+                    <h1>The new operating system for agents who want more deals, less drag.</h1>
                     <p class="hero-copy">
-                        FAST BRIDGE GROUP gives your team one operating surface for MLS review, comps, offers, agent coordination,
-                        assigned properties, and acquisition execution. The public site stays clean. The full workspace unlocks only after login.
+                        FAST brings your workflow, comps, deal tracking, offer execution, and client-facing speed into one sleek platform.
+                        It is smart, fast, easy to run, and built to help modern agents move sharper, respond quicker, and close with more confidence.
                     </p>
                     <div class="hero-actions">
-                        <a class="primary-cta" href="login.html">Access FAST</a>
-                        <a class="secondary-cta" href="#platform">See what FAST handles</a>
+                        <button class="primary-cta" id="open-access-request" type="button">Access FAST</button>
+                        <a class="secondary-cta" href="#platform">Explore the platform</a>
                     </div>
                     <div class="hero-metrics">
                         <div class="metric">
-                            <strong>1 Workspace</strong>
-                            <span>MLS intake, offer prep, buyer tracking, and agent coordination in one place.</span>
+                            <strong>1 Command Center</strong>
+                            <span>Search, analyze, coordinate, and execute from one locked-in system built for pressure, speed, and control.</span>
                         </div>
                         <div class="metric">
-                            <strong>Private Access</strong>
-                            <span>Deal tabs and internal workflow stay behind authenticated access only.</span>
+                            <strong>Built For The Grind</strong>
+                            <span>Less noise, less drag, more forward motion from first lead to final signature.</span>
                         </div>
                         <div class="metric">
-                            <strong>Operator First</strong>
-                            <span>Designed around acquisitions, assignments, comps, and real investor decision flow.</span>
+                            <strong>No Dead Weight</strong>
+                            <span>Every screen is there to sharpen decisions, tighten execution, and help serious agents win more often.</span>
                         </div>
                     </div>
                 </div>
 
                 <aside class="hero-side">
-                    <p class="side-heading">Inside the platform</p>
+                    <p class="side-heading">Why agents want FAST</p>
                     <div class="ops-list">
                         <div class="ops-item">
-                            <strong>Deal Intake</strong>
-                            <p>Import MLS properties, assign them, track clicked listings, and move straight into property underwriting.</p>
+                            <strong>Instant Deal Clarity</strong>
+                            <p>See the numbers, the activity, and the next move without bouncing between spreadsheets, texts, and stale tools.</p>
                         </div>
                         <div class="ops-item">
-                            <strong>Investor Analysis</strong>
-                            <p>Run ARV, offer price, acquisition cost, financing cost, and profit targets with operator-friendly inputs.</p>
+                            <strong>Smarter Analysis</strong>
+                            <p>Surface comps, pricing signals, and decision-ready details fast enough to actually improve how you operate.</p>
                         </div>
                         <div class="ops-item">
-                            <strong>Agent Execution</strong>
-                            <p>Keep listing-side communication, offer positioning, and follow-up activity attached to the property instead of spread across tabs and text threads.</p>
+                            <strong>Modern Execution</strong>
+                            <p>Keep conversations, offers, follow-up, and team coordination flowing inside one clean, high-speed system.</p>
                         </div>
                     </div>
                 </aside>
@@ -708,29 +904,68 @@
 
             <section id="platform" class="content-grid">
                 <article class="section-card">
-                    <h2>For acquisitions teams</h2>
+                    <h2>Built for the agents setting the pace</h2>
                     <p>
-                        FAST is built around buying logic: what the property is worth, what it costs to control, how quickly it can move,
-                        and who needs to act next.
+                        FAST gives high-output agents a sharper way to run the business: cleaner decision-making, quicker execution, and better control over every moving part.
                     </p>
                 </article>
                 <article class="section-card">
-                    <h2>For agent-facing workflow</h2>
+                    <h2>Feels new because it is</h2>
                     <p>
-                        Keep listing-side communication, offer positioning, and follow-up activity attached to the property instead of spread across tabs and text threads.
+                        This is not another normal software dashboard. It is a next-level real estate command center that feels modern, intuitive, and instantly useful.
                     </p>
                 </article>
                 <article class="section-card">
-                    <h2>For operational control</h2>
+                    <h2>More speed. Better outcomes.</h2>
                     <p>
-                        Assignment visibility, deal routing, buyer tracking, and internal collaboration all stay structured once your team signs in.
+                        From first look to final move, FAST helps agents stay organized, react faster, and show up with more confidence in every deal conversation.
                     </p>
                 </article>
             </section>
         </main>
 
+        <div class="access-request-modal" id="access-request-modal" aria-hidden="true">
+            <div class="access-request-dialog" role="dialog" aria-modal="true" aria-labelledby="access-request-title">
+                <div class="access-request-header">
+                    <div>
+                        <h2 id="access-request-title">Request FAST access</h2>
+                        <p>Tell us who you are and how you work. We will review your request and open the door to the FAST experience.</p>
+                    </div>
+                    <button class="access-request-close" id="close-access-request" type="button" aria-label="Close request access form">×</button>
+                </div>
+                <form class="access-request-form" id="access-request-form">
+                    <div class="access-request-grid">
+                        <div class="access-request-field">
+                            <label for="access-request-name">Full name</label>
+                            <input id="access-request-name" name="name" type="text" placeholder="Your full name" required>
+                        </div>
+                        <div class="access-request-field">
+                            <label for="access-request-email">Email</label>
+                            <input id="access-request-email" name="email" type="email" placeholder="name@example.com" required>
+                        </div>
+                        <div class="access-request-field">
+                            <label for="access-request-phone">Phone</label>
+                            <input id="access-request-phone" name="phone" type="tel" placeholder="(555) 555-5555">
+                        </div>
+                        <div class="access-request-field">
+                            <label for="access-request-company">Company</label>
+                            <input id="access-request-company" name="company" type="text" placeholder="Investment company or team name">
+                        </div>
+                        <div class="access-request-field full-width">
+                            <label for="access-request-message">What do you need FAST for?</label>
+                            <textarea id="access-request-message" name="message" placeholder="Acquisitions volume, market focus, team size, or anything admin should know."></textarea>
+                        </div>
+                    </div>
+                    <div class="access-request-actions">
+                        <p class="access-request-feedback" id="access-request-feedback" aria-live="polite"></p>
+                        <button class="login-btn" id="submit-access-request" type="submit">Send Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <footer class="footer-note">
-            <span>FAST BRIDGE GROUP investor platform. Public front page on the outside, private deal workspace after login.</span>
+            <span>FAST BRIDGE GROUP is the modern real estate platform built for agents who want sharper systems and stronger results.</span>
             <a href="login.html">Go to login</a>
         </footer>
     </div>
@@ -762,6 +997,124 @@
 
                 document.documentElement.setAttribute('data-theme', theme);
             };
+
+            const modal = document.getElementById('access-request-modal');
+            const openButton = document.getElementById('open-access-request');
+            const closeButton = document.getElementById('close-access-request');
+            const form = document.getElementById('access-request-form');
+            const feedback = document.getElementById('access-request-feedback');
+            const submitButton = document.getElementById('submit-access-request');
+
+            const setFeedback = (message, state) => {
+                if (!feedback) {
+                    return;
+                }
+
+                feedback.textContent = message || '';
+                feedback.classList.remove('is-error', 'is-success');
+                if (state === 'error') {
+                    feedback.classList.add('is-error');
+                }
+                if (state === 'success') {
+                    feedback.classList.add('is-success');
+                }
+            };
+
+            const closeModal = () => {
+                if (!modal) {
+                    return;
+                }
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            };
+
+            const openModal = () => {
+                if (!modal) {
+                    return;
+                }
+                modal.classList.add('is-open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                setFeedback('', '');
+                const firstField = document.getElementById('access-request-name');
+                if (firstField) {
+                    window.setTimeout(() => firstField.focus(), 40);
+                }
+            };
+
+            if (openButton) {
+                openButton.addEventListener('click', openModal);
+            }
+
+            if (closeButton) {
+                closeButton.addEventListener('click', closeModal);
+            }
+
+            if (modal) {
+                modal.addEventListener('click', (event) => {
+                    if (event.target === modal) {
+                        closeModal();
+                    }
+                });
+            }
+
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && modal && modal.classList.contains('is-open')) {
+                    closeModal();
+                }
+            });
+
+            if (form) {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    setFeedback('', '');
+
+                    const formData = new FormData(form);
+                    const payload = {
+                        name: String(formData.get('name') || '').trim(),
+                        email: String(formData.get('email') || '').trim(),
+                        phone: String(formData.get('phone') || '').trim(),
+                        company: String(formData.get('company') || '').trim(),
+                        message: String(formData.get('message') || '').trim()
+                    };
+
+                    if (!payload.name || !payload.email) {
+                        setFeedback('Name and email are required.', 'error');
+                        return;
+                    }
+
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.textContent = 'Sending...';
+                    }
+
+                    try {
+                        const response = await fetch('/api/access-requests', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Unable to submit request.');
+                        }
+
+                        form.reset();
+                        setFeedback('Request received. Admin will review your info before granting FAST access.', 'success');
+                        window.setTimeout(closeModal, 1600);
+                    } catch (error) {
+                        setFeedback(String(error.message || 'Unable to submit request.'), 'error');
+                    } finally {
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Send Request';
+                        }
+                    }
+                });
+            }
 
             window.addEventListener('storage', applyStoredTheme);
             applyStoredTheme();

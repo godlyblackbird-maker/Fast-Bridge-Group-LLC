@@ -43,6 +43,27 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 let cachedOpenAiApiKey = null;
 
+function getRequestOrigin(req) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const protocol = forwardedProto || req.protocol || 'http';
+  const host = String(req.headers['x-forwarded-host'] || req.get('host') || '').split(',')[0].trim();
+
+  if (!host) {
+    return `http://localhost:${PORT}`;
+  }
+
+  return `${protocol}://${host}`;
+}
+
+function getGoogleRedirectUri(req) {
+  const configured = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+  if (configured) {
+    return configured;
+  }
+
+  return `${getRequestOrigin(req)}/auth/google/callback`;
+}
+
 function readOpenAiKeysFromDisk() {
   const candidates = [
     path.join(__dirname, 'Open AI Key', 'Open AI keys.txt'),
@@ -188,6 +209,25 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN smtp_user TEXT`, () => {});
       db.run(`ALTER TABLE users ADD COLUMN smtp_pass TEXT`, () => {});
         db.run(`ALTER TABLE users ADD COLUMN smtp_signature TEXT`, () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS access_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT,
+      company TEXT,
+      message TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating access_requests table:', err);
+    } else {
+      console.log('Access requests table ready');
     }
   });
 }
@@ -372,7 +412,7 @@ function redirectOAuthError(res, message) {
 // OAuth - Google start
 app.get('/auth/google', (req, res) => {
   const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-  const redirectUri = String(process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback').trim();
+  const redirectUri = getGoogleRedirectUri(req);
 
   if (!clientId) {
     return redirectOAuthError(res, 'Google sign-in is not configured yet');
@@ -397,7 +437,7 @@ app.get('/auth/google/callback', async (req, res) => {
   const state = String(req.query?.state || '').trim();
   const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
   const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
-  const redirectUri = String(process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback').trim();
+  const redirectUri = getGoogleRedirectUri(req);
 
   if (!verifyOAuthState(state, 'google')) {
     return redirectOAuthError(res, 'Google sign-in state validation failed');
@@ -635,6 +675,20 @@ function requireAuth(req, res) {
   }
 }
 
+function requireAdmin(req, res) {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return null;
+  }
+
+  if (decoded.role !== 'admin') {
+    res.status(403).json({ error: 'Admin access required' });
+    return null;
+  }
+
+  return decoded;
+}
+
 // GET /api/smtp-settings — returns the authenticated user's Gmail SMTP settings
 app.get('/api/smtp-settings', (req, res) => {
   const decoded = requireAuth(req, res);
@@ -733,6 +787,68 @@ app.post('/api/leads', async (req, res) => {
     console.error('Failed to send lead email:', error);
     return res.status(500).json({ error: 'Failed to send lead email' });
   }
+});
+
+app.post('/api/access-requests', (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const phone = String(req.body?.phone || '').trim();
+  const company = String(req.body?.company || '').trim();
+  const message = String(req.body?.message || '').trim();
+
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required.' });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+
+  db.run(
+    'INSERT INTO access_requests (name, email, phone, company, message) VALUES (?, ?, ?, ?, ?)',
+    [name, email, phone, company, message],
+    function onInsert(err) {
+      if (err) {
+        console.error('Failed to save access request:', err);
+        return res.status(500).json({ error: 'Unable to save access request.' });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Access request submitted successfully.',
+        request: {
+          id: this.lastID,
+          name,
+          email,
+          phone,
+          company,
+          message,
+          status: 'pending'
+        }
+      });
+    }
+  );
+});
+
+app.get('/api/access-requests', (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  db.all(
+    `SELECT id, name, email, phone, company, message, status, created_at
+     FROM access_requests
+     ORDER BY datetime(created_at) DESC, id DESC`,
+    (err, rows) => {
+      if (err) {
+        console.error('Failed to load access requests:', err);
+        return res.status(500).json({ error: 'Unable to load access requests.' });
+      }
+
+      return res.json({ requests: rows || [] });
+    }
+  );
 });
 
 app.get('/api/investor-attachments', (req, res) => {
