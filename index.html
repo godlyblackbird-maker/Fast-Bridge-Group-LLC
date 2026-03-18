@@ -199,6 +199,36 @@
             --primary-cta-end: rgba(251, 146, 60, 0.92);
         }
 
+        html[data-theme='beach'] body::before {
+            content: '';
+            position: fixed;
+            right: -70px;
+            bottom: -70px;
+            width: 520px;
+            height: 520px;
+            border-radius: 0;
+            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat center;
+            background-size: contain;
+            opacity: 0.12;
+            filter: drop-shadow(0 18px 34px rgba(8, 47, 73, 0.24)) blur(1.6px) saturate(0.88);
+            transform: rotate(-3deg);
+        }
+
+        html[data-theme='beach'] body::after {
+            content: '';
+            position: fixed;
+            left: 18px;
+            top: 16px;
+            width: 430px;
+            height: 260px;
+            border-radius: 0;
+            background: url("png photos/pngtree-flock-flying-birds-silhouette-vector-png-image_6611910.png") no-repeat top left;
+            background-size: contain;
+            opacity: 0.24;
+            filter: blur(0.8px) saturate(0.92) contrast(1.04);
+            transform: rotate(-2deg);
+        }
+
         html[data-theme='swamp'] {
             color-scheme: light;
             --bg: #47582e;
@@ -940,6 +970,22 @@
 
             .hero-metrics {
                 grid-template-columns: 1fr;
+            }
+
+            html[data-theme='beach'] body::before {
+                right: -98px;
+                bottom: -54px;
+                width: 360px;
+                height: 360px;
+                opacity: 0.1;
+            }
+
+            html[data-theme='beach'] body::after {
+                left: -14px;
+                top: 12px;
+                width: 250px;
+                height: 150px;
+                opacity: 0.18;
             }
 
             html[data-theme='swamp'] body::before {
