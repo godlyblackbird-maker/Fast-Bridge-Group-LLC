@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (devBypass === '1') {
       // Simulate successful login for Isaac
       const user = {
-        email: 'isaacs.hesed@gmail.com',
+        email: 'isaacs.hesed@fastbridgegroup.com',
         name: 'Isaac',
         role: 'admin',
         id: 'dev-isaac',
@@ -98,10 +98,11 @@ document.addEventListener('DOMContentLoaded', function() {
       } catch (error) {
         console.error('Login error:', error);
         const isFileProtocol = window.location.protocol === 'file:';
+        const loginPageUrl = `${window.location.origin || 'http://localhost:3000'}/login.html`;
         if (isFileProtocol) {
-          errorDiv.textContent = 'Connection error. Open this app through http://localhost:3000/login.html (not as a local file).';
+          errorDiv.textContent = `Connection error. Open this app through ${loginPageUrl} (not as a local file).`;
         } else {
-          errorDiv.textContent = 'Connection error. Start the server with "npm start" and then open http://localhost:3000/login.html.';
+          errorDiv.textContent = `Connection error. Start the server with "npm start" and then open ${loginPageUrl}.`;
         }
         errorDiv.style.display = 'block';
         loginBtn.disabled = false;

@@ -5544,7 +5544,7 @@ function initNavbarDateTime() {
             const coreAssignableUsers = [
                 {
                     name: 'Isaac Haro',
-                    email: 'isaacs.hesed@gmail.com',
+                    email: 'isaacs.hesed@fastbridgegroup.com',
                     role: 'admin'
                 },
                 {
