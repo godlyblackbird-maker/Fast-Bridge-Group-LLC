@@ -2867,6 +2867,16 @@ a {
     gap: 8px;
 }
 
+.admin-email-actions {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.admin-user-email-input {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
 .outreach-item-actions .card-btn {
     padding: 6px 10px;
     font-size: 12px;

@@ -3392,10 +3392,13 @@ function initNavbarDateTime() {
         const subtitle = document.getElementById('account-manager-subtitle');
         const createButton = document.getElementById('admin-create-user-btn');
         const refreshButton = document.getElementById('admin-refresh-users-btn');
+        const migrateDomainButton = document.getElementById('admin-migrate-domain-btn');
         const nameInput = document.getElementById('admin-new-user-name');
         const emailInput = document.getElementById('admin-new-user-email');
         const passwordInput = document.getElementById('admin-new-user-password');
         const roleInput = document.getElementById('admin-new-user-role');
+        const nextDomain = 'fastbridgegroup.com';
+        let loadedUsers = [];
 
         const token = localStorage.getItem('authToken');
         let currentUser = null;
@@ -3428,6 +3431,9 @@ function initNavbarDateTime() {
                 row.className = 'outreach-item';
                 const roleClass = String(item.role || '').toLowerCase() === 'admin' ? 'published' : 'draft';
                 const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown';
+                const currentEmail = String(item.email || '').trim().toLowerCase();
+                const localPart = currentEmail.includes('@') ? currentEmail.split('@')[0] : currentEmail;
+                const suggestedEmail = localPart ? `${localPart}@${nextDomain}` : '';
                 row.innerHTML = `
                     <div class="outreach-item-head">
                         <span class="outreach-item-title">${item.name || 'User'}</span>
@@ -3435,8 +3441,88 @@ function initNavbarDateTime() {
                     </div>
                     <p class="outreach-item-body">${item.email || ''}</p>
                     <p class="outreach-owner">Created: ${createdAt}</p>
+                    <div class="outreach-item-actions admin-email-actions">
+                        <input class="form-input admin-user-email-input" type="email" value="${suggestedEmail || currentEmail}" placeholder="username@fastbridgegroup.com" data-user-id="${item.id}">
+                        <button type="button" class="card-btn admin-suggest-email-btn" data-user-id="${item.id}">Use @${nextDomain}</button>
+                        <button type="button" class="card-btn active admin-update-email-btn" data-user-id="${item.id}" data-current-email="${currentEmail}">Update Email</button>
+                    </div>
                 `;
                 usersList.appendChild(row);
+            });
+
+            usersList.querySelectorAll('.admin-suggest-email-btn').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const userId = button.dataset.userId;
+                    const input = usersList.querySelector(`.admin-user-email-input[data-user-id="${userId}"]`);
+                    if (!input) {
+                        return;
+                    }
+
+                    const currentValue = String(input.value || '').trim().toLowerCase();
+                    const localPart = currentValue.includes('@') ? currentValue.split('@')[0] : currentValue;
+                    if (!localPart) {
+                        showDashboardToast('error', 'Email Missing', 'Enter or keep a username before applying the new domain.');
+                        return;
+                    }
+
+                    input.value = `${localPart}@${nextDomain}`;
+                });
+            });
+
+            usersList.querySelectorAll('.admin-update-email-btn').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const userId = button.dataset.userId;
+                    const currentEmail = String(button.dataset.currentEmail || '').trim().toLowerCase();
+                    const input = usersList.querySelector(`.admin-user-email-input[data-user-id="${userId}"]`);
+                    const nextEmail = String(input?.value || '').trim().toLowerCase();
+
+                    if (!nextEmail) {
+                        showDashboardToast('error', 'Email Required', 'Enter the new login email first.');
+                        return;
+                    }
+
+                    if (nextEmail === currentEmail) {
+                        showDashboardToast('error', 'No Change', 'That account is already using this email.');
+                        return;
+                    }
+
+                    if (!token) {
+                        showDashboardToast('error', 'Missing Auth', 'Please sign in again and retry.');
+                        return;
+                    }
+
+                    button.disabled = true;
+
+                    try {
+                        const response = await fetch(`/api/admin/users/${userId}/email`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                email: nextEmail,
+                                syncSmtpUser: true
+                            })
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Unable to update user email');
+                        }
+
+                        if (currentUser && Number(currentUser.id) === Number(userId)) {
+                            currentUser.email = nextEmail;
+                            localStorage.setItem('user', JSON.stringify(currentUser));
+                        }
+
+                        showDashboardToast('success', 'Email Updated', `${data.user.name} now signs in with ${data.user.email}. Sign out and back in if this was your own account.`);
+                        await loadUsers();
+                    } catch (error) {
+                        showDashboardToast('error', 'Update Failed', String(error.message || 'Unable to update user email.'));
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
             });
         }
 
@@ -3456,10 +3542,30 @@ function initNavbarDateTime() {
                 if (!response.ok) {
                     throw new Error(data.error || 'Unable to load users');
                 }
-                renderUsers(data.users || []);
+                loadedUsers = Array.isArray(data.users) ? data.users : [];
+                renderUsers(loadedUsers);
             } catch (error) {
                 usersList.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load users.')}</p>`;
             }
+        }
+
+        async function updateUserEmail(userId, nextEmail) {
+            const response = await fetch(`/api/admin/users/${userId}/email`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    email: nextEmail,
+                    syncSmtpUser: true
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to update user email');
+            }
+            return data;
         }
 
         async function createUser() {
@@ -3523,6 +3629,53 @@ function initNavbarDateTime() {
 
         if (refreshButton) {
             refreshButton.addEventListener('click', loadUsers);
+        }
+
+        if (migrateDomainButton) {
+            migrateDomainButton.addEventListener('click', async () => {
+                if (!token) {
+                    showDashboardToast('error', 'Missing Auth', 'Please sign in again and retry.');
+                    return;
+                }
+
+                const candidates = loadedUsers.filter((item) => {
+                    const currentEmail = String(item.email || '').trim().toLowerCase();
+                    return currentEmail && !currentEmail.endsWith(`@${nextDomain}`);
+                });
+
+                if (candidates.length === 0) {
+                    showDashboardToast('success', 'Already Migrated', `All loaded accounts already use @${nextDomain}.`);
+                    return;
+                }
+
+                migrateDomainButton.disabled = true;
+                let updatedCount = 0;
+
+                try {
+                    for (const item of candidates) {
+                        const currentEmail = String(item.email || '').trim().toLowerCase();
+                        const localPart = currentEmail.includes('@') ? currentEmail.split('@')[0] : currentEmail;
+                        if (!localPart) {
+                            continue;
+                        }
+
+                        const nextEmail = `${localPart}@${nextDomain}`;
+                        const data = await updateUserEmail(item.id, nextEmail);
+                        if (currentUser && Number(currentUser.id) === Number(item.id)) {
+                            currentUser.email = data.user.email;
+                            localStorage.setItem('user', JSON.stringify(currentUser));
+                        }
+                        updatedCount += 1;
+                    }
+
+                    showDashboardToast('success', 'Domain Migration Complete', `${updatedCount} account${updatedCount === 1 ? '' : 's'} switched to @${nextDomain}. Sign out and back in if your own admin account was changed.`);
+                    await loadUsers();
+                } catch (error) {
+                    showDashboardToast('error', 'Migration Failed', String(error.message || 'Unable to migrate account emails.'));
+                } finally {
+                    migrateDomainButton.disabled = false;
+                }
+            });
         }
 
         loadUsers();

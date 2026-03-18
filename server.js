@@ -624,6 +624,93 @@ app.post('/api/admin/users', (req, res) => {
   });
 });
 
+app.put('/api/admin/users/:id/email', (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const userId = Number.parseInt(String(req.params?.id || ''), 10);
+  const nextEmail = String(req.body?.email || '').trim().toLowerCase();
+  const syncSmtpUser = req.body?.syncSmtpUser !== false;
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return res.status(400).json({ error: 'Valid user id is required' });
+  }
+
+  if (!nextEmail) {
+    return res.status(400).json({ error: 'New email is required' });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+    return res.status(400).json({ error: 'Valid email is required' });
+  }
+
+  db.get('SELECT id, name, email, role, smtp_user FROM users WHERE id = ?', [userId], (selectError, userRow) => {
+    if (selectError) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!userRow) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (String(userRow.email || '').trim().toLowerCase() === nextEmail) {
+      return res.json({
+        success: true,
+        message: 'Email already matches this account',
+        user: {
+          id: userRow.id,
+          name: userRow.name,
+          email: nextEmail,
+          role: userRow.role
+        }
+      });
+    }
+
+    db.get('SELECT id FROM users WHERE LOWER(email) = ? AND id != ?', [nextEmail, userId], (existingError, existingUser) => {
+      if (existingError) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (existingUser) {
+        return res.status(400).json({ error: 'That email is already assigned to another account' });
+      }
+
+      const currentEmail = String(userRow.email || '').trim().toLowerCase();
+      const currentSmtpUser = String(userRow.smtp_user || '').trim().toLowerCase();
+      const nextSmtpUser = syncSmtpUser && currentSmtpUser && currentSmtpUser === currentEmail
+        ? nextEmail
+        : userRow.smtp_user;
+
+      db.run(
+        'UPDATE users SET email = ?, smtp_user = ? WHERE id = ?',
+        [nextEmail, nextSmtpUser, userId],
+        (updateError) => {
+          if (updateError) {
+            if (String(updateError.message || '').includes('UNIQUE constraint failed')) {
+              return res.status(400).json({ error: 'That email is already assigned to another account' });
+            }
+            return res.status(500).json({ error: 'Unable to update user email' });
+          }
+
+          return res.json({
+            success: true,
+            message: 'User email updated successfully',
+            user: {
+              id: userRow.id,
+              name: userRow.name,
+              email: nextEmail,
+              role: userRow.role
+            },
+            smtpUserUpdated: nextSmtpUser !== userRow.smtp_user
+          });
+        }
+      );
+    });
+  });
+});
+
 // Verify token endpoint
 app.post('/api/verify', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
