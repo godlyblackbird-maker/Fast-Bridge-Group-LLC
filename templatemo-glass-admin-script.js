@@ -5075,6 +5075,9 @@ function initNavbarDateTime() {
             const bedsText = parseMetricText(card, 1, '0 Beds').replace('Beds', 'Br').trim();
             const bathsText = parseMetricText(card, 2, '0 Baths').replace('Baths', 'Ba').trim();
             const areaText = parseMetricText(card, 3, '0 sqft').replace('sqft', 'ft²').trim();
+            const titleText = card.querySelector('h3')?.textContent?.trim() || parseAddress(card);
+            const locationText = card.querySelector('.mls-location')?.textContent?.trim() || '';
+            const listingNote = card.querySelector('.mls-note')?.textContent?.trim() || 'Property overview pending additional underwriting notes.';
             const propertyImages = Array.from(card.querySelectorAll('.mls-property-image'))
                 .map(image => image.getAttribute('src') || '')
                 .map(src => src.trim())
@@ -5083,6 +5086,10 @@ function initNavbarDateTime() {
             const status = normalizeStatus(card.dataset.status);
             const listedAt = new Date(card.dataset.listedAt || new Date().toISOString());
             const daysActive = Math.max(1, Math.floor((Date.now() - listedAt.getTime()) / 86400000));
+            const listedAtLabel = Number.isNaN(listedAt.getTime())
+                ? new Date().toLocaleDateString()
+                : listedAt.toLocaleDateString();
+            const statusLabel = status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ');
 
             const propertyPayload = {
                 address: parseAddress(card),
@@ -5093,17 +5100,39 @@ function initNavbarDateTime() {
                 moderatePain: 'Moderate Pain',
                 taxDelinquency: 'Tax Delinquency',
                 highDebt: 'High Debt (LTV >80%)',
-                marketInfo: `${daysActive} Days / ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+                marketInfo: `${daysActive} Days / ${statusLabel}`,
                 dom: daysActive,
                 cdom: daysActive,
                 askingVsArv: `${(65 + roi).toFixed(2)}%`,
                 arv: `$${Math.round(Number((priceText || '$0').replace(/[^0-9]/g, '')) * 1.42).toLocaleString()}`,
                 compData: 'A0, P1, B0, C1',
-                piq: card.querySelector('.mls-note')?.textContent?.trim() || 'Property overview pending additional underwriting notes.',
+                piq: listingNote,
                 comps: '',
                 ia: 'Initial analysis suggests moderate upside with value-add potential and stable rental demand in the micro-market.',
                 agentRecord: buildAgentRecordFromCard(card),
-                offer: 'Offer strategy placeholder: define max allowable offer, desired terms, inspection windows, and contingencies.'
+                offer: 'Offer strategy placeholder: define max allowable offer, desired terms, inspection windows, and contingencies.',
+                recordCreated: listedAtLabel,
+                listingDate: listedAtLabel,
+                idx: 'MLS Sandbox',
+                propertyType: 'Residential',
+                mlsNumber: String(card.dataset.mlsId || card.dataset.listingId || titleText.replace(/[^A-Z0-9]/gi, '').slice(0, 8) || 'MLS-DEMO').toUpperCase(),
+                statusLabel,
+                autoTracker: `Active ${daysActive} Day${daysActive === 1 ? '' : 's'}`,
+                areaLabel: locationText || '-',
+                propertyCover: titleText,
+                publicComments: listingNote,
+                agentComments: 'MLS sandbox listing. Verify showing instructions, disclosures, and offer timeline before submitting terms.',
+                apn: '- ',
+                unitNumber: '-',
+                totalFloors: 'One',
+                sewer: 'Unknown',
+                propertyCondition: 'Review listing notes',
+                zoning: '-',
+                associationDues: '-',
+                commonWalls: '-',
+                lockboxType: '-',
+                occupied: 'Unknown',
+                showing: 'Confirm with listing agent'
             };
 
             rememberClickedProperty(card, propertyPayload, status, roi);
@@ -6007,7 +6036,29 @@ function initNavbarDateTime() {
                     averageDealsPerYear: '-',
                     specialties: 'Imported listing'
                 },
-                offer: 'Imported listing: build your offer strategy, inspection window, and negotiation plan here.'
+                offer: 'Imported listing: build your offer strategy, inspection window, and negotiation plan here.',
+                recordCreated: new Date().toLocaleDateString(),
+                listingDate: new Date().toLocaleDateString(),
+                idx: 'Manual MLS Import',
+                propertyType: 'Residential',
+                mlsNumber: mlsId || 'MANUAL',
+                statusLabel: status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' '),
+                autoTracker: `Active ${dom} Day${dom === 1 ? '' : 's'}`,
+                areaLabel: location || 'Imported MLS Property',
+                propertyCover: address || 'Imported Property',
+                publicComments: notes,
+                agentComments: 'Imported from manual MLS entry. Confirm disclosures, showing notes, and timeline before drafting terms.',
+                apn: '-',
+                unitNumber: '-',
+                totalFloors: '-',
+                sewer: '-',
+                propertyCondition: '-',
+                zoning: '-',
+                associationDues: '-',
+                commonWalls: '-',
+                lockboxType: '-',
+                occupied: '-',
+                showing: '-'
             };
 
             return {
@@ -6238,6 +6289,28 @@ function initNavbarDateTime() {
                 piq: 'About property notes will appear here.',
                 comps: '',
                 ia: 'IA tab content placeholder.',
+                recordCreated: '- ',
+                listingDate: '- ',
+                idx: '-',
+                propertyType: '-',
+                mlsNumber: '-',
+                statusLabel: 'Active',
+                autoTracker: '-',
+                areaLabel: '-',
+                propertyCover: '-',
+                publicComments: 'No public comments available.',
+                agentComments: 'No agent comments available.',
+                apn: '-',
+                unitNumber: '-',
+                totalFloors: '-',
+                sewer: '-',
+                propertyCondition: '-',
+                zoning: '-',
+                associationDues: '-',
+                commonWalls: '-',
+                lockboxType: '-',
+                occupied: '-',
+                showing: '-',
                 agentRecord: {
                     name: 'Brandon Wasilewski',
                     title: 'Agent Record',
@@ -6543,6 +6616,28 @@ function initNavbarDateTime() {
             'property-high-debt': detailData.highDebt,
             'property-market-info': detailData.marketInfo,
             'property-dom-cdom': `DOM: ${detailData.dom} / CDOM: ${detailData.cdom}`,
+            'property-record-created': detailData.recordCreated,
+            'property-listing-date': detailData.listingDate,
+            'property-idx': detailData.idx,
+            'property-type': detailData.propertyType,
+            'property-mls-number': detailData.mlsNumber,
+            'property-status-label': detailData.statusLabel,
+            'property-auto-tracker': detailData.autoTracker,
+            'property-area': detailData.areaLabel,
+            'property-cover': detailData.propertyCover,
+            'property-public-comments': detailData.publicComments,
+            'property-agent-comments': detailData.agentComments,
+            'property-apn': detailData.apn,
+            'property-unit-number': detailData.unitNumber,
+            'property-total-floors': detailData.totalFloors,
+            'property-sewer': detailData.sewer,
+            'property-condition': detailData.propertyCondition,
+            'property-zoning': detailData.zoning,
+            'property-association-dues': detailData.associationDues,
+            'property-common-walls': detailData.commonWalls,
+            'property-lockbox-type': detailData.lockboxType,
+            'property-occupied': detailData.occupied,
+            'property-showing': detailData.showing,
             'property-asking-vs-arv': detailData.askingVsArv,
             'property-arv': detailData.arv,
             'property-comp-data': detailData.compData,
