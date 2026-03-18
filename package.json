@@ -9,13 +9,13 @@
     "share": "node scripts/share-link.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.0",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.0",
+    "express": "^4.22.1",
+    "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.2",
-    "sqlite3": "^6.0.1"
+    "sqlite3": "^5.0.11"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
@@ -23,5 +23,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC.git"
+  },
+  "bugs": {
+    "url": "https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/issues"
+  },
+  "homepage": "https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC#readme"
 }
