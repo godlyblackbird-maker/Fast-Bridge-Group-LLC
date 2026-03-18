@@ -2268,6 +2268,10 @@ function initNavbarDateTime() {
             if (dockItem) {
                 dockItem.remove();
             }
+
+            if (typeof widget.scrollIntoView === 'function') {
+                widget.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
         }
 
         function minimizeWidget(widget) {
@@ -2342,17 +2346,25 @@ function initNavbarDateTime() {
                 header.appendChild(actionCluster);
             }
 
-            const controls = document.createElement('div');
-            controls.className = 'widget-controls';
-            controls.innerHTML = `
-                <button type="button" class="widget-control-btn" data-widget-action="minimize" aria-label="Minimize ${title}">
-                    ${createIcon('minimize')}
-                </button>
-                <button type="button" class="widget-control-btn" data-widget-action="expand" aria-label="Expand ${title}" aria-pressed="false">
-                    ${createIcon('expand')}
-                </button>
-            `;
-            actionCluster.appendChild(controls);
+            let controls = actionCluster.querySelector('.widget-controls');
+            if (!controls) {
+                controls = document.createElement('div');
+                controls.className = 'widget-controls';
+                controls.innerHTML = `
+                    <button type="button" class="widget-control-btn" data-widget-action="minimize" aria-label="Minimize ${title}">
+                        ${createIcon('minimize')}
+                    </button>
+                    <button type="button" class="widget-control-btn" data-widget-action="expand" aria-label="Expand ${title}" aria-pressed="false">
+                        ${createIcon('expand')}
+                    </button>
+                `;
+                actionCluster.appendChild(controls);
+            }
+
+            if (controls.dataset.widgetControlsBound === 'true') {
+                return;
+            }
+            controls.dataset.widgetControlsBound = 'true';
 
             controls.querySelector('[data-widget-action="minimize"]').addEventListener('click', () => {
                 minimizeWidget(widget);

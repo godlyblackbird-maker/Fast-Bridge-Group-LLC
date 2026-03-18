@@ -3439,12 +3439,44 @@ a {
     position: fixed;
     top: 50%;
     left: 50%;
+    display: flex;
+    flex-direction: column;
     transform: translate(-50%, -50%);
     width: min(1100px, calc(100vw - 80px));
+    height: min(920px, calc(100vh - 80px));
     max-height: calc(100vh - 80px);
     overflow: auto;
     z-index: 2000;
     box-shadow: 0 35px 90px rgba(0, 0, 0, 0.45);
+}
+
+.widget-card.widget-expanded > .card-header,
+.widget-card.widget-expanded > .calendar-header,
+.widget-card.widget-expanded > .chatgpt-form {
+    flex: 0 0 auto;
+}
+
+.widget-card.widget-expanded .chatgpt-chat,
+.widget-card.widget-expanded .outreach-list,
+.widget-card.widget-expanded .calendar-stage,
+.widget-card.widget-expanded .calendar-ai-panel,
+.widget-card.widget-expanded .agent-note-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+}
+
+.chatgpt-widget.widget-expanded {
+    height: min(920px, calc(100vh - 80px));
+    max-height: calc(100vh - 80px);
+}
+
+.chatgpt-widget.widget-expanded .chatgpt-chat {
+    max-height: none;
+}
+
+.calendar-widget.widget-expanded .calendar-stage {
+    min-height: min(720px, calc(100vh - 220px));
 }
 
 .widget-dock {
@@ -6420,6 +6452,7 @@ a {
 
     .widget-card.widget-expanded {
         width: calc(100vw - 24px);
+        height: calc(100vh - 24px);
         max-height: calc(100vh - 24px);
     }
 
