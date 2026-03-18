@@ -8761,6 +8761,8 @@ function initNavbarDateTime() {
             recalculate();
         }
 
+        initIaCalculator();
+
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const tabId = button.dataset.tab;
