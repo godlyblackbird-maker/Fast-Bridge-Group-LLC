@@ -378,59 +378,6 @@ https://templatemo.com/tm-607-glass-admin
             </section>
 
             <section class="outreach-workspace-grid">
-                <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="Agent Templates">
-                    <div class="card-header">
-                        <div>
-                            <h2 class="card-title">My Agent Templates</h2>
-                            <p class="card-subtitle">Personal templates to send to agents</p>
-                        </div>
-                    </div>
-                    <p class="outreach-owner" id="template-owner-label">Workspace owner: You</p>
-                    <div class="outreach-input-grid">
-                        <div class="form-group">
-                            <label for="template-title-input">Template Title</label>
-                            <input id="template-title-input" class="form-input" type="text" placeholder="Follow-up template, initial outreach, price reduction...">
-                        </div>
-                        <div class="form-group outreach-full-width">
-                            <label for="template-body-input">Template Message</label>
-                            <textarea id="template-body-input" class="form-input outreach-textarea" placeholder="Hi [Agent Name], I am reviewing [Property Address] and wanted to confirm..."></textarea>
-                        </div>
-                    </div>
-                    <div class="outreach-actions">
-                        <button id="save-template-btn" type="button" class="card-btn active">Save Template</button>
-                    </div>
-
-                    <div id="template-list" class="outreach-list">
-                        <p class="outreach-empty">No templates yet.</p>
-                    </div>
-                </div>
-
-                <div class="glass-card widget-card outreach-card" data-widget-id="call-scripts" data-widget-title="Call Scripts">
-                    <div class="card-header">
-                        <div>
-                            <h2 class="card-title">Phone Call Scripts</h2>
-                            <p class="card-subtitle">Personal call scripts you can publish</p>
-                        </div>
-                    </div>
-                    <p class="outreach-owner" id="script-owner-label">Workspace owner: You</p>
-                    <div class="outreach-input-grid">
-                        <div class="form-group">
-                            <label for="script-title-input">Script Title</label>
-                            <input id="script-title-input" class="form-input" type="text" placeholder="Warm lead opener, second call, seller objection handling...">
-                        </div>
-                        <div class="form-group outreach-full-width">
-                            <label for="script-body-input">Call Script</label>
-                            <textarea id="script-body-input" class="form-input outreach-textarea" placeholder="Hello [Name], this is [Your Name] with FAST BRIDGE GROUP... "></textarea>
-                        </div>
-                    </div>
-                    <div class="outreach-actions">
-                        <button id="save-script-btn" type="button" class="card-btn active">Save Script</button>
-                    </div>
-                    <div id="script-list" class="outreach-list">
-                        <p class="outreach-empty">No scripts yet.</p>
-                    </div>
-                </div>
-
                 <div class="glass-card widget-card outreach-card" data-widget-id="agent-notes" data-widget-title="Agent Notes">
                     <div class="card-header">
                         <div>
@@ -451,6 +398,7 @@ https://templatemo.com/tm-607-glass-admin
                         </div>
                     </div>
                     <p class="outreach-owner" id="todo-goal-owner-label">Workspace owner: You</p>
+                    <p class="planner-reminder-note" id="planner-reminder-note">Top-right reminders will alert you when planner tasks are coming up, due, or overdue.</p>
                     <div class="planner-input-grid">
                         <div class="form-group planner-full-width">
                             <label for="planner-task-input">Task / Goal</label>
@@ -467,6 +415,15 @@ https://templatemo.com/tm-607-glass-admin
                                 <option value="p1">High</option>
                                 <option value="p3">Low</option>
                                 <option value="p4">Someday</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="planner-task-reminder">Reminder</label>
+                            <select id="planner-task-reminder" class="form-input">
+                                <option value="day-of">On due date</option>
+                                <option value="1-day">1 day before</option>
+                                <option value="3-day">3 days before</option>
+                                <option value="none">No reminder</option>
                             </select>
                         </div>
                     </div>

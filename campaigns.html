@@ -275,6 +275,31 @@
             margin-top: 16px;
         }
 
+        .campaign-tools-section {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .campaign-tools-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .campaign-tools-head p {
+            margin: 6px 0 0;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            max-width: 760px;
+        }
+
+        .campaign-tools-grid {
+            margin-top: 0;
+        }
+
         .campaign-copy-block {
             padding: 16px;
             border-radius: 16px;
@@ -361,7 +386,8 @@
 
         @media (max-width: 720px) {
             .campaign-copy-top,
-            .vendor-head {
+            .vendor-head,
+            .campaign-tools-head {
                 flex-direction: column;
                 align-items: flex-start;
             }
@@ -654,6 +680,70 @@
                                     <path d="M9 12l2 2 4-4"></path>
                                     <circle cx="12" cy="12" r="9"></circle>
                                 </svg>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="glass-card campaign-tools-section">
+                    <div class="campaign-tools-head">
+                        <div>
+                            <h3 class="card-title">Campaign Tools</h3>
+                            <p>Keep your agent SMS copy, call openers, and rep-ready scripts inside Campaigns so outreach planning and execution stay in one place.</p>
+                        </div>
+                    </div>
+
+                    <div class="outreach-workspace-grid campaign-tools-grid">
+                        <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="Agent Templates">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">My Agent Templates</h2>
+                                    <p class="card-subtitle">Personal templates to send to agents</p>
+                                </div>
+                            </div>
+                            <p class="outreach-owner" id="template-owner-label">Workspace owner: You</p>
+                            <div class="outreach-input-grid">
+                                <div class="form-group">
+                                    <label for="template-title-input">Template Title</label>
+                                    <input id="template-title-input" class="form-input" type="text" placeholder="Follow-up template, initial outreach, price reduction...">
+                                </div>
+                                <div class="form-group outreach-full-width">
+                                    <label for="template-body-input">Template Message</label>
+                                    <textarea id="template-body-input" class="form-input outreach-textarea" placeholder="Hi [Agent Name], I am reviewing [Property Address] and wanted to confirm..."></textarea>
+                                </div>
+                            </div>
+                            <div class="outreach-actions">
+                                <button id="save-template-btn" type="button" class="card-btn active">Save Template</button>
+                            </div>
+
+                            <div id="template-list" class="outreach-list">
+                                <p class="outreach-empty">No templates yet.</p>
+                            </div>
+                        </div>
+
+                        <div class="glass-card widget-card outreach-card" data-widget-id="call-scripts" data-widget-title="Call Scripts">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Phone Call Scripts</h2>
+                                    <p class="card-subtitle">Personal call scripts you can publish</p>
+                                </div>
+                            </div>
+                            <p class="outreach-owner" id="script-owner-label">Workspace owner: You</p>
+                            <div class="outreach-input-grid">
+                                <div class="form-group">
+                                    <label for="script-title-input">Script Title</label>
+                                    <input id="script-title-input" class="form-input" type="text" placeholder="Warm lead opener, second call, seller objection handling...">
+                                </div>
+                                <div class="form-group outreach-full-width">
+                                    <label for="script-body-input">Call Script</label>
+                                    <textarea id="script-body-input" class="form-input outreach-textarea" placeholder="Hello [Name], this is [Your Name] with FAST BRIDGE GROUP... "></textarea>
+                                </div>
+                            </div>
+                            <div class="outreach-actions">
+                                <button id="save-script-btn" type="button" class="card-btn active">Save Script</button>
+                            </div>
+                            <div id="script-list" class="outreach-list">
+                                <p class="outreach-empty">No scripts yet.</p>
                             </div>
                         </div>
                     </div>

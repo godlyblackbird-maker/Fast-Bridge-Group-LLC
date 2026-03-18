@@ -1475,13 +1475,30 @@ a {
 
 .notification-dot {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 8px;
+    top: 8px;
+    right: 8px;
+    min-width: 8px;
     height: 8px;
+    padding: 0;
     background: var(--coral);
-    border-radius: 50%;
+    border-radius: 999px;
     box-shadow: 0 0 10px var(--coral);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0;
+    font-weight: 700;
+    line-height: 1;
+    transition: all var(--transition-fast);
+}
+
+.notification-dot.has-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+    box-shadow: 0 8px 18px rgba(224, 122, 95, 0.32), 0 0 16px rgba(224, 122, 95, 0.4);
 }
 
 /* ============================================
@@ -2981,12 +2998,19 @@ a {
 
 .planner-input-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
 }
 
 .planner-full-width {
     grid-column: 1 / -1;
+}
+
+.planner-reminder-note {
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .planner-filters {
@@ -3130,7 +3154,23 @@ a {
 .planner-task-meta {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
+}
+
+.planner-reminder-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    background: rgba(245, 158, 11, 0.08);
+    color: #fbbf24;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 
 .planner-priority {
@@ -3581,6 +3621,8 @@ a {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .chatgpt-hero {
@@ -3657,8 +3699,9 @@ a {
 }
 
 .chatgpt-chat {
-    flex: 1;
-    overflow: auto;
+    flex: 0 0 220px;
+    overflow-y: auto;
+    overflow-x: hidden;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     padding: 8px;
@@ -3666,7 +3709,11 @@ a {
     flex-direction: column;
     gap: 6px;
     background: rgba(15, 23, 42, 0.18);
+    height: 220px;
     min-height: 220px;
+    max-height: 220px;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 .chatgpt-msg {
@@ -3675,6 +3722,9 @@ a {
     line-height: 1.35;
     padding: 6px 8px;
     border-radius: 8px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .chatgpt-msg.user {
@@ -4155,8 +4205,8 @@ a {
 
 .dashboard-toast {
     min-width: 260px;
-    max-width: 360px;
-    padding: 15px 18px;
+    max-width: 390px;
+    padding: 15px 18px 16px;
     border-radius: 18px;
     border: 1px solid var(--toast-border);
     border-left-width: 6px;
@@ -4167,6 +4217,32 @@ a {
     -webkit-backdrop-filter: blur(18px);
     pointer-events: auto;
     animation: dashboardToastIn 0.24s ease-out;
+}
+
+.dashboard-toast-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dashboard-toast-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.dashboard-toast-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--toast-body);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .dashboard-toast strong {
@@ -4184,6 +4260,67 @@ a {
     line-height: 1.45;
 }
 
+.dashboard-toast-meta {
+    margin-top: 10px;
+    color: var(--toast-body);
+    font-size: 11px;
+    opacity: 0.84;
+}
+
+.dashboard-toast-list {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashboard-toast-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-toast-item-label {
+    min-width: 0;
+    color: var(--toast-title);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.dashboard-toast-item-meta {
+    flex-shrink: 0;
+    color: var(--toast-body);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.dashboard-toast-close {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--toast-body);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.dashboard-toast-close:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--toast-title);
+    transform: scale(1.04);
+}
+
 .dashboard-toast.reminder {
     border-left-color: #f59e0b;
     box-shadow: var(--toast-shadow), 0 0 0 1px rgba(245, 158, 11, 0.18);
@@ -4199,6 +4336,21 @@ a {
     box-shadow: var(--toast-shadow), 0 0 0 1px rgba(239, 68, 68, 0.18);
 }
 
+.dashboard-toast.reminder .dashboard-toast-eyebrow {
+    background: rgba(245, 158, 11, 0.14);
+    color: #fbbf24;
+}
+
+.dashboard-toast.success .dashboard-toast-eyebrow {
+    background: rgba(16, 185, 129, 0.14);
+    color: #86efac;
+}
+
+.dashboard-toast.error .dashboard-toast-eyebrow {
+    background: rgba(239, 68, 68, 0.14);
+    color: #fca5a5;
+}
+
 @keyframes dashboardToastIn {
     from {
         opacity: 0;
@@ -4207,6 +4359,34 @@ a {
     to {
         opacity: 1;
         transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@media (max-width: 900px) {
+    .planner-input-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .planner-input-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-toast-stack {
+        left: 14px;
+        right: 14px;
+        top: 14px;
+    }
+
+    .dashboard-toast {
+        min-width: 0;
+        max-width: none;
+    }
+
+    .dashboard-toast-item {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }
 
@@ -6058,6 +6238,15 @@ a {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+.mls-alert-eyebrow {
+    margin: 0;
+    color: var(--gold-light);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .mls-controls-grid {

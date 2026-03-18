@@ -11,8 +11,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCUMENTS_KEY = 'offerDocumentsByUser';
     const IA_CALCULATOR_STATE_KEY = 'iaCalculatorStateByUser';
     const PIQ_AGENT_STATUS_KEY = 'piqAgentStatusByUser';
+    const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
+    const DASHBOARD_NOTIFICATION_SOUND_PATH = 'Sound FX/Notification sound effect.wav';
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
     const USER_THEME_KEY = 'dashboardThemeByUser';
@@ -150,7 +152,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-sound-settings-updated', { detail: next }));
     }
 
-    function showDashboardToast(type, title, message) {
+    function showDashboardToast(type, title, message, options) {
+        const config = options && typeof options === 'object' ? options : {};
         let stack = document.querySelector('.dashboard-toast-stack');
         if (!stack) {
             stack = document.createElement('div');
@@ -160,12 +163,77 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         const toast = document.createElement('div');
         toast.className = `dashboard-toast ${type}`;
-        toast.innerHTML = `<strong>${title}</strong><p>${message}</p>`;
+
+        const head = document.createElement('div');
+        head.className = 'dashboard-toast-head';
+
+        const copy = document.createElement('div');
+        copy.className = 'dashboard-toast-copy';
+
+        if (config.eyebrow) {
+            const eyebrow = document.createElement('div');
+            eyebrow.className = 'dashboard-toast-eyebrow';
+            eyebrow.textContent = String(config.eyebrow);
+            copy.appendChild(eyebrow);
+        }
+
+        const titleEl = document.createElement('strong');
+        titleEl.textContent = String(title || 'Notice');
+        copy.appendChild(titleEl);
+
+        const messageEl = document.createElement('p');
+        messageEl.textContent = String(message || '');
+        copy.appendChild(messageEl);
+
+        if (config.meta) {
+            const metaEl = document.createElement('div');
+            metaEl.className = 'dashboard-toast-meta';
+            metaEl.textContent = String(config.meta);
+            copy.appendChild(metaEl);
+        }
+
+        head.appendChild(copy);
+
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'dashboard-toast-close';
+        closeButton.setAttribute('aria-label', 'Dismiss notification');
+        closeButton.textContent = '×';
+        head.appendChild(closeButton);
+        toast.appendChild(head);
+
+        if (Array.isArray(config.items) && config.items.length > 0) {
+            const list = document.createElement('ul');
+            list.className = 'dashboard-toast-list';
+            config.items.slice(0, 4).forEach(item => {
+                const entry = document.createElement('li');
+                entry.className = 'dashboard-toast-item';
+
+                const label = document.createElement('span');
+                label.className = 'dashboard-toast-item-label';
+                label.textContent = item && typeof item === 'object' ? String(item.label || '') : String(item || '');
+                entry.appendChild(label);
+
+                if (item && typeof item === 'object' && item.meta) {
+                    const meta = document.createElement('span');
+                    meta.className = 'dashboard-toast-item-meta';
+                    meta.textContent = String(item.meta);
+                    entry.appendChild(meta);
+                }
+
+                list.appendChild(entry);
+            });
+            toast.appendChild(list);
+        }
+
         stack.appendChild(toast);
 
-        window.setTimeout(() => {
+        const dismiss = () => {
             toast.remove();
-        }, 4000);
+        };
+
+        closeButton.addEventListener('click', dismiss);
+        window.setTimeout(dismiss, Number.isFinite(config.duration) ? config.duration : (type === 'reminder' ? 7000 : 4000));
     }
 
     function initBuildVersionLabel() {
@@ -332,6 +400,189 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         store[userKey] = value && typeof value === 'object' ? value : {};
         localStorage.setItem(storageKey, JSON.stringify(store));
+    }
+
+    function getPlannerDateKey(value) {
+        const normalized = String(value || '').trim();
+        if (!normalized) {
+            return '';
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+            return normalized;
+        }
+        const parsed = new Date(normalized);
+        if (Number.isNaN(parsed.getTime())) {
+            return '';
+        }
+        return parsed.toISOString().slice(0, 10);
+    }
+
+    function getPlannerDateFromKey(dateKey) {
+        const normalized = getPlannerDateKey(dateKey);
+        if (!normalized) {
+            return null;
+        }
+        const [year, month, day] = normalized.split('-').map(value => Number.parseInt(value, 10));
+        const parsed = new Date(year, month - 1, day);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function getPlannerTodayKey() {
+        const now = new Date();
+        return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+    }
+
+    function formatPlannerDateLabel(dateKey) {
+        const date = getPlannerDateFromKey(dateKey);
+        if (!date) {
+            return 'No due date';
+        }
+        return date.toLocaleDateString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+
+    function getPlannerReminderLeadDays(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === '3-day') {
+            return 3;
+        }
+        if (normalized === '1-day') {
+            return 1;
+        }
+        if (normalized === 'day-of') {
+            return 0;
+        }
+        return -1;
+    }
+
+    function getPlannerReminderLabel(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === '3-day') {
+            return '3 days out';
+        }
+        if (normalized === '1-day') {
+            return '1 day out';
+        }
+        if (normalized === 'day-of') {
+            return 'Due date';
+        }
+        return 'No reminder';
+    }
+
+    function migratePlannerItems(items, workspaceUser) {
+        let changed = false;
+        const migrated = Array.isArray(items) ? items.map(item => {
+            const dueDate = getPlannerDateKey(item && item.dueDate);
+            const nextReminderLead = ['none', 'day-of', '1-day', '3-day'].includes(item && item.reminderLead)
+                ? item.reminderLead
+                : (dueDate ? 'day-of' : 'none');
+            const notifications = item && item.notifications && typeof item.notifications === 'object' && !Array.isArray(item.notifications)
+                ? item.notifications
+                : {};
+
+            const nextItem = item && typeof item.text === 'string' && !item.title
+                ? {
+                    id: item.id,
+                    title: item.text,
+                    dueDate,
+                    priority: item.type === 'goal' ? 'p1' : 'p2',
+                    completed: Boolean(item.completed),
+                    updatedAt: item.updatedAt || Date.now(),
+                    reminderLead: nextReminderLead,
+                    notifications
+                }
+                : {
+                    id: item && item.id,
+                    title: String(item && item.title || '').trim(),
+                    dueDate,
+                    priority: ['p1', 'p2', 'p3', 'p4'].includes(item && item.priority) ? item.priority : 'p2',
+                    completed: Boolean(item && item.completed),
+                    updatedAt: item && item.updatedAt || Date.now(),
+                    reminderLead: dueDate ? nextReminderLead : 'none',
+                    notifications
+                };
+
+            if (!item || item.title !== nextItem.title || item.dueDate !== nextItem.dueDate || item.priority !== nextItem.priority || item.reminderLead !== nextItem.reminderLead || !item.notifications || typeof item.notifications !== 'object') {
+                changed = true;
+            }
+
+            return nextItem;
+        }) : [];
+
+        if (changed && workspaceUser && workspaceUser.key) {
+            setUserScopedItems(TODO_GOALS_KEY, workspaceUser.key, migrated);
+        }
+
+        return migrated;
+    }
+
+    function getPlannerItems(workspaceUser) {
+        const activeUser = workspaceUser || getWorkspaceUserContext();
+        return migratePlannerItems(getUserScopedItems(TODO_GOALS_KEY, activeUser.key), activeUser);
+    }
+
+    function setPlannerItems(items, workspaceUser) {
+        const activeUser = workspaceUser || getWorkspaceUserContext();
+        setUserScopedItems(TODO_GOALS_KEY, activeUser.key, items);
+    }
+
+    function getPlannerNotificationSettings() {
+        const workspaceUser = getWorkspaceUserContext();
+        const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
+        const controls = remembered && typeof remembered.controls === 'object' ? remembered.controls : {};
+
+        return {
+            inApp: Object.prototype.hasOwnProperty.call(controls, 'id:notifications-toggle-planner-popups')
+                ? Boolean(controls['id:notifications-toggle-planner-popups'])
+                : true,
+            desktop: Object.prototype.hasOwnProperty.call(controls, 'id:notifications-toggle-desktop')
+                ? Boolean(controls['id:notifications-toggle-desktop'])
+                : true,
+            sound: Object.prototype.hasOwnProperty.call(controls, 'id:notifications-toggle-sound')
+                ? Boolean(controls['id:notifications-toggle-sound'])
+                : false
+        };
+    }
+
+    function getMlsNotificationSettings() {
+        const workspaceUser = getWorkspaceUserContext();
+        const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
+        const controls = remembered && typeof remembered.controls === 'object' ? remembered.controls : {};
+        const shared = getPlannerNotificationSettings();
+
+        return {
+            enabled: Object.prototype.hasOwnProperty.call(controls, 'id:notifications-toggle-mls-new-listings')
+                ? Boolean(controls['id:notifications-toggle-mls-new-listings'])
+                : true,
+            desktop: shared.desktop,
+            sound: shared.sound
+        };
+    }
+
+    function playPlannerNotificationSound() {
+        if (!getPlannerNotificationSettings().sound) {
+            return;
+        }
+        try {
+            let audio = document.getElementById('planner-notification-sound');
+            if (!audio) {
+                audio = document.createElement('audio');
+                audio.id = 'planner-notification-sound';
+                audio.src = DASHBOARD_NOTIFICATION_SOUND_PATH;
+                audio.preload = 'auto';
+                audio.volume = 0.45;
+                document.body.appendChild(audio);
+            }
+            audio.currentTime = 0;
+            audio.play().catch(() => {
+                // Ignore autoplay restrictions.
+            });
+        } catch (error) {
+            // Ignore playback errors.
+        }
     }
 
     function getGlobalObject(storageKey) {
@@ -1058,39 +1309,128 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     }
 
     function initLiveKpiStats() {
-        const pipelineValueEl = document.getElementById('kpi-pipeline-value');
-        const qualifiedLeadsEl = document.getElementById('kpi-qualified-leads');
+        const myProfitsValueEl = document.getElementById('kpi-my-profits');
+        const offerTermsSentEl = document.getElementById('kpi-offer-terms-sent');
         const offersSubmittedEl = document.getElementById('kpi-offers-submitted');
-        const conversionRateEl = document.getElementById('kpi-conversion-rate');
 
-        if (!pipelineValueEl || !qualifiedLeadsEl || !offersSubmittedEl || !conversionRateEl) {
+        if (!myProfitsValueEl || !offerTermsSentEl || !offersSubmittedEl) {
             return;
         }
 
-        const pipelineChangeEl = document.getElementById('kpi-pipeline-change');
-        const qualifiedChangeEl = document.getElementById('kpi-qualified-change');
+        const myProfitsChangeEl = document.getElementById('kpi-my-profits-change');
+        const offerTermsChangeEl = document.getElementById('kpi-offer-terms-change');
         const offersChangeEl = document.getElementById('kpi-offers-change');
-        const conversionChangeEl = document.getElementById('kpi-conversion-change');
+
+        function calculateIaNetProfit(state) {
+            if (!state || typeof state !== 'object') {
+                return 0;
+            }
+
+            const listPrice = Math.max(parseMoneyValue(state.listPrice), 0);
+            const rawArv = Math.max(parseMoneyValue(state.arv), 0);
+            const estimatedSalesPrice = rawArv;
+            const sellSidePct = Math.max(parseMoneyValue(state.sellSidePercent), 0);
+            const sellSideCost = estimatedSalesPrice * (sellSidePct / 100);
+            const buySideCost = listPrice * 0.006617;
+            const renovation = Math.max(parseMoneyValue(state.renovation), 0);
+            const offerPrice = Math.max(parseMoneyValue(state.offerPrice), 0);
+            const holdMonths = Math.max(parseMoneyValue(state.holdMonths), 0);
+            const financingMode = String(state.financingMode || '100-100').trim().toLowerCase();
+            const loanToArvPct = Math.max(parseMoneyValue(state.loanToArv), 0);
+            const interestRatePct = Math.max(parseMoneyValue(state.interestRate), 0);
+            const pointsPct = Math.max(parseMoneyValue(state.originationPoints), 0);
+            const lenderFees = Math.max(parseMoneyValue(state.lenderFees), 0);
+            const otherCosts = Array.isArray(state.otherCosts)
+                ? state.otherCosts.reduce((sum, item) => sum + Math.max(parseMoneyValue(item && item.amount), 0), 0)
+                : 0;
+
+            const investorDefaults = state.investorDefaults && typeof state.investorDefaults === 'object'
+                ? state.investorDefaults
+                : {};
+
+            const invEscrowPct = Math.max(parseMoneyValue(investorDefaults.invEscrowPct), 1);
+            const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
+            const invConcessionsPct = Math.max(parseMoneyValue(investorDefaults.invConcessionsPct), 0);
+            const invBuyerAgentPct = Math.max(parseMoneyValue(investorDefaults.invBuyerAgentPct), 2);
+            const invListingAgentPct = Math.max(parseMoneyValue(investorDefaults.invListingAgentPct), 2);
+            const invPerDiemPct = Math.max(parseMoneyValue(investorDefaults.invPerDiemPct), 0);
+            const invAssetMgmtPct = Math.max(parseMoneyValue(investorDefaults.invAssetMgmtPct), 0);
+            const invDueDiligence = Math.max(parseMoneyValue(investorDefaults.invDueDiligence), 0);
+            const invAcquisitionFee = Math.max(parseMoneyValue(investorDefaults.invAcquisitionFee), 0);
+            const invCashForKeys = Math.max(parseMoneyValue(investorDefaults.invCashForKeys), 0);
+
+            const invEscrowAmount = estimatedSalesPrice * (invEscrowPct / 100);
+            const invProratedAmount = estimatedSalesPrice * (invProratedPct / 100);
+            const invConcessionsAmount = estimatedSalesPrice * (invConcessionsPct / 100);
+            const invBuyerAgentAmount = estimatedSalesPrice * (invBuyerAgentPct / 100);
+            const invListingAgentAmount = estimatedSalesPrice * (invListingAgentPct / 100);
+            const invPerDiemAmount = estimatedSalesPrice * (invPerDiemPct / 100);
+            const invAssetMgmtAmount = estimatedSalesPrice * (invAssetMgmtPct / 100);
+
+            const grossSaleAdjustmentTotal = invEscrowAmount
+                + invProratedAmount
+                + invConcessionsAmount
+                + invBuyerAgentAmount
+                + invListingAgentAmount
+                + invPerDiemAmount
+                + invAssetMgmtAmount;
+            const grossPurchaseAdjustmentTotal = invDueDiligence + invAcquisitionFee + invCashForKeys;
+
+            const loanAmount = financingMode === 'cash' ? 0 : rawArv * (loanToArvPct / 100);
+            const originationAmount = financingMode === 'cash' ? 0 : loanAmount * (pointsPct / 100);
+            const interestCost = financingMode === 'cash' ? 0 : loanAmount * (interestRatePct / 100) * (holdMonths / 12);
+            const totalFinancingCost = financingMode === 'cash' ? 0 : (originationAmount + lenderFees + interestCost);
+
+            const grossProfitToSeller = estimatedSalesPrice - sellSideCost - grossSaleAdjustmentTotal;
+            const invTotalAcquisition = offerPrice + buySideCost + otherCosts;
+            const invHardMoneyCosts = totalFinancingCost;
+            const invMiscLessInterest = grossPurchaseAdjustmentTotal;
+            const invTotalDevelopmentCost = invTotalAcquisition + invHardMoneyCosts + renovation + invMiscLessInterest;
+            const invNetProfit = grossProfitToSeller - invTotalDevelopmentCost;
+
+            return Number.isFinite(invNetProfit) ? invNetProfit : 0;
+        }
 
         function refreshKpis() {
             const workspaceUser = getWorkspaceUserContext();
             const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
             const plannerItems = getUserScopedItems(TODO_GOALS_KEY, workspaceUser.key);
+            const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
+            const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
 
             const latestByProperty = new Map();
             const offerLeadSet = new Set();
+            const offerTermsSentSet = new Set();
             const offerRegex = /\boffer\b|submitted|sent/i;
+
+            Object.entries(scopedStatuses).forEach(([propertyKey, statusValue]) => {
+                const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
+                if (normalizedStatus === 'offer-terms-sent') {
+                    offerTermsSentSet.add(String(propertyKey || '').trim().toLowerCase());
+                }
+            });
 
             notes.forEach(note => {
                 const propertyAddress = String(note.propertyAddress || '').trim();
                 if (!propertyAddress) {
                     return;
                 }
+                const propertyKey = propertyAddress.toLowerCase();
 
                 const createdAt = Number(note.createdAt) || 0;
                 const existing = latestByProperty.get(propertyAddress);
                 if (!existing || createdAt > (Number(existing.createdAt) || 0)) {
                     latestByProperty.set(propertyAddress, note);
+                }
+
+                const noteStatus = String(
+                    scopedStatuses[propertyKey]
+                    || note.piqAgentStatus
+                    || note.propertySnapshot?.piqAgentStatus
+                    || 'none'
+                ).trim().toLowerCase();
+                if (noteStatus === 'offer-terms-sent') {
+                    offerTermsSentSet.add(propertyKey);
                 }
 
                 const noteText = String(note.note || '');
@@ -1106,31 +1446,22 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             });
 
-            let pipelineTotal = 0;
-            latestByProperty.forEach(note => {
-                const snapshot = note.propertySnapshot || {};
-                pipelineTotal += parseMoneyValue(snapshot.listPrice);
-            });
-            const qualifiedLeads = latestByProperty.size;
+            const myProfitsTotal = iaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0);
+            const offerTermsSentCount = offerTermsSentSet.size;
             const offersSubmitted = offerLeadSet.size;
-            const conversion = qualifiedLeads > 0 ? (offersSubmitted / qualifiedLeads) * 100 : 0;
 
-            pipelineValueEl.textContent = `$${Math.round(pipelineTotal).toLocaleString()}`;
-            qualifiedLeadsEl.textContent = String(qualifiedLeads);
+            myProfitsValueEl.textContent = formatMoney(myProfitsTotal);
+            offerTermsSentEl.textContent = String(offerTermsSentCount);
             offersSubmittedEl.textContent = String(offersSubmitted);
-            conversionRateEl.textContent = `${conversion.toFixed(1)}%`;
 
-            if (pipelineChangeEl) {
-                pipelineChangeEl.textContent = `${qualifiedLeads} active lead${qualifiedLeads === 1 ? '' : 's'}`;
+            if (myProfitsChangeEl) {
+                myProfitsChangeEl.textContent = `${iaStates.length} saved IA deal${iaStates.length === 1 ? '' : 's'}`;
             }
-            if (qualifiedChangeEl) {
-                qualifiedChangeEl.textContent = `${notes.length} qualifying note${notes.length === 1 ? '' : 's'}`;
+            if (offerTermsChangeEl) {
+                offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} at offer terms sent`;
             }
             if (offersChangeEl) {
                 offersChangeEl.textContent = `${offersSubmitted} offer event${offersSubmitted === 1 ? '' : 's'}`;
-            }
-            if (conversionChangeEl) {
-                conversionChangeEl.textContent = `${offersSubmitted}/${qualifiedLeads} lead-to-offer`;
             }
         }
 
@@ -1766,6 +2097,12 @@ function initNavbarDateTime() {
                 controls: settingsState,
                 updatedAt: Date.now()
             });
+            window.dispatchEvent(new CustomEvent('dashboard-user-settings-updated', {
+                detail: {
+                    userKey: workspaceUser.key,
+                    controls: { ...settingsState }
+                }
+            }));
         }
 
         tabsToPersist.forEach(tabId => {
@@ -3888,14 +4225,16 @@ function initNavbarDateTime() {
         const input = document.getElementById('planner-task-input');
         const dateInput = document.getElementById('planner-task-date');
         const prioritySelect = document.getElementById('planner-task-priority');
+        const reminderSelect = document.getElementById('planner-task-reminder');
         const addButton = document.getElementById('planner-add-btn');
         const list = document.getElementById('planner-task-list');
         const filterButtons = Array.from(document.querySelectorAll('.planner-filter-btn[data-filter]'));
         const countToday = document.getElementById('planner-count-today');
         const countUpcoming = document.getElementById('planner-count-upcoming');
         const countDone = document.getElementById('planner-count-done');
+        const reminderNote = document.getElementById('planner-reminder-note');
 
-        if (!input || !dateInput || !prioritySelect || !addButton || !list || filterButtons.length === 0) {
+        if (!input || !dateInput || !prioritySelect || !reminderSelect || !addButton || !list || filterButtons.length === 0) {
             return;
         }
 
@@ -3915,7 +4254,7 @@ function initNavbarDateTime() {
                 }
                 audio.currentTime = 0;
                 audio.play();
-            } catch (e) {
+            } catch (error) {
                 // silently fail
             }
         }
@@ -3926,63 +4265,38 @@ function initNavbarDateTime() {
             ownerLabel.textContent = `Workspace owner: ${workspaceUser.name}`;
         }
 
+        function renderReminderNote() {
+            if (!reminderNote) {
+                return;
+            }
+            const settings = getPlannerNotificationSettings();
+            if (!settings.inApp && !settings.desktop) {
+                reminderNote.textContent = 'Planner reminders are off. Enable popups or desktop notifications in Settings to get alerts.';
+                return;
+            }
+            if (!settings.inApp && settings.desktop) {
+                reminderNote.textContent = 'Desktop notifications are on. Top-right planner popups are off in Settings.';
+                return;
+            }
+            if (settings.inApp && !settings.desktop) {
+                reminderNote.textContent = 'Top-right planner popups are on. Desktop notifications are off in Settings.';
+                return;
+            }
+            reminderNote.textContent = 'Top-right reminders will alert you when planner tasks are coming up, due, or overdue.';
+        }
+
+        renderReminderNote();
+        window.addEventListener('dashboard-user-settings-updated', renderReminderNote);
+
         function getItems() {
-            return getUserScopedItems(TODO_GOALS_KEY, workspaceUser.key);
+            return getPlannerItems(workspaceUser);
         }
 
         function setItems(items) {
-            setUserScopedItems(TODO_GOALS_KEY, workspaceUser.key, items);
+            setPlannerItems(items, workspaceUser);
         }
 
         let activeFilter = 'today';
-
-        function toDateKey(value) {
-            if (!value) return '';
-            const date = new Date(value);
-            if (Number.isNaN(date.getTime())) return '';
-            return date.toISOString().slice(0, 10);
-        }
-
-        function formatDateLabel(dateKey) {
-            if (!dateKey) return 'No due date';
-            const date = new Date(`${dateKey}T00:00:00`);
-            if (Number.isNaN(date.getTime())) return 'No due date';
-            return date.toLocaleDateString(undefined, {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-
-        function migrateItems(items) {
-            let changed = false;
-            const migrated = items.map(item => {
-                if (item && typeof item.text === 'string' && !item.title) {
-                    changed = true;
-                    return {
-                        id: item.id,
-                        title: item.text,
-                        dueDate: '',
-                        priority: item.type === 'goal' ? 'p1' : 'p2',
-                        completed: Boolean(item.completed),
-                        updatedAt: item.updatedAt || Date.now()
-                    };
-                }
-                return {
-                    id: item.id,
-                    title: String(item.title || '').trim(),
-                    dueDate: toDateKey(item.dueDate),
-                    priority: ['p1', 'p2', 'p3', 'p4'].includes(item.priority) ? item.priority : 'p2',
-                    completed: Boolean(item.completed),
-                    updatedAt: item.updatedAt || Date.now()
-                };
-            });
-
-            if (changed) {
-                setItems(migrated);
-            }
-            return migrated;
-        }
 
         function classifyItem(item, todayKey) {
             if (item.completed) {
@@ -3995,8 +4309,8 @@ function initNavbarDateTime() {
         }
 
         function renderItems() {
-            const todayKey = new Date().toISOString().slice(0, 10);
-            const items = migrateItems(getItems())
+            const todayKey = getPlannerTodayKey();
+            const items = getItems()
                 .slice()
                 .sort((a, b) => {
                     if (a.completed !== b.completed) {
@@ -4077,10 +4391,17 @@ function initNavbarDateTime() {
 
                 const time = document.createElement('span');
                 time.className = 'planner-task-time';
-                time.textContent = formatDateLabel(item.dueDate);
+                time.textContent = formatPlannerDateLabel(item.dueDate);
 
                 meta.appendChild(priority);
                 meta.appendChild(time);
+
+                if (item.dueDate && item.reminderLead !== 'none') {
+                    const reminder = document.createElement('span');
+                    reminder.className = 'planner-reminder-pill';
+                    reminder.textContent = getPlannerReminderLabel(item.reminderLead);
+                    meta.appendChild(reminder);
+                }
 
                 const deleteButton = document.createElement('button');
                 deleteButton.type = 'button';
@@ -4142,8 +4463,11 @@ function initNavbarDateTime() {
 
         function addItem() {
             const title = input.value.trim();
-            const dueDate = toDateKey(dateInput.value);
+            const dueDate = getPlannerDateKey(dateInput.value);
             const priority = ['p1', 'p2', 'p3', 'p4'].includes(prioritySelect.value) ? prioritySelect.value : 'p2';
+            const reminderLead = dueDate && ['none', 'day-of', '1-day', '3-day'].includes(reminderSelect.value)
+                ? reminderSelect.value
+                : 'none';
 
             if (!title) {
                 showDashboardToast('error', 'Task Required', 'Add a task title first.');
@@ -4157,15 +4481,25 @@ function initNavbarDateTime() {
                 dueDate,
                 priority,
                 completed: false,
-                updatedAt: Date.now()
+                updatedAt: Date.now(),
+                reminderLead,
+                notifications: {}
             });
 
             setItems(items);
             input.value = '';
             dateInput.value = '';
             prioritySelect.value = 'p2';
+            reminderSelect.value = 'day-of';
             renderItems();
-            showDashboardToast('success', 'Added To Planner', 'Task saved in your planner widget.');
+            showDashboardToast('success', 'Added To Planner', dueDate ? 'Task saved with a reminder in your planner widget.' : 'Task saved in your planner widget.', {
+                eyebrow: 'Planner updated',
+                meta: dueDate ? `${formatPlannerDateLabel(dueDate)} • ${getPlannerReminderLabel(reminderLead)}` : 'No due date set'
+            });
+
+            if (dueDate && getPlannerNotificationSettings().desktop && 'Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => {});
+            }
         }
 
         addButton.addEventListener('click', addItem);
@@ -4184,7 +4518,195 @@ function initNavbarDateTime() {
             });
         });
 
+        reminderSelect.value = 'day-of';
         renderItems();
+    }
+
+    function initPlannerNotifications() {
+        const workspaceUser = getWorkspaceUserContext();
+        let settings = getPlannerNotificationSettings();
+
+        function getDayDifference(dateKey, todayKey) {
+            const dueDate = getPlannerDateFromKey(dateKey);
+            const today = getPlannerDateFromKey(todayKey);
+            if (!dueDate || !today) {
+                return null;
+            }
+            return Math.round((dueDate.getTime() - today.getTime()) / 86400000);
+        }
+
+        function updateNotificationDots() {
+            const todayKey = getPlannerTodayKey();
+            const count = getPlannerItems(workspaceUser).filter(item => {
+                if (item.completed || !item.dueDate) {
+                    return false;
+                }
+                const diffDays = getDayDifference(item.dueDate, todayKey);
+                if (diffDays === null) {
+                    return false;
+                }
+                const leadDays = getPlannerReminderLeadDays(item.reminderLead);
+                if (diffDays <= 0) {
+                    return true;
+                }
+                return leadDays >= 0 && diffDays <= leadDays;
+            }).length;
+
+            document.querySelectorAll('.notification-dot').forEach(dot => {
+                if (count > 0) {
+                    dot.hidden = false;
+                    dot.classList.add('has-count');
+                    dot.textContent = count > 9 ? '9+' : String(count);
+                } else {
+                    dot.classList.remove('has-count');
+                    dot.textContent = '';
+                    dot.hidden = true;
+                }
+            });
+        }
+
+        function buildToastItems(items, todayKey) {
+            return items.slice(0, 3).map(item => {
+                const diffDays = getDayDifference(item.dueDate, todayKey);
+                let meta = formatPlannerDateLabel(item.dueDate);
+                if (diffDays === 0) {
+                    meta = 'Due today';
+                } else if (diffDays < 0) {
+                    meta = `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} late`;
+                } else if (diffDays > 0) {
+                    meta = `${diffDays} day${diffDays === 1 ? '' : 's'} away`;
+                }
+                return {
+                    label: item.title,
+                    meta
+                };
+            });
+        }
+
+        function notifyStage(stage, items, todayKey) {
+            if (!items.length) {
+                return;
+            }
+
+            const first = items[0];
+            let title = 'Planner reminder';
+            let message = `${items.length} task${items.length === 1 ? '' : 's'} need attention.`;
+            let type = 'reminder';
+            let meta = '';
+
+            if (stage === 'overdue') {
+                title = items.length === 1 ? 'Planner task overdue' : 'Planner tasks overdue';
+                message = items.length === 1 ? `"${first.title}" is past due.` : `${items.length} planner tasks are past due.`;
+                type = 'error';
+                meta = 'Clear these first so follow-ups do not slip.';
+            } else if (stage === 'due') {
+                title = items.length === 1 ? 'Planner task due today' : 'Planner tasks due today';
+                message = items.length === 1 ? `"${first.title}" is due today.` : `${items.length} planner tasks are due today.`;
+                type = 'reminder';
+                meta = 'Today view is ready for quick action.';
+            } else if (stage === 'upcoming') {
+                title = items.length === 1 ? 'Planner task coming up' : 'Planner tasks coming up';
+                message = items.length === 1 ? `"${first.title}" is coming up soon.` : `${items.length} planner tasks are coming up soon.`;
+                type = 'success';
+                meta = 'Use the planner to tighten the next few days.';
+            }
+
+            if (settings.inApp) {
+                showDashboardToast(type, title, message, {
+                    eyebrow: 'Planner reminder',
+                    meta,
+                    items: buildToastItems(items, todayKey),
+                    duration: 8000
+                });
+            }
+
+            if (settings.desktop && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification(`FAST BRIDGE GROUP: ${title}`, {
+                    body: message
+                });
+            }
+        }
+
+        function checkPlannerReminders() {
+            const todayKey = getPlannerTodayKey();
+            const items = getPlannerItems(workspaceUser).slice();
+            const triggered = {
+                overdue: [],
+                due: [],
+                upcoming: []
+            };
+            let dirty = false;
+
+            items.forEach(item => {
+                if (item.completed || !item.dueDate) {
+                    return;
+                }
+
+                const diffDays = getDayDifference(item.dueDate, todayKey);
+                if (diffDays === null) {
+                    return;
+                }
+
+                if (!item.notifications || typeof item.notifications !== 'object') {
+                    item.notifications = {};
+                    dirty = true;
+                }
+
+                if (diffDays < 0) {
+                    if (item.notifications.overdueForDueDate !== item.dueDate) {
+                        item.notifications.overdueForDueDate = item.dueDate;
+                        triggered.overdue.push(item);
+                        dirty = true;
+                    }
+                    return;
+                }
+
+                if (diffDays === 0) {
+                    if (item.notifications.dueForDueDate !== item.dueDate) {
+                        item.notifications.dueForDueDate = item.dueDate;
+                        triggered.due.push(item);
+                        dirty = true;
+                    }
+                    return;
+                }
+
+                const leadDays = getPlannerReminderLeadDays(item.reminderLead);
+                if (leadDays > 0 && diffDays <= leadDays && item.notifications.upcomingForDueDate !== item.dueDate) {
+                    item.notifications.upcomingForDueDate = item.dueDate;
+                    triggered.upcoming.push(item);
+                    dirty = true;
+                }
+            });
+
+            if (dirty) {
+                setPlannerItems(items, workspaceUser);
+            }
+
+            if (settings.inApp && (triggered.overdue.length || triggered.due.length || triggered.upcoming.length)) {
+                playPlannerNotificationSound();
+            }
+
+            notifyStage('overdue', triggered.overdue, todayKey);
+            notifyStage('due', triggered.due, todayKey);
+            notifyStage('upcoming', triggered.upcoming, todayKey);
+            updateNotificationDots();
+        }
+
+        window.addEventListener('dashboard-data-updated', updateNotificationDots);
+        window.addEventListener('storage', event => {
+            if (event.key === TODO_GOALS_KEY || event.key === USER_SETTINGS_KEY) {
+                settings = getPlannerNotificationSettings();
+                updateNotificationDots();
+            }
+        });
+        window.addEventListener('dashboard-user-settings-updated', () => {
+            settings = getPlannerNotificationSettings();
+            updateNotificationDots();
+        });
+
+        updateNotificationDots();
+        checkPlannerReminders();
+        window.setInterval(checkPlannerReminders, 60000);
     }
 
     // ============================================
@@ -4199,17 +4721,148 @@ function initNavbarDateTime() {
         const keywordCategoryFilter = document.getElementById('mls-keyword-category');
         const searchInput = document.getElementById('mls-search-input');
         const statusFilter = document.getElementById('mls-listing-status');
+        const alertStatus = document.getElementById('mls-alert-status');
         const emptyState = document.getElementById('mls-empty-state');
         const pagination = document.getElementById('mls-pagination');
         const cards = Array.from(listingsGrid.querySelectorAll('.mls-property-card'));
         const pageSize = 10;
         let currentPage = 1;
 
+        function getListingNotificationStore() {
+            const workspaceUser = getWorkspaceUserContext();
+            const stored = getUserScopedObject(MLS_LISTING_NOTIFICATIONS_KEY, workspaceUser.key);
+            const seenKeys = Array.isArray(stored.seenKeys)
+                ? stored.seenKeys.map(item => String(item || '').trim().toLowerCase()).filter(Boolean)
+                : [];
+            return {
+                seenKeys,
+                seededAt: Number(stored.seededAt) || 0,
+                lastNotifiedAt: Number(stored.lastNotifiedAt) || 0
+            };
+        }
+
+        function setListingNotificationStore(next) {
+            const workspaceUser = getWorkspaceUserContext();
+            setUserScopedObject(MLS_LISTING_NOTIFICATIONS_KEY, workspaceUser.key, {
+                seenKeys: Array.isArray(next && next.seenKeys) ? next.seenKeys : [],
+                seededAt: Number(next && next.seededAt) || 0,
+                lastNotifiedAt: Number(next && next.lastNotifiedAt) || 0
+            });
+        }
+
+        function updateMlsAlertStatus(text) {
+            if (alertStatus) {
+                alertStatus.textContent = text;
+            }
+        }
+
         function parseAddress(card) {
             const title = card.querySelector('h3')?.textContent?.trim() || 'Property';
             const locationRaw = card.querySelector('.mls-location')?.textContent?.trim() || '';
             const location = locationRaw.split('·')[0].trim();
             return `${title}, ${location}`;
+        }
+
+        function getListingNotificationKey(card) {
+            const explicitId = String(card.dataset.mlsId || card.dataset.listingId || '').trim().toLowerCase();
+            if (explicitId) {
+                return explicitId;
+            }
+            const address = parseAddress(card).toLowerCase();
+            const listedAt = String(card.dataset.listedAt || '').trim().toLowerCase();
+            const price = String(card.dataset.price || '').trim().toLowerCase();
+            return `${address}|${listedAt}|${price}`;
+        }
+
+        function getListingNotificationSummary(card) {
+            const title = card.querySelector('h3')?.textContent?.trim() || 'Property';
+            const location = card.querySelector('.mls-location')?.textContent?.trim() || 'MLS board';
+            const price = parseMetricText(card, 0, '$0');
+            return {
+                key: getListingNotificationKey(card),
+                title,
+                location,
+                price,
+                listedAt: String(card.dataset.listedAt || '').trim()
+            };
+        }
+
+        function notifyNewMlsListings(freshListings) {
+            if (!freshListings.length) {
+                return;
+            }
+
+            const settings = getMlsNotificationSettings();
+            const store = getListingNotificationStore();
+            const seenSet = new Set(store.seenKeys);
+            freshListings.forEach(item => seenSet.add(item.key));
+            setListingNotificationStore({
+                seenKeys: Array.from(seenSet),
+                seededAt: store.seededAt || Date.now(),
+                lastNotifiedAt: Date.now()
+            });
+
+            const listingCount = freshListings.length;
+            updateMlsAlertStatus(`${listingCount} new MLS ${listingCount === 1 ? 'listing is' : 'listings are'} ready for review. Alerts will keep watching for the next feed update.`);
+
+            if (!settings.enabled) {
+                return;
+            }
+
+            if (settings.sound) {
+                playPlannerNotificationSound();
+            }
+
+            showDashboardToast('success', listingCount === 1 ? 'New MLS listing' : 'New MLS listings', listingCount === 1
+                ? `${freshListings[0].title} just hit the MLS board.`
+                : `${listingCount} new properties just hit the MLS board.`, {
+                eyebrow: 'MLS alert',
+                meta: 'Prepared for live MLS feed updates and routing to agents or associates.',
+                items: freshListings.slice(0, 3).map(item => ({
+                    label: `${item.title} • ${item.price}`,
+                    meta: item.location
+                })),
+                duration: 9000
+            });
+
+            if (settings.desktop) {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('FAST BRIDGE GROUP: New MLS listing alert', {
+                        body: listingCount === 1
+                            ? `${freshListings[0].title} is ready for review.`
+                            : `${listingCount} new MLS properties are ready for review.`
+                    });
+                } else if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission().catch(() => {});
+                }
+            }
+        }
+
+        function seedOrNotifyListings(sourceCards, options = {}) {
+            const store = getListingNotificationStore();
+            const seenSet = new Set(store.seenKeys);
+            const summaries = sourceCards.map(getListingNotificationSummary);
+            const unseen = summaries.filter(item => item.key && !seenSet.has(item.key));
+
+            if (!store.seededAt) {
+                unseen.forEach(item => seenSet.add(item.key));
+                setListingNotificationStore({
+                    seenKeys: Array.from(seenSet),
+                    seededAt: Date.now(),
+                    lastNotifiedAt: store.lastNotifiedAt
+                });
+                updateMlsAlertStatus('MLS alerts are armed. Current board was saved as the baseline, and only future listings will trigger notifications.');
+                return;
+            }
+
+            if (unseen.length > 0) {
+                notifyNewMlsListings(unseen);
+            } else if (!options.skipStatusRefresh) {
+                const settings = getMlsNotificationSettings();
+                updateMlsAlertStatus(settings.enabled
+                    ? 'MLS alerts are armed. When new listings land here, FAST will notify you to route them to agents or associates.'
+                    : 'MLS alerts are currently off in Settings. New listings will be tracked quietly until you turn alerts back on.');
+            }
         }
 
         function parseMetricText(card, index, fallback) {
@@ -4475,12 +5128,13 @@ function initNavbarDateTime() {
             return `https://www.redfin.com/search?q=${encodedQuery}`;
         }
 
-        cards.forEach((card, index) => {
+        function prepareListingCard(card, index) {
             if (!card.dataset.status) {
                 const fallbackStatuses = ['active', 'pending', 'on-hold', 'closed'];
                 card.dataset.status = fallbackStatuses[index % fallbackStatuses.length];
             }
             card.dataset.status = normalizeStatus(card.dataset.status);
+            card.dataset.listingAlertKey = getListingNotificationKey(card);
 
             const cardTop = card.querySelector('.mls-card-top');
             if (cardTop && !cardTop.querySelector('.mls-listing-status')) {
@@ -4503,6 +5157,10 @@ function initNavbarDateTime() {
                 `;
                 card.appendChild(sourceWrap);
             }
+        }
+
+        cards.forEach((card, index) => {
+            prepareListingCard(card, index);
         });
 
         function renderPagination(totalItems) {
@@ -4654,7 +5312,47 @@ function initNavbarDateTime() {
             }
         });
 
+        const listingObserver = new MutationObserver(mutations => {
+            const newCards = [];
+
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (!(node instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (node.classList.contains('mls-property-card')) {
+                        newCards.push(node);
+                    }
+
+                    node.querySelectorAll?.('.mls-property-card').forEach(card => {
+                        newCards.push(card);
+                    });
+                });
+            });
+
+            if (!newCards.length) {
+                return;
+            }
+
+            newCards.forEach((card, index) => {
+                prepareListingCard(card, cards.length + index);
+                if (!cards.includes(card)) {
+                    cards.push(card);
+                }
+            });
+
+            seedOrNotifyListings(newCards);
+            applyFiltersAndSort();
+        });
+
+        listingObserver.observe(listingsGrid, {
+            childList: true,
+            subtree: true
+        });
+
         applyFiltersAndSort();
+        seedOrNotifyListings(cards);
     }
 
     function initMlsSearchHub() {
@@ -5959,6 +6657,28 @@ function initNavbarDateTime() {
         const piqAgentStatusSelect = document.getElementById('piq-agent-status');
         const propertyAssigneeSelect = document.getElementById('property-assignee-select');
         const agentCurrentStatusEl = document.getElementById('agent-current-status');
+        const offerNegotiatorEl = document.getElementById('offer-negotiator-name');
+
+        function getOfferNegotiatorName(assignmentLike) {
+            const assignment = assignmentLike && typeof assignmentLike === 'object' ? assignmentLike : {};
+            const assignedTo = assignment.assignedTo && typeof assignment.assignedTo === 'object'
+                ? assignment.assignedTo
+                : detailData.propertyAssignment && typeof detailData.propertyAssignment === 'object'
+                    ? (detailData.propertyAssignment.assignedTo || {})
+                    : {};
+            const assignedName = String(assignedTo.name || '').trim();
+            return assignedName || 'N/A';
+        }
+
+        function renderOfferNegotiator(assignmentLike) {
+            if (!offerNegotiatorEl) {
+                return;
+            }
+            offerNegotiatorEl.textContent = getOfferNegotiatorName(assignmentLike);
+        }
+
+        renderOfferNegotiator(persistedAssignment);
+
         if (piqAgentStatusSelect) {
             const defaultStatus = 'none';
             const persistedStatus = getPersistedPiqStatus();
@@ -6023,6 +6743,7 @@ function initNavbarDateTime() {
                         delete detailData.propertyAssignment;
                         localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
                         setPropertyAssignmentRecord(propertyKey, null);
+                        renderOfferNegotiator(null);
                         showDashboardToast('success', 'Property Unassigned', 'This property is no longer assigned to a user.');
                         return;
                     }
@@ -6035,6 +6756,7 @@ function initNavbarDateTime() {
                     };
                     localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
                     setPropertyAssignmentRecord(propertyKey, assignmentRecord);
+                    renderOfferNegotiator(assignmentRecord);
                     showDashboardToast('success', 'Property Assigned', `${assignmentRecord.propertyAddress} was assigned to ${selectedUser.name}.`);
                 });
             });
@@ -8804,6 +9526,7 @@ function initNavbarDateTime() {
         initAdminAccessRequests();
         initAdminUserManager();
         initTodoGoalsWidget();
+        initPlannerNotifications();
         initMlsDealsBoard();
         initMlsSearchHub();
         initFlyerMaker();

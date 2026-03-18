@@ -189,7 +189,7 @@
 
                     <section class="agent-record-section">
                         <h4>BASIC INFORMATION</h4>
-                        <p>Offer Negotiator: <strong>Isaac Haro (USER)</strong></p>
+                        <p>Offer Negotiator: <strong id="offer-negotiator-name">N/A</strong></p>
                         <p>Record Created: <strong>03/12/2026</strong></p>
                         <p>Listing Date: <strong>03/12/2026</strong></p>
                         <p>IDX: <strong>CCMA-CRMLS</strong></p>
@@ -440,8 +440,6 @@
                                     <input id="ia-list-price" type="text" inputmode="numeric" autocomplete="off" value="574900">
                                 </label>
                                 <div class="ia-readout">ARV Ratio: <strong id="ia-list-price-arv">0.00%</strong></div>
-
-                                <div class="ia-readout">Buy-Side Closing Costs: <strong id="ia-buy-side-cost">$0</strong></div>
                                 <div class="ia-readout">Buy-Side % ARV: <strong id="ia-buy-side-cost-arv">0.00%</strong></div>
 
                                 <label>Renovation Budget
@@ -766,7 +764,7 @@
                                 <label>City Transfer Tax
                                     <select id="offer-city-transfer-tax">
                                         <option value="">Select City Transfer Tax</option>
-                                        <option value="seller">seller</option>
+                                        <option value="seller" selected>seller</option>
                                         <option value="buyer">buyer</option>
                                         <option value="both">both</option>
                                     </select>
@@ -774,7 +772,7 @@
                                 <label>County Transfer Tax
                                     <select id="offer-county-transfer-tax">
                                         <option value="">Select County Transfer Tax</option>
-                                        <option value="seller">seller</option>
+                                        <option value="seller" selected>seller</option>
                                         <option value="buyer">buyer</option>
                                         <option value="both">both</option>
                                     </select>
@@ -783,7 +781,7 @@
                                     <input id="offer-escrow" type="text" placeholder="Select or type escrow...">
                                 </label>
                                 <label>Title Company
-                                    <input id="offer-title-company" type="text" placeholder="Select or type title company...">
+                                    <input id="offer-title-company" type="text" value="Sellers choice" placeholder="Select or type title company...">
                                 </label>
                                 <label>Disclosures
                                     <select id="offer-disclosures">
@@ -837,13 +835,6 @@
                                         </label>
                                     </div>
                                 </div>
-                                <label>Multiple Buyers
-                                    <select id="offer-multiple-buyers">
-                                        <option value="">Select</option>
-                                        <option value="yes">Yes</option>
-                                        <option value="no">No</option>
-                                    </select>
-                                </label>
                             </div>
                         </div>
 
