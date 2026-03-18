@@ -231,30 +231,16 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
     }
 
-    function isSteveMedinaWorkspaceUser() {
-        const workspaceUser = getWorkspaceUserContext();
-        const aliases = Array.isArray(workspaceUser.aliases) ? workspaceUser.aliases : [];
-        return aliases.includes('steve-medina') || aliases.includes('medinafbg@gmail.com');
-    }
-
     function initMyAgentsAccessRules() {
-        if (isSteveMedinaWorkspaceUser()) {
-            return;
-        }
-
         document.querySelectorAll('a[href="my-agents.html"]').forEach((link) => {
             const navItem = link.closest('.nav-item');
             if (navItem) {
-                navItem.remove();
-                return;
+                navItem.style.display = '';
+                navItem.hidden = false;
             }
-            link.remove();
+            link.style.display = '';
+            link.hidden = false;
         });
-
-        const currentPage = String(window.location.pathname || '').split('/').pop().toLowerCase();
-        if (currentPage === 'my-agents.html') {
-            window.location.replace('dashboard.html');
-        }
     }
 
     function getUserScopedObject(storageKey, userKey) {
