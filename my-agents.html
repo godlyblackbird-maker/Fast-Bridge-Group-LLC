@@ -563,6 +563,12 @@
     <script>
         (function () {
             const STORAGE_KEY_BASE = 'myAgentsSheetRows';
+            const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
+            const ISAAC_EMAIL_ALIASES = [
+                CANONICAL_ISAAC_EMAIL,
+                'isaacs.hesed@fastbridgegroup.com',
+                'isaacs.hesed@gmail.com'
+            ];
             const IMPORT_SOURCES = [
                 {
                     matchers: ['isaac.haro@fastbridgegroupllc.com', 'isaacs.hesed@fastbridgegroup.com', 'isaacs.hesed@gmail.com', 'isaac haro', 'isaac'],
@@ -585,10 +591,25 @@
                 }
             }
 
+            function normalizeKnownEmail(email) {
+                const normalizedEmail = String(email || '').trim().toLowerCase();
+                return ISAAC_EMAIL_ALIASES.includes(normalizedEmail) ? CANONICAL_ISAAC_EMAIL : normalizedEmail;
+            }
+
+            function getScopedEmailKeys(email) {
+                const normalizedEmail = String(email || '').trim().toLowerCase();
+                if (!normalizedEmail) {
+                    return [];
+                }
+                return ISAAC_EMAIL_ALIASES.includes(normalizedEmail)
+                    ? ISAAC_EMAIL_ALIASES.slice()
+                    : [normalizedEmail];
+            }
+
             function getUserContext() {
                 const profile = safeReadJson('userProfile');
                 const user = safeReadJson('user');
-                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const email = normalizeKnownEmail(user.email || profile.email || '');
                 const name = String(user.name || profile.name || 'default-user').trim();
                 const normalizedName = name.toLowerCase();
                 const userKey = email || normalizedName.replace(/\s+/g, '-') || 'default-user';
@@ -606,7 +627,7 @@
                 const aliases = new Set();
 
                 if (userContext.email) {
-                    aliases.add(userContext.email);
+                    getScopedEmailKeys(userContext.email).forEach((email) => aliases.add(email));
                     const localPart = userContext.email.split('@')[0];
                     if (localPart) {
                         aliases.add(localPart);
@@ -639,7 +660,17 @@
                 return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
-            const STORAGE_KEY = getUserStorageKey();
+            function getUserStorageKeys() {
+                const userContext = getUserContext();
+                const emailKeys = getScopedEmailKeys(userContext.email);
+                if (emailKeys.length > 0) {
+                    return emailKeys.map(email => `${STORAGE_KEY_BASE}:${email}`);
+                }
+                return [getUserStorageKey()];
+            }
+
+            const STORAGE_KEY = getUserStorageKeys()[0];
+            const STORAGE_KEYS = getUserStorageKeys();
             const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
             const DEFAULT_ROWS = [
                 { agentName: '', brokerage: '', email: '', cellPhone: '', market: '', specialty: '', status: '', notes: '' }
@@ -838,7 +869,9 @@
             }
 
             function persistRows(rows) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+                STORAGE_KEYS.forEach((storageKey) => {
+                    localStorage.setItem(storageKey, JSON.stringify(rows));
+                });
                 updateAgentCount(rows);
             }
 
@@ -1072,14 +1105,19 @@
                 let rows = [];
                 const canUseLegacySharedRows = !!getImportSource();
                 try {
-                    const stored = localStorage.getItem(STORAGE_KEY);
-                    if (stored) {
-                        rows = JSON.parse(stored);
-                    } else if (canUseLegacySharedRows) {
+                    for (const storageKey of STORAGE_KEYS) {
+                        const stored = localStorage.getItem(storageKey);
+                        if (stored) {
+                            rows = JSON.parse(stored);
+                            break;
+                        }
+                    }
+
+                    if ((!Array.isArray(rows) || rows.length === 0) && canUseLegacySharedRows) {
                         const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
                         rows = legacyStored ? JSON.parse(legacyStored) : [];
                         if (Array.isArray(rows) && rows.length > 0) {
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+                            persistRows(rows);
                         }
                     }
                 } catch (error) {

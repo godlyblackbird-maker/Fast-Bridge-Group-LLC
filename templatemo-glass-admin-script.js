@@ -20,6 +20,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp'];
+    const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
+    const ISAAC_EMAIL_ALIASES = new Set([
+        CANONICAL_ISAAC_EMAIL,
+        'isaacs.hesed@fastbridgegroup.com',
+        'isaacs.hesed@gmail.com'
+    ]);
     const BIBLE_MEMORY_VERSES = [
         { reference: 'Acts 16:31', text: 'Believe on the Lord Jesus Christ, and you will be saved.' },
         { reference: '1 John 4:19', text: 'We love because he first loved us.' },
@@ -139,7 +145,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     }
 
     function normalizeUserIdentityValue(value) {
-        return String(value || '').trim().toLowerCase();
+        const normalizedValue = String(value || '').trim().toLowerCase();
+        if (ISAAC_EMAIL_ALIASES.has(normalizedValue)) {
+            return CANONICAL_ISAAC_EMAIL;
+        }
+        return normalizedValue;
     }
 
     function normalizeUserNameKey(value) {
@@ -148,13 +158,17 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function getUserIdentityAliases(userLike) {
         const aliases = new Set();
-        const email = normalizeUserIdentityValue(userLike && userLike.email);
+        const rawEmail = String(userLike && userLike.email || '').trim().toLowerCase();
+        const email = normalizeUserIdentityValue(rawEmail);
         const name = String(userLike && userLike.name || '').trim();
         const normalizedName = normalizeUserNameKey(name);
         const key = normalizeUserIdentityValue(userLike && userLike.key);
 
         if (email) {
             aliases.add(email);
+        }
+        if (ISAAC_EMAIL_ALIASES.has(rawEmail) || ISAAC_EMAIL_ALIASES.has(email)) {
+            ISAAC_EMAIL_ALIASES.forEach((alias) => aliases.add(alias));
         }
         if (normalizedName) {
             aliases.add(normalizedName);

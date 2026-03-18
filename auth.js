@@ -2,16 +2,131 @@
 // Include this in all pages that require authentication
 
 (function() {
+  const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
+  const ISAAC_EMAIL_ALIASES = [
+    CANONICAL_ISAAC_EMAIL,
+    'isaacs.hesed@fastbridgegroup.com',
+    'isaacs.hesed@gmail.com'
+  ];
+
+  function normalizeKnownEmail(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    return ISAAC_EMAIL_ALIASES.includes(normalizedEmail) ? CANONICAL_ISAAC_EMAIL : normalizedEmail;
+  }
+
+  function getKnownEmailCandidates(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      return [];
+    }
+    return ISAAC_EMAIL_ALIASES.includes(normalizedEmail)
+      ? ISAAC_EMAIL_ALIASES.slice()
+      : [normalizedEmail];
+  }
+
+  function normalizeKnownUser(userLike) {
+    if (!userLike || typeof userLike !== 'object') {
+      return null;
+    }
+
+    const normalizedEmail = normalizeKnownEmail(userLike.email || '');
+    const isIsaacAccount = ISAAC_EMAIL_ALIASES.includes(String(userLike.email || '').trim().toLowerCase())
+      || normalizedEmail === CANONICAL_ISAAC_EMAIL;
+
+    return {
+      ...userLike,
+      email: normalizedEmail || String(userLike.email || '').trim().toLowerCase(),
+      role: isIsaacAccount ? 'admin' : String(userLike.role || '').trim().toLowerCase()
+    };
+  }
+
+  function getScopedKeys(userLike) {
+    const normalizedUser = normalizeKnownUser(userLike) || {};
+    const keys = new Set();
+    getKnownEmailCandidates(normalizedUser.email || userLike.email || '').forEach((candidate) => keys.add(candidate));
+
+    const name = String(normalizedUser.name || userLike.name || 'User').trim().toLowerCase();
+    if (name) {
+      keys.add(name.replace(/\s+/g, '-'));
+    }
+
+    return Array.from(keys).filter(Boolean);
+  }
+
+  function readStoredUser() {
+    try {
+      return normalizeKnownUser(JSON.parse(localStorage.getItem('user') || 'null'));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeStoredUser(userLike) {
+    const normalizedUser = normalizeKnownUser(userLike);
+    if (!normalizedUser) {
+      return null;
+    }
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    return normalizedUser;
+  }
+
+  function clearAuthState() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('registeredEmail');
+    localStorage.removeItem('bypassAuth');
+    localStorage.removeItem('bypassProfile');
+  }
+
+  async function syncAuthenticatedUser() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      return readStoredUser();
+    }
+
+    try {
+      const response = await fetch('/api/verify', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          clearAuthState();
+          if (!['/', '/index.html', '/login.html'].includes(window.location.pathname)) {
+            window.location.href = '/login.html';
+          }
+          return null;
+        }
+        return readStoredUser();
+      }
+
+      const data = await response.json();
+      if (!data || !data.success || !data.user) {
+        return readStoredUser();
+      }
+
+      return writeStoredUser(data.user);
+    } catch (error) {
+      return readStoredUser();
+    }
+  }
+
   function getStoredProfile() {
     const user = window.getCurrentUser ? window.getCurrentUser() : null;
-    const email = String((user && user.email) || '').trim().toLowerCase();
     const name = String((user && user.name) || 'User').trim();
-    const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+    const userKeys = getScopedKeys(user || {});
 
     try {
       const profileStore = JSON.parse(localStorage.getItem('userProfilesByUser') || '{}');
-      if (profileStore && profileStore[userKey] && typeof profileStore[userKey] === 'object') {
-        return profileStore[userKey];
+      if (profileStore && typeof profileStore === 'object') {
+        for (const userKey of userKeys) {
+          if (profileStore[userKey] && typeof profileStore[userKey] === 'object') {
+            return profileStore[userKey];
+          }
+        }
       }
     } catch (error) {
       // Fall back to legacy key.
@@ -28,11 +143,12 @@
         return null;
       }
 
-      const legacyEmail = String(legacy.email || '').trim().toLowerCase();
+      const legacyEmail = normalizeKnownEmail(legacy.email || '');
       const legacyName = String(legacy.name || '').trim().toLowerCase();
       const activeName = String(name || '').trim().toLowerCase();
+      const activeEmails = new Set(getKnownEmailCandidates((user && user.email) || ''));
 
-      if ((email && legacyEmail === email) || (!email && legacyName && legacyName === activeName)) {
+      if ((activeEmails.size > 0 && activeEmails.has(legacyEmail)) || (!activeEmails.size && legacyName && legacyName === activeName)) {
         return legacy;
       }
 
@@ -65,10 +181,11 @@
   }
 
   // Run check when page loads
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', async function() {
+    const syncedUser = await syncAuthenticatedUser();
     checkAuthentication();
 
-    const activeUser = getCurrentUser();
+    const activeUser = syncedUser || getCurrentUser();
 
     const adminLinks = document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]');
     adminLinks.forEach(link => {
@@ -146,17 +263,12 @@
 
   // Get current user
   window.getCurrentUser = function() {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    return readStoredUser();
   };
 
   // Logout function
   window.logout = function() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('registeredEmail');
-    localStorage.removeItem('bypassAuth');
-    localStorage.removeItem('bypassProfile');
+    clearAuthState();
     window.location.href = '/login.html';
   };
 

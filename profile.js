@@ -2,8 +2,29 @@
 
 (function() {
   const USER_PROFILE_STORE_KEY = 'userProfilesByUser';
+  const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
+  const ISAAC_EMAIL_ALIASES = [
+    CANONICAL_ISAAC_EMAIL,
+    'isaacs.hesed@fastbridgegroup.com',
+    'isaacs.hesed@gmail.com'
+  ];
 
-  function getActiveUserKey() {
+  function normalizeKnownEmail(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    return ISAAC_EMAIL_ALIASES.includes(normalizedEmail) ? CANONICAL_ISAAC_EMAIL : normalizedEmail;
+  }
+
+  function getScopedEmailKeys(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      return [];
+    }
+    return ISAAC_EMAIL_ALIASES.includes(normalizedEmail)
+      ? ISAAC_EMAIL_ALIASES.slice()
+      : [normalizedEmail];
+  }
+
+  function getActiveUserKeys() {
     let user = null;
     if (typeof getCurrentUser === 'function') {
       user = getCurrentUser();
@@ -16,9 +37,17 @@
       fallbackUser = {};
     }
 
-    const email = String((user && user.email) || fallbackUser.email || '').trim().toLowerCase();
-    const name = String((user && user.name) || fallbackUser.name || 'User').trim();
-    return email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+    const keys = new Set(getScopedEmailKeys((user && user.email) || fallbackUser.email || ''));
+    const name = String((user && user.name) || fallbackUser.name || 'User').trim().toLowerCase();
+    if (name) {
+      keys.add(name.replace(/\s+/g, '-'));
+    }
+
+    return Array.from(keys).filter(Boolean);
+  }
+
+  function getActiveUserKey() {
+    return getActiveUserKeys()[0] || 'default-user';
   }
 
   function getProfileStore() {
@@ -31,19 +60,23 @@
   }
 
   function setStoredProfileData(profileData) {
-    const key = getActiveUserKey();
+    const keys = getActiveUserKeys();
     const store = getProfileStore();
-    store[key] = profileData || {};
+    keys.forEach((key) => {
+      store[key] = profileData || {};
+    });
     localStorage.setItem(USER_PROFILE_STORE_KEY, JSON.stringify(store));
     localStorage.setItem('userProfile', JSON.stringify(profileData || {}));
   }
 
   function getStoredProfileData() {
-    const key = getActiveUserKey();
+    const keys = getActiveUserKeys();
     const store = getProfileStore();
-    const scoped = store[key];
-    if (scoped && typeof scoped === 'object') {
-      return scoped;
+    for (const key of keys) {
+      const scoped = store[key];
+      if (scoped && typeof scoped === 'object') {
+        return scoped;
+      }
     }
 
     try {
@@ -59,12 +92,12 @@
         fallbackUser = {};
       }
 
-      const activeEmail = String(fallbackUser.email || '').trim().toLowerCase();
+      const activeEmails = new Set(getScopedEmailKeys(fallbackUser.email || ''));
       const activeName = String(fallbackUser.name || '').trim().toLowerCase();
-      const legacyEmail = String(legacy.email || '').trim().toLowerCase();
+      const legacyEmail = normalizeKnownEmail(legacy.email || '');
       const legacyName = String(legacy.name || '').trim().toLowerCase();
 
-      if ((activeEmail && legacyEmail === activeEmail) || (!activeEmail && legacyName && legacyName === activeName)) {
+      if ((activeEmails.size > 0 && activeEmails.has(legacyEmail)) || (!activeEmails.size && legacyName && legacyName === activeName)) {
         return legacy;
       }
 
@@ -88,7 +121,7 @@
     const stored = getStoredProfileData();
     return {
       name: stored.name || (user && user.name) || 'User',
-      email: stored.email || (user && user.email) || '',
+      email: normalizeKnownEmail(stored.email || (user && user.email) || ''),
       phone: stored.phone || '',
       company: stored.company || '',
       address: stored.address || '',
