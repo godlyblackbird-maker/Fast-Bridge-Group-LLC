@@ -320,7 +320,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 20px;
-            padding: 22px 0 16px;
+            padding: 18px 0 6px;
         }
 
         .brand {
@@ -332,8 +332,8 @@
         }
 
         .brand img {
-            width: 76px;
-            height: 76px;
+            width: 180px;
+            height: 180px;
             object-fit: contain;
             filter: drop-shadow(0 10px 16px var(--brand-shadow));
         }
@@ -341,23 +341,23 @@
         .brand-copy {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .brand-kicker {
             margin: 0;
             font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.2em;
+            font-size: 18px;
+            letter-spacing: 0.28em;
             text-transform: uppercase;
             color: var(--accent-soft);
         }
 
         .brand-name {
             margin: 0;
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
         }
 
         .login-btn {
@@ -388,7 +388,7 @@
             grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
             gap: 24px;
             align-items: stretch;
-            padding: 24px 0 18px;
+            padding: 8px 0 18px;
         }
 
         .hero-panel,
@@ -501,11 +501,11 @@
             display: block;
             margin-bottom: 6px;
             font-size: 24px;
-            color: #ffffff;
+            color: #13202b;
         }
 
         .metric span {
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(19, 32, 43, 0.82);
             font-size: 13px;
             line-height: 1.5;
         }
@@ -564,7 +564,9 @@
             padding: 24px;
             position: relative;
             overflow: hidden;
-            transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
+            transform-style: preserve-3d;
+            will-change: transform;
+            transition: transform 0.4s cubic-bezier(0.03, 0.98, 0.52, 0.99), box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
         }
 
         .section-card::after {
@@ -597,7 +599,6 @@
 
         .section-card:hover,
         .section-card:focus-within {
-            transform: translateY(-8px);
             border-color: rgba(255, 255, 255, 0.24);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
             box-shadow: 0 28px 60px rgba(0, 0, 0, 0.28);
@@ -618,6 +619,116 @@
         .section-card:hover p,
         .section-card:focus-within p {
             color: rgba(248, 252, 255, 0.88);
+        }
+
+        .social-strip {
+            padding: 6px 0 40px;
+        }
+
+        .social-strip-head {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .social-strip-copy {
+            max-width: 680px;
+        }
+
+        .social-strip-copy h2 {
+            margin: 0 0 10px;
+            font-size: clamp(28px, 4vw, 40px);
+            letter-spacing: -0.04em;
+        }
+
+        .social-strip-copy p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .social-strip-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--eyebrow-border);
+            background: var(--eyebrow-bg);
+            color: var(--accent-soft);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .social-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .social-card {
+            display: grid;
+            gap: 14px;
+            padding: 20px;
+            border-radius: 24px;
+            border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
+            background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+            color: var(--text);
+            text-decoration: none;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .social-card:hover,
+        .social-card:focus-visible {
+            transform: translateY(-5px);
+            border-color: color-mix(in srgb, var(--accent-soft) 48%, white 12%);
+            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
+        }
+
+        .social-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 78%, white 22%), color-mix(in srgb, var(--sand) 72%, white 28%));
+            color: #ffffff;
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+        }
+
+        .social-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .social-card h3 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: -0.03em;
+        }
+
+        .social-card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 14px;
+        }
+
+        .social-card span {
+            color: var(--accent-soft);
+            font-size: 12px;
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
         }
 
         .access-request-modal {
@@ -781,6 +892,15 @@
             .content-grid {
                 grid-template-columns: 1fr;
             }
+
+            .social-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .social-strip-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
         }
 
         @media (max-width: 640px) {
@@ -789,12 +909,22 @@
             }
 
             .topbar {
-                padding-top: 16px;
+                padding-top: 12px;
+                padding-bottom: 4px;
             }
 
             .brand img {
-                width: 60px;
-                height: 60px;
+                width: 128px;
+                height: 128px;
+            }
+
+            .brand-kicker {
+                font-size: 14px;
+                letter-spacing: 0.2em;
+            }
+
+            .brand-name {
+                font-size: 28px;
             }
 
             .hero-panel,
@@ -838,6 +968,10 @@
             .access-request-grid {
                 grid-template-columns: 1fr;
             }
+
+            .social-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -858,14 +992,13 @@
             <section class="hero">
                 <div class="hero-panel">
                     <div class="eyebrow">The platform serious agents plug into next</div>
-                    <h1>The new operating system for agents who want more deals, less drag.</h1>
+                    <h1>Where Relationships Meet Opportunities</h1>
                     <p class="hero-copy">
                         FAST brings your workflow, comps, deal tracking, offer execution, and client-facing speed into one sleek platform.
                         It is smart, fast, easy to run, and built to help modern agents move sharper, respond quicker, and close with more confidence.
                     </p>
                     <div class="hero-actions">
                         <button class="primary-cta" id="open-access-request" type="button">Access FAST</button>
-                        <a class="secondary-cta" href="#platform">Explore the platform</a>
                     </div>
                     <div class="hero-metrics">
                         <div class="metric">
@@ -898,6 +1031,22 @@
                             <strong>Modern Execution</strong>
                             <p>Keep conversations, offers, follow-up, and team coordination flowing inside one clean, high-speed system.</p>
                         </div>
+                        <div class="ops-item">
+                            <strong>Everything Stays Connected</strong>
+                            <p>Property data, outreach, next actions, and team movement stay tied together so nothing gets lost when the pace picks up.</p>
+                        </div>
+                        <div class="ops-item">
+                            <strong>Faster Agent Response</strong>
+                            <p>Move on opportunities while they are still warm with a platform that helps you react quickly and stay one step ahead.</p>
+                        </div>
+                        <div class="ops-item">
+                            <strong>More Confidence Per Deal</strong>
+                            <p>Walk into every conversation with better visibility, cleaner numbers, and a sharper grip on what needs to happen next.</p>
+                        </div>
+                        <div class="ops-item">
+                            <strong>Built To Help You Win</strong>
+                            <p>FAST is not just here to organize work. It is here to help agents look sharper, move cleaner, and create better outcomes more often.</p>
+                        </div>
                     </div>
                 </aside>
             </section>
@@ -921,6 +1070,63 @@
                         From first look to final move, FAST helps agents stay organized, react faster, and show up with more confidence in every deal conversation.
                     </p>
                 </article>
+            </section>
+
+            <section class="social-strip" aria-labelledby="social-strip-title">
+                <div class="social-strip-head">
+                    <div class="social-strip-copy">
+                        <h2 id="social-strip-title">Stay plugged into FAST everywhere</h2>
+                        <p>Watch the brand, follow the momentum, and keep FAST in the mix across every social channel your audience already lives on.</p>
+                    </div>
+                    <div class="social-strip-badge">Social Media</div>
+                </div>
+
+                <div class="social-grid">
+                    <a class="social-card" href="https://www.instagram.com/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Instagram">
+                        <div class="social-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="0.75" fill="currentColor" stroke="none"></circle></svg>
+                        </div>
+                        <h3>Instagram</h3>
+                        <p>Show the brand, the energy, and the deals in a format built for attention and fast recognition.</p>
+                        <span>Follow the feed</span>
+                    </a>
+
+                    <a class="social-card" href="https://www.youtube.com/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on YouTube">
+                        <div class="social-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.58 7.19a2.99 2.99 0 0 0-2.1-2.12C17.62 4.5 12 4.5 12 4.5s-5.62 0-7.48.57A2.99 2.99 0 0 0 2.42 7.2 31.29 31.29 0 0 0 2 12a31.29 31.29 0 0 0 .42 4.81 2.99 2.99 0 0 0 2.1 2.12c1.86.57 7.48.57 7.48.57s5.62 0 7.48-.57a2.99 2.99 0 0 0 2.1-2.12A31.29 31.29 0 0 0 22 12a31.29 31.29 0 0 0-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z"></path></svg>
+                        </div>
+                        <h3>YouTube</h3>
+                        <p>Break down strategy, showcase the platform, and turn deeper content into trust at scale.</p>
+                        <span>Watch the channel</span>
+                    </a>
+
+                    <a class="social-card" href="https://x.com/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on X">
+                        <div class="social-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.26l-4.9-6.42L6.42 22H3.3l7.24-8.28L.8 2h6.41l4.43 5.86L18.9 2Zm-1.1 18h1.73L6.26 3.9H4.4L17.8 20Z"></path></svg>
+                        </div>
+                        <h3>X</h3>
+                        <p>Move fast with updates, ideas, and sharper real-time conversation around deals and market motion.</p>
+                        <span>Join the conversation</span>
+                    </a>
+
+                    <a class="social-card" href="https://www.facebook.com/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Facebook">
+                        <div class="social-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 22v-8.2h2.77l.42-3.2H13.5V8.56c0-.93.27-1.56 1.63-1.56h1.74V4.14c-.3-.04-1.33-.14-2.53-.14-2.5 0-4.21 1.5-4.21 4.32v2.28H7.3v3.2h2.83V22h3.37Z"></path></svg>
+                        </div>
+                        <h3>Facebook</h3>
+                        <p>Keep your broader audience connected to the brand with updates, wins, and platform credibility.</p>
+                        <span>See the page</span>
+                    </a>
+
+                    <a class="social-card" href="https://www.tiktok.com/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on TikTok">
+                        <div class="social-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.8 3c.24 2.03 1.4 3.74 3.2 4.64v2.85a8.2 8.2 0 0 1-3.14-.78l-.03 5.42c0 3.78-3.05 6.84-6.82 6.84A6.83 6.83 0 0 1 4 10.56a6.81 6.81 0 0 1 7.44-1.2v2.97a3.9 3.9 0 0 0-1.56-.33 3.95 3.95 0 1 0 3.95 4.03L13.86 2.99h1.94Z"></path></svg>
+                        </div>
+                        <h3>TikTok</h3>
+                        <p>Package attention-grabbing clips, fast lessons, and brand personality into content people actually stop for.</p>
+                        <span>Catch the clips</span>
+                    </a>
+                </div>
             </section>
         </main>
 
@@ -1004,6 +1210,7 @@
             const form = document.getElementById('access-request-form');
             const feedback = document.getElementById('access-request-feedback');
             const submitButton = document.getElementById('submit-access-request');
+            const swayCards = Array.from(document.querySelectorAll('#platform .section-card'));
 
             const setFeedback = (message, state) => {
                 if (!feedback) {
@@ -1115,6 +1322,24 @@
                     }
                 });
             }
+
+            swayCards.forEach((card) => {
+                card.addEventListener('mousemove', (event) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = (y - centerY) / 20;
+                    const rotateY = (centerX - x) / 20;
+
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+                });
+            });
 
             window.addEventListener('storage', applyStoredTheme);
             applyStoredTheme();
