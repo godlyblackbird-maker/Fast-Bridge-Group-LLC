@@ -12,7 +12,9 @@
     <script>
         (function () {
             try {
-                document.documentElement.setAttribute('data-theme', 'beach');
+                const storedTheme = String(localStorage.getItem('homepageTheme') || 'beach').trim().toLowerCase();
+                const nextTheme = storedTheme === 'sunset' ? 'sunset' : 'beach';
+                document.documentElement.setAttribute('data-theme', nextTheme);
             } catch (error) {
                 // Ignore theme bootstrap errors on the public home page.
             }
@@ -396,6 +398,14 @@
             padding: 18px 0 6px;
         }
 
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
         .brand {
             display: inline-flex;
             align-items: center;
@@ -454,6 +464,36 @@
             transform: translateY(-1px);
             border-color: var(--login-hover-border);
             box-shadow: var(--login-hover-shadow);
+        }
+
+        .theme-switch-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 0 18px;
+            border-radius: 999px;
+            border: 1px solid var(--secondary-border);
+            background: var(--secondary-bg);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(8, 47, 73, 0.12);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .theme-switch-btn:hover,
+        .theme-switch-btn:focus-visible {
+            transform: translateY(-1px);
+            border-color: var(--login-hover-border);
+            background: rgba(255, 255, 255, 0.22);
+            box-shadow: 0 16px 28px rgba(8, 47, 73, 0.18);
+        }
+
+        .theme-switch-btn .theme-switch-current {
+            opacity: 0.7;
+            font-weight: 600;
         }
 
         .hero {
@@ -1328,7 +1368,13 @@
                     <p class="brand-name">FAST BRIDGE GROUP</p>
                 </div>
             </a>
-            <a class="login-btn" href="login.html">Log In</a>
+            <div class="topbar-actions">
+                <button class="theme-switch-btn" id="homepage-theme-toggle" type="button" aria-live="polite">
+                    <span class="theme-switch-label">Switch to Sunset Mode</span>
+                    <span class="theme-switch-current">Beach Mode</span>
+                </button>
+                <a class="login-btn" href="login.html">Log In</a>
+            </div>
         </header>
 
         <main>
@@ -1522,8 +1568,33 @@
     </div>
     <script>
         (function () {
+            const HOMEPAGE_THEME_KEY = 'homepageTheme';
+            const ALLOWED_HOMEPAGE_THEMES = ['beach', 'sunset'];
+
+            const getHomepageTheme = () => {
+                const storedValue = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || 'beach').trim().toLowerCase();
+                return ALLOWED_HOMEPAGE_THEMES.includes(storedValue) ? storedValue : 'beach';
+            };
+
+            const homepageThemeToggle = document.getElementById('homepage-theme-toggle');
+            const homepageThemeLabel = homepageThemeToggle ? homepageThemeToggle.querySelector('.theme-switch-label') : null;
+            const homepageThemeCurrent = homepageThemeToggle ? homepageThemeToggle.querySelector('.theme-switch-current') : null;
+
             const applyStoredTheme = () => {
-                document.documentElement.setAttribute('data-theme', 'beach');
+                const activeTheme = getHomepageTheme();
+                document.documentElement.setAttribute('data-theme', activeTheme);
+
+                if (homepageThemeLabel) {
+                    homepageThemeLabel.textContent = activeTheme === 'beach' ? 'Switch to Sunset Mode' : 'Switch to Beach Mode';
+                }
+
+                if (homepageThemeCurrent) {
+                    homepageThemeCurrent.textContent = activeTheme === 'beach' ? 'Beach Mode' : 'Sunset Mode';
+                }
+
+                if (homepageThemeToggle) {
+                    homepageThemeToggle.setAttribute('aria-label', activeTheme === 'beach' ? 'Switch homepage theme to Sunset Mode' : 'Switch homepage theme to Beach Mode');
+                }
             };
 
             const modal = document.getElementById('access-request-modal');
@@ -1576,6 +1647,14 @@
 
             if (openButton) {
                 openButton.addEventListener('click', openModal);
+            }
+
+            if (homepageThemeToggle) {
+                homepageThemeToggle.addEventListener('click', () => {
+                    const nextTheme = getHomepageTheme() === 'beach' ? 'sunset' : 'beach';
+                    localStorage.setItem(HOMEPAGE_THEME_KEY, nextTheme);
+                    applyStoredTheme();
+                });
             }
 
             if (closeButton) {

@@ -21,6 +21,35 @@ document.addEventListener('DOMContentLoaded', function() {
   const emailInput = document.getElementById('email');
   const googleSignInBtn = document.getElementById('google-signin-btn');
   const loginVersionLabel = document.getElementById('login-version-label');
+  const termsAcceptCheckbox = document.getElementById('terms-accept-checkbox');
+
+  function hasAcceptedTerms() {
+    return !termsAcceptCheckbox || termsAcceptCheckbox.checked;
+  }
+
+  function syncLoginAvailability() {
+    const isAccepted = hasAcceptedTerms();
+    if (loginBtn) {
+      loginBtn.disabled = !isAccepted;
+      loginBtn.setAttribute('aria-disabled', String(!isAccepted));
+    }
+
+    if (googleSignInBtn) {
+      googleSignInBtn.disabled = !isAccepted;
+      googleSignInBtn.setAttribute('aria-disabled', String(!isAccepted));
+      googleSignInBtn.title = isAccepted ? 'Sign in with Google' : 'Accept the Terms and Conditions first';
+    }
+  }
+
+  function showTermsRequiredMessage() {
+    if (!errorDiv) {
+      return;
+    }
+
+    errorDiv.style.display = 'block';
+    errorDiv.style.color = '#ef4444';
+    errorDiv.textContent = 'You must agree to the Terms and Conditions before signing in.';
+  }
 
   function getApiBaseOrigin() {
     if (window.location.protocol === 'file:') {
@@ -55,6 +84,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function startGoogleSignIn() {
     if (!googleSignInBtn) {
+      return;
+    }
+
+    if (!hasAcceptedTerms()) {
+      showTermsRequiredMessage();
+      syncLoginAvailability();
       return;
     }
 
@@ -122,11 +157,30 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  if (termsAcceptCheckbox) {
+    termsAcceptCheckbox.checked = false;
+    termsAcceptCheckbox.addEventListener('change', function() {
+      if (errorDiv && hasAcceptedTerms() && errorDiv.textContent === 'You must agree to the Terms and Conditions before signing in.') {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+      }
+      syncLoginAvailability();
+    });
+  }
+
+  syncLoginAvailability();
+
   loadBuildVersion();
 
   if (loginForm) {
     loginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
+
+      if (!hasAcceptedTerms()) {
+        showTermsRequiredMessage();
+        syncLoginAvailability();
+        return;
+      }
 
       const email = document.getElementById('email').value.trim().toLowerCase();
       const password = document.getElementById('password').value;
