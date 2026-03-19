@@ -22,6 +22,33 @@ document.addEventListener('DOMContentLoaded', function() {
   const googleSignInBtn = document.getElementById('google-signin-btn');
   const loginVersionLabel = document.getElementById('login-version-label');
   const termsAcceptCheckbox = document.getElementById('terms-accept-checkbox');
+  const termsModal = document.getElementById('terms-modal');
+  const termsContinueBtn = document.getElementById('terms-continue-btn');
+  const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
+
+  function openTermsModal() {
+    if (!termsModal) {
+      return;
+    }
+
+    termsModal.classList.add('is-open');
+    termsModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('terms-modal-open');
+
+    if (firstTermsFocusable) {
+      window.setTimeout(() => firstTermsFocusable.focus(), 40);
+    }
+  }
+
+  function closeTermsModal() {
+    if (!termsModal) {
+      return;
+    }
+
+    termsModal.classList.remove('is-open');
+    termsModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('terms-modal-open');
+  }
 
   function hasAcceptedTerms() {
     return !termsAcceptCheckbox || termsAcceptCheckbox.checked;
@@ -38,6 +65,11 @@ document.addEventListener('DOMContentLoaded', function() {
       googleSignInBtn.disabled = !isAccepted;
       googleSignInBtn.setAttribute('aria-disabled', String(!isAccepted));
       googleSignInBtn.title = isAccepted ? 'Sign in with Google' : 'Accept the Terms and Conditions first';
+    }
+
+    if (termsContinueBtn) {
+      termsContinueBtn.disabled = !isAccepted;
+      termsContinueBtn.setAttribute('aria-disabled', String(!isAccepted));
     }
   }
 
@@ -168,7 +200,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  if (termsContinueBtn) {
+    termsContinueBtn.addEventListener('click', function() {
+      if (!hasAcceptedTerms()) {
+        showTermsRequiredMessage();
+        syncLoginAvailability();
+        return;
+      }
+
+      closeTermsModal();
+    });
+  }
+
   syncLoginAvailability();
+  openTermsModal();
 
   loadBuildVersion();
 

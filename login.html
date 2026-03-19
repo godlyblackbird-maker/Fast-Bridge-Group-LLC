@@ -140,25 +140,6 @@ https://templatemo.com/tm-607-glass-admin
                         <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
                     </div>
 
-                    <div class="terms-consent-card" aria-labelledby="login-terms-title">
-                        <div class="terms-consent-header">
-                            <h2 id="login-terms-title">Terms and Conditions</h2>
-                            <p>You must review and accept these terms before signing in.</p>
-                        </div>
-                        <div class="terms-consent-scroll" tabindex="0" aria-label="Terms and Conditions">
-                            <p>By accessing FAST BRIDGE GROUP systems, dashboards, reports, and property-search tools, you agree to use this platform only for lawful business purposes authorized by your account permissions.</p>
-                            <p>You agree not to copy, scrape, redistribute, resell, publish, or misuse any property data, contact data, comps, internal notes, offers, investor workflows, or system-generated content unless expressly authorized by FAST BRIDGE GROUP and any applicable data provider rules.</p>
-                            <p>You are responsible for maintaining the confidentiality of your login credentials, device access, and account activity. You must immediately notify FAST BRIDGE GROUP if you suspect unauthorized access, credential sharing, or any compromise of your account.</p>
-                            <p>Information available in this system, including MLS-related content, offer summaries, calculations, contact records, and communication tools, is provided for operational convenience and may contain delays, omissions, or inaccuracies. You remain responsible for independent verification before relying on any information in a transaction or business decision.</p>
-                            <p>FAST BRIDGE GROUP may monitor usage, restrict access, suspend accounts, and retain records as needed for security, compliance, audit, operational, and legal purposes. Unauthorized use may result in account termination and additional action where permitted by law.</p>
-                            <p>By checking the acceptance box below, you acknowledge that you have read, understood, and agreed to these terms and conditions, along with any applicable privacy, legal, brokerage, IDX, VOW, and data-use policies associated with this platform.</p>
-                        </div>
-                        <label class="checkbox-label terms-consent-checkbox" for="terms-accept-checkbox">
-                            <input type="checkbox" id="terms-accept-checkbox">
-                            I have read and agree to the Terms and Conditions
-                        </label>
-                    </div>
-
                     <div id="error-message" style="color: #ef4444; font-size: 14px; margin-bottom: 15px; display: none; text-align: center;"></div>
 
                     <div class="form-row">
@@ -204,6 +185,33 @@ https://templatemo.com/tm-607-glass-admin
             </div>
         </div>
 
+    </div>
+
+    <div class="terms-modal" id="terms-modal" aria-hidden="true">
+        <div class="terms-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="login-terms-title">
+            <div class="terms-consent-card terms-consent-card-modal" aria-labelledby="login-terms-title">
+                <div class="terms-consent-header">
+                    <h2 id="login-terms-title">Terms and Conditions</h2>
+                    <p>You must review and accept these terms before you can use the login page.</p>
+                </div>
+                <div class="terms-consent-scroll" tabindex="0" aria-label="Terms and Conditions">
+                    <p>By accessing FAST BRIDGE GROUP systems, dashboards, reports, and property-search tools, you agree to use this platform only for lawful business purposes authorized by your account permissions.</p>
+                    <p>You agree not to copy, scrape, redistribute, resell, publish, or misuse any property data, contact data, comps, internal notes, offers, investor workflows, or system-generated content unless expressly authorized by FAST BRIDGE GROUP and any applicable data provider rules.</p>
+                    <p>You are responsible for maintaining the confidentiality of your login credentials, device access, and account activity. You must immediately notify FAST BRIDGE GROUP if you suspect unauthorized access, credential sharing, or any compromise of your account.</p>
+                    <p>Information available in this system, including MLS-related content, offer summaries, calculations, contact records, and communication tools, is provided for operational convenience and may contain delays, omissions, or inaccuracies. You remain responsible for independent verification before relying on any information in a transaction or business decision.</p>
+                    <p>FAST BRIDGE GROUP may monitor usage, restrict access, suspend accounts, and retain records as needed for security, compliance, audit, operational, and legal purposes. Unauthorized use may result in account termination and additional action where permitted by law.</p>
+                    <p>You further agree to comply with applicable California real estate laws, regulations, and professional standards, including fair housing and anti-discrimination rules, first-point-of-contact and solicitation requirements, electronic submission and record-handling rules, licensing discipline standards, and broker-supervision obligations.</p>
+                    <p>By checking the acceptance box below, you acknowledge that you have read, understood, and agreed to these terms and conditions, along with any applicable privacy, legal, brokerage, IDX, VOW, and data-use policies associated with this platform.</p>
+                </div>
+                <label class="checkbox-label terms-consent-checkbox" for="terms-accept-checkbox">
+                    <input type="checkbox" id="terms-accept-checkbox">
+                    I have read and agree to the Terms and Conditions
+                </label>
+                <button type="button" class="btn btn-primary terms-consent-continue" id="terms-continue-btn" disabled>
+                    Continue to Login
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="templatemo-glass-admin-script.js"></script>
