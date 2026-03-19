@@ -121,6 +121,27 @@ Headers: `Authorization: Bearer <token>`
 **GET** `/api/users`
 Headers: `Authorization: Bearer <token>`
 
+### 5. Twilio Status
+**GET** `/api/twilio/status`
+
+Returns whether Twilio SMS is configured for the app.
+
+### 6. Send SMS Campaign
+**POST** `/api/twilio/send-sms`
+```json
+{
+  "campaignName": "OC stale listings",
+  "senderName": "Isaac Haro",
+  "body": "Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out.",
+  "recipients": [
+    { "name": "Andrew Vakis", "phone": "9494234567", "area": "Orange County" },
+    { "name": "Chris Sheppard", "phone": "949-433-7035", "area": "South Orange County" }
+  ]
+}
+```
+
+Headers: `Authorization: Bearer <token>` optional but recommended so the sender name can default to the logged-in user.
+
 ---
 
 ## Security Highlights
@@ -187,6 +208,19 @@ Edit `.env` file to customize:
 - **DATABASE:** Path to SQLite database
 - **OPENAI_API_KEY:** Server-side key for the dashboard AI helper
 - **OPENAI_MODEL:** OpenAI model name for the AI helper (default: `gpt-5-nano`)
+- **TWILIO_ACCOUNT_SID:** Twilio account SID for SMS sending
+- **TWILIO_AUTH_TOKEN:** Twilio auth token
+- **TWILIO_PHONE_NUMBER:** Twilio sending number in E.164 format, e.g. `+18005551234`
+- **TWILIO_MESSAGING_SERVICE_SID:** Optional Twilio Messaging Service SID. If set, it is used instead of `TWILIO_PHONE_NUMBER`
+
+Example Twilio block for `.env`:
+```env
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+18005551234
+# Optional instead of a direct phone number:
+# TWILIO_MESSAGING_SERVICE_SID=MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
 ⚠️ **IMPORTANT FOR PRODUCTION:**
 - Change `JWT_SECRET` to a long random string

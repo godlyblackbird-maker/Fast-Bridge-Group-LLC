@@ -4,6 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const twilio = require('twilio');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -43,6 +44,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
 
 let cachedOpenAiApiKey = null;
+let cachedTwilioClient = null;
+let cachedTwilioClientKey = '';
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
@@ -174,6 +177,77 @@ function extractOpenAiResponseText(payload) {
   });
 
   return segments.join('\n\n').trim();
+}
+
+function normalizeSmsPhone(phone) {
+  const raw = String(phone || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  if (raw.startsWith('+')) {
+    const digits = `+${raw.slice(1).replace(/\D/g, '')}`;
+    return /^\+[1-9]\d{7,14}$/.test(digits) ? digits : '';
+  }
+
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `+${digits}`;
+  }
+
+  return '';
+}
+
+function maskPhoneNumber(phone) {
+  const normalized = normalizeSmsPhone(phone);
+  if (!normalized) {
+    return '';
+  }
+  return `${normalized.slice(0, 2)}******${normalized.slice(-4)}`;
+}
+
+function getTwilioMessagingConfig() {
+  return {
+    accountSid: String(process.env.TWILIO_ACCOUNT_SID || '').trim(),
+    authToken: String(process.env.TWILIO_AUTH_TOKEN || '').trim(),
+    fromNumber: String(process.env.TWILIO_PHONE_NUMBER || '').trim(),
+    messagingServiceSid: String(process.env.TWILIO_MESSAGING_SERVICE_SID || '').trim()
+  };
+}
+
+function isTwilioConfigured(config = getTwilioMessagingConfig()) {
+  return Boolean(config.accountSid && config.authToken && (config.messagingServiceSid || config.fromNumber));
+}
+
+function getTwilioClient() {
+  const config = getTwilioMessagingConfig();
+  if (!isTwilioConfigured(config)) {
+    return null;
+  }
+
+  const cacheKey = `${config.accountSid}:${config.authToken}`;
+  if (!cachedTwilioClient || cachedTwilioClientKey !== cacheKey) {
+    cachedTwilioClient = twilio(config.accountSid, config.authToken);
+    cachedTwilioClientKey = cacheKey;
+  }
+
+  return cachedTwilioClient;
+}
+
+function personalizeSmsBody(body, recipient = {}, senderName = '') {
+  const name = String(recipient.name || '').trim();
+  const firstName = name ? name.split(/\s+/)[0] : 'there';
+  const area = String(recipient.area || recipient.market || '').trim() || 'your market';
+  const sender = String(senderName || '').trim() || 'FAST BRIDGE GROUP';
+
+  return String(body || '')
+    .replace(/\[(agent\s+first\s+name|first\s+name|name)\]/gi, firstName)
+    .replace(/\[(your\s+name)\]/gi, sender)
+    .replace(/\[(area|market)\]/gi, area)
+    .trim();
 }
 
 async function queryOpenAiAssistant(question) {
@@ -1152,6 +1226,116 @@ app.get('/api/investor-attachments', (req, res) => {
     console.error('Failed to list investor attachments:', error);
     return res.status(500).json({ error: 'Failed to load investor attachment packages.' });
   }
+});
+
+app.get('/api/twilio/status', (req, res) => {
+  const config = getTwilioMessagingConfig();
+
+  return res.json({
+    configured: isTwilioConfigured(config),
+    fromNumberMasked: maskPhoneNumber(config.fromNumber),
+    messagingServiceSidConfigured: Boolean(config.messagingServiceSid),
+    mode: config.messagingServiceSid ? 'messaging-service' : (config.fromNumber ? 'phone-number' : 'unconfigured')
+  });
+});
+
+app.post('/api/twilio/send-sms', async (req, res) => {
+  const config = getTwilioMessagingConfig();
+  if (!isTwilioConfigured(config)) {
+    return res.status(400).json({ error: 'Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.' });
+  }
+
+  const body = String(req.body?.body || '').trim();
+  const campaignName = String(req.body?.campaignName || 'Untitled SMS Campaign').trim();
+  const providedRecipients = Array.isArray(req.body?.recipients) ? req.body.recipients : [];
+
+  if (!body) {
+    return res.status(400).json({ error: 'SMS body is required.' });
+  }
+
+  if (providedRecipients.length === 0) {
+    return res.status(400).json({ error: 'At least one recipient is required.' });
+  }
+
+  let senderName = String(req.body?.senderName || '').trim();
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (!senderName && token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      senderName = String(decoded?.name || '').trim();
+    } catch (error) {
+      // Ignore invalid token and continue without a sender name.
+    }
+  }
+
+  const client = getTwilioClient();
+  if (!client) {
+    return res.status(500).json({ error: 'Twilio client could not be initialized.' });
+  }
+
+  const sent = [];
+  const failed = [];
+
+  for (const entry of providedRecipients) {
+    const recipient = typeof entry === 'string'
+      ? { phone: entry }
+      : {
+          name: String(entry?.name || '').trim(),
+          phone: String(entry?.phone || '').trim(),
+          area: String(entry?.area || entry?.market || '').trim()
+        };
+
+    const normalizedPhone = normalizeSmsPhone(recipient.phone);
+    if (!normalizedPhone) {
+      failed.push({
+        name: recipient.name || '',
+        phone: recipient.phone || '',
+        error: 'Invalid phone number'
+      });
+      continue;
+    }
+
+    const personalizedBody = personalizeSmsBody(body, recipient, senderName).slice(0, 1600);
+
+    try {
+      const payload = {
+        body: personalizedBody,
+        to: normalizedPhone
+      };
+
+      if (config.messagingServiceSid) {
+        payload.messagingServiceSid = config.messagingServiceSid;
+      } else {
+        payload.from = config.fromNumber;
+      }
+
+      const message = await client.messages.create(payload);
+      sent.push({
+        name: recipient.name || '',
+        phone: normalizedPhone,
+        sid: message.sid,
+        status: message.status || 'queued'
+      });
+    } catch (error) {
+      failed.push({
+        name: recipient.name || '',
+        phone: normalizedPhone,
+        error: error.message || 'Twilio send failed'
+      });
+    }
+  }
+
+  if (sent.length === 0) {
+    return res.status(500).json({ error: 'No messages were sent.', failed, campaignName });
+  }
+
+  return res.json({
+    success: true,
+    campaignName,
+    message: `Queued ${sent.length} message(s).`,
+    sent,
+    failed
+  });
 });
 
 app.post('/api/send-agent-email', async (req, res) => {

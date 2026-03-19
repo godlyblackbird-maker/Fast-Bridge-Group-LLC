@@ -504,7 +504,51 @@
                         </div>
                         <div class="buyers-sheet-actions">
                             <button id="buyers-add-row" class="card-btn active" type="button">Add Row</button>
+                            <button id="buyers-send-sms-btn" class="card-btn" type="button">Quick SMS Campaign</button>
                             <button id="buyers-send-email-btn" class="card-btn" type="button">Send Email to All Buyers</button>
+                        </div>
+                        <div id="buyers-sms-modal" class="profile-modal" style="display: none;">
+                            <div class="profile-modal-overlay"></div>
+                            <div class="profile-modal-content" style="max-width: 560px;">
+                                <div class="profile-modal-header">
+                                    <h2>SMS All Buyers</h2>
+                                    <button id="close-buyers-sms-modal" class="profile-close-btn" type="button">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="profile-modal-body">
+                                    <form id="buyers-sms-form" class="profile-form">
+                                        <div class="form-section">
+                                            <div class="form-group">
+                                                <label>Campaign Name</label>
+                                                <input type="text" id="buyers-sms-campaign-name" class="form-input" placeholder="Orange County buyers push" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Message</label>
+                                                <textarea id="buyers-sms-body" class="form-input" placeholder="Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP... Reply STOP to opt out." style="resize: vertical; min-height: 110px;" required></textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                                                    Recipients
+                                                    <span>
+                                                        <button type="button" id="buyers-sms-select-all" style="font-size:12px;padding:2px 8px;margin-right:4px;">Select All</button>
+                                                        <button type="button" id="buyers-sms-deselect-all" style="font-size:12px;padding:2px 8px;">Deselect All</button>
+                                                    </span>
+                                                </label>
+                                                <div id="buyers-sms-recipients-list" style="max-height:180px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px 6px 4px 6px;background:rgba(0,0,0,0.03);margin-bottom:4px;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="profile-modal-actions">
+                                            <button type="button" id="cancel-buyers-sms" class="btn btn-secondary">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Send SMS</button>
+                                        </div>
+                                    </form>
+                                    <div id="buyers-sms-status" style="margin-top:10px;font-size:13px;"></div>
+                                </div>
+                            </div>
                         </div>
                         <!-- Bulk Email Modal -->
                         <div id="buyers-email-modal" class="profile-modal" style="display: none;">
@@ -591,6 +635,10 @@
                     const checkboxes = document.querySelectorAll('.buyers-email-recipient-toggle');
                     checkboxes.forEach(cb => { cb.checked = val; });
                 }
+                function buyersSmsSelectAll(val) {
+                    const checkboxes = document.querySelectorAll('.buyers-sms-recipient-toggle');
+                    checkboxes.forEach(cb => { cb.checked = val; });
+                }
                 document.addEventListener('click', function(e) {
                     if (e.target && e.target.id === 'buyers-email-select-all') {
                         e.preventDefault();
@@ -598,16 +646,121 @@
                     } else if (e.target && e.target.id === 'buyers-email-deselect-all') {
                         e.preventDefault();
                         buyersEmailSelectAll(false);
+                    } else if (e.target && e.target.id === 'buyers-sms-select-all') {
+                        e.preventDefault();
+                        buyersSmsSelectAll(true);
+                    } else if (e.target && e.target.id === 'buyers-sms-deselect-all') {
+                        e.preventDefault();
+                        buyersSmsSelectAll(false);
                     }
                 });
         (function () {
                     // --- Bulk Email Modal Logic ---
+                    const buyersSendSmsBtn = document.getElementById('buyers-send-sms-btn');
+                    const buyersSmsModal = document.getElementById('buyers-sms-modal');
+                    const closeBuyersSmsModal = document.getElementById('close-buyers-sms-modal');
+                    const cancelBuyersSms = document.getElementById('cancel-buyers-sms');
+                    const buyersSmsForm = document.getElementById('buyers-sms-form');
+                    const buyersSmsStatus = document.getElementById('buyers-sms-status');
                     const buyersSendEmailBtn = document.getElementById('buyers-send-email-btn');
                     const buyersEmailModal = document.getElementById('buyers-email-modal');
                     const closeBuyersEmailModal = document.getElementById('close-buyers-email-modal');
                     const cancelBuyersEmail = document.getElementById('cancel-buyers-email');
                     const buyersEmailForm = document.getElementById('buyers-email-form');
                     const buyersEmailStatus = document.getElementById('buyers-email-status');
+
+                    function getStoredSenderName() {
+                        try {
+                            const user = JSON.parse(localStorage.getItem('user') || '{}');
+                            return String(user.name || '').trim();
+                        } catch (error) {
+                            return '';
+                        }
+                    }
+
+                    function getAuthHeader() {
+                        const token = String(localStorage.getItem('authToken') || '').trim();
+                        return token ? { Authorization: `Bearer ${token}` } : {};
+                    }
+
+                    function openBuyersSmsModal() {
+                        buyersSmsModal.style.display = 'flex';
+                        buyersSmsStatus.textContent = '';
+                        buyersSmsForm.reset();
+                        document.getElementById('buyers-sms-campaign-name').value = 'Active Buyers SMS Push';
+
+                        const recipientsList = document.getElementById('buyers-sms-recipients-list');
+                        recipientsList.innerHTML = '';
+                        const rows = Array.from(document.getElementById('buyers-sheet-body').querySelectorAll('tr'));
+                        let count = 0;
+                        rows.forEach((tr, idx) => {
+                            const name = tr.children[1] ? tr.children[1].textContent.trim() : '';
+                            const phone = tr.children[3] ? tr.children[3].textContent.trim() : '';
+                            if (!phone) return;
+                            const id = `buyers-sms-recipient-${idx}`;
+                            const div = document.createElement('div');
+                            div.style.marginBottom = '4px';
+                            div.innerHTML = `<label style="display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer;"><input type="checkbox" class="buyers-sms-recipient-toggle" id="${id}" data-name="${name.replace(/"/g, '&quot;')}" value="${phone}" checked style="margin:0 4px 0 0;">${name ? `<span>${name}</span>` : ''}<span style="color:#666;font-size:13px;">${phone}</span></label>`;
+                            recipientsList.appendChild(div);
+                            count++;
+                        });
+                        if (count === 0) {
+                            recipientsList.innerHTML = '<span style="color:#b91c1c;">No buyer phone numbers found.</span>';
+                        }
+                    }
+
+                    function closeBuyersSms() {
+                        buyersSmsModal.style.display = 'none';
+                    }
+
+                    buyersSendSmsBtn.addEventListener('click', openBuyersSmsModal);
+                    closeBuyersSmsModal.addEventListener('click', closeBuyersSms);
+                    cancelBuyersSms.addEventListener('click', closeBuyersSms);
+
+                    buyersSmsForm.addEventListener('submit', async function (e) {
+                        e.preventDefault();
+                        buyersSmsStatus.textContent = 'Queueing SMS campaign...';
+
+                        const campaignName = document.getElementById('buyers-sms-campaign-name').value.trim();
+                        const body = document.getElementById('buyers-sms-body').value.trim();
+                        const checked = Array.from(document.querySelectorAll('.buyers-sms-recipient-toggle:checked'));
+                        const recipients = checked.map((cb) => ({
+                            name: cb.dataset.name || '',
+                            phone: cb.value
+                        }));
+
+                        if (recipients.length === 0) {
+                            buyersSmsStatus.textContent = 'No SMS recipients selected.';
+                            return;
+                        }
+
+                        try {
+                            const res = await fetch('/api/twilio/send-sms', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    ...getAuthHeader()
+                                },
+                                body: JSON.stringify({
+                                    campaignName,
+                                    body,
+                                    senderName: getStoredSenderName(),
+                                    recipients
+                                })
+                            });
+                            const data = await res.json();
+                            if (res.ok && data.success) {
+                                const failedCount = Array.isArray(data.failed) ? data.failed.length : 0;
+                                buyersSmsStatus.textContent = failedCount > 0
+                                    ? `Queued ${data.sent.length} SMS. ${failedCount} failed.`
+                                    : `Queued ${data.sent.length} SMS successfully.`;
+                            } else {
+                                buyersSmsStatus.textContent = 'Error: ' + (data.error || 'Failed to send SMS.');
+                            }
+                        } catch (err) {
+                            buyersSmsStatus.textContent = 'Error: ' + (err.message || 'Failed to send SMS.');
+                        }
+                    });
 
                     function openBuyersEmailModal() {
                         buyersEmailModal.style.display = 'flex';

@@ -11,6 +11,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCUMENTS_KEY = 'offerDocumentsByUser';
     const IA_CALCULATOR_STATE_KEY = 'iaCalculatorStateByUser';
     const PIQ_AGENT_STATUS_KEY = 'piqAgentStatusByUser';
+    const CLOSED_DEALS_KEY = 'closedDealsByUser';
     const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
@@ -18,6 +19,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
     const USER_THEME_KEY = 'dashboardThemeByUser';
+    const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
+    const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -400,6 +403,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         store[userKey] = value && typeof value === 'object' ? value : {};
         localStorage.setItem(storageKey, JSON.stringify(store));
+        window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
     function getPlannerDateKey(value) {
@@ -1134,6 +1138,40 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function getUserScopedValue(storageKey, userKey, fallbackValue = '') {
+        let store = {};
+        try {
+            store = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (error) {
+            store = {};
+        }
+
+        if (!store || typeof store !== 'object' || Array.isArray(store)) {
+            return fallbackValue;
+        }
+
+        return Object.prototype.hasOwnProperty.call(store, userKey)
+            ? store[userKey]
+            : fallbackValue;
+    }
+
+    function setUserScopedValue(storageKey, userKey, value) {
+        let store = {};
+        try {
+            store = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (error) {
+            store = {};
+        }
+
+        if (!store || typeof store !== 'object' || Array.isArray(store)) {
+            store = {};
+        }
+
+        store[userKey] = value;
+        localStorage.setItem(storageKey, JSON.stringify(store));
+        window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+    }
+
     function parseMoneyValue(value) {
         const numeric = Number(String(value || '').replace(/[^0-9.-]/g, ''));
         return Number.isFinite(numeric) ? numeric : 0;
@@ -1289,7 +1327,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function formatAgentStatusLabel(value) {
         const labels = {
-            acquired: '100% - Acquired',
+            acquired: '100% - Closed Deal',
             'offer-accepted': '80% - Offer Accepted',
             'in-negotiations': '60% - In Negotiations',
             'contract-submitted': '50% - Contract Submitted',
@@ -1312,6 +1350,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const myProfitsValueEl = document.getElementById('kpi-my-profits');
         const offerTermsSentEl = document.getElementById('kpi-offer-terms-sent');
         const offersSubmittedEl = document.getElementById('kpi-offers-submitted');
+        const profitGoalInputEl = document.getElementById('kpi-profit-goal-input');
+        const profitGoalMetaEl = document.getElementById('kpi-profit-goal-meta');
+        const profitWindowButtons = Array.from(document.querySelectorAll('[data-profit-window]'));
 
         if (!myProfitsValueEl || !offerTermsSentEl || !offersSubmittedEl) {
             return;
@@ -1320,6 +1361,43 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const myProfitsChangeEl = document.getElementById('kpi-my-profits-change');
         const offerTermsChangeEl = document.getElementById('kpi-offer-terms-change');
         const offersChangeEl = document.getElementById('kpi-offers-change');
+        const PROFIT_WINDOW_CONFIG = {
+            week: { label: 'last 7 days', days: 7 },
+            month: { label: 'last 30 days', days: 30 },
+            quarter: { label: 'last 90 days', days: 90 },
+            'six-month': { label: 'last 6 months', days: 183 },
+            year: { label: 'last 12 months', days: 365 }
+        };
+
+        function getSelectedProfitWindow() {
+            const workspaceUser = getWorkspaceUserContext();
+            const storedWindow = String(getUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, 'year') || 'year').trim().toLowerCase();
+            return PROFIT_WINDOW_CONFIG[storedWindow] ? storedWindow : 'year';
+        }
+
+        function setSelectedProfitWindow(windowKey) {
+            const workspaceUser = getWorkspaceUserContext();
+            const normalizedWindow = String(windowKey || 'year').trim().toLowerCase();
+            const nextWindow = PROFIT_WINDOW_CONFIG[normalizedWindow] ? normalizedWindow : 'year';
+            setUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, nextWindow);
+        }
+
+        function getStateTimestamp(state) {
+            return Number(state && (state.updatedAt || state.createdAt)) || 0;
+        }
+
+        function getProfitWindowRange(windowKey, now) {
+            const config = PROFIT_WINDOW_CONFIG[windowKey] || PROFIT_WINDOW_CONFIG.year;
+            return now - (config.days * 24 * 60 * 60 * 1000);
+        }
+
+        function syncProfitWindowUi(activeWindow) {
+            profitWindowButtons.forEach((button) => {
+                const isActive = button.dataset.profitWindow === activeWindow;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
 
         function calculateIaNetProfit(state) {
             if (!state || typeof state !== 'object') {
@@ -1397,6 +1475,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const plannerItems = getUserScopedItems(TODO_GOALS_KEY, workspaceUser.key);
             const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+            const rawProfitGoal = getUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, '');
+            const profitGoal = Math.max(parseMoneyValue(rawProfitGoal), 0);
+            const activeProfitWindow = getSelectedProfitWindow();
+            const now = Date.now();
+            const profitWindowStart = getProfitWindowRange(activeProfitWindow, now);
+            const windowedIaStates = iaStates.filter((state) => getStateTimestamp(state) >= profitWindowStart);
+            const yearlyProfitStart = getProfitWindowRange('year', now);
+            const yearlyIaStates = iaStates.filter((state) => getStateTimestamp(state) >= yearlyProfitStart);
 
             const latestByProperty = new Map();
             const offerLeadSet = new Set();
@@ -1446,16 +1532,34 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             });
 
-            const myProfitsTotal = iaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0);
+            const myProfitsTotal = windowedIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0);
             const offerTermsSentCount = offerTermsSentSet.size;
             const offersSubmitted = offerLeadSet.size;
+            const activeProfitWindowLabel = (PROFIT_WINDOW_CONFIG[activeProfitWindow] || PROFIT_WINDOW_CONFIG.year).label;
 
             myProfitsValueEl.textContent = formatMoney(myProfitsTotal);
             offerTermsSentEl.textContent = String(offerTermsSentCount);
             offersSubmittedEl.textContent = String(offersSubmitted);
+            syncProfitWindowUi(activeProfitWindow);
 
             if (myProfitsChangeEl) {
-                myProfitsChangeEl.textContent = `${iaStates.length} saved IA deal${iaStates.length === 1 ? '' : 's'}`;
+                myProfitsChangeEl.textContent = `${windowedIaStates.length} saved IA deal${windowedIaStates.length === 1 ? '' : 's'} ${activeProfitWindowLabel}`;
+            }
+            if (profitGoalInputEl) {
+                const formattedGoal = profitGoal > 0 ? Math.round(profitGoal).toLocaleString('en-US') : '';
+                if (profitGoalInputEl !== document.activeElement || !String(profitGoalInputEl.value || '').trim()) {
+                    profitGoalInputEl.value = formattedGoal;
+                }
+            }
+            if (profitGoalMetaEl) {
+                if (profitGoal > 0) {
+                    const yearlyProfitTotal = yearlyIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0);
+                    const remaining = Math.max(profitGoal - yearlyProfitTotal, 0);
+                    const percentToGoal = Math.min((yearlyProfitTotal / profitGoal) * 100, 999);
+                    profitGoalMetaEl.textContent = `${formatMoney(remaining)} to annual goal • ${percentToGoal.toFixed(1)}% reached`;
+                } else {
+                    profitGoalMetaEl.textContent = 'Set your target for this year.';
+                }
             }
             if (offerTermsChangeEl) {
                 offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} at offer terms sent`;
@@ -1465,9 +1569,272 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
         }
 
+        if (profitGoalInputEl) {
+            profitGoalInputEl.addEventListener('input', () => {
+                const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
+                profitGoalInputEl.value = digitsOnly ? Number(digitsOnly).toLocaleString('en-US') : '';
+            });
+
+            const persistProfitGoal = () => {
+                const workspaceUser = getWorkspaceUserContext();
+                const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
+                setUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, digitsOnly);
+            };
+
+            profitGoalInputEl.addEventListener('change', persistProfitGoal);
+            profitGoalInputEl.addEventListener('blur', persistProfitGoal);
+        }
+
+        profitWindowButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                setSelectedProfitWindow(button.dataset.profitWindow);
+            });
+        });
+
         refreshKpis();
         window.addEventListener('dashboard-data-updated', refreshKpis);
         window.addEventListener('storage', refreshKpis);
+    }
+
+    function initClosedDealsWidget() {
+        const closedDealsValueEl = document.getElementById('kpi-closed-deals');
+        const closedDealsChangeEl = document.getElementById('kpi-closed-deals-change');
+        const dealNameInput = document.getElementById('closed-deal-name');
+        const dealDateInput = document.getElementById('closed-deal-date');
+        const dealNoteInput = document.getElementById('closed-deal-note');
+        const saveButton = document.getElementById('closed-deal-save-btn');
+        const listEl = document.getElementById('analytics-closed-deals-list');
+
+        if (!closedDealsValueEl || !closedDealsChangeEl || !listEl) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+
+        function getManualClosedDeals() {
+            return getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
+        }
+
+        function setManualClosedDeals(items) {
+            setUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key, items);
+        }
+
+        function formatClosedDealDate(value) {
+            const parsedTimestamp = typeof value === 'number' ? value : Date.parse(String(value || ''));
+            if (!Number.isFinite(parsedTimestamp) || parsedTimestamp <= 0) {
+                return 'Date not set';
+            }
+            return new Date(parsedTimestamp).toLocaleDateString();
+        }
+
+        function buildClosedDealAddressLookup() {
+            const lookup = new Map();
+            const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
+            const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
+            const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
+
+            notes.forEach((note) => {
+                const address = String(note.propertyAddress || '').trim();
+                const propertyKey = makePropertyStorageKey(address);
+                if (propertyKey && address && !lookup.has(propertyKey)) {
+                    lookup.set(propertyKey, address);
+                }
+            });
+
+            iaStates.forEach((state) => {
+                const address = String(state.propertyAddress || '').trim();
+                const propertyKey = makePropertyStorageKey(state.propertyKey || address);
+                if (propertyKey && address && !lookup.has(propertyKey)) {
+                    lookup.set(propertyKey, address);
+                }
+            });
+
+            Object.entries(assignmentStore).forEach(([propertyKey, record]) => {
+                const address = String(record?.propertyAddress || record?.propertySnapshot?.address || '').trim();
+                if (propertyKey && address && !lookup.has(propertyKey)) {
+                    lookup.set(propertyKey, address);
+                }
+            });
+
+            return lookup;
+        }
+
+        function buildAutoClosedDeals() {
+            const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+            const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
+            const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
+            const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
+            const addressLookup = buildClosedDealAddressLookup();
+
+            return Object.entries(scopedStatuses)
+                .filter(([, statusValue]) => String(statusValue || '').trim().toLowerCase() === 'acquired')
+                .map(([propertyKey]) => {
+                    const relatedNoteTimes = notes
+                        .filter((note) => makePropertyStorageKey(note.propertyAddress) === propertyKey)
+                        .map((note) => Number(note.createdAt) || 0);
+                    const relatedIaTimes = iaStates
+                        .filter((state) => makePropertyStorageKey(state.propertyKey || state.propertyAddress) === propertyKey)
+                        .map((state) => Number(state.updatedAt || state.createdAt) || 0);
+                    const assignmentTime = Date.parse(String(assignmentStore[propertyKey]?.assignedAt || '')) || 0;
+                    const latestTimestamp = Math.max(0, assignmentTime, ...relatedNoteTimes, ...relatedIaTimes);
+
+                    return {
+                        id: `auto-${propertyKey}`,
+                        key: propertyKey,
+                        title: addressLookup.get(propertyKey) || propertyKey || 'Closed Deal',
+                        closeDate: latestTimestamp || Date.now(),
+                        note: 'Auto-added from Agent Status: 100% - Closed Deal.',
+                        source: 'auto',
+                        manual: false
+                    };
+                });
+        }
+
+        function buildCombinedClosedDeals() {
+            const manualDeals = getManualClosedDeals().map((item) => {
+                const title = String(item.title || item.propertyAddress || '').trim() || 'Closed Deal';
+                return {
+                    id: String(item.id || `manual-${Date.now()}`),
+                    key: makePropertyStorageKey(title),
+                    title,
+                    closeDate: item.closeDate || item.createdAt || Date.now(),
+                    note: String(item.note || '').trim(),
+                    source: 'manual',
+                    manual: true,
+                    createdAt: Number(item.createdAt) || Date.now()
+                };
+            });
+            const autoDeals = buildAutoClosedDeals();
+            const combinedMap = new Map();
+
+            autoDeals.forEach((deal) => {
+                combinedMap.set(deal.key, { ...deal });
+            });
+
+            manualDeals.forEach((deal) => {
+                const existing = combinedMap.get(deal.key);
+                if (existing) {
+                    combinedMap.set(deal.key, {
+                        ...existing,
+                        id: deal.id,
+                        title: deal.title || existing.title,
+                        closeDate: deal.closeDate || existing.closeDate,
+                        note: deal.note || existing.note,
+                        source: 'mixed',
+                        manual: true,
+                        createdAt: deal.createdAt || existing.createdAt || Date.now()
+                    });
+                    return;
+                }
+
+                combinedMap.set(deal.key || deal.id, { ...deal });
+            });
+
+            return Array.from(combinedMap.values())
+                .sort((left, right) => (Number(right.closeDate) || Date.parse(right.closeDate) || 0) - (Number(left.closeDate) || Date.parse(left.closeDate) || 0));
+        }
+
+        function renderClosedDeals() {
+            const manualDeals = getManualClosedDeals();
+            const autoDeals = buildAutoClosedDeals();
+            const combinedDeals = buildCombinedClosedDeals();
+
+            closedDealsValueEl.textContent = String(combinedDeals.length);
+            closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} • ${manualDeals.length} manual`;
+
+            listEl.innerHTML = '';
+            if (combinedDeals.length === 0) {
+                listEl.innerHTML = '<p class="outreach-empty">No closed deals recorded yet.</p>';
+                return;
+            }
+
+            combinedDeals.forEach((deal) => {
+                const card = document.createElement('article');
+                card.className = 'closed-deal-item';
+
+                const head = document.createElement('div');
+                head.className = 'closed-deal-item-head';
+
+                const title = document.createElement('div');
+                title.className = 'closed-deal-item-title';
+                title.textContent = deal.title;
+
+                const source = document.createElement('span');
+                source.className = `closed-deal-source ${deal.source}`;
+                source.textContent = deal.source === 'mixed'
+                    ? 'Auto + Manual'
+                    : deal.source === 'manual'
+                        ? 'Manual'
+                        : 'Auto';
+
+                const meta = document.createElement('p');
+                meta.className = 'closed-deal-item-meta';
+                meta.textContent = `Closed: ${formatClosedDealDate(deal.closeDate)}`;
+
+                head.appendChild(title);
+                head.appendChild(source);
+                card.appendChild(head);
+                card.appendChild(meta);
+
+                if (deal.note) {
+                    const note = document.createElement('p');
+                    note.className = 'closed-deal-item-note';
+                    note.textContent = deal.note;
+                    card.appendChild(note);
+                }
+
+                if (deal.manual) {
+                    const removeButton = document.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.className = 'closed-deal-remove-btn';
+                    removeButton.textContent = 'Remove manual entry';
+                    removeButton.addEventListener('click', () => {
+                        const nextItems = getManualClosedDeals().filter((item) => String(item.id || '') !== String(deal.id || ''));
+                        setManualClosedDeals(nextItems);
+                    });
+                    card.appendChild(removeButton);
+                }
+
+                listEl.appendChild(card);
+            });
+        }
+
+        if (dealDateInput && !dealDateInput.value) {
+            dealDateInput.value = new Date().toISOString().slice(0, 10);
+        }
+
+        if (saveButton && dealNameInput && dealDateInput && dealNoteInput) {
+            saveButton.addEventListener('click', () => {
+                const title = String(dealNameInput.value || '').trim();
+                const closeDate = String(dealDateInput.value || '').trim();
+                const note = String(dealNoteInput.value || '').trim();
+
+                if (!title) {
+                    showDashboardToast('error', 'Deal Name Required', 'Add the property address or deal name before saving.');
+                    return;
+                }
+
+                const items = getManualClosedDeals();
+                items.push({
+                    id: `closed-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                    title,
+                    propertyAddress: title,
+                    closeDate: closeDate || new Date().toISOString().slice(0, 10),
+                    note,
+                    createdAt: Date.now()
+                });
+
+                setManualClosedDeals(items);
+                dealNameInput.value = '';
+                dealNoteInput.value = '';
+                dealDateInput.value = new Date().toISOString().slice(0, 10);
+                showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to your analytics closed deals widget.');
+            });
+        }
+
+        renderClosedDeals();
+        window.addEventListener('dashboard-data-updated', renderClosedDeals);
+        window.addEventListener('storage', renderClosedDeals);
     }
 
 function initNavbarDateTime() {
@@ -8019,6 +8386,18 @@ function initNavbarDateTime() {
                 };
             }
 
+            function getOfferSignerName() {
+                const profile = readLocalJson('userProfile');
+                const user = readLocalJson('user');
+                return String(
+                    savedDraft.senderName ||
+                    profile.name ||
+                    user.name ||
+                    workspaceUser.name ||
+                    ''
+                ).trim();
+            }
+
             function getStoredUserProfile() {
                 const scopedStore = readLocalJson('userProfilesByUser');
                 const scopedProfile = scopedStore && typeof scopedStore === 'object'
@@ -8511,6 +8890,7 @@ function initNavbarDateTime() {
                 const senderName = senderNameInput.value.trim();
                 const recipientName = recipientNameInput.value.trim();
                 const recipientEmail = recipientEmailInput.value.trim();
+                const signerName = getOfferSignerName() || senderName || 'N/A';
                 const entityText = getOfferSelectText('offer-entity') || 'Selected Entity';
                 const categoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.label || 'Offer Terms';
                 const subcategoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.subcategories[getEffectiveSubcategory()]?.label || 'General';
@@ -8556,9 +8936,17 @@ function initNavbarDateTime() {
                         `• Escrow: ${escrow}`,
                         `• Title company: ${titleCompany}`,
                         `• Additional terms: ${otherTerms}`,
+                        `• Buyer: Fast Bridge Group, LLC`,
+                        `• Signer: ${signerName}`,
                         sellerCompEnabled
                             ? `• Seller compensation: ${sellerCompPercent ? `${sellerCompPercent}%` : ''}${sellerCompPercent && sellerCompAmount ? ' | ' : ''}${sellerCompAmount ? `$${sellerCompAmount}` : ''}`
                             : '• Seller compensation: Not included'
+                    );
+
+                    lines.push(
+                        '',
+                        'Assignment / Contract Verbiage',
+                        '“EMD to be fully refundable in the instance of seller/assignor non-performance including property not being delivered vacant, not having clear and marketable title, or not in similar condition as when this assignment was executed. Buyer will not assume any payoffs, liens, or assessments. Buyer to walk through on date of funding to verify occupancy status and condition. Any personal property remaining at the property at close of escrow is expressly abandoned by the seller and otherwise released to the buyer.”'
                     );
                 }
 
@@ -9624,6 +10012,7 @@ function initNavbarDateTime() {
         initPageTransitions();
         initSettingsTabs();
         initLiveKpiStats();
+        initClosedDealsWidget();
         initWidgetControls();
         initInteractiveCalendar();
         initDashboardChatGptWidget();

@@ -300,6 +300,45 @@
             margin-top: 0;
         }
 
+        .campaign-send-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .campaign-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            width: fit-content;
+        }
+
+        .campaign-status-pill.ready {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.14);
+            color: #d1fae5;
+        }
+
+        .campaign-status-pill.offline {
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.12);
+            color: #fde68a;
+        }
+
+        .campaign-send-status {
+            min-height: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
         .campaign-copy-block {
             padding: 16px;
             border-radius: 16px;
@@ -694,6 +733,39 @@
                     </div>
 
                     <div class="outreach-workspace-grid campaign-tools-grid">
+                        <div class="glass-card widget-card outreach-card" data-widget-id="twilio-quick-send" data-widget-title="Twilio Quick Send">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Twilio Quick Send</h2>
+                                    <p class="card-subtitle">Launch a small SMS campaign without leaving Campaigns.</p>
+                                </div>
+                            </div>
+                            <div class="campaign-send-panel">
+                                <div id="campaign-twilio-status" class="campaign-status-pill offline">Checking Twilio config...</div>
+                                <div class="outreach-input-grid">
+                                    <div class="form-group">
+                                        <label for="campaign-sms-name">Campaign Name</label>
+                                        <input id="campaign-sms-name" class="form-input" type="text" placeholder="OC stale listing outreach">
+                                    </div>
+                                    <div class="form-group outreach-full-width">
+                                        <label for="campaign-sms-recipients">Recipients</label>
+                                        <textarea id="campaign-sms-recipients" class="form-input outreach-textarea" placeholder="One per line. Use Name | Phone | Area or just Phone."></textarea>
+                                    </div>
+                                    <div class="form-group outreach-full-width">
+                                        <label for="campaign-sms-body">Message</label>
+                                        <textarea id="campaign-sms-body" class="form-input outreach-textarea" placeholder="Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out."></textarea>
+                                    </div>
+                                </div>
+                                <div class="outreach-actions">
+                                    <button id="campaign-load-template-1" type="button" class="card-btn">Load First Touch</button>
+                                    <button id="campaign-load-template-2" type="button" class="card-btn">Load Follow-Up</button>
+                                    <button id="campaign-load-template-3" type="button" class="card-btn">Load Breakup</button>
+                                    <button id="campaign-send-sms-btn" type="button" class="card-btn active">Send Twilio Campaign</button>
+                                </div>
+                                <div id="campaign-send-status" class="campaign-send-status"></div>
+                            </div>
+                        </div>
+
                         <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="Agent Templates">
                             <div class="card-header">
                                 <div>
@@ -936,6 +1008,133 @@
     <script>
         (function () {
             const copyButtons = document.querySelectorAll('[data-copy-target]');
+            const token = String(localStorage.getItem('authToken') || '').trim();
+            const campaignStatus = document.getElementById('campaign-twilio-status');
+            const campaignSendStatus = document.getElementById('campaign-send-status');
+            const campaignNameInput = document.getElementById('campaign-sms-name');
+            const campaignRecipientsInput = document.getElementById('campaign-sms-recipients');
+            const campaignBodyInput = document.getElementById('campaign-sms-body');
+            const campaignSendButton = document.getElementById('campaign-send-sms-btn');
+
+            function getCurrentSenderName() {
+                try {
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    return String(user.name || '').trim();
+                } catch (error) {
+                    return '';
+                }
+            }
+
+            function parseCampaignRecipients(text) {
+                return String(text || '')
+                    .split(/\r?\n/)
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .map((line) => {
+                        const parts = line.split('|').map((part) => part.trim());
+                        if (parts.length >= 3) {
+                            return { name: parts[0], phone: parts[1], area: parts[2] };
+                        }
+                        if (parts.length === 2) {
+                            return { name: parts[0], phone: parts[1] };
+                        }
+                        return { phone: line };
+                    });
+            }
+
+            async function loadTwilioStatus() {
+                if (!campaignStatus) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/twilio/status');
+                    const data = await response.json();
+                    if (data.configured) {
+                        const modeLabel = data.messagingServiceSidConfigured
+                            ? 'Messaging Service connected'
+                            : `From ${data.fromNumberMasked || 'number configured'}`;
+                        campaignStatus.textContent = modeLabel;
+                        campaignStatus.classList.remove('offline');
+                        campaignStatus.classList.add('ready');
+                    } else {
+                        campaignStatus.textContent = 'Twilio not configured';
+                        campaignStatus.classList.remove('ready');
+                        campaignStatus.classList.add('offline');
+                    }
+                } catch (error) {
+                    campaignStatus.textContent = 'Twilio status unavailable';
+                    campaignStatus.classList.remove('ready');
+                    campaignStatus.classList.add('offline');
+                }
+            }
+
+            [
+                ['campaign-load-template-1', 'sms-template-1'],
+                ['campaign-load-template-2', 'sms-template-2'],
+                ['campaign-load-template-3', 'sms-template-3']
+            ].forEach(([buttonId, templateId]) => {
+                const button = document.getElementById(buttonId);
+                const template = document.getElementById(templateId);
+                if (!button || !template || !campaignBodyInput) {
+                    return;
+                }
+
+                button.addEventListener('click', () => {
+                    campaignBodyInput.value = String(template.textContent || '').trim();
+                });
+            });
+
+            if (campaignNameInput && !campaignNameInput.value.trim()) {
+                campaignNameInput.value = 'Agent SMS Campaign';
+            }
+
+            if (campaignSendButton) {
+                campaignSendButton.addEventListener('click', async () => {
+                    const recipients = parseCampaignRecipients(campaignRecipientsInput ? campaignRecipientsInput.value : '');
+                    const body = campaignBodyInput ? campaignBodyInput.value.trim() : '';
+                    const campaignName = campaignNameInput ? campaignNameInput.value.trim() : 'Agent SMS Campaign';
+
+                    if (!recipients.length) {
+                        campaignSendStatus.textContent = 'Add at least one phone number before sending.';
+                        return;
+                    }
+
+                    if (!body) {
+                        campaignSendStatus.textContent = 'Enter an SMS body before sending.';
+                        return;
+                    }
+
+                    campaignSendStatus.textContent = 'Queueing Twilio campaign...';
+
+                    try {
+                        const response = await fetch('/api/twilio/send-sms', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { Authorization: `Bearer ${token}` } : {})
+                            },
+                            body: JSON.stringify({
+                                campaignName,
+                                body,
+                                senderName: getCurrentSenderName(),
+                                recipients
+                            })
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.success) {
+                            const failedCount = Array.isArray(data.failed) ? data.failed.length : 0;
+                            campaignSendStatus.textContent = failedCount > 0
+                                ? `Queued ${data.sent.length} SMS. ${failedCount} failed.`
+                                : `Queued ${data.sent.length} SMS successfully.`;
+                        } else {
+                            campaignSendStatus.textContent = data.error || 'Failed to queue campaign.';
+                        }
+                    } catch (error) {
+                        campaignSendStatus.textContent = error.message || 'Failed to queue campaign.';
+                    }
+                });
+            }
 
             copyButtons.forEach((button) => {
                 button.addEventListener('click', async () => {
@@ -959,6 +1158,8 @@
                     }, 1200);
                 });
             });
+
+            loadTwilioStatus();
         })();
     </script>
 </body>

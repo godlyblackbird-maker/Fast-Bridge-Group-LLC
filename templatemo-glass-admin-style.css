@@ -1680,6 +1680,73 @@ a {
     background-clip: text;
 }
 
+.profit-window-scroll {
+    margin: 0 0 12px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(52, 211, 153, 0.35) transparent;
+}
+
+.profit-window-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.profit-window-scroll::-webkit-scrollbar-thumb {
+    background: rgba(52, 211, 153, 0.3);
+    border-radius: 999px;
+}
+
+.profit-window-track {
+    display: inline-flex;
+    gap: 8px;
+    min-width: max-content;
+    padding-bottom: 4px;
+}
+
+.profit-window-pill {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    white-space: nowrap;
+}
+
+.profit-window-pill:hover {
+    transform: translateY(-1px);
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+.profit-window-pill.active {
+    color: #03150f;
+    border-color: rgba(52, 211, 153, 0.65);
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.95), rgba(167, 243, 208, 0.9));
+    box-shadow: 0 10px 24px rgba(52, 211, 153, 0.22);
+}
+
+[data-theme="light"] .profit-window-pill {
+    border-color: rgba(15, 23, 42, 0.12);
+    background: rgba(255, 255, 255, 0.82);
+}
+
+[data-theme="beach"] .profit-window-pill {
+    border-color: rgba(180, 83, 9, 0.18);
+    background: rgba(255, 248, 235, 0.75);
+    color: #6b4120;
+}
+
+[data-theme="beach"] .profit-window-pill.active {
+    color: #3f240f;
+    border-color: rgba(234, 88, 12, 0.42);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.95), rgba(253, 230, 138, 0.92));
+    box-shadow: 0 10px 24px rgba(217, 119, 6, 0.2);
+}
+
 .stat-change {
     display: inline-flex;
     align-items: center;
@@ -1698,6 +1765,203 @@ a {
 .stat-change.negative {
     color: #ff6b6b;
     background: rgba(255, 107, 107, 0.15);
+}
+
+.profit-goal-box {
+    margin-top: 14px;
+}
+
+.profit-goal-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.profit-goal-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.profit-goal-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.profit-goal-input::placeholder {
+    color: var(--text-muted);
+}
+
+.profit-goal-input:focus {
+    outline: none;
+    border-color: rgba(52, 211, 153, 0.55);
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
+}
+
+.profit-goal-meta {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.closed-deals-box {
+    margin-top: 14px;
+}
+
+.closed-deals-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.closed-deals-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.closed-deals-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.closed-deals-input:focus {
+    outline: none;
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+}
+
+.closed-deals-textarea {
+    min-height: 78px;
+    resize: vertical;
+}
+
+.closed-deals-actions {
+    margin-top: 8px;
+    display: flex;
+}
+
+.closed-deals-list {
+    margin-top: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+}
+
+.closed-deal-item {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 10px 12px;
+}
+
+.closed-deal-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.closed-deal-item-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.closed-deal-item-meta {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.closed-deal-item-note {
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.closed-deal-source {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: rgba(34, 197, 94, 0.16);
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.closed-deal-source.manual {
+    background: rgba(52, 211, 153, 0.16);
+    color: var(--emerald-light);
+}
+
+.closed-deal-source.mixed {
+    background: rgba(251, 191, 36, 0.16);
+    color: var(--gold);
+}
+
+.closed-deal-remove-btn {
+    margin-top: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.closed-deal-remove-btn:hover {
+    color: #ff6b6b;
+}
+
+[data-theme="light"] .closed-deals-input,
+[data-theme="light"] .closed-deal-item {
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(15, 23, 42, 0.09);
+}
+
+[data-theme="beach"] .closed-deals-input,
+[data-theme="beach"] .closed-deal-item {
+    background: rgba(255, 248, 235, 0.76);
+    border-color: rgba(180, 83, 9, 0.16);
+}
+
+[data-theme="light"] .profit-goal-input {
+    background: rgba(255, 255, 255, 0.78);
+    border-color: rgba(15, 23, 42, 0.1);
+}
+
+[data-theme="beach"] .profit-goal-input {
+    background: rgba(255, 248, 235, 0.78);
+    border-color: rgba(180, 83, 9, 0.18);
 }
 
 .stat-icon {
@@ -6567,6 +6831,23 @@ a {
     
     .stat-value {
         font-size: 26px;
+    }
+
+    .profit-window-pill {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .profit-goal-input {
+        font-size: 13px;
+    }
+
+    .closed-deals-input {
+        font-size: 13px;
+    }
+
+    .closed-deals-list {
+        max-height: 220px;
     }
     
     .data-table {

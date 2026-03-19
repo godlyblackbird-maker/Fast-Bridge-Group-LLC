@@ -298,11 +298,27 @@ https://templatemo.com/tm-607-glass-admin
                     <div class="stat-card-inner">
                         <div class="stat-info">
                             <h3>My Profits</h3>
+                            <div class="profit-window-scroll" aria-label="Profit time range selector">
+                                <div class="profit-window-track" id="kpi-profit-window-track" role="tablist" aria-label="Profit time range">
+                                    <button type="button" class="profit-window-pill active" id="kpi-profit-window-week" data-profit-window="week">Week</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-month" data-profit-window="month">Mo</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-quarter" data-profit-window="quarter">Quarter</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-six-month" data-profit-window="six-month">6 Mo</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-year" data-profit-window="year">Yr</button>
+                                </div>
+                            </div>
                             <div class="stat-value" id="kpi-my-profits">$0</div>
                             <span class="stat-change positive">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
                                 <span id="kpi-my-profits-change">0 saved IA deals</span>
                             </span>
+                            <div class="profit-goal-box">
+                                <label class="profit-goal-label" for="kpi-profit-goal-input">Yearly profit goal</label>
+                                <div class="profit-goal-row">
+                                    <input id="kpi-profit-goal-input" class="profit-goal-input" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 500000">
+                                    <div class="profit-goal-meta" id="kpi-profit-goal-meta">Set your target for this year.</div>
+                                </div>
+                            </div>
                         </div>
                         <div class="stat-icon cyan">
                             <svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald-light)" stroke-width="2">
@@ -353,6 +369,31 @@ https://templatemo.com/tm-607-glass-admin
                 <div class="glass-card glass-card-3d stat-card">
                     <div class="stat-card-inner">
                         <div class="stat-info">
+                            <h3>Closed Deals</h3>
+                            <div class="stat-value" id="kpi-closed-deals">0</div>
+                            <span class="stat-change positive">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+                                <span id="kpi-closed-deals-change">0 auto closed deals</span>
+                            </span>
+                            <div class="closed-deals-box">
+                                <label class="closed-deals-label" for="closed-deal-name">Record closed deal</label>
+                                <div class="closed-deals-form-grid">
+                                    <input id="closed-deal-name" class="closed-deals-input" type="text" autocomplete="off" placeholder="Property address or deal name">
+                                    <input id="closed-deal-date" class="closed-deals-input" type="date">
+                                    <textarea id="closed-deal-note" class="closed-deals-input closed-deals-textarea" placeholder="Optional note about this close"></textarea>
+                                </div>
+                                <div class="closed-deals-actions">
+                                    <button type="button" class="card-btn active" id="closed-deal-save-btn">Save Closed Deal</button>
+                                </div>
+                                <div class="closed-deals-list" id="analytics-closed-deals-list">
+                                    <p class="outreach-empty">No closed deals recorded yet.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-icon success">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2">
+                                <path d="M20 6 9 17l-5-5"/>
+                            </svg>
                         </div>
                     </div>
                 </div>
