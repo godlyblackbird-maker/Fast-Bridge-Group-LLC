@@ -424,6 +424,12 @@
                 </article>
                 <article class="property-tab-panel" data-panel="ia">
                     <div id="ia-calculator-root" class="ia-calculator">
+                        <div class="ia-workspace-tabs" role="tablist" aria-label="IA tools">
+                            <button type="button" class="ia-workspace-tab active" data-ia-workspace-tab="calculator" aria-selected="true">Web Calculator</button>
+                            <button type="button" class="ia-workspace-tab" data-ia-workspace-tab="workbook" aria-selected="false">Excel IA</button>
+                        </div>
+
+                        <div class="ia-workspace-panel active" data-ia-workspace-panel="calculator">
                         <section class="ia-section">
                             <h3>Deal Snapshot</h3>
                             <div class="ia-grid">
@@ -629,6 +635,27 @@
                             <div class="investor-summary-wrap">
                                 <div class="outreach-actions investor-summary-actions">
                                     <button type="button" class="card-btn active" id="inv-summary-copy-btn">Copy Investor Summary (Email/SMS)</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        </div>
+
+                        <section class="ia-workspace-panel" data-ia-workspace-panel="workbook" hidden>
+                            <div class="ia-section ia-workbook-hero">
+                                <div class="ia-workbook-copy">
+                                    <h3>Excel IA Workbook</h3>
+                                    <p>Open the original underwriting sheet directly from the Calculator folder whenever you want the spreadsheet version side by side with the web calculator.</p>
+                                    <div class="outreach-actions ia-workbook-actions">
+                                        <a class="card-btn active ia-workbook-btn" href="Calculator/STJ%202025%20IA.xlsx" target="_blank" rel="noopener noreferrer">Open Excel IA</a>
+                                        <a class="card-btn ia-workbook-btn" href="Calculator/STJ%202025%20IA.xlsx" download="STJ 2025 IA.xlsx">Download Copy</a>
+                                    </div>
+                                </div>
+                                <div class="ia-workbook-meta">
+                                    <div class="ia-readout ia-span-2">Workbook Path: <strong>Calculator/STJ 2025 IA.xlsx</strong></div>
+                                    <div class="ia-readout">Source: <strong>Exact lender sheet</strong></div>
+                                    <div class="ia-readout">Access: <strong>Browser and Excel download</strong></div>
+                                    <div class="ia-readout ia-span-2">Use this tab when you need the original spreadsheet logic while reviewing the deal inside the property calculator workspace.</div>
                                 </div>
                             </div>
                         </section>

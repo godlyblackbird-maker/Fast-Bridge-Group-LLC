@@ -9930,6 +9930,9 @@ function initNavbarDateTime() {
             const root = document.getElementById('ia-calculator-root');
             if (!root) return;
 
+            const workspaceTabButtons = Array.from(root.querySelectorAll('[data-ia-workspace-tab]'));
+            const workspacePanels = Array.from(root.querySelectorAll('[data-ia-workspace-panel]'));
+
             const arvInput = document.getElementById('ia-arv');
             const renovationInput = document.getElementById('ia-renovation-budget');
             const sellSidePercentInput = document.getElementById('ia-sell-side-percent');
@@ -10001,6 +10004,7 @@ function initNavbarDateTime() {
             let otherCosts = [];
             let targetMode = 'dollar';
             let offerPriceMode = 'target';
+            let activeWorkspaceTab = 'calculator';
             const collapsedSections = {
                 miscCosts: true,
                 purchaseAdjustments: true,
@@ -10119,6 +10123,7 @@ function initNavbarDateTime() {
 
                 targetMode = state.targetMode === 'percent' ? 'percent' : 'dollar';
                 offerPriceMode = state.offerPriceMode === 'manual' ? 'manual' : 'target';
+                activeWorkspaceTab = state.workspaceTab === 'workbook' ? 'workbook' : 'calculator';
 
                 if (state.collapsedSections && typeof state.collapsedSections === 'object') {
                     Object.keys(collapsedSections).forEach(key => {
@@ -10158,6 +10163,7 @@ function initNavbarDateTime() {
                     },
                     targetMode,
                     offerPriceMode,
+                    workspaceTab: activeWorkspaceTab,
                     financingHoldCollapsed: collapsedSections.financing,
                     collapsedSections: {
                         ...collapsedSections
@@ -10195,6 +10201,26 @@ function initNavbarDateTime() {
                 if (toggleIcon) {
                     toggleIcon.textContent = collapsedSections[sectionKey] ? '+' : '-';
                 }
+
+                if (!options.skipPersist) {
+                    setPersistedIaCalculatorState(buildIaCalculatorState());
+                }
+            }
+
+            function setIaWorkspaceTab(tabKey, options = {}) {
+                activeWorkspaceTab = tabKey === 'workbook' ? 'workbook' : 'calculator';
+
+                workspaceTabButtons.forEach(button => {
+                    const isActive = button.dataset.iaWorkspaceTab === activeWorkspaceTab;
+                    button.classList.toggle('active', isActive);
+                    button.setAttribute('aria-selected', String(isActive));
+                });
+
+                workspacePanels.forEach(panel => {
+                    const isActive = panel.dataset.iaWorkspacePanel === activeWorkspaceTab;
+                    panel.classList.toggle('active', isActive);
+                    panel.hidden = !isActive;
+                });
 
                 if (!options.skipPersist) {
                     setPersistedIaCalculatorState(buildIaCalculatorState());
@@ -10826,6 +10852,12 @@ function initNavbarDateTime() {
                 });
             });
 
+            workspaceTabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    setIaWorkspaceTab(button.dataset.iaWorkspaceTab || 'calculator');
+                });
+            });
+
             async function copyTextWithToast(value, emptyMessage) {
                 const text = String(value || '').trim();
                 if (!text) {
@@ -10900,6 +10932,7 @@ function initNavbarDateTime() {
                 setIaSectionCollapsed(sectionKey, collapsedSections[sectionKey], { skipPersist: true });
             });
 
+            setIaWorkspaceTab(activeWorkspaceTab, { skipPersist: true });
             renderOtherCosts();
             applyFinancingModeDefaults(financingModeInput.value, { preserveValues: !!persistedIaCalculatorState });
             formatIaNumericInputs();
