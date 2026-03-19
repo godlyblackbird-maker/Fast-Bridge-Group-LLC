@@ -9803,7 +9803,6 @@ function initNavbarDateTime() {
             const root = document.getElementById('ia-calculator-root');
             if (!root) return;
 
-            const listPriceInput = document.getElementById('ia-list-price');
             const arvInput = document.getElementById('ia-arv');
             const renovationInput = document.getElementById('ia-renovation-budget');
             const sellSidePercentInput = document.getElementById('ia-sell-side-percent');
@@ -9856,13 +9855,10 @@ function initNavbarDateTime() {
                 invCashForKeys: '0'
             };
 
-            if (!listPriceInput || !arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput) {
+            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput) {
                 return;
             }
 
-            const lockedListPriceValue = String(parseMoney(detailData.listPrice || 574900));
-            listPriceInput.value = lockedListPriceValue;
-            listPriceInput.readOnly = true;
             arvInput.value = String(parseMoney(detailData.arv || 694592));
 
             const buySideRate = 0.006617;
@@ -9907,7 +9903,6 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                listPriceInput.value = lockedListPriceValue;
                 arvInput.value = String(state.arv ?? arvInput.value ?? '');
                 renovationInput.value = String(state.renovation ?? renovationInput.value ?? '');
                 sellSidePercentInput.value = String(state.sellSidePercent ?? sellSidePercentInput.value ?? '');
@@ -10129,7 +10124,6 @@ function initNavbarDateTime() {
 
             function formatIaNumericInputs() {
                 [
-                    listPriceInput,
                     arvInput,
                     renovationInput,
                     offerPriceInput,
@@ -10297,7 +10291,6 @@ function initNavbarDateTime() {
             function recalculate() {
                 syncInvestorDefaultsFromInputs();
 
-                const listPrice = asNumber(listPriceInput, 0);
                 const rawArv = Math.max(asNumber(arvInput, 0), 1);
                 const renovation = Math.max(asNumber(renovationInput, 0), 0);
                 const sellSidePct = Math.max(asNumber(sellSidePercentInput, 0), 0);
@@ -10318,7 +10311,6 @@ function initNavbarDateTime() {
                 const invCashForKeys = Math.max(parseMoneyValue(investorDefaults.invCashForKeys), 0);
                 const financingMode = financingModeInput.value || '100-100';
 
-                const buySideCost = listPrice * buySideRate;
                 const extraCosts = otherCostsTotal();
                 const estimatedSalesPrice = rawArv;
                 const arvBasis = Math.max(estimatedSalesPrice, 1);
@@ -10342,66 +10334,96 @@ function initNavbarDateTime() {
 
                 let targetProfitDollar = asNumber(targetDollarInput, 0);
                 let targetProfitPercent = asNumber(targetPercentInput, 0);
-                const baselineWithoutFinancing = listPrice + buySideCost + renovation + grossScopeAdjustmentTotal;
+                function estimateFinancing(offerCandidate) {
+                    const safeOfferCandidate = Math.max(Number(offerCandidate) || 0, 0);
+                    const buySideCostCandidate = safeOfferCandidate * buySideRate;
+                    const financingAssumptions = getFinancingModeAssumptions(financingMode);
+                    const loanArvCapAmount = rawArv * (loanToArvPct / 100);
+                    const loanCostBase = safeOfferCandidate + renovation;
+                    let loanAmountCandidate = financingMode === 'cash' ? 0 : loanArvCapAmount;
+
+                    if (financingAssumptions) {
+                        const assumedArvCapAmount = rawArv * financingAssumptions.arvAdvanceRate;
+                        const assumedCostCapAmount = loanCostBase * financingAssumptions.costAdvanceRate;
+                        loanAmountCandidate = Math.min(loanArvCapAmount, assumedArvCapAmount, assumedCostCapAmount);
+                    }
+
+                    const originationAmountCandidate = financingMode === 'cash' ? 0 : loanAmountCandidate * (pointsPct / 100);
+                    const interestCostCandidate = financingMode === 'cash' ? 0 : loanAmountCandidate * (interestRatePct / 100) * (holdMonths / 12);
+                    const totalFinancingCostCandidate = financingMode === 'cash' ? 0 : (originationAmountCandidate + interestCostCandidate);
+                    const baselineForTargetCandidate = safeOfferCandidate + buySideCostCandidate + renovation + grossScopeAdjustmentTotal + totalFinancingCostCandidate;
+
+                    return {
+                        buySideCost: buySideCostCandidate,
+                        loanAmount: loanAmountCandidate,
+                        originationAmount: originationAmountCandidate,
+                        interestCost: interestCostCandidate,
+                        totalFinancingCost: totalFinancingCostCandidate,
+                        baselineForTarget: baselineForTargetCandidate
+                    };
+                }
+
+                let offerPrice = offerPriceMode === 'manual'
+                    ? Math.max(asNumber(offerPriceInput, 0), 0)
+                    : Math.max(estimatedSalesPrice - sellSideCost - grossScopeAdjustmentTotal - renovation - extraCosts - targetProfitDollar, 0);
+                let buySideCost = 0;
+                let loanAmount = 0;
+                let originationAmount = 0;
+                let interestCost = 0;
+                let totalFinancingCost = 0;
+
+                for (let index = 0; index < 4; index += 1) {
+                    const estimate = estimateFinancing(offerPrice);
+                    buySideCost = estimate.buySideCost;
+                    loanAmount = estimate.loanAmount;
+                    originationAmount = estimate.originationAmount;
+                    interestCost = estimate.interestCost;
+                    totalFinancingCost = estimate.totalFinancingCost;
+
+                    if (targetMode === 'percent') {
+                        targetProfitDollar = estimate.baselineForTarget * (targetProfitPercent / 100);
+                    } else {
+                        targetProfitPercent = estimate.baselineForTarget > 0 ? (targetProfitDollar / estimate.baselineForTarget) * 100 : 0;
+                    }
+
+                    if (offerPriceMode !== 'manual') {
+                        offerPrice = Math.max(
+                            estimatedSalesPrice
+                            - sellSideCost
+                            - targetProfitDollar
+                            - grossScopeAdjustmentTotal
+                            - renovation
+                            - buySideCost
+                            - extraCosts
+                            - totalFinancingCost,
+                            0
+                        );
+                    }
+                }
+
+                const finalEstimate = estimateFinancing(offerPrice);
+                buySideCost = finalEstimate.buySideCost;
+                loanAmount = finalEstimate.loanAmount;
+                originationAmount = finalEstimate.originationAmount;
+                interestCost = finalEstimate.interestCost;
+                totalFinancingCost = finalEstimate.totalFinancingCost;
 
                 if (targetMode === 'percent') {
-                    targetProfitDollar = baselineWithoutFinancing * (targetProfitPercent / 100);
+                    targetProfitDollar = finalEstimate.baselineForTarget * (targetProfitPercent / 100);
                     targetDollarInput.value = targetProfitDollar.toFixed(0);
                     formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
                 } else {
-                    targetProfitPercent = baselineWithoutFinancing > 0 ? (targetProfitDollar / baselineWithoutFinancing) * 100 : 0;
+                    targetProfitPercent = finalEstimate.baselineForTarget > 0 ? (targetProfitDollar / finalEstimate.baselineForTarget) * 100 : 0;
                     targetPercentInput.value = targetProfitPercent.toFixed(2);
                     formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
                 }
 
-                const preliminaryAutoOfferPrice = estimatedSalesPrice
-                    - sellSideCost
-                    - targetProfitDollar
-                    - grossScopeAdjustmentTotal
-                    - renovation
-                    - buySideCost
-                    - extraCosts;
-                const underwrittenOfferPrice = offerPriceMode === 'manual'
-                    ? asNumber(offerPriceInput, preliminaryAutoOfferPrice)
-                    : preliminaryAutoOfferPrice;
-
-                const financingAssumptions = getFinancingModeAssumptions(financingMode);
-                const loanArvCapAmount = rawArv * (loanToArvPct / 100);
-                const loanCostBase = underwrittenOfferPrice + renovation;
-                let loanAmount = financingMode === 'cash' ? 0 : loanArvCapAmount;
-                if (financingAssumptions) {
-                    const assumedArvCapAmount = rawArv * financingAssumptions.arvAdvanceRate;
-                    const assumedCostCapAmount = loanCostBase * financingAssumptions.costAdvanceRate;
-                    loanAmount = Math.min(loanArvCapAmount, assumedArvCapAmount, assumedCostCapAmount);
-                }
-                const originationAmount = financingMode === 'cash' ? 0 : loanAmount * (pointsPct / 100);
-                const interestCost = financingMode === 'cash' ? 0 : loanAmount * (interestRatePct / 100) * (holdMonths / 12);
-                const totalFinancingCost = financingMode === 'cash' ? 0 : (originationAmount + interestCost);
-
-                const baselineForTarget = listPrice + buySideCost + renovation + grossScopeAdjustmentTotal + totalFinancingCost;
-
-                if (targetMode === 'percent') {
-                    targetProfitDollar = baselineForTarget * (targetProfitPercent / 100);
-                    targetDollarInput.value = targetProfitDollar.toFixed(0);
-                    formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
-                } else {
-                    targetProfitPercent = baselineForTarget > 0 ? (targetProfitDollar / baselineForTarget) * 100 : 0;
-                    targetPercentInput.value = targetProfitPercent.toFixed(2);
-                    formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
-                }
-
-                const autoOfferPrice = estimatedSalesPrice - sellSideCost - targetProfitDollar - grossScopeAdjustmentTotal - renovation - buySideCost - extraCosts - totalFinancingCost;
-                let offerPrice = autoOfferPrice;
                 if (offerPriceMode === 'manual') {
-                    offerPrice = asNumber(offerPriceInput, autoOfferPrice);
                     formatNumericInputValue(offerPriceInput);
                 } else {
                     offerPriceInput.value = offerPrice.toFixed(0);
                     formatNumericInputValue(offerPriceInput);
                 }
-
-                const offAskingDollar = listPrice - offerPrice;
-                const offAskingPercent = listPrice > 0 ? (offAskingDollar / listPrice) * 100 : 0;
 
                 const totalPurchaseCost = offerPrice + buySideCost + grossPurchaseAdjustmentTotal + extraCosts;
                 const totalProjectCost = totalPurchaseCost + renovation;
@@ -10422,14 +10444,10 @@ function initNavbarDateTime() {
                 const invNetProfit = grossProfitToSeller - invTotalDevelopmentCost;
                 const invCashProfit = invNetProfit + invHardMoneyCosts;
 
-                setText('ia-list-price-arv', formatPercent((listPrice / arvBasis) * 100));
                 setText('ia-buy-side-cost', formatMoney(buySideCost));
                 setText('ia-buy-side-cost-arv', formatPercent((buySideCost / arvBasis) * 100));
                 setText('ia-reno-arv', formatPercent((renovation / arvBasis) * 100));
                 setText('ia-sell-side-amount', formatMoney(sellSideCost));
-
-                setText('ia-off-asking-dollar', formatMoney(offAskingDollar));
-                setText('ia-off-asking-percent', formatPercent(offAskingPercent));
                 setText('ia-offer-price-arv', formatPercent((offerPrice / arvBasis) * 100));
 
                 setText('ia-total-acquisition', formatMoney(totalPurchaseCost));
@@ -10437,7 +10455,6 @@ function initNavbarDateTime() {
                 setText('ia-summary-acq', `${formatMoney(totalPurchaseCost)} (${formatPercent((totalPurchaseCost / arvBasis) * 100)} ARV)`);
                 setText('ia-summary-project', `${formatMoney(totalProjectCost)} (${formatPercent((totalProjectCost / arvBasis) * 100)} ARV)`);
                 setText('ia-summary-project-fin', `${formatMoney(totalProjectWithFinancing)} (${formatPercent((totalProjectWithFinancing / arvBasis) * 100)} ARV)`);
-                setText('ia-offer-off-asking', `${formatPercent(offAskingPercent)} off asking (${formatMoney(listPrice)})`);
 
                 setText('ia-other-cost-total', formatMoney(extraCosts));
                 setText('ia-loan-amount', formatMoney(loanAmount));
@@ -10450,7 +10467,6 @@ function initNavbarDateTime() {
                 iaSummaryMessage = [
                     'IA Calculator Snapshot',
                     '-',
-                    `List Price: ${formatMoney(listPrice)}`,
                     `ARV: ${formatMoney(rawArv)}`,
                     `Financing Program: ${financingModeInput.selectedOptions && financingModeInput.selectedOptions[0] ? financingModeInput.selectedOptions[0].textContent.trim() : financingMode}`,
                     `Hold Time: ${holdMonths} month${holdMonths === 1 ? '' : 's'}`,
@@ -10461,7 +10477,6 @@ function initNavbarDateTime() {
                     `Gross Profit Adjustments: ${formatMoney(grossScopeAdjustmentTotal)}`,
                     '-',
                     `Offer Price: ${formatMoney(offerPrice)}`,
-                    `% Off Asking: ${formatPercent(offAskingPercent)} (${formatMoney(offAskingDollar)})`,
                     '-',
                     `Total Purchase Cost: ${formatMoney(totalPurchaseCost)} (${formatPercent((totalPurchaseCost / arvBasis) * 100)} ARV)`,
                     `Total Project Cost: ${formatMoney(totalProjectCost)} (${formatPercent((totalProjectCost / arvBasis) * 100)} ARV)`,

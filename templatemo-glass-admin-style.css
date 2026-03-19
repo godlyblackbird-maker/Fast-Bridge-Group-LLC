@@ -1545,12 +1545,6 @@
     color: rgba(71, 85, 105, 0.8);
 }
 
-[data-theme="light"] .ia-grid input.ia-field-locked[readonly] {
-    background: rgba(226, 232, 240, 0.72);
-    border-color: rgba(148, 163, 184, 0.2);
-    color: #334155;
-}
-
 [data-theme="light"] .ia-calc-btn,
 [data-theme="light"] .ia-other-head button {
     background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-light-rgb), 0.2));
@@ -10471,13 +10465,6 @@ a {
     border-radius: 8px;
     padding: 9px 10px;
     font-family: inherit;
-}
-
-.ia-grid input.ia-field-locked[readonly] {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(148, 163, 184, 0.24);
-    color: var(--text-primary);
-    cursor: default;
 }
 
 .ia-grid input:focus,
