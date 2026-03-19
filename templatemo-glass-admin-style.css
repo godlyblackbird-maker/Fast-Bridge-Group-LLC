@@ -2397,15 +2397,25 @@ a {
     text-decoration: none;
     font-size: 14px;
     font-weight: 600;
-    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    transform-origin: center center;
+    transition: transform 0.22s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.22s ease;
 }
 
 .legal-library-list a:hover,
 .legal-library-list a:focus-visible {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     border-color: rgba(var(--accent-rgb), 0.34);
     background: rgba(255, 255, 255, 0.1);
     color: rgb(var(--accent-light-rgb));
+    box-shadow: 0 14px 24px -20px rgba(0, 0, 0, 0.34);
+    animation: accessFastHoverSway 1.45s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .legal-library-list a:hover,
+    .legal-library-list a:focus-visible {
+        animation: none;
+    }
 }
 
 [data-theme="light"] .legal-hero,
@@ -6697,7 +6707,7 @@ a {
 
 .terms-consent-card {
     margin-bottom: 20px;
-    padding: 18px;
+    padding: 14px;
     border: 1px solid rgba(var(--accent-rgb), 0.18);
     border-radius: 22px;
     background:
@@ -6705,14 +6715,14 @@ a {
         linear-gradient(165deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
     display: grid;
-    gap: 14px;
+    gap: 10px;
 }
 
 .terms-consent-hero {
     position: relative;
     overflow: hidden;
-    padding: 18px;
-    border-radius: 20px;
+    padding: 14px;
+    border-radius: 18px;
     border: 1px solid rgba(var(--accent-rgb), 0.2);
     background:
         linear-gradient(135deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-light-rgb), 0.12)),
@@ -6737,14 +6747,14 @@ a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 34px;
-    padding: 0 12px;
-    margin-bottom: 12px;
+    min-height: 30px;
+    padding: 0 10px;
+    margin-bottom: 10px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: rgba(255, 255, 255, 0.14);
     color: var(--text-primary);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -6753,8 +6763,8 @@ a {
 .terms-consent-header h2 {
     position: relative;
     z-index: 1;
-    margin: 0 0 8px;
-    font-size: clamp(22px, 3vw, 28px);
+    margin: 0 0 6px;
+    font-size: clamp(18px, 2.4vw, 24px);
     color: var(--text-primary);
     line-height: 1.05;
 }
@@ -6764,7 +6774,7 @@ a {
     z-index: 1;
     margin: 0;
     max-width: 560px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-secondary);
 }
 
@@ -6773,33 +6783,33 @@ a {
     z-index: 1;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .terms-consent-highlights span {
     display: inline-flex;
     align-items: center;
-    min-height: 34px;
-    padding: 0 12px;
+    min-height: 30px;
+    padding: 0 10px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.14);
     color: var(--text-primary);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
 }
 
 .terms-consent-scroll {
-    max-height: 180px;
+    max-height: 152px;
     overflow-y: auto;
-    padding: 14px;
-    border-radius: 14px;
+    padding: 12px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(8, 15, 25, 0.22);
     color: var(--text-secondary);
-    font-size: 13px;
-    line-height: 1.65;
+    font-size: 12px;
+    line-height: 1.55;
     scrollbar-width: thin;
     scrollbar-color: rgba(var(--accent-rgb), 0.6) rgba(255, 255, 255, 0.08);
 }
@@ -6819,20 +6829,20 @@ a {
 }
 
 .terms-consent-section {
-    padding: 14px 14px 15px;
-    border-radius: 16px;
+    padding: 11px 12px 12px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .terms-consent-section + .terms-consent-section {
-    margin-top: 12px;
+    margin-top: 10px;
 }
 
 .terms-consent-section h3 {
-    margin: 0 0 8px;
-    font-size: 13px;
+    margin: 0 0 6px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -6863,8 +6873,8 @@ a {
 .terms-consent-checkbox {
     align-items: flex-start;
     gap: 12px;
-    padding: 14px 16px;
-    border-radius: 16px;
+    padding: 12px 14px;
+    border-radius: 14px;
     border: 1px solid rgba(var(--accent-rgb), 0.14);
     background: rgba(255, 255, 255, 0.07);
     line-height: 1.45;
@@ -6885,7 +6895,7 @@ a {
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
     background: rgba(5, 10, 18, 0.62);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -6897,25 +6907,25 @@ a {
 }
 
 .terms-modal-dialog {
-    width: min(720px, 100%);
+    width: min(560px, 100%);
 }
 
 .terms-consent-card-modal {
     margin-bottom: 0;
-    padding: 26px;
-    border-radius: 28px;
+    padding: 18px;
+    border-radius: 22px;
     border-color: rgba(var(--accent-rgb), 0.22);
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(var(--accent-rgb), 0.08);
 }
 
 .terms-consent-card-modal .terms-consent-scroll {
-    max-height: min(46vh, 420px);
+    max-height: min(34vh, 280px);
 }
 
 .terms-consent-continue {
     margin-top: 4px;
-    min-height: 52px;
-    font-size: 15px;
+    min-height: 44px;
+    font-size: 14px;
 }
 
 [data-theme="light"] .terms-consent-card,
@@ -7049,16 +7059,16 @@ a {
 
 @media (max-width: 640px) {
     .terms-consent-card-modal {
-        padding: 18px;
-        border-radius: 24px;
+        padding: 16px;
+        border-radius: 20px;
     }
 
     .terms-consent-hero {
-        padding: 16px;
+        padding: 13px;
     }
 
     .terms-consent-header h2 {
-        font-size: 22px;
+        font-size: 18px;
     }
 
     .terms-consent-highlights {
