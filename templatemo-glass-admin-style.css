@@ -3493,6 +3493,19 @@ a {
     grid-column: span 2;
 }
 
+.offer-email-field-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.offer-email-ecard-field {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
 .offer-email-toggle-row {
     display: inline-flex !important;
     align-items: center;
@@ -3511,6 +3524,7 @@ a {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+    width: 100%;
 }
 
 .offer-email-ecard-select {
@@ -3519,6 +3533,7 @@ a {
 }
 
 .offer-email-ecard-toggle {
+    flex: 0 0 auto;
     min-height: 46px;
     white-space: nowrap;
     cursor: pointer;
@@ -3769,6 +3784,15 @@ a {
 
     .offer-email-span-2 {
         grid-column: span 1;
+    }
+
+    .offer-email-ecard-row {
+        align-items: stretch;
+    }
+
+    .offer-email-ecard-toggle {
+        width: 100%;
+        justify-content: space-between;
     }
 }
 
