@@ -4657,7 +4657,7 @@ a {
     overflow: hidden;
     display: inline-flex;
     align-items: center;
-    margin: 8px 0 0;
+    margin: 0;
     padding: 5px 11px;
     border-radius: 999px;
     font-size: 11px;
@@ -4691,10 +4691,21 @@ a {
     border-color: rgba(245, 158, 11, 0.28);
 }
 
+.chatgpt-header-copy {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.chatgpt-header-copy .card-title {
+    margin: 0;
+}
+
 .chatgpt-chat {
     position: relative;
     flex: 1 1 auto;
-    min-height: 390px;
+    min-height: 340px;
     max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
@@ -4954,6 +4965,7 @@ a {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 6px;
+    align-items: center;
 }
 
 .calendar-view {
@@ -7290,7 +7302,7 @@ a {
     }
 
     .chatgpt-chat {
-        min-height: 320px;
+        min-height: 300px;
     }
     
     .navbar {
