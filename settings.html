@@ -33,7 +33,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|swamp)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|swamp|sunset)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
@@ -627,6 +627,7 @@ https://templatemo.com/tm-607-glass-admin
                                     <option value="light">Light Mode</option>
                                     <option value="beach">Beach Mode</option>
                                     <option value="swamp">Swamp Mode</option>
+                                    <option value="sunset">Sunset Mode</option>
                                     <option value="system">System Default</option>
                                 </select>
                             </div>

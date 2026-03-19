@@ -370,6 +370,274 @@
     background: rgba(186, 230, 253, 0.38);
 }
 
+/* Sunset Mode */
+[data-theme="sunset"] {
+    --glass-bg: rgba(96, 46, 89, 0.28);
+    --glass-border: rgba(255, 205, 173, 0.24);
+    --glass-shadow: rgba(66, 24, 61, 0.34);
+    --glass-hover: rgba(255, 228, 205, 0.16);
+
+    --bg-dark: #2b1530;
+    --bg-gradient-1: #4a2050;
+    --bg-gradient-2: #8c3f5d;
+    --bg-gradient-3: #f09362;
+
+    --text-primary: #fff1df;
+    --text-secondary: rgba(255, 241, 223, 0.82);
+    --text-muted: rgba(255, 241, 223, 0.58);
+
+    --mobile-toggle-bg: linear-gradient(135deg, rgba(255, 144, 104, 0.96), rgba(255, 210, 138, 0.92));
+    --mobile-toggle-border: rgba(255, 205, 173, 0.24);
+    --mobile-toggle-shadow: 0 14px 30px -14px rgba(66, 24, 61, 0.44), 0 10px 24px rgba(240, 147, 98, 0.24);
+    --mobile-toggle-icon: #fff7ed;
+
+    --toast-surface: rgba(69, 28, 63, 0.96);
+    --toast-border: rgba(255, 205, 173, 0.2);
+    --toast-title: #fff1df;
+    --toast-body: rgba(255, 241, 223, 0.9);
+    --toast-shadow: 0 18px 44px rgba(42, 15, 41, 0.34);
+}
+
+[data-theme="sunset"] .orb {
+    opacity: 0.34;
+}
+
+[data-theme="sunset"] .background::before {
+    background:
+        radial-gradient(ellipse 78% 52% at 15% 24%, rgba(255, 145, 112, 0.34) 0%, transparent 56%),
+        radial-gradient(ellipse 64% 46% at 88% 28%, rgba(255, 210, 138, 0.26) 0%, transparent 56%),
+        radial-gradient(ellipse 52% 38% at 52% 88%, rgba(168, 95, 151, 0.24) 0%, transparent 56%);
+}
+
+[data-theme="sunset"] .background::after {
+    content: '';
+    position: absolute;
+    left: -6%;
+    right: -6%;
+    bottom: -3%;
+    height: 36%;
+    pointer-events: none;
+    background:
+        radial-gradient(120% 78% at 15% 100%, rgba(255, 199, 145, 0.82) 0%, rgba(255, 199, 145, 0) 62%),
+        radial-gradient(95% 70% at 62% 100%, rgba(255, 154, 122, 0.72) 0%, rgba(255, 154, 122, 0) 64%),
+        radial-gradient(105% 74% at 102% 100%, rgba(176, 99, 155, 0.64) 0%, rgba(176, 99, 155, 0) 66%);
+    opacity: 0.95;
+    animation: beachSandDrift 24s ease-in-out infinite alternate;
+}
+
+[data-theme="sunset"] .orb-1 {
+    background: #ff8c69;
+}
+
+[data-theme="sunset"] .orb-2 {
+    background: #ffd28a;
+}
+
+[data-theme="sunset"] .orb-3 {
+    background: #b26a9d;
+}
+
+[data-theme="sunset"] .glass-card {
+    border-color: rgba(255, 205, 173, 0.24);
+    box-shadow:
+        0 20px 40px -22px rgba(42, 15, 41, 0.42),
+        0 8px 24px rgba(240, 147, 98, 0.16);
+}
+
+[data-theme="sunset"] .glass-card:hover {
+    border-color: rgba(255, 205, 173, 0.38);
+    box-shadow:
+        0 24px 48px -22px rgba(42, 15, 41, 0.46),
+        0 0 28px rgba(255, 176, 124, 0.24);
+}
+
+[data-theme="sunset"] .sidebar,
+[data-theme="sunset"] .navbar {
+    border-color: rgba(255, 205, 173, 0.22);
+}
+
+[data-theme="sunset"] body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(74, 32, 80, 0.3), rgba(240, 147, 98, 0.16)),
+        url("Themes/Wallpaper%20SUNSET.jpg") no-repeat center center;
+    background-size: cover;
+    opacity: 0.24;
+    filter: saturate(0.96) contrast(1.02);
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="sunset"] body::after {
+    content: '';
+    position: fixed;
+    left: 14px;
+    top: 14px;
+    width: 420px;
+    height: 250px;
+    background:
+        radial-gradient(circle at 24% 38%, rgba(255, 214, 170, 0.26), transparent 48%),
+        radial-gradient(circle at 72% 24%, rgba(255, 145, 112, 0.22), transparent 44%),
+        radial-gradient(circle at 50% 88%, rgba(176, 99, 155, 0.22), transparent 50%);
+    filter: blur(6px);
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="sunset"] .calendar-day.past-day {
+    color: rgba(255, 241, 223, 0.92);
+    background: linear-gradient(135deg, rgba(145, 74, 101, 0.78), rgba(104, 46, 90, 0.8));
+    border-color: rgba(255, 205, 173, 0.28);
+}
+
+[data-theme="sunset"] .calendar-day.past-day .calendar-day-number {
+    color: #fff4e8;
+}
+
+[data-theme="sunset"] .form-input,
+[data-theme="sunset"] .search-input,
+[data-theme="sunset"] .settings-select,
+[data-theme="sunset"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+[data-theme="sunset"] textarea,
+[data-theme="sunset"] select,
+[data-theme="sunset"] select.form-input,
+[data-theme="sunset"] .ia-grid input,
+[data-theme="sunset"] .ia-grid select,
+[data-theme="sunset"] .offer-grid input,
+[data-theme="sunset"] .offer-grid select,
+[data-theme="sunset"] .calendar-inline-form textarea,
+[data-theme="sunset"] .calendar-inline-form input,
+[data-theme="sunset"] .agent-note-input,
+[data-theme="sunset"] .outreach-textarea {
+    background: linear-gradient(135deg, rgba(73, 31, 69, 0.84), rgba(143, 68, 87, 0.74)) !important;
+    border: 1px solid rgba(255, 205, 173, 0.42) !important;
+    color: #fff3e6 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 244, 232, 0.08), 0 4px 12px rgba(42, 15, 41, 0.24);
+}
+
+[data-theme="sunset"] .form-input::placeholder,
+[data-theme="sunset"] .search-input::placeholder,
+[data-theme="sunset"] .agent-note-input::placeholder,
+[data-theme="sunset"] .outreach-textarea::placeholder,
+[data-theme="sunset"] input::placeholder,
+[data-theme="sunset"] textarea::placeholder {
+    color: rgba(255, 241, 223, 0.74) !important;
+}
+
+[data-theme="sunset"] .form-input:focus,
+[data-theme="sunset"] .search-input:focus,
+[data-theme="sunset"] .settings-select:focus,
+[data-theme="sunset"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="sunset"] textarea:focus,
+[data-theme="sunset"] select:focus,
+[data-theme="sunset"] .ia-grid input:focus,
+[data-theme="sunset"] .ia-grid select:focus,
+[data-theme="sunset"] .offer-grid input:focus,
+[data-theme="sunset"] .offer-grid select:focus,
+[data-theme="sunset"] .calendar-inline-form textarea:focus,
+[data-theme="sunset"] .calendar-inline-form input:focus,
+[data-theme="sunset"] .agent-note-input:focus,
+[data-theme="sunset"] .outreach-textarea:focus {
+    border-color: rgba(255, 222, 195, 0.94) !important;
+    box-shadow: 0 0 0 3px rgba(255, 176, 124, 0.22), 0 12px 20px -14px rgba(42, 15, 41, 0.68) !important;
+}
+
+[data-theme="sunset"] .settings-select,
+[data-theme="sunset"] select,
+[data-theme="sunset"] select.form-input,
+[data-theme="sunset"] .ia-grid select,
+[data-theme="sunset"] .offer-grid select,
+[data-theme="sunset"] .form-group .form-input[type="select-one"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23fff3e6' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+}
+
+[data-theme="sunset"] .settings-select option,
+[data-theme="sunset"] select option,
+[data-theme="sunset"] select.form-input option,
+[data-theme="sunset"] .ia-grid select option,
+[data-theme="sunset"] .offer-grid select option,
+[data-theme="sunset"] .form-group .form-input[type="select-one"] option {
+    background: #4b2349 !important;
+    color: #fff3e6 !important;
+}
+
+[data-theme="sunset"] .settings-select option:checked,
+[data-theme="sunset"] select option:checked,
+[data-theme="sunset"] select.form-input option:checked,
+[data-theme="sunset"] .ia-grid select option:checked,
+[data-theme="sunset"] .offer-grid select option:checked,
+[data-theme="sunset"] .form-group .form-input[type="select-one"] option:checked {
+    background: #8b4558 !important;
+    color: #fff8ef !important;
+}
+
+[data-theme="sunset"] input:disabled,
+[data-theme="sunset"] textarea:disabled,
+[data-theme="sunset"] select:disabled {
+    background: rgba(88, 44, 88, 0.48) !important;
+    border-color: rgba(255, 205, 173, 0.24) !important;
+    color: rgba(255, 241, 223, 0.64) !important;
+}
+
+[data-theme="sunset"] .ia-section {
+    border-color: rgba(255, 205, 173, 0.28);
+    background:
+        linear-gradient(140deg, rgba(121, 54, 86, 0.86), rgba(79, 32, 74, 0.78)),
+        linear-gradient(20deg, rgba(255, 176, 124, 0.2), rgba(255, 210, 138, 0.14));
+    box-shadow: inset 0 1px 0 rgba(255, 244, 232, 0.14), 0 18px 28px -20px rgba(42, 15, 41, 0.4);
+}
+
+[data-theme="sunset"] .ia-section h3 {
+    color: #fff3e6;
+}
+
+[data-theme="sunset"] .ia-grid label,
+[data-theme="sunset"] .ia-other-head,
+[data-theme="sunset"] .ia-other-item {
+    color: rgba(255, 241, 223, 0.9);
+}
+
+[data-theme="sunset"] .ia-readout {
+    border-color: rgba(255, 205, 173, 0.26);
+    background: linear-gradient(135deg, rgba(91, 38, 81, 0.88), rgba(153, 79, 95, 0.72));
+    color: rgba(255, 248, 239, 0.92);
+}
+
+[data-theme="sunset"] .ia-readout strong {
+    color: #fff8ef;
+}
+
+[data-theme="sunset"] .ia-other-costs {
+    border-color: rgba(255, 205, 173, 0.28);
+    background: linear-gradient(135deg, rgba(120, 54, 86, 0.3), rgba(255, 176, 124, 0.18));
+}
+
+[data-theme="sunset"] .ia-other-item {
+    border-color: rgba(255, 205, 173, 0.22);
+    background: rgba(76, 30, 72, 0.42);
+}
+
+[data-theme="sunset"] .ia-calc-btn,
+[data-theme="sunset"] .ia-other-head button {
+    border-color: rgba(255, 205, 173, 0.34);
+    background: linear-gradient(135deg, rgba(255, 140, 105, 0.84), rgba(255, 210, 138, 0.76));
+    color: #4a2045;
+    box-shadow: 0 10px 18px -12px rgba(42, 15, 41, 0.48);
+}
+
+[data-theme="sunset"] .ia-calc-btn:hover,
+[data-theme="sunset"] .ia-other-head button:hover {
+    background: linear-gradient(135deg, rgba(255, 155, 121, 0.92), rgba(255, 219, 158, 0.84));
+}
+
+[data-theme="sunset"] .ia-cash-note {
+    border-color: rgba(255, 205, 173, 0.3);
+    color: #fff3e6;
+    background: rgba(255, 176, 124, 0.18);
+}
+
 /* Swamp Mode */
 [data-theme="swamp"] {
     --glass-bg: rgba(34, 52, 25, 0.4);

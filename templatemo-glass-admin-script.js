@@ -24,7 +24,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp'];
+    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset'];
     const KNOWN_EMAIL_GROUPS = [
         {
             canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -1870,7 +1870,8 @@ function initNavbarDateTime() {
             dark: 'Symbols/Dark Mode.svg',
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
-            swamp: 'Symbols/Beach Mode.svg'
+            swamp: 'Symbols/Beach Mode.svg',
+            sunset: 'Symbols/Beach Mode.svg'
         };
 
         const iconSun = themeToggle.querySelector('.icon-sun');
@@ -1913,7 +1914,8 @@ function initNavbarDateTime() {
             dark: 'Symbols/Dark Mode.svg',
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
-            swamp: 'Symbols/Beach Mode.svg'
+            swamp: 'Symbols/Beach Mode.svg',
+            sunset: 'Symbols/Beach Mode.svg'
         };
         const resolvedTheme = themeSymbols[effectiveTheme] ? effectiveTheme : 'beach';
 
@@ -1941,9 +1943,7 @@ function initNavbarDateTime() {
             updateThemeToggleIcons(themeToggle, effectiveTheme);
 
             if (themeToggle) {
-                const modeLabel = effectiveTheme === 'swamp'
-                    ? 'Swamp'
-                    : effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
+                const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
                 themeToggle.title = `Theme: ${modeLabel} Mode`;
             }
         }
@@ -1963,7 +1963,9 @@ function initNavbarDateTime() {
                     ? 'beach'
                     : currentTheme === 'beach'
                         ? 'swamp'
-                    : 'dark';
+                        : currentTheme === 'swamp'
+                            ? 'sunset'
+                            : 'dark';
             setTheme(nextTheme);
         });
     }
