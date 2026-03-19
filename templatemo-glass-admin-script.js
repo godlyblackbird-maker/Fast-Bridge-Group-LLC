@@ -9259,9 +9259,7 @@ function initNavbarDateTime() {
                 ensureECardOption(userECardPath);
             }
             if (ecardToggle) {
-                ecardToggle.checked = typeof savedDraft.includeECard === 'boolean'
-                    ? savedDraft.includeECard
-                    : Boolean(ecardSelect.value);
+                ecardToggle.checked = false;
             }
             syncOpenButtonLabel();
             populateInvestorAttachmentOptions(savedDraft.investorAttachmentFolder || '');
@@ -9300,9 +9298,6 @@ function initNavbarDateTime() {
                 saveDraft();
             });
             ecardSelect.addEventListener('change', () => {
-                if (ecardToggle) {
-                    ecardToggle.checked = Boolean(userECardPath && ecardSelect.value === userECardPath);
-                }
                 refreshPreparedEmail();
                 saveDraft();
             });
@@ -9313,8 +9308,7 @@ function initNavbarDateTime() {
                             ensureECardOption(userECardPath);
                             ecardSelect.value = userECardPath;
                         } else {
-                            ecardToggle.checked = false;
-                            showDashboardToast('error', 'E-Card Missing', 'No personal E-card file was found for this user.');
+                            showDashboardToast('info', 'Resolving E-Card', 'Your E-card will be resolved from the USERS folder when the email is sent.');
                         }
                     } else {
                         ecardSelect.value = '';
@@ -9399,7 +9393,7 @@ function initNavbarDateTime() {
                             body,
                             htmlBody: buildServerEmailHtml(),
                             includeECard: Boolean(ecardToggle && ecardToggle.checked),
-                            ecardPath: ecardToggle && ecardToggle.checked ? (userECardPath || getSelectedECardPath()) : '',
+                            ecardPath: ecardToggle && ecardToggle.checked ? (userECardPath || getSelectedECardPath() || '') : '',
                             ecardAttachmentName: ecardToggle && ecardToggle.checked ? getUserECardAttachmentName() : '',
                             attachments,
                             investorAttachmentPaths
