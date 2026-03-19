@@ -9860,7 +9860,9 @@ function initNavbarDateTime() {
                 return;
             }
 
-            listPriceInput.value = String(parseMoney(detailData.listPrice || 574900));
+            const lockedListPriceValue = String(parseMoney(detailData.listPrice || 574900));
+            listPriceInput.value = lockedListPriceValue;
+            listPriceInput.readOnly = true;
             arvInput.value = String(parseMoney(detailData.arv || 694592));
 
             const buySideRate = 0.006617;
@@ -9905,7 +9907,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                listPriceInput.value = String(state.listPrice ?? listPriceInput.value ?? '');
+                listPriceInput.value = lockedListPriceValue;
                 arvInput.value = String(state.arv ?? arvInput.value ?? '');
                 renovationInput.value = String(state.renovation ?? renovationInput.value ?? '');
                 sellSidePercentInput.value = String(state.sellSidePercent ?? sellSidePercentInput.value ?? '');
@@ -9963,7 +9965,6 @@ function initNavbarDateTime() {
                 syncInvestorDefaultsFromInputs();
 
                 return {
-                    listPrice: listPriceInput.value,
                     arv: arvInput.value,
                     renovation: renovationInput.value,
                     sellSidePercent: sellSidePercentInput.value,
@@ -10572,7 +10573,6 @@ function initNavbarDateTime() {
             });
 
             [
-                listPriceInput,
                 arvInput,
                 renovationInput,
                 sellSidePercentInput,
