@@ -77,17 +77,16 @@
     // ============================================
     function initThemeToggle() {
         const themeToggle = document.getElementById('theme-toggle');
-        if (!themeToggle) return;
-
-        ensureThemeToggleIcons(themeToggle);
         
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
 
-            updateThemeToggleIcons(themeToggle, theme);
-            const modeLabel = theme === 'swamp' ? 'Swamp' : `${theme.charAt(0).toUpperCase()}${theme.slice(1)}`;
-            themeToggle.title = `Theme: ${modeLabel} Mode`;
+            if (themeToggle) {
+                updateThemeToggleIcons(themeToggle, theme);
+                const modeLabel = theme === 'swamp' ? 'Swamp' : `${theme.charAt(0).toUpperCase()}${theme.slice(1)}`;
+                themeToggle.title = `Theme: ${modeLabel} Mode`;
+            }
         }
         
         // Default first-time visitors to beach mode.
@@ -97,6 +96,11 @@
             localStorage.setItem('theme', savedTheme);
         }
         setTheme(savedTheme);
+
+        if (!themeToggle) return;
+
+        ensureThemeToggleIcons(themeToggle);
+        updateThemeToggleIcons(themeToggle, savedTheme);
         
         themeToggle.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');

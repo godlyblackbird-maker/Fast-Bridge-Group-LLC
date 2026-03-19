@@ -372,30 +372,30 @@
 
 /* Sunset Mode */
 [data-theme="sunset"] {
-    --glass-bg: rgba(96, 46, 89, 0.28);
-    --glass-border: rgba(255, 205, 173, 0.24);
-    --glass-shadow: rgba(66, 24, 61, 0.34);
-    --glass-hover: rgba(255, 228, 205, 0.16);
+    --glass-bg: rgba(78, 52, 76, 0.28);
+    --glass-border: rgba(255, 215, 184, 0.24);
+    --glass-shadow: rgba(28, 14, 27, 0.38);
+    --glass-hover: rgba(255, 230, 208, 0.2);
 
-    --bg-dark: #2b1530;
-    --bg-gradient-1: #4a2050;
-    --bg-gradient-2: #8c3f5d;
-    --bg-gradient-3: #f09362;
+    --bg-dark: #17070b;
+    --bg-gradient-1: #321721;
+    --bg-gradient-2: #6f6176;
+    --bg-gradient-3: #f4b27d;
 
     --text-primary: #fff1df;
     --text-secondary: rgba(255, 241, 223, 0.82);
     --text-muted: rgba(255, 241, 223, 0.58);
 
-    --mobile-toggle-bg: linear-gradient(135deg, rgba(255, 144, 104, 0.96), rgba(255, 210, 138, 0.92));
-    --mobile-toggle-border: rgba(255, 205, 173, 0.24);
-    --mobile-toggle-shadow: 0 14px 30px -14px rgba(66, 24, 61, 0.44), 0 10px 24px rgba(240, 147, 98, 0.24);
+    --mobile-toggle-bg: linear-gradient(135deg, rgba(255, 167, 134, 0.96), rgba(248, 199, 129, 0.92));
+    --mobile-toggle-border: rgba(255, 215, 184, 0.24);
+    --mobile-toggle-shadow: 0 14px 30px -14px rgba(28, 14, 27, 0.44), 0 10px 24px rgba(244, 178, 125, 0.24);
     --mobile-toggle-icon: #fff7ed;
 
-    --toast-surface: rgba(69, 28, 63, 0.96);
-    --toast-border: rgba(255, 205, 173, 0.2);
+    --toast-surface: rgba(55, 28, 46, 0.96);
+    --toast-border: rgba(255, 215, 184, 0.2);
     --toast-title: #fff1df;
     --toast-body: rgba(255, 241, 223, 0.9);
-    --toast-shadow: 0 18px 44px rgba(42, 15, 41, 0.34);
+    --toast-shadow: 0 18px 44px rgba(28, 14, 27, 0.34);
 }
 
 [data-theme="sunset"] .orb {
@@ -404,9 +404,9 @@
 
 [data-theme="sunset"] .background::before {
     background:
-        radial-gradient(ellipse 78% 52% at 15% 24%, rgba(255, 145, 112, 0.34) 0%, transparent 56%),
-        radial-gradient(ellipse 64% 46% at 88% 28%, rgba(255, 210, 138, 0.26) 0%, transparent 56%),
-        radial-gradient(ellipse 52% 38% at 52% 88%, rgba(168, 95, 151, 0.24) 0%, transparent 56%);
+    radial-gradient(ellipse 78% 52% at 15% 24%, rgba(255, 166, 136, 0.32) 0%, transparent 56%),
+    radial-gradient(ellipse 64% 46% at 88% 28%, rgba(255, 208, 156, 0.24) 0%, transparent 56%),
+    radial-gradient(ellipse 52% 38% at 52% 88%, rgba(126, 118, 145, 0.24) 0%, transparent 56%);
 }
 
 [data-theme="sunset"] .background::after {
@@ -418,42 +418,42 @@
     height: 36%;
     pointer-events: none;
     background:
-        radial-gradient(120% 78% at 15% 100%, rgba(255, 199, 145, 0.82) 0%, rgba(255, 199, 145, 0) 62%),
-        radial-gradient(95% 70% at 62% 100%, rgba(255, 154, 122, 0.72) 0%, rgba(255, 154, 122, 0) 64%),
-        radial-gradient(105% 74% at 102% 100%, rgba(176, 99, 155, 0.64) 0%, rgba(176, 99, 155, 0) 66%);
+        radial-gradient(120% 78% at 15% 100%, rgba(255, 205, 152, 0.78) 0%, rgba(255, 205, 152, 0) 62%),
+        radial-gradient(95% 70% at 62% 100%, rgba(255, 164, 131, 0.66) 0%, rgba(255, 164, 131, 0) 64%),
+        radial-gradient(105% 74% at 102% 100%, rgba(139, 120, 148, 0.56) 0%, rgba(139, 120, 148, 0) 66%);
     opacity: 0.95;
     animation: beachSandDrift 24s ease-in-out infinite alternate;
 }
 
 [data-theme="sunset"] .orb-1 {
-    background: #ff8c69;
+    background: #ffa786;
 }
 
 [data-theme="sunset"] .orb-2 {
-    background: #ffd28a;
+    background: #f8c781;
 }
 
 [data-theme="sunset"] .orb-3 {
-    background: #b26a9d;
+    background: #7b748f;
 }
 
 [data-theme="sunset"] .glass-card {
-    border-color: rgba(255, 205, 173, 0.24);
+    border-color: rgba(255, 215, 184, 0.24);
     box-shadow:
-        0 20px 40px -22px rgba(42, 15, 41, 0.42),
-        0 8px 24px rgba(240, 147, 98, 0.16);
+        0 20px 40px -22px rgba(28, 14, 27, 0.42),
+        0 8px 24px rgba(244, 178, 125, 0.16);
 }
 
 [data-theme="sunset"] .glass-card:hover {
-    border-color: rgba(255, 205, 173, 0.38);
+    border-color: rgba(255, 220, 195, 0.38);
     box-shadow:
-        0 24px 48px -22px rgba(42, 15, 41, 0.46),
-        0 0 28px rgba(255, 176, 124, 0.24);
+        0 24px 48px -22px rgba(28, 14, 27, 0.46),
+        0 0 28px rgba(255, 188, 133, 0.24);
 }
 
 [data-theme="sunset"] .sidebar,
 [data-theme="sunset"] .navbar {
-    border-color: rgba(255, 205, 173, 0.22);
+    border-color: rgba(255, 215, 184, 0.22);
 }
 
 [data-theme="sunset"] body::before {
@@ -461,11 +461,11 @@
     position: fixed;
     inset: 0;
     background:
-        linear-gradient(180deg, rgba(74, 32, 80, 0.3), rgba(240, 147, 98, 0.16)),
+        linear-gradient(180deg, rgba(33, 10, 21, 0.14), rgba(244, 178, 125, 0.08)),
         url("Themes/Wallpaper%20SUNSET.jpg") no-repeat center center;
     background-size: cover;
-    opacity: 0.24;
-    filter: saturate(0.96) contrast(1.02);
+    opacity: 0.36;
+    filter: blur(1.8px) saturate(1.08) contrast(1.04);
     pointer-events: none;
     z-index: -1;
 }
@@ -478,10 +478,10 @@
     width: 420px;
     height: 250px;
     background:
-        radial-gradient(circle at 24% 38%, rgba(255, 214, 170, 0.26), transparent 48%),
-        radial-gradient(circle at 72% 24%, rgba(255, 145, 112, 0.22), transparent 44%),
-        radial-gradient(circle at 50% 88%, rgba(176, 99, 155, 0.22), transparent 50%);
-    filter: blur(6px);
+        radial-gradient(circle at 24% 38%, rgba(255, 214, 170, 0.24), transparent 48%),
+        radial-gradient(circle at 72% 24%, rgba(255, 166, 136, 0.2), transparent 44%),
+        radial-gradient(circle at 50% 88%, rgba(123, 116, 143, 0.2), transparent 50%);
+    filter: blur(8px);
     pointer-events: none;
     z-index: -1;
 }
@@ -1906,6 +1906,14 @@ a {
 
 .glass-card-3d:hover {
     transform: rotateX(5deg) rotateY(-5deg) translateZ(10px);
+}
+
+.glass-card-3d.tilt-firm {
+    transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.glass-card-3d.tilt-firm:hover {
+    transform: rotateX(2deg) rotateY(-2deg) translateZ(4px);
 }
 
 /* ============================================
@@ -4282,8 +4290,8 @@ a {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    height: clamp(420px, 52vh, 560px);
-    max-height: min(560px, calc(100vh - 170px));
+    height: clamp(480px, 58vh, 640px);
+    max-height: min(640px, calc(100vh - 150px));
     min-height: 0;
     overflow: hidden;
     border: 1px solid rgba(var(--accent-rgb), 0.18);
@@ -4408,7 +4416,7 @@ a {
 .chatgpt-chat {
     position: relative;
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 320px;
     max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
@@ -5810,44 +5818,6 @@ a {
     padding: 30px 20px;
     text-align: center;
     margin-top: 30px;
-}
-
-/* Floating Theme Toggle for Login/Register */
-.theme-toggle-float {
-    position: fixed;
-    top: 24px;
-    right: 24px;
-    width: 45px;
-    height: 45px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 100;
-    transition: all var(--transition-fast);
-}
-
-.theme-toggle-float:hover {
-    background: var(--glass-hover);
-    border-color: var(--emerald-light);
-}
-
-.theme-toggle-float svg {
-    width: 20px;
-    height: 20px;
-    color: var(--text-secondary);
-}
-
-.theme-toggle-float .icon-theme-symbol {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-    pointer-events: none;
 }
 
 /* ============================================

@@ -2118,10 +2118,21 @@ function initNavbarDateTime() {
                 const centerX = rect.width / 2;
                 const centerY = rect.height / 2;
 
-                const rotateX = (y - centerY) / 20;
-                const rotateY = (centerX - x) / 20;
+                const divisor = Number.parseFloat(card.dataset.tiltDivisor) || 20;
+                const depth = Number.parseFloat(card.dataset.tiltDepth) || 10;
+                const maxTilt = Number.parseFloat(card.dataset.tiltMax);
 
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+                const clamp = (value) => {
+                    if (!Number.isFinite(maxTilt) || maxTilt <= 0) {
+                        return value;
+                    }
+                    return Math.max(-maxTilt, Math.min(maxTilt, value));
+                };
+
+                const rotateX = clamp((y - centerY) / divisor);
+                const rotateY = clamp((centerX - x) / divisor);
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`;
             });
 
             card.addEventListener('mouseleave', () => {
@@ -3062,6 +3073,7 @@ function initNavbarDateTime() {
                         item.notifiedAt = new Date().toISOString();
                         dirty = true;
                         showDashboardToast('reminder', 'Reminder due', item.note);
+                        playPlannerNotificationSound();
 
                         if ('Notification' in window && Notification.permission === 'granted') {
                             new Notification('FAST BRIDGE GROUP reminder', {
