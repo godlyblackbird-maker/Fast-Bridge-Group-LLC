@@ -7310,6 +7310,23 @@ function initNavbarDateTime() {
             });
         }
 
+        tabButtons.forEach(button => {
+            if (button.dataset.propertyTabBound === 'true') {
+                return;
+            }
+
+            button.dataset.propertyTabBound = 'true';
+            button.addEventListener('click', () => {
+                const tabId = button.dataset.tab;
+                activatePropertyTab(tabId);
+            });
+        });
+
+        const initialActiveTab = tabButtons.find(button => button.classList.contains('active'))?.dataset.tab
+            || tabPanels.find(panel => panel.classList.contains('active'))?.dataset.panel
+            || 'piq';
+        activatePropertyTab(initialActiveTab);
+
         const previewGallery = document.getElementById('piq-property-image-preview');
         const imageGallery = document.getElementById('piq-property-image-gallery');
         const imageTabButtons = Array.from(document.querySelectorAll('.piq-image-tab[data-piq-image-tab]'));
@@ -10694,13 +10711,6 @@ function initNavbarDateTime() {
         }
 
         initIaCalculator();
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tabId = button.dataset.tab;
-                activatePropertyTab(tabId);
-            });
-        });
 
     }
 
