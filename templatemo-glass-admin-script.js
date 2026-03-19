@@ -9991,7 +9991,7 @@ function initNavbarDateTime() {
                 invCashForKeys: '0'
             };
 
-            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !oddDaysInput || !reserveWithholdInput || !otherCostList || !financingModeInput) {
+            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput) {
                 return;
             }
 
@@ -10079,8 +10079,8 @@ function initNavbarDateTime() {
                 interestRateInput.value = String(state.interestRate ?? interestRateInput.value ?? '');
                 originationPointsInput.value = String(state.originationPoints ?? originationPointsInput.value ?? '');
                 lenderFeesInput.value = String(state.lenderFees ?? lenderFeesInput.value ?? '');
-                oddDaysInput.value = String(state.oddDays ?? oddDaysInput.value ?? '');
-                reserveWithholdInput.value = String(state.reserveWithhold ?? reserveWithholdInput.value ?? '');
+                if (oddDaysInput) oddDaysInput.value = String(state.oddDays ?? oddDaysInput.value ?? '');
+                if (reserveWithholdInput) reserveWithholdInput.value = String(state.reserveWithhold ?? reserveWithholdInput.value ?? '');
                 otherCosts = Array.isArray(state.otherCosts)
                     ? state.otherCosts
                         .map(item => ({
@@ -10147,8 +10147,8 @@ function initNavbarDateTime() {
                     interestRate: interestRateInput.value,
                     originationPoints: originationPointsInput.value,
                     lenderFees: lenderFeesInput.value,
-                    oddDays: oddDaysInput.value,
-                    reserveWithhold: reserveWithholdInput.value,
+                    oddDays: oddDaysInput ? oddDaysInput.value : '0',
+                    reserveWithhold: reserveWithholdInput ? reserveWithholdInput.value : '0',
                     otherCosts: otherCosts.map(item => ({
                         name: String(item.name || 'Other Cost').trim() || 'Other Cost',
                         amount: Math.max(parseMoneyValue(item.amount), 0)
@@ -10364,8 +10364,8 @@ function initNavbarDateTime() {
                 originationPointsInput.disabled = isCash;
                 interestRateInput.disabled = isCash;
                 lenderFeesInput.disabled = isCash;
-                oddDaysInput.disabled = isCash;
-                reserveWithholdInput.disabled = isCash;
+                if (oddDaysInput) oddDaysInput.disabled = isCash;
+                if (reserveWithholdInput) reserveWithholdInput.disabled = isCash;
                 holdMonthsInput.disabled = isCash;
                 if (cashNote) {
                     cashNote.hidden = !isCash;
@@ -10765,10 +10765,13 @@ function initNavbarDateTime() {
                 loanToArvInput,
                 interestRateInput,
                 originationPointsInput,
-                    lenderFeesInput,
-                    oddDaysInput,
-                    reserveWithholdInput
+                lenderFeesInput,
+                oddDaysInput,
+                reserveWithholdInput
             ].forEach(input => {
+                if (!input) {
+                    return;
+                }
                 input.addEventListener('input', () => {
                     formatNumericInputValue(input);
                     recalculate();
