@@ -9804,6 +9804,11 @@ function initNavbarDateTime() {
             const strikeZoneAreaEl = document.getElementById('ia-strike-zone-area');
             const iaSummaryCopyBtn = document.getElementById('ia-summary-copy-btn');
             const cashNote = document.getElementById('ia-cash-note');
+            const financingSection = document.getElementById('ia-financing-section');
+            const financingSectionBody = document.getElementById('ia-financing-body');
+            const financingToggleButton = document.getElementById('ia-financing-toggle');
+            const financingToggleText = financingToggleButton ? financingToggleButton.querySelector('.ia-section-toggle-text') : null;
+            const financingToggleIcon = financingToggleButton ? financingToggleButton.querySelector('.ia-section-toggle-icon') : null;
 
             const addOtherCostButton = document.getElementById('ia-add-other-cost');
             const otherCostNameInput = document.getElementById('ia-other-cost-name');
@@ -9845,6 +9850,7 @@ function initNavbarDateTime() {
             let otherCosts = [];
             let targetMode = 'dollar';
             let offerPriceMode = 'target';
+            let financingHoldCollapsed = false;
             let iaSummaryMessage = '';
             let investorSummaryMessage = '';
 
@@ -9933,6 +9939,7 @@ function initNavbarDateTime() {
 
                 targetMode = state.targetMode === 'percent' ? 'percent' : 'dollar';
                 offerPriceMode = state.offerPriceMode === 'manual' ? 'manual' : 'target';
+                financingHoldCollapsed = Boolean(state.financingHoldCollapsed);
             }
 
             function buildIaCalculatorState() {
@@ -9960,8 +9967,37 @@ function initNavbarDateTime() {
                         ...investorDefaults
                     },
                     targetMode,
-                    offerPriceMode
+                    offerPriceMode,
+                    financingHoldCollapsed
                 };
+            }
+
+            function setFinancingSectionCollapsed(collapsed, options = {}) {
+                financingHoldCollapsed = !!collapsed;
+
+                if (financingSection) {
+                    financingSection.classList.toggle('is-collapsed', financingHoldCollapsed);
+                }
+
+                if (financingSectionBody) {
+                    financingSectionBody.hidden = financingHoldCollapsed;
+                }
+
+                if (financingToggleButton) {
+                    financingToggleButton.setAttribute('aria-expanded', String(!financingHoldCollapsed));
+                }
+
+                if (financingToggleText) {
+                    financingToggleText.textContent = financingHoldCollapsed ? 'Open' : 'Minimize';
+                }
+
+                if (financingToggleIcon) {
+                    financingToggleIcon.textContent = financingHoldCollapsed ? '+' : '-';
+                }
+
+                if (!options.skipPersist) {
+                    setPersistedIaCalculatorState(buildIaCalculatorState());
+                }
             }
 
             function formatNumericInputValue(input, options = {}) {
@@ -9990,6 +10026,89 @@ function initNavbarDateTime() {
                 input.value = isNegative ? `-${formattedValue}` : formattedValue;
             }
 
+            function formatPercentSuffixInputValue(input, options = {}) {
+                if (!input) return;
+
+                const allowNegative = !!options.allowNegative;
+                const rawValue = String(input.value || '');
+                const cleaned = rawValue.replace(/,/g, '').replace(/[^0-9.]/g, '');
+                const isNegative = allowNegative && rawValue.trim().startsWith('-');
+
+                if (!cleaned) {
+                    input.value = isNegative ? '-%' : '%';
+                    return;
+                }
+
+                if (cleaned === '.') {
+                    input.value = isNegative ? '-0.%' : '0.%';
+                    return;
+                }
+
+                const hasDot = cleaned.includes('.');
+                const parts = cleaned.split('.');
+                const integerPartRaw = parts[0] || '0';
+                const decimalPartRaw = parts[1] || '';
+                const integerPart = integerPartRaw.replace(/^0+(?=\d)/, '') || '0';
+                const formattedInteger = Number(integerPart).toLocaleString('en-US');
+                const formattedValue = hasDot ? `${formattedInteger}.${decimalPartRaw}` : formattedInteger;
+                input.value = `${isNegative ? '-' : ''}${formattedValue}%`;
+            }
+
+            function formatCurrencyPrefixInputValue(input, options = {}) {
+                if (!input) return;
+
+                const allowNegative = !!options.allowNegative;
+                const rawValue = String(input.value || '');
+                const cleaned = rawValue.replace(/,/g, '').replace(/[^0-9.]/g, '');
+                const isNegative = allowNegative && rawValue.trim().startsWith('-');
+
+                if (!cleaned) {
+                    input.value = isNegative ? '-$' : '$';
+                    return;
+                }
+
+                if (cleaned === '.') {
+                    input.value = isNegative ? '-$0.' : '$0.';
+                    return;
+                }
+
+                const hasDot = cleaned.includes('.');
+                const parts = cleaned.split('.');
+                const integerPartRaw = parts[0] || '0';
+                const decimalPartRaw = parts[1] || '';
+                const integerPart = integerPartRaw.replace(/^0+(?=\d)/, '') || '0';
+                const formattedInteger = Number(integerPart).toLocaleString('en-US');
+                const formattedValue = hasDot ? `${formattedInteger}.${decimalPartRaw}` : formattedInteger;
+                input.value = `${isNegative ? '-$' : '$'}${formattedValue}`;
+            }
+
+            function placePercentSuffixCaret(input) {
+                if (!input || typeof input.setSelectionRange !== 'function') {
+                    return;
+                }
+
+                const value = String(input.value || '');
+                const suffixIndex = value.endsWith('%') ? value.length - 1 : value.length;
+                window.requestAnimationFrame(() => {
+                    input.setSelectionRange(suffixIndex, suffixIndex);
+                });
+            }
+
+            function placeCurrencyPrefixCaret(input) {
+                if (!input || typeof input.setSelectionRange !== 'function') {
+                    return;
+                }
+
+                const value = String(input.value || '');
+                const prefixLength = value.startsWith('-$') ? 2 : value.startsWith('$') ? 1 : 0;
+                const selectionStart = typeof input.selectionStart === 'number' ? input.selectionStart : prefixLength;
+                const nextCaret = Math.max(selectionStart, prefixLength);
+
+                window.requestAnimationFrame(() => {
+                    input.setSelectionRange(nextCaret, nextCaret);
+                });
+            }
+
             function formatIaNumericInputs() {
                 [
                     listPriceInput,
@@ -10005,8 +10124,8 @@ function initNavbarDateTime() {
                     otherCostAmountInput
                 ].forEach(formatNumericInputValue);
 
-                formatNumericInputValue(targetPercentInput, { allowNegative: true });
-                formatNumericInputValue(targetDollarInput, { allowNegative: true });
+                formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
+                formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
             }
 
             function syncInvestorDefaultsFromInputs() {
@@ -10022,29 +10141,59 @@ function initNavbarDateTime() {
                 if (invCashForKeysInput) investorDefaults.invCashForKeys = String(invCashForKeysInput.value || investorDefaults.invCashForKeys);
             }
 
+            function getFinancingModeAssumptions(mode) {
+                if (mode === '90-100') {
+                    return {
+                        loanToArv: '75',
+                        originationPoints: '1',
+                        interestRate: '10',
+                        lenderFees: '999',
+                        holdMonths: '4',
+                        costAdvanceRate: 0.9,
+                        arvAdvanceRate: 0.75
+                    };
+                }
+
+                if (mode === '100-100') {
+                    return {
+                        loanToArv: '80',
+                        originationPoints: '1.5',
+                        interestRate: '10.44',
+                        lenderFees: '999',
+                        holdMonths: '4',
+                        costAdvanceRate: 1,
+                        arvAdvanceRate: 0.8
+                    };
+                }
+
+                if (mode === 'cash') {
+                    return {
+                        loanToArv: '0',
+                        originationPoints: '0',
+                        interestRate: '0',
+                        lenderFees: '0',
+                        holdMonths: '0',
+                        costAdvanceRate: 0,
+                        arvAdvanceRate: 0
+                    };
+                }
+
+                return null;
+            }
+
             function applyFinancingModeDefaults(mode, options = {}) {
                 const preserveValues = !!options.preserveValues;
+                const assumptions = getFinancingModeAssumptions(mode);
 
                 if (!preserveValues) {
-                    if (mode === '90-100') {
-                        loanToArvInput.value = '75';
-                        originationPointsInput.value = '1';
-                        interestRateInput.value = '10';
-                        lenderFeesInput.value = '999';
-                        holdMonthsInput.value = holdMonthsInput.value || '4';
+                    if (assumptions) {
+                        loanToArvInput.value = assumptions.loanToArv;
+                        originationPointsInput.value = assumptions.originationPoints;
+                        interestRateInput.value = assumptions.interestRate;
+                        lenderFeesInput.value = assumptions.lenderFees;
+                        holdMonthsInput.value = assumptions.holdMonths;
                     } else if (mode === 'custom') {
                         // Keep current values for fully manual underwriting.
-                    } else if (mode === 'cash') {
-                        loanToArvInput.value = '0';
-                        originationPointsInput.value = '0';
-                        interestRateInput.value = '0';
-                        lenderFeesInput.value = '0';
-                    } else {
-                        loanToArvInput.value = '80';
-                        originationPointsInput.value = '1.5';
-                        interestRateInput.value = '10.44';
-                        lenderFeesInput.value = '999';
-                        holdMonthsInput.value = holdMonthsInput.value || '4';
                     }
                 }
 
@@ -10173,10 +10322,18 @@ function initNavbarDateTime() {
                 const grossPurchaseAdjustmentTotal = invDueDiligence + invAcquisitionFee + invCashForKeys;
                 const grossScopeAdjustmentTotal = grossSaleAdjustmentTotal + grossPurchaseAdjustmentTotal;
 
-                const loanAmount = financingMode === 'cash' ? 0 : rawArv * (loanToArvPct / 100);
+                const financingAssumptions = getFinancingModeAssumptions(financingMode);
+                const loanArvCapAmount = rawArv * (loanToArvPct / 100);
+                const loanCostBase = offerPrice + renovation;
+                let loanAmount = financingMode === 'cash' ? 0 : loanArvCapAmount;
+                if (financingAssumptions) {
+                    const assumedArvCapAmount = rawArv * financingAssumptions.arvAdvanceRate;
+                    const assumedCostCapAmount = loanCostBase * financingAssumptions.costAdvanceRate;
+                    loanAmount = Math.min(loanArvCapAmount, assumedArvCapAmount, assumedCostCapAmount);
+                }
                 const originationAmount = financingMode === 'cash' ? 0 : loanAmount * (pointsPct / 100);
                 const interestCost = financingMode === 'cash' ? 0 : loanAmount * (interestRatePct / 100) * (holdMonths / 12);
-                const totalFinancingCost = financingMode === 'cash' ? 0 : (originationAmount + lenderFees + interestCost);
+                const totalFinancingCost = financingMode === 'cash' ? 0 : (originationAmount + interestCost);
 
                 const baselineForTarget = listPrice + buySideCost + renovation + grossScopeAdjustmentTotal + totalFinancingCost;
                 let targetProfitDollar = asNumber(targetDollarInput, 0);
@@ -10185,11 +10342,11 @@ function initNavbarDateTime() {
                 if (targetMode === 'percent') {
                     targetProfitDollar = baselineForTarget * (targetProfitPercent / 100);
                     targetDollarInput.value = targetProfitDollar.toFixed(0);
-                    formatNumericInputValue(targetDollarInput, { allowNegative: true });
+                    formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
                 } else {
                     targetProfitPercent = baselineForTarget > 0 ? (targetProfitDollar / baselineForTarget) * 100 : 0;
                     targetPercentInput.value = targetProfitPercent.toFixed(2);
-                    formatNumericInputValue(targetPercentInput, { allowNegative: true });
+                    formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
                 }
 
                 const autoOfferPrice = estimatedSalesPrice - sellSideCost - targetProfitDollar - grossScopeAdjustmentTotal - renovation - buySideCost - extraCosts - totalFinancingCost;
@@ -10205,20 +10362,20 @@ function initNavbarDateTime() {
                 const offAskingDollar = listPrice - offerPrice;
                 const offAskingPercent = listPrice > 0 ? (offAskingDollar / listPrice) * 100 : 0;
 
-                const totalAcquisition = offerPrice + buySideCost + renovation + grossPurchaseAdjustmentTotal + extraCosts;
-                const totalProjectCost = totalAcquisition + grossSaleAdjustmentTotal;
+                const totalPurchaseCost = offerPrice + buySideCost + grossPurchaseAdjustmentTotal + extraCosts;
+                const totalProjectCost = totalPurchaseCost + renovation;
                 const totalProjectWithFinancing = totalProjectCost + totalFinancingCost;
-                const leveragedProfit = estimatedSalesPrice - sellSideCost - totalProjectCost - totalFinancingCost;
+                const leveragedProfit = estimatedSalesPrice - sellSideCost - grossSaleAdjustmentTotal - totalProjectWithFinancing;
 
                 const grossProfitToSeller = estimatedSalesPrice - sellSideCost - grossSaleAdjustmentTotal;
 
-                const invTotalAcquisition = offerPrice + buySideCost + extraCosts;
+                const invTotalAcquisition = totalPurchaseCost;
                 const invHardMoneyCosts = totalFinancingCost;
-                const invMiscLessInterest = grossPurchaseAdjustmentTotal;
-                const invTotalDevelopmentCost = invTotalAcquisition + invHardMoneyCosts + renovation + invMiscLessInterest;
-                const invTotalPurchaseCosts = invTotalAcquisition + grossPurchaseAdjustmentTotal;
-                const invCashRequiredToClose = Math.max(invTotalAcquisition - loanAmount, 0) + grossPurchaseAdjustmentTotal;
-                const invTotalCashInvestment = invCashRequiredToClose + invHardMoneyCosts;
+                const invMiscLessInterest = 0;
+                const invTotalDevelopmentCost = totalProjectWithFinancing;
+                const invTotalPurchaseCosts = totalPurchaseCost;
+                const invCashRequiredToClose = Math.max(invTotalPurchaseCosts + renovation + originationAmount - loanAmount, 0);
+                const invTotalCashInvestment = invCashRequiredToClose + interestCost;
                 const invShortFundsToEscrow = invCashRequiredToClose;
 
                 const invNetProfit = grossProfitToSeller - invTotalDevelopmentCost;
@@ -10234,9 +10391,9 @@ function initNavbarDateTime() {
                 setText('ia-off-asking-percent', formatPercent(offAskingPercent));
                 setText('ia-offer-price-arv', formatPercent((offerPrice / arvBasis) * 100));
 
-                setText('ia-total-acquisition', formatMoney(totalAcquisition));
-                setText('ia-total-acquisition-arv', formatPercent((totalAcquisition / arvBasis) * 100));
-                setText('ia-summary-acq', `${formatMoney(totalAcquisition)} (${formatPercent((totalAcquisition / arvBasis) * 100)} ARV)`);
+                setText('ia-total-acquisition', formatMoney(totalPurchaseCost));
+                setText('ia-total-acquisition-arv', formatPercent((totalPurchaseCost / arvBasis) * 100));
+                setText('ia-summary-acq', `${formatMoney(totalPurchaseCost)} (${formatPercent((totalPurchaseCost / arvBasis) * 100)} ARV)`);
                 setText('ia-summary-project', `${formatMoney(totalProjectCost)} (${formatPercent((totalProjectCost / arvBasis) * 100)} ARV)`);
                 setText('ia-summary-project-fin', `${formatMoney(totalProjectWithFinancing)} (${formatPercent((totalProjectWithFinancing / arvBasis) * 100)} ARV)`);
                 setText('ia-offer-off-asking', `${formatPercent(offAskingPercent)} off asking (${formatMoney(listPrice)})`);
@@ -10246,7 +10403,8 @@ function initNavbarDateTime() {
                 setText('ia-origination-amount', formatMoney(originationAmount, 1));
                 setText('ia-interest-cost', formatMoney(interestCost));
                 setText('ia-total-financing', formatMoney(totalFinancingCost));
-                setText('ia-leveraged-profit', formatMoney(leveragedProfit));
+                setText('ia-cash-required-close', formatMoney(invCashRequiredToClose));
+                setText('ia-total-cash-investment', formatMoney(invTotalCashInvestment));
 
                 iaSummaryMessage = [
                     'IA Calculator Snapshot',
@@ -10264,9 +10422,12 @@ function initNavbarDateTime() {
                     `Offer Price: ${formatMoney(offerPrice)}`,
                     `% Off Asking: ${formatPercent(offAskingPercent)} (${formatMoney(offAskingDollar)})`,
                     '-',
-                    `Total Acquisition Cost: ${formatMoney(totalAcquisition)} (${formatPercent((totalAcquisition / arvBasis) * 100)} ARV)`,
+                    `Total Purchase Cost: ${formatMoney(totalPurchaseCost)} (${formatPercent((totalPurchaseCost / arvBasis) * 100)} ARV)`,
                     `Total Project Cost: ${formatMoney(totalProjectCost)} (${formatPercent((totalProjectCost / arvBasis) * 100)} ARV)`,
                     `Total Project Cost w/ Financing: ${formatMoney(totalProjectWithFinancing)} (${formatPercent((totalProjectWithFinancing / arvBasis) * 100)} ARV)`,
+                    `Cash Required To Close: ${formatMoney(invCashRequiredToClose)}`,
+                    `Cash In w/ Payments: ${formatMoney(invTotalCashInvestment)}`,
+                    `Gross Profit To Seller: ${formatMoney(grossProfitToSeller)}`,
                     '-',
                     'Net Profits',
                     `Net Profit: ${formatMoney(invNetProfit)}`,
@@ -10274,7 +10435,7 @@ function initNavbarDateTime() {
                     `Cash Profit: ${formatMoney(invCashProfit)}`,
                     `Cash Profit %: ${formatPercent((invCashProfit / arvBasis) * 100)}`,
                     '-',
-                    `Total Financing Cost: ${formatMoney(totalFinancingCost)}`,
+                    `Hard Money Costs: ${formatMoney(totalFinancingCost)}`,
                     `Interest Carry: ${formatMoney(interestCost)}`,
                     `Leveraged Profit: ${formatMoney(leveragedProfit)}`
                 ].join('\n');
@@ -10291,6 +10452,9 @@ function initNavbarDateTime() {
                     `Offer Price: ${formatMoney(offerPrice)}`,
                     `Total Purchase Costs: ${formatMoney(invTotalPurchaseCosts)} (${formatPercent((invTotalPurchaseCosts / arvBasis) * 100)})`,
                     `Total Development Cost: ${formatMoney(invTotalDevelopmentCost)} (${formatPercent((invTotalDevelopmentCost / arvBasis) * 100)})`,
+                    `Cash Required To Close: ${formatMoney(invCashRequiredToClose)}`,
+                    `Cash In w/ Payments: ${formatMoney(invTotalCashInvestment)}`,
+                    `Gross Profit To Seller: ${formatMoney(grossProfitToSeller)}`,
                     `Net Profit: ${formatMoney(invNetProfit)} (${formatPercent((invNetProfit / arvBasis) * 100)})`,
                     `Cash Profit: ${formatMoney(invCashProfit)} (${formatPercent((invCashProfit / arvBasis) * 100)})`
                 ].join('\n');
@@ -10314,14 +10478,52 @@ function initNavbarDateTime() {
             targetPercentInput.addEventListener('input', () => {
                 targetMode = 'percent';
                 offerPriceMode = 'target';
-                formatNumericInputValue(targetPercentInput, { allowNegative: true });
+                formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
+                placePercentSuffixCaret(targetPercentInput);
                 recalculate();
+            });
+            targetPercentInput.addEventListener('focus', () => {
+                formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
+                placePercentSuffixCaret(targetPercentInput);
+            });
+            targetPercentInput.addEventListener('click', () => {
+                placePercentSuffixCaret(targetPercentInput);
+            });
+            targetPercentInput.addEventListener('keydown', (event) => {
+                const value = String(targetPercentInput.value || '');
+                const suffixIndex = value.endsWith('%') ? value.length - 1 : value.length;
+                const selectionStart = typeof targetPercentInput.selectionStart === 'number' ? targetPercentInput.selectionStart : suffixIndex;
+                const selectionEnd = typeof targetPercentInput.selectionEnd === 'number' ? targetPercentInput.selectionEnd : suffixIndex;
+
+                if (selectionStart > suffixIndex || selectionEnd > suffixIndex) {
+                    event.preventDefault();
+                    placePercentSuffixCaret(targetPercentInput);
+                }
             });
             targetDollarInput.addEventListener('input', () => {
                 targetMode = 'dollar';
                 offerPriceMode = 'target';
-                formatNumericInputValue(targetDollarInput, { allowNegative: true });
+                formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
+                placeCurrencyPrefixCaret(targetDollarInput);
                 recalculate();
+            });
+            targetDollarInput.addEventListener('focus', () => {
+                formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
+                placeCurrencyPrefixCaret(targetDollarInput);
+            });
+            targetDollarInput.addEventListener('click', () => {
+                placeCurrencyPrefixCaret(targetDollarInput);
+            });
+            targetDollarInput.addEventListener('keydown', (event) => {
+                const value = String(targetDollarInput.value || '');
+                const prefixLength = value.startsWith('-$') ? 2 : value.startsWith('$') ? 1 : 0;
+                const selectionStart = typeof targetDollarInput.selectionStart === 'number' ? targetDollarInput.selectionStart : prefixLength;
+                const selectionEnd = typeof targetDollarInput.selectionEnd === 'number' ? targetDollarInput.selectionEnd : prefixLength;
+
+                if (selectionStart < prefixLength || selectionEnd < prefixLength) {
+                    event.preventDefault();
+                    placeCurrencyPrefixCaret(targetDollarInput);
+                }
             });
             offerPriceInput.addEventListener('input', () => {
                 offerPriceMode = 'manual';
@@ -10382,6 +10584,12 @@ function initNavbarDateTime() {
                 applyFinancingModeDefaults(financingModeInput.value);
                 recalculate();
             });
+
+            if (financingToggleButton) {
+                financingToggleButton.addEventListener('click', () => {
+                    setFinancingSectionCollapsed(!financingHoldCollapsed);
+                });
+            }
 
             async function copyTextWithToast(value, emptyMessage) {
                 const text = String(value || '').trim();
@@ -10452,6 +10660,8 @@ function initNavbarDateTime() {
             if (persistedIaCalculatorState) {
                 applyPersistedIaCalculatorState(persistedIaCalculatorState);
             }
+
+            setFinancingSectionCollapsed(financingHoldCollapsed, { skipPersist: true });
 
             renderOtherCosts();
             applyFinancingModeDefaults(financingModeInput.value, { preserveValues: !!persistedIaCalculatorState });

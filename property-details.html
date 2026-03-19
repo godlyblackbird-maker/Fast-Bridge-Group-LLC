@@ -438,8 +438,8 @@
                                 </label>
                                 <div class="ia-readout">Reno % ARV: <strong id="ia-reno-arv">0.00%</strong></div>
 
-                                <div class="ia-readout">Total Acquisition Cost: <strong id="ia-total-acquisition">$0</strong></div>
-                                <div class="ia-readout">Acquisition % ARV: <strong id="ia-total-acquisition-arv">0.00%</strong></div>
+                                <div class="ia-readout">Total Purchase Cost: <strong id="ia-total-acquisition">$0</strong></div>
+                                <div class="ia-readout">Purchase % ARV: <strong id="ia-total-acquisition-arv">0.00%</strong></div>
 
                                 <label>After Repair Value (ARV)
                                     <input id="ia-arv" type="text" inputmode="numeric" autocomplete="off" value="694592">
@@ -473,10 +473,10 @@
                                 </div>
 
                                 <label>Target Profit Goal (%)
-                                    <input id="ia-target-profit-percent" type="text" inputmode="decimal" autocomplete="off" value="12">
+                                    <input id="ia-target-profit-percent" type="text" inputmode="decimal" autocomplete="off" value="12%">
                                 </label>
                                 <label>Target Profit Goal ($)
-                                    <input id="ia-target-profit-dollar" type="text" inputmode="numeric" autocomplete="off" value="70700">
+                                    <input id="ia-target-profit-dollar" type="text" inputmode="numeric" autocomplete="off" value="$70700">
                                 </label>
 
                                 <div class="ia-readout">$ Off Asking: <strong id="ia-off-asking-dollar">$0</strong></div>
@@ -496,7 +496,7 @@
                                 <div class="ia-readout">Offer % of ARV: <strong id="ia-offer-price-arv">0.00%</strong></div>
                                 <div class="ia-readout">Off Asking Summary: <strong id="ia-offer-off-asking">0.00%</strong></div>
 
-                                <div class="ia-readout ia-span-2">Total Acquisition Cost: <strong id="ia-summary-acq">$0</strong></div>
+                                <div class="ia-readout ia-span-2">Total Purchase Cost: <strong id="ia-summary-acq">$0</strong></div>
                                 <div class="ia-readout ia-span-2">Total Project Cost: <strong id="ia-summary-project">$0</strong></div>
                                 <div class="ia-readout ia-span-2">Total Project Cost w/ Financing: <strong id="ia-summary-project-fin">$0</strong></div>
                                 <div class="outreach-actions ia-span-2">
@@ -506,13 +506,19 @@
                             </div>
                         </section>
 
-                        <section class="ia-section">
-                            <h3>Financing &amp; Hold</h3>
-                            <div class="ia-grid">
+                        <section class="ia-section ia-collapsible-section" id="ia-financing-section">
+                            <div class="ia-section-header">
+                                <h3>Financing &amp; Hold</h3>
+                                <button type="button" class="ia-section-toggle" id="ia-financing-toggle" aria-expanded="true" aria-controls="ia-financing-body">
+                                    <span class="ia-section-toggle-text">Minimize</span>
+                                    <span class="ia-section-toggle-icon" aria-hidden="true">-</span>
+                                </button>
+                            </div>
+                            <div class="ia-grid ia-section-body" id="ia-financing-body">
                                 <label>Financing Program
                                     <select id="ia-financing-mode">
-                                        <option value="100-100">100/100 - Kiavi 80% of ARV</option>
-                                        <option value="90-100">90/100 - Kiavi 75% of ARV</option>
+                                        <option value="100-100">100/100 - 100% Cost Cap, 80% ARV Max</option>
+                                        <option value="90-100">90/100 - 90% Cost Cap, 75% ARV Max</option>
                                         <option value="custom">Custom Financing</option>
                                         <option value="cash">Cash</option>
                                     </select>
@@ -538,8 +544,9 @@
                                 <div class="ia-readout">Loan Amount: <strong id="ia-loan-amount">$0</strong></div>
                                 <div class="ia-readout">Origination Points: <strong id="ia-origination-amount">$0</strong></div>
                                 <div class="ia-readout">Interest Cost: <strong id="ia-interest-cost">$0</strong></div>
-                                <div class="ia-readout">Total Financing Cost: <strong id="ia-total-financing">$0</strong></div>
-                                <div class="ia-readout ia-span-2">Leveraged Profit: <strong id="ia-leveraged-profit">$0</strong></div>
+                                <div class="ia-readout">Hard Money Costs: <strong id="ia-total-financing">$0</strong></div>
+                                <div class="ia-readout">Cash Required To Close: <strong id="ia-cash-required-close">$0</strong></div>
+                                <div class="ia-readout">Cash In w/ Payments: <strong id="ia-total-cash-investment">$0</strong></div>
                                 <div class="ia-readout ia-span-2 ia-cash-note" id="ia-cash-note" hidden>Cash: No financing costs for cash purchase.</div>
                             </div>
                         </section>
