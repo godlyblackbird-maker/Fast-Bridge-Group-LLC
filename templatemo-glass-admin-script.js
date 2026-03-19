@@ -8595,8 +8595,8 @@ function initNavbarDateTime() {
             }
 
             const AVAILABLE_ECARD_FILES = [
-                'E cards/Updated Isaac Haro - E card.jpg',
-                'E cards/Updated Steve Medina - E card.jpg'
+                'Isaac Haro (ADMIN)/Updated Isaac Haro - E Card.jpg',
+                'Steve Medina (ADMIN)/Updated Steve Medina - E Card.jpg'
             ];
 
             function normalizeECardMatchValue(value) {
@@ -9306,7 +9306,8 @@ function initNavbarDateTime() {
                             subject,
                             body,
                             htmlBody: buildServerEmailHtml(),
-                            ecardPath: ecardToggle && ecardToggle.checked ? userECardPath : '',
+                            includeECard: Boolean(ecardToggle && ecardToggle.checked),
+                            ecardPath: ecardToggle && ecardToggle.checked ? (userECardPath || getSelectedECardPath()) : '',
                             ecardAttachmentName: ecardToggle && ecardToggle.checked ? getUserECardAttachmentName() : '',
                             attachments,
                             investorAttachmentPaths

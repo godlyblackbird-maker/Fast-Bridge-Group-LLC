@@ -561,6 +561,85 @@ function resolveWorkspaceAssetPath(relativePath) {
   return absolutePath;
 }
 
+function normalizeAdminECardMatchValue(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/\(admin\)/gi, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function listAdminECardFiles() {
+  return fs.readdirSync(__dirname, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /\(admin\)$/i.test(entry.name))
+    .map((entry) => {
+      const folderName = entry.name;
+      const folderPath = path.join(__dirname, folderName);
+      const files = fs.readdirSync(folderPath, { withFileTypes: true })
+        .filter((fileEntry) => fileEntry.isFile())
+        .map((fileEntry) => fileEntry.name)
+        .filter((fileName) => ['.jpg', '.jpeg', '.png', '.webp'].includes(path.extname(fileName).toLowerCase()))
+        .filter((fileName) => /e\s*-?\s*card/i.test(fileName))
+        .sort((left, right) => {
+          const leftPriority = /updated/i.test(left) ? 0 : 1;
+          const rightPriority = /updated/i.test(right) ? 0 : 1;
+          if (leftPriority !== rightPriority) {
+            return leftPriority - rightPriority;
+          }
+          return left.localeCompare(right);
+        });
+
+      if (files.length === 0) {
+        return null;
+      }
+
+      const selectedFile = files[0];
+      const relativePath = `${folderName}/${selectedFile}`.replace(/\\/g, '/');
+      return {
+        folderName,
+        relativePath,
+        normalizedFolderName: normalizeAdminECardMatchValue(folderName),
+        normalizedFileName: normalizeAdminECardMatchValue(selectedFile)
+      };
+    })
+    .filter(Boolean);
+}
+
+function resolveUserAdminECardRelativePath({ name, email }) {
+  const candidates = listAdminECardFiles();
+  if (candidates.length === 0) {
+    return '';
+  }
+
+  const normalizedName = normalizeAdminECardMatchValue(name);
+  const normalizedEmailLocalPart = normalizeAdminECardMatchValue(String(email || '').split('@')[0]);
+  const matchTokens = [normalizedName, normalizedEmailLocalPart].filter(Boolean);
+
+  for (const token of matchTokens) {
+    const exactFolderMatch = candidates.find((entry) => entry.normalizedFolderName === token);
+    if (exactFolderMatch) {
+      return exactFolderMatch.relativePath;
+    }
+  }
+
+  for (const token of matchTokens) {
+    const partialFolderMatch = candidates.find((entry) => entry.normalizedFolderName.includes(token) || token.includes(entry.normalizedFolderName));
+    if (partialFolderMatch) {
+      return partialFolderMatch.relativePath;
+    }
+  }
+
+  for (const token of matchTokens) {
+    const fileMatch = candidates.find((entry) => entry.normalizedFileName.includes(token) || token.includes(entry.normalizedFileName));
+    if (fileMatch) {
+      return fileMatch.relativePath;
+    }
+  }
+
+  return '';
+}
+
 const INVESTOR_ATTACHMENTS_ROOT = path.resolve(__dirname, 'Investors Attatchments');
 
 function isAllowedInvestorAttachmentExtension(extension) {
@@ -1346,6 +1425,7 @@ app.post('/api/send-agent-email', async (req, res) => {
   const subject = String(req.body?.subject || '').trim();
   const body = String(req.body?.body || '').trim();
   const htmlBody = String(req.body?.htmlBody || '').trim();
+  const includeECard = Boolean(req.body?.includeECard);
   const ecardPath = String(req.body?.ecardPath || '').trim();
   const ecardAttachmentName = String(req.body?.ecardAttachmentName || '').trim();
   const attachments = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
@@ -1356,11 +1436,6 @@ app.post('/api/send-agent-email', async (req, res) => {
   }
   if (!subject && !body) {
     return res.status(400).json({ error: 'Subject or body is required' });
-  }
-
-  const resolvedECardPath = ecardPath ? resolveWorkspaceAssetPath(ecardPath) : '';
-  if (ecardPath && !resolvedECardPath) {
-    return res.status(400).json({ error: 'Selected E-card image was not found.' });
   }
 
   const normalizedAttachments = [];
@@ -1394,6 +1469,7 @@ app.post('/api/send-agent-email', async (req, res) => {
   }
 
   // Look up the authenticated user's personal SMTP settings; fall back to env vars if not set
+  let authenticatedUser = null;
   let smtpUser;
   let smtpPass;
   let smtpSignature = '';
@@ -1402,10 +1478,11 @@ app.post('/api/send-agent-email', async (req, res) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       const row = await new Promise((resolve, reject) => {
-        db.get('SELECT smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, r) => {
+        db.get('SELECT name, email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, r) => {
           if (err) reject(err); else resolve(r);
         });
       });
+      authenticatedUser = row || null;
       if (row?.smtp_user && row?.smtp_pass) {
         smtpUser = row.smtp_user;
         smtpPass = row.smtp_pass;
@@ -1414,6 +1491,23 @@ app.post('/api/send-agent-email', async (req, res) => {
     } catch (e) {
       // Invalid token or DB failure — proceed with env fallback
     }
+  }
+
+  const fallbackECardRelativePath = includeECard
+    ? resolveUserAdminECardRelativePath({
+        name: authenticatedUser?.name || fromName,
+        email: authenticatedUser?.email || fromEmail
+      })
+    : '';
+  const resolvedECardPath = ecardPath
+    ? resolveWorkspaceAssetPath(ecardPath)
+    : (fallbackECardRelativePath ? resolveWorkspaceAssetPath(fallbackECardRelativePath) : '');
+
+  if (includeECard && !resolvedECardPath) {
+    return res.status(400).json({ error: 'Your admin folder E-card image was not found.' });
+  }
+  if (ecardPath && !resolvedECardPath) {
+    return res.status(400).json({ error: 'Selected E-card image was not found.' });
   }
 
   // Split emails and send individually
