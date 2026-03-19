@@ -33,7 +33,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|swamp|sunset)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
@@ -596,7 +596,7 @@ https://templatemo.com/tm-607-glass-admin
                                     <span class="settings-label-desc">Play sound for notifications</span>
                                 </div>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="notifications-toggle-sound">
+                                    <input type="checkbox" id="notifications-toggle-sound" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>

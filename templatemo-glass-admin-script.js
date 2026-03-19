@@ -164,6 +164,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             document.body.appendChild(stack);
         }
 
+        if (config.playSound !== false) {
+            playPlannerNotificationSound();
+        }
+
         const toast = document.createElement('div');
         toast.className = `dashboard-toast ${type}`;
 
@@ -547,7 +551,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 : true,
             sound: Object.prototype.hasOwnProperty.call(controls, 'id:notifications-toggle-sound')
                 ? Boolean(controls['id:notifications-toggle-sound'])
-                : false
+                : true
         };
     }
 
@@ -3137,7 +3141,9 @@ function initNavbarDateTime() {
                     if (reminderDate <= now) {
                         item.notifiedAt = new Date().toISOString();
                         dirty = true;
-                        showDashboardToast('reminder', 'Reminder due', item.note);
+                        showDashboardToast('reminder', 'Reminder due', item.note, {
+                            playSound: false
+                        });
                         playPlannerNotificationSound();
 
                         if ('Notification' in window && Notification.permission === 'granted') {
@@ -5074,7 +5080,8 @@ function initNavbarDateTime() {
                     eyebrow: 'Planner reminder',
                     meta,
                     items: buildToastItems(items, todayKey),
-                    duration: 8000
+                    duration: 8000,
+                    playSound: false
                 });
             }
 
@@ -5280,7 +5287,8 @@ function initNavbarDateTime() {
                     label: `${item.title} • ${item.price}`,
                     meta: item.location
                 })),
-                duration: 9000
+                duration: 9000,
+                playSound: false
             });
 
             if (settings.desktop) {
@@ -5828,6 +5836,7 @@ function initNavbarDateTime() {
 
         const listingObserver = new MutationObserver(mutations => {
             const newCards = [];
+            const knownCards = new Set(cards);
 
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
@@ -5835,12 +5844,14 @@ function initNavbarDateTime() {
                         return;
                     }
 
-                    if (node.classList.contains('mls-property-card')) {
+                    if (node.classList.contains('mls-property-card') && !knownCards.has(node)) {
                         newCards.push(node);
                     }
 
                     node.querySelectorAll?.('.mls-property-card').forEach(card => {
-                        newCards.push(card);
+                        if (!knownCards.has(card)) {
+                            newCards.push(card);
+                        }
                     });
                 });
             });

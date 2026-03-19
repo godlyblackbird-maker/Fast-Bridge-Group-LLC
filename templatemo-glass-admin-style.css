@@ -736,7 +736,7 @@
         url("Themes/Wallpaper%20STARLIGHT.jpg") no-repeat center center;
     background-size: cover;
     opacity: 0.42;
-    filter: blur(1.6px) saturate(1.06) contrast(1.08);
+    filter: blur(0.35px) saturate(1.04) contrast(1.06);
     pointer-events: none;
     z-index: -1;
 }
@@ -744,15 +744,16 @@
 [data-theme="space"] body::after {
     content: '';
     position: fixed;
-    right: 18px;
-    top: 16px;
-    width: 420px;
-    height: 250px;
+    right: -34px;
+    top: -42px;
+    width: 560px;
+    height: 560px;
     background:
-        radial-gradient(circle at 20% 30%, rgba(123, 149, 255, 0.18), transparent 40%),
-        radial-gradient(circle at 70% 26%, rgba(112, 230, 255, 0.16), transparent 36%),
-        radial-gradient(circle at 52% 76%, rgba(164, 92, 255, 0.14), transparent 44%);
-    filter: blur(10px);
+        radial-gradient(circle at 48% 48%, rgba(170, 197, 255, 0.18), transparent 34%),
+        url("png photos/GLOWING MOON.png") no-repeat center;
+    background-size: 100% 100%, contain;
+    opacity: 0.94;
+    filter: drop-shadow(0 0 30px rgba(150, 193, 255, 0.36)) drop-shadow(0 0 72px rgba(112, 230, 255, 0.18));
     pointer-events: none;
     z-index: -1;
 }
@@ -3059,6 +3060,7 @@ a {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
+    align-items: stretch;
 }
 
 .outreach-workspace-grid {
@@ -3123,6 +3125,11 @@ a {
 .outreach-workspace-grid .widget-card {
     padding: 16px;
     border-radius: 14px;
+}
+
+.bottom-grid .calendar-widget,
+.bottom-grid .chatgpt-widget {
+    min-height: clamp(520px, 62vh, 680px);
 }
 
 .bottom-grid .widget-card .card-header,
@@ -4561,8 +4568,8 @@ a {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    height: clamp(480px, 58vh, 640px);
-    max-height: min(640px, calc(100vh - 150px));
+    height: 100%;
+    max-height: min(680px, calc(100vh - 140px));
     min-height: 0;
     overflow: hidden;
     border: 1px solid rgba(var(--accent-rgb), 0.18);
@@ -4687,7 +4694,7 @@ a {
 .chatgpt-chat {
     position: relative;
     flex: 1 1 auto;
-    min-height: 320px;
+    min-height: 390px;
     max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
@@ -7277,8 +7284,13 @@ a {
     }
 
     .chatgpt-widget {
-        height: clamp(360px, 58vh, 480px);
+        min-height: clamp(420px, 58vh, 560px);
+        height: 100%;
         max-height: calc(100vh - 140px);
+    }
+
+    .chatgpt-chat {
+        min-height: 320px;
     }
     
     .navbar {

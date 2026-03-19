@@ -543,6 +543,9 @@
             border-radius: 16px;
             text-decoration: none;
             font-weight: 700;
+            transform-style: preserve-3d;
+            will-change: transform;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
         }
 
         .primary-cta {
@@ -1404,6 +1407,7 @@
             const form = document.getElementById('access-request-form');
             const feedback = document.getElementById('access-request-feedback');
             const submitButton = document.getElementById('submit-access-request');
+            const swayAccessButton = document.getElementById('open-access-request');
             const swayCards = Array.from(document.querySelectorAll('#platform .section-card'));
             const swayOpsItems = Array.from(document.querySelectorAll('.ops-item'));
 
@@ -1553,6 +1557,24 @@
                     item.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
                 });
             });
+
+            if (swayAccessButton) {
+                swayAccessButton.addEventListener('mousemove', (event) => {
+                    const rect = swayAccessButton.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = (y - centerY) / 26;
+                    const rotateY = (centerX - x) / 26;
+
+                    swayAccessButton.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(8px)`;
+                });
+
+                swayAccessButton.addEventListener('mouseleave', () => {
+                    swayAccessButton.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+                });
+            }
 
             window.addEventListener('storage', applyStoredTheme);
             applyStoredTheme();
