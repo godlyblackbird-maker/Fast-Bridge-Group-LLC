@@ -2938,6 +2938,7 @@ a {
 
 .card-actions {
     display: flex;
+    align-items: center;
     gap: 8px;
 }
 
@@ -3821,6 +3822,25 @@ a {
     margin-top: 8px;
 }
 
+.offer-email-send-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.offer-email-send-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.offer-email-send-btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
 .offer-email-card {
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.03);
@@ -3964,6 +3984,47 @@ a {
     min-width: 120px;
 }
 
+.offer-email-color-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.18);
+    color: var(--text-secondary);
+}
+
+.offer-email-color-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.offer-email-text-color {
+    width: 36px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.offer-email-text-color::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.offer-email-text-color::-webkit-color-swatch {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+}
+
+.offer-email-text-color::-moz-color-swatch {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+}
+
 .offer-toolbar-btn {
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(15, 23, 42, 0.18);
@@ -4017,6 +4078,166 @@ a {
     white-space: pre-line;
 }
 
+.offer-email-attach-box {
+    margin-top: 18px;
+    padding: 18px 16px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.12), transparent 38%),
+        linear-gradient(160deg, rgba(15, 23, 42, 0.2), rgba(255, 255, 255, 0.04));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    display: grid;
+    gap: 14px;
+}
+
+.offer-attach-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.offer-attach-kicker {
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(var(--accent-light-rgb));
+}
+
+.offer-attach-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.offer-attach-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.offer-attach-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.offer-docs-stage {
+    min-height: 92px;
+}
+
+.offer-docs-empty {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.16);
+}
+
+.offer-docs-empty-icon {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: rgba(var(--accent-rgb), 0.14);
+    color: rgb(var(--accent-light-rgb));
+}
+
+.offer-docs-empty-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.offer-docs-empty-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.offer-docs-empty-copy strong {
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.offer-docs-empty-copy p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.offer-attach-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.offer-doc-launch-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-start;
+    min-height: 64px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.18);
+    border-color: rgba(255, 255, 255, 0.14);
+    text-align: left;
+}
+
+.offer-doc-launch-btn:hover {
+    transform: translateY(-1px);
+}
+
+.offer-doc-launch-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(var(--accent-rgb), 0.14);
+    color: rgb(var(--accent-light-rgb));
+}
+
+.offer-doc-launch-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.offer-doc-launch-copy {
+    display: grid;
+    gap: 3px;
+}
+
+.offer-doc-launch-copy strong {
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.offer-doc-launch-copy small {
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
 [data-theme="light"] .offer-doc-item,
 [data-theme="light"] .offer-doc-action-btn {
     border-color: rgba(15, 23, 42, 0.12);
@@ -4030,15 +4251,39 @@ a {
 }
 
 [data-theme="light"] .offer-email-card,
-[data-theme="light"] .offer-email-doc-summary {
+[data-theme="light"] .offer-email-doc-summary,
+[data-theme="light"] .offer-email-attach-box,
+[data-theme="light"] .offer-docs-empty {
     border-color: rgba(15, 23, 42, 0.12);
     background: rgba(255, 255, 255, 0.56);
 }
 
 [data-theme="light"] .offer-email-toggle-row,
-[data-theme="light"] .offer-toolbar-btn {
+[data-theme="light"] .offer-toolbar-btn,
+[data-theme="light"] .offer-doc-launch-btn,
+[data-theme="light"] .offer-attach-badge {
     border-color: rgba(15, 23, 42, 0.12);
     background: rgba(255, 255, 255, 0.62);
+}
+
+[data-theme="light"] .offer-doc-launch-copy small,
+[data-theme="light"] .offer-docs-empty-copy p,
+[data-theme="light"] .offer-attach-badge {
+    color: rgba(15, 23, 42, 0.66);
+}
+
+[data-theme="light"] .contracts-intro-banner,
+[data-theme="light"] .contracts-agreement-shell,
+[data-theme="light"] .contracts-clause-card,
+[data-theme="light"] .contracts-signature-card,
+[data-theme="light"] .contracts-responsibility-note {
+    border-color: rgba(15, 23, 42, 0.12);
+    background: rgba(255, 255, 255, 0.62);
+}
+
+[data-theme="light"] .contracts-clause-card-strong {
+    border-color: rgba(239, 68, 68, 0.24);
+    background: linear-gradient(145deg, rgba(254, 242, 242, 0.95), rgba(255, 255, 255, 0.68));
 }
 
 [data-theme="light"] .offer-seller-comp-check {
@@ -4060,7 +4305,15 @@ a {
 [data-theme="beach"] .offer-seller-comp-check,
 [data-theme="beach"] .offer-doc-item p,
 [data-theme="beach"] .offer-docs-note,
-[data-theme="beach"] .offer-email-doc-summary {
+[data-theme="beach"] .offer-email-doc-summary,
+[data-theme="beach"] .offer-docs-empty-copy p,
+[data-theme="beach"] .offer-doc-launch-copy small,
+[data-theme="beach"] .offer-attach-badge,
+[data-theme="beach"] .contracts-intro-banner p,
+[data-theme="beach"] .contracts-agreement-header p,
+[data-theme="beach"] .contracts-clause-card p,
+[data-theme="beach"] .contracts-responsibility-note,
+[data-theme="beach"] .contracts-signature-header p {
     color: rgba(8, 47, 73, 0.84);
 }
 
@@ -4105,14 +4358,28 @@ a {
 [data-theme="beach"] .offer-docs-box,
 [data-theme="beach"] .offer-email-card,
 [data-theme="beach"] .offer-email-doc-summary,
+[data-theme="beach"] .offer-email-attach-box,
 [data-theme="beach"] .offer-seller-comp-check,
 [data-theme="beach"] .offer-seller-comp-box,
 [data-theme="beach"] .offer-doc-item,
 [data-theme="beach"] .offer-email-toggle-row,
 [data-theme="beach"] .offer-toolbar-btn,
-[data-theme="beach"] .offer-doc-action-btn {
+[data-theme="beach"] .offer-doc-action-btn,
+[data-theme="beach"] .offer-doc-launch-btn,
+[data-theme="beach"] .offer-docs-empty,
+[data-theme="beach"] .offer-attach-badge,
+[data-theme="beach"] .contracts-intro-banner,
+[data-theme="beach"] .contracts-agreement-shell,
+[data-theme="beach"] .contracts-clause-card,
+[data-theme="beach"] .contracts-signature-card,
+[data-theme="beach"] .contracts-responsibility-note {
     border-color: rgba(14, 116, 144, 0.3);
     background: rgba(239, 246, 255, 0.58);
+}
+
+[data-theme="beach"] .contracts-clause-card-strong {
+    border-color: rgba(220, 38, 38, 0.22);
+    background: linear-gradient(145deg, rgba(254, 242, 242, 0.88), rgba(239, 246, 255, 0.62));
 }
 
 [data-theme="beach"] .offer-doc-chip {
@@ -4127,6 +4394,11 @@ a {
         grid-template-columns: 1fr;
     }
 
+    .contracts-meta-grid,
+    .contracts-signature-grid {
+        grid-template-columns: 1fr;
+    }
+
     .offer-email-span-2 {
         grid-column: span 1;
     }
@@ -4138,6 +4410,22 @@ a {
     .offer-email-ecard-toggle {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .offer-attach-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .offer-docs-empty {
+        align-items: flex-start;
+    }
+
+    .offer-email-send-btn {
+        margin-left: 0;
+    }
+
+    .contracts-clause-card {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -4720,6 +5008,15 @@ a {
 .calendar-nav {
     display: flex;
     gap: 8px;
+}
+
+.calendar-header .card-actions {
+    margin-left: auto;
+    flex-wrap: nowrap;
+}
+
+.calendar-header .widget-controls {
+    margin-left: 0;
 }
 
 .calendar-nav-btn {
@@ -7499,6 +7796,165 @@ a {
     display: flex;
     gap: 12px;
     margin-top: 24px;
+}
+
+.contracts-widget {
+    gap: 16px;
+}
+
+.contracts-intro-banner {
+    padding: 16px 18px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(145deg, rgba(var(--accent-rgb), 0.14), rgba(255, 255, 255, 0.04));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.contracts-intro-kicker {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(var(--accent-light-rgb));
+}
+
+.contracts-intro-banner p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.65;
+}
+
+.contracts-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.contracts-agreement-shell {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+}
+
+.contracts-agreement-header {
+    display: grid;
+    gap: 8px;
+}
+
+.contracts-agreement-type {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--accent-light-rgb));
+}
+
+.contracts-agreement-header h3,
+.contracts-signature-header h3 {
+    margin: 0;
+    font-size: 24px;
+    color: var(--text-primary);
+}
+
+.contracts-agreement-header p,
+.contracts-signature-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.65;
+}
+
+.contracts-clause-list {
+    display: grid;
+    gap: 12px;
+}
+
+.contracts-clause-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.contracts-clause-card-strong {
+    border-color: rgba(248, 113, 113, 0.28);
+    background: linear-gradient(145deg, rgba(127, 29, 29, 0.18), rgba(255, 255, 255, 0.03));
+}
+
+.contracts-clause-number {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(var(--accent-rgb), 0.14);
+    color: rgb(var(--accent-light-rgb));
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.contracts-clause-card h4,
+.contracts-signature-card h4 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.contracts-clause-card p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+.contracts-responsibility-note {
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    background: rgba(15, 23, 42, 0.18);
+    color: var(--text-secondary);
+    line-height: 1.65;
+}
+
+.contracts-responsibility-note strong {
+    color: var(--text-primary);
+}
+
+.contracts-signature-panel {
+    display: grid;
+    gap: 14px;
+}
+
+.contracts-signature-header {
+    display: grid;
+    gap: 6px;
+}
+
+.contracts-signature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.contracts-signature-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 /* Settings Tab Content */

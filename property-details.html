@@ -912,6 +912,10 @@
                                                 <option value="5">18 pt</option>
                                                 <option value="6">24 pt</option>
                                             </select>
+                                            <label class="offer-email-color-control" for="offer-email-text-color" title="Text color">
+                                                <span class="offer-email-color-label">Color</span>
+                                                <input id="offer-email-text-color" class="offer-email-text-color" type="color" value="#111827" aria-label="Email text color">
+                                            </label>
                                             <button type="button" class="offer-toolbar-btn" data-command="bold"><strong>B</strong></button>
                                             <button type="button" class="offer-toolbar-btn" data-command="italic"><em>I</em></button>
                                             <button type="button" class="offer-toolbar-btn" data-command="underline"><u>U</u></button>
@@ -924,24 +928,104 @@
                                 <div id="offer-email-doc-summary" class="offer-email-doc-summary">No offer documents attached yet.</div>
                                 <p class="offer-docs-note" id="offer-email-note">Uploaded files in the Offer Documents section below will be sent automatically with Send To Agent. Browser-based email drafts still cannot auto-attach local files. Send To Agent can also embed the selected E-card JPG inline.</p>
 
-                                <div class="offer-email-attach-box" style="margin-top:18px;padding:16px 14px 14px 14px;border:1px solid #e5e7eb;border-radius:10px;background:rgba(0,0,0,0.03);">
-                                    <div style="font-weight:600;font-size:15px;margin-bottom:6px;">Offer Documents</div>
-                                    <div id="offer-docs-list">
-                                        <p class="outreach-empty">No documents attached yet.</p>
+                                <div class="offer-email-attach-box">
+                                    <div class="offer-attach-header">
+                                        <div>
+                                            <p class="offer-attach-kicker">Document Workspace</p>
+                                            <div class="offer-attach-title-row">
+                                                <h4 class="offer-attach-title">Offer Documents</h4>
+                                                <span class="offer-attach-badge">Bundle links, files, and templates</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="offer-docs-list" class="offer-docs-stage">
+                                        <div class="offer-docs-empty">
+                                            <div class="offer-docs-empty-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+                                                    <path d="M14 3v5h5"></path>
+                                                    <path d="M9 13h6"></path>
+                                                    <path d="M9 17h4"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="offer-docs-empty-copy">
+                                                <strong>No documents attached yet.</strong>
+                                                <p>Start building this offer package with a link, upload, PDF template, or Google Doc.</p>
+                                            </div>
+                                        </div>
                                     </div>
                                     <p class="offer-docs-note" id="offer-docs-note">Select an entity first, then use Link, Upload, PDF Template, or Google Doc.</p>
-                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                                        <button type="button" class="card-btn" id="offer-link-document-btn">Link Document</button>
-                                        <button type="button" class="card-btn" id="offer-upload-files-btn">Upload Files</button>
-                                        <button type="button" class="card-btn" id="offer-pdf-template-btn">PDF Template</button>
-                                        <button type="button" class="card-btn" id="offer-google-doc-btn">Google Doc Link</button>
+                                    <div class="offer-attach-actions">
+                                        <button type="button" class="card-btn offer-doc-launch-btn" id="offer-link-document-btn">
+                                            <span class="offer-doc-launch-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10.9 5.02"></path>
+                                                    <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14.1 18"></path>
+                                                </svg>
+                                            </span>
+                                            <span class="offer-doc-launch-copy">
+                                                <strong>Link Document</strong>
+                                                <small>Attach an external URL</small>
+                                            </span>
+                                        </button>
+                                        <button type="button" class="card-btn offer-doc-launch-btn" id="offer-upload-files-btn">
+                                            <span class="offer-doc-launch-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M12 16V4"></path>
+                                                    <path d="M7 9l5-5 5 5"></path>
+                                                    <path d="M5 20h14"></path>
+                                                </svg>
+                                            </span>
+                                            <span class="offer-doc-launch-copy">
+                                                <strong>Upload Files</strong>
+                                                <small>Add PDFs, docs, or images</small>
+                                            </span>
+                                        </button>
+                                        <button type="button" class="card-btn offer-doc-launch-btn" id="offer-pdf-template-btn">
+                                            <span class="offer-doc-launch-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+                                                    <path d="M14 3v5h5"></path>
+                                                    <path d="M9 14h6"></path>
+                                                    <path d="M9 18h6"></path>
+                                                    <path d="M9 10h2"></path>
+                                                </svg>
+                                            </span>
+                                            <span class="offer-doc-launch-copy">
+                                                <strong>PDF Template</strong>
+                                                <small>Generate a quick offer form</small>
+                                            </span>
+                                        </button>
+                                        <button type="button" class="card-btn offer-doc-launch-btn" id="offer-google-doc-btn">
+                                            <span class="offer-doc-launch-icon" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+                                                    <path d="M14 3v5h5"></path>
+                                                    <path d="M9 10h6"></path>
+                                                    <path d="M9 14h6"></path>
+                                                    <path d="M9 18h3"></path>
+                                                </svg>
+                                            </span>
+                                            <span class="offer-doc-launch-copy">
+                                                <strong>Google Doc Link</strong>
+                                                <small>Save a shared docs.google.com file</small>
+                                            </span>
+                                        </button>
                                     </div>
                                     <input id="offer-upload-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.txt">
                                 </div>
                                 <div class="offer-docs-actions">
                                     <button type="button" class="card-btn" id="offer-email-copy-subject-btn">Copy Subject</button>
                                     <button type="button" class="card-btn" id="offer-email-copy-body-btn">Copy Body</button>
-                                    <button type="button" class="card-btn" id="offer-email-send-agent-btn">Send To Agent</button>
+                                    <button type="button" class="card-btn offer-email-send-btn" id="offer-email-send-agent-btn">
+                                        <span class="offer-email-send-btn-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M22 2L11 13"></path>
+                                                <path d="M22 2L15 22l-4-9-9-4 20-7z"></path>
+                                            </svg>
+                                        </span>
+                                        <span>Send To Agent</span>
+                                    </button>
                                     <button type="button" class="card-btn active" id="offer-email-open-btn">Open Email Draft</button>
                                 </div>
                             </div>

@@ -625,6 +625,18 @@ function normalizeAdminECardMatchValue(value) {
     .trim();
 }
 
+function getAdminECardOwnerName(folderName) {
+  return String(folderName || '')
+    .replace(/\(admin\)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function formatAdminECardLabel(ownerName) {
+  const normalizedOwnerName = String(ownerName || '').trim();
+  return normalizedOwnerName ? `${normalizedOwnerName}'s E-Card` : 'E-Card';
+}
+
 const ADMIN_ECARD_ROOT = path.resolve(__dirname, 'USERS');
 
 function listAdminECardFiles() {
@@ -657,8 +669,12 @@ function listAdminECardFiles() {
 
       const selectedFile = files[0];
       const relativePath = `USERS/${folderName}/${selectedFile}`.replace(/\\/g, '/');
+      const ownerName = getAdminECardOwnerName(folderName);
       return {
         folderName,
+        ownerName,
+        label: formatAdminECardLabel(ownerName),
+        fileName: selectedFile,
         relativePath,
         normalizedFolderName: normalizeAdminECardMatchValue(folderName),
         normalizedFileName: normalizeAdminECardMatchValue(selectedFile)
@@ -1379,6 +1395,22 @@ app.get('/api/investor-attachments', (req, res) => {
   } catch (error) {
     console.error('Failed to list investor attachments:', error);
     return res.status(500).json({ error: 'Failed to load investor attachment packages.' });
+  }
+});
+
+app.get('/api/admin-ecards', (req, res) => {
+  try {
+    const ecards = listAdminECardFiles().map((entry) => ({
+      folderName: entry.folderName,
+      ownerName: entry.ownerName,
+      label: entry.label,
+      fileName: entry.fileName,
+      relativePath: entry.relativePath
+    }));
+    return res.json({ ecards });
+  } catch (error) {
+    console.error('Failed to list admin E-cards:', error);
+    return res.status(500).json({ error: 'Failed to load E-card folders.' });
   }
 });
 

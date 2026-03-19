@@ -310,14 +310,22 @@
         html[data-theme='sunset'] body::before {
             content: '';
             position: fixed;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             border-radius: 0;
             background:
                 linear-gradient(180deg, rgba(67, 23, 65, 0.5), rgba(240, 138, 93, 0.18)),
                 url("Themes/Wallpaper%20SUNSET.jpg") no-repeat center center;
             background-size: cover;
-            opacity: 0.34;
-            filter: saturate(0.98) contrast(1.02);
+            background-position: center center;
+            background-repeat: no-repeat;
+            opacity: 0.36;
+            filter: blur(1.8px) saturate(1.08) contrast(1.04);
+            pointer-events: none;
         }
 
         html[data-theme='sunset'] body::after {
@@ -1329,8 +1337,15 @@
             }
 
             html[data-theme='sunset'] body::before {
-                opacity: 0.4;
-                background-position: 62% center;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                opacity: 0.38;
+                background-position: center center;
+                background-size: cover;
             }
 
             .footer-note {

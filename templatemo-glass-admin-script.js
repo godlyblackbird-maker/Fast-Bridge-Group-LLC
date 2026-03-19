@@ -2700,16 +2700,28 @@ function initNavbarDateTime() {
     // ============================================
     // Widget Controls
     // ============================================
+    function getWidgetStateStorageKey() {
+        const baseKey = typeof WIDGET_STATE_KEY === 'string' && WIDGET_STATE_KEY
+            ? WIDGET_STATE_KEY
+            : 'dashboardWidgetState';
+        const pageKey = String(window.location.pathname || 'global')
+            .replace(/^\/+/, '')
+            .replace(/[^a-z0-9]+/gi, '-')
+            .replace(/^-+|-+$/g, '')
+            || 'home';
+        return `${baseKey}:${pageKey}`;
+    }
+
     function getWidgetState() {
         try {
-            return JSON.parse(localStorage.getItem(WIDGET_STATE_KEY) || '{}');
+            return JSON.parse(localStorage.getItem(getWidgetStateStorageKey()) || '{}');
         } catch (error) {
             return {};
         }
     }
 
     function saveWidgetState(state) {
-        localStorage.setItem(WIDGET_STATE_KEY, JSON.stringify(state));
+        localStorage.setItem(getWidgetStateStorageKey(), JSON.stringify(state));
     }
 
     function ensureWidgetDock() {
@@ -2841,11 +2853,18 @@ function initNavbarDateTime() {
 
             widget.dataset.widgetTitle = title;
 
-            let actionCluster = header.querySelector('.card-actions, .calendar-nav');
+            let actionCluster = header.querySelector('.card-actions');
             if (!actionCluster) {
                 actionCluster = document.createElement('div');
                 actionCluster.className = 'card-actions';
-                header.appendChild(actionCluster);
+
+                const existingCalendarNav = header.querySelector('.calendar-nav');
+                if (existingCalendarNav) {
+                    header.appendChild(actionCluster);
+                    actionCluster.appendChild(existingCalendarNav);
+                } else {
+                    header.appendChild(actionCluster);
+                }
             }
 
             let controls = actionCluster.querySelector('.widget-controls');
@@ -8123,6 +8142,25 @@ function initNavbarDateTime() {
                 return button;
             }
 
+            function renderEmptyDocumentsState() {
+                docsList.innerHTML = `
+                    <div class="offer-docs-empty">
+                        <div class="offer-docs-empty-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+                                <path d="M14 3v5h5"></path>
+                                <path d="M9 13h6"></path>
+                                <path d="M9 17h4"></path>
+                            </svg>
+                        </div>
+                        <div class="offer-docs-empty-copy">
+                            <strong>No documents attached yet.</strong>
+                            <p>Start building this offer package with a link, upload, PDF template, or Google Doc.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
             function requireEntity() {
                 if (entitySelect.value) {
                     return entitySelect.value;
@@ -8189,7 +8227,7 @@ function initNavbarDateTime() {
                 docsList.innerHTML = '';
 
                 if (documents.length === 0) {
-                    docsList.innerHTML = '<p class="outreach-empty">No documents attached yet.</p>';
+                    renderEmptyDocumentsState();
                     return;
                 }
 
@@ -8500,6 +8538,117 @@ function initNavbarDateTime() {
                 return;
             }
 
+            const EMAIL_GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Bitter:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=Fira+Sans:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Karla:wght@400;500;600;700&family=Lato:wght@400;700&family=Libre+Baskerville:wght@400;700&family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&family=Nunito+Sans:wght@400;600;700;800&family=Open+Sans:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=PT+Sans:wght@400;700&family=Quicksand:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Rubik:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap';
+            const EMAIL_FONT_OPTIONS = [
+                { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+                { label: 'Outfit', value: "'Outfit', Arial, sans-serif" },
+                { label: 'DM Sans', value: "'DM Sans', Arial, sans-serif" },
+                { label: 'Manrope', value: "'Manrope', Arial, sans-serif" },
+                { label: 'Open Sans', value: "'Open Sans', Arial, sans-serif" },
+                { label: 'Roboto', value: "'Roboto', Arial, sans-serif" },
+                { label: 'Lato', value: "'Lato', Arial, sans-serif" },
+                { label: 'Source Sans 3', value: "'Source Sans 3', Arial, sans-serif" },
+                { label: 'Nunito Sans', value: "'Nunito Sans', Arial, sans-serif" },
+                { label: 'Work Sans', value: "'Work Sans', Arial, sans-serif" },
+                { label: 'IBM Plex Sans', value: "'IBM Plex Sans', Arial, sans-serif" },
+                { label: 'Karla', value: "'Karla', Arial, sans-serif" },
+                { label: 'Fira Sans', value: "'Fira Sans', Arial, sans-serif" },
+                { label: 'Montserrat', value: "'Montserrat', Arial, sans-serif" },
+                { label: 'Poppins', value: "'Poppins', Arial, sans-serif" },
+                { label: 'Raleway', value: "'Raleway', Arial, sans-serif" },
+                { label: 'Rubik', value: "'Rubik', Arial, sans-serif" },
+                { label: 'Quicksand', value: "'Quicksand', Arial, sans-serif" },
+                { label: 'Noto Sans', value: "'Noto Sans', Arial, sans-serif" },
+                { label: 'PT Sans', value: "'PT Sans', Arial, sans-serif" },
+                { label: 'Georgia', value: 'Georgia, Times New Roman, serif' },
+                { label: 'Merriweather', value: "'Merriweather', Georgia, serif" },
+                { label: 'Libre Baskerville', value: "'Libre Baskerville', Georgia, serif" },
+                { label: 'Playfair Display', value: "'Playfair Display', Georgia, serif" },
+                { label: 'Bitter', value: "'Bitter', Georgia, serif" }
+            ];
+            const DEFAULT_EMAIL_FONT_FAMILY = 'Arial, Helvetica, sans-serif';
+            const DEFAULT_EMAIL_TEXT_COLOR = '#111827';
+            const LEGACY_EMAIL_FONT_MAP = {
+                'Arial': 'Arial, Helvetica, sans-serif',
+                'Georgia': 'Georgia, Times New Roman, serif',
+                'Tahoma': 'Arial, Helvetica, sans-serif',
+                'Trebuchet MS': "'DM Sans', Arial, sans-serif",
+                'Verdana': "'Open Sans', Arial, sans-serif"
+            };
+
+            function ensureEmailGoogleFontsLoaded() {
+                const head = document.head || document.getElementsByTagName('head')[0];
+                if (!head) {
+                    return;
+                }
+
+                if (!document.getElementById('offer-email-fonts-preconnect')) {
+                    const preconnect = document.createElement('link');
+                    preconnect.id = 'offer-email-fonts-preconnect';
+                    preconnect.rel = 'preconnect';
+                    preconnect.href = 'https://fonts.googleapis.com';
+                    head.appendChild(preconnect);
+                }
+
+                if (!document.getElementById('offer-email-fonts-gstatic')) {
+                    const preconnectGstatic = document.createElement('link');
+                    preconnectGstatic.id = 'offer-email-fonts-gstatic';
+                    preconnectGstatic.rel = 'preconnect';
+                    preconnectGstatic.href = 'https://fonts.gstatic.com';
+                    preconnectGstatic.crossOrigin = 'anonymous';
+                    head.appendChild(preconnectGstatic);
+                }
+
+                if (!document.getElementById('offer-email-fonts-stylesheet')) {
+                    const stylesheet = document.createElement('link');
+                    stylesheet.id = 'offer-email-fonts-stylesheet';
+                    stylesheet.rel = 'stylesheet';
+                    stylesheet.href = EMAIL_GOOGLE_FONTS_URL;
+                    head.appendChild(stylesheet);
+                }
+            }
+
+            function normalizeEmailFontFamily(value) {
+                const rawValue = String(value || '').trim();
+                const mappedValue = LEGACY_EMAIL_FONT_MAP[rawValue] || rawValue;
+                return EMAIL_FONT_OPTIONS.some((option) => option.value === mappedValue)
+                    ? mappedValue
+                    : DEFAULT_EMAIL_FONT_FAMILY;
+            }
+
+            function populateEmailFontFamilyOptions(selectEl) {
+                if (!selectEl) {
+                    return;
+                }
+
+                selectEl.innerHTML = '';
+                EMAIL_FONT_OPTIONS.forEach((option) => {
+                    const optionEl = document.createElement('option');
+                    optionEl.value = option.value;
+                    optionEl.textContent = option.label;
+                    optionEl.style.fontFamily = option.value;
+                    selectEl.appendChild(optionEl);
+                });
+            }
+
+            function getSelectedEmailFontFamily() {
+                return normalizeEmailFontFamily((document.getElementById('offer-email-font-family') || {}).value || savedDraft.fontFamily || DEFAULT_EMAIL_FONT_FAMILY);
+            }
+
+            function getSelectedEmailFontSizeValue() {
+                const selectedFontSize = String((document.getElementById('offer-email-font-size') || {}).value || savedDraft.fontSize || '3').trim();
+                return /^[1-7]$/.test(selectedFontSize) ? selectedFontSize : '3';
+            }
+
+            function normalizeEmailTextColor(value) {
+                const rawValue = String(value || '').trim();
+                return /^#[0-9a-f]{6}$/i.test(rawValue) ? rawValue.toLowerCase() : DEFAULT_EMAIL_TEXT_COLOR;
+            }
+
+            function getSelectedEmailTextColor() {
+                return normalizeEmailTextColor((document.getElementById('offer-email-text-color') || {}).value || savedDraft.textColor || DEFAULT_EMAIL_TEXT_COLOR);
+            }
+
             const OFFER_EMAIL_LIBRARY = {
                 'initial-offer': {
                     label: 'Initial Offer',
@@ -8686,10 +8835,7 @@ function initNavbarDateTime() {
                 return option ? String(option.textContent || '').trim() : '';
             }
 
-            const AVAILABLE_ECARD_FILES = [
-                'USERS/Isaac Haro (ADMIN)/Updated Isaac Haro - E Card.jpg',
-                'USERS/Steve Medina (ADMIN)/Updated Steve Medina - E Card.jpg'
-            ];
+            let availableECardEntries = [];
 
             function normalizeECardMatchValue(value) {
                 return String(value || '')
@@ -8699,12 +8845,25 @@ function initNavbarDateTime() {
                     .trim();
             }
 
-            function isAllowedECardPath(value) {
+            function getAvailableECardEntry(value) {
                 const normalized = String(value || '').trim();
-                return AVAILABLE_ECARD_FILES.includes(normalized);
+                if (!normalized) {
+                    return null;
+                }
+
+                return availableECardEntries.find((entry) => String(entry.relativePath || '').trim() === normalized) || null;
+            }
+
+            function isAllowedECardPath(value) {
+                return Boolean(getAvailableECardEntry(value));
             }
 
             function getECardLabel(value) {
+                const entry = getAvailableECardEntry(value);
+                if (entry && entry.label) {
+                    return String(entry.label).trim();
+                }
+
                 return String(value || '')
                     .split('/')
                     .pop()
@@ -8719,15 +8878,38 @@ function initNavbarDateTime() {
 
                 const currentValue = String(ecardSelect.value || '').trim();
                 ecardSelect.innerHTML = '<option value="">Do not include E-card</option>';
-                AVAILABLE_ECARD_FILES.forEach((filePath) => {
+                availableECardEntries.forEach((entry) => {
                     const option = document.createElement('option');
-                    option.value = filePath;
-                    option.textContent = getECardLabel(filePath);
+                    option.value = entry.relativePath;
+                    option.textContent = entry.label || getECardLabel(entry.relativePath);
                     ecardSelect.appendChild(option);
                 });
 
                 if (isAllowedECardPath(currentValue)) {
                     ecardSelect.value = currentValue;
+                }
+            }
+
+            async function loadAvailableECardOptions(preferredValue = '') {
+                try {
+                    const response = await fetch('/api/admin-ecards');
+                    if (!response.ok) {
+                        throw new Error('Could not load E-card folders.');
+                    }
+
+                    const result = await response.json();
+                    availableECardEntries = Array.isArray(result?.ecards) ? result.ecards : [];
+                } catch (error) {
+                    availableECardEntries = [];
+                    emailNote.textContent = 'E-card folders could not be loaded right now. Send To Agent can still resolve your E-card from the USERS folder when available.';
+                }
+
+                populateECardOptions();
+
+                const selectedPath = isAllowedECardPath(preferredValue) ? String(preferredValue || '').trim() : '';
+                if (selectedPath) {
+                    ensureECardOption(selectedPath);
+                    ecardSelect.value = selectedPath;
                 }
             }
 
@@ -8739,19 +8921,27 @@ function initNavbarDateTime() {
                 }
 
                 const normalizedName = normalizeECardMatchValue(name);
-                return AVAILABLE_ECARD_FILES.find((filePath) => {
-                    const normalizedFileName = normalizeECardMatchValue(getECardLabel(filePath));
-                    return normalizedFileName.includes(normalizedName) || normalizedName.includes(normalizedFileName);
-                }) || '';
+                const match = availableECardEntries.find((entry) => {
+                    const normalizedOwnerName = normalizeECardMatchValue(entry.ownerName || '');
+                    const normalizedLabel = normalizeECardMatchValue(entry.label || '');
+                    const normalizedFileName = normalizeECardMatchValue(entry.fileName || getECardLabel(entry.relativePath));
+                    return normalizedOwnerName === normalizedName
+                        || normalizedOwnerName.includes(normalizedName)
+                        || normalizedName.includes(normalizedOwnerName)
+                        || normalizedLabel.includes(normalizedName)
+                        || normalizedFileName.includes(normalizedName);
+                });
+
+                return match ? match.relativePath : '';
             }
 
-            function getUserECardAttachmentName() {
-                const profile = getStoredUserProfile();
-                const name = String(profile.name || workspaceUser.name || '').trim();
-                if (!name) {
-                    return 'E-Card.jpg';
-                }
-                return `${name}.jpg`;
+            function getECardAttachmentName(value) {
+                const entry = getAvailableECardEntry(value);
+                const fallbackName = String(entry?.ownerName || getECardLabel(value) || 'E-Card').trim();
+                const extensionMatch = String(value || '').match(/(\.[a-z0-9]+)$/i);
+                const extension = extensionMatch ? extensionMatch[1].toLowerCase() : '.jpg';
+
+                return fallbackName ? `${fallbackName} E-Card${extension}` : `E-Card${extension}`;
             }
 
             function ensureECardOption(value) {
@@ -8815,8 +9005,9 @@ function initNavbarDateTime() {
                     body: (bodyInput.contentEditable === 'true' ? bodyInput.innerHTML : getBodyValue()),
                     subjectEdited: Boolean(subjectInput.dataset.userEdited === 'true'),
                     bodyEdited: Boolean(bodyInput.dataset.userEdited === 'true'),
-                    fontFamily: (document.getElementById('offer-email-font-family') || {}).value || 'Arial',
-                    fontSize: (document.getElementById('offer-email-font-size') || {}).value || '3'
+                    fontFamily: (document.getElementById('offer-email-font-family') || {}).value || DEFAULT_EMAIL_FONT_FAMILY,
+                    fontSize: (document.getElementById('offer-email-font-size') || {}).value || '3',
+                    textColor: getSelectedEmailTextColor()
                 };
                 localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
             }
@@ -8847,8 +9038,13 @@ function initNavbarDateTime() {
                     return '';
                 }
 
+                const fontFamily = getSelectedEmailFontFamily();
+                const fontSize = fontSizePtMap[getSelectedEmailFontSizeValue()] || '12pt';
+                const textColor = getSelectedEmailTextColor();
+
                 return `
-                    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.65; color: #111827;">
+                    <style type="text/css">@import url('${EMAIL_GOOGLE_FONTS_URL}');</style>
+                    <div style="font-family: ${fontFamily}; font-size: ${fontSize}; line-height: 1.65; color: ${textColor};">
                         ${bodyHtml}
                     </div>
                 `.trim();
@@ -9244,8 +9440,7 @@ function initNavbarDateTime() {
             }
 
             const senderProfile = getSenderProfile();
-            populateECardOptions();
-            const userECardPath = getUserECardJpgPath();
+            let userECardPath = '';
             senderNameInput.value = senderProfile.name;
             senderEmailInput.value = senderProfile.email;
             recipientNameInput.value = String(savedDraft.recipientName || agentRecord.name || '').trim();
@@ -9254,10 +9449,15 @@ function initNavbarDateTime() {
             includeTermsToggle.checked = Boolean(savedDraft.includeTerms);
             setBodyValue(savedDraft.body || '', { userEdited: Boolean(savedDraft.bodyEdited) });
             sendModeSelect.value = savedDraft.sendMode || 'mailto';
-            ecardSelect.value = isAllowedECardPath(savedDraft.ecard) ? String(savedDraft.ecard || '').trim() : '';
-            if (userECardPath) {
-                ensureECardOption(userECardPath);
-            }
+            loadAvailableECardOptions(String(savedDraft.ecard || '').trim()).finally(() => {
+                userECardPath = getUserECardJpgPath();
+                if (userECardPath) {
+                    ensureECardOption(userECardPath);
+                    if (!getSelectedECardPath() && isAllowedECardPath(String(savedDraft.ecard || '').trim())) {
+                        ecardSelect.value = String(savedDraft.ecard || '').trim();
+                    }
+                }
+            });
             if (ecardToggle) {
                 ecardToggle.checked = false;
             }
@@ -9378,6 +9578,7 @@ function initNavbarDateTime() {
                     const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
                     const attachments = await buildServerEmailAttachments();
                     const investorAttachmentPaths = getSelectedInvestorAttachmentPaths();
+                    const resolvedECardPath = ecardToggle && ecardToggle.checked ? (getSelectedECardPath() || userECardPath || '') : '';
                     const response = await fetch('/api/send-agent-email', {
                         method: 'POST',
                         headers: {
@@ -9393,8 +9594,8 @@ function initNavbarDateTime() {
                             body,
                             htmlBody: buildServerEmailHtml(),
                             includeECard: Boolean(ecardToggle && ecardToggle.checked),
-                            ecardPath: ecardToggle && ecardToggle.checked ? (userECardPath || getSelectedECardPath() || '') : '',
-                            ecardAttachmentName: ecardToggle && ecardToggle.checked ? getUserECardAttachmentName() : '',
+                            ecardPath: resolvedECardPath,
+                            ecardAttachmentName: resolvedECardPath ? getECardAttachmentName(resolvedECardPath) : '',
                             attachments,
                             investorAttachmentPaths
                         })
@@ -9439,6 +9640,7 @@ function initNavbarDateTime() {
 
             // ── Toolbar wiring ────────────────────────────────────────────
             const toolbarEl = document.getElementById('offer-email-toolbar');
+            const textColorInputEl = document.getElementById('offer-email-text-color');
             if (toolbarEl) {
                 // B / I / U / Bullets / Clear — use mousedown to keep editor selection intact
                 toolbarEl.querySelectorAll('[data-command]').forEach(function (btn) {
@@ -9453,13 +9655,55 @@ function initNavbarDateTime() {
             const fontFamilySelectEl = document.getElementById('offer-email-font-family');
             const fontSizeSelectEl = document.getElementById('offer-email-font-size');
             const fontSizePtMap = { '1': '8pt', '2': '10pt', '3': '12pt', '4': '14pt', '5': '18pt', '6': '24pt', '7': '36pt' };
+            let savedBodySelectionRange = null;
+
+            function captureBodySelectionRange() {
+                const selection = window.getSelection ? window.getSelection() : null;
+                if (!selection || selection.rangeCount === 0) {
+                    return;
+                }
+
+                const range = selection.getRangeAt(0);
+                if (bodyInput.contains(range.commonAncestorContainer)) {
+                    savedBodySelectionRange = range.cloneRange();
+                }
+            }
+
+            function restoreBodySelectionRange() {
+                if (!savedBodySelectionRange || !window.getSelection) {
+                    return false;
+                }
+
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(savedBodySelectionRange);
+                return true;
+            }
+
+            function applyBodyTextColor(color) {
+                const normalizedColor = normalizeEmailTextColor(color);
+                bodyInput.style.color = normalizedColor;
+
+                if (typeof bodyInput.value === 'string') {
+                    return;
+                }
+
+                bodyInput.focus();
+                restoreBodySelectionRange();
+                document.execCommand('styleWithCSS', false, true);
+                document.execCommand('foreColor', false, normalizedColor);
+                captureBodySelectionRange();
+            }
+
+            ensureEmailGoogleFontsLoaded();
+            populateEmailFontFamilyOptions(fontFamilySelectEl);
 
             if (fontFamilySelectEl) {
-                const savedFF = savedDraft.fontFamily || 'Arial';
+                const savedFF = normalizeEmailFontFamily(savedDraft.fontFamily || DEFAULT_EMAIL_FONT_FAMILY);
                 fontFamilySelectEl.value = savedFF;
                 bodyInput.style.fontFamily = savedFF;
                 fontFamilySelectEl.addEventListener('change', function () {
-                    bodyInput.style.fontFamily = fontFamilySelectEl.value;
+                    bodyInput.style.fontFamily = getSelectedEmailFontFamily();
                     saveDraft();
                 });
             }
@@ -9473,6 +9717,28 @@ function initNavbarDateTime() {
                     saveDraft();
                 });
             }
+
+            if (textColorInputEl) {
+                const savedTextColor = normalizeEmailTextColor(savedDraft.textColor || DEFAULT_EMAIL_TEXT_COLOR);
+                textColorInputEl.value = savedTextColor;
+                bodyInput.style.color = savedTextColor;
+
+                textColorInputEl.addEventListener('click', captureBodySelectionRange);
+                textColorInputEl.addEventListener('input', function () {
+                    applyBodyTextColor(textColorInputEl.value);
+                    bodyInput.dataset.userEdited = 'true';
+                    saveDraft();
+                });
+                textColorInputEl.addEventListener('change', function () {
+                    applyBodyTextColor(textColorInputEl.value);
+                    bodyInput.dataset.userEdited = 'true';
+                    saveDraft();
+                });
+            }
+
+            bodyInput.addEventListener('mouseup', captureBodySelectionRange);
+            bodyInput.addEventListener('keyup', captureBodySelectionRange);
+            bodyInput.addEventListener('focus', captureBodySelectionRange);
 
             renderDocumentSummary();
 

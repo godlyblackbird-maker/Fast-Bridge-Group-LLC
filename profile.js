@@ -377,6 +377,17 @@
     }
   }
 
+  function restoreCurrentAvatarDisplay() {
+    const currentProfile = getResolvedProfileData();
+    updateSidebarProfile(currentProfile);
+    updateRemoveAvatarButtonState(currentProfile);
+  }
+
+  function handleAvatarSelectionCanceled() {
+    closeAvatarAdjuster(true);
+    restoreCurrentAvatarDisplay();
+  }
+
   function ensureAvatarAdjusterUI() {
     if (avatarAdjuster) {
       return;
@@ -459,7 +470,7 @@
 
     if (avatarCancelBtn) {
       avatarCancelBtn.addEventListener('click', function() {
-        closeAvatarAdjuster(true);
+        handleAvatarSelectionCanceled();
       });
     }
   }
@@ -495,7 +506,8 @@
 
   // Close profile modal
   function closeModal() {
-    closeAvatarAdjuster(false);
+    closeAvatarAdjuster(true);
+    restoreCurrentAvatarDisplay();
     profileModal.style.display = 'none';
     document.body.style.overflow = 'auto';
   }
@@ -1238,16 +1250,22 @@
   if (editAvatarBtn) {
     editAvatarBtn.addEventListener('click', function() {
       if (avatarInput) {
+        avatarInput.value = '';
         avatarInput.click();
       }
     });
   }
 
   if (avatarInput) {
+    avatarInput.addEventListener('cancel', function() {
+      handleAvatarSelectionCanceled();
+    });
+
     avatarInput.addEventListener('change', function(event) {
       const [file] = event.target.files || [];
 
       if (!file) {
+        handleAvatarSelectionCanceled();
         return;
       }
 
