@@ -10322,9 +10322,34 @@ function initNavbarDateTime() {
                 const grossPurchaseAdjustmentTotal = invDueDiligence + invAcquisitionFee + invCashForKeys;
                 const grossScopeAdjustmentTotal = grossSaleAdjustmentTotal + grossPurchaseAdjustmentTotal;
 
+                let targetProfitDollar = asNumber(targetDollarInput, 0);
+                let targetProfitPercent = asNumber(targetPercentInput, 0);
+                const baselineWithoutFinancing = listPrice + buySideCost + renovation + grossScopeAdjustmentTotal;
+
+                if (targetMode === 'percent') {
+                    targetProfitDollar = baselineWithoutFinancing * (targetProfitPercent / 100);
+                    targetDollarInput.value = targetProfitDollar.toFixed(0);
+                    formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
+                } else {
+                    targetProfitPercent = baselineWithoutFinancing > 0 ? (targetProfitDollar / baselineWithoutFinancing) * 100 : 0;
+                    targetPercentInput.value = targetProfitPercent.toFixed(2);
+                    formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
+                }
+
+                const preliminaryAutoOfferPrice = estimatedSalesPrice
+                    - sellSideCost
+                    - targetProfitDollar
+                    - grossScopeAdjustmentTotal
+                    - renovation
+                    - buySideCost
+                    - extraCosts;
+                const underwrittenOfferPrice = offerPriceMode === 'manual'
+                    ? asNumber(offerPriceInput, preliminaryAutoOfferPrice)
+                    : preliminaryAutoOfferPrice;
+
                 const financingAssumptions = getFinancingModeAssumptions(financingMode);
                 const loanArvCapAmount = rawArv * (loanToArvPct / 100);
-                const loanCostBase = offerPrice + renovation;
+                const loanCostBase = underwrittenOfferPrice + renovation;
                 let loanAmount = financingMode === 'cash' ? 0 : loanArvCapAmount;
                 if (financingAssumptions) {
                     const assumedArvCapAmount = rawArv * financingAssumptions.arvAdvanceRate;
@@ -10336,8 +10361,6 @@ function initNavbarDateTime() {
                 const totalFinancingCost = financingMode === 'cash' ? 0 : (originationAmount + interestCost);
 
                 const baselineForTarget = listPrice + buySideCost + renovation + grossScopeAdjustmentTotal + totalFinancingCost;
-                let targetProfitDollar = asNumber(targetDollarInput, 0);
-                let targetProfitPercent = asNumber(targetPercentInput, 0);
 
                 if (targetMode === 'percent') {
                     targetProfitDollar = baselineForTarget * (targetProfitPercent / 100);
