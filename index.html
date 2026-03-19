@@ -1175,12 +1175,30 @@
 
         .footer-note {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
+            flex-wrap: wrap;
             gap: 16px;
             padding: 0 0 28px;
             color: var(--footer-text);
             font-size: 13px;
+        }
+
+        .footer-note-copy {
+            display: grid;
+            gap: 8px;
+            max-width: 760px;
+        }
+
+        .footer-note-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            align-items: center;
+        }
+
+        .footer-note-separator {
+            color: color-mix(in srgb, var(--footer-text) 55%, transparent);
         }
 
         .footer-note a {
@@ -1479,7 +1497,26 @@
         </div>
 
         <footer class="footer-note">
-            <span>FAST BRIDGE GROUP is the modern real estate platform built for agents who want sharper systems and stronger results.</span>
+            <div class="footer-note-copy">
+                <span>FAST BRIDGE GROUP is the modern real estate platform built for agents who want sharper systems and stronger results.</span>
+                <div class="footer-note-links" aria-label="Legal and policy links">
+                    <a href="legal.html#mls-data-disclaimer">MLS Data Disclaimer</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal.html#idx-vow-disclaimer">IDX/VOW Disclaimer</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal.html#equal-housing">Equal Housing</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal.html#accuracy-liability">Accuracy &amp; Liability</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal.html#copyright">Copyright</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal.html#privacy-policy">Privacy Policy</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal.html#terms-of-use">Terms of Use</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal.html#broker-information">Broker Information</a>
+                </div>
+            </div>
             <a href="login.html">Go to login</a>
         </footer>
     </div>

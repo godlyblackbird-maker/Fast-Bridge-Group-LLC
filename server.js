@@ -625,12 +625,18 @@ function normalizeAdminECardMatchValue(value) {
     .trim();
 }
 
+const ADMIN_ECARD_ROOT = path.resolve(__dirname, 'USERS');
+
 function listAdminECardFiles() {
-  return fs.readdirSync(__dirname, { withFileTypes: true })
+  if (!fs.existsSync(ADMIN_ECARD_ROOT)) {
+    return [];
+  }
+
+  return fs.readdirSync(ADMIN_ECARD_ROOT, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && /\(admin\)$/i.test(entry.name))
     .map((entry) => {
       const folderName = entry.name;
-      const folderPath = path.join(__dirname, folderName);
+      const folderPath = path.join(ADMIN_ECARD_ROOT, folderName);
       const files = fs.readdirSync(folderPath, { withFileTypes: true })
         .filter((fileEntry) => fileEntry.isFile())
         .map((fileEntry) => fileEntry.name)
@@ -650,7 +656,7 @@ function listAdminECardFiles() {
       }
 
       const selectedFile = files[0];
-      const relativePath = `${folderName}/${selectedFile}`.replace(/\\/g, '/');
+      const relativePath = `USERS/${folderName}/${selectedFile}`.replace(/\\/g, '/');
       return {
         folderName,
         relativePath,

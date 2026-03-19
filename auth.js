@@ -107,6 +107,39 @@
     localStorage.removeItem('bypassProfile');
   }
 
+  function isAdminUser(userLike) {
+    return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'admin');
+  }
+
+  function isActiveBuyersPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/active-buyers.html' || normalizedPath.endsWith('/active-buyers.html');
+  }
+
+  function applyLockedActiveBuyersLink(link) {
+    if (!link || link.dataset.lockedActiveBuyers === 'true') {
+      return;
+    }
+
+    link.dataset.lockedActiveBuyers = 'true';
+    link.classList.remove('active');
+    link.classList.add('nav-link-locked');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', 'Active Buyers is restricted to administrators.');
+
+    if (!link.querySelector('.nav-lock-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-lock-badge';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+      link.appendChild(badge);
+    }
+
+    link.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
   async function syncAuthenticatedUser() {
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -202,8 +235,14 @@
 
     const activeUser = window.getCurrentUser ? window.getCurrentUser() : null;
     const normalizedPath = String(currentPath || '').toLowerCase();
+    if (isActiveBuyersPath(normalizedPath)) {
+      if (!isAdminUser(activeUser)) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+    }
     if (normalizedPath.endsWith('/admin-controls.html') || normalizedPath === '/admin-controls.html') {
-      if (!activeUser || String(activeUser.role || '').toLowerCase() !== 'admin') {
+      if (!isAdminUser(activeUser)) {
         window.location.href = '/dashboard.html';
       }
     }
@@ -215,10 +254,10 @@
     checkAuthentication();
 
     const activeUser = syncedUser || getCurrentUser();
+    const isAdmin = isAdminUser(activeUser);
 
     const adminLinks = document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]');
     adminLinks.forEach(link => {
-      const isAdmin = activeUser && String(activeUser.role || '').toLowerCase() === 'admin';
       const listItem = link.closest('.nav-item');
       if (!isAdmin) {
         if (listItem) {
@@ -226,6 +265,13 @@
         } else {
           link.remove();
         }
+      }
+    });
+
+    const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
+    activeBuyersLinks.forEach(link => {
+      if (!isAdmin) {
+        applyLockedActiveBuyersLink(link);
       }
     });
 

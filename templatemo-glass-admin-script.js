@@ -22,6 +22,16 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
     const PLANNER_DRAFT_KEY = 'plannerDraftByUser';
+    const LEGAL_FOOTER_LINKS = [
+        { id: 'mls-data-disclaimer', label: 'MLS Data Disclaimer' },
+        { id: 'idx-vow-disclaimer', label: 'IDX/VOW Disclaimer' },
+        { id: 'equal-housing', label: 'Equal Housing' },
+        { id: 'accuracy-liability', label: 'Accuracy & Liability' },
+        { id: 'copyright', label: 'Copyright' },
+        { id: 'privacy-policy', label: 'Privacy Policy' },
+        { id: 'terms-of-use', label: 'Terms of Use' },
+        { id: 'broker-information', label: 'Broker Information' }
+    ];
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -154,6 +164,47 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
         localStorage.setItem(SOUND_SETTINGS_KEY, JSON.stringify(store));
         window.dispatchEvent(new CustomEvent('dashboard-sound-settings-updated', { detail: next }));
+    }
+
+    function buildLegalFooterMarkup() {
+        const year = new Date().getFullYear();
+        const linksMarkup = LEGAL_FOOTER_LINKS.map((link) => {
+            return `<a class="site-legal-footer-link" href="legal.html#${link.id}">${link.label}</a>`;
+        }).join('<span class="site-legal-footer-separator" aria-hidden="true">|</span>');
+
+        return `
+            <div class="site-legal-footer-inner">
+                <div class="site-legal-footer-brand">FAST BRIDGE GROUP <span>${year}</span></div>
+                <nav class="site-legal-footer-links" aria-label="Legal and policy links">${linksMarkup}</nav>
+            </div>
+        `;
+    }
+
+    function getLegalFooterHost() {
+        return document.querySelector('.main-content')
+            || document.querySelector('.login-container')
+            || document.querySelector('.legal-page-main')
+            || document.querySelector('.page-shell')
+            || document.querySelector('.page-wrapper')
+            || document.querySelector('main')
+            || document.body;
+    }
+
+    function initSiteLegalFooter() {
+        if (document.querySelector('[data-site-legal-footer="true"]')) {
+            return;
+        }
+
+        const host = getLegalFooterHost();
+        if (!host) {
+            return;
+        }
+
+        const footer = document.createElement('footer');
+        footer.className = 'site-legal-footer';
+        footer.dataset.siteLegalFooter = 'true';
+        footer.innerHTML = buildLegalFooterMarkup();
+        host.appendChild(footer);
     }
 
     function showDashboardToast(type, title, message, options) {
@@ -8636,8 +8687,8 @@ function initNavbarDateTime() {
             }
 
             const AVAILABLE_ECARD_FILES = [
-                'Isaac Haro (ADMIN)/Updated Isaac Haro - E Card.jpg',
-                'Steve Medina (ADMIN)/Updated Steve Medina - E Card.jpg'
+                'USERS/Isaac Haro (ADMIN)/Updated Isaac Haro - E Card.jpg',
+                'USERS/Steve Medina (ADMIN)/Updated Steve Medina - E Card.jpg'
             ];
 
             function normalizeECardMatchValue(value) {
@@ -10165,6 +10216,7 @@ function initNavbarDateTime() {
     // Initialize All Functions
     // ============================================
     function init() {
+        initSiteLegalFooter();
         initAccentPreference();
         initMyAgentsAccessRules();
         initThemeToggle();

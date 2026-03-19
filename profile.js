@@ -184,6 +184,7 @@
           <div class="profile-avatar-large" id="profile-avatar-large">IH</div>
           <div class="profile-avatar-actions">
             <button id="edit-avatar-btn" class="avatar-btn" type="button">Change Image</button>
+            <button id="remove-avatar-btn" class="avatar-btn avatar-btn-secondary" type="button" disabled>Remove Image</button>
             <input id="profile-avatar-input" type="file" accept="image/*" class="avatar-file-input">
           </div>
         </div>
@@ -274,14 +275,29 @@
   const profileForm = document.getElementById('profile-form');
   const profileOverlay = document.querySelector('.profile-modal-overlay');
   const editAvatarBtn = document.getElementById('edit-avatar-btn');
+  let removeAvatarBtn = document.getElementById('remove-avatar-btn');
 
   let avatarInput = document.getElementById('profile-avatar-input');
   if (!avatarInput) {
     const avatarActions = document.querySelector('.profile-avatar-actions');
     if (avatarActions) {
+      if (!removeAvatarBtn) {
+        avatarActions.insertAdjacentHTML('beforeend', '<button id="remove-avatar-btn" class="avatar-btn avatar-btn-secondary" type="button" disabled>Remove Image</button>');
+        removeAvatarBtn = document.getElementById('remove-avatar-btn');
+      }
       avatarActions.insertAdjacentHTML('beforeend', '<input id="profile-avatar-input" type="file" accept="image/*" class="avatar-file-input">');
       avatarInput = document.getElementById('profile-avatar-input');
     }
+  }
+
+  function updateRemoveAvatarButtonState(profileData) {
+    if (!removeAvatarBtn) {
+      return;
+    }
+
+    const hasAvatarImage = Boolean((profileData && profileData.avatarImage) || getResolvedProfileData().avatarImage);
+    removeAvatarBtn.disabled = !hasAvatarImage;
+    removeAvatarBtn.hidden = !hasAvatarImage;
   }
 
   let avatarAdjuster = null;
@@ -534,6 +550,7 @@
     }
 
     syncSettingsProfileSection();
+    updateRemoveAvatarButtonState(getResolvedProfileData());
   }
 
   // Save profile data
@@ -1143,6 +1160,21 @@
     });
 
     syncSettingsProfileSection();
+    updateRemoveAvatarButtonState(updatedProfile);
+  }
+
+  if (removeAvatarBtn) {
+    removeAvatarBtn.addEventListener('click', function() {
+      const profileData = getResolvedProfileData();
+      if (!profileData.avatarImage) {
+        updateRemoveAvatarButtonState(profileData);
+        return;
+      }
+
+      saveAvatarImage('');
+      closeAvatarAdjuster(true);
+      showNotification('Profile image removed successfully!', 'success');
+    });
   }
 
   // Notification function
