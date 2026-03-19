@@ -9,6 +9,40 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(theme)) {
+                    theme = 'beach';
+                }
+
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
 </head>
 <body class="legal-page">
@@ -109,9 +143,15 @@
                 <p>We may collect contact details, account information, usage activity, device and browser metadata, submitted forms, and transaction-related communications to operate the platform, support account access, improve services, and comply with legal obligations. By using this website, you consent to the collection, storage, and processing of such information in accordance with applicable privacy laws and our internal data-handling practices.</p>
             </article>
 
-            <article class="legal-card" id="terms-of-use">
+            <article class="legal-card legal-card-featured legal-card-shimmer" id="terms-of-use">
                 <h2>Terms of Use</h2>
-                <p>Use of this site constitutes acceptance of the terms governing access, account security, acceptable use, and informational limitations. Users agree not to misuse the platform, attempt unauthorized access, reverse engineer protected workflows, or rely on website content as a substitute for professional legal, tax, appraisal, title, brokerage, lending, or investment advice. Users further agree to comply with applicable California real estate laws, regulations, and professional standards reflected in FAST BRIDGE GROUP reference materials, including rules related to fair housing and anti-discrimination conduct, first-point-of-contact and solicitation practices, electronic submissions and record handling, licensing discipline standards, and broker-supervision requirements. Use of FAST BRIDGE GROUP tools does not excuse compliance failures, filing errors, disclosure omissions, unlawful outreach, or conduct that could support discipline, suspension, restriction, or denial of licensure.</p>
+                <p class="legal-card-lead">Use of this site constitutes acceptance of FAST BRIDGE GROUP access, security, compliance, and information-use rules.</p>
+                <ul class="legal-card-list">
+                    <li>Users may not misuse the platform, attempt unauthorized access, scrape protected content, or reverse engineer restricted workflows.</li>
+                    <li>Website content, calculators, comps, workflows, and communications are operational tools only and do not replace legal, tax, appraisal, title, brokerage, lending, or investment advice.</li>
+                    <li>Users must comply with applicable California real estate laws, fair housing obligations, anti-discrimination standards, solicitation rules, electronic submission requirements, and broker-supervision duties.</li>
+                    <li>Use of FAST BRIDGE GROUP systems does not excuse filing errors, disclosure omissions, unlawful outreach, compliance failures, or conduct that could support suspension, restriction, denial, or discipline of a license.</li>
+                </ul>
             </article>
 
             <article class="legal-card" id="broker-information">
