@@ -16,7 +16,9 @@
             dark: 'Symbols/Dark Mode.svg',
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
-            swamp: 'Symbols/Beach Mode.svg'
+            swamp: 'Symbols/Beach Mode.svg',
+            sunset: 'Symbols/Beach Mode.svg',
+            space: 'Symbols/Dark Mode.svg'
         };
 
         const iconSun = themeToggle.querySelector('.icon-sun');
@@ -59,7 +61,9 @@
             dark: 'Symbols/Dark Mode.svg',
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
-            swamp: 'Symbols/Beach Mode.svg'
+            swamp: 'Symbols/Beach Mode.svg',
+            sunset: 'Symbols/Beach Mode.svg',
+            space: 'Symbols/Dark Mode.svg'
         };
         const resolvedTheme = themeSymbols[theme] ? theme : 'beach';
 
@@ -110,6 +114,10 @@
                     ? 'beach'
                     : currentTheme === 'beach'
                         ? 'swamp'
+                        : currentTheme === 'swamp'
+                            ? 'sunset'
+                            : currentTheme === 'sunset'
+                                ? 'space'
                     : 'dark';
             setTheme(nextTheme);
         });
@@ -348,17 +356,16 @@
                 currentTheme = 'beach';
                 localStorage.setItem('theme', currentTheme);
             }
+            if (currentTheme === 'system') {
+                currentTheme = 'dark';
+                localStorage.setItem('theme', currentTheme);
+            }
             themeSelect.value = currentTheme;
             
             themeSelect.addEventListener('change', () => {
                 const theme = themeSelect.value;
-                if (theme === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-                } else {
-                    document.documentElement.setAttribute('data-theme', theme);
-                    localStorage.setItem('theme', theme);
-                }
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
                 
                 const themeToggle = document.getElementById('theme-toggle');
                 const effectiveTheme = document.documentElement.getAttribute('data-theme');

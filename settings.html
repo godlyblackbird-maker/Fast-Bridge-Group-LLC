@@ -44,6 +44,7 @@
 
                 const palettes = {
                     emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
                     blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
                     sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
                     cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
@@ -78,12 +79,17 @@
                 };
 
                 const palette = palettes[accentChoice] || palettes.emerald;
+                const accentGlow = Object.prototype.hasOwnProperty.call(controls, 'id:accent-glow-toggle')
+                    ? Boolean(controls['id:accent-glow-toggle'])
+                    : /^(on|true|1)$/i.test(String(localStorage.getItem('accentGlow') || ''));
                 root.style.setProperty('--emerald', palette.emerald);
                 root.style.setProperty('--emerald-light', palette.emeraldLight);
                 root.style.setProperty('--gold', palette.gold);
                 root.style.setProperty('--gold-light', palette.goldLight);
                 root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
                 root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+                root.setAttribute('data-accent-color', palettes[accentChoice] ? accentChoice : 'emerald');
+                root.setAttribute('data-accent-glow', accentGlow ? 'on' : 'off');
             } catch (error) {
                 // Ignore pre-load theme errors and allow default styles.
             }
@@ -612,12 +618,12 @@ https://templatemo.com/tm-607-glass-admin
                                     <span class="settings-label-desc">Choose your preferred color mode</span>
                                 </div>
                                 <select class="settings-select" id="theme-select">
-                                    <option value="dark">Dark Mode</option>
+                                    <option value="dark">Emerald Mode</option>
                                     <option value="light">Light Mode</option>
                                     <option value="beach">Beach Mode</option>
                                     <option value="swamp">Swamp Mode</option>
                                     <option value="sunset">Sunset Mode</option>
-                                    <option value="system">System Default</option>
+                                    <option value="space">Space Mode</option>
                                 </select>
                             </div>
                             <div class="settings-row">
@@ -627,6 +633,7 @@ https://templatemo.com/tm-607-glass-admin
                                 </div>
                                 <select class="settings-select" id="accent-color-select">
                                     <option value="emerald">Emerald (Default)</option>
+                                    <option value="white">White</option>
                                     <option value="blue">Blue</option>
                                     <option value="sky">Sky</option>
                                     <option value="cyan">Cyan</option>

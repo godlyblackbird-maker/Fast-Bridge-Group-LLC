@@ -638,6 +638,277 @@
     background: rgba(255, 176, 124, 0.18);
 }
 
+/* Space Mode */
+[data-theme="space"] {
+    --glass-bg: rgba(18, 24, 50, 0.34);
+    --glass-border: rgba(135, 180, 255, 0.2);
+    --glass-shadow: rgba(3, 6, 20, 0.48);
+    --glass-hover: rgba(158, 204, 255, 0.14);
+
+    --bg-dark: #030816;
+    --bg-gradient-1: #0c1630;
+    --bg-gradient-2: #17264c;
+    --bg-gradient-3: #513470;
+
+    --text-primary: #eef4ff;
+    --text-secondary: rgba(238, 244, 255, 0.8);
+    --text-muted: rgba(238, 244, 255, 0.56);
+
+    --mobile-toggle-bg: linear-gradient(135deg, rgba(89, 112, 255, 0.94), rgba(112, 230, 255, 0.9));
+    --mobile-toggle-border: rgba(151, 196, 255, 0.24);
+    --mobile-toggle-shadow: 0 14px 32px -14px rgba(4, 10, 30, 0.52), 0 12px 26px rgba(82, 138, 255, 0.24);
+    --mobile-toggle-icon: #f8fbff;
+
+    --toast-surface: rgba(12, 18, 40, 0.96);
+    --toast-border: rgba(135, 180, 255, 0.18);
+    --toast-title: #eef4ff;
+    --toast-body: rgba(228, 238, 255, 0.88);
+    --toast-shadow: 0 18px 44px rgba(3, 6, 20, 0.42);
+}
+
+[data-theme="space"] .orb {
+    opacity: 0.3;
+}
+
+[data-theme="space"] .background::before {
+    background:
+        radial-gradient(ellipse 82% 58% at 14% 22%, rgba(108, 128, 255, 0.3) 0%, transparent 56%),
+        radial-gradient(ellipse 62% 44% at 84% 18%, rgba(70, 225, 255, 0.18) 0%, transparent 54%),
+        radial-gradient(ellipse 58% 42% at 54% 82%, rgba(167, 94, 255, 0.18) 0%, transparent 56%);
+}
+
+[data-theme="space"] .background::after {
+    content: '';
+    position: absolute;
+    left: -6%;
+    right: -6%;
+    top: -4%;
+    height: 54%;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.7) 0 1px, transparent 2px),
+        radial-gradient(circle at 38% 30%, rgba(201, 224, 255, 0.52) 0 1px, transparent 2px),
+        radial-gradient(circle at 67% 14%, rgba(255, 255, 255, 0.68) 0 1px, transparent 2px),
+        radial-gradient(circle at 82% 36%, rgba(160, 244, 255, 0.54) 0 1px, transparent 2px),
+        radial-gradient(circle at 56% 48%, rgba(182, 194, 255, 0.46) 0 1px, transparent 2px);
+    background-size: 240px 170px, 280px 210px, 320px 180px, 260px 220px, 360px 240px;
+    opacity: 0.76;
+    filter: blur(0.2px);
+}
+
+[data-theme="space"] .orb-1 {
+    background: #6f8bff;
+}
+
+[data-theme="space"] .orb-2 {
+    background: #70e6ff;
+}
+
+[data-theme="space"] .orb-3 {
+    background: #a45cff;
+}
+
+[data-theme="space"] .glass-card {
+    border-color: rgba(135, 180, 255, 0.22);
+    box-shadow:
+        0 24px 48px -24px rgba(3, 6, 20, 0.6),
+        0 10px 26px rgba(84, 120, 255, 0.14);
+}
+
+[data-theme="space"] .glass-card:hover {
+    border-color: rgba(165, 205, 255, 0.34);
+    box-shadow:
+        0 26px 52px -24px rgba(3, 6, 20, 0.66),
+        0 0 28px rgba(112, 230, 255, 0.18);
+}
+
+[data-theme="space"] .sidebar,
+[data-theme="space"] .navbar {
+    border-color: rgba(135, 180, 255, 0.2);
+}
+
+[data-theme="space"] body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(4, 8, 22, 0.26), rgba(10, 16, 36, 0.16)),
+        url("Themes/Wallpaper%20STARLIGHT.jpg") no-repeat center center;
+    background-size: cover;
+    opacity: 0.42;
+    filter: blur(1.6px) saturate(1.06) contrast(1.08);
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="space"] body::after {
+    content: '';
+    position: fixed;
+    right: 18px;
+    top: 16px;
+    width: 420px;
+    height: 250px;
+    background:
+        radial-gradient(circle at 20% 30%, rgba(123, 149, 255, 0.18), transparent 40%),
+        radial-gradient(circle at 70% 26%, rgba(112, 230, 255, 0.16), transparent 36%),
+        radial-gradient(circle at 52% 76%, rgba(164, 92, 255, 0.14), transparent 44%);
+    filter: blur(10px);
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="space"] .calendar-day.past-day {
+    color: rgba(238, 244, 255, 0.92);
+    background: linear-gradient(135deg, rgba(52, 72, 134, 0.78), rgba(32, 46, 96, 0.8));
+    border-color: rgba(161, 198, 255, 0.24);
+}
+
+[data-theme="space"] .calendar-day.past-day .calendar-day-number {
+    color: #f8fbff;
+}
+
+[data-theme="space"] .form-input,
+[data-theme="space"] .search-input,
+[data-theme="space"] .settings-select,
+[data-theme="space"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+[data-theme="space"] textarea,
+[data-theme="space"] select,
+[data-theme="space"] select.form-input,
+[data-theme="space"] .ia-grid input,
+[data-theme="space"] .ia-grid select,
+[data-theme="space"] .offer-grid input,
+[data-theme="space"] .offer-grid select,
+[data-theme="space"] .calendar-inline-form textarea,
+[data-theme="space"] .calendar-inline-form input,
+[data-theme="space"] .agent-note-input,
+[data-theme="space"] .outreach-textarea {
+    background: linear-gradient(135deg, rgba(18, 29, 63, 0.88), rgba(43, 55, 104, 0.78)) !important;
+    border: 1px solid rgba(151, 196, 255, 0.36) !important;
+    color: #eef4ff !important;
+    box-shadow: inset 0 1px 0 rgba(223, 234, 255, 0.08), 0 4px 14px rgba(4, 10, 30, 0.26);
+}
+
+[data-theme="space"] .form-input::placeholder,
+[data-theme="space"] .search-input::placeholder,
+[data-theme="space"] .agent-note-input::placeholder,
+[data-theme="space"] .outreach-textarea::placeholder,
+[data-theme="space"] input::placeholder,
+[data-theme="space"] textarea::placeholder {
+    color: rgba(222, 234, 255, 0.68) !important;
+}
+
+[data-theme="space"] .form-input:focus,
+[data-theme="space"] .search-input:focus,
+[data-theme="space"] .settings-select:focus,
+[data-theme="space"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="space"] textarea:focus,
+[data-theme="space"] select:focus,
+[data-theme="space"] .ia-grid input:focus,
+[data-theme="space"] .ia-grid select:focus,
+[data-theme="space"] .offer-grid input:focus,
+[data-theme="space"] .offer-grid select:focus,
+[data-theme="space"] .calendar-inline-form textarea:focus,
+[data-theme="space"] .calendar-inline-form input:focus,
+[data-theme="space"] .agent-note-input:focus,
+[data-theme="space"] .outreach-textarea:focus {
+    border-color: rgba(178, 220, 255, 0.94) !important;
+    box-shadow: 0 0 0 3px rgba(111, 139, 255, 0.2), 0 14px 24px -16px rgba(4, 10, 30, 0.72) !important;
+}
+
+[data-theme="space"] .settings-select,
+[data-theme="space"] select,
+[data-theme="space"] select.form-input,
+[data-theme="space"] .ia-grid select,
+[data-theme="space"] .offer-grid select,
+[data-theme="space"] .form-group .form-input[type="select-one"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23eef4ff' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+}
+
+[data-theme="space"] .settings-select option,
+[data-theme="space"] select option,
+[data-theme="space"] select.form-input option,
+[data-theme="space"] .ia-grid select option,
+[data-theme="space"] .offer-grid select option,
+[data-theme="space"] .form-group .form-input[type="select-one"] option {
+    background: #16224a !important;
+    color: #eef4ff !important;
+}
+
+[data-theme="space"] .settings-select option:checked,
+[data-theme="space"] select option:checked,
+[data-theme="space"] select.form-input option:checked,
+[data-theme="space"] .ia-grid select option:checked,
+[data-theme="space"] .offer-grid select option:checked,
+[data-theme="space"] .form-group .form-input[type="select-one"] option:checked {
+    background: #30417f !important;
+    color: #f8fbff !important;
+}
+
+[data-theme="space"] input:disabled,
+[data-theme="space"] textarea:disabled,
+[data-theme="space"] select:disabled {
+    background: rgba(29, 42, 82, 0.48) !important;
+    border-color: rgba(151, 196, 255, 0.18) !important;
+    color: rgba(222, 234, 255, 0.52) !important;
+}
+
+[data-theme="space"] .ia-section {
+    border-color: rgba(151, 196, 255, 0.22);
+    background:
+        linear-gradient(140deg, rgba(25, 36, 74, 0.86), rgba(18, 26, 55, 0.8)),
+        linear-gradient(20deg, rgba(112, 230, 255, 0.08), rgba(164, 92, 255, 0.08));
+    box-shadow: inset 0 1px 0 rgba(223, 234, 255, 0.08), 0 18px 28px -20px rgba(3, 6, 20, 0.44);
+}
+
+[data-theme="space"] .ia-section h3 {
+    color: #eef4ff;
+}
+
+[data-theme="space"] .ia-grid label,
+[data-theme="space"] .ia-other-head,
+[data-theme="space"] .ia-other-item {
+    color: rgba(238, 244, 255, 0.88);
+}
+
+[data-theme="space"] .ia-readout {
+    border-color: rgba(151, 196, 255, 0.22);
+    background: linear-gradient(135deg, rgba(27, 41, 84, 0.9), rgba(56, 74, 132, 0.74));
+    color: rgba(238, 244, 255, 0.92);
+}
+
+[data-theme="space"] .ia-readout strong {
+    color: #f8fbff;
+}
+
+[data-theme="space"] .ia-other-costs {
+    border-color: rgba(151, 196, 255, 0.2);
+    background: linear-gradient(135deg, rgba(33, 46, 92, 0.34), rgba(112, 230, 255, 0.12));
+}
+
+[data-theme="space"] .ia-other-item {
+    border-color: rgba(151, 196, 255, 0.18);
+    background: rgba(20, 30, 64, 0.46);
+}
+
+[data-theme="space"] .ia-calc-btn,
+[data-theme="space"] .ia-other-head button {
+    border-color: rgba(151, 196, 255, 0.24);
+    background: linear-gradient(135deg, rgba(93, 118, 255, 0.84), rgba(112, 230, 255, 0.76));
+    color: #08111f;
+    box-shadow: 0 10px 18px -12px rgba(3, 6, 20, 0.52);
+}
+
+[data-theme="space"] .ia-calc-btn:hover,
+[data-theme="space"] .ia-other-head button:hover {
+    background: linear-gradient(135deg, rgba(116, 138, 255, 0.92), rgba(141, 236, 255, 0.82));
+}
+
+[data-theme="space"] .ia-cash-note {
+    border-color: rgba(151, 196, 255, 0.24);
+    color: #eef4ff;
+    background: rgba(112, 230, 255, 0.1);
+}
+
 /* Swamp Mode */
 [data-theme="swamp"] {
     --glass-bg: rgba(34, 52, 25, 0.4);
@@ -5688,6 +5959,40 @@ a {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     color: var(--text-primary);
+}
+
+[data-accent-color="white"][data-accent-glow="on"] .btn-primary,
+[data-accent-color="white"][data-accent-glow="on"] .card-btn.active,
+[data-accent-color="white"][data-accent-glow="on"] .nav-link.active,
+[data-accent-color="white"][data-accent-glow="on"] .property-tab-btn.active,
+[data-accent-color="white"][data-accent-glow="on"] .piq-image-tab.active,
+[data-accent-color="white"][data-accent-glow="on"] .mls-page-btn.active,
+[data-accent-color="white"][data-accent-glow="on"] .property-back-link,
+[data-accent-color="white"][data-accent-glow="on"] .ia-calc-btn,
+[data-accent-color="white"][data-accent-glow="on"] .ia-other-head button,
+[data-accent-color="white"][data-accent-glow="on"] .comps-chip,
+[data-accent-color="white"][data-accent-glow="on"] .offer-toolbar-btn:hover,
+[data-accent-color="white"][data-accent-glow="on"] .offer-toolbar-btn:focus-visible {
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.42),
+        0 0 18px rgba(255, 255, 255, 0.58),
+        0 0 34px rgba(203, 213, 225, 0.42),
+        0 0 56px rgba(148, 163, 184, 0.24);
+}
+
+[data-accent-color="white"][data-accent-glow="on"] .btn-primary::after,
+[data-accent-color="white"][data-accent-glow="on"] .card-btn.active::after,
+[data-accent-color="white"][data-accent-glow="on"] .nav-link.active::after,
+[data-accent-color="white"][data-accent-glow="on"] .property-tab-btn.active::after,
+[data-accent-color="white"][data-accent-glow="on"] .piq-image-tab.active::after,
+[data-accent-color="white"][data-accent-glow="on"] .mls-page-btn.active::after,
+[data-accent-color="white"][data-accent-glow="on"] .property-back-link::after,
+[data-accent-color="white"][data-accent-glow="on"] .ia-calc-btn::after,
+[data-accent-color="white"][data-accent-glow="on"] .ia-other-head button::after,
+[data-accent-color="white"][data-accent-glow="on"] .comps-chip::after,
+[data-accent-color="white"][data-accent-glow="on"] .offer-toolbar-btn:hover::after,
+[data-accent-color="white"][data-accent-glow="on"] .offer-toolbar-btn:focus-visible::after {
+    border-color: rgba(255, 255, 255, 0.78);
 }
 
 .btn-secondary:hover {

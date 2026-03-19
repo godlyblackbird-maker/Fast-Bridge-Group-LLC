@@ -24,7 +24,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset'];
+    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space'];
     const KNOWN_EMAIL_GROUPS = [
         {
             canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -610,6 +610,59 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function persistSelectedPropertyDetail(detail) {
+        const serializedDetail = JSON.stringify(detail && typeof detail === 'object' ? detail : null);
+        let stored = false;
+
+        try {
+            localStorage.setItem('selectedPropertyDetail', serializedDetail);
+            stored = true;
+        } catch (error) {
+            stored = false;
+        }
+
+        try {
+            sessionStorage.setItem('selectedPropertyDetail', serializedDetail);
+            stored = true;
+        } catch (error) {
+            // Ignore session fallback failures and rely on the stored flag.
+        }
+
+        return stored;
+    }
+
+    function getPersistedSelectedPropertyDetail() {
+        const storageReaders = [
+            () => localStorage.getItem('selectedPropertyDetail'),
+            () => sessionStorage.getItem('selectedPropertyDetail')
+        ];
+
+        for (const readValue of storageReaders) {
+            let rawValue = null;
+
+            try {
+                rawValue = readValue();
+            } catch (error) {
+                rawValue = null;
+            }
+
+            if (!rawValue) {
+                continue;
+            }
+
+            try {
+                const parsed = JSON.parse(rawValue);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    return parsed;
+                }
+            } catch (error) {
+                // Ignore malformed stored payloads and keep looking for a valid fallback.
+            }
+        }
+
+        return null;
+    }
+
     function buildUserIdentity(userLike) {
         const email = normalizeUserIdentityValue(userLike && userLike.email || '');
         const name = String(userLike && userLike.name || '').trim() || email || 'User';
@@ -924,6 +977,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 gold: '#d4a574',
                 goldLight: '#e8c9a0'
             },
+            white: {
+                emerald: '#e5e7eb',
+                emeraldLight: '#ffffff',
+                gold: '#cbd5e1',
+                goldLight: '#f8fafc'
+            },
             blue: {
                 emerald: '#2563eb',
                 emeraldLight: '#60a5fa',
@@ -1080,6 +1139,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const palettes = getAccentPalettes();
         const normalized = String(accentChoice || '').trim().toLowerCase();
         const palette = palettes[normalized] || palettes.emerald;
+        const appliedChoice = palettes[normalized] ? normalized : 'emerald';
 
         document.documentElement.style.setProperty('--emerald', palette.emerald);
         document.documentElement.style.setProperty('--emerald-light', palette.emeraldLight);
@@ -1087,6 +1147,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         document.documentElement.style.setProperty('--gold-light', palette.goldLight);
         document.documentElement.style.setProperty('--accent-rgb', hexToRgbString(palette.emerald));
         document.documentElement.style.setProperty('--accent-light-rgb', hexToRgbString(palette.emeraldLight));
+        document.documentElement.setAttribute('data-accent-color', appliedChoice);
     }
 
     function applyAccentGlowPreference(enabled) {
@@ -1871,7 +1932,8 @@ function initNavbarDateTime() {
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
-            sunset: 'Symbols/Beach Mode.svg'
+            sunset: 'Symbols/Beach Mode.svg',
+            space: 'Symbols/Dark Mode.svg'
         };
 
         const iconSun = themeToggle.querySelector('.icon-sun');
@@ -1915,7 +1977,8 @@ function initNavbarDateTime() {
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
-            sunset: 'Symbols/Beach Mode.svg'
+            sunset: 'Symbols/Beach Mode.svg',
+            space: 'Symbols/Dark Mode.svg'
         };
         const resolvedTheme = themeSymbols[effectiveTheme] ? effectiveTheme : 'beach';
 
@@ -1965,6 +2028,8 @@ function initNavbarDateTime() {
                         ? 'swamp'
                         : currentTheme === 'swamp'
                             ? 'sunset'
+                            : currentTheme === 'sunset'
+                                ? 'space'
                             : 'dark';
             setTheme(nextTheme);
         });
@@ -2408,13 +2473,13 @@ function initNavbarDateTime() {
         const accentGlowToggle = document.getElementById('accent-glow-toggle');
         if (themeSelect) {
             const currentTheme = getThemePreference();
-            themeSelect.value = currentTheme === 'system' ? 'system' : resolveTheme(currentTheme);
+            themeSelect.value = currentTheme === 'system' ? 'dark' : resolveTheme(currentTheme);
 
             themeSelect.addEventListener('change', () => {
                 const theme = themeSelect.value;
                 const effectiveTheme = resolveTheme(theme);
                 document.documentElement.setAttribute('data-theme', effectiveTheme);
-                saveThemePreference(theme === 'system' ? 'system' : effectiveTheme);
+                saveThemePreference(effectiveTheme);
 
                 const themeToggle = document.getElementById('theme-toggle');
                 updateThemeToggleIcons(themeToggle, effectiveTheme);
@@ -5460,7 +5525,28 @@ function initNavbarDateTime() {
                 ...items.filter(item => String(item.id || '') !== compactEntry.id)
             ].slice(0, 120);
 
-            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+            try {
+                setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+            } catch (error) {
+                try {
+                    const fallbackItems = nextItems.map(item => ({
+                        id: item.id,
+                        address: item.address,
+                        location: item.location,
+                        price: item.price,
+                        beds: item.beds,
+                        baths: item.baths,
+                        area: item.area,
+                        status: item.status,
+                        roi: item.roi,
+                        imageUrl: item.imageUrl,
+                        clickedAt: item.clickedAt
+                    })).slice(0, 40);
+                    setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, fallbackItems);
+                } catch (fallbackError) {
+                    // Ignore clicked-history persistence issues so MLS navigation still works.
+                }
+            }
         }
 
         function openPropertyDetail(card) {
@@ -5470,6 +5556,10 @@ function initNavbarDateTime() {
             const areaText = parseMetricText(card, 3, '0 sqft').replace('sqft', 'ft²').trim();
             const titleText = card.querySelector('h3')?.textContent?.trim() || parseAddress(card);
             const locationText = card.querySelector('.mls-location')?.textContent?.trim() || '';
+            const locationParts = locationText.split('·').map(part => part.trim()).filter(Boolean);
+            const cityStateLabel = locationParts[0] || '';
+            const countyLabel = locationParts[1] || '';
+            const cityLabel = cityStateLabel.split(',')[0]?.trim() || '';
             const listingNote = card.querySelector('.mls-note')?.textContent?.trim() || 'Property overview pending additional underwriting notes.';
             const propertyImages = Array.from(card.querySelectorAll('.mls-property-image'))
                 .map(image => image.getAttribute('src') || '')
@@ -5512,6 +5602,8 @@ function initNavbarDateTime() {
                 statusLabel,
                 autoTracker: `Active ${daysActive} Day${daysActive === 1 ? '' : 's'}`,
                 areaLabel: locationText || '-',
+                city: cityLabel,
+                county: countyLabel,
                 propertyCover: titleText,
                 publicComments: listingNote,
                 agentComments: 'MLS sandbox listing. Verify showing instructions, disclosures, and offer timeline before submitting terms.',
@@ -5530,7 +5622,7 @@ function initNavbarDateTime() {
 
             rememberClickedProperty(card, propertyPayload, status, roi);
 
-            localStorage.setItem('selectedPropertyDetail', JSON.stringify(propertyPayload));
+            persistSelectedPropertyDetail(propertyPayload);
             window.location.href = 'property-details.html';
         }
 
@@ -6653,74 +6745,84 @@ function initNavbarDateTime() {
         const legacyCompsLine = 'Comparable set will include similar bed/bath properties within 1.0 mile radius and the last 6-12 month window.';
 
         let detailData = null;
-        try {
-            detailData = JSON.parse(localStorage.getItem('selectedPropertyDetail') || 'null');
-        } catch (error) {
-            detailData = null;
-        }
+        detailData = getPersistedSelectedPropertyDetail();
 
-        if (!detailData) {
-            detailData = {
-                address: 'No property selected',
-                propertyImages: [
-                    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-                    'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=80',
-                    'https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=1200&q=80'
-                ],
-                propertyDetails: 'Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 ft² / 170,320 ft² / Pool: None',
-                listPrice: '$780,000',
-                propensity: 8,
-                moderatePain: 'Moderate Pain',
-                taxDelinquency: 'Tax Delinquency',
-                highDebt: 'High Debt (LTV >80%)',
-                marketInfo: '41 Days / Active',
-                dom: 41,
-                cdom: 41,
-                askingVsArv: '70.35%',
-                arv: '$1,108,806',
-                compData: 'A0, P1, B0, C1',
-                piq: 'About property notes will appear here.',
-                comps: '',
-                ia: 'IA tab content placeholder.',
-                recordCreated: '- ',
-                listingDate: '- ',
-                idx: '-',
-                propertyType: '-',
-                mlsNumber: '-',
-                statusLabel: 'Active',
-                autoTracker: '-',
-                areaLabel: '-',
-                propertyCover: '-',
-                publicComments: 'No public comments available.',
-                agentComments: 'No agent comments available.',
-                apn: '-',
-                unitNumber: '-',
-                totalFloors: '-',
-                sewer: '-',
-                propertyCondition: '-',
-                zoning: '-',
-                associationDues: '-',
-                commonWalls: '-',
-                lockboxType: '-',
-                occupied: '-',
-                showing: '-',
+        const defaultDetailData = {
+            address: 'No property selected',
+            propertyImages: [
+                'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+                'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=80',
+                'https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=1200&q=80'
+            ],
+            propertyDetails: 'Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 ft² / 170,320 ft² / Pool: None',
+            listPrice: '$780,000',
+            propensity: 8,
+            moderatePain: 'Moderate Pain',
+            taxDelinquency: 'Tax Delinquency',
+            highDebt: 'High Debt (LTV >80%)',
+            marketInfo: '41 Days / Active',
+            dom: 41,
+            cdom: 41,
+            askingVsArv: '70.35%',
+            arv: '$1,108,806',
+            compData: 'A0, P1, B0, C1',
+            piq: 'About property notes will appear here.',
+            comps: '',
+            ia: 'IA tab content placeholder.',
+            recordCreated: '- ',
+            listingDate: '- ',
+            idx: '-',
+            propertyType: '-',
+            mlsNumber: '-',
+            statusLabel: 'Active',
+            autoTracker: '-',
+            areaLabel: '-',
+            city: '',
+            county: '',
+            propertyCover: '-',
+            publicComments: 'No public comments available.',
+            agentComments: 'No agent comments available.',
+            apn: '-',
+            unitNumber: '-',
+            totalFloors: '-',
+            sewer: '-',
+            propertyCondition: '-',
+            zoning: '-',
+            associationDues: '-',
+            commonWalls: '-',
+            lockboxType: '-',
+            occupied: '-',
+            showing: '-',
+            agentRecord: {
+                name: 'Brandon Wasilewski',
+                title: 'Agent Record',
+                phone: '(805) 856-8773',
+                email: 'lewskisells@gmail.com',
+                brokerage: 'Realty ONE Group Summit',
+                lastCommunicationDate: '-',
+                lastAddressDiscussed: '-',
+                lastCommunicatedAA: '-',
+                activeInLast2Years: 'TRUE',
+                averageDealsPerYear: '3',
+                doubleEnded: '0',
+                investorSource: '0'
+            },
+            offer: 'Offer tab content placeholder.'
+        };
+
+        detailData = detailData && typeof detailData === 'object' && !Array.isArray(detailData)
+            ? {
+                ...defaultDetailData,
+                ...detailData,
+                propertyImages: Array.isArray(detailData.propertyImages) && detailData.propertyImages.length > 0
+                    ? detailData.propertyImages
+                    : defaultDetailData.propertyImages,
                 agentRecord: {
-                    name: 'Brandon Wasilewski',
-                    title: 'Agent Record',
-                    phone: '(805) 856-8773',
-                    email: 'lewskisells@gmail.com',
-                    brokerage: 'Realty ONE Group Summit',
-                    lastCommunicationDate: '-',
-                    lastAddressDiscussed: '-',
-                    lastCommunicatedAA: '-',
-                    activeInLast2Years: 'TRUE',
-                    averageDealsPerYear: '3',
-                    doubleEnded: '0',
-                    investorSource: '0'
-                },
-                offer: 'Offer tab content placeholder.'
-            };
-        }
+                    ...defaultDetailData.agentRecord,
+                    ...(detailData.agentRecord && typeof detailData.agentRecord === 'object' ? detailData.agentRecord : {})
+                }
+            }
+            : defaultDetailData;
 
         const compsText = String(detailData.comps || '').trim();
         if (
