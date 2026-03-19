@@ -62,6 +62,17 @@ const LEGACY_EMAIL_ALIASES = new Map([
   ['medinastj@gmail.com', CANONICAL_STEVE_EMAIL]
 ]);
 
+function getFirstConfiguredEnvValue(...names) {
+  for (const name of names) {
+    const value = String(process.env[name] || '').trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return '';
+}
+
 function normalizeKnownEmail(email) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   return LEGACY_EMAIL_ALIASES.get(normalizedEmail) || normalizedEmail;
@@ -69,6 +80,50 @@ function normalizeKnownEmail(email) {
 
 function isKnownAdminEmail(email) {
   return ADMIN_CANONICAL_EMAILS.has(normalizeKnownEmail(email));
+}
+
+function getPerUserSmtpEnvConfig(email) {
+  const normalizedEmail = normalizeKnownEmail(email);
+
+  if (normalizedEmail === CANONICAL_STEVE_EMAIL) {
+    return {
+      smtpUser: getFirstConfiguredEnvValue('STEVE_SMTP_USER') || CANONICAL_STEVE_EMAIL,
+      smtpPass: getFirstConfiguredEnvValue('STEVE_SMTP_PASS'),
+      smtpSignature: getFirstConfiguredEnvValue('STEVE_SMTP_SIGNATURE')
+    };
+  }
+
+  if (normalizedEmail === CANONICAL_ISAAC_EMAIL) {
+    return {
+      smtpUser: getFirstConfiguredEnvValue('ISAAC_SMTP_USER') || CANONICAL_ISAAC_EMAIL,
+      smtpPass: getFirstConfiguredEnvValue('ISAAC_SMTP_PASS'),
+      smtpSignature: getFirstConfiguredEnvValue('ISAAC_SMTP_SIGNATURE')
+    };
+  }
+
+  return {
+    smtpUser: '',
+    smtpPass: '',
+    smtpSignature: ''
+  };
+}
+
+function resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature }) {
+  const normalizedEmail = normalizeKnownEmail(email);
+  const normalizedDbUser = normalizeKnownEmail(smtpUser || normalizedEmail);
+  const perUserEnvConfig = getPerUserSmtpEnvConfig(normalizedDbUser || normalizedEmail);
+  const fallbackGlobalUser = getFirstConfiguredEnvValue('SMTP_USER');
+  const fallbackGlobalPass = getFirstConfiguredEnvValue('SMTP_PASS');
+  const resolvedUser = String(smtpUser || perUserEnvConfig.smtpUser || fallbackGlobalUser || '').trim().toLowerCase();
+  const resolvedPass = String(smtpPass || perUserEnvConfig.smtpPass || fallbackGlobalPass || '').trim();
+  const resolvedSignature = String(smtpSignature || perUserEnvConfig.smtpSignature || '').trim();
+
+  return {
+    smtpUser: resolvedUser,
+    smtpPass: resolvedPass,
+    smtpSignature: resolvedSignature,
+    hasPassword: Boolean(resolvedPass)
+  };
 }
 
 function getRequestOrigin(req) {
@@ -1141,12 +1196,20 @@ app.get('/api/smtp-settings', (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) return;
 
-  db.get('SELECT smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, row) => {
+  db.get('SELECT email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
+
+    const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
+      email: row?.email || decoded.email,
+      smtpUser: row?.smtp_user,
+      smtpPass: row?.smtp_pass,
+      smtpSignature: row?.smtp_signature
+    });
+
     return res.json({
-      smtpUser: row?.smtp_user || '',
-      hasPassword: !!(row?.smtp_pass),
-      smtpSignature: row?.smtp_signature || ''
+      smtpUser: effectiveSmtpConfig.smtpUser,
+      hasPassword: effectiveSmtpConfig.hasPassword,
+      smtpSignature: effectiveSmtpConfig.smtpSignature
     });
   });
 });
@@ -1185,15 +1248,21 @@ app.post('/api/test-smtp', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) return;
 
-  db.get('SELECT smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], async (err, row) => {
+  db.get('SELECT email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], async (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
 
-    const smtpUser = row?.smtp_user || '';
-    const smtpPass = row?.smtp_pass || '';
-    const smtpSignature = row?.smtp_signature || '';
+    const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
+      email: row?.email || decoded.email,
+      smtpUser: row?.smtp_user,
+      smtpPass: row?.smtp_pass,
+      smtpSignature: row?.smtp_signature
+    });
+    const smtpUser = effectiveSmtpConfig.smtpUser;
+    const smtpPass = effectiveSmtpConfig.smtpPass;
+    const smtpSignature = effectiveSmtpConfig.smtpSignature;
 
     if (!smtpUser || !smtpPass) {
-      return res.status(400).json({ error: 'Save your Gmail settings first before testing' });
+      return res.status(400).json({ error: 'No Gmail SMTP credentials are configured for your account. Save them in Profile or add the matching Render environment variables.' });
     }
 
     try {
@@ -1483,11 +1552,15 @@ app.post('/api/send-agent-email', async (req, res) => {
         });
       });
       authenticatedUser = row || null;
-      if (row?.smtp_user && row?.smtp_pass) {
-        smtpUser = row.smtp_user;
-        smtpPass = row.smtp_pass;
-      }
-      smtpSignature = String(row?.smtp_signature || '').trim();
+      const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
+        email: row?.email || decoded.email,
+        smtpUser: row?.smtp_user,
+        smtpPass: row?.smtp_pass,
+        smtpSignature: row?.smtp_signature
+      });
+      smtpUser = effectiveSmtpConfig.smtpUser;
+      smtpPass = effectiveSmtpConfig.smtpPass;
+      smtpSignature = effectiveSmtpConfig.smtpSignature;
     } catch (e) {
       // Invalid token or DB failure — proceed with env fallback
     }

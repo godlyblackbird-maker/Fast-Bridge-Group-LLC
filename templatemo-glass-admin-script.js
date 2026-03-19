@@ -21,6 +21,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const USER_THEME_KEY = 'dashboardThemeByUser';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
+    const PLANNER_DRAFT_KEY = 'plannerDraftByUser';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -1635,16 +1636,17 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         if (profitGoalInputEl) {
-            profitGoalInputEl.addEventListener('input', () => {
-                const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
-                profitGoalInputEl.value = digitsOnly ? Number(digitsOnly).toLocaleString('en-US') : '';
-            });
-
             const persistProfitGoal = () => {
                 const workspaceUser = getWorkspaceUserContext();
                 const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
                 setUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, digitsOnly);
             };
+
+            profitGoalInputEl.addEventListener('input', () => {
+                const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
+                profitGoalInputEl.value = digitsOnly ? Number(digitsOnly).toLocaleString('en-US') : '';
+                persistProfitGoal();
+            });
 
             profitGoalInputEl.addEventListener('change', persistProfitGoal);
             profitGoalInputEl.addEventListener('blur', persistProfitGoal);
@@ -4760,7 +4762,41 @@ function initNavbarDateTime() {
             setPlannerItems(items, workspaceUser);
         }
 
+        function getDraft() {
+            const savedDraft = getUserScopedValue(PLANNER_DRAFT_KEY, workspaceUser.key, null);
+            return savedDraft && typeof savedDraft === 'object' && !Array.isArray(savedDraft)
+                ? savedDraft
+                : null;
+        }
+
+        function saveDraft() {
+            setUserScopedValue(PLANNER_DRAFT_KEY, workspaceUser.key, {
+                title: String(input.value || ''),
+                dueDate: String(dateInput.value || ''),
+                priority: String(prioritySelect.value || 'p2'),
+                reminderLead: String(reminderSelect.value || 'day-of')
+            });
+        }
+
+        function applyDraft() {
+            const draft = getDraft();
+            if (!draft) {
+                return;
+            }
+
+            input.value = String(draft.title || '');
+            dateInput.value = String(draft.dueDate || '');
+            prioritySelect.value = ['p1', 'p2', 'p3', 'p4'].includes(draft.priority) ? draft.priority : 'p2';
+            reminderSelect.value = ['none', 'day-of', '1-day', '3-day'].includes(draft.reminderLead) ? draft.reminderLead : 'day-of';
+        }
+
+        function clearDraft() {
+            setUserScopedValue(PLANNER_DRAFT_KEY, workspaceUser.key, null);
+        }
+
         let activeFilter = 'today';
+
+        applyDraft();
 
         function classifyItem(item, todayKey) {
             if (item.completed) {
@@ -4955,6 +4991,7 @@ function initNavbarDateTime() {
             dateInput.value = '';
             prioritySelect.value = 'p2';
             reminderSelect.value = 'day-of';
+            clearDraft();
             renderItems();
             showDashboardToast('success', 'Added To Planner', dueDate ? 'Task saved with a reminder in your planner widget.' : 'Task saved in your planner widget.', {
                 eyebrow: 'Planner updated',
@@ -4967,6 +5004,10 @@ function initNavbarDateTime() {
         }
 
         addButton.addEventListener('click', addItem);
+        input.addEventListener('input', saveDraft);
+        dateInput.addEventListener('input', saveDraft);
+        prioritySelect.addEventListener('change', saveDraft);
+        reminderSelect.addEventListener('change', saveDraft);
         input.addEventListener('keydown', event => {
             if (event.key === 'Enter') {
                 event.preventDefault();

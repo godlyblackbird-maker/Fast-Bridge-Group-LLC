@@ -212,6 +212,10 @@ Edit `.env` file to customize:
 - **TWILIO_AUTH_TOKEN:** Twilio auth token
 - **TWILIO_PHONE_NUMBER:** Twilio sending number in E.164 format, e.g. `+18005551234`
 - **TWILIO_MESSAGING_SERVICE_SID:** Optional Twilio Messaging Service SID. If set, it is used instead of `TWILIO_PHONE_NUMBER`
+- **STEVE_SMTP_USER:** Steve's sending mailbox for dashboard emails. If omitted, the app uses `steve.medina@fastbridgegroupllc.com`
+- **STEVE_SMTP_PASS:** Steve's Gmail App Password used when his profile does not already have a saved password
+- **STEVE_SMTP_SIGNATURE:** Optional default signature/footer for Steve's outbound emails
+- **ISAAC_SMTP_USER / ISAAC_SMTP_PASS / ISAAC_SMTP_SIGNATURE:** Optional per-user fallback SMTP settings for Isaac using the same pattern
 
 Example Twilio block for `.env`:
 ```env
@@ -221,6 +225,35 @@ TWILIO_PHONE_NUMBER=+18005551234
 # Optional instead of a direct phone number:
 # TWILIO_MESSAGING_SERVICE_SID=MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
+
+Example Render email block:
+```env
+STEVE_SMTP_USER=steve.medina@fastbridgegroupllc.com
+STEVE_SMTP_PASS=your_16_character_gmail_app_password
+# Optional:
+STEVE_SMTP_SIGNATURE=Steve Medina\nFAST BRIDGE GROUP\nsteve.medina@fastbridgegroupllc.com
+```
+
+On Render, add these in the service dashboard under Environment:
+- `JWT_SECRET`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `STEVE_SMTP_USER`
+- `STEVE_SMTP_PASS`
+- `STEVE_SMTP_SIGNATURE` if you want a default signature
+- `SMTP_USER` and `SMTP_PASS` only if you still want a global fallback sender for non-user-specific mail like lead notifications
+- `LEAD_NOTIFY_EMAIL`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_PHONE_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+
+Steve email behavior after this change:
+- If Steve saved Gmail settings in Profile, those are used first.
+- If not, the app falls back to `STEVE_SMTP_USER` and `STEVE_SMTP_PASS` from Render.
+- The same fallback pattern also works for Isaac if you set the `ISAAC_SMTP_*` variables.
 
 ⚠️ **IMPORTANT FOR PRODUCTION:**
 - Change `JWT_SECRET` to a long random string
