@@ -1543,8 +1543,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 ? state.investorDefaults
                 : {};
 
-            const invEscrowPct = 1;
-            const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
+                const invEscrowPct = 0;
+                const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
             const invConcessionsPct = Math.max(parseMoneyValue(investorDefaults.invConcessionsPct), 0);
             const invBuyerAgentPct = 0;
             const invListingAgentPct = 0;
@@ -10012,7 +10012,7 @@ function initNavbarDateTime() {
             const invCashForKeysInput = document.getElementById('inv-cash-for-keys');
 
             const investorDefaults = {
-                invEscrowPct: '1',
+                 invEscrowPct: '0',
                 invProratedPct: '0',
                 invConcessionsPct: '0',
                 invBuyerAgentPct: '0',
@@ -10038,19 +10038,46 @@ function initNavbarDateTime() {
             let iaSummaryMessage = '';
             let investorSummaryMessage = '';
 
+            function sanitizeIaInvestorDefaults(defaults) {
+                const nextDefaults = defaults && typeof defaults === 'object'
+                    ? { ...defaults }
+                    : {};
+
+                nextDefaults.invEscrowPct = '0';
+                nextDefaults.invBuyerAgentPct = '0';
+                nextDefaults.invListingAgentPct = '0';
+
+                return nextDefaults;
+            }
+
+            function sanitizeIaCalculatorState(state) {
+                if (!state || typeof state !== 'object') {
+                    return state;
+                }
+
+                return {
+                    ...state,
+                    investorDefaults: sanitizeIaInvestorDefaults(state.investorDefaults)
+                };
+            }
+
             function getPersistedIaCalculatorState() {
                 if (!propertyKey) {
                     return null;
                 }
 
-                return getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key)
+                const savedState = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key)
                     .find(item => String(item.propertyKey || '').trim().toLowerCase() === propertyKey) || null;
+
+                return sanitizeIaCalculatorState(savedState);
             }
 
             function setPersistedIaCalculatorState(state) {
                 if (!propertyKey || !state || typeof state !== 'object') {
                     return;
                 }
+
+                const sanitizedState = sanitizeIaCalculatorState(state);
 
                 const items = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key)
                     .filter(item => String(item.propertyKey || '').trim().toLowerCase() !== propertyKey);
@@ -10059,7 +10086,7 @@ function initNavbarDateTime() {
                     propertyKey,
                     propertyAddress,
                     updatedAt: Date.now(),
-                    ...state
+                    ...sanitizedState
                 };
 
                 setUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key, [...items, nextState]);
@@ -10072,22 +10099,27 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                arvInput.value = String(state.arv ?? arvInput.value ?? '');
-                renovationInput.value = String(state.renovation ?? renovationInput.value ?? '');
-                sellSidePercentInput.value = String(state.sellSidePercent ?? sellSidePercentInput.value ?? '');
-                offerPriceInput.value = String(state.offerPrice ?? offerPriceInput.value ?? '');
-                targetPercentInput.value = String(state.targetProfitPercent ?? targetPercentInput.value ?? '');
-                targetDollarInput.value = String(state.targetProfitDollar ?? targetDollarInput.value ?? '');
-                holdMonthsInput.value = String(state.holdMonths ?? holdMonthsInput.value ?? '');
-                financingModeInput.value = String(state.financingMode ?? financingModeInput.value ?? '100-100');
-                customCostCapInput.value = String(state.customCostCap ?? customCostCapInput.value ?? '100');
-                customArvMaxInput.value = String(state.customArvMax ?? customArvMaxInput.value ?? '80');
-                loanToArvInput.value = String(state.loanToArv ?? loanToArvInput.value ?? '');
-                interestRateInput.value = String(state.interestRate ?? interestRateInput.value ?? '');
-                originationPointsInput.value = String(state.originationPoints ?? originationPointsInput.value ?? '');
-                lenderFeesInput.value = String(state.lenderFees ?? lenderFeesInput.value ?? '');
-                otherCosts = Array.isArray(state.otherCosts)
-                    ? state.otherCosts
+                const sanitizedState = sanitizeIaCalculatorState(state);
+                if (JSON.stringify(sanitizedState) !== JSON.stringify(state)) {
+                    setPersistedIaCalculatorState(sanitizedState);
+                }
+
+                arvInput.value = String(sanitizedState.arv ?? arvInput.value ?? '');
+                renovationInput.value = String(sanitizedState.renovation ?? renovationInput.value ?? '');
+                sellSidePercentInput.value = String(sanitizedState.sellSidePercent ?? sellSidePercentInput.value ?? '');
+                offerPriceInput.value = String(sanitizedState.offerPrice ?? offerPriceInput.value ?? '');
+                targetPercentInput.value = String(sanitizedState.targetProfitPercent ?? targetPercentInput.value ?? '');
+                targetDollarInput.value = String(sanitizedState.targetProfitDollar ?? targetDollarInput.value ?? '');
+                holdMonthsInput.value = String(sanitizedState.holdMonths ?? holdMonthsInput.value ?? '');
+                financingModeInput.value = String(sanitizedState.financingMode ?? financingModeInput.value ?? '100-100');
+                customCostCapInput.value = String(sanitizedState.customCostCap ?? customCostCapInput.value ?? '100');
+                customArvMaxInput.value = String(sanitizedState.customArvMax ?? customArvMaxInput.value ?? '80');
+                loanToArvInput.value = String(sanitizedState.loanToArv ?? loanToArvInput.value ?? '');
+                interestRateInput.value = String(sanitizedState.interestRate ?? interestRateInput.value ?? '');
+                originationPointsInput.value = String(sanitizedState.originationPoints ?? originationPointsInput.value ?? '');
+                lenderFeesInput.value = String(sanitizedState.lenderFees ?? lenderFeesInput.value ?? '');
+                otherCosts = Array.isArray(sanitizedState.otherCosts)
+                    ? sanitizedState.otherCosts
                         .map(item => ({
                             name: String(item && item.name ? item.name : 'Other Cost').trim() || 'Other Cost',
                             amount: Math.max(parseMoneyValue(item && item.amount), 0)
@@ -10095,11 +10127,11 @@ function initNavbarDateTime() {
                         .filter(item => item.amount > 0)
                     : [];
 
-                const savedInvestorDefaults = state.investorDefaults && typeof state.investorDefaults === 'object'
-                    ? state.investorDefaults
+                const savedInvestorDefaults = sanitizedState.investorDefaults && typeof sanitizedState.investorDefaults === 'object'
+                    ? sanitizedState.investorDefaults
                     : null;
                 if (savedInvestorDefaults) {
-                    investorDefaults.invEscrowPct = String(savedInvestorDefaults.invEscrowPct ?? investorDefaults.invEscrowPct);
+                    investorDefaults.invEscrowPct = '0';
                     investorDefaults.invProratedPct = String(savedInvestorDefaults.invProratedPct ?? investorDefaults.invProratedPct);
                     investorDefaults.invConcessionsPct = String(savedInvestorDefaults.invConcessionsPct ?? investorDefaults.invConcessionsPct);
                     investorDefaults.invBuyerAgentPct = '0';
@@ -10149,9 +10181,7 @@ function initNavbarDateTime() {
                         name: String(item.name || 'Other Cost').trim() || 'Other Cost',
                         amount: Math.max(parseMoneyValue(item.amount), 0)
                     })),
-                    investorDefaults: {
-                        ...investorDefaults
-                    },
+                    investorDefaults: sanitizeIaInvestorDefaults(investorDefaults),
                     targetMode,
                     offerPriceMode,
                     financingHoldCollapsed
@@ -10316,7 +10346,8 @@ function initNavbarDateTime() {
             }
 
             function syncInvestorDefaultsFromInputs() {
-                if (invEscrowPctInput) investorDefaults.invEscrowPct = String(invEscrowPctInput.value || investorDefaults.invEscrowPct);
+                 investorDefaults.invEscrowPct = '0';
+                 if (invEscrowPctInput) invEscrowPctInput.value = '0';
                 if (invProratedPctInput) investorDefaults.invProratedPct = String(invProratedPctInput.value || investorDefaults.invProratedPct);
                 if (invConcessionsPctInput) investorDefaults.invConcessionsPct = String(invConcessionsPctInput.value || investorDefaults.invConcessionsPct);
                 investorDefaults.invBuyerAgentPct = '0';
@@ -10516,7 +10547,7 @@ function initNavbarDateTime() {
                 const interestRatePct = Math.max(asNumber(interestRateInput, 0), 0);
                 const pointsPct = Math.max(asNumber(originationPointsInput, 0), 0);
                 const lenderFees = Math.max(asNumber(lenderFeesInput, 0), 0);
-                const invEscrowPct = 1;
+                const invEscrowPct = 0;
                 const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
                 const invConcessionsPct = Math.max(parseMoneyValue(investorDefaults.invConcessionsPct), 0);
                 const invBuyerAgentPct = 0;
@@ -10678,8 +10709,6 @@ function initNavbarDateTime() {
                 setText('ia-buy-side-cost-arv', formatPercent((buySideCost / arvBasis) * 100));
                 setText('ia-reno-arv', formatPercent((renovation / arvBasis) * 100));
                 setText('ia-sell-side-amount', formatMoney(sellSideCost));
-                setText('ia-sale-escrow-percent', formatPercent(invEscrowPct));
-                setText('ia-sale-escrow-amount', formatMoney(invEscrowAmount));
                 setText('ia-offer-price-arv', formatPercent((offerPrice / arvBasis) * 100));
 
                 setText('ia-total-acquisition', formatMoney(totalPurchaseCost));
@@ -10734,7 +10763,6 @@ function initNavbarDateTime() {
                     `Renovation Budget: ${formatMoney(renovation)}`,
                     `Buy-Side Closing Costs: ${formatMoney(buySideCost)}`,
                     `Sell-Side Closing Amount: ${formatMoney(sellSideCost)} (${formatPercent(sellSidePct)})`,
-                    `Sale-Side Escrow Amount: ${formatMoney(invEscrowAmount)} (${formatPercent(invEscrowPct)})`,
                     `Other Cost Total: ${formatMoney(extraCosts)}`,
                     `Gross Profit Adjustments: ${formatMoney(grossScopeAdjustmentTotal)}`,
                     '-',
@@ -10974,7 +11002,8 @@ function initNavbarDateTime() {
                 });
             }
 
-            const persistedIaCalculatorState = getPersistedIaCalculatorState() || (detailData.iaCalculatorState && typeof detailData.iaCalculatorState === 'object' ? detailData.iaCalculatorState : null);
+            const persistedIaCalculatorState = getPersistedIaCalculatorState()
+                || sanitizeIaCalculatorState(detailData.iaCalculatorState && typeof detailData.iaCalculatorState === 'object' ? detailData.iaCalculatorState : null);
 
             if (persistedIaCalculatorState) {
                 applyPersistedIaCalculatorState(persistedIaCalculatorState);
