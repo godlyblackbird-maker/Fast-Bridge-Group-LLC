@@ -6727,6 +6727,270 @@ function initNavbarDateTime() {
         });
     }
 
+    function initContractsWidget() {
+        const downloadPdfBtn = document.getElementById('contract-download-pdf');
+
+        if (!downloadPdfBtn) {
+            return;
+        }
+
+        let jsPdfLoaderPromise = null;
+        const clauses = [
+            {
+                title: 'Limited Purpose',
+                body: 'The brokerage grants FAST BRIDGE GROUP, LLC a limited, non-exclusive, revocable permission to reference and use the brokerage\'s real estate license, broker supervision, and related MLS authorization strictly as required to access, receive, display, and maintain MLS data and IDX/VOW-related compliance on FAST BRIDGE systems.'
+            },
+            {
+                title: 'No Ownership, Control, or IP Rights',
+                body: 'The brokerage acknowledges and agrees that it has no ownership interest, no equity, no control rights, and no claim whatsoever over FAST BRIDGE GROUP, LLC\'s website, source code, software, automations, user interface, databases, workflows, CRM logic, designs, branding, domains, marketing systems, investor lists, written content, graphics, or business operations. This Agreement does not transfer, assign, license, encumber, or imply any rights in FAST BRIDGE intellectual property other than the narrow MLS/data-use permission expressly stated above.'
+            },
+            {
+                title: 'FAST BRIDGE Responsibility',
+                body: 'FAST BRIDGE GROUP, LLC will retain full responsibility for the design, development, hosting, coding, security, maintenance, uptime, vendor relationships, data handling decisions, and all website-related operations. FAST BRIDGE GROUP, LLC will bear responsibility for its own website conduct, implementation choices, and compliance workflows, except that the brokerage remains responsible only for duties that by law cannot be delegated away under its license or MLS rules.'
+            },
+            {
+                title: 'MLS Data Boundary',
+                body: 'Any MLS data, listing content, or brokerage-required compliance materials remain subject to applicable MLS rules, broker supervision requirements, and third-party data rights. Outside of that MLS-specific content, all remaining systems, features, code, and platform assets belong exclusively to FAST BRIDGE GROUP, LLC.'
+            },
+            {
+                title: 'No Partnership or Work-for-Hire',
+                body: 'This Agreement does not create a partnership, joint venture, merger, employer relationship, franchise, or work-for-hire arrangement. The brokerage is not the owner, developer, operator, or purchaser of the FAST BRIDGE website or codebase by virtue of providing MLS licensing access.'
+            },
+            {
+                title: 'Termination',
+                body: 'Upon termination, FAST BRIDGE GROUP, LLC will discontinue use of the brokerage\'s license and any MLS/IDX permissions tied to that brokerage unless replaced by another valid authorization. Termination does not grant the brokerage any right to seize, demand transfer of, copy, or control FAST BRIDGE systems, software, or website assets.'
+            }
+        ];
+
+        const fieldReaders = {
+            effectiveDate: () => document.getElementById('contract-effective-date')?.value || '',
+            market: () => document.getElementById('contract-mls-market')?.value || '',
+            brokerageName: () => document.getElementById('contract-brokerage-name')?.value || '',
+            brokerageSignerName: () => document.getElementById('contract-brokerage-signer-name')?.value || '',
+            brokerageSignerTitle: () => document.getElementById('contract-brokerage-signer-title')?.value || '',
+            brokerageSignature: () => document.getElementById('contract-brokerage-signature')?.value || '',
+            brokerageSignDate: () => document.getElementById('contract-brokerage-sign-date')?.value || '',
+            fastbridgeSignerName: () => document.getElementById('contract-fastbridge-signer-name')?.value || '',
+            fastbridgeSignerTitle: () => document.getElementById('contract-fastbridge-signer-title')?.value || '',
+            fastbridgeSignature: () => document.getElementById('contract-fastbridge-signature')?.value || '',
+            fastbridgeSignDate: () => document.getElementById('contract-fastbridge-sign-date')?.value || '',
+            extraSignerName: () => document.getElementById('contract-extra-signer-name')?.value || '',
+            extraSignerTitle: () => document.getElementById('contract-extra-signer-title')?.value || '',
+            extraSignature: () => document.getElementById('contract-extra-signature')?.value || '',
+            extraSignDate: () => document.getElementById('contract-extra-sign-date')?.value || ''
+        };
+
+        function normalizeValue(value, fallback) {
+            const normalized = String(value || '').trim();
+            return normalized || fallback;
+        }
+
+        function formatDateValue(value) {
+            const rawValue = String(value || '').trim();
+            if (!rawValue) {
+                return '________________';
+            }
+
+            const parsed = new Date(rawValue);
+            if (Number.isNaN(parsed.getTime())) {
+                return rawValue;
+            }
+
+            return parsed.toLocaleDateString();
+        }
+
+        function buildAgreementFileName(brokerageName) {
+            const slug = normalizeValue(brokerageName, 'mls-data-license-only')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            return `${slug || 'mls-data-license-only'}-agreement.pdf`;
+        }
+
+        function loadJsPdf() {
+            if (window.jspdf && window.jspdf.jsPDF) {
+                return Promise.resolve(window.jspdf.jsPDF);
+            }
+
+            if (jsPdfLoaderPromise) {
+                return jsPdfLoaderPromise;
+            }
+
+            jsPdfLoaderPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+                script.async = true;
+                script.onload = () => {
+                    if (window.jspdf && window.jspdf.jsPDF) {
+                        resolve(window.jspdf.jsPDF);
+                        return;
+                    }
+                    reject(new Error('jsPDF did not initialize.'));
+                };
+                script.onerror = () => reject(new Error('Failed to load jsPDF.'));
+                document.head.appendChild(script);
+            });
+
+            return jsPdfLoaderPromise;
+        }
+
+        function buildAgreementSections() {
+            const agreementData = {
+                effectiveDate: formatDateValue(fieldReaders.effectiveDate()),
+                market: normalizeValue(fieldReaders.market(), '________________'),
+                brokerageName: normalizeValue(fieldReaders.brokerageName(), 'the licensed brokerage identified below'),
+                brokerageSignerName: normalizeValue(fieldReaders.brokerageSignerName(), '________________'),
+                brokerageSignerTitle: normalizeValue(fieldReaders.brokerageSignerTitle(), '________________'),
+                brokerageSignature: normalizeValue(fieldReaders.brokerageSignature(), '________________'),
+                brokerageSignDate: formatDateValue(fieldReaders.brokerageSignDate()),
+                fastbridgeSignerName: normalizeValue(fieldReaders.fastbridgeSignerName(), '________________'),
+                fastbridgeSignerTitle: normalizeValue(fieldReaders.fastbridgeSignerTitle(), '________________'),
+                fastbridgeSignature: normalizeValue(fieldReaders.fastbridgeSignature(), '________________'),
+                fastbridgeSignDate: formatDateValue(fieldReaders.fastbridgeSignDate()),
+                extraSignerName: normalizeValue(fieldReaders.extraSignerName(), '________________'),
+                extraSignerTitle: normalizeValue(fieldReaders.extraSignerTitle(), '________________'),
+                extraSignature: normalizeValue(fieldReaders.extraSignature(), '________________'),
+                extraSignDate: formatDateValue(fieldReaders.extraSignDate())
+            };
+
+            const sections = [
+                {
+                    heading: 'License Agreement / Data Use Agreement',
+                    lines: [
+                        'MLS Data License Only',
+                        `Effective Date: ${agreementData.effectiveDate}`,
+                        `MLS Market / Region: ${agreementData.market}`,
+                        `Brokerage Legal Name: ${agreementData.brokerageName}`,
+                        '',
+                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC and ${agreementData.brokerageName} solely for the limited purpose of enabling lawful MLS data access, display, and compliance under the brokerage\'s license.`
+                    ]
+                },
+                {
+                    heading: 'Working Draft Notice',
+                    lines: [
+                        'This agreement is drafted to allow a brokerage license to be used strictly for MLS data access and compliance. FAST BRIDGE GROUP, LLC retains full ownership and control of the website, codebase, software, branding, business processes, and all non-MLS intellectual property. Final legal review is still recommended before signing.'
+                    ]
+                },
+                ...clauses.map((clause, index) => ({
+                    heading: `${String(index + 1).padStart(2, '0')} ${clause.title}`,
+                    lines: [clause.body]
+                })),
+                {
+                    heading: 'Intent of This Agreement',
+                    lines: [
+                        'The brokerage is being engaged only so FAST BRIDGE can lawfully use the brokerage\'s license for MLS data access. The brokerage is not obtaining any ownership, management, coding rights, website rights, or business rights in FAST BRIDGE GROUP, LLC, at all.'
+                    ]
+                },
+                {
+                    heading: 'Signature Blocks',
+                    lines: [
+                        `Brokerage Signer: ${agreementData.brokerageSignerName}`,
+                        `Title: ${agreementData.brokerageSignerTitle}`,
+                        `Signature: ${agreementData.brokerageSignature}`,
+                        `Date: ${agreementData.brokerageSignDate}`,
+                        '',
+                        `FAST BRIDGE GROUP, LLC Signer: ${agreementData.fastbridgeSignerName}`,
+                        `Title: ${agreementData.fastbridgeSignerTitle}`,
+                        `Signature: ${agreementData.fastbridgeSignature}`,
+                        `Date: ${agreementData.fastbridgeSignDate}`,
+                        '',
+                        `Additional Signer: ${agreementData.extraSignerName}`,
+                        `Title / Role: ${agreementData.extraSignerTitle}`,
+                        `Signature: ${agreementData.extraSignature}`,
+                        `Date: ${agreementData.extraSignDate}`
+                    ]
+                }
+            ];
+
+            return {
+                sections,
+                fileName: buildAgreementFileName(agreementData.brokerageName)
+            };
+        }
+
+        async function downloadAgreementPdf() {
+            downloadPdfBtn.disabled = true;
+
+            try {
+                const JsPdfConstructor = await loadJsPdf();
+                const { sections, fileName } = buildAgreementSections();
+                const pdf = new JsPdfConstructor({
+                    orientation: 'portrait',
+                    unit: 'pt',
+                    format: 'letter'
+                });
+
+                const marginX = 48;
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const contentWidth = pageWidth - (marginX * 2);
+                const bottomMargin = 56;
+                let cursorY = 58;
+
+                function ensurePage(requiredHeight) {
+                    if (cursorY + requiredHeight <= pageHeight - bottomMargin) {
+                        return;
+                    }
+                    pdf.addPage();
+                    cursorY = 58;
+                }
+
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(18);
+                pdf.text('FAST BRIDGE GROUP, LLC', marginX, cursorY);
+                cursorY += 24;
+
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text('License Agreement / Data Use Agreement PDF Export', marginX, cursorY);
+                cursorY += 24;
+
+                sections.forEach((section, sectionIndex) => {
+                    const bodyLines = [];
+                    section.lines.forEach((line) => {
+                        if (!String(line || '').trim()) {
+                            bodyLines.push('');
+                            return;
+                        }
+                        const wrappedLines = pdf.splitTextToSize(String(line), contentWidth);
+                        wrappedLines.forEach((wrappedLine) => bodyLines.push(wrappedLine));
+                    });
+
+                    const estimatedHeight = 22 + (Math.max(1, bodyLines.length) * 14) + 10;
+                    ensurePage(estimatedHeight);
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(sectionIndex === 0 ? 16 : 12);
+                    pdf.text(section.heading, marginX, cursorY);
+                    cursorY += sectionIndex === 0 ? 22 : 18;
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(11);
+                    bodyLines.forEach((line) => {
+                        if (!line) {
+                            cursorY += 8;
+                            return;
+                        }
+                        ensurePage(18);
+                        pdf.text(line, marginX, cursorY);
+                        cursorY += 14;
+                    });
+
+                    cursorY += 10;
+                });
+
+                pdf.save(fileName);
+                showDashboardToast('success', 'Agreement Downloaded', 'MLS Data License Only was downloaded as a PDF.');
+            } catch (error) {
+                showDashboardToast('error', 'Download Failed', 'Unable to generate the agreement PDF right now.');
+            } finally {
+                downloadPdfBtn.disabled = false;
+            }
+        }
+
+        downloadPdfBtn.addEventListener('click', downloadAgreementPdf);
+    }
+
     async function initDealsPage() {
         const list = document.getElementById('deals-compact-list');
         const count = document.getElementById('deals-compact-count');
@@ -11176,6 +11440,7 @@ function initNavbarDateTime() {
         initAdminUserManager();
         initTodoGoalsWidget();
         initPlannerNotifications();
+        initContractsWidget();
         initMlsDealsBoard();
         initMlsSearchHub();
         initFlyerMaker();
