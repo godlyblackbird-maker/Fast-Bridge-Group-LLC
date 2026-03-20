@@ -7896,20 +7896,14 @@ function initNavbarDateTime() {
             localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
         }
 
-        const agentRecord = detailData.agentRecord || {
-            name: 'Brandon Wasilewski',
-            title: 'Agent Record',
-            phone: '(805) 856-8773',
-            email: 'lewskisells@gmail.com',
-            brokerage: 'Realty ONE Group Summit',
-            lastCommunicationDate: '-',
-            lastAddressDiscussed: '-',
-            lastCommunicatedAA: '-',
-            activeInLast2Years: 'TRUE',
-            averageDealsPerYear: '3',
-            doubleEnded: '0',
-            investorSource: '0'
-        };
+        function getCurrentAgentRecordState() {
+            return {
+                ...defaultDetailData.agentRecord,
+                ...(detailData.agentRecord && typeof detailData.agentRecord === 'object' ? detailData.agentRecord : {})
+            };
+        }
+
+        const agentRecord = getCurrentAgentRecordState();
 
         const workspaceUser = getWorkspaceUserContext();
         const activeUser = getStoredCurrentUserIdentity();
@@ -8166,6 +8160,34 @@ function initNavbarDateTime() {
         };
         const currentStatusLabel = formatAgentStatusLabel(currentStatusValue);
 
+        function applyAgentWorkspaceRecord(agentRecordState) {
+            const safeAgentRecord = {
+                ...defaultDetailData.agentRecord,
+                ...(agentRecordState && typeof agentRecordState === 'object' ? agentRecordState : {})
+            };
+            const agentFieldMap = {
+                'agent-name': safeAgentRecord.name,
+                'agent-record-title': safeAgentRecord.title,
+                'agent-phone': safeAgentRecord.phone,
+                'agent-email': safeAgentRecord.email,
+                'agent-brokerage': safeAgentRecord.brokerage,
+                'agent-last-communication-date': safeAgentRecord.lastCommunicationDate,
+                'agent-last-address-discussed': safeAgentRecord.lastAddressDiscussed,
+                'agent-last-communicated-aa': safeAgentRecord.lastCommunicatedAA,
+                'agent-active-last-2-years': safeAgentRecord.activeInLast2Years,
+                'agent-average-deals-per-year': safeAgentRecord.averageDealsPerYear,
+                'agent-double-ended': safeAgentRecord.doubleEnded,
+                'agent-investor-source': safeAgentRecord.investorSource
+            };
+
+            Object.keys(agentFieldMap).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = agentFieldMap[id];
+                }
+            });
+        }
+
         const idMap = {
             'property-address-title': detailData.address,
             'property-details-line': detailData.propertyDetails,
@@ -8215,19 +8237,7 @@ function initNavbarDateTime() {
             'tab-content-piq': detailData.piq,
             'tab-content-comps': detailData.comps,
             'tab-content-ia': detailData.ia,
-            'agent-name': agentRecord.name,
-            'agent-record-title': agentRecord.title,
-            'agent-phone': agentRecord.phone,
-            'agent-email': agentRecord.email,
-            'agent-brokerage': agentRecord.brokerage,
             'agent-current-status': currentStatusLabel,
-            'agent-last-communication-date': agentRecord.lastCommunicationDate,
-            'agent-last-address-discussed': agentRecord.lastAddressDiscussed,
-            'agent-last-communicated-aa': agentRecord.lastCommunicatedAA,
-            'agent-active-last-2-years': agentRecord.activeInLast2Years,
-            'agent-average-deals-per-year': agentRecord.averageDealsPerYear,
-            'agent-double-ended': agentRecord.doubleEnded,
-            'agent-investor-source': agentRecord.investorSource,
             'tab-content-offer': detailData.offer
         };
 
@@ -8237,6 +8247,8 @@ function initNavbarDateTime() {
                 element.textContent = idMap[id];
             }
         });
+
+        applyAgentWorkspaceRecord(getCurrentAgentRecordState());
 
         const tabButtons = Array.from(document.querySelectorAll('.property-tab-btn[data-tab]'));
         const tabPanels = Array.from(document.querySelectorAll('.property-tab-panel[data-panel]'));
@@ -8350,6 +8362,79 @@ function initNavbarDateTime() {
         }
 
         renderOfferNegotiator(persistedAssignment);
+
+        function initAgentWorkspaceEditor() {
+            const editButton = document.getElementById('agent-workspace-edit-btn');
+            const editPanel = document.getElementById('agent-workspace-edit-panel');
+            const saveButton = document.getElementById('agent-workspace-save-btn');
+            const cancelButton = document.getElementById('agent-workspace-cancel-btn');
+            const fieldMap = {
+                name: document.getElementById('agent-workspace-name-input'),
+                title: document.getElementById('agent-workspace-title-input'),
+                phone: document.getElementById('agent-workspace-phone-input'),
+                email: document.getElementById('agent-workspace-email-input'),
+                brokerage: document.getElementById('agent-workspace-brokerage-input'),
+                lastCommunicationDate: document.getElementById('agent-workspace-last-communication-input'),
+                lastAddressDiscussed: document.getElementById('agent-workspace-last-address-input'),
+                lastCommunicatedAA: document.getElementById('agent-workspace-last-aa-input'),
+                activeInLast2Years: document.getElementById('agent-workspace-active-input'),
+                averageDealsPerYear: document.getElementById('agent-workspace-average-deals-input'),
+                doubleEnded: document.getElementById('agent-workspace-double-ended-input'),
+                investorSource: document.getElementById('agent-workspace-investor-source-input')
+            };
+
+            if (!editButton || !editPanel || !saveButton || !cancelButton || Object.values(fieldMap).some(field => !field)) {
+                return;
+            }
+
+            function populateForm() {
+                const currentRecord = getCurrentAgentRecordState();
+                Object.entries(fieldMap).forEach(([key, field]) => {
+                    field.value = String(currentRecord[key] || '').trim();
+                });
+            }
+
+            function setEditMode(isEditing) {
+                editPanel.hidden = !isEditing;
+                editButton.textContent = isEditing ? 'Editing Agent Workspace' : 'Edit Agent Workspace';
+                editButton.disabled = Boolean(isEditing);
+            }
+
+            editButton.addEventListener('click', () => {
+                populateForm();
+                setEditMode(true);
+            });
+
+            cancelButton.addEventListener('click', () => {
+                populateForm();
+                setEditMode(false);
+            });
+
+            saveButton.addEventListener('click', () => {
+                const nextAgentRecord = {
+                    ...getCurrentAgentRecordState()
+                };
+
+                Object.entries(fieldMap).forEach(([key, field]) => {
+                    const nextValue = String(field.value || '').trim();
+                    nextAgentRecord[key] = nextValue || defaultDetailData.agentRecord[key] || '-';
+                });
+
+                detailData.agentRecord = {
+                    ...detailData.agentRecord,
+                    ...nextAgentRecord,
+                    agentStatus: formatAgentStatusLabel(detailData.piqAgentStatus || 'none')
+                };
+                Object.assign(agentRecord, detailData.agentRecord);
+                applyAgentWorkspaceRecord(detailData.agentRecord);
+                localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+                syncCurrentAssignmentSnapshot();
+                setEditMode(false);
+                showDashboardToast('success', 'Agent Workspace Saved', 'Agent workspace details were updated for this property.');
+            });
+        }
+
+        initAgentWorkspaceEditor();
 
         if (piqAgentStatusSelect) {
             const defaultStatus = 'none';
@@ -8710,9 +8795,7 @@ function initNavbarDateTime() {
 
             const workspaceUser = getWorkspaceUserContext();
             const propertyAddress = String(detailData.address || '').trim();
-            const agentName = String(agentRecord.name || '').trim();
             const propertyKey = propertyAddress.toLowerCase();
-            const agentKey = agentName.toLowerCase();
 
             function getNotes() {
                 return getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
@@ -8724,11 +8807,14 @@ function initNavbarDateTime() {
 
             function renderNotes() {
                 const canonicalStatus = String(getPersistedPiqStatus() || detailData.piqAgentStatus || 'none');
+                const currentAgentRecord = getCurrentAgentRecordState();
+                const currentAgentName = String(currentAgentRecord.name || '').trim();
+                const currentAgentKey = currentAgentName.toLowerCase();
                 const notes = getNotes()
                     .filter(note => {
                         const noteAddress = String(note.propertyAddress || '').trim().toLowerCase();
                         const noteAgent = String(note.agentName || '').trim().toLowerCase();
-                        return noteAddress === propertyKey && noteAgent === agentKey;
+                        return noteAddress === propertyKey && noteAgent === currentAgentKey;
                     })
                     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
@@ -8746,7 +8832,7 @@ function initNavbarDateTime() {
                     head.className = 'agent-note-item-head';
 
                     const heading = document.createElement('strong');
-                    heading.textContent = agentName || 'Agent Note';
+                    heading.textContent = currentAgentName || 'Agent Note';
 
                     const time = document.createElement('span');
                     time.className = 'agent-note-item-time';
@@ -8780,6 +8866,8 @@ function initNavbarDateTime() {
                     detailData.piqAgentStatus ||
                     'none'
                 );
+                const currentAgentRecord = getCurrentAgentRecordState();
+                const currentAgentName = String(currentAgentRecord.name || '').trim();
                 detailData.piqAgentStatus = currentStatus;
                 detailData.agentRecord = {
                     ...(detailData.agentRecord || {}),
@@ -8803,10 +8891,10 @@ function initNavbarDateTime() {
                     id: `agn-${Date.now()}-${Math.round(Math.random() * 10000)}`,
                     note: noteText,
                     propertyAddress,
-                    agentName,
-                    agentPhone: agentRecord.phone || '',
-                    agentEmail: agentRecord.email || '',
-                    agentBrokerage: agentRecord.brokerage || '',
+                    agentName: currentAgentName,
+                    agentPhone: currentAgentRecord.phone || '',
+                    agentEmail: currentAgentRecord.email || '',
+                    agentBrokerage: currentAgentRecord.brokerage || '',
                     piqAgentStatus: currentStatus,
                     createdAt: Date.now(),
                     propertySnapshot: {

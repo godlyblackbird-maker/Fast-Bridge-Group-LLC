@@ -591,6 +591,57 @@
                             <p id="agent-brokerage">Realty ONE Group Summit</p>
                         </header>
 
+                        <div class="outreach-actions agent-record-edit-actions">
+                            <button id="agent-workspace-edit-btn" type="button" class="card-btn active">Edit Agent Workspace</button>
+                        </div>
+
+                        <section id="agent-workspace-edit-panel" class="agent-record-section" hidden>
+                            <h4>Edit Agent Workspace</h4>
+                            <p class="agent-note-help">Update the agent workspace fields below. Saved changes stay attached to this property and load back in automatically.</p>
+                            <div class="offer-grid">
+                                <label>Name
+                                    <input id="agent-workspace-name-input" class="form-input" type="text" placeholder="Agent name">
+                                </label>
+                                <label>Record Title
+                                    <input id="agent-workspace-title-input" class="form-input" type="text" placeholder="Agent Record">
+                                </label>
+                                <label>Phone
+                                    <input id="agent-workspace-phone-input" class="form-input" type="text" placeholder="(555) 555-5555">
+                                </label>
+                                <label>Email
+                                    <input id="agent-workspace-email-input" class="form-input" type="email" placeholder="agent@example.com">
+                                </label>
+                                <label>Brokerage
+                                    <input id="agent-workspace-brokerage-input" class="form-input" type="text" placeholder="Brokerage name">
+                                </label>
+                                <label>Last Communication Date
+                                    <input id="agent-workspace-last-communication-input" class="form-input" type="text" placeholder="03/20/2026">
+                                </label>
+                                <label>Last Address Discussed
+                                    <input id="agent-workspace-last-address-input" class="form-input" type="text" placeholder="Property address">
+                                </label>
+                                <label>Last Communicated AA
+                                    <input id="agent-workspace-last-aa-input" class="form-input" type="text" placeholder="AA name or note">
+                                </label>
+                                <label>Active In Last 2 Years
+                                    <input id="agent-workspace-active-input" class="form-input" type="text" placeholder="TRUE / FALSE">
+                                </label>
+                                <label>Average Deals Per Year
+                                    <input id="agent-workspace-average-deals-input" class="form-input" type="text" placeholder="0">
+                                </label>
+                                <label>Double Ended
+                                    <input id="agent-workspace-double-ended-input" class="form-input" type="text" placeholder="0">
+                                </label>
+                                <label>Investor Source
+                                    <input id="agent-workspace-investor-source-input" class="form-input" type="text" placeholder="0">
+                                </label>
+                            </div>
+                            <div class="outreach-actions">
+                                <button id="agent-workspace-save-btn" type="button" class="card-btn active">Save Changes</button>
+                                <button id="agent-workspace-cancel-btn" type="button" class="card-btn">Cancel</button>
+                            </div>
+                        </section>
+
                         <div class="agent-record-section">
                             <h4>Last Communication</h4>
                             <p>Agent Status: <strong id="agent-current-status">0% - None</strong></p>
