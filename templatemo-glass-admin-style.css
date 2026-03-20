@@ -10550,6 +10550,22 @@ select.form-input option:checked,
     align-items: stretch;
 }
 
+.ia-sell-side-amount-pill {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-height: 100%;
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+.ia-sell-side-amount-pill strong {
+    display: block;
+    font-size: 15px;
+    line-height: 1.15;
+}
+
 .ia-calc-btn {
     flex: 1 1 100%;
     width: 100%;
