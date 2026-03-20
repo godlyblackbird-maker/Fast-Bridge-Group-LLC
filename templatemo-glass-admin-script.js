@@ -7167,19 +7167,19 @@ function initNavbarDateTime() {
             return [
                 {
                     title: 'Purpose',
-                    body: `This Agreement establishes a limited relationship under which ${agreementData.brokerageName} authorizes FAST BRIDGE GROUP, LLC to operate a real estate platform that accesses and displays MLS data under brokerage supervision strictly for compliance with applicable MLS, IDX, and VOW rules.`
+                    body: `This Agreement establishes a limited relationship under which ${agreementData.brokerageName} authorizes FAST BRIDGE GROUP, LLC to operate a real estate platform that accesses and displays MLS data under brokerage supervision in a manner consistent with applicable MLS, IDX, VOW, legal, and broker risk-management requirements.`
                 },
                 {
                     title: 'Limited License & Authorization',
-                    body: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable authorization to access MLS data feeds, including IDX and VOW as applicable, display listing data on FAST BRIDGE platforms, and operate under brokerage supervision solely to the extent required by law and MLS rules. FAST BRIDGE does not receive ownership of MLS data.`
+                    body: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable authorization to access MLS data feeds, including IDX and VOW as applicable, display listing data on FAST BRIDGE platforms, and operate subject to brokerage oversight required for compliance with law, MLS rules, and the brokerage's license obligations. FAST BRIDGE does not receive ownership of MLS data.`
                 },
                 {
                     title: 'Ownership of Platform & Intellectual Property',
-                    body: 'FAST BRIDGE GROUP, LLC retains 100% exclusive ownership of its website, platform, infrastructure, source code, software systems, databases excluding MLS data, branding, domains, marketing systems, user data excluding MLS-provided data, CRM systems, workflows, and automations. The brokerage receives no ownership, equity, or claim to FAST BRIDGE intellectual property under any circumstance.'
+                    body: 'FAST BRIDGE GROUP, LLC retains ownership of its website, platform, infrastructure, source code, software systems, databases excluding MLS data, branding, domains, marketing systems, user data excluding MLS-provided data, CRM systems, workflows, and automations. Nothing in this Agreement grants the brokerage any ownership interest in FAST BRIDGE intellectual property.'
                 },
                 {
-                    title: 'Brokerage Compliance Authority (Limited)',
-                    body: `${agreementData.brokerageName} retains authority only as required by law and MLS rules, including ensuring IDX/VOW compliance, requiring corrections to listing display or disclosures, and enforcing legally required supervision. This authority is strictly limited to compliance matters, and does not extend to product development, technology decisions, UX/UI design, business strategy, or marketing unless legally non-compliant.`
+                    title: 'Brokerage Compliance and Risk Management Authority',
+                    body: `${agreementData.brokerageName} retains authority necessary to ensure compliance with MLS rules, applicable law, and risk-management obligations associated with its license, including requiring corrections to listing display, disclosures, marketing claims, data handling, and other platform activity that could reasonably create broker liability. The parties will work cooperatively to resolve compliance issues, and brokerage authority under this Section does not grant the brokerage ownership of FAST BRIDGE intellectual property or day-to-day control over unrelated product development decisions.`
                 },
                 {
                     title: 'FAST BRIDGE Responsibilities',
@@ -7195,7 +7195,7 @@ function initNavbarDateTime() {
                 },
                 {
                     title: 'Term and Termination',
-                    body: `Either party may terminate this Agreement upon thirty (30) days' written notice. Immediate termination may occur for MLS violations, legal non-compliance, data-security failures, or breach of this Agreement. Upon termination, FAST BRIDGE GROUP, LLC must discontinue MLS data use tied to ${agreementData.brokerageName}, and ${agreementData.brokerageName} retains no rights to FAST BRIDGE systems, software, or non-MLS data.`
+                    body: `Either party may terminate this Agreement upon thirty (30) days' written notice. Immediate termination may occur for MLS violations, legal non-compliance, data-security failures, or breach of this Agreement. Upon termination, FAST BRIDGE GROUP, LLC must discontinue MLS data use tied to ${agreementData.brokerageName}, and ${agreementData.brokerageName} retains no rights to FAST BRIDGE systems, software, or non-MLS data. Where permitted, ${agreementData.brokerageName} agrees to reasonably cooperate in transitioning MLS data access to a successor brokerage so FAST BRIDGE can maintain lawful operations without unnecessary interruption.`
                 },
                 {
                     title: 'No Partnership or Agency',
@@ -7208,6 +7208,10 @@ function initNavbarDateTime() {
                 {
                     title: 'Broker License Verification',
                     body: `The brokerage represents and warrants that it holds a valid, active real estate license in good standing and that ${agreementData.brokerageSignerName} holds an active broker license in good standing with authority to bind ${agreementData.brokerageName}. ${agreementData.brokerageName} shall promptly notify FAST BRIDGE GROUP, LLC of any suspension, lapse, restriction, disciplinary action, or other change in licensing status that could affect MLS access, broker supervision, or this Agreement.`
+                },
+                {
+                    title: 'MLS Rules Control',
+                    body: 'In the event of any conflict between this Agreement and applicable MLS, IDX, or VOW rules, policies, or data-license requirements, the applicable MLS rules and related governing requirements shall control.'
                 },
                 {
                     title: 'Governing Law',
@@ -7223,9 +7227,9 @@ function initNavbarDateTime() {
         function buildAgreementPreviewContent(agreementData) {
             return {
                 intro: `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC, a California limited liability company with a business address at ${agreementData.fastbridgeBusinessAddress}, acting by and through ${agreementData.fastbridgeSignerName}, and ${agreementData.brokerageName}, a licensed real estate brokerage with a business address at ${agreementData.brokerageBusinessAddress}, acting by and through ${agreementData.brokerageSignerName} as its duly authorized licensed broker, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`,
-                limitedPurpose: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable authorization to access MLS data feeds, including IDX and VOW as applicable, display listing data on FAST BRIDGE platforms, and operate under brokerage supervision solely to the extent required by law and MLS rules. FAST BRIDGE does not receive ownership of MLS data.`,
+                limitedPurpose: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable authorization to access MLS data feeds, including IDX and VOW as applicable, display listing data on FAST BRIDGE platforms, and operate subject to brokerage oversight required for compliance with law, MLS rules, and the brokerage's license obligations. FAST BRIDGE does not receive ownership of MLS data.`,
                 fastbridgeResponsibility: 'FAST BRIDGE GROUP, LLC agrees to maintain operational control of the platform, ensure MLS data is displayed in compliance with applicable rules, implement required disclaimers and attribution, maintain applicable data accuracy and refresh standards, maintain reasonable data security safeguards, and promptly correct compliance issues upon notice.',
-                intent: 'Intent of this agreement: this is a compliance-based licensing relationship only, where the brokerage provides lawful MLS access and supervision and FAST BRIDGE retains full ownership and operational control. At no point does the brokerage obtain ownership or operational control over the FAST BRIDGE platform beyond legally required compliance oversight.'
+                intent: 'Intent of this agreement: this is a compliance-based licensing relationship only, where the brokerage provides lawful MLS access and retains authority necessary to satisfy its MLS, legal, and broker risk-management duties, while FAST BRIDGE retains ownership and operational control of its platform subject to that required oversight.'
             };
         }
 
@@ -7297,7 +7301,7 @@ function initNavbarDateTime() {
                 {
                     heading: 'Working Draft Notice',
                     lines: [
-                        'This agreement is drafted to reflect a compliance-based MLS authorization structure only. FAST BRIDGE GROUP, LLC retains ownership of its platform and non-MLS intellectual property, while the brokerage retains only the supervision and compliance authority required by law and MLS rules. Final legal review is still recommended before signing.'
+                        'This agreement is drafted to reflect a compliance-based MLS authorization structure only. FAST BRIDGE GROUP, LLC retains ownership of its platform and non-MLS intellectual property, while the brokerage retains the authority reasonably necessary to satisfy its MLS, legal, and broker risk-management obligations. Final legal review is still recommended before signing.'
                     ]
                 },
                 ...clauses.map((clause, index) => ({
@@ -7307,7 +7311,7 @@ function initNavbarDateTime() {
                 {
                     heading: 'Intent of This Agreement',
                     lines: [
-                        'The intent of this Agreement is to establish a compliance-based licensing relationship only, where the brokerage provides lawful MLS access and supervision and FAST BRIDGE retains full ownership and operational control. At no point does the brokerage obtain any ownership or operational control over the FAST BRIDGE platform beyond legally required compliance oversight.'
+                        'The intent of this Agreement is to establish a compliance-based licensing relationship only, where the brokerage provides lawful MLS access and retains authority necessary to satisfy its MLS, legal, and broker risk-management obligations, while FAST BRIDGE retains ownership and operational control of its platform subject to that required oversight. Nothing in this Agreement grants the brokerage any ownership interest in FAST BRIDGE intellectual property.'
                     ]
                 },
                 {
