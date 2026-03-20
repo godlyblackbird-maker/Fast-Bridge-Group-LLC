@@ -1635,7 +1635,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const renovation = Math.max(parseMoneyValue(state.renovation), 0);
             const offerPrice = Math.max(parseMoneyValue(state.offerPrice), 0);
             const holdMonths = Math.max(parseMoneyValue(state.holdMonths), 0);
-            const financingMode = String(state.financingMode || '100-100').trim().toLowerCase();
+            const financingMode = String(state.financingMode || '100-95-13-excel-ia').trim().toLowerCase();
             const loanToArvPct = Math.max(parseMoneyValue(state.loanToArv), 0);
             const interestRatePct = Math.max(parseMoneyValue(state.interestRate), 0);
             const pointsPct = Math.max(parseMoneyValue(state.originationPoints), 0);
@@ -11262,7 +11262,7 @@ function initNavbarDateTime() {
                 targetPercentInput.value = String(sanitizedState.targetProfitPercent ?? targetPercentInput.value ?? '');
                 targetDollarInput.value = String(sanitizedState.targetProfitDollar ?? targetDollarInput.value ?? '');
                 holdMonthsInput.value = String(sanitizedState.holdMonths ?? holdMonthsInput.value ?? '');
-                financingModeInput.value = String(sanitizedState.financingMode ?? financingModeInput.value ?? '100-100');
+                financingModeInput.value = String(sanitizedState.financingMode ?? financingModeInput.value ?? '100-95-13-excel-ia');
                 customCostCapInput.value = String(sanitizedState.customCostCap ?? customCostCapInput.value ?? '100');
                 customArvMaxInput.value = String(sanitizedState.customArvMax ?? customArvMaxInput.value ?? '80');
                 loanToArvInput.value = String(sanitizedState.loanToArv ?? loanToArvInput.value ?? '');
@@ -11708,7 +11708,7 @@ function initNavbarDateTime() {
                 const invDueDiligence = Math.max(parseMoneyValue(investorDefaults.invDueDiligence), 0);
                 const invAcquisitionFee = Math.max(parseMoneyValue(investorDefaults.invAcquisitionFee), 0);
                 const invCashForKeys = Math.max(parseMoneyValue(investorDefaults.invCashForKeys), 0);
-                const financingMode = financingModeInput.value || '100-100';
+                const financingMode = financingModeInput.value || '100-95-13-excel-ia';
 
                 const extraCosts = otherCostsTotal();
                 const estimatedSalesPrice = rawArv;
