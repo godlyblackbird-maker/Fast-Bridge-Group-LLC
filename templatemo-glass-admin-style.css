@@ -10601,15 +10601,17 @@ select.form-input option:checked,
 
 .ia-sell-side-amount-pill {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     border-radius: 8px;
     padding: 9px 10px;
 }
 
 .ia-sell-side-amount-pill strong {
-    display: block;
+    display: inline-block;
+    margin-left: auto;
+    white-space: nowrap;
     font-size: inherit;
     line-height: 1.2;
 }
