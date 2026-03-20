@@ -666,6 +666,89 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function emitPropertyAssignmentUpdated(propertyKey, assignmentRecord) {
+        window.dispatchEvent(new CustomEvent('property-assignment-updated', {
+            detail: {
+                propertyKey,
+                assignment: assignmentRecord || null
+            }
+        }));
+    }
+
+    function applyPropertyAssignmentStore(nextStore) {
+        setGlobalObject(PROPERTY_ASSIGNMENTS_KEY, nextStore);
+        emitPropertyAssignmentUpdated('*', null);
+    }
+
+    function writePropertyAssignmentRecord(propertyKey, assignmentRecord) {
+        if (!propertyKey) {
+            return;
+        }
+
+        const store = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
+        if (assignmentRecord && typeof assignmentRecord === 'object') {
+            store[propertyKey] = assignmentRecord;
+        } else {
+            delete store[propertyKey];
+        }
+
+        setGlobalObject(PROPERTY_ASSIGNMENTS_KEY, store);
+        emitPropertyAssignmentUpdated(propertyKey, assignmentRecord);
+    }
+
+    async function fetchPropertyAssignmentsFromServer() {
+        const token = String(localStorage.getItem('authToken') || '').trim();
+        if (!token) {
+            return getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
+        }
+
+        const response = await fetch('/api/property-assignments', {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to load shared property assignments.');
+        }
+
+        const payload = await response.json();
+        const assignments = payload && payload.assignments && typeof payload.assignments === 'object' && !Array.isArray(payload.assignments)
+            ? payload.assignments
+            : {};
+
+        applyPropertyAssignmentStore(assignments);
+        return assignments;
+    }
+
+    async function syncPropertyAssignmentRecordToServer(propertyKey, assignmentRecord) {
+        const token = String(localStorage.getItem('authToken') || '').trim();
+        if (!token) {
+            return assignmentRecord;
+        }
+
+        const response = await fetch('/api/property-assignments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                propertyKey,
+                assignment: assignmentRecord || null
+            })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(String(payload && payload.error || 'Unable to save the property assignment.'));
+        }
+
+        return payload.assignment || assignmentRecord || null;
+    }
+
+    const propertyAssignmentsReady = fetchPropertyAssignmentsFromServer().catch(() => getGlobalObject(PROPERTY_ASSIGNMENTS_KEY));
+
     function persistSelectedPropertyDetail(detail) {
         const serializedDetail = JSON.stringify(detail && typeof detail === 'object' ? detail : null);
         let stored = false;
@@ -977,25 +1060,28 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return record && typeof record === 'object' ? record : null;
     }
 
-    function setPropertyAssignmentRecord(propertyKey, assignmentRecord) {
+    async function setPropertyAssignmentRecord(propertyKey, assignmentRecord, options) {
         if (!propertyKey) {
             return;
         }
 
-        const store = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
-        if (assignmentRecord && typeof assignmentRecord === 'object') {
-            store[propertyKey] = assignmentRecord;
-        } else {
-            delete store[propertyKey];
+        const config = options && typeof options === 'object' ? options : {};
+        const previousRecord = getPropertyAssignmentRecord(propertyKey);
+
+        writePropertyAssignmentRecord(propertyKey, assignmentRecord);
+
+        if (config.skipRemote === true) {
+            return assignmentRecord || null;
         }
 
-        setGlobalObject(PROPERTY_ASSIGNMENTS_KEY, store);
-        window.dispatchEvent(new CustomEvent('property-assignment-updated', {
-            detail: {
-                propertyKey,
-                assignment: assignmentRecord || null
-            }
-        }));
+        try {
+            const persistedRecord = await syncPropertyAssignmentRecordToServer(propertyKey, assignmentRecord);
+            writePropertyAssignmentRecord(propertyKey, persistedRecord);
+            return persistedRecord;
+        } catch (error) {
+            writePropertyAssignmentRecord(propertyKey, previousRecord);
+            throw error;
+        }
     }
 
     function getThemePreference() {
@@ -6641,7 +6727,7 @@ function initNavbarDateTime() {
         });
     }
 
-    function initDealsPage() {
+    async function initDealsPage() {
         const list = document.getElementById('deals-compact-list');
         const count = document.getElementById('deals-compact-count');
         const assignedList = document.getElementById('assigned-properties-list');
@@ -6657,6 +6743,8 @@ function initNavbarDateTime() {
         if (!list || !count || !assignedList || !assignedCount) {
             return;
         }
+
+        await propertyAssignmentsReady;
 
         const workspaceUser = getWorkspaceUserContext();
 
@@ -7021,9 +7109,10 @@ function initNavbarDateTime() {
     // ============================================
     // Property Detail Page
     // ============================================
-    function initPropertyDetailPage() {
+    async function initPropertyDetailPage() {
         const addressEl = document.getElementById('property-address-title');
         if (!addressEl) return;
+        await propertyAssignmentsReady;
         const legacyCompsLine = 'Comparable set will include similar bed/bath properties within 1.0 mile radius and the last 6-12 month window.';
 
         let detailData = null;
@@ -7343,7 +7432,9 @@ function initNavbarDateTime() {
                     }
                 }
             };
-            setPropertyAssignmentRecord(propertyKey, syncedAssignment);
+            setPropertyAssignmentRecord(propertyKey, syncedAssignment).catch(() => {
+                // Keep the local assignment intact if the snapshot sync fails.
+            });
         }
 
         function setPersistedPiqStatus(statusValue) {
@@ -7625,28 +7716,51 @@ function initNavbarDateTime() {
             loadAssignableUsers().then(users => {
                 renderAssigneeOptions(users);
 
-                propertyAssigneeSelect.addEventListener('change', () => {
+                propertyAssigneeSelect.addEventListener('change', async () => {
                     const selectedUser = users.find(user => user.key === propertyAssigneeSelect.value) || null;
+                    const previousAssignment = getPropertyAssignmentRecord(propertyKey);
+                    const previousAssignedKey = String(previousAssignment?.assignedTo?.key || '').trim();
 
-                    if (!selectedUser) {
-                        delete detailData.propertyAssignment;
+                    propertyAssigneeSelect.disabled = true;
+
+                    try {
+                        if (!selectedUser) {
+                            delete detailData.propertyAssignment;
+                            localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+                            await setPropertyAssignmentRecord(propertyKey, null);
+                            renderOfferNegotiator(null);
+                            showDashboardToast('success', 'Property Unassigned', 'This property is no longer assigned to a user.');
+                            return;
+                        }
+
+                        const assignmentRecord = buildAssignmentRecord(selectedUser);
+                        detailData.propertyAssignment = {
+                            assignedTo: assignmentRecord.assignedTo,
+                            assignedBy: assignmentRecord.assignedBy,
+                            assignedAt: assignmentRecord.assignedAt
+                        };
                         localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
-                        setPropertyAssignmentRecord(propertyKey, null);
-                        renderOfferNegotiator(null);
-                        showDashboardToast('success', 'Property Unassigned', 'This property is no longer assigned to a user.');
-                        return;
-                    }
+                        const persistedRecord = await setPropertyAssignmentRecord(propertyKey, assignmentRecord);
+                        renderOfferNegotiator(persistedRecord);
+                        showDashboardToast('success', 'Property Assigned', `${assignmentRecord.propertyAddress} was assigned to ${selectedUser.name}.`);
+                    } catch (error) {
+                        if (previousAssignment) {
+                            detailData.propertyAssignment = {
+                                assignedTo: previousAssignment.assignedTo,
+                                assignedBy: previousAssignment.assignedBy,
+                                assignedAt: previousAssignment.assignedAt
+                            };
+                        } else {
+                            delete detailData.propertyAssignment;
+                        }
 
-                    const assignmentRecord = buildAssignmentRecord(selectedUser);
-                    detailData.propertyAssignment = {
-                        assignedTo: assignmentRecord.assignedTo,
-                        assignedBy: assignmentRecord.assignedBy,
-                        assignedAt: assignmentRecord.assignedAt
-                    };
-                    localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
-                    setPropertyAssignmentRecord(propertyKey, assignmentRecord);
-                    renderOfferNegotiator(assignmentRecord);
-                    showDashboardToast('success', 'Property Assigned', `${assignmentRecord.propertyAddress} was assigned to ${selectedUser.name}.`);
+                        localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+                        propertyAssigneeSelect.value = previousAssignedKey;
+                        renderOfferNegotiator(previousAssignment);
+                        showDashboardToast('error', 'Assignment Failed', String(error && error.message || 'Unable to save the property assignment.'));
+                    } finally {
+                        propertyAssigneeSelect.disabled = false;
+                    }
                 });
             });
         }
@@ -10055,10 +10169,16 @@ function initNavbarDateTime() {
                     return state;
                 }
 
-                return {
+                const nextState = {
                     ...state,
                     investorDefaults: sanitizeIaInvestorDefaults(state.investorDefaults)
                 };
+
+                if (typeof nextState.sellSidePercent === 'string' && !nextState.sellSidePercent.trim()) {
+                    nextState.sellSidePercent = null;
+                }
+
+                return nextState;
             }
 
             function getPersistedIaCalculatorState() {

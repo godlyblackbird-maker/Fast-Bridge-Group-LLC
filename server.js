@@ -464,6 +464,28 @@ function initializeDatabase() {
       console.log('SMTP requests table ready');
     }
   });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS property_assignments (
+      property_key TEXT PRIMARY KEY,
+      property_address TEXT,
+      assigned_to_key TEXT NOT NULL,
+      assigned_to_email TEXT,
+      assigned_to_name TEXT,
+      assigned_by_key TEXT,
+      assigned_by_email TEXT,
+      assigned_by_name TEXT,
+      assigned_at DATETIME NOT NULL,
+      payload_json TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating property_assignments table:', err);
+    } else {
+      console.log('Property assignments table ready');
+    }
+  });
 }
 
 function createOAuthState(provider) {
@@ -513,6 +535,96 @@ function dbRun(sql, params) {
       }
       resolve(this);
     });
+  });
+}
+
+function normalizeUserKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+}
+
+function normalizeAssignmentUser(userLike) {
+  const email = normalizeKnownEmail(userLike?.email || '');
+  const name = String(userLike?.name || '').trim() || email || 'User';
+  const role = String(userLike?.role || '').trim().toLowerCase();
+  const key = normalizeUserKey(userLike?.key || email || name) || 'default-user';
+
+  return {
+    key,
+    name,
+    email,
+    role: isKnownAdminEmail(email) ? 'admin' : role
+  };
+}
+
+function normalizePropertyAssignmentKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizePropertyAssignmentRecord(propertyKey, assignmentLike, fallbackAssignedBy) {
+  const normalizedPropertyKey = normalizePropertyAssignmentKey(propertyKey || assignmentLike?.propertyKey);
+  if (!normalizedPropertyKey || !assignmentLike || typeof assignmentLike !== 'object') {
+    return null;
+  }
+
+  const assignedTo = normalizeAssignmentUser(assignmentLike.assignedTo || {});
+  if (!assignedTo.key) {
+    return null;
+  }
+
+  const assignedBy = normalizeAssignmentUser(assignmentLike.assignedBy || fallbackAssignedBy || {});
+  const assignedAtValue = String(assignmentLike.assignedAt || '').trim();
+  const assignedAtDate = assignedAtValue ? new Date(assignedAtValue) : new Date();
+  const assignedAt = Number.isNaN(assignedAtDate.getTime())
+    ? new Date().toISOString()
+    : assignedAtDate.toISOString();
+  const propertyAddress = String(assignmentLike.propertyAddress || assignmentLike.propertySnapshot?.address || 'Property').trim() || 'Property';
+  const propertySnapshot = assignmentLike.propertySnapshot && typeof assignmentLike.propertySnapshot === 'object'
+    ? assignmentLike.propertySnapshot
+    : {};
+
+  return {
+    propertyKey: normalizedPropertyKey,
+    propertyAddress,
+    assignedTo,
+    assignedBy,
+    assignedAt,
+    propertySnapshot
+  };
+}
+
+function parsePropertyAssignmentRow(row) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  try {
+    const parsedPayload = JSON.parse(String(row.payload_json || '{}'));
+    const normalized = normalizePropertyAssignmentRecord(row.property_key, parsedPayload);
+    if (normalized) {
+      return normalized;
+    }
+  } catch (error) {
+    // Fall through to the row-based fallback.
+  }
+
+  return normalizePropertyAssignmentRecord(row.property_key, {
+    propertyKey: row.property_key,
+    propertyAddress: row.property_address,
+    assignedTo: {
+      key: row.assigned_to_key,
+      email: row.assigned_to_email,
+      name: row.assigned_to_name
+    },
+    assignedBy: {
+      key: row.assigned_by_key,
+      email: row.assigned_by_email,
+      name: row.assigned_by_name
+    },
+    assignedAt: row.assigned_at,
+    propertySnapshot: {}
   });
 }
 
@@ -1843,6 +1955,112 @@ app.get('/api/users', (req, res) => {
     });
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+app.get('/api/property-assignments', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  db.all(
+    `SELECT property_key, property_address, assigned_to_key, assigned_to_email, assigned_to_name,
+            assigned_by_key, assigned_by_email, assigned_by_name, assigned_at, payload_json
+     FROM property_assignments`,
+    [],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      const assignments = {};
+      (rows || []).forEach((row) => {
+        const record = parsePropertyAssignmentRow(row);
+        if (record && record.propertyKey) {
+          assignments[record.propertyKey] = record;
+        }
+      });
+
+      return res.json({ assignments });
+    }
+  );
+});
+
+app.post('/api/property-assignments', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const propertyKey = normalizePropertyAssignmentKey(req.body?.propertyKey || req.body?.assignment?.propertyKey);
+  if (!propertyKey) {
+    return res.status(400).json({ error: 'Property key is required' });
+  }
+
+  const assignment = req.body?.assignment;
+
+  if (assignment == null) {
+    try {
+      await dbRun('DELETE FROM property_assignments WHERE property_key = ?', [propertyKey]);
+      return res.json({ success: true, propertyKey, assignment: null });
+    } catch (error) {
+      return res.status(500).json({ error: 'Unable to remove property assignment' });
+    }
+  }
+
+  const normalizedRecord = normalizePropertyAssignmentRecord(propertyKey, assignment, decoded);
+  if (!normalizedRecord) {
+    return res.status(400).json({ error: 'Valid assignment details are required' });
+  }
+
+  try {
+    await dbRun(
+      `INSERT INTO property_assignments (
+          property_key,
+          property_address,
+          assigned_to_key,
+          assigned_to_email,
+          assigned_to_name,
+          assigned_by_key,
+          assigned_by_email,
+          assigned_by_name,
+          assigned_at,
+          payload_json,
+          updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(property_key) DO UPDATE SET
+          property_address = excluded.property_address,
+          assigned_to_key = excluded.assigned_to_key,
+          assigned_to_email = excluded.assigned_to_email,
+          assigned_to_name = excluded.assigned_to_name,
+          assigned_by_key = excluded.assigned_by_key,
+          assigned_by_email = excluded.assigned_by_email,
+          assigned_by_name = excluded.assigned_by_name,
+          assigned_at = excluded.assigned_at,
+          payload_json = excluded.payload_json,
+          updated_at = CURRENT_TIMESTAMP`,
+      [
+        normalizedRecord.propertyKey,
+        normalizedRecord.propertyAddress,
+        normalizedRecord.assignedTo.key,
+        normalizedRecord.assignedTo.email,
+        normalizedRecord.assignedTo.name,
+        normalizedRecord.assignedBy.key,
+        normalizedRecord.assignedBy.email,
+        normalizedRecord.assignedBy.name,
+        normalizedRecord.assignedAt,
+        JSON.stringify(normalizedRecord)
+      ]
+    );
+
+    return res.json({
+      success: true,
+      propertyKey: normalizedRecord.propertyKey,
+      assignment: normalizedRecord
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to save property assignment' });
   }
 });
 
