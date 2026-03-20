@@ -9811,6 +9811,8 @@ function initNavbarDateTime() {
             const targetDollarInput = document.getElementById('ia-target-profit-dollar');
             const holdMonthsInput = document.getElementById('ia-hold-months');
             const financingModeInput = document.getElementById('ia-financing-mode');
+            const costCapUsageEl = document.getElementById('ia-cost-cap-usage');
+            const arvCapUsageEl = document.getElementById('ia-arv-cap-usage');
             const loanToArvInput = document.getElementById('ia-loan-to-arv');
             const interestRateInput = document.getElementById('ia-interest-rate');
             const originationPointsInput = document.getElementById('ia-origination-points');
@@ -10437,6 +10439,10 @@ function initNavbarDateTime() {
                 const totalProjectCost = totalPurchaseCost + renovation;
                 const totalProjectWithFinancing = totalProjectCost + totalFinancingCost;
                 const leveragedProfit = estimatedSalesPrice - sellSideCost - grossSaleAdjustmentTotal - totalProjectWithFinancing;
+                const financingAssumptions = getFinancingModeAssumptions(financingMode);
+                const loanCostBase = offerPrice + renovation;
+                const programCostCapAmount = financingAssumptions ? loanCostBase * financingAssumptions.costAdvanceRate : 0;
+                const programArvCapAmount = financingAssumptions ? rawArv * financingAssumptions.arvAdvanceRate : rawArv * (loanToArvPct / 100);
 
                 const grossProfitToSeller = estimatedSalesPrice - sellSideCost - grossSaleAdjustmentTotal;
 
@@ -10492,6 +10498,8 @@ function initNavbarDateTime() {
 
                 setText('ia-other-cost-total', formatMoney(extraCosts));
                 setText('ia-loan-amount', formatMoney(loanAmount));
+                setText('ia-cost-cap-usage', programCostCapAmount > 0 ? formatPercent((loanAmount / programCostCapAmount) * 100) : 'NA');
+                setText('ia-arv-cap-usage', programArvCapAmount > 0 ? formatPercent((loanAmount / programArvCapAmount) * 100) : 'NA');
                 setText('ia-origination-amount', formatMoney(originationAmount, 1));
                 setText('ia-interest-cost', formatMoney(interestCost));
                 setText('ia-total-financing', formatMoney(totalFinancingCost));

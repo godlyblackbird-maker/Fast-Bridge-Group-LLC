@@ -10457,6 +10457,20 @@ a {
     font-size: 13px;
 }
 
+.ia-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ia-label-note {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.68);
+}
+
 .ia-grid input,
 .ia-grid select {
     background: rgba(15, 23, 42, 0.5);
@@ -10554,16 +10568,15 @@ select.form-input option:checked,
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 6px;
-    min-height: 100%;
-    border-radius: 12px;
-    padding: 12px 14px;
+    gap: 2px;
+    border-radius: 8px;
+    padding: 9px 10px;
 }
 
 .ia-sell-side-amount-pill strong {
     display: block;
-    font-size: 15px;
-    line-height: 1.15;
+    font-size: inherit;
+    line-height: 1.2;
 }
 
 .ia-calc-btn {

@@ -517,7 +517,11 @@
                                 </button>
                             </div>
                             <div class="ia-grid ia-section-body" id="ia-financing-body">
-                                <label>Financing Program
+                                <label>
+                                    <span class="ia-label-row">
+                                        <span>Financing Program</span>
+                                        <span class="ia-label-note">(Excel)</span>
+                                    </span>
                                     <select id="ia-financing-mode">
                                         <option value="100-100">100/100 - 100% Cost Cap, 80% ARV Max</option>
                                         <option value="90-100">90/100 - 90% Cost Cap, 75% ARV Max</option>
@@ -528,6 +532,9 @@
                                 <label>Hold Time (months)
                                     <input id="ia-hold-months" type="text" inputmode="numeric" autocomplete="off" value="4">
                                 </label>
+
+                                <div class="ia-readout">Cost Cap Usage: <strong id="ia-cost-cap-usage">NA</strong></div>
+                                <div class="ia-readout">ARV Cap Usage: <strong id="ia-arv-cap-usage">NA</strong></div>
 
                                 <label>Loan to ARV (%)
                                     <input id="ia-loan-to-arv" type="text" inputmode="decimal" autocomplete="off" value="80">
