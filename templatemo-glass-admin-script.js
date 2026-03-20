@@ -7641,6 +7641,15 @@ function initNavbarDateTime() {
             return /[a-z]/i.test(raw) ? raw : `${raw} ${suffix}`;
         }
 
+        function normalizeGarageCount(value, fallback) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return fallback;
+            }
+            const match = raw.match(/\d+(?:\.\d+)?/);
+            return match ? match[0] : fallback;
+        }
+
         function getImportedPropertyImage(value) {
             const raw = String(value || '').trim();
             return raw || 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80';
@@ -7655,6 +7664,8 @@ function initNavbarDateTime() {
             const beds = normalizeMetric(formData.get('beds'), 'Beds', '0 Beds');
             const baths = normalizeMetric(formData.get('baths'), 'Baths', '0 Baths');
             const area = normalizeMetric(formData.get('area'), 'sqft', '0 sqft');
+            const garageCount = normalizeGarageCount(formData.get('garage'), '0');
+            const lotSize = normalizeMetric(formData.get('lotSize'), 'sqft', 'Lot Size TBD');
             const status = normalizeStatus(String(formData.get('status') || 'active').trim());
             const roi = Number(formData.get('roi'));
             const domValue = Number(formData.get('dom'));
@@ -7668,7 +7679,7 @@ function initNavbarDateTime() {
             const propertySnapshot = {
                 address,
                 propertyImages: [imageUrl],
-                propertyDetails: `Single Family / ${beds.replace('Beds', 'Br').trim()} / ${baths.replace('Baths', 'Ba').trim()} / 2 Gar / -- / ${area.replace('sqft', 'ft²').trim()} / Lot Size TBD / Pool: Unknown`,
+                propertyDetails: `Single Family / ${beds.replace('Beds', 'Br').trim()} / ${baths.replace('Baths', 'Ba').trim()} / ${garageCount} Gar / -- / ${area.replace('sqft', 'ft²').trim()} / ${lotSize.replace('sqft', 'ft²').trim()} / Pool: Unknown`,
                 listPrice: price,
                 propensity: Math.max(1, Math.min(10, Math.round(Number.isFinite(roi) ? roi : 6))),
                 moderatePain: 'Imported Listing',
@@ -7720,6 +7731,8 @@ function initNavbarDateTime() {
                 zoning: '-',
                 associationDues: '-',
                 commonWalls: '-',
+                garageCount,
+                lotSize,
                 lockboxType: '-',
                 occupied: '-',
                 showing: '-'
@@ -7733,6 +7746,8 @@ function initNavbarDateTime() {
                 beds,
                 baths,
                 area,
+                garage: garageCount,
+                lotSize,
                 status,
                 roi: Number.isFinite(roi) ? roi.toFixed(1) : '0.0',
                 imageUrl,
@@ -7970,6 +7985,8 @@ function initNavbarDateTime() {
             zoning: '-',
             associationDues: '-',
             commonWalls: '-',
+            garageCount: '3',
+            lotSize: '170,320 ft²',
             lockboxType: '-',
             occupied: '-',
             showing: '-',
@@ -8334,6 +8351,8 @@ function initNavbarDateTime() {
             'property-zoning': detailData.zoning,
             'property-association-dues': detailData.associationDues,
             'property-common-walls': detailData.commonWalls,
+            'property-garage': detailData.garageCount,
+            'property-lot-size': detailData.lotSize,
             'property-lockbox-type': detailData.lockboxType,
             'property-occupied': detailData.occupied,
             'property-showing': detailData.showing,
