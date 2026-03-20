@@ -930,9 +930,172 @@ function resolveUserAdminECardRelativePath({ name, email }) {
 }
 
 const INVESTOR_ATTACHMENTS_ROOT = path.resolve(__dirname, 'Investors Attatchments');
+const AGENT_WORKSPACE_UPLOADS_ROOT = path.resolve(__dirname, 'AGENT_WORKSPACE_UPLOADS');
+const AGENT_WORKSPACE_DOCUMENT_CATEGORIES = Object.freeze({
+  'executed-contracts': 'Executed Contracts',
+  'wire-instructions': 'Wire Instructions',
+  disclosures: 'Disclosures',
+  'assignment-agreements': 'Assignment Agreement',
+  invoices: 'Invoices'
+});
 
 function isAllowedInvestorAttachmentExtension(extension) {
   return ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.png', '.jpg', '.jpeg', '.txt'].includes(String(extension || '').toLowerCase());
+}
+
+function isAllowedAgentWorkspaceDocumentExtension(extension) {
+  return isAllowedInvestorAttachmentExtension(extension);
+}
+
+function sanitizeAgentWorkspaceSegment(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/-+/g, '-')
+    .trim()
+    .replace(/^\.+/, '')
+    .replace(/[. ]+$/g, '')
+    .slice(0, 120) || 'item';
+}
+
+function getAgentWorkspaceCategoryLabel(category) {
+  return AGENT_WORKSPACE_DOCUMENT_CATEGORIES[String(category || '').trim().toLowerCase()] || '';
+}
+
+function getAgentWorkspaceUserFolder(decoded) {
+  const userId = Number(decoded?.id) || 0;
+  const displaySeed = String(decoded?.name || decoded?.email || `user-${userId}`).trim();
+  const displaySlug = sanitizeAgentWorkspaceSegment(displaySeed)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `user-${userId}`;
+
+  return `user-${userId}-${displaySlug}`;
+}
+
+function getAgentWorkspaceUserRoot(decoded) {
+  return path.join(AGENT_WORKSPACE_UPLOADS_ROOT, getAgentWorkspaceUserFolder(decoded));
+}
+
+function buildAgentWorkspaceStoredFileName(documentId, originalName) {
+  const extension = path.extname(String(originalName || '')).toLowerCase();
+  const baseName = path.basename(String(originalName || 'document'), extension);
+  const safeBaseName = sanitizeAgentWorkspaceSegment(baseName)
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase() || 'document';
+  const safeExtension = isAllowedAgentWorkspaceDocumentExtension(extension) ? extension : '';
+  return `${documentId}__${safeBaseName}${safeExtension}`;
+}
+
+function parseAgentWorkspaceStoredFileName(fileName) {
+  const normalized = String(fileName || '').trim();
+  const separatorIndex = normalized.indexOf('__');
+  if (separatorIndex <= 0) {
+    return null;
+  }
+
+  const id = normalized.slice(0, separatorIndex);
+  const originalName = normalized.slice(separatorIndex + 2);
+  if (!id || !originalName) {
+    return null;
+  }
+
+  return {
+    id,
+    fileName: originalName
+  };
+}
+
+function listAgentWorkspaceDocumentsForUser(decoded) {
+  const userRoot = getAgentWorkspaceUserRoot(decoded);
+  if (!fs.existsSync(userRoot)) {
+    return [];
+  }
+
+  return Object.entries(AGENT_WORKSPACE_DOCUMENT_CATEGORIES)
+    .flatMap(([category, label]) => {
+      const categoryRoot = path.join(userRoot, category);
+      if (!fs.existsSync(categoryRoot)) {
+        return [];
+      }
+
+      return fs.readdirSync(categoryRoot, { withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => {
+          const parsed = parseAgentWorkspaceStoredFileName(entry.name);
+          if (!parsed) {
+            return null;
+          }
+
+          const absolutePath = path.join(categoryRoot, entry.name);
+          const extension = path.extname(parsed.fileName).toLowerCase();
+          if (!isAllowedAgentWorkspaceDocumentExtension(extension)) {
+            return null;
+          }
+
+          const stats = fs.statSync(absolutePath);
+          return {
+            id: parsed.id,
+            category,
+            categoryLabel: label,
+            fileName: parsed.fileName,
+            fileSize: stats.size,
+            fileType: extension || 'file',
+            createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
+            updatedAt: stats.mtimeMs || stats.birthtimeMs || Date.now()
+          };
+        })
+        .filter(Boolean);
+    })
+    .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0));
+}
+
+function findAgentWorkspaceDocumentForUser(decoded, documentId) {
+  const normalizedId = String(documentId || '').trim();
+  if (!normalizedId) {
+    return null;
+  }
+
+  const userRoot = getAgentWorkspaceUserRoot(decoded);
+  if (!fs.existsSync(userRoot)) {
+    return null;
+  }
+
+  for (const [category, label] of Object.entries(AGENT_WORKSPACE_DOCUMENT_CATEGORIES)) {
+    const categoryRoot = path.join(userRoot, category);
+    if (!fs.existsSync(categoryRoot)) {
+      continue;
+    }
+
+    const matchedEntry = fs.readdirSync(categoryRoot, { withFileTypes: true })
+      .find((entry) => entry.isFile() && entry.name.startsWith(`${normalizedId}__`));
+
+    if (!matchedEntry) {
+      continue;
+    }
+
+    const parsed = parseAgentWorkspaceStoredFileName(matchedEntry.name);
+    if (!parsed) {
+      continue;
+    }
+
+    const absolutePath = path.join(categoryRoot, matchedEntry.name);
+    const stats = fs.statSync(absolutePath);
+    return {
+      id: parsed.id,
+      category,
+      categoryLabel: label,
+      fileName: parsed.fileName,
+      absolutePath,
+      fileSize: stats.size,
+      createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
+      updatedAt: stats.mtimeMs || stats.birthtimeMs || Date.now()
+    };
+  }
+
+  return null;
 }
 
 function resolveInvestorAttachmentPath(relativePath) {
@@ -1759,6 +1922,148 @@ app.get('/api/admin-ecards', (req, res) => {
   } catch (error) {
     console.error('Failed to list admin E-cards:', error);
     return res.status(500).json({ error: 'Failed to load E-card folders.' });
+  }
+});
+
+app.get('/api/agent-workspace-documents', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    return res.json({ documents: listAgentWorkspaceDocumentsForUser(decoded) });
+  } catch (error) {
+    console.error('Failed to list Agent Workspace documents:', error);
+    return res.status(500).json({ error: 'Failed to load Agent Workspace documents.' });
+  }
+});
+
+app.post('/api/agent-workspace-documents', express.json({ limit: '20mb' }), (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const category = String(req.body?.category || '').trim().toLowerCase();
+    const categoryLabel = getAgentWorkspaceCategoryLabel(category);
+    const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(req.body?.fileName || '').trim()));
+    const contentBase64 = String(req.body?.contentBase64 || '').trim();
+
+    if (!categoryLabel) {
+      return res.status(400).json({ error: 'Select a valid Agent Workspace document type.' });
+    }
+
+    if (!fileName || !contentBase64) {
+      return res.status(400).json({ error: 'A file name and file content are required.' });
+    }
+
+    const extension = path.extname(fileName).toLowerCase();
+    if (!isAllowedAgentWorkspaceDocumentExtension(extension)) {
+      return res.status(400).json({ error: 'This file type is not allowed.' });
+    }
+
+    const buffer = Buffer.from(contentBase64, 'base64');
+    if (!buffer.length) {
+      return res.status(400).json({ error: 'The uploaded file was empty.' });
+    }
+
+    if (buffer.length > 15 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Files must be 15 MB or smaller.' });
+    }
+
+    const documentId = crypto.randomUUID();
+    const userRoot = getAgentWorkspaceUserRoot(decoded);
+    const categoryRoot = path.join(userRoot, category);
+    fs.mkdirSync(categoryRoot, { recursive: true });
+
+    const storedFileName = buildAgentWorkspaceStoredFileName(documentId, fileName);
+    const absolutePath = path.join(categoryRoot, storedFileName);
+    fs.writeFileSync(absolutePath, buffer);
+    const stats = fs.statSync(absolutePath);
+
+    return res.status(201).json({
+      document: {
+        id: documentId,
+        category,
+        categoryLabel,
+        fileName,
+        fileSize: stats.size,
+        fileType: extension || 'file',
+        createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
+        updatedAt: stats.mtimeMs || stats.birthtimeMs || Date.now()
+      }
+    });
+  } catch (error) {
+    console.error('Failed to save Agent Workspace document:', error);
+    return res.status(500).json({ error: 'Failed to save the uploaded file.' });
+  }
+});
+
+app.get('/api/agent-workspace-documents/:documentId/content', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const documentItem = findAgentWorkspaceDocumentForUser(decoded, req.params.documentId);
+    if (!documentItem) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    const download = String(req.query?.download || '').trim() === '1';
+    const extension = path.extname(documentItem.fileName).toLowerCase();
+    const contentType = extension === '.pdf'
+      ? 'application/pdf'
+      : extension === '.doc'
+        ? 'application/msword'
+        : extension === '.docx'
+          ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          : extension === '.xls'
+            ? 'application/vnd.ms-excel'
+            : extension === '.xlsx'
+              ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              : extension === '.csv'
+                ? 'text/csv'
+                : extension === '.png'
+                  ? 'image/png'
+                  : ['.jpg', '.jpeg'].includes(extension)
+                    ? 'image/jpeg'
+                    : extension === '.txt'
+                      ? 'text/plain; charset=utf-8'
+                      : 'application/octet-stream';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `${download ? 'attachment' : 'inline'}; filename="${documentItem.fileName.replace(/"/g, '')}"`
+    );
+    return fs.createReadStream(documentItem.absolutePath).pipe(res);
+  } catch (error) {
+    console.error('Failed to stream Agent Workspace document:', error);
+    return res.status(500).json({ error: 'Failed to open the requested file.' });
+  }
+});
+
+app.delete('/api/agent-workspace-documents/:documentId', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const documentItem = findAgentWorkspaceDocumentForUser(decoded, req.params.documentId);
+    if (!documentItem) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    fs.unlinkSync(documentItem.absolutePath);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete Agent Workspace document:', error);
+    return res.status(500).json({ error: 'Failed to delete the selected file.' });
   }
 });
 

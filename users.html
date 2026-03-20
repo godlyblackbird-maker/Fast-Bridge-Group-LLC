@@ -301,6 +301,83 @@
                     </div>
                 </div>
 
+                <div class="glass-card widget-card outreach-card" data-widget-id="agent-email-prep" data-widget-title="Email Prep">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Email Prep</h2>
+                            <p class="card-subtitle">Keep reusable deal docs ready for your next email package</p>
+                        </div>
+                    </div>
+                    <div class="agent-email-prep-grid">
+                        <label class="agent-email-prep-span-2">Subject
+                            <input id="agent-workspace-email-subject" class="form-input" type="text" placeholder="Executed Contract Package - 123 Main St">
+                        </label>
+                        <div class="agent-email-prep-span-2 offer-email-editor-wrap">
+                            <span class="offer-email-editor-label">Email Body</span>
+                            <div id="agent-workspace-email-body" class="form-input offer-email-body offer-email-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Draft the reusable email body here."></div>
+                        </div>
+                    </div>
+                    <div class="offer-docs-actions agent-email-prep-actions">
+                        <button type="button" class="card-btn" id="agent-workspace-copy-subject-btn">Copy Subject</button>
+                        <button type="button" class="card-btn" id="agent-workspace-copy-body-btn">Copy Body</button>
+                        <button type="button" class="card-btn" id="agent-workspace-copy-doc-list-btn">Copy Attachment List</button>
+                    </div>
+
+                    <div class="offer-email-attach-box agent-email-library-box">
+                        <div class="offer-attach-header">
+                            <div>
+                                <p class="offer-attach-kicker">Reusable Upload Library</p>
+                                <div class="offer-attach-title-row">
+                                    <h4 class="offer-attach-title">Saved Email Documents</h4>
+                                    <span class="offer-attach-badge">Persistent by user</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="agent-email-library-toolbar">
+                            <label>Document Type
+                                <select id="agent-workspace-doc-category" class="form-input">
+                                    <option value="executed-contracts">Executed Contracts</option>
+                                    <option value="wire-instructions">Wire Instructions</option>
+                                    <option value="disclosures">Disclosures</option>
+                                    <option value="assignment-agreements">Assignment Agreement</option>
+                                    <option value="invoices">Invoices</option>
+                                </select>
+                            </label>
+                            <button type="button" class="card-btn offer-doc-launch-btn" id="agent-workspace-upload-btn">
+                                <span class="offer-doc-launch-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 16V4"></path>
+                                        <path d="M7 9l5-5 5 5"></path>
+                                        <path d="M5 20h14"></path>
+                                    </svg>
+                                </span>
+                                <span class="offer-doc-launch-copy">
+                                    <strong>Upload File</strong>
+                                    <small>Store it for reuse in future emails</small>
+                                </span>
+                            </button>
+                        </div>
+                        <div id="agent-workspace-docs-list" class="offer-docs-stage">
+                            <div class="offer-docs-empty">
+                                <div class="offer-docs-empty-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+                                        <path d="M14 3v5h5"></path>
+                                        <path d="M9 13h6"></path>
+                                        <path d="M9 17h4"></path>
+                                    </svg>
+                                </div>
+                                <div class="offer-docs-empty-copy">
+                                    <strong>No saved email documents yet.</strong>
+                                    <p>Upload executed contracts, wire instructions, disclosures, assignment agreements, or invoices once and reuse them later.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="offer-docs-note" id="agent-workspace-docs-note">Files uploaded here stay in your Agent Workspace library for reuse.</p>
+                        <input id="agent-workspace-upload-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.txt">
+                    </div>
+                </div>
+
             </section>
         </main>
     </div>

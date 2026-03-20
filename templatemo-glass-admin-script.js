@@ -9,6 +9,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const TODO_GOALS_KEY = 'personalTodoGoalsByUser';
     const DEALS_CLICKED_KEY = 'clickedDealsByUser';
     const OFFER_DOCUMENTS_KEY = 'offerDocumentsByUser';
+    const AGENT_WORKSPACE_EMAIL_PREP_KEY = 'agentWorkspaceEmailPrepByUser';
     const IA_CALCULATOR_STATE_KEY = 'iaCalculatorStateByUser';
     const PIQ_AGENT_STATUS_KEY = 'piqAgentStatusByUser';
     const CLOSED_DEALS_KEY = 'closedDealsByUser';
@@ -1526,6 +1527,24 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
         return new Blob([pdf], { type: 'application/pdf' });
+    }
+
+    function readBlobAsBase64(blob) {
+        return new Promise((resolve, reject) => {
+            if (!(blob instanceof Blob)) {
+                reject(new Error('A valid file is required.'));
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = String(reader.result || '');
+                const base64 = result.includes(',') ? result.split(',').pop() : result;
+                resolve(String(base64 || '').trim());
+            };
+            reader.onerror = () => reject(reader.error || new Error('Unable to read the selected file.'));
+            reader.readAsDataURL(blob);
+        });
     }
 
     function formatAgentStatusLabel(value) {
@@ -4414,6 +4433,323 @@ function initNavbarDateTime() {
         });
     }
 
+    function initAgentWorkspaceEmailPrep() {
+        const subjectInput = document.getElementById('agent-workspace-email-subject');
+        const bodyInput = document.getElementById('agent-workspace-email-body');
+        const copySubjectButton = document.getElementById('agent-workspace-copy-subject-btn');
+        const copyBodyButton = document.getElementById('agent-workspace-copy-body-btn');
+        const copyDocListButton = document.getElementById('agent-workspace-copy-doc-list-btn');
+        const categorySelect = document.getElementById('agent-workspace-doc-category');
+        const uploadButton = document.getElementById('agent-workspace-upload-btn');
+        const uploadInput = document.getElementById('agent-workspace-upload-input');
+        const docsList = document.getElementById('agent-workspace-docs-list');
+        const docsNote = document.getElementById('agent-workspace-docs-note');
+
+        if (!subjectInput || !bodyInput || !copySubjectButton || !copyBodyButton || !copyDocListButton || !categorySelect || !uploadButton || !uploadInput || !docsList || !docsNote) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+        let documents = [];
+        let isSavingDraft = false;
+
+        function getAuthToken() {
+            return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        }
+
+        async function requestAgentWorkspace(url, options = {}) {
+            const token = getAuthToken();
+            if (!token) {
+                throw new Error('Sign in again to use Agent Workspace uploads.');
+            }
+
+            const headers = {
+                Authorization: `Bearer ${token}`,
+                ...(options.headers || {})
+            };
+
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(String(payload && payload.error || 'Request failed.'));
+            }
+
+            return payload;
+        }
+
+        function saveDraft() {
+            if (isSavingDraft) {
+                return;
+            }
+
+            const nextDraft = {
+                subject: String(subjectInput.value || '').trim(),
+                bodyHtml: String(bodyInput.innerHTML || '').trim()
+            };
+            setUserScopedObject(AGENT_WORKSPACE_EMAIL_PREP_KEY, workspaceUser.key, nextDraft);
+        }
+
+        function loadDraft() {
+            const savedDraft = getUserScopedObject(AGENT_WORKSPACE_EMAIL_PREP_KEY, workspaceUser.key);
+            isSavingDraft = true;
+            subjectInput.value = String(savedDraft.subject || '').trim();
+            bodyInput.innerHTML = String(savedDraft.bodyHtml || '').trim();
+            isSavingDraft = false;
+        }
+
+        function renderEmptyState() {
+            docsList.innerHTML = `
+                <div class="offer-docs-empty">
+                    <div class="offer-docs-empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+                            <path d="M14 3v5h5"></path>
+                            <path d="M9 13h6"></path>
+                            <path d="M9 17h4"></path>
+                        </svg>
+                    </div>
+                    <div class="offer-docs-empty-copy">
+                        <strong>No saved email documents yet.</strong>
+                        <p>Upload a file once and it will stay in this user's Agent Workspace library for reuse.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function copyTextValue(value, successTitle, emptyMessage) {
+            const text = String(value || '').trim();
+            if (!text) {
+                showDashboardToast('error', 'Nothing To Copy', emptyMessage);
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    throw new Error('Clipboard API unavailable');
+                }
+                showDashboardToast('success', successTitle, 'Copied to clipboard.');
+            } catch (error) {
+                showDashboardToast('error', 'Copy Failed', 'The clipboard could not be updated in this browser.');
+            }
+        }
+
+        function buildAttachmentList() {
+            if (!documents.length) {
+                return '';
+            }
+
+            return documents
+                .map((documentItem) => `${documentItem.categoryLabel}: ${documentItem.fileName}`)
+                .join('\n');
+        }
+
+        async function openDocument(documentItem, download = false) {
+            try {
+                const token = getAuthToken();
+                if (!token) {
+                    throw new Error('Sign in again to open saved files.');
+                }
+
+                const response = await fetch(`/api/agent-workspace-documents/${encodeURIComponent(documentItem.id)}/content?download=${download ? '1' : '0'}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(String(payload && payload.error || 'Unable to open the file.'));
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+
+                if (download) {
+                    link.download = documentItem.fileName || 'agent-workspace-document';
+                } else {
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                }
+
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+            } catch (error) {
+                showDashboardToast('error', 'Open Failed', error.message || 'Unable to open the selected file.');
+            }
+        }
+
+        async function removeDocument(documentItem) {
+            const confirmed = window.confirm(`Delete "${documentItem.fileName}" from your Agent Workspace library?`);
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                await requestAgentWorkspace(`/api/agent-workspace-documents/${encodeURIComponent(documentItem.id)}`, {
+                    method: 'DELETE'
+                });
+                documents = documents.filter((item) => item.id !== documentItem.id);
+                renderDocuments();
+                showDashboardToast('success', 'Document Deleted', 'The file was removed from your saved library.');
+            } catch (error) {
+                showDashboardToast('error', 'Delete Failed', error.message || 'Unable to delete the selected file.');
+            }
+        }
+
+        function createActionButton(label, onClick, className = '') {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `offer-doc-action-btn ${className}`.trim();
+            button.textContent = label;
+            button.addEventListener('click', onClick);
+            return button;
+        }
+
+        function renderDocuments() {
+            docsList.innerHTML = '';
+
+            if (!documents.length) {
+                docsNote.textContent = 'Files uploaded here stay in your Agent Workspace library for reuse.';
+                renderEmptyState();
+                return;
+            }
+
+            const listWrap = document.createElement('div');
+            listWrap.className = 'offer-docs-list';
+
+            documents.forEach((documentItem) => {
+                const item = document.createElement('article');
+                item.className = 'offer-doc-item';
+
+                const head = document.createElement('div');
+                head.className = 'offer-doc-item-head';
+
+                const titleWrap = document.createElement('div');
+                const title = document.createElement('strong');
+                title.textContent = documentItem.fileName || 'Saved Document';
+                const subtitle = document.createElement('p');
+                subtitle.textContent = `Saved ${new Date(Number(documentItem.createdAt) || Date.now()).toLocaleString()}`;
+                titleWrap.appendChild(title);
+                titleWrap.appendChild(subtitle);
+
+                const meta = document.createElement('div');
+                meta.className = 'offer-doc-meta';
+                [
+                    documentItem.categoryLabel,
+                    formatFileSize(documentItem.fileSize),
+                    String(documentItem.fileType || '').replace(/^\./, '').toUpperCase()
+                ].filter(Boolean).forEach((value) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'offer-doc-chip';
+                    chip.textContent = value;
+                    meta.appendChild(chip);
+                });
+
+                head.appendChild(titleWrap);
+                head.appendChild(meta);
+                item.appendChild(head);
+
+                const actions = document.createElement('div');
+                actions.className = 'offer-doc-actions';
+                actions.appendChild(createActionButton('Open', async () => {
+                    await openDocument(documentItem, false);
+                }));
+                actions.appendChild(createActionButton('Download', async () => {
+                    await openDocument(documentItem, true);
+                }));
+                actions.appendChild(createActionButton('Delete', async () => {
+                    await removeDocument(documentItem);
+                }, 'danger'));
+
+                item.appendChild(actions);
+                listWrap.appendChild(item);
+            });
+
+            docsList.appendChild(listWrap);
+            docsNote.textContent = `${documents.length} saved document${documents.length === 1 ? '' : 's'} ready to reuse.`;
+        }
+
+        async function loadDocuments() {
+            docsNote.textContent = 'Loading saved Agent Workspace documents...';
+            try {
+                const payload = await requestAgentWorkspace('/api/agent-workspace-documents');
+                documents = Array.isArray(payload && payload.documents) ? payload.documents : [];
+                renderDocuments();
+            } catch (error) {
+                documents = [];
+                renderEmptyState();
+                docsNote.textContent = error.message || 'Unable to load saved Agent Workspace documents.';
+                showDashboardToast('error', 'Library Unavailable', error.message || 'Unable to load saved Agent Workspace documents.');
+            }
+        }
+
+        copySubjectButton.addEventListener('click', async () => {
+            await copyTextValue(subjectInput.value, 'Subject Copied', 'Add a subject before copying it.');
+        });
+
+        copyBodyButton.addEventListener('click', async () => {
+            await copyTextValue(bodyInput.textContent, 'Body Copied', 'Add an email body before copying it.');
+        });
+
+        copyDocListButton.addEventListener('click', async () => {
+            await copyTextValue(buildAttachmentList(), 'Attachment List Copied', 'Upload at least one file before copying the attachment list.');
+        });
+
+        subjectInput.addEventListener('input', saveDraft);
+        bodyInput.addEventListener('input', saveDraft);
+
+        uploadButton.addEventListener('click', () => {
+            uploadInput.click();
+        });
+
+        uploadInput.addEventListener('change', async () => {
+            const files = Array.from(uploadInput.files || []);
+            const category = String(categorySelect.value || '').trim();
+            if (!files.length || !category) {
+                uploadInput.value = '';
+                return;
+            }
+
+            try {
+                for (const file of files) {
+                    const contentBase64 = await readBlobAsBase64(file);
+                    await requestAgentWorkspace('/api/agent-workspace-documents', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            category,
+                            fileName: file.name,
+                            contentBase64,
+                            contentType: file.type || ''
+                        })
+                    });
+                }
+
+                uploadInput.value = '';
+                await loadDocuments();
+                showDashboardToast('success', 'Files Saved', 'The selected files are now stored in your Agent Workspace library.');
+            } catch (error) {
+                uploadInput.value = '';
+                showDashboardToast('error', 'Upload Failed', error.message || 'Unable to save the selected files.');
+            }
+        });
+
+        loadDraft();
+        loadDocuments();
+    }
+
     function initAdminUserManager() {
         const usersList = document.getElementById('admin-users-list');
         if (!usersList) {
@@ -6729,38 +7065,16 @@ function initNavbarDateTime() {
 
     function initContractsWidget() {
         const downloadPdfBtn = document.getElementById('contract-download-pdf');
+        const introPreview = document.getElementById('contract-preview-intro');
+        const limitedPurposePreview = document.getElementById('contract-preview-limited-purpose');
+        const fastbridgeResponsibilityPreview = document.getElementById('contract-preview-fastbridge-responsibility');
+        const intentPreview = document.getElementById('contract-preview-intent');
 
         if (!downloadPdfBtn) {
             return;
         }
 
         let jsPdfLoaderPromise = null;
-        const clauses = [
-            {
-                title: 'Limited Purpose',
-                body: 'The brokerage grants FAST BRIDGE GROUP, LLC a limited, non-exclusive, revocable permission to reference and use the brokerage\'s real estate license, broker supervision, and related MLS authorization strictly as required to access, receive, display, and maintain MLS data and IDX/VOW-related compliance on FAST BRIDGE systems.'
-            },
-            {
-                title: 'No Ownership, Control, or IP Rights',
-                body: 'The brokerage acknowledges and agrees that it has no ownership interest, no equity, no control rights, and no claim whatsoever over FAST BRIDGE GROUP, LLC\'s website, source code, software, automations, user interface, databases, workflows, CRM logic, designs, branding, domains, marketing systems, investor lists, written content, graphics, or business operations. This Agreement does not transfer, assign, license, encumber, or imply any rights in FAST BRIDGE intellectual property other than the narrow MLS/data-use permission expressly stated above.'
-            },
-            {
-                title: 'FAST BRIDGE Responsibility',
-                body: 'FAST BRIDGE GROUP, LLC will retain full responsibility for the design, development, hosting, coding, security, maintenance, uptime, vendor relationships, data handling decisions, and all website-related operations. FAST BRIDGE GROUP, LLC will bear responsibility for its own website conduct, implementation choices, and compliance workflows, except that the brokerage remains responsible only for duties that by law cannot be delegated away under its license or MLS rules.'
-            },
-            {
-                title: 'MLS Data Boundary',
-                body: 'Any MLS data, listing content, or brokerage-required compliance materials remain subject to applicable MLS rules, broker supervision requirements, and third-party data rights. Outside of that MLS-specific content, all remaining systems, features, code, and platform assets belong exclusively to FAST BRIDGE GROUP, LLC.'
-            },
-            {
-                title: 'No Partnership or Work-for-Hire',
-                body: 'This Agreement does not create a partnership, joint venture, merger, employer relationship, franchise, or work-for-hire arrangement. The brokerage is not the owner, developer, operator, or purchaser of the FAST BRIDGE website or codebase by virtue of providing MLS licensing access.'
-            },
-            {
-                title: 'Termination',
-                body: 'Upon termination, FAST BRIDGE GROUP, LLC will discontinue use of the brokerage\'s license and any MLS/IDX permissions tied to that brokerage unless replaced by another valid authorization. Termination does not grant the brokerage any right to seize, demand transfer of, copy, or control FAST BRIDGE systems, software, or website assets.'
-            }
-        ];
 
         const fieldReaders = {
             effectiveDate: () => document.getElementById('contract-effective-date')?.value || '',
@@ -6807,6 +7121,82 @@ function initNavbarDateTime() {
             return `${slug || 'mls-data-license-only'}-agreement.pdf`;
         }
 
+        function buildAgreementData() {
+            return {
+                effectiveDate: formatDateValue(fieldReaders.effectiveDate()),
+                market: normalizeValue(fieldReaders.market(), '________________'),
+                brokerageName: normalizeValue(fieldReaders.brokerageName(), 'the licensed brokerage identified below'),
+                brokerageSignerName: normalizeValue(fieldReaders.brokerageSignerName(), 'the brokerage\'s authorized signer'),
+                brokerageSignerTitle: normalizeValue(fieldReaders.brokerageSignerTitle(), '________________'),
+                brokerageSignature: normalizeValue(fieldReaders.brokerageSignature(), '________________'),
+                brokerageSignDate: formatDateValue(fieldReaders.brokerageSignDate()),
+                fastbridgeSignerName: normalizeValue(fieldReaders.fastbridgeSignerName(), 'FAST BRIDGE\'s authorized signer'),
+                fastbridgeSignerTitle: normalizeValue(fieldReaders.fastbridgeSignerTitle(), '________________'),
+                fastbridgeSignature: normalizeValue(fieldReaders.fastbridgeSignature(), '________________'),
+                fastbridgeSignDate: formatDateValue(fieldReaders.fastbridgeSignDate()),
+                extraSignerName: normalizeValue(fieldReaders.extraSignerName(), '________________'),
+                extraSignerTitle: normalizeValue(fieldReaders.extraSignerTitle(), '________________'),
+                extraSignature: normalizeValue(fieldReaders.extraSignature(), '________________'),
+                extraSignDate: formatDateValue(fieldReaders.extraSignDate())
+            };
+        }
+
+        function buildAgreementClauses(agreementData) {
+            return [
+                {
+                    title: 'Limited Purpose',
+                    body: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable permission to reference and use the brokerage's real estate license, broker supervision, and related MLS authorization strictly as required to access, receive, display, and maintain MLS data and IDX/VOW-related compliance on FAST BRIDGE systems.`
+                },
+                {
+                    title: 'No Ownership, Control, or IP Rights',
+                    body: `The brokerage, including ${agreementData.brokerageSignerName} on behalf of ${agreementData.brokerageName}, acknowledges and agrees that it has no ownership interest, no equity, no control rights, and no claim whatsoever over FAST BRIDGE GROUP, LLC's website, source code, software, automations, user interface, databases, workflows, CRM logic, designs, branding, domains, marketing systems, investor lists, written content, graphics, or business operations. This Agreement does not transfer, assign, license, encumber, or imply any rights in FAST BRIDGE intellectual property other than the narrow MLS/data-use permission expressly stated above.`
+                },
+                {
+                    title: 'FAST BRIDGE Responsibility',
+                    body: `FAST BRIDGE GROUP, LLC, acting through ${agreementData.fastbridgeSignerName}, will retain full responsibility for the design, development, hosting, coding, security, maintenance, uptime, vendor relationships, data handling decisions, and all website-related operations. FAST BRIDGE GROUP, LLC will bear responsibility for its own website conduct, implementation choices, and compliance workflows, except that ${agreementData.brokerageName} remains responsible only for duties that by law cannot be delegated away under its license or MLS rules.`
+                },
+                {
+                    title: 'MLS Data Boundary',
+                    body: 'Any MLS data, listing content, or brokerage-required compliance materials remain subject to applicable MLS rules, broker supervision requirements, and third-party data rights. Outside of that MLS-specific content, all remaining systems, features, code, and platform assets belong exclusively to FAST BRIDGE GROUP, LLC.'
+                },
+                {
+                    title: 'No Partnership or Work-for-Hire',
+                    body: `This Agreement does not create a partnership, joint venture, merger, employer relationship, franchise, or work-for-hire arrangement. ${agreementData.brokerageName} is not the owner, developer, operator, or purchaser of the FAST BRIDGE website or codebase by virtue of providing MLS licensing access.`
+                },
+                {
+                    title: 'Termination',
+                    body: `Upon termination, FAST BRIDGE GROUP, LLC will discontinue use of ${agreementData.brokerageName}'s license and any MLS/IDX permissions tied to that brokerage unless replaced by another valid authorization. Termination does not grant ${agreementData.brokerageName} any right to seize, demand transfer of, copy, or control FAST BRIDGE systems, software, or website assets.`
+                }
+            ];
+        }
+
+        function buildAgreementPreviewContent(agreementData) {
+            return {
+                intro: `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC, acting by and through ${agreementData.fastbridgeSignerName}, and ${agreementData.brokerageName}, acting by and through ${agreementData.brokerageSignerName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under the brokerage's license.`,
+                limitedPurpose: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable permission to reference and use the brokerage's real estate license, broker supervision, and related MLS authorization strictly as required to access, receive, display, and maintain MLS data and IDX/VOW-related compliance on FAST BRIDGE systems.`,
+                fastbridgeResponsibility: `FAST BRIDGE GROUP, LLC, acting through ${agreementData.fastbridgeSignerName}, will retain full responsibility for the design, development, hosting, coding, security, maintenance, uptime, vendor relationships, data handling decisions, and all website-related operations. FAST BRIDGE GROUP, LLC will bear responsibility for its own website conduct, implementation choices, and compliance workflows, except that ${agreementData.brokerageName} remains responsible only for duties that by law cannot be delegated away under its license or MLS rules.`,
+                intent: `Intent of this agreement: ${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, is being engaged only so FAST BRIDGE, through ${agreementData.fastbridgeSignerName}, can lawfully use the brokerage's license for MLS data access. The brokerage is not obtaining any ownership, management, coding rights, website rights, or business rights in FAST BRIDGE GROUP, LLC, at all.`
+            };
+        }
+
+        function updateContractPreview() {
+            const agreementData = buildAgreementData();
+            const previewContent = buildAgreementPreviewContent(agreementData);
+
+            if (introPreview) {
+                introPreview.textContent = previewContent.intro;
+            }
+            if (limitedPurposePreview) {
+                limitedPurposePreview.textContent = previewContent.limitedPurpose;
+            }
+            if (fastbridgeResponsibilityPreview) {
+                fastbridgeResponsibilityPreview.textContent = previewContent.fastbridgeResponsibility;
+            }
+            if (intentPreview) {
+                intentPreview.innerHTML = `<strong>Intent of this agreement:</strong> ${previewContent.intent.replace(/^Intent of this agreement:\s*/i, '')}`;
+            }
+        }
+
         function loadJsPdf() {
             if (window.jspdf && window.jspdf.jsPDF) {
                 return Promise.resolve(window.jspdf.jsPDF);
@@ -6835,23 +7225,8 @@ function initNavbarDateTime() {
         }
 
         function buildAgreementSections() {
-            const agreementData = {
-                effectiveDate: formatDateValue(fieldReaders.effectiveDate()),
-                market: normalizeValue(fieldReaders.market(), '________________'),
-                brokerageName: normalizeValue(fieldReaders.brokerageName(), 'the licensed brokerage identified below'),
-                brokerageSignerName: normalizeValue(fieldReaders.brokerageSignerName(), '________________'),
-                brokerageSignerTitle: normalizeValue(fieldReaders.brokerageSignerTitle(), '________________'),
-                brokerageSignature: normalizeValue(fieldReaders.brokerageSignature(), '________________'),
-                brokerageSignDate: formatDateValue(fieldReaders.brokerageSignDate()),
-                fastbridgeSignerName: normalizeValue(fieldReaders.fastbridgeSignerName(), '________________'),
-                fastbridgeSignerTitle: normalizeValue(fieldReaders.fastbridgeSignerTitle(), '________________'),
-                fastbridgeSignature: normalizeValue(fieldReaders.fastbridgeSignature(), '________________'),
-                fastbridgeSignDate: formatDateValue(fieldReaders.fastbridgeSignDate()),
-                extraSignerName: normalizeValue(fieldReaders.extraSignerName(), '________________'),
-                extraSignerTitle: normalizeValue(fieldReaders.extraSignerTitle(), '________________'),
-                extraSignature: normalizeValue(fieldReaders.extraSignature(), '________________'),
-                extraSignDate: formatDateValue(fieldReaders.extraSignDate())
-            };
+            const agreementData = buildAgreementData();
+            const clauses = buildAgreementClauses(agreementData);
 
             const sections = [
                 {
@@ -6862,7 +7237,7 @@ function initNavbarDateTime() {
                         `MLS Market / Region: ${agreementData.market}`,
                         `Brokerage Legal Name: ${agreementData.brokerageName}`,
                         '',
-                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC and ${agreementData.brokerageName} solely for the limited purpose of enabling lawful MLS data access, display, and compliance under the brokerage\'s license.`
+                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC, acting by and through ${agreementData.fastbridgeSignerName}, and ${agreementData.brokerageName}, acting by and through ${agreementData.brokerageSignerName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under the brokerage\'s license.`
                     ]
                 },
                 {
@@ -6878,7 +7253,7 @@ function initNavbarDateTime() {
                 {
                     heading: 'Intent of This Agreement',
                     lines: [
-                        'The brokerage is being engaged only so FAST BRIDGE can lawfully use the brokerage\'s license for MLS data access. The brokerage is not obtaining any ownership, management, coding rights, website rights, or business rights in FAST BRIDGE GROUP, LLC, at all.'
+                        `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, is being engaged only so FAST BRIDGE, through ${agreementData.fastbridgeSignerName}, can lawfully use the brokerage's license for MLS data access. The brokerage is not obtaining any ownership, management, coding rights, website rights, or business rights in FAST BRIDGE GROUP, LLC, at all.`
                     ]
                 },
                 {
@@ -6907,6 +7282,34 @@ function initNavbarDateTime() {
                 fileName: buildAgreementFileName(agreementData.brokerageName)
             };
         }
+
+        [
+            'contract-effective-date',
+            'contract-mls-market',
+            'contract-brokerage-name',
+            'contract-brokerage-signer-name',
+            'contract-brokerage-signer-title',
+            'contract-brokerage-signature',
+            'contract-brokerage-sign-date',
+            'contract-fastbridge-signer-name',
+            'contract-fastbridge-signer-title',
+            'contract-fastbridge-signature',
+            'contract-fastbridge-sign-date',
+            'contract-extra-signer-name',
+            'contract-extra-signer-title',
+            'contract-extra-signature',
+            'contract-extra-sign-date'
+        ].forEach((fieldId) => {
+            const field = document.getElementById(fieldId);
+            if (!field) {
+                return;
+            }
+
+            field.addEventListener('input', updateContractPreview);
+            field.addEventListener('change', updateContractPreview);
+        });
+
+        updateContractPreview();
 
         async function downloadAgreementPdf() {
             downloadPdfBtn.disabled = true;
@@ -11432,6 +11835,7 @@ function initNavbarDateTime() {
         initDailyBibleVerseWidget();
         initPersonalOutreachWorkspace();
         initAgentNotesWidget();
+        initAgentWorkspaceEmailPrep();
         initAdminAccessRequests();
         initAdminSmtpApprovals();
         initAdminUserManager();
