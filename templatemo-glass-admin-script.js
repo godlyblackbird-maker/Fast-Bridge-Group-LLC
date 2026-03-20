@@ -1508,124 +1508,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return now - (config.days * 24 * 60 * 60 * 1000);
         }
 
-        function getIaFinancingModeAssumptions(mode) {
-            if (mode === '90-100') {
-                return {
-                    loanToArv: 75,
-                    originationPoints: 1,
-                    interestRate: 10,
-                    lenderFees: 999,
-                    holdMonths: 4,
-                    costAdvanceRate: 0.9,
-                    arvAdvanceRate: 0.75
-                };
-            }
-
-            if (mode === '100-100') {
-                return {
-                    loanToArv: 80,
-                    originationPoints: 1.5,
-                    interestRate: 10.44,
-                    lenderFees: 999,
-                    holdMonths: 4,
-                    costAdvanceRate: 1,
-                    arvAdvanceRate: 0.8
-                };
-            }
-
-            if (mode === 'cash') {
-                return {
-                    loanToArv: 0,
-                    originationPoints: 0,
-                    interestRate: 0,
-                    lenderFees: 0,
-                    holdMonths: 0,
-                    costAdvanceRate: 0,
-                    arvAdvanceRate: 0
-                };
-            }
-
-            return null;
-        }
-
-        function calculateIaFirstLoanWaterfall(options = {}) {
-            const rawArv = Math.max(Number(options.rawArv) || 0, 0);
-            const offerPrice = Math.max(Number(options.offerPrice) || 0, 0);
-            const renovation = Math.max(Number(options.renovation) || 0, 0);
-            const holdMonths = Math.max(Number(options.holdMonths) || 0, 0);
-            const manualLoanToArvPct = Math.max(Number(options.loanToArvPct) || 0, 0);
-            const interestRatePct = Math.max(Number(options.interestRatePct) || 0, 0);
-            const pointsPct = Math.max(Number(options.pointsPct) || 0, 0);
-            const lenderFees = Math.max(Number(options.lenderFees) || 0, 0);
-            const oddDays = Math.max(Number(options.oddDays) || 0, 0);
-            const reserveWithhold = Math.max(Number(options.reserveWithhold) || 0, 0);
-            const financingMode = String(options.financingMode || '100-100').trim().toLowerCase();
-
-            if (financingMode === 'cash') {
-                return {
-                    loanAmount: 0,
-                    loanArvCapAmount: 0,
-                    loanCostCapAmount: 0,
-                    originationAmount: 0,
-                    monthlyInterestPayment: 0,
-                    proratedInterestReserve: 0,
-                    totalInterestCost: 0,
-                    totalFinancingCost: 0,
-                    rehabHoldback: 0,
-                    reserveWithhold: 0,
-                    lenderFees: 0,
-                    netLoanToEscrow: 0,
-                    oddDays: 0,
-                    dayCount: 31
-                };
-            }
-
-            const assumptions = getIaFinancingModeAssumptions(financingMode);
-            const effectiveArvAdvanceRate = assumptions ? assumptions.arvAdvanceRate : (manualLoanToArvPct / 100);
-            const effectiveCostAdvanceRate = assumptions && Number.isFinite(assumptions.costAdvanceRate)
-                ? assumptions.costAdvanceRate
-                : null;
-            const loanArvCapAmount = rawArv * Math.max(effectiveArvAdvanceRate, 0);
-            const loanCostBase = offerPrice + renovation;
-            const loanCostCapAmount = effectiveCostAdvanceRate === null
-                ? Infinity
-                : loanCostBase * Math.max(effectiveCostAdvanceRate, 0);
-            const loanAmount = Math.max(Math.min(loanArvCapAmount, loanCostCapAmount), 0);
-            const originationAmount = loanAmount * (pointsPct / 100);
-            const monthlyInterestPayment = loanAmount * (interestRatePct / 100) / 12;
-            const dayCount = 31;
-            const proratedInterestReserve = (monthlyInterestPayment / dayCount) * oddDays;
-            const totalInterestCost = monthlyInterestPayment * holdMonths;
-            const totalFinancingCost = originationAmount + lenderFees + totalInterestCost;
-            const rehabHoldback = renovation;
-            const netLoanToEscrow = Math.max(
-                loanAmount
-                - rehabHoldback
-                - originationAmount
-                - lenderFees
-                - proratedInterestReserve
-                - reserveWithhold,
-                0
-            );
-
-            return {
-                loanAmount,
-                loanArvCapAmount,
-                loanCostCapAmount: Number.isFinite(loanCostCapAmount) ? loanCostCapAmount : loanAmount,
-                originationAmount,
-                monthlyInterestPayment,
-                proratedInterestReserve,
-                totalInterestCost,
-                totalFinancingCost,
-                rehabHoldback,
-                reserveWithhold,
-                lenderFees,
-                netLoanToEscrow,
-                oddDays,
-                dayCount
-            };
-        }
-
         function syncProfitWindowUi(activeWindow) {
             profitWindowButtons.forEach((button) => {
                 const isActive = button.dataset.profitWindow === activeWindow;
@@ -1639,21 +1521,20 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return 0;
             }
 
+            const listPrice = Math.max(parseMoneyValue(state.listPrice), 0);
             const rawArv = Math.max(parseMoneyValue(state.arv), 0);
             const estimatedSalesPrice = rawArv;
             const sellSidePct = Math.max(parseMoneyValue(state.sellSidePercent), 0);
             const sellSideCost = estimatedSalesPrice * (sellSidePct / 100);
-            const offerPrice = Math.max(parseMoneyValue(state.offerPrice), 0);
-            const buySideCost = offerPrice * 0.006617;
+            const buySideCost = listPrice * 0.006617;
             const renovation = Math.max(parseMoneyValue(state.renovation), 0);
+            const offerPrice = Math.max(parseMoneyValue(state.offerPrice), 0);
             const holdMonths = Math.max(parseMoneyValue(state.holdMonths), 0);
             const financingMode = String(state.financingMode || '100-100').trim().toLowerCase();
             const loanToArvPct = Math.max(parseMoneyValue(state.loanToArv), 0);
             const interestRatePct = Math.max(parseMoneyValue(state.interestRate), 0);
             const pointsPct = Math.max(parseMoneyValue(state.originationPoints), 0);
             const lenderFees = Math.max(parseMoneyValue(state.lenderFees), 0);
-            const oddDays = Math.max(parseMoneyValue(state.oddDays), 0);
-            const reserveWithhold = Math.max(parseMoneyValue(state.reserveWithhold), 0);
             const otherCosts = Array.isArray(state.otherCosts)
                 ? state.otherCosts.reduce((sum, item) => sum + Math.max(parseMoneyValue(item && item.amount), 0), 0)
                 : 0;
@@ -1689,23 +1570,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 + invPerDiemAmount
                 + invAssetMgmtAmount;
             const grossPurchaseAdjustmentTotal = invDueDiligence + invAcquisitionFee + invCashForKeys;
-            const financing = calculateIaFirstLoanWaterfall({
-                rawArv,
-                offerPrice,
-                renovation,
-                holdMonths,
-                loanToArvPct,
-                interestRatePct,
-                pointsPct,
-                lenderFees,
-                oddDays,
-                reserveWithhold,
-                financingMode
-            });
+
+            const loanAmount = financingMode === 'cash' ? 0 : rawArv * (loanToArvPct / 100);
+            const originationAmount = financingMode === 'cash' ? 0 : loanAmount * (pointsPct / 100);
+            const interestCost = financingMode === 'cash' ? 0 : loanAmount * (interestRatePct / 100) * (holdMonths / 12);
+            const totalFinancingCost = financingMode === 'cash' ? 0 : (originationAmount + lenderFees + interestCost);
 
             const grossProfitToSeller = estimatedSalesPrice - sellSideCost - grossSaleAdjustmentTotal;
             const invTotalAcquisition = offerPrice + buySideCost + otherCosts;
-            const invHardMoneyCosts = financing.totalFinancingCost;
+            const invHardMoneyCosts = totalFinancingCost;
             const invMiscLessInterest = grossPurchaseAdjustmentTotal;
             const invTotalDevelopmentCost = invTotalAcquisition + invHardMoneyCosts + renovation + invMiscLessInterest;
             const invNetProfit = grossProfitToSeller - invTotalDevelopmentCost;
@@ -9942,25 +9815,16 @@ function initNavbarDateTime() {
             const interestRateInput = document.getElementById('ia-interest-rate');
             const originationPointsInput = document.getElementById('ia-origination-points');
             const lenderFeesInput = document.getElementById('ia-lender-fees');
-            const oddDaysInput = document.getElementById('ia-odd-days');
-            const reserveWithholdInput = document.getElementById('ia-reserve-withhold');
             const calcButton = document.getElementById('ia-calc-btn');
             const strikeZonePctEl = document.getElementById('ia-strike-zone-pct');
             const strikeZoneAreaEl = document.getElementById('ia-strike-zone-area');
             const iaSummaryCopyBtn = document.getElementById('ia-summary-copy-btn');
             const cashNote = document.getElementById('ia-cash-note');
-            const miscCostsSection = document.getElementById('ia-misc-costs-section');
-            const miscCostsSectionBody = document.getElementById('ia-misc-costs-body');
-            const miscCostsToggleButton = document.getElementById('ia-misc-costs-toggle');
-            const purchaseAdjustmentsSection = document.getElementById('ia-purchase-adjustments-section');
-            const purchaseAdjustmentsSectionBody = document.getElementById('ia-purchase-adjustments-body');
-            const purchaseAdjustmentsToggleButton = document.getElementById('ia-purchase-adjustments-toggle');
-            const saleAdjustmentsSection = document.getElementById('ia-sale-adjustments-section');
-            const saleAdjustmentsSectionBody = document.getElementById('ia-sale-adjustments-body');
-            const saleAdjustmentsToggleButton = document.getElementById('ia-sale-adjustments-toggle');
             const financingSection = document.getElementById('ia-financing-section');
             const financingSectionBody = document.getElementById('ia-financing-body');
             const financingToggleButton = document.getElementById('ia-financing-toggle');
+            const financingToggleText = financingToggleButton ? financingToggleButton.querySelector('.ia-section-toggle-text') : null;
+            const financingToggleIcon = financingToggleButton ? financingToggleButton.querySelector('.ia-section-toggle-icon') : null;
 
             const addOtherCostButton = document.getElementById('ia-add-other-cost');
             const otherCostNameInput = document.getElementById('ia-other-cost-name');
@@ -9991,7 +9855,7 @@ function initNavbarDateTime() {
                 invCashForKeys: '0'
             };
 
-            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !oddDaysInput || !reserveWithholdInput || !otherCostList || !financingModeInput) {
+            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput) {
                 return;
             }
 
@@ -10001,37 +9865,9 @@ function initNavbarDateTime() {
             let otherCosts = [];
             let targetMode = 'dollar';
             let offerPriceMode = 'target';
-            const collapsedSections = {
-                miscCosts: true,
-                purchaseAdjustments: true,
-                saleAdjustments: true,
-                financing: true
-            };
+            let financingHoldCollapsed = false;
             let iaSummaryMessage = '';
             let investorSummaryMessage = '';
-
-            const iaCollapsibleSections = {
-                miscCosts: {
-                    section: miscCostsSection,
-                    body: miscCostsSectionBody,
-                    button: miscCostsToggleButton
-                },
-                purchaseAdjustments: {
-                    section: purchaseAdjustmentsSection,
-                    body: purchaseAdjustmentsSectionBody,
-                    button: purchaseAdjustmentsToggleButton
-                },
-                saleAdjustments: {
-                    section: saleAdjustmentsSection,
-                    body: saleAdjustmentsSectionBody,
-                    button: saleAdjustmentsToggleButton
-                },
-                financing: {
-                    section: financingSection,
-                    body: financingSectionBody,
-                    button: financingToggleButton
-                }
-            };
 
             function getPersistedIaCalculatorState() {
                 if (!propertyKey) {
@@ -10079,8 +9915,6 @@ function initNavbarDateTime() {
                 interestRateInput.value = String(state.interestRate ?? interestRateInput.value ?? '');
                 originationPointsInput.value = String(state.originationPoints ?? originationPointsInput.value ?? '');
                 lenderFeesInput.value = String(state.lenderFees ?? lenderFeesInput.value ?? '');
-                oddDaysInput.value = String(state.oddDays ?? oddDaysInput.value ?? '');
-                reserveWithholdInput.value = String(state.reserveWithhold ?? reserveWithholdInput.value ?? '');
                 otherCosts = Array.isArray(state.otherCosts)
                     ? state.otherCosts
                         .map(item => ({
@@ -10119,16 +9953,7 @@ function initNavbarDateTime() {
 
                 targetMode = state.targetMode === 'percent' ? 'percent' : 'dollar';
                 offerPriceMode = state.offerPriceMode === 'manual' ? 'manual' : 'target';
-
-                if (state.collapsedSections && typeof state.collapsedSections === 'object') {
-                    Object.keys(collapsedSections).forEach(key => {
-                        if (Object.prototype.hasOwnProperty.call(state.collapsedSections, key)) {
-                            collapsedSections[key] = Boolean(state.collapsedSections[key]);
-                        }
-                    });
-                } else if (Object.prototype.hasOwnProperty.call(state, 'financingHoldCollapsed')) {
-                    collapsedSections.financing = Boolean(state.financingHoldCollapsed);
-                }
+                financingHoldCollapsed = Boolean(state.financingHoldCollapsed);
             }
 
             function buildIaCalculatorState() {
@@ -10147,8 +9972,6 @@ function initNavbarDateTime() {
                     interestRate: interestRateInput.value,
                     originationPoints: originationPointsInput.value,
                     lenderFees: lenderFeesInput.value,
-                    oddDays: oddDaysInput.value,
-                    reserveWithhold: reserveWithholdInput.value,
                     otherCosts: otherCosts.map(item => ({
                         name: String(item.name || 'Other Cost').trim() || 'Other Cost',
                         amount: Math.max(parseMoneyValue(item.amount), 0)
@@ -10158,42 +9981,31 @@ function initNavbarDateTime() {
                     },
                     targetMode,
                     offerPriceMode,
-                    financingHoldCollapsed: collapsedSections.financing,
-                    collapsedSections: {
-                        ...collapsedSections
-                    }
+                    financingHoldCollapsed
                 };
             }
 
-            function setIaSectionCollapsed(sectionKey, collapsed, options = {}) {
-                if (!Object.prototype.hasOwnProperty.call(iaCollapsibleSections, sectionKey)) {
-                    return;
+            function setFinancingSectionCollapsed(collapsed, options = {}) {
+                financingHoldCollapsed = !!collapsed;
+
+                if (financingSection) {
+                    financingSection.classList.toggle('is-collapsed', financingHoldCollapsed);
                 }
 
-                collapsedSections[sectionKey] = !!collapsed;
-
-                const config = iaCollapsibleSections[sectionKey];
-                const toggleText = config.button ? config.button.querySelector('.ia-section-toggle-text') : null;
-                const toggleIcon = config.button ? config.button.querySelector('.ia-section-toggle-icon') : null;
-
-                if (config.section) {
-                    config.section.classList.toggle('is-collapsed', collapsedSections[sectionKey]);
+                if (financingSectionBody) {
+                    financingSectionBody.hidden = financingHoldCollapsed;
                 }
 
-                if (config.body) {
-                    config.body.hidden = collapsedSections[sectionKey];
+                if (financingToggleButton) {
+                    financingToggleButton.setAttribute('aria-expanded', String(!financingHoldCollapsed));
                 }
 
-                if (config.button) {
-                    config.button.setAttribute('aria-expanded', String(!collapsedSections[sectionKey]));
+                if (financingToggleText) {
+                    financingToggleText.textContent = financingHoldCollapsed ? 'Open' : 'Minimize';
                 }
 
-                if (toggleText) {
-                    toggleText.textContent = collapsedSections[sectionKey] ? 'Open' : 'Minimize';
-                }
-
-                if (toggleIcon) {
-                    toggleIcon.textContent = collapsedSections[sectionKey] ? '+' : '-';
+                if (financingToggleIcon) {
+                    financingToggleIcon.textContent = financingHoldCollapsed ? '+' : '-';
                 }
 
                 if (!options.skipPersist) {
@@ -10321,8 +10133,6 @@ function initNavbarDateTime() {
                     interestRateInput,
                     originationPointsInput,
                     lenderFeesInput,
-                    oddDaysInput,
-                    reserveWithholdInput,
                     otherCostAmountInput
                 ].forEach(formatNumericInputValue);
 
@@ -10343,17 +10153,57 @@ function initNavbarDateTime() {
                 if (invCashForKeysInput) investorDefaults.invCashForKeys = String(invCashForKeysInput.value || investorDefaults.invCashForKeys);
             }
 
+            function getFinancingModeAssumptions(mode) {
+                if (mode === '90-100') {
+                    return {
+                        loanToArv: '75',
+                        originationPoints: '1',
+                        interestRate: '10',
+                        lenderFees: '999',
+                        holdMonths: '4',
+                        costAdvanceRate: 0.9,
+                        arvAdvanceRate: 0.75
+                    };
+                }
+
+                if (mode === '100-100') {
+                    return {
+                        loanToArv: '80',
+                        originationPoints: '1.5',
+                        interestRate: '10.44',
+                        lenderFees: '999',
+                        holdMonths: '4',
+                        costAdvanceRate: 1,
+                        arvAdvanceRate: 0.8
+                    };
+                }
+
+                if (mode === 'cash') {
+                    return {
+                        loanToArv: '0',
+                        originationPoints: '0',
+                        interestRate: '0',
+                        lenderFees: '0',
+                        holdMonths: '0',
+                        costAdvanceRate: 0,
+                        arvAdvanceRate: 0
+                    };
+                }
+
+                return null;
+            }
+
             function applyFinancingModeDefaults(mode, options = {}) {
                 const preserveValues = !!options.preserveValues;
-                const assumptions = getIaFinancingModeAssumptions(mode);
+                const assumptions = getFinancingModeAssumptions(mode);
 
                 if (!preserveValues) {
                     if (assumptions) {
-                        loanToArvInput.value = String(assumptions.loanToArv);
-                        originationPointsInput.value = String(assumptions.originationPoints);
-                        interestRateInput.value = String(assumptions.interestRate);
-                        lenderFeesInput.value = String(assumptions.lenderFees);
-                        holdMonthsInput.value = String(assumptions.holdMonths);
+                        loanToArvInput.value = assumptions.loanToArv;
+                        originationPointsInput.value = assumptions.originationPoints;
+                        interestRateInput.value = assumptions.interestRate;
+                        lenderFeesInput.value = assumptions.lenderFees;
+                        holdMonthsInput.value = assumptions.holdMonths;
                     } else if (mode === 'custom') {
                         // Keep current values for fully manual underwriting.
                     }
@@ -10364,8 +10214,6 @@ function initNavbarDateTime() {
                 originationPointsInput.disabled = isCash;
                 interestRateInput.disabled = isCash;
                 lenderFeesInput.disabled = isCash;
-                oddDaysInput.disabled = isCash;
-                reserveWithholdInput.disabled = isCash;
                 holdMonthsInput.disabled = isCash;
                 if (cashNote) {
                     cashNote.hidden = !isCash;
@@ -10451,8 +10299,6 @@ function initNavbarDateTime() {
                 const interestRatePct = Math.max(asNumber(interestRateInput, 0), 0);
                 const pointsPct = Math.max(asNumber(originationPointsInput, 0), 0);
                 const lenderFees = Math.max(asNumber(lenderFeesInput, 0), 0);
-                const oddDays = Math.max(asNumber(oddDaysInput, 0), 0);
-                const reserveWithhold = Math.max(asNumber(reserveWithholdInput, 0), 0);
                 const invEscrowPct = Math.max(parseMoneyValue(investorDefaults.invEscrowPct), 1);
                 const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
                 const invConcessionsPct = Math.max(parseMoneyValue(investorDefaults.invConcessionsPct), 0);
@@ -10491,25 +10337,28 @@ function initNavbarDateTime() {
                 function estimateFinancing(offerCandidate) {
                     const safeOfferCandidate = Math.max(Number(offerCandidate) || 0, 0);
                     const buySideCostCandidate = safeOfferCandidate * buySideRate;
-                    const financing = calculateIaFirstLoanWaterfall({
-                        rawArv,
-                        offerPrice: safeOfferCandidate,
-                        renovation,
-                        holdMonths,
-                        loanToArvPct,
-                        interestRatePct,
-                        pointsPct,
-                        lenderFees,
-                        oddDays,
-                        reserveWithhold,
-                        financingMode
-                    });
-                    const totalFinancingCostCandidate = financing.totalFinancingCost;
+                    const financingAssumptions = getFinancingModeAssumptions(financingMode);
+                    const loanArvCapAmount = rawArv * (loanToArvPct / 100);
+                    const loanCostBase = safeOfferCandidate + renovation;
+                    let loanAmountCandidate = financingMode === 'cash' ? 0 : loanArvCapAmount;
+
+                    if (financingAssumptions) {
+                        const assumedArvCapAmount = rawArv * financingAssumptions.arvAdvanceRate;
+                        const assumedCostCapAmount = loanCostBase * financingAssumptions.costAdvanceRate;
+                        loanAmountCandidate = Math.min(loanArvCapAmount, assumedArvCapAmount, assumedCostCapAmount);
+                    }
+
+                    const originationAmountCandidate = financingMode === 'cash' ? 0 : loanAmountCandidate * (pointsPct / 100);
+                    const interestCostCandidate = financingMode === 'cash' ? 0 : loanAmountCandidate * (interestRatePct / 100) * (holdMonths / 12);
+                    const totalFinancingCostCandidate = financingMode === 'cash' ? 0 : (originationAmountCandidate + interestCostCandidate);
                     const baselineForTargetCandidate = safeOfferCandidate + buySideCostCandidate + renovation + grossScopeAdjustmentTotal + totalFinancingCostCandidate;
 
                     return {
                         buySideCost: buySideCostCandidate,
-                        ...financing,
+                        loanAmount: loanAmountCandidate,
+                        originationAmount: originationAmountCandidate,
+                        interestCost: interestCostCandidate,
+                        totalFinancingCost: totalFinancingCostCandidate,
                         baselineForTarget: baselineForTargetCandidate
                     };
                 }
@@ -10519,11 +10368,7 @@ function initNavbarDateTime() {
                     : Math.max(estimatedSalesPrice - sellSideCost - grossScopeAdjustmentTotal - renovation - extraCosts - targetProfitDollar, 0);
                 let buySideCost = 0;
                 let loanAmount = 0;
-                let netLoanToEscrow = 0;
                 let originationAmount = 0;
-                let rehabHoldback = 0;
-                let monthlyInterestPayment = 0;
-                let proratedInterestReserve = 0;
                 let interestCost = 0;
                 let totalFinancingCost = 0;
 
@@ -10531,12 +10376,8 @@ function initNavbarDateTime() {
                     const estimate = estimateFinancing(offerPrice);
                     buySideCost = estimate.buySideCost;
                     loanAmount = estimate.loanAmount;
-                    netLoanToEscrow = estimate.netLoanToEscrow;
                     originationAmount = estimate.originationAmount;
-                    rehabHoldback = estimate.rehabHoldback;
-                    monthlyInterestPayment = estimate.monthlyInterestPayment;
-                    proratedInterestReserve = estimate.proratedInterestReserve;
-                    interestCost = estimate.totalInterestCost;
+                    interestCost = estimate.interestCost;
                     totalFinancingCost = estimate.totalFinancingCost;
 
                     if (targetMode === 'percent') {
@@ -10563,12 +10404,8 @@ function initNavbarDateTime() {
                 const finalEstimate = estimateFinancing(offerPrice);
                 buySideCost = finalEstimate.buySideCost;
                 loanAmount = finalEstimate.loanAmount;
-                netLoanToEscrow = finalEstimate.netLoanToEscrow;
                 originationAmount = finalEstimate.originationAmount;
-                rehabHoldback = finalEstimate.rehabHoldback;
-                monthlyInterestPayment = finalEstimate.monthlyInterestPayment;
-                proratedInterestReserve = finalEstimate.proratedInterestReserve;
-                interestCost = finalEstimate.totalInterestCost;
+                interestCost = finalEstimate.interestCost;
                 totalFinancingCost = finalEstimate.totalFinancingCost;
 
                 if (targetMode === 'percent') {
@@ -10600,7 +10437,7 @@ function initNavbarDateTime() {
                 const invMiscLessInterest = 0;
                 const invTotalDevelopmentCost = totalProjectWithFinancing;
                 const invTotalPurchaseCosts = totalPurchaseCost;
-                const invCashRequiredToClose = Math.max(invTotalPurchaseCosts - netLoanToEscrow, 0);
+                const invCashRequiredToClose = Math.max(invTotalPurchaseCosts + renovation + originationAmount - loanAmount, 0);
                 const invTotalCashInvestment = invCashRequiredToClose + interestCost;
                 const invShortFundsToEscrow = invCashRequiredToClose;
 
@@ -10621,11 +10458,7 @@ function initNavbarDateTime() {
 
                 setText('ia-other-cost-total', formatMoney(extraCosts));
                 setText('ia-loan-amount', formatMoney(loanAmount));
-                setText('ia-net-loan-to-escrow', formatMoney(netLoanToEscrow));
                 setText('ia-origination-amount', formatMoney(originationAmount, 1));
-                setText('ia-rehab-holdback', formatMoney(rehabHoldback));
-                setText('ia-monthly-interest-payment', formatMoney(monthlyInterestPayment));
-                setText('ia-prorated-interest', formatMoney(proratedInterestReserve));
                 setText('ia-interest-cost', formatMoney(interestCost));
                 setText('ia-total-financing', formatMoney(totalFinancingCost));
                 setText('ia-cash-required-close', formatMoney(invCashRequiredToClose));
@@ -10645,9 +10478,6 @@ function initNavbarDateTime() {
                     '-',
                     `Offer Price: ${formatMoney(offerPrice)}`,
                     '-',
-                    `Net Loan To Escrow: ${formatMoney(netLoanToEscrow)}`,
-                    `Rehab Holdback: ${formatMoney(rehabHoldback)}`,
-                    `Prorated Interest Reserve: ${formatMoney(proratedInterestReserve)} (${oddDays} odd day${oddDays === 1 ? '' : 's'})`,
                     `Total Purchase Cost: ${formatMoney(totalPurchaseCost)} (${formatPercent((totalPurchaseCost / arvBasis) * 100)} ARV)`,
                     `Total Project Cost: ${formatMoney(totalProjectCost)} (${formatPercent((totalProjectCost / arvBasis) * 100)} ARV)`,
                     `Total Project Cost w/ Financing: ${formatMoney(totalProjectWithFinancing)} (${formatPercent((totalProjectWithFinancing / arvBasis) * 100)} ARV)`,
@@ -10765,9 +10595,7 @@ function initNavbarDateTime() {
                 loanToArvInput,
                 interestRateInput,
                 originationPointsInput,
-                    lenderFeesInput,
-                    oddDaysInput,
-                    reserveWithholdInput
+                lenderFeesInput
             ].forEach(input => {
                 input.addEventListener('input', () => {
                     formatNumericInputValue(input);
@@ -10812,16 +10640,11 @@ function initNavbarDateTime() {
                 recalculate();
             });
 
-            Object.keys(iaCollapsibleSections).forEach(sectionKey => {
-                const config = iaCollapsibleSections[sectionKey];
-                if (!config || !config.button) {
-                    return;
-                }
-
-                config.button.addEventListener('click', () => {
-                    setIaSectionCollapsed(sectionKey, !collapsedSections[sectionKey]);
+            if (financingToggleButton) {
+                financingToggleButton.addEventListener('click', () => {
+                    setFinancingSectionCollapsed(!financingHoldCollapsed);
                 });
-            });
+            }
 
             async function copyTextWithToast(value, emptyMessage) {
                 const text = String(value || '').trim();
@@ -10893,9 +10716,7 @@ function initNavbarDateTime() {
                 applyPersistedIaCalculatorState(persistedIaCalculatorState);
             }
 
-            Object.keys(iaCollapsibleSections).forEach(sectionKey => {
-                setIaSectionCollapsed(sectionKey, collapsedSections[sectionKey], { skipPersist: true });
-            });
+            setFinancingSectionCollapsed(financingHoldCollapsed, { skipPersist: true });
 
             renderOtherCosts();
             applyFinancingModeDefaults(financingModeInput.value, { preserveValues: !!persistedIaCalculatorState });

@@ -425,26 +425,49 @@
                 <article class="property-tab-panel" data-panel="ia">
                     <div id="ia-calculator-root" class="ia-calculator">
                         <section class="ia-section">
-                            <h3>Deal Snapshot</h3>
+                            <h3>Property &amp; Scope</h3>
                             <div class="ia-grid">
-                                <div class="ia-readout ia-span-2 ia-offer-price-readout">
-                                    <label class="ia-offer-price-field" for="ia-offer-price-input">
-                                        <span>Offer Price</span>
-                                        <input id="ia-offer-price-input" type="text" inputmode="numeric" autocomplete="off" value="0">
-                                    </label>
-                                </div>
-
-                                <label>After Repair Value (ARV)
-                                    <input id="ia-arv" type="text" inputmode="numeric" autocomplete="off" value="694592">
-                                </label>
+                                <div class="ia-readout">Buy-Side Closing Amount: <strong id="ia-buy-side-cost">$0</strong></div>
+                                <div class="ia-readout">Buy-Side % ARV: <strong id="ia-buy-side-cost-arv">0.00%</strong></div>
 
                                 <label>Renovation Budget
                                     <input id="ia-renovation-budget" type="text" inputmode="numeric" autocomplete="off" value="0">
                                 </label>
+                                <div class="ia-readout">Reno % ARV: <strong id="ia-reno-arv">0.00%</strong></div>
 
+                                <div class="ia-readout">Total Purchase Cost: <strong id="ia-total-acquisition">$0</strong></div>
+                                <div class="ia-readout">Purchase % ARV: <strong id="ia-total-acquisition-arv">0.00%</strong></div>
+
+                                <label>After Repair Value (ARV)
+                                    <input id="ia-arv" type="text" inputmode="numeric" autocomplete="off" value="694592">
+                                </label>
                                 <label>Sell-Side Closing (%)
                                     <input id="ia-sell-side-percent" type="text" inputmode="decimal" autocomplete="off" value="4">
                                 </label>
+
+                                <div class="ia-readout ia-span-2">Sell-Side Closing Amount: <strong id="ia-sell-side-amount">$0</strong></div>
+                            </div>
+                        </section>
+
+                        <section class="ia-section">
+                            <h3>Targets &amp; Results</h3>
+                            <div class="ia-grid">
+                                <div class="ia-other-costs ia-span-2">
+                                    <div class="ia-other-head">
+                                        <span>Other Costs</span>
+                                        <button id="ia-add-other-cost" type="button">Add</button>
+                                    </div>
+                                    <div class="ia-other-inputs">
+                                        <input id="ia-other-cost-name" type="text" list="ia-other-cost-presets" placeholder="Select or type cost...">
+                                        <datalist id="ia-other-cost-presets">
+                                            <option value="Whole sale"></option>
+                                            <option value="Cash for Keys"></option>
+                                        </datalist>
+                                        <input id="ia-other-cost-amount" type="text" inputmode="numeric" autocomplete="off" value="0" placeholder="0">
+                                    </div>
+                                    <ul id="ia-other-cost-list" class="ia-other-list"></ul>
+                                    <div class="ia-readout">Other Cost Total: <strong id="ia-other-cost-total">$0</strong></div>
+                                </div>
 
                                 <label>Target Profit Goal (%)
                                     <input id="ia-target-profit-percent" type="text" inputmode="decimal" autocomplete="off" value="12%">
@@ -453,23 +476,18 @@
                                     <input id="ia-target-profit-dollar" type="text" inputmode="numeric" autocomplete="off" value="$70700">
                                 </label>
 
+                                <div class="ia-readout ia-span-2 ia-offer-price-readout">
+                                    <label class="ia-offer-price-field" for="ia-offer-price-input">
+                                        <span>Offer Price</span>
+                                        <input id="ia-offer-price-input" type="text" inputmode="numeric" autocomplete="off" value="0">
+                                    </label>
+                                </div>
                                 <div class="ia-readout ia-span-2 ia-strike-zone-readout">
                                     <span class="ia-strike-zone-label">Strike Zone Max Buy %</span>
                                     <strong id="ia-strike-zone-pct">NA</strong>
                                     <small id="ia-strike-zone-area">Area: NA</small>
                                 </div>
-
-                                <div class="ia-readout">Buy-Side Closing Amount: <strong id="ia-buy-side-cost">$0</strong></div>
-                                <div class="ia-readout">Buy-Side % ARV: <strong id="ia-buy-side-cost-arv">0.00%</strong></div>
-                                <div class="ia-readout ia-span-2">Sell-Side Closing Amount: <strong id="ia-sell-side-amount">$0</strong></div>
                                 <div class="ia-readout">Offer % of ARV: <strong id="ia-offer-price-arv">0.00%</strong></div>
-                                <div class="ia-readout">Reno % ARV: <strong id="ia-reno-arv">0.00%</strong></div>
-
-                                <div class="ia-readout">Total Purchase Cost: <strong id="ia-total-acquisition">$0</strong></div>
-                                <div class="ia-readout">Purchase % ARV: <strong id="ia-total-acquisition-arv">0.00%</strong></div>
-
-                                <div class="ia-readout">Cash Required To Close: <strong id="ia-cash-required-close">$0</strong></div>
-                                <div class="ia-readout">Cash In w/ Payments: <strong id="ia-total-cash-investment">$0</strong></div>
 
                                 <div class="ia-readout ia-span-2">Total Purchase Cost: <strong id="ia-summary-acq">$0</strong></div>
                                 <div class="ia-readout ia-span-2">Total Project Cost: <strong id="ia-summary-project">$0</strong></div>
@@ -481,99 +499,15 @@
                             </div>
                         </section>
 
-                        <section class="ia-section ia-collapsible-section is-collapsed" id="ia-misc-costs-section">
-                            <div class="ia-section-header">
-                                <h3>Misc Costs</h3>
-                                <button type="button" class="ia-section-toggle" id="ia-misc-costs-toggle" aria-expanded="false" aria-controls="ia-misc-costs-body">
-                                    <span class="ia-section-toggle-text">Open</span>
-                                    <span class="ia-section-toggle-icon" aria-hidden="true">+</span>
-                                </button>
-                            </div>
-                            <div class="ia-grid ia-section-body" id="ia-misc-costs-body" hidden>
-                                <div class="ia-other-costs ia-span-2">
-                                    <div class="ia-other-head">
-                                        <span>Other Costs</span>
-                                        <button id="ia-add-other-cost" type="button">Add</button>
-                                    </div>
-                                    <div class="ia-other-inputs">
-                                        <input id="ia-other-cost-name" type="text" list="ia-other-cost-presets" placeholder="Select or type cost...">
-                                        <datalist id="ia-other-cost-presets">
-                                            <option value="Whole sale"></option>
-                                            <option value="Cash for Keys"></option>
-                                            <option value="Utilities"></option>
-                                            <option value="HOA"></option>
-                                        </datalist>
-                                        <input id="ia-other-cost-amount" type="text" inputmode="numeric" autocomplete="off" value="0" placeholder="0">
-                                    </div>
-                                    <ul id="ia-other-cost-list" class="ia-other-list"></ul>
-                                    <div class="ia-readout">Other Cost Total: <strong id="ia-other-cost-total">$0</strong></div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="ia-section ia-collapsible-section is-collapsed" id="ia-purchase-adjustments-section">
-                            <div class="ia-section-header">
-                                <h3>Purchase Adjustments</h3>
-                                <button type="button" class="ia-section-toggle" id="ia-purchase-adjustments-toggle" aria-expanded="false" aria-controls="ia-purchase-adjustments-body">
-                                    <span class="ia-section-toggle-text">Open</span>
-                                    <span class="ia-section-toggle-icon" aria-hidden="true">+</span>
-                                </button>
-                            </div>
-                            <div class="ia-grid ia-section-body" id="ia-purchase-adjustments-body" hidden>
-                                <label>Escrow &amp; Title (%)
-                                    <input id="inv-escrow-pct" type="text" inputmode="decimal" autocomplete="off" value="1">
-                                </label>
-                                <label>Prorated Property Tax (%)
-                                    <input id="inv-prorated-pct" type="text" inputmode="decimal" autocomplete="off" value="0">
-                                </label>
-                                <label>Due Diligence Fee ($)
-                                    <input id="inv-due-diligence" type="text" inputmode="numeric" autocomplete="off" value="0">
-                                </label>
-                                <label>Acquisition Fee ($)
-                                    <input id="inv-acquisition-fee" type="text" inputmode="numeric" autocomplete="off" value="10000">
-                                </label>
-                                <label>Cash for Keys ($)
-                                    <input id="inv-cash-for-keys" type="text" inputmode="numeric" autocomplete="off" value="0">
-                                </label>
-                            </div>
-                        </section>
-
-                        <section class="ia-section ia-collapsible-section is-collapsed" id="ia-sale-adjustments-section">
-                            <div class="ia-section-header">
-                                <h3>Sale Adjustments</h3>
-                                <button type="button" class="ia-section-toggle" id="ia-sale-adjustments-toggle" aria-expanded="false" aria-controls="ia-sale-adjustments-body">
-                                    <span class="ia-section-toggle-text">Open</span>
-                                    <span class="ia-section-toggle-icon" aria-hidden="true">+</span>
-                                </button>
-                            </div>
-                            <div class="ia-grid ia-section-body" id="ia-sale-adjustments-body" hidden>
-                                <label>Concessions (%)
-                                    <input id="inv-concessions-pct" type="text" inputmode="decimal" autocomplete="off" value="0">
-                                </label>
-                                <label>Buyer Agent (%)
-                                    <input id="inv-buyer-agent-pct" type="text" inputmode="decimal" autocomplete="off" value="2">
-                                </label>
-                                <label>Listing Agent (%)
-                                    <input id="inv-listing-agent-pct" type="text" inputmode="decimal" autocomplete="off" value="2">
-                                </label>
-                                <label>Per Diem Adjustment (%)
-                                    <input id="inv-per-diem-pct" type="text" inputmode="decimal" autocomplete="off" value="0">
-                                </label>
-                                <label>Asset Management (%)
-                                    <input id="inv-asset-mgmt-pct" type="text" inputmode="decimal" autocomplete="off" value="0">
-                                </label>
-                            </div>
-                        </section>
-
-                        <section class="ia-section ia-collapsible-section is-collapsed" id="ia-financing-section">
+                        <section class="ia-section ia-collapsible-section" id="ia-financing-section">
                             <div class="ia-section-header">
                                 <h3>Financing &amp; Hold</h3>
-                                <button type="button" class="ia-section-toggle" id="ia-financing-toggle" aria-expanded="false" aria-controls="ia-financing-body">
-                                    <span class="ia-section-toggle-text">Open</span>
-                                    <span class="ia-section-toggle-icon" aria-hidden="true">+</span>
+                                <button type="button" class="ia-section-toggle" id="ia-financing-toggle" aria-expanded="true" aria-controls="ia-financing-body">
+                                    <span class="ia-section-toggle-text">Minimize</span>
+                                    <span class="ia-section-toggle-icon" aria-hidden="true">-</span>
                                 </button>
                             </div>
-                            <div class="ia-grid ia-section-body" id="ia-financing-body" hidden>
+                            <div class="ia-grid ia-section-body" id="ia-financing-body">
                                 <label>Financing Program
                                     <select id="ia-financing-mode">
                                         <option value="100-100">100/100 - 100% Cost Cap, 80% ARV Max</option>
@@ -599,21 +533,13 @@
                                 <label>Lender Fees ($)
                                     <input id="ia-lender-fees" type="text" inputmode="numeric" autocomplete="off" value="999">
                                 </label>
-                                <label>Odd Days
-                                    <input id="ia-odd-days" type="text" inputmode="numeric" autocomplete="off" value="0">
-                                </label>
-                                <label>Reserve Withhold ($)
-                                    <input id="ia-reserve-withhold" type="text" inputmode="numeric" autocomplete="off" value="0">
-                                </label>
 
                                 <div class="ia-readout">Loan Amount: <strong id="ia-loan-amount">$0</strong></div>
-                                <div class="ia-readout">Net Loan To Escrow: <strong id="ia-net-loan-to-escrow">$0</strong></div>
                                 <div class="ia-readout">Origination Points: <strong id="ia-origination-amount">$0</strong></div>
-                                <div class="ia-readout">Rehab Holdback: <strong id="ia-rehab-holdback">$0</strong></div>
-                                <div class="ia-readout">Monthly Interest: <strong id="ia-monthly-interest-payment">$0</strong></div>
-                                <div class="ia-readout">Prorated Interest: <strong id="ia-prorated-interest">$0</strong></div>
                                 <div class="ia-readout">Interest Cost: <strong id="ia-interest-cost">$0</strong></div>
                                 <div class="ia-readout">Hard Money Costs: <strong id="ia-total-financing">$0</strong></div>
+                                <div class="ia-readout">Cash Required To Close: <strong id="ia-cash-required-close">$0</strong></div>
+                                <div class="ia-readout">Cash In w/ Payments: <strong id="ia-total-cash-investment">$0</strong></div>
                                 <div class="ia-readout ia-span-2 ia-cash-note" id="ia-cash-note" hidden>Cash: No financing costs for cash purchase.</div>
                             </div>
                         </section>
