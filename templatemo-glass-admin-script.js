@@ -7080,18 +7080,17 @@ function initNavbarDateTime() {
             effectiveDate: () => document.getElementById('contract-effective-date')?.value || '',
             market: () => document.getElementById('contract-mls-market')?.value || '',
             brokerageName: () => document.getElementById('contract-brokerage-name')?.value || '',
+            fastbridgeBusinessAddress: () => document.getElementById('contract-fastbridge-business-address')?.value || '',
+            brokerageBusinessAddress: () => document.getElementById('contract-brokerage-business-address')?.value || '',
             brokerageSignerName: () => document.getElementById('contract-brokerage-signer-name')?.value || '',
             brokerageSignerTitle: () => document.getElementById('contract-brokerage-signer-title')?.value || '',
+            brokerageLicenseNumber: () => document.getElementById('contract-brokerage-license-number')?.value || '',
             brokerageSignature: () => document.getElementById('contract-brokerage-signature')?.value || '',
             brokerageSignDate: () => document.getElementById('contract-brokerage-sign-date')?.value || '',
             fastbridgeSignerName: () => document.getElementById('contract-fastbridge-signer-name')?.value || '',
             fastbridgeSignerTitle: () => document.getElementById('contract-fastbridge-signer-title')?.value || '',
             fastbridgeSignature: () => document.getElementById('contract-fastbridge-signature')?.value || '',
-            fastbridgeSignDate: () => document.getElementById('contract-fastbridge-sign-date')?.value || '',
-            extraSignerName: () => document.getElementById('contract-extra-signer-name')?.value || '',
-            extraSignerTitle: () => document.getElementById('contract-extra-signer-title')?.value || '',
-            extraSignature: () => document.getElementById('contract-extra-signature')?.value || '',
-            extraSignDate: () => document.getElementById('contract-extra-sign-date')?.value || ''
+            fastbridgeSignDate: () => document.getElementById('contract-fastbridge-sign-date')?.value || ''
         };
 
         function normalizeValue(value, fallback) {
@@ -7114,11 +7113,11 @@ function initNavbarDateTime() {
         }
 
         function buildAgreementFileName(brokerageName) {
-            const slug = normalizeValue(brokerageName, 'mls-data-license-only')
+            const slug = normalizeValue(brokerageName, 'mls-data-license-limited-use')
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-+|-+$/g, '');
-            return `${slug || 'mls-data-license-only'}-agreement.pdf`;
+            return `${slug || 'mls-data-license-limited-use'}-agreement.pdf`;
         }
 
         function buildAgreementData() {
@@ -7126,56 +7125,83 @@ function initNavbarDateTime() {
                 effectiveDate: formatDateValue(fieldReaders.effectiveDate()),
                 market: normalizeValue(fieldReaders.market(), '________________'),
                 brokerageName: normalizeValue(fieldReaders.brokerageName(), 'the licensed brokerage identified below'),
+                fastbridgeBusinessAddress: normalizeValue(fieldReaders.fastbridgeBusinessAddress(), '________________'),
+                brokerageBusinessAddress: normalizeValue(fieldReaders.brokerageBusinessAddress(), '________________'),
                 brokerageSignerName: normalizeValue(fieldReaders.brokerageSignerName(), 'the brokerage\'s authorized signer'),
                 brokerageSignerTitle: normalizeValue(fieldReaders.brokerageSignerTitle(), '________________'),
+                brokerageLicenseNumber: normalizeValue(fieldReaders.brokerageLicenseNumber(), '________________'),
                 brokerageSignature: normalizeValue(fieldReaders.brokerageSignature(), '________________'),
                 brokerageSignDate: formatDateValue(fieldReaders.brokerageSignDate()),
                 fastbridgeSignerName: normalizeValue(fieldReaders.fastbridgeSignerName(), 'FAST BRIDGE\'s authorized signer'),
                 fastbridgeSignerTitle: normalizeValue(fieldReaders.fastbridgeSignerTitle(), '________________'),
                 fastbridgeSignature: normalizeValue(fieldReaders.fastbridgeSignature(), '________________'),
-                fastbridgeSignDate: formatDateValue(fieldReaders.fastbridgeSignDate()),
-                extraSignerName: normalizeValue(fieldReaders.extraSignerName(), '________________'),
-                extraSignerTitle: normalizeValue(fieldReaders.extraSignerTitle(), '________________'),
-                extraSignature: normalizeValue(fieldReaders.extraSignature(), '________________'),
-                extraSignDate: formatDateValue(fieldReaders.extraSignDate())
+                fastbridgeSignDate: formatDateValue(fieldReaders.fastbridgeSignDate())
             };
         }
 
         function buildAgreementClauses(agreementData) {
             return [
                 {
-                    title: 'Limited Purpose',
-                    body: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable permission to reference and use the brokerage's real estate license, broker supervision, and related MLS authorization strictly as required to access, receive, display, and maintain MLS data and IDX/VOW-related compliance on FAST BRIDGE systems.`
+                    title: 'Purpose',
+                    body: `This Agreement establishes a limited relationship under which ${agreementData.brokerageName} authorizes FAST BRIDGE GROUP, LLC to operate a real estate platform that accesses and displays MLS data under brokerage supervision strictly for compliance with applicable MLS, IDX, and VOW rules.`
                 },
                 {
-                    title: 'No Ownership, Control, or IP Rights',
-                    body: `The brokerage, including ${agreementData.brokerageSignerName} on behalf of ${agreementData.brokerageName}, acknowledges and agrees that it has no ownership interest, no equity, no control rights, and no claim whatsoever over FAST BRIDGE GROUP, LLC's website, source code, software, automations, user interface, databases, workflows, CRM logic, designs, branding, domains, marketing systems, investor lists, written content, graphics, or business operations. This Agreement does not transfer, assign, license, encumber, or imply any rights in FAST BRIDGE intellectual property other than the narrow MLS/data-use permission expressly stated above.`
+                    title: 'Limited License & Authorization',
+                    body: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable authorization to access MLS data feeds, including IDX and VOW as applicable, display listing data on FAST BRIDGE platforms, and operate under brokerage supervision solely to the extent required by law and MLS rules. FAST BRIDGE does not receive ownership of MLS data.`
                 },
                 {
-                    title: 'FAST BRIDGE Responsibility',
-                    body: `FAST BRIDGE GROUP, LLC, acting through ${agreementData.fastbridgeSignerName}, will retain full responsibility for the design, development, hosting, coding, security, maintenance, uptime, vendor relationships, data handling decisions, and all website-related operations. FAST BRIDGE GROUP, LLC will bear responsibility for its own website conduct, implementation choices, and compliance workflows, except that ${agreementData.brokerageName} remains responsible only for duties that by law cannot be delegated away under its license or MLS rules.`
+                    title: 'Ownership of Platform & Intellectual Property',
+                    body: 'FAST BRIDGE GROUP, LLC retains 100% exclusive ownership of its website, platform, infrastructure, source code, software systems, databases excluding MLS data, branding, domains, marketing systems, user data excluding MLS-provided data, CRM systems, workflows, and automations. The brokerage receives no ownership, equity, or claim to FAST BRIDGE intellectual property under any circumstance.'
                 },
                 {
-                    title: 'MLS Data Boundary',
-                    body: 'Any MLS data, listing content, or brokerage-required compliance materials remain subject to applicable MLS rules, broker supervision requirements, and third-party data rights. Outside of that MLS-specific content, all remaining systems, features, code, and platform assets belong exclusively to FAST BRIDGE GROUP, LLC.'
+                    title: 'Brokerage Compliance Authority (Limited)',
+                    body: `${agreementData.brokerageName} retains authority only as required by law and MLS rules, including ensuring IDX/VOW compliance, requiring corrections to listing display or disclosures, and enforcing legally required supervision. This authority is strictly limited to compliance matters, and does not extend to product development, technology decisions, UX/UI design, business strategy, or marketing unless legally non-compliant.`
                 },
                 {
-                    title: 'No Partnership or Work-for-Hire',
-                    body: `This Agreement does not create a partnership, joint venture, merger, employer relationship, franchise, or work-for-hire arrangement. ${agreementData.brokerageName} is not the owner, developer, operator, or purchaser of the FAST BRIDGE website or codebase by virtue of providing MLS licensing access.`
+                    title: 'FAST BRIDGE Responsibilities',
+                    body: 'FAST BRIDGE GROUP, LLC agrees to maintain operational control of the platform, ensure MLS data is displayed in compliance with applicable rules, implement required disclaimers and attribution, maintain applicable data accuracy and refresh standards, maintain reasonable data security safeguards, and promptly correct compliance issues upon notice.'
                 },
                 {
-                    title: 'Termination',
-                    body: `Upon termination, FAST BRIDGE GROUP, LLC will discontinue use of ${agreementData.brokerageName}'s license and any MLS/IDX permissions tied to that brokerage unless replaced by another valid authorization. Termination does not grant ${agreementData.brokerageName} any right to seize, demand transfer of, copy, or control FAST BRIDGE systems, software, or website assets.`
+                    title: 'Data Use Restrictions',
+                    body: 'FAST BRIDGE GROUP, LLC shall not resell, redistribute, sublicense, unlawfully scrape, mine, repurpose, store, or use MLS, IDX, or VOW data outside permitted display purposes or beyond permitted retention limits. All MLS data remains subject to third-party ownership, MLS rules, and brokerage compliance requirements.'
+                },
+                {
+                    title: 'Indemnification',
+                    body: `FAST BRIDGE GROUP, LLC shall indemnify, defend, and hold harmless ${agreementData.brokerageName} and its agents from claims, damages, liabilities, losses, penalties, and legal actions arising from FAST BRIDGE platform operations, data misuse, technology failures, or non-compliance caused by FAST BRIDGE. ${agreementData.brokerageName} shall indemnify FAST BRIDGE GROUP, LLC only for violations directly caused by the brokerage's licensing status, misconduct, or breach of non-waivable duties.`
+                },
+                {
+                    title: 'Term and Termination',
+                    body: `Either party may terminate this Agreement upon thirty (30) days' written notice. Immediate termination may occur for MLS violations, legal non-compliance, data-security failures, or breach of this Agreement. Upon termination, FAST BRIDGE GROUP, LLC must discontinue MLS data use tied to ${agreementData.brokerageName}, and ${agreementData.brokerageName} retains no rights to FAST BRIDGE systems, software, or non-MLS data.`
+                },
+                {
+                    title: 'No Partnership or Agency',
+                    body: 'This Agreement does not create a partnership, joint venture, employer-employee relationship, or ownership interest. FAST BRIDGE GROUP, LLC operates as an independent entity, subject only to required legal supervision by the brokerage.'
+                },
+                {
+                    title: 'Audit & Verification Rights',
+                    body: `Upon reasonable notice, ${agreementData.brokerageName} may request verification of compliance with MLS rules. Any audit or review shall be limited to compliance matters only, shall avoid unnecessary exposure of proprietary systems or code, and shall be conducted in a commercially reasonable manner.`
+                },
+                {
+                    title: 'Broker License Verification',
+                    body: `The brokerage represents and warrants that it holds a valid, active real estate license in good standing and that ${agreementData.brokerageSignerName} holds an active broker license in good standing with authority to bind ${agreementData.brokerageName}. ${agreementData.brokerageName} shall promptly notify FAST BRIDGE GROUP, LLC of any suspension, lapse, restriction, disciplinary action, or other change in licensing status that could affect MLS access, broker supervision, or this Agreement.`
+                },
+                {
+                    title: 'Governing Law',
+                    body: 'This Agreement shall be governed by the laws of the State of California. Any disputes shall be resolved in the appropriate state or federal courts located within California, unless non-waivable law or an applicable MLS agreement requires another forum.'
+                },
+                {
+                    title: 'Entire Agreement',
+                    body: 'This Agreement constitutes the entire understanding between the parties regarding MLS-related authorization and supersedes prior discussions, drafts, representations, or agreements on that subject.'
                 }
             ];
         }
 
         function buildAgreementPreviewContent(agreementData) {
             return {
-                intro: `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC, acting by and through ${agreementData.fastbridgeSignerName}, and ${agreementData.brokerageName}, acting by and through ${agreementData.brokerageSignerName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under the brokerage's license.`,
-                limitedPurpose: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable permission to reference and use the brokerage's real estate license, broker supervision, and related MLS authorization strictly as required to access, receive, display, and maintain MLS data and IDX/VOW-related compliance on FAST BRIDGE systems.`,
-                fastbridgeResponsibility: `FAST BRIDGE GROUP, LLC, acting through ${agreementData.fastbridgeSignerName}, will retain full responsibility for the design, development, hosting, coding, security, maintenance, uptime, vendor relationships, data handling decisions, and all website-related operations. FAST BRIDGE GROUP, LLC will bear responsibility for its own website conduct, implementation choices, and compliance workflows, except that ${agreementData.brokerageName} remains responsible only for duties that by law cannot be delegated away under its license or MLS rules.`,
-                intent: `Intent of this agreement: ${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, is being engaged only so FAST BRIDGE, through ${agreementData.fastbridgeSignerName}, can lawfully use the brokerage's license for MLS data access. The brokerage is not obtaining any ownership, management, coding rights, website rights, or business rights in FAST BRIDGE GROUP, LLC, at all.`
+                intro: `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC, a California limited liability company with a business address at ${agreementData.fastbridgeBusinessAddress}, acting by and through ${agreementData.fastbridgeSignerName}, and ${agreementData.brokerageName}, a licensed real estate brokerage with a business address at ${agreementData.brokerageBusinessAddress}, acting by and through ${agreementData.brokerageSignerName} as its duly authorized licensed broker, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`,
+                limitedPurpose: `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, grants FAST BRIDGE GROUP, LLC, through ${agreementData.fastbridgeSignerName}, a limited, non-exclusive, revocable authorization to access MLS data feeds, including IDX and VOW as applicable, display listing data on FAST BRIDGE platforms, and operate under brokerage supervision solely to the extent required by law and MLS rules. FAST BRIDGE does not receive ownership of MLS data.`,
+                fastbridgeResponsibility: 'FAST BRIDGE GROUP, LLC agrees to maintain operational control of the platform, ensure MLS data is displayed in compliance with applicable rules, implement required disclaimers and attribution, maintain applicable data accuracy and refresh standards, maintain reasonable data security safeguards, and promptly correct compliance issues upon notice.',
+                intent: 'Intent of this agreement: this is a compliance-based licensing relationship only, where the brokerage provides lawful MLS access and supervision and FAST BRIDGE retains full ownership and operational control. At no point does the brokerage obtain ownership or operational control over the FAST BRIDGE platform beyond legally required compliance oversight.'
             };
         }
 
@@ -7230,20 +7256,24 @@ function initNavbarDateTime() {
 
             const sections = [
                 {
-                    heading: 'License Agreement / Data Use Agreement',
+                    heading: 'MLS DATA LICENSE & LIMITED USE AGREEMENT',
                     lines: [
-                        'MLS Data License Only',
                         `Effective Date: ${agreementData.effectiveDate}`,
+                        'By and Between:',
+                        'FAST BRIDGE GROUP, LLC, a California limited liability company',
+                        `FAST BRIDGE Business Address: ${agreementData.fastbridgeBusinessAddress}`,
+                        `and ${agreementData.brokerageName}, a licensed real estate brokerage acting through its duly authorized licensed broker`,
+                        `Brokerage Business Address: ${agreementData.brokerageBusinessAddress}`,
                         `MLS Market / Region: ${agreementData.market}`,
                         `Brokerage Legal Name: ${agreementData.brokerageName}`,
                         '',
-                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC, acting by and through ${agreementData.fastbridgeSignerName}, and ${agreementData.brokerageName}, acting by and through ${agreementData.brokerageSignerName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under the brokerage\'s license.`
+                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC, acting by and through ${agreementData.fastbridgeSignerName}, and ${agreementData.brokerageName}, acting by and through ${agreementData.brokerageSignerName} as its duly authorized licensed broker, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`
                     ]
                 },
                 {
                     heading: 'Working Draft Notice',
                     lines: [
-                        'This agreement is drafted to allow a brokerage license to be used strictly for MLS data access and compliance. FAST BRIDGE GROUP, LLC retains full ownership and control of the website, codebase, software, branding, business processes, and all non-MLS intellectual property. Final legal review is still recommended before signing.'
+                        'This agreement is drafted to reflect a compliance-based MLS authorization structure only. FAST BRIDGE GROUP, LLC retains ownership of its platform and non-MLS intellectual property, while the brokerage retains only the supervision and compliance authority required by law and MLS rules. Final legal review is still recommended before signing.'
                     ]
                 },
                 ...clauses.map((clause, index) => ({
@@ -7253,7 +7283,7 @@ function initNavbarDateTime() {
                 {
                     heading: 'Intent of This Agreement',
                     lines: [
-                        `${agreementData.brokerageName}, through ${agreementData.brokerageSignerName}, is being engaged only so FAST BRIDGE, through ${agreementData.fastbridgeSignerName}, can lawfully use the brokerage's license for MLS data access. The brokerage is not obtaining any ownership, management, coding rights, website rights, or business rights in FAST BRIDGE GROUP, LLC, at all.`
+                        'The intent of this Agreement is to establish a compliance-based licensing relationship only, where the brokerage provides lawful MLS access and supervision and FAST BRIDGE retains full ownership and operational control. At no point does the brokerage obtain any ownership or operational control over the FAST BRIDGE platform beyond legally required compliance oversight.'
                     ]
                 },
                 {
@@ -7261,18 +7291,14 @@ function initNavbarDateTime() {
                     lines: [
                         `Brokerage Signer: ${agreementData.brokerageSignerName}`,
                         `Title: ${agreementData.brokerageSignerTitle}`,
+                        `License #: ${agreementData.brokerageLicenseNumber}`,
                         `Signature: ${agreementData.brokerageSignature}`,
                         `Date: ${agreementData.brokerageSignDate}`,
                         '',
                         `FAST BRIDGE GROUP, LLC Signer: ${agreementData.fastbridgeSignerName}`,
                         `Title: ${agreementData.fastbridgeSignerTitle}`,
                         `Signature: ${agreementData.fastbridgeSignature}`,
-                        `Date: ${agreementData.fastbridgeSignDate}`,
-                        '',
-                        `Additional Signer: ${agreementData.extraSignerName}`,
-                        `Title / Role: ${agreementData.extraSignerTitle}`,
-                        `Signature: ${agreementData.extraSignature}`,
-                        `Date: ${agreementData.extraSignDate}`
+                        `Date: ${agreementData.fastbridgeSignDate}`
                     ]
                 }
             ];
@@ -7287,18 +7313,17 @@ function initNavbarDateTime() {
             'contract-effective-date',
             'contract-mls-market',
             'contract-brokerage-name',
+            'contract-fastbridge-business-address',
+            'contract-brokerage-business-address',
             'contract-brokerage-signer-name',
             'contract-brokerage-signer-title',
+            'contract-brokerage-license-number',
             'contract-brokerage-signature',
             'contract-brokerage-sign-date',
             'contract-fastbridge-signer-name',
             'contract-fastbridge-signer-title',
             'contract-fastbridge-signature',
-            'contract-fastbridge-sign-date',
-            'contract-extra-signer-name',
-            'contract-extra-signer-title',
-            'contract-extra-signature',
-            'contract-extra-sign-date'
+            'contract-fastbridge-sign-date'
         ].forEach((fieldId) => {
             const field = document.getElementById(fieldId);
             if (!field) {
