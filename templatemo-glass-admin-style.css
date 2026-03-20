@@ -10595,19 +10595,14 @@ select.form-input option:checked,
     gap: 4px;
 }
 
-.ia-strike-zone-pill {
+.ia-strike-zone-stack {
     display: flex;
     flex-direction: column;
     gap: 3px;
     margin-top: 4px;
-    padding: 10px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.ia-strike-zone-pill-line {
+.ia-strike-zone-line-label {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -10615,7 +10610,7 @@ select.form-input option:checked,
     opacity: 0.78;
 }
 
-.ia-strike-zone-pill strong {
+.ia-strike-zone-stack strong {
     font-size: 15px;
     line-height: 1.15;
 }
