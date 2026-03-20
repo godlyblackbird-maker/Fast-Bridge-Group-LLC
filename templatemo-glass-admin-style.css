@@ -2078,13 +2078,153 @@ a {
 }
 
 .legal-page {
-    min-height: 100vh;
-    background:
-        radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.22), transparent 28%),
-        radial-gradient(circle at top right, rgba(212, 165, 116, 0.16), transparent 26%),
+    --legal-page-bg:
+        radial-gradient(circle at 14% 12%, rgba(var(--accent-rgb), 0.22), transparent 28%),
+        radial-gradient(circle at 88% 16%, rgba(var(--accent-light-rgb), 0.12), transparent 24%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
-        var(--bg-primary);
+        linear-gradient(180deg, var(--bg-gradient-1), var(--bg-dark));
+    --legal-panel-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+    --legal-panel-border: rgba(255, 255, 255, 0.14);
+    --legal-panel-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+    --legal-panel-text: var(--text-secondary);
+    --legal-title-color: var(--text-primary);
+    --legal-link-bg: rgba(255, 255, 255, 0.06);
+    --legal-link-hover-bg: rgba(255, 255, 255, 0.12);
+    --legal-link-hover-color: rgb(var(--accent-light-rgb));
+    --legal-kicker-color: var(--emerald-light);
+    --legal-badge-bg: rgba(255, 255, 255, 0.12);
+    --legal-badge-border: rgba(var(--accent-rgb), 0.22);
+    --legal-home-bg: rgba(255, 255, 255, 0.12);
+    --legal-home-border: rgba(255, 255, 255, 0.18);
+    --legal-home-hover-bg: rgba(255, 255, 255, 0.18);
+    --legal-home-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    --legal-home-hover-shadow: 0 18px 34px rgba(0, 0, 0, 0.16);
+    --legal-shimmer: linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 255, 255, 0.1) 66%, transparent 82%);
+    min-height: 100vh;
+    background: var(--legal-page-bg);
     color: var(--text-primary);
+}
+
+[data-theme="light"] .legal-page {
+    --legal-page-bg:
+        radial-gradient(circle at 12% 10%, rgba(16, 185, 129, 0.14), transparent 26%),
+        radial-gradient(circle at 88% 14%, rgba(148, 163, 184, 0.14), transparent 24%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(248, 250, 252, 0.18)),
+        linear-gradient(180deg, #dceae2, #edf5f0 56%, #f5faf7);
+    --legal-panel-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.58), rgba(223, 236, 228, 0.5));
+    --legal-panel-border: rgba(15, 23, 42, 0.12);
+    --legal-panel-shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
+    --legal-panel-text: rgba(18, 37, 30, 0.78);
+    --legal-title-color: #123126;
+    --legal-link-bg: rgba(255, 255, 255, 0.52);
+    --legal-link-hover-bg: rgba(255, 255, 255, 0.72);
+    --legal-link-hover-color: #0f766e;
+    --legal-kicker-color: #0f766e;
+    --legal-badge-bg: rgba(255, 255, 255, 0.56);
+    --legal-badge-border: rgba(15, 23, 42, 0.12);
+    --legal-home-bg: rgba(255, 255, 255, 0.66);
+    --legal-home-border: rgba(15, 23, 42, 0.12);
+    --legal-home-hover-bg: rgba(255, 255, 255, 0.84);
+    --legal-home-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+    --legal-home-hover-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+    --legal-shimmer: linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.18) 34%, rgba(255, 255, 255, 0.7) 50%, rgba(255, 255, 255, 0.24) 66%, transparent 82%);
+}
+
+[data-theme="beach"] .legal-page {
+    --legal-page-bg:
+        radial-gradient(circle at 12% 12%, rgba(14, 165, 233, 0.18), transparent 28%),
+        radial-gradient(circle at 86% 16%, rgba(251, 146, 60, 0.16), transparent 24%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+        linear-gradient(180deg, #a4deef, #d6f1f6 52%, #f7deb3);
+    --legal-panel-bg: linear-gradient(165deg, rgba(222, 244, 250, 0.62), rgba(255, 235, 205, 0.4));
+    --legal-panel-border: rgba(12, 74, 110, 0.2);
+    --legal-panel-shadow: 0 22px 44px rgba(8, 47, 73, 0.16);
+    --legal-panel-text: rgba(8, 47, 73, 0.82);
+    --legal-title-color: #0c4a6e;
+    --legal-link-bg: rgba(255, 255, 255, 0.46);
+    --legal-link-hover-bg: rgba(255, 255, 255, 0.66);
+    --legal-link-hover-color: #0369a1;
+    --legal-kicker-color: #0f766e;
+    --legal-badge-bg: rgba(255, 255, 255, 0.44);
+    --legal-badge-border: rgba(12, 74, 110, 0.18);
+    --legal-home-bg: rgba(255, 255, 255, 0.52);
+    --legal-home-border: rgba(12, 74, 110, 0.18);
+    --legal-home-hover-bg: rgba(255, 255, 255, 0.72);
+    --legal-home-shadow: 0 16px 30px rgba(8, 47, 73, 0.14);
+    --legal-home-hover-shadow: 0 20px 38px rgba(8, 47, 73, 0.18);
+}
+
+[data-theme="swamp"] .legal-page {
+    --legal-page-bg:
+        radial-gradient(circle at 12% 10%, rgba(122, 156, 69, 0.2), transparent 28%),
+        radial-gradient(circle at 88% 14%, rgba(159, 128, 76, 0.18), transparent 24%),
+        linear-gradient(180deg, rgba(250, 246, 228, 0.04), rgba(250, 246, 228, 0.01)),
+        linear-gradient(180deg, #415128, #2f3d1d 52%, #241b12);
+    --legal-panel-bg: linear-gradient(160deg, rgba(59, 75, 36, 0.88), rgba(72, 53, 31, 0.8));
+    --legal-panel-border: rgba(196, 167, 111, 0.22);
+    --legal-panel-shadow: 0 26px 56px rgba(20, 25, 14, 0.28);
+    --legal-panel-text: rgba(247, 243, 223, 0.84);
+    --legal-title-color: #f7f3df;
+    --legal-link-bg: rgba(49, 65, 31, 0.72);
+    --legal-link-hover-bg: rgba(69, 88, 41, 0.84);
+    --legal-link-hover-color: #d7e8a7;
+    --legal-kicker-color: #b9d77d;
+    --legal-badge-bg: rgba(54, 71, 32, 0.82);
+    --legal-badge-border: rgba(196, 167, 111, 0.22);
+    --legal-home-bg: rgba(58, 74, 35, 0.8);
+    --legal-home-border: rgba(196, 167, 111, 0.24);
+    --legal-home-hover-bg: rgba(76, 96, 46, 0.88);
+    --legal-home-shadow: 0 18px 34px rgba(20, 25, 14, 0.26);
+    --legal-home-hover-shadow: 0 22px 40px rgba(20, 25, 14, 0.32);
+    --legal-shimmer: linear-gradient(115deg, transparent 18%, rgba(245, 233, 198, 0.05) 34%, rgba(185, 215, 125, 0.22) 50%, rgba(245, 233, 198, 0.08) 66%, transparent 82%);
+}
+
+[data-theme="sunset"] .legal-page {
+    --legal-page-bg:
+        radial-gradient(circle at 14% 10%, rgba(255, 167, 134, 0.18), transparent 28%),
+        radial-gradient(circle at 86% 16%, rgba(248, 199, 129, 0.16), transparent 22%),
+        linear-gradient(180deg, rgba(255, 241, 223, 0.05), rgba(255, 241, 223, 0.02)),
+        linear-gradient(180deg, #3d1b28, #24111c 52%, #17070b);
+    --legal-panel-bg: linear-gradient(165deg, rgba(116, 58, 82, 0.72), rgba(78, 34, 63, 0.62));
+    --legal-panel-border: rgba(255, 214, 184, 0.18);
+    --legal-panel-shadow: 0 24px 54px rgba(28, 14, 27, 0.28);
+    --legal-panel-text: rgba(255, 236, 224, 0.84);
+    --legal-title-color: #fff1df;
+    --legal-link-bg: rgba(100, 48, 76, 0.52);
+    --legal-link-hover-bg: rgba(126, 57, 86, 0.66);
+    --legal-link-hover-color: #ffd7af;
+    --legal-kicker-color: #ffd7af;
+    --legal-badge-bg: rgba(97, 45, 69, 0.6);
+    --legal-badge-border: rgba(255, 214, 184, 0.18);
+    --legal-home-bg: rgba(107, 53, 81, 0.58);
+    --legal-home-border: rgba(255, 214, 184, 0.18);
+    --legal-home-hover-bg: rgba(130, 68, 97, 0.72);
+    --legal-home-shadow: 0 18px 34px rgba(28, 14, 27, 0.24);
+    --legal-home-hover-shadow: 0 22px 42px rgba(28, 14, 27, 0.3);
+}
+
+[data-theme="space"] .legal-page {
+    --legal-page-bg:
+        radial-gradient(circle at 12% 10%, rgba(111, 139, 255, 0.2), transparent 28%),
+        radial-gradient(circle at 88% 12%, rgba(112, 230, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, rgba(238, 244, 255, 0.04), rgba(238, 244, 255, 0.01)),
+        linear-gradient(180deg, #162449, #091228 52%, #030816);
+    --legal-panel-bg: linear-gradient(165deg, rgba(22, 35, 74, 0.84), rgba(15, 24, 51, 0.76));
+    --legal-panel-border: rgba(151, 196, 255, 0.2);
+    --legal-panel-shadow: 0 26px 58px rgba(3, 6, 20, 0.34);
+    --legal-panel-text: rgba(238, 244, 255, 0.82);
+    --legal-title-color: #eef4ff;
+    --legal-link-bg: rgba(24, 38, 78, 0.64);
+    --legal-link-hover-bg: rgba(36, 54, 106, 0.76);
+    --legal-link-hover-color: #70e6ff;
+    --legal-kicker-color: #70e6ff;
+    --legal-badge-bg: rgba(22, 35, 74, 0.72);
+    --legal-badge-border: rgba(151, 196, 255, 0.18);
+    --legal-home-bg: rgba(26, 42, 86, 0.72);
+    --legal-home-border: rgba(151, 196, 255, 0.2);
+    --legal-home-hover-bg: rgba(38, 58, 114, 0.84);
+    --legal-home-shadow: 0 18px 34px rgba(3, 6, 20, 0.28);
+    --legal-home-hover-shadow: 0 22px 42px rgba(3, 6, 20, 0.34);
 }
 
 .legal-page-main {
@@ -2109,9 +2249,9 @@ a {
     min-height: 46px;
     padding: 0 18px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text-primary);
+    border: 1px solid var(--legal-panel-border);
+    background: var(--legal-link-bg);
+    color: var(--legal-title-color);
     text-decoration: none;
     font-size: 14px;
     font-weight: 700;
@@ -2120,21 +2260,22 @@ a {
 
 .legal-back-link:hover {
     transform: translateY(-1px);
-    color: var(--text-primary);
+    color: var(--legal-title-color);
     border-color: rgba(var(--accent-rgb), 0.38);
+    background: var(--legal-link-hover-bg);
 }
 
 .legal-home-link {
-    border-color: rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--text-primary);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    border-color: var(--legal-home-border);
+    background: var(--legal-home-bg);
+    color: var(--legal-title-color);
+    box-shadow: var(--legal-home-shadow);
 }
 
 .legal-home-link:hover,
 .legal-home-link:focus-visible {
-    background: rgba(255, 255, 255, 0.18);
-    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.16);
+    background: var(--legal-home-hover-bg);
+    box-shadow: var(--legal-home-hover-shadow);
 }
 
 .legal-login-link {
@@ -2194,11 +2335,11 @@ a {
     overflow: hidden;
     padding: 28px;
     border-radius: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid var(--legal-panel-border);
     background:
         radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.14), transparent 34%),
-        linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.14);
+        var(--legal-panel-bg);
+    box-shadow: var(--legal-panel-shadow);
 }
 
 .legal-hero::before,
@@ -2206,7 +2347,7 @@ a {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 255, 255, 0.1) 66%, transparent 82%);
+    background: var(--legal-shimmer);
     transform: translateX(-155%) skewX(-24deg);
     opacity: 0;
     pointer-events: none;
@@ -2223,7 +2364,7 @@ a {
     align-items: center;
     gap: 8px;
     margin-bottom: 14px;
-    color: var(--emerald-light);
+    color: var(--legal-kicker-color);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.16em;
@@ -2239,7 +2380,7 @@ a {
 .legal-hero p {
     max-width: 760px;
     margin: 16px 0 0;
-    color: var(--text-secondary);
+    color: var(--legal-panel-text);
     font-size: 16px;
     line-height: 1.7;
 }
@@ -2255,9 +2396,9 @@ a {
     display: block;
     padding: 14px 16px;
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text-primary);
+    border: 1px solid var(--legal-panel-border);
+    background: var(--legal-link-bg);
+    color: var(--legal-title-color);
     text-decoration: none;
     font-size: 14px;
     font-weight: 600;
@@ -2266,8 +2407,8 @@ a {
 
 .legal-top-links a:hover {
     border-color: rgba(var(--accent-rgb), 0.42);
-    color: var(--emerald-light);
-    background: rgba(255, 255, 255, 0.1);
+    color: var(--legal-link-hover-color);
+    background: var(--legal-link-hover-bg);
 }
 
 .legal-grid {
@@ -2281,28 +2422,28 @@ a {
     overflow: hidden;
     padding: 22px;
     border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--legal-panel-border);
+    background: var(--legal-panel-bg);
+    box-shadow: var(--legal-panel-shadow);
     scroll-margin-top: 24px;
 }
 
 .legal-card h2 {
     margin: 0 0 12px;
     font-size: 20px;
-    color: var(--text-primary);
+    color: var(--legal-title-color);
 }
 
 .legal-card p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.82);
+    color: var(--legal-panel-text);
     line-height: 1.7;
 }
 
 .legal-card-lead {
     font-size: 15px;
     font-weight: 600;
-    color: var(--text-primary) !important;
+    color: var(--legal-title-color) !important;
 }
 
 .legal-card-list {
@@ -2310,7 +2451,7 @@ a {
     padding-left: 18px;
     display: grid;
     gap: 10px;
-    color: rgba(255, 255, 255, 0.82);
+    color: var(--legal-panel-text);
 }
 
 .legal-card-list li {
@@ -2321,8 +2462,8 @@ a {
     border-color: rgba(var(--accent-rgb), 0.34);
     background:
         radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.15), transparent 36%),
-        linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(var(--accent-rgb), 0.08);
+        var(--legal-panel-bg);
+    box-shadow: var(--legal-panel-shadow), 0 0 0 1px rgba(var(--accent-rgb), 0.08);
 }
 
 .legal-card-featured h2 {
@@ -2336,8 +2477,8 @@ a {
     background:
         radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.14), transparent 30%),
         radial-gradient(circle at bottom left, rgba(var(--accent-light-rgb), 0.1), transparent 34%),
-        linear-gradient(165deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(var(--accent-rgb), 0.08);
+        var(--legal-panel-bg);
+    box-shadow: var(--legal-panel-shadow), 0 0 0 1px rgba(var(--accent-rgb), 0.08);
 }
 
 .legal-library-header {
@@ -2355,7 +2496,7 @@ a {
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--emerald-light) !important;
+    color: var(--legal-kicker-color) !important;
 }
 
 .legal-library-badge {
@@ -2365,9 +2506,9 @@ a {
     min-height: 38px;
     padding: 0 14px;
     border-radius: 999px;
-    border: 1px solid rgba(var(--accent-rgb), 0.22);
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--text-primary);
+    border: 1px solid var(--legal-badge-border);
+    background: var(--legal-badge-bg);
+    color: var(--legal-title-color);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -2391,9 +2532,9 @@ a {
     min-height: 100%;
     padding: 14px 16px;
     border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text-primary);
+    border: 1px solid var(--legal-panel-border);
+    background: var(--legal-link-bg);
+    color: var(--legal-title-color);
     text-decoration: none;
     font-size: 14px;
     font-weight: 600;
@@ -2405,8 +2546,8 @@ a {
 .legal-library-list a:focus-visible {
     transform: translateY(-2px);
     border-color: rgba(var(--accent-rgb), 0.34);
-    background: rgba(255, 255, 255, 0.1);
-    color: rgb(var(--accent-light-rgb));
+    background: var(--legal-link-hover-bg);
+    color: var(--legal-link-hover-color);
     box-shadow: 0 14px 24px -20px rgba(0, 0, 0, 0.34);
     animation: accessFastHoverSway 1.45s ease-in-out infinite;
 }
@@ -2418,118 +2559,15 @@ a {
     }
 }
 
-[data-theme="light"] .legal-hero,
-[data-theme="light"] .legal-card,
-[data-theme="light"] .legal-card-featured,
-[data-theme="light"] .legal-library-card,
-[data-theme="light"] .legal-top-links a,
-[data-theme="light"] .legal-library-list a {
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.66), rgba(230, 239, 235, 0.48));
-    border-color: rgba(15, 23, 42, 0.14);
-}
-
-[data-theme="light"] .legal-card p,
-[data-theme="light"] .legal-card-list,
-[data-theme="light"] .legal-hero p {
-    color: rgba(15, 23, 42, 0.72);
-}
-
-[data-theme="light"] .legal-hero::before,
-[data-theme="light"] .legal-card-shimmer::before {
-    background: linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.18) 34%, rgba(255, 255, 255, 0.7) 50%, rgba(255, 255, 255, 0.24) 66%, transparent 82%);
-}
-
-[data-theme="beach"] .legal-hero,
-[data-theme="beach"] .legal-card,
-[data-theme="beach"] .legal-card-featured,
-[data-theme="beach"] .legal-library-card,
-[data-theme="beach"] .legal-top-links a,
-[data-theme="beach"] .legal-library-list a {
-    background: linear-gradient(165deg, rgba(216, 240, 247, 0.56), rgba(255, 231, 202, 0.34));
-    border-color: rgba(14, 116, 144, 0.22);
-}
-
-[data-theme="beach"] .legal-hero h1,
-[data-theme="beach"] .legal-card h2,
-[data-theme="beach"] .legal-top-links a,
-[data-theme="beach"] .legal-library-list a,
-[data-theme="beach"] .legal-card-lead {
-    color: #0c4a6e;
-}
-
-[data-theme="beach"] .legal-card p,
-[data-theme="beach"] .legal-card-list,
-[data-theme="beach"] .legal-hero p {
-    color: rgba(8, 47, 73, 0.8);
-}
-
 [data-theme="beach"] .legal-hero::before,
 [data-theme="beach"] .legal-card-shimmer::before,
+[data-theme="swamp"] .legal-hero::before,
+[data-theme="swamp"] .legal-card-shimmer::before,
 [data-theme="sunset"] .legal-hero::before,
-[data-theme="sunset"] .legal-card-shimmer::before {
+[data-theme="sunset"] .legal-card-shimmer::before,
+[data-theme="space"] .legal-hero::before,
+[data-theme="space"] .legal-card-shimmer::before {
     opacity: 0.95;
-}
-
-[data-theme="sunset"] .legal-page {
-    --legal-sunset-title: rgba(61, 29, 23, 0.96);
-    --legal-sunset-body: rgba(88, 44, 34, 0.9);
-    --legal-sunset-muted: rgba(110, 60, 47, 0.82);
-}
-
-[data-theme="sunset"] .legal-back-link {
-    color: var(--legal-sunset-body);
-    border-color: rgba(95, 47, 37, 0.18);
-    background: rgba(255, 243, 232, 0.16);
-}
-
-[data-theme="sunset"] .legal-eyebrow {
-    color: rgba(126, 57, 37, 0.88);
-}
-
-[data-theme="sunset"] .legal-hero,
-[data-theme="sunset"] .legal-card,
-[data-theme="sunset"] .legal-card-featured,
-[data-theme="sunset"] .legal-library-card,
-[data-theme="sunset"] .legal-top-links a,
-[data-theme="sunset"] .legal-library-list a {
-    background: linear-gradient(165deg, rgba(144, 87, 78, 0.36), rgba(229, 171, 129, 0.18));
-    border-color: rgba(255, 214, 184, 0.16);
-}
-
-[data-theme="sunset"] .legal-hero h1,
-[data-theme="sunset"] .legal-card h2,
-[data-theme="sunset"] .legal-top-links a,
-[data-theme="sunset"] .legal-library-list a,
-[data-theme="sunset"] .legal-card-lead {
-    color: var(--legal-sunset-title);
-}
-
-[data-theme="sunset"] .legal-hero p,
-[data-theme="sunset"] .legal-card p,
-[data-theme="sunset"] .legal-card-list,
-[data-theme="sunset"] .legal-top-links a {
-    color: rgba(255, 236, 224, 0.84);
-}
-
-[data-theme="sunset"] .legal-library-kicker {
-    color: rgba(255, 214, 184, 0.82) !important;
-}
-
-[data-theme="sunset"] .legal-library-badge {
-    color: rgba(255, 241, 233, 0.92);
-    background: rgba(255, 243, 232, 0.12);
-    border-color: rgba(255, 214, 184, 0.16);
-}
-
-[data-theme="beach"] .legal-library-kicker,
-[data-theme="light"] .legal-library-kicker {
-    color: var(--emerald) !important;
-}
-
-[data-theme="beach"] .legal-library-badge,
-[data-theme="light"] .legal-library-badge {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.3);
 }
 
 @media (max-width: 768px) {
@@ -2545,7 +2583,7 @@ a {
 [data-theme="sunset"] .site-legal-footer-brand,
 [data-theme="sunset"] .site-legal-footer-link,
 [data-theme="sunset"] .site-legal-footer-separator {
-    color: var(--legal-sunset-muted);
+    color: rgba(255, 236, 224, 0.66);
 }
 
 /* ============================================
