@@ -9817,6 +9817,9 @@ function initNavbarDateTime() {
             const lenderFeesInput = document.getElementById('ia-lender-fees');
             const calcButton = document.getElementById('ia-calc-btn');
             const strikeZonePctEl = document.getElementById('ia-strike-zone-pct');
+            const strikeZoneAcqEl = document.getElementById('ia-strike-zone-acq');
+            const strikeZoneAcqPctEl = document.getElementById('ia-strike-zone-acq-pct');
+            const strikeZoneGapEl = document.getElementById('ia-strike-zone-gap');
             const strikeZoneAreaEl = document.getElementById('ia-strike-zone-area');
             const iaSummaryCopyBtn = document.getElementById('ia-summary-copy-btn');
             const cashNote = document.getElementById('ia-cash-note');
@@ -10271,7 +10274,9 @@ function initNavbarDateTime() {
                 const propertyCounty = String(detailData.county || '').trim();
                 if (!propertyAddress && !propertyCity && !propertyCounty) {
                     strikeZonePctEl.textContent = 'NA';
+                    if (strikeZoneGapEl) strikeZoneGapEl.textContent = 'Gap to strike zone: NA';
                     strikeZoneAreaEl.textContent = 'Area: NA';
+                    recalculate();
                     return;
                 }
 
@@ -10280,12 +10285,15 @@ function initNavbarDateTime() {
 
                 if (!match || match.isPass || !match.pct || String(match.pct).toUpperCase() === 'NA') {
                     strikeZonePctEl.textContent = 'NA';
+                    if (strikeZoneGapEl) strikeZoneGapEl.textContent = 'Gap to strike zone: NA';
                     strikeZoneAreaEl.textContent = 'Area: NA';
+                    recalculate();
                     return;
                 }
 
                 strikeZonePctEl.textContent = match.pct;
                 strikeZoneAreaEl.textContent = `Area: ${match.area}${match.county ? `, ${match.county}` : ''}`;
+                recalculate();
             }
 
             function recalculate() {
@@ -10444,6 +10452,15 @@ function initNavbarDateTime() {
                 const invNetProfit = grossProfitToSeller - invTotalDevelopmentCost;
                 const invCashProfit = invNetProfit + invHardMoneyCosts;
 
+                function updateStrikeZoneGapState(state) {
+                    if (!strikeZoneGapEl) {
+                        return;
+                    }
+
+                    strikeZoneGapEl.classList.remove('is-under', 'is-over', 'is-na');
+                    strikeZoneGapEl.classList.add(state);
+                }
+
                 setText('ia-buy-side-cost', formatMoney(buySideCost));
                 setText('ia-buy-side-cost-arv', formatPercent((buySideCost / arvBasis) * 100));
                 setText('ia-reno-arv', formatPercent((renovation / arvBasis) * 100));
@@ -10455,6 +10472,23 @@ function initNavbarDateTime() {
                 setText('ia-summary-acq', `${formatMoney(totalPurchaseCost)} (${formatPercent((totalPurchaseCost / arvBasis) * 100)} ARV)`);
                 setText('ia-summary-project', `${formatMoney(totalProjectCost)} (${formatPercent((totalProjectCost / arvBasis) * 100)} ARV)`);
                 setText('ia-summary-project-fin', `${formatMoney(totalProjectWithFinancing)} (${formatPercent((totalProjectWithFinancing / arvBasis) * 100)} ARV)`);
+
+                const acquisitionPctOfArv = (totalPurchaseCost / arvBasis) * 100;
+                const strikeZonePct = parseMoneyValue(strikeZonePctEl ? strikeZonePctEl.textContent : '');
+                setText('ia-strike-zone-acq', formatMoney(totalPurchaseCost));
+                setText('ia-strike-zone-acq-pct', formatPercent(acquisitionPctOfArv));
+                if (strikeZoneGapEl) {
+                    if (strikeZonePct > 0) {
+                        const strikeZoneGap = strikeZonePct - acquisitionPctOfArv;
+                        updateStrikeZoneGapState(strikeZoneGap >= 0 ? 'is-under' : 'is-over');
+                        strikeZoneGapEl.textContent = strikeZoneGap >= 0
+                            ? `Gap to strike zone: ${formatPercent(strikeZoneGap)} under max`
+                            : `Gap to strike zone: ${formatPercent(Math.abs(strikeZoneGap))} over max`;
+                    } else {
+                        updateStrikeZoneGapState('is-na');
+                        strikeZoneGapEl.textContent = 'Gap to strike zone: NA';
+                    }
+                }
 
                 setText('ia-other-cost-total', formatMoney(extraCosts));
                 setText('ia-loan-amount', formatMoney(loanAmount));
