@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equal Housing - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Equal housing information and commitments for FAST BRIDGE GROUP.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (error) { return {}; } };
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+                if (theme === 'system') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(theme)) theme = 'beach';
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) { document.documentElement.setAttribute('data-theme', 'beach'); }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+        <section class="legal-hero">
+            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <h1>Equal Housing</h1>
+            <p>FAST BRIDGE GROUP supports fair housing principles and expects platform use, marketing, and communications to reflect equal treatment standards.</p>
+        </section>
+        <nav class="legal-top-links" aria-label="Legal pages">
+            <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
+            <a href="legal-california-law-updates.html">California Law Updates</a>
+            <a href="legal-fair-practice-discipline.html">Fair Practice &amp; Discipline</a>
+            <a href="legal-electronic-submissions.html">Electronic Submissions</a>
+            <a href="legal-equal-housing.html">Equal Housing</a>
+            <a href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
+            <a href="legal-copyright.html">Copyright</a>
+            <a href="legal-privacy-policy.html">Privacy Policy</a>
+            <a href="legal-terms-of-use.html">Terms of Use</a>
+            <a href="legal-broker-information.html">Broker Information</a>
+            <a href="legal-2026-law-library.html">2026 Law Library</a>
+        </nav>
+        <section class="legal-grid" aria-label="Equal housing details">
+            <article class="legal-card legal-card-featured legal-card-shimmer">
+                <h2>Housing commitment</h2>
+                <p class="legal-card-lead">FAST supports equal housing opportunity and opposes discrimination in housing-related services, marketing, communications, and access.</p>
+                <ul class="legal-card-list">
+                    <li>Services should be provided without regard to race, color, religion, sex, disability, familial status, national origin, ancestry, source of income, sexual orientation, gender identity, or any other protected classification under applicable law.</li>
+                    <li>Users should avoid language, filtering practices, marketing choices, and lead handling behavior that could create steering or discriminatory treatment concerns.</li>
+                    <li>Fair housing standards apply in person, on calls, in texts, in marketing copy, and inside digital workflows.</li>
+                </ul>
+            </article>
+            <article class="legal-card">
+                <h2>Platform expectation</h2>
+                <p>FAST is meant to make the team sharper, not careless. Every user should assume that speed and convenience still have to live inside lawful housing practices and respectful professional conduct.</p>
+            </article>
+        </section>
+    </main>
+    <script src="templatemo-glass-admin-script.js"></script>
+</body>
+</html>

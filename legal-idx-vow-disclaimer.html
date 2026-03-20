@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDX/VOW Disclaimer - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Detailed IDX and VOW disclaimer information for FAST BRIDGE GROUP users.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(theme)) {
+                    theme = 'beach';
+                }
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+        <section class="legal-hero">
+            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <h1>IDX/VOW Disclaimer</h1>
+            <p>IDX and VOW data carries use restrictions designed to protect consumers, MLS participants, and the integrity of listing content across digital platforms.</p>
+        </section>
+        <nav class="legal-top-links" aria-label="Legal pages">
+            <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
+            <a href="legal-california-law-updates.html">California Law Updates</a>
+            <a href="legal-fair-practice-discipline.html">Fair Practice &amp; Discipline</a>
+            <a href="legal-electronic-submissions.html">Electronic Submissions</a>
+            <a href="legal-equal-housing.html">Equal Housing</a>
+            <a href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
+            <a href="legal-copyright.html">Copyright</a>
+            <a href="legal-privacy-policy.html">Privacy Policy</a>
+            <a href="legal-terms-of-use.html">Terms of Use</a>
+            <a href="legal-broker-information.html">Broker Information</a>
+            <a href="legal-2026-law-library.html">2026 Law Library</a>
+        </nav>
+        <section class="legal-grid" aria-label="IDX VOW details">
+            <article class="legal-card legal-card-featured legal-card-shimmer">
+                <h2>Consumer-use boundaries</h2>
+                <p class="legal-card-lead">IDX and VOW content is generally provided for personal, non-commercial use by consumers identifying properties they may want to buy, sell, lease, or study.</p>
+                <ul class="legal-card-list">
+                    <li>Listing photos, remarks, map content, and search results may be limited by MLS rules, broker permissions, or vendor agreements.</li>
+                    <li>Redistribution, scraping, republication, automated copying, or reuse of protected listing content outside the allowed user experience may violate MLS policy or copyright rules.</li>
+                    <li>Some data may be hidden, delayed, or unavailable depending on user role, local MLS requirements, and participant permissions.</li>
+                    <li>FAST users remain responsible for following any brokerage, MLS, and vendor restrictions that apply to the listing data they access through the platform.</li>
+                </ul>
+            </article>
+            <article class="legal-card">
+                <h2>Operational reminder</h2>
+                <p>FAST is designed to help users move faster with property data, but faster access does not create permission to copy, export, or commercialize IDX or VOW content beyond the rules that govern the original feed. If a use case is unclear, the user should treat the data as restricted until confirmed otherwise.</p>
+            </article>
+        </section>
+    </main>
+    <script src="templatemo-glass-admin-script.js"></script>
+</body>
+</html>

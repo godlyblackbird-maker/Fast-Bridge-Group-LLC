@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Law Library - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="2026 California real estate law library resources for FAST BRIDGE GROUP.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (error) { return {}; } };
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+                if (theme === 'system') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(theme)) theme = 'beach';
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) { document.documentElement.setAttribute('data-theme', 'beach'); }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+        <section class="legal-hero">
+            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <h1>2026 Law Library</h1>
+            <p>Reference materials for 2026 California real estate law updates are organized here as a working library for the team.</p>
+        </section>
+        <nav class="legal-top-links" aria-label="Legal pages">
+            <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
+            <a href="legal-california-law-updates.html">California Law Updates</a>
+            <a href="legal-fair-practice-discipline.html">Fair Practice &amp; Discipline</a>
+            <a href="legal-electronic-submissions.html">Electronic Submissions</a>
+            <a href="legal-equal-housing.html">Equal Housing</a>
+            <a href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
+            <a href="legal-copyright.html">Copyright</a>
+            <a href="legal-privacy-policy.html">Privacy Policy</a>
+            <a href="legal-terms-of-use.html">Terms of Use</a>
+            <a href="legal-broker-information.html">Broker Information</a>
+            <a href="legal-2026-law-library.html">2026 Law Library</a>
+        </nav>
+        <section class="legal-grid" aria-label="2026 law library details">
+            <article class="legal-card legal-card-featured legal-card-shimmer">
+                <h2>Library purpose</h2>
+                <p class="legal-card-lead">This library gathers 2026 law-update materials into one place so the team can review operational changes, risk issues, disclosure changes, and procedural updates without hunting through scattered files.</p>
+                <ul class="legal-card-list">
+                    <li>These materials are provided for internal reference, workflow education, and legal awareness.</li>
+                    <li>Users should still evaluate whether a specific transaction, filing, disclosure, or representation requires direct legal or broker guidance.</li>
+                    <li>The presence of a resource in the library does not guarantee that it is exhaustive, current on every point, or controlling for a specific factual scenario.</li>
+                </ul>
+            </article>
+            <article class="legal-card legal-library-card">
+                <h2>Reference documents</h2>
+                <ul class="legal-card-list">
+                    <li><a href="2026%20Real%20Estate%20Laws/2022_06_Discrimination_as_Basis_for_Discipline_Adopted_Text_6_27_2022.pdf" target="_blank" rel="noopener">Discrimination as Basis for Discipline - Adopted Text</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/2022_06_Discrimination_as_Basis_for_Discipline_OAL_Notice_of_Approval.pdf" target="_blank" rel="noopener">Discrimination as Basis for Discipline - OAL Notice of Approval</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/2022_12_29_OAL_NARA_REM_SB_263_Impl_Regs).pdf" target="_blank" rel="noopener">SB 263 Implementation Regulations - OAL Notice</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/2022_12_29_Title_10_Cal_Code_Sections_SB_263_Impl.pdf" target="_blank" rel="noopener">SB 263 Implementation - Title 10 Code Sections</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/2024-1113-02S-Approval.pdf" target="_blank" rel="noopener">2024-1113-02S Approval</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/adminlaw.pdf" target="_blank" rel="noopener">Administrative Law Reference</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/Criteria_For_Substantial_Relationship2021.pdf" target="_blank" rel="noopener">Criteria for Substantial Relationship</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/excerpts.pdf" target="_blank" rel="noopener">Law Excerpts</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/FirstPointContactSolicitationsAmendedReg3-28-2019.pdf" target="_blank" rel="noopener">First Point Contact Solicitations - Amended Regulation</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/list_of_statutes.pdf" target="_blank" rel="noopener">List of Statutes</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/OAL_Criteria_Approval.pdf" target="_blank" rel="noopener">OAL Criteria Approval</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/PetitionDisciplineRemovalAdoptedReg3-7-2019.pdf" target="_blank" rel="noopener">Petition Discipline Removal - Adopted Regulation</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/regs.pdf" target="_blank" rel="noopener">Regulations Reference</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/relaw.pdf" target="_blank" rel="noopener">Real Estate Law Reference</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/SB_887_Electronic_Submissions%20_OAL_Notice_of_Approval.pdf" target="_blank" rel="noopener">SB 887 Electronic Submissions - OAL Notice</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/SB_887_Electronic_Submissions_Regulatory_Language_OAL_APPROVED.pdf" target="_blank" rel="noopener">SB 887 Electronic Submissions - Approved Regulatory Language</a></li>
+                    <li><a href="2026%20Real%20Estate%20Laws/Title%2010%20Calif%20Code%20of%20Regulations%20Section%202773%20(AMENDED%20TEXT)%203-28-2019.pdf" target="_blank" rel="noopener">Title 10 CCR Section 2773 - Amended Text</a></li>
+                </ul>
+            </article>
+        </section>
+    </main>
+    <script src="templatemo-glass-admin-script.js"></script>
+</body>
+</html>

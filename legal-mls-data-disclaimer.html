@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLS Data Disclaimer - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Detailed MLS data disclaimer information for FAST BRIDGE GROUP users, agents, and investors.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(theme)) {
+                    theme = 'beach';
+                }
+
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+
+        <section class="legal-hero">
+            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <h1>MLS Data Disclaimer</h1>
+            <p>MLS-backed property data helps users move faster, but it must still be verified before anyone relies on it for pricing, underwriting, disclosures, or transaction decisions.</p>
+        </section>
+
+        <nav class="legal-top-links" aria-label="Legal pages">
+            <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
+            <a href="legal-california-law-updates.html">California Law Updates</a>
+            <a href="legal-fair-practice-discipline.html">Fair Practice &amp; Discipline</a>
+            <a href="legal-electronic-submissions.html">Electronic Submissions</a>
+            <a href="legal-equal-housing.html">Equal Housing</a>
+            <a href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
+            <a href="legal-copyright.html">Copyright</a>
+            <a href="legal-privacy-policy.html">Privacy Policy</a>
+            <a href="legal-terms-of-use.html">Terms of Use</a>
+            <a href="legal-broker-information.html">Broker Information</a>
+            <a href="legal-2026-law-library.html">2026 Law Library</a>
+        </nav>
+
+        <section class="legal-grid" aria-label="MLS disclaimer details">
+            <article class="legal-card legal-card-featured legal-card-shimmer">
+                <h2>How FAST uses MLS information</h2>
+                <p class="legal-card-lead">MLS information displayed through FAST is intended to help agents and investors evaluate opportunities quickly, not to replace independent verification.</p>
+                <ul class="legal-card-list">
+                    <li>Listing details may originate from one or more multiple listing services, broker participants, or cooperating data vendors.</li>
+                    <li>Square footage, lot size, room counts, zoning, permits, status changes, and days on market can change without notice and may contain delays or errors.</li>
+                    <li>Users should confirm all material property facts directly with the listing broker, title sources, public records, inspections, and any professionals relevant to the transaction.</li>
+                    <li>FAST may surface MLS information inside deal analysis workflows, comps views, and investor conversations, but the user remains responsible for final review before action is taken.</li>
+                </ul>
+            </article>
+
+            <article class="legal-card">
+                <h2>What this means in practice</h2>
+                <p>When a user runs numbers on a property in FAST, that speed is operationally valuable, but it does not convert MLS data into a warranty. Any acquisition, listing, wholesaling, underwriting, or resale decision should be made only after the user confirms the underlying facts that matter to price, compliance, and risk.</p>
+            </article>
+        </section>
+    </main>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+</body>
+</html>
