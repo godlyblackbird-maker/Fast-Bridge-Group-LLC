@@ -1543,11 +1543,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 ? state.investorDefaults
                 : {};
 
-            const invEscrowPct = Math.max(parseMoneyValue(investorDefaults.invEscrowPct), 1);
+            const invEscrowPct = 1;
             const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
             const invConcessionsPct = Math.max(parseMoneyValue(investorDefaults.invConcessionsPct), 0);
-            const invBuyerAgentPct = Math.max(parseMoneyValue(investorDefaults.invBuyerAgentPct), 2);
-            const invListingAgentPct = Math.max(parseMoneyValue(investorDefaults.invListingAgentPct), 2);
+            const invBuyerAgentPct = Math.max(parseMoneyValue(investorDefaults.invBuyerAgentPct), 0);
+            const invListingAgentPct = Math.max(parseMoneyValue(investorDefaults.invListingAgentPct), 0);
             const invPerDiemPct = Math.max(parseMoneyValue(investorDefaults.invPerDiemPct), 0);
             const invAssetMgmtPct = Math.max(parseMoneyValue(investorDefaults.invAssetMgmtPct), 0);
             const invDueDiligence = Math.max(parseMoneyValue(investorDefaults.invDueDiligence), 0);
@@ -9971,8 +9971,12 @@ function initNavbarDateTime() {
             const targetDollarInput = document.getElementById('ia-target-profit-dollar');
             const holdMonthsInput = document.getElementById('ia-hold-months');
             const financingModeInput = document.getElementById('ia-financing-mode');
-            const costCapUsageOptionEl = document.getElementById('ia-cost-cap-usage-option');
-            const arvCapUsageOptionEl = document.getElementById('ia-arv-cap-usage-option');
+            const costCapUsageEl = document.getElementById('ia-cost-cap-usage');
+            const arvCapUsageEl = document.getElementById('ia-arv-cap-usage');
+            const customCostCapInput = document.getElementById('ia-custom-cost-cap');
+            const customArvMaxInput = document.getElementById('ia-custom-arv-max');
+            const customCostCapLabel = document.getElementById('ia-custom-cost-cap-label');
+            const customArvMaxLabel = document.getElementById('ia-custom-arv-max-label');
             const loanToArvInput = document.getElementById('ia-loan-to-arv');
             const interestRateInput = document.getElementById('ia-interest-rate');
             const originationPointsInput = document.getElementById('ia-origination-points');
@@ -10011,8 +10015,8 @@ function initNavbarDateTime() {
                 invEscrowPct: '1',
                 invProratedPct: '0',
                 invConcessionsPct: '0',
-                invBuyerAgentPct: '2',
-                invListingAgentPct: '2',
+                invBuyerAgentPct: '0',
+                invListingAgentPct: '0',
                 invPerDiemPct: '0',
                 invAssetMgmtPct: '0',
                 invDueDiligence: '0',
@@ -10020,7 +10024,7 @@ function initNavbarDateTime() {
                 invCashForKeys: '0'
             };
 
-            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput) {
+            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput || !customCostCapInput || !customArvMaxInput) {
                 return;
             }
 
@@ -10076,6 +10080,8 @@ function initNavbarDateTime() {
                 targetDollarInput.value = String(state.targetProfitDollar ?? targetDollarInput.value ?? '');
                 holdMonthsInput.value = String(state.holdMonths ?? holdMonthsInput.value ?? '');
                 financingModeInput.value = String(state.financingMode ?? financingModeInput.value ?? '100-100');
+                customCostCapInput.value = String(state.customCostCap ?? customCostCapInput.value ?? '100');
+                customArvMaxInput.value = String(state.customArvMax ?? customArvMaxInput.value ?? '80');
                 loanToArvInput.value = String(state.loanToArv ?? loanToArvInput.value ?? '');
                 interestRateInput.value = String(state.interestRate ?? interestRateInput.value ?? '');
                 originationPointsInput.value = String(state.originationPoints ?? originationPointsInput.value ?? '');
@@ -10133,6 +10139,8 @@ function initNavbarDateTime() {
                     targetProfitDollar: targetDollarInput.value,
                     holdMonths: holdMonthsInput.value,
                     financingMode: financingModeInput.value,
+                    customCostCap: customCostCapInput.value,
+                    customArvMax: customArvMaxInput.value,
                     loanToArv: loanToArvInput.value,
                     interestRate: interestRateInput.value,
                     originationPoints: originationPointsInput.value,
@@ -10294,6 +10302,8 @@ function initNavbarDateTime() {
                     offerPriceInput,
                     sellSidePercentInput,
                     holdMonthsInput,
+                    customCostCapInput,
+                    customArvMaxInput,
                     loanToArvInput,
                     interestRateInput,
                     originationPointsInput,
@@ -10343,6 +10353,18 @@ function initNavbarDateTime() {
                     };
                 }
 
+                if (mode === '100-95-13-excel-ia') {
+                    return {
+                        loanToArv: '95.13',
+                        originationPoints: '1.5',
+                        interestRate: '10.44',
+                        lenderFees: '999',
+                        holdMonths: '4',
+                        costAdvanceRate: 1,
+                        arvAdvanceRate: 0.9513
+                    };
+                }
+
                 if (mode === 'cash') {
                     return {
                         loanToArv: '0',
@@ -10355,7 +10377,29 @@ function initNavbarDateTime() {
                     };
                 }
 
+                if (mode === 'custom') {
+                    return {
+                        costAdvanceRate: Math.max(asNumber(customCostCapInput, 0), 0) / 100,
+                        arvAdvanceRate: Math.max(asNumber(customArvMaxInput, 0), 0) / 100
+                    };
+                }
+
                 return null;
+            }
+
+            function syncCustomFinancingVisibility(mode) {
+                const isCustom = mode === 'custom';
+                const isCash = mode === 'cash';
+
+                if (customCostCapLabel) {
+                    customCostCapLabel.hidden = !isCustom;
+                }
+                if (customArvMaxLabel) {
+                    customArvMaxLabel.hidden = !isCustom;
+                }
+
+                customCostCapInput.disabled = !isCustom || isCash;
+                customArvMaxInput.disabled = !isCustom || isCash;
             }
 
             function applyFinancingModeDefaults(mode, options = {}) {
@@ -10380,6 +10424,7 @@ function initNavbarDateTime() {
                 interestRateInput.disabled = isCash;
                 lenderFeesInput.disabled = isCash;
                 holdMonthsInput.disabled = isCash;
+                syncCustomFinancingVisibility(mode);
                 if (cashNote) {
                     cashNote.hidden = !isCash;
                 }
@@ -10469,11 +10514,11 @@ function initNavbarDateTime() {
                 const interestRatePct = Math.max(asNumber(interestRateInput, 0), 0);
                 const pointsPct = Math.max(asNumber(originationPointsInput, 0), 0);
                 const lenderFees = Math.max(asNumber(lenderFeesInput, 0), 0);
-                const invEscrowPct = Math.max(parseMoneyValue(investorDefaults.invEscrowPct), 1);
+                const invEscrowPct = 1;
                 const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
                 const invConcessionsPct = Math.max(parseMoneyValue(investorDefaults.invConcessionsPct), 0);
-                const invBuyerAgentPct = Math.max(parseMoneyValue(investorDefaults.invBuyerAgentPct), 2);
-                const invListingAgentPct = Math.max(parseMoneyValue(investorDefaults.invListingAgentPct), 2);
+                const invBuyerAgentPct = Math.max(parseMoneyValue(investorDefaults.invBuyerAgentPct), 0);
+                const invListingAgentPct = Math.max(parseMoneyValue(investorDefaults.invListingAgentPct), 0);
                 const invPerDiemPct = Math.max(parseMoneyValue(investorDefaults.invPerDiemPct), 0);
                 const invAssetMgmtPct = Math.max(parseMoneyValue(investorDefaults.invAssetMgmtPct), 0);
                 const invDueDiligence = Math.max(parseMoneyValue(investorDefaults.invDueDiligence), 0);
@@ -10631,6 +10676,8 @@ function initNavbarDateTime() {
                 setText('ia-buy-side-cost-arv', formatPercent((buySideCost / arvBasis) * 100));
                 setText('ia-reno-arv', formatPercent((renovation / arvBasis) * 100));
                 setText('ia-sell-side-amount', formatMoney(sellSideCost));
+                setText('ia-sale-escrow-percent', formatPercent(invEscrowPct));
+                setText('ia-sale-escrow-amount', formatMoney(invEscrowAmount));
                 setText('ia-offer-price-arv', formatPercent((offerPrice / arvBasis) * 100));
 
                 setText('ia-total-acquisition', formatMoney(totalPurchaseCost));
@@ -10658,12 +10705,18 @@ function initNavbarDateTime() {
 
                 setText('ia-other-cost-total', formatMoney(extraCosts));
                 setText('ia-loan-amount', formatMoney(loanAmount));
-                if (costCapUsageOptionEl) {
-                    costCapUsageOptionEl.textContent = `Cost cap usage: ${programCostCapAmount > 0 ? formatPercent((loanAmount / programCostCapAmount) * 100) : 'NA'}`;
-                }
-                if (arvCapUsageOptionEl) {
-                    arvCapUsageOptionEl.textContent = `ARV cap usage: ${programArvCapAmount > 0 ? formatPercent((loanAmount / programArvCapAmount) * 100) : 'NA'}`;
-                }
+                setText(
+                    'ia-cost-cap-usage',
+                    programCostCapAmount > 0
+                        ? formatPercent((loanAmount / programCostCapAmount) * 100)
+                        : 'NA'
+                );
+                setText(
+                    'ia-arv-cap-usage',
+                    programArvCapAmount > 0
+                        ? formatPercent((loanAmount / programArvCapAmount) * 100)
+                        : 'NA'
+                );
                 setText('ia-origination-amount', formatMoney(originationAmount, 1));
                 setText('ia-interest-cost', formatMoney(interestCost));
                 setText('ia-total-financing', formatMoney(totalFinancingCost));
@@ -10679,6 +10732,7 @@ function initNavbarDateTime() {
                     `Renovation Budget: ${formatMoney(renovation)}`,
                     `Buy-Side Closing Costs: ${formatMoney(buySideCost)}`,
                     `Sell-Side Closing Amount: ${formatMoney(sellSideCost)} (${formatPercent(sellSidePct)})`,
+                    `Sale-Side Escrow Amount: ${formatMoney(invEscrowAmount)} (${formatPercent(invEscrowPct)})`,
                     `Other Cost Total: ${formatMoney(extraCosts)}`,
                     `Gross Profit Adjustments: ${formatMoney(grossScopeAdjustmentTotal)}`,
                     '-',
@@ -10798,6 +10852,8 @@ function initNavbarDateTime() {
                 renovationInput,
                 sellSidePercentInput,
                 holdMonthsInput,
+                customCostCapInput,
+                customArvMaxInput,
                 loanToArvInput,
                 interestRateInput,
                 originationPointsInput,

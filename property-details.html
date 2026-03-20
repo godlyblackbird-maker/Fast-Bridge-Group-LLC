@@ -448,6 +448,10 @@
 
                                     <div class="ia-readout ia-sell-side-amount-pill">Sell-Side Closing Amount: <strong id="ia-sell-side-amount">$0</strong></div>
                                 </div>
+                                <div class="ia-grid ia-sell-side-row ia-span-2">
+                                    <div class="ia-readout">Sale-Side Escrow: <strong id="ia-sale-escrow-percent">1.00%</strong></div>
+                                    <div class="ia-readout ia-sell-side-amount-pill">Sale-Side Escrow Amount: <strong id="ia-sale-escrow-amount">$0</strong></div>
+                                </div>
                             </div>
                         </section>
 
@@ -523,15 +527,20 @@
                                         <span class="ia-label-note">(Excel)</span>
                                     </span>
                                     <select id="ia-financing-mode">
-                                        <option value="100-100">100/100 - 100% Cost Cap, 80% ARV Max</option>
-                                        <option value="90-100">90/100 - 90% Cost Cap, 75% ARV Max</option>
+                                        <option value="100-100">100% Cost Cap / 80% ARV Max</option>
+                                        <option value="90-100">90% Cost Cap / 75% ARV Max</option>
+                                        <option value="100-95-13-excel-ia">100% Cost Cap / 95.13% ARV Max - Excel IA</option>
                                         <option value="custom">Custom Financing</option>
                                         <option value="cash">Cash</option>
-                                        <optgroup label="Calculated Usage">
-                                            <option value="calc-cost-cap" id="ia-cost-cap-usage-option" disabled>Cost cap usage: NA</option>
-                                            <option value="calc-arv-cap" id="ia-arv-cap-usage-option" disabled>ARV cap usage: NA</option>
-                                        </optgroup>
                                     </select>
+                                </label>
+                                <div class="ia-readout">Cost Cap Usage: <strong id="ia-cost-cap-usage">NA</strong></div>
+                                <div class="ia-readout">ARV Cap Usage: <strong id="ia-arv-cap-usage">NA</strong></div>
+                                <label id="ia-custom-cost-cap-label" hidden>Custom Cost Cap (%)
+                                    <input id="ia-custom-cost-cap" type="text" inputmode="decimal" autocomplete="off" value="100">
+                                </label>
+                                <label id="ia-custom-arv-max-label" hidden>Custom ARV Max (%)
+                                    <input id="ia-custom-arv-max" type="text" inputmode="decimal" autocomplete="off" value="80">
                                 </label>
                                 <label>Hold Time (months)
                                     <input id="ia-hold-months" type="text" inputmode="numeric" autocomplete="off" value="4">
