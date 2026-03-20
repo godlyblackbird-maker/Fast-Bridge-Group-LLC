@@ -4757,6 +4757,166 @@ function initNavbarDateTime() {
         loadRequests();
     }
 
+    function initAdminSmtpApprovals() {
+        const requestsList = document.getElementById('admin-smtp-requests-list');
+        if (!requestsList) {
+            return;
+        }
+
+        const subtitle = document.getElementById('smtp-approval-subtitle');
+        const token = localStorage.getItem('authToken');
+        let currentUser = null;
+
+        try {
+            currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        } catch (error) {
+            currentUser = null;
+        }
+
+        if (!currentUser || currentUser.role !== 'admin') {
+            if (subtitle) {
+                subtitle.textContent = 'Only admin accounts can review Gmail outbox requests.';
+            }
+            requestsList.innerHTML = '<p class="outreach-empty">Admin access required.</p>';
+            return;
+        }
+
+        function escapeSmtpText(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderRequests(items) {
+            requestsList.innerHTML = '';
+
+            if (!Array.isArray(items) || items.length === 0) {
+                if (subtitle) {
+                    subtitle.textContent = 'Approve submitted Gmail emails and app passwords for outgoing mail';
+                }
+                requestsList.innerHTML = '<p class="outreach-empty">No Gmail outbox requests yet.</p>';
+                return;
+            }
+
+            const pendingCount = items.filter(item => String(item.status || '').toLowerCase() === 'pending').length;
+            if (subtitle) {
+                subtitle.textContent = `${pendingCount} Gmail request${pendingCount === 1 ? '' : 's'} waiting for review`;
+            }
+
+            items.forEach((item) => {
+                const row = document.createElement('article');
+                row.className = 'outreach-item';
+                const status = String(item.status || 'pending').trim().toLowerCase() || 'pending';
+                const statusClass = status === 'approved' ? 'published' : status === 'rejected' ? 'draft' : 'sent';
+                const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown';
+                const requesterName = escapeSmtpText(item.requester_name || 'Unknown user');
+                const requesterEmail = escapeSmtpText(item.requester_email || 'No account email');
+                const smtpUser = escapeSmtpText(item.smtp_user || 'No Gmail submitted');
+                const smtpPass = escapeSmtpText(item.smtp_pass || 'No app password submitted');
+                const reviewedBy = escapeSmtpText(item.reviewed_by_name || '');
+                const actionsHtml = status === 'pending'
+                    ? `<div class="outreach-item-actions">
+                            <button type="button" class="card-btn active admin-approve-smtp-btn" data-request-id="${item.id}">Approve</button>
+                            <button type="button" class="card-btn admin-reject-smtp-btn" data-request-id="${item.id}">Reject</button>
+                       </div>`
+                    : '';
+
+                row.innerHTML = `
+                    <div class="outreach-item-head">
+                        <span class="outreach-item-title">${requesterName}</span>
+                        <span class="outreach-status ${statusClass}">${status}</span>
+                    </div>
+                    <p class="outreach-item-body">Account Email: ${requesterEmail}</p>
+                    <p class="outreach-item-body">Gmail Outbox: ${smtpUser}</p>
+                    <p class="outreach-item-body admin-smtp-secret">App Password: ${smtpPass}</p>
+                    <p class="outreach-owner">Submitted: ${createdAt}</p>
+                    ${reviewedBy ? `<p class="outreach-owner">Reviewed By: ${reviewedBy}</p>` : ''}
+                    ${actionsHtml}
+                `;
+                requestsList.appendChild(row);
+            });
+
+            requestsList.querySelectorAll('.admin-approve-smtp-btn').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const requestId = button.dataset.requestId;
+                    button.disabled = true;
+
+                    try {
+                        const response = await fetch(`/api/admin/smtp-requests/${requestId}/approve`, {
+                            method: 'POST',
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            }
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Unable to approve Gmail request');
+                        }
+                        showDashboardToast('success', 'Gmail Approved', 'Gmail outbox request approved and applied to the user account.');
+                        await loadRequests();
+                    } catch (error) {
+                        showDashboardToast('error', 'Approval Failed', String(error.message || 'Unable to approve Gmail request.'));
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            });
+
+            requestsList.querySelectorAll('.admin-reject-smtp-btn').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const requestId = button.dataset.requestId;
+                    button.disabled = true;
+
+                    try {
+                        const response = await fetch(`/api/admin/smtp-requests/${requestId}/reject`, {
+                            method: 'POST',
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            }
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Unable to reject Gmail request');
+                        }
+                        showDashboardToast('success', 'Gmail Rejected', 'Gmail outbox request rejected.');
+                        await loadRequests();
+                    } catch (error) {
+                        showDashboardToast('error', 'Reject Failed', String(error.message || 'Unable to reject Gmail request.'));
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            });
+        }
+
+        async function loadRequests() {
+            if (!token) {
+                requestsList.innerHTML = '<p class="outreach-empty">Missing auth token. Please sign in again.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/smtp-requests', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load Gmail requests');
+                }
+                renderRequests(data.requests || []);
+            } catch (error) {
+                requestsList.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load Gmail requests.')}</p>`;
+            }
+        }
+
+        loadRequests();
+    }
+
     function initTodoGoalsWidget() {
         const input = document.getElementById('planner-task-input');
         const dateInput = document.getElementById('planner-task-date');
@@ -9811,8 +9971,8 @@ function initNavbarDateTime() {
             const targetDollarInput = document.getElementById('ia-target-profit-dollar');
             const holdMonthsInput = document.getElementById('ia-hold-months');
             const financingModeInput = document.getElementById('ia-financing-mode');
-            const costCapUsageEl = document.getElementById('ia-cost-cap-usage');
-            const arvCapUsageEl = document.getElementById('ia-arv-cap-usage');
+            const costCapUsageOptionEl = document.getElementById('ia-cost-cap-usage-option');
+            const arvCapUsageOptionEl = document.getElementById('ia-arv-cap-usage-option');
             const loanToArvInput = document.getElementById('ia-loan-to-arv');
             const interestRateInput = document.getElementById('ia-interest-rate');
             const originationPointsInput = document.getElementById('ia-origination-points');
@@ -10498,8 +10658,12 @@ function initNavbarDateTime() {
 
                 setText('ia-other-cost-total', formatMoney(extraCosts));
                 setText('ia-loan-amount', formatMoney(loanAmount));
-                setText('ia-cost-cap-usage', programCostCapAmount > 0 ? formatPercent((loanAmount / programCostCapAmount) * 100) : 'NA');
-                setText('ia-arv-cap-usage', programArvCapAmount > 0 ? formatPercent((loanAmount / programArvCapAmount) * 100) : 'NA');
+                if (costCapUsageOptionEl) {
+                    costCapUsageOptionEl.textContent = `Cost cap usage: ${programCostCapAmount > 0 ? formatPercent((loanAmount / programCostCapAmount) * 100) : 'NA'}`;
+                }
+                if (arvCapUsageOptionEl) {
+                    arvCapUsageOptionEl.textContent = `ARV cap usage: ${programArvCapAmount > 0 ? formatPercent((loanAmount / programArvCapAmount) * 100) : 'NA'}`;
+                }
                 setText('ia-origination-amount', formatMoney(originationAmount, 1));
                 setText('ia-interest-cost', formatMoney(interestCost));
                 setText('ia-total-financing', formatMoney(totalFinancingCost));
@@ -10801,6 +10965,7 @@ function initNavbarDateTime() {
         initPersonalOutreachWorkspace();
         initAgentNotesWidget();
         initAdminAccessRequests();
+        initAdminSmtpApprovals();
         initAdminUserManager();
         initTodoGoalsWidget();
         initPlannerNotifications();

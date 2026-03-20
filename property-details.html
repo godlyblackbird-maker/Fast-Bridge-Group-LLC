@@ -527,14 +527,15 @@
                                         <option value="90-100">90/100 - 90% Cost Cap, 75% ARV Max</option>
                                         <option value="custom">Custom Financing</option>
                                         <option value="cash">Cash</option>
+                                        <optgroup label="Calculated Usage">
+                                            <option value="calc-cost-cap" id="ia-cost-cap-usage-option" disabled>Cost cap usage: NA</option>
+                                            <option value="calc-arv-cap" id="ia-arv-cap-usage-option" disabled>ARV cap usage: NA</option>
+                                        </optgroup>
                                     </select>
                                 </label>
                                 <label>Hold Time (months)
                                     <input id="ia-hold-months" type="text" inputmode="numeric" autocomplete="off" value="4">
                                 </label>
-
-                                <div class="ia-readout">Cost Cap Usage: <strong id="ia-cost-cap-usage">NA</strong></div>
-                                <div class="ia-readout">ARV Cap Usage: <strong id="ia-arv-cap-usage">NA</strong></div>
 
                                 <label>Loan to ARV (%)
                                     <input id="ia-loan-to-arv" type="text" inputmode="decimal" autocomplete="off" value="80">

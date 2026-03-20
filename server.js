@@ -442,6 +442,28 @@ function initializeDatabase() {
       console.log('Access requests table ready');
     }
   });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS smtp_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      requester_name TEXT,
+      requester_email TEXT,
+      smtp_user TEXT NOT NULL,
+      smtp_pass TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at DATETIME,
+      reviewed_by_user_id INTEGER,
+      reviewed_by_name TEXT
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating smtp_requests table:', err);
+    } else {
+      console.log('SMTP requests table ready');
+    }
+  });
 }
 
 function createOAuthState(provider) {
@@ -1228,41 +1250,177 @@ app.get('/api/smtp-settings', (req, res) => {
       smtpSignature: row?.smtp_signature
     });
 
-    return res.json({
-      smtpUser: effectiveSmtpConfig.smtpUser,
-      hasPassword: effectiveSmtpConfig.hasPassword,
-      smtpSignature: effectiveSmtpConfig.smtpSignature
-    });
+    db.get(
+      `SELECT id, smtp_user, status, created_at
+       FROM smtp_requests
+       WHERE user_id = ? AND status = 'pending'
+       ORDER BY datetime(created_at) DESC, id DESC
+       LIMIT 1`,
+      [decoded.id],
+      (requestError, pendingRow) => {
+        if (requestError) return res.status(500).json({ error: 'Database error' });
+
+        return res.json({
+          smtpUser: pendingRow?.smtp_user || effectiveSmtpConfig.smtpUser,
+          hasPassword: effectiveSmtpConfig.hasPassword,
+          smtpSignature: effectiveSmtpConfig.smtpSignature,
+          pendingRequest: pendingRow ? {
+            id: pendingRow.id,
+            smtpUser: pendingRow.smtp_user,
+            status: pendingRow.status,
+            createdAt: pendingRow.created_at
+          } : null
+        });
+      }
+    );
   });
 });
 
-// POST /api/smtp-settings — save the authenticated user's Gmail SMTP settings
+// POST /api/smtp-settings — submit Gmail SMTP settings for admin approval
 app.post('/api/smtp-settings', (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) return;
 
   const smtpUser = String(req.body?.smtpUser || '').trim().toLowerCase();
   const smtpPass = String(req.body?.smtpPass || '').trim();
-  const smtpSignature = String(req.body?.smtpSignature || '').trim();
 
   if (!smtpUser) return res.status(400).json({ error: 'Gmail address is required' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(smtpUser)) return res.status(400).json({ error: 'Invalid Gmail address' });
+  if (!smtpPass) return res.status(400).json({ error: 'App Password is required' });
 
-  db.get('SELECT smtp_pass FROM users WHERE id = ?', [decoded.id], (selectError, row) => {
-    if (selectError) return res.status(500).json({ error: 'Database error' });
+  db.get(
+    `SELECT id
+     FROM smtp_requests
+     WHERE user_id = ? AND status = 'pending'
+     ORDER BY datetime(created_at) DESC, id DESC
+     LIMIT 1`,
+    [decoded.id],
+    (selectError, row) => {
+      if (selectError) return res.status(500).json({ error: 'Database error' });
 
-    const resolvedSmtpPass = smtpPass || String(row?.smtp_pass || '').trim();
-    if (!resolvedSmtpPass) return res.status(400).json({ error: 'App Password is required' });
+      const requestName = String(decoded.name || '').trim();
+      const requestEmail = String(decoded.email || '').trim().toLowerCase();
 
-    db.run(
-      'UPDATE users SET smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
-      [smtpUser, resolvedSmtpPass, smtpSignature, decoded.id],
-      (err) => {
-        if (err) return res.status(500).json({ error: 'Failed to save SMTP settings' });
-        return res.json({ success: true, message: 'Gmail settings saved' });
+      if (row?.id) {
+        db.run(
+          `UPDATE smtp_requests
+           SET requester_name = ?, requester_email = ?, smtp_user = ?, smtp_pass = ?, created_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [requestName, requestEmail, smtpUser, smtpPass, row.id],
+          (updateError) => {
+            if (updateError) return res.status(500).json({ error: 'Failed to submit Gmail approval request' });
+            return res.json({ success: true, message: 'Gmail request updated and sent for admin approval.' });
+          }
+        );
+        return;
       }
+
+      db.run(
+        'INSERT INTO smtp_requests (user_id, requester_name, requester_email, smtp_user, smtp_pass) VALUES (?, ?, ?, ?, ?)',
+        [decoded.id, requestName, requestEmail, smtpUser, smtpPass],
+        (insertError) => {
+          if (insertError) return res.status(500).json({ error: 'Failed to submit Gmail approval request' });
+          return res.json({ success: true, message: 'Gmail request submitted for admin approval.' });
+        }
+      );
+    }
+  );
+});
+
+app.get('/api/admin/smtp-requests', (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  db.all(
+    `SELECT id, user_id, requester_name, requester_email, smtp_user, smtp_pass, status, created_at, reviewed_at, reviewed_by_name
+     FROM smtp_requests
+     ORDER BY CASE WHEN status = 'pending' THEN 0 ELSE 1 END, datetime(created_at) DESC, id DESC`,
+    (err, rows) => {
+      if (err) {
+        console.error('Failed to load smtp requests:', err);
+        return res.status(500).json({ error: 'Unable to load Gmail outbox requests.' });
+      }
+
+      return res.json({ requests: rows || [] });
+    }
+  );
+});
+
+app.post('/api/admin/smtp-requests/:id/approve', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const requestId = Number.parseInt(String(req.params?.id || ''), 10);
+  if (!Number.isInteger(requestId) || requestId <= 0) {
+    return res.status(400).json({ error: 'Valid request id is required' });
+  }
+
+  try {
+    const requestRow = await dbGet('SELECT * FROM smtp_requests WHERE id = ?', [requestId]);
+    if (!requestRow) {
+      return res.status(404).json({ error: 'Gmail request not found' });
+    }
+
+    if (String(requestRow.status || '').toLowerCase() !== 'pending') {
+      return res.status(400).json({ error: 'Only pending Gmail requests can be approved' });
+    }
+
+    await dbRun(
+      'UPDATE users SET smtp_user = ?, smtp_pass = ?, smtp_signature = COALESCE(smtp_signature, \'\') WHERE id = ?',
+      [String(requestRow.smtp_user || '').trim().toLowerCase(), String(requestRow.smtp_pass || '').trim(), requestRow.user_id]
     );
-  });
+
+    await dbRun(
+      `UPDATE smtp_requests
+       SET status = 'approved', reviewed_at = CURRENT_TIMESTAMP, reviewed_by_user_id = ?, reviewed_by_name = ?
+       WHERE id = ?`,
+      [decoded.id, String(decoded.name || '').trim(), requestId]
+    );
+
+    return res.json({ success: true, message: 'Gmail outbox request approved.' });
+  } catch (error) {
+    console.error('Failed to approve smtp request:', error);
+    return res.status(500).json({ error: 'Unable to approve Gmail outbox request.' });
+  }
+});
+
+app.post('/api/admin/smtp-requests/:id/reject', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const requestId = Number.parseInt(String(req.params?.id || ''), 10);
+  if (!Number.isInteger(requestId) || requestId <= 0) {
+    return res.status(400).json({ error: 'Valid request id is required' });
+  }
+
+  try {
+    const requestRow = await dbGet('SELECT * FROM smtp_requests WHERE id = ?', [requestId]);
+    if (!requestRow) {
+      return res.status(404).json({ error: 'Gmail request not found' });
+    }
+
+    if (String(requestRow.status || '').toLowerCase() !== 'pending') {
+      return res.status(400).json({ error: 'Only pending Gmail requests can be rejected' });
+    }
+
+    await dbRun(
+      `UPDATE smtp_requests
+       SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP, reviewed_by_user_id = ?, reviewed_by_name = ?
+       WHERE id = ?`,
+      [decoded.id, String(decoded.name || '').trim(), requestId]
+    );
+
+    return res.json({ success: true, message: 'Gmail outbox request rejected.' });
+  } catch (error) {
+    console.error('Failed to reject smtp request:', error);
+    return res.status(500).json({ error: 'Unable to reject Gmail outbox request.' });
+  }
 });
 
 // POST /api/test-smtp — sends a test email to verify the user's Gmail SMTP settings

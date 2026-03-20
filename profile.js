@@ -1342,9 +1342,7 @@
   (function initSmtpSettings() {
     const smtpUserInput  = document.getElementById('smtp-gmail-user');
     const smtpPassInput  = document.getElementById('smtp-gmail-pass');
-    const smtpSignatureInput = document.getElementById('smtp-gmail-signature');
     const smtpSaveBtn    = document.getElementById('smtp-save-btn');
-    const smtpTestBtn    = document.getElementById('smtp-test-btn');
     const smtpStatusMsg  = document.getElementById('smtp-status-msg');
     const smtpPassToggle = document.getElementById('smtp-pass-toggle');
     const smtpEyeIcon    = document.getElementById('smtp-eye-icon');
@@ -1360,7 +1358,7 @@
       localStorage.setItem('smtpSettings', JSON.stringify({
         smtpUser: String(settings?.smtpUser || '').trim(),
         hasPassword: Boolean(settings?.hasPassword),
-        smtpSignature: String(settings?.smtpSignature || '').trim()
+        pendingRequest: settings?.pendingRequest || null
       }));
     }
 
@@ -1398,12 +1396,13 @@
         smtpHasSavedPassword = Boolean(data.hasPassword);
         if (smtpUserInput && data.smtpUser) smtpUserInput.value = data.smtpUser;
         if (smtpPassInput && data.hasPassword) smtpPassInput.placeholder = '••••••••••••••••';
-        if (smtpSignatureInput) smtpSignatureInput.value = String(data.smtpSignature || '').trim();
         cacheSmtpSettings(data);
-        if (data.smtpUser && data.hasPassword) {
+        if (data.pendingRequest) {
+          setSmtpStatus(`Pending admin approval for ${data.pendingRequest.smtpUser}.`, '');
+        } else if (data.smtpUser && data.hasPassword) {
           setSmtpStatus('Gmail account configured ✓', 'success');
         } else {
-          setSmtpStatus('No Gmail account saved yet.', '');
+          setSmtpStatus('No Gmail approval request submitted yet.', '');
         }
       } catch (e) {
         // Silently ignore — server may not be available yet
@@ -1418,24 +1417,23 @@
 
         const smtpUser = smtpUserInput ? smtpUserInput.value.trim() : '';
         const smtpPass = smtpPassInput ? smtpPassInput.value.trim() : '';
-  const smtpSignature = smtpSignatureInput ? smtpSignatureInput.value.trim() : '';
 
         if (!smtpUser) { setSmtpStatus('Enter your Gmail address.', 'error'); return; }
-  if (!smtpPass && !smtpHasSavedPassword) { setSmtpStatus('Enter your Gmail App Password.', 'error'); return; }
+        if (!smtpPass) { setSmtpStatus('Enter your Gmail App Password.', 'error'); return; }
 
         smtpSaveBtn.disabled = true;
-        smtpSaveBtn.textContent = 'Saving…';
+        smtpSaveBtn.textContent = 'Submitting…';
         setSmtpStatus('', '');
 
         try {
           const res = await fetch('/api/smtp-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ smtpUser, smtpPass, smtpSignature })
+            body: JSON.stringify({ smtpUser, smtpPass })
           });
           const data = await res.json();
           if (res.ok && data.success) {
-            setSmtpStatus('Gmail settings saved successfully ✓', 'success');
+            setSmtpStatus('Gmail request submitted for admin approval ✓', 'success');
             if (smtpPassInput) smtpPassInput.value = '';
             await loadSmtpSettings();
           } else {
@@ -1445,37 +1443,7 @@
           setSmtpStatus('Network error — could not save settings.', 'error');
         } finally {
           smtpSaveBtn.disabled = false;
-          smtpSaveBtn.textContent = 'Save Gmail Settings';
-        }
-      });
-    }
-
-    // Send test email
-    if (smtpTestBtn) {
-      smtpTestBtn.addEventListener('click', async function () {
-        const token = getToken();
-        if (!token) { setSmtpStatus('You must be logged in to test.', 'error'); return; }
-
-        smtpTestBtn.disabled = true;
-        smtpTestBtn.textContent = 'Sending…';
-        setSmtpStatus('', '');
-
-        try {
-          const res = await fetch('/api/test-smtp', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (res.ok && data.success) {
-            setSmtpStatus(data.message + ' — check your inbox ✓', 'success');
-          } else {
-            setSmtpStatus(data.error || 'Test failed.', 'error');
-          }
-        } catch (e) {
-          setSmtpStatus('Network error — could not send test email.', 'error');
-        } finally {
-          smtpTestBtn.disabled = false;
-          smtpTestBtn.textContent = 'Send Test Email';
+          smtpSaveBtn.textContent = 'Submit For Admin Approval';
         }
       });
     }

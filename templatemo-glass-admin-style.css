@@ -8274,6 +8274,41 @@ a {
     min-height: 100px;
 }
 
+.smtp-quick-guide {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.smtp-quick-guide-copy {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+.smtp-quick-guide-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.smtp-quick-guide-links a {
+    color: rgb(var(--accent-light-rgb));
+    text-decoration: underline;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.admin-smtp-secret {
+    width: 100%;
+    margin-top: 8px;
+}
+
 .btn-group {
     display: flex;
     gap: 12px;
