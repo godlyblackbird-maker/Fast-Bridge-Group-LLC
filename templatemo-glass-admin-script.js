@@ -6654,6 +6654,7 @@ function initNavbarDateTime() {
 
         let html2CanvasLoaderPromise = null;
         let jsPdfLoaderPromise = null;
+        let agreementLogoDataUrlPromise = null;
         let flyerContacts = [];
         const FLYER_TEMPLATES = {
             'we-want-your-home-fixer': {
@@ -6920,6 +6921,29 @@ function initNavbarDateTime() {
             });
 
             return jsPdfLoaderPromise;
+        }
+
+        function loadAgreementLogoDataUrl() {
+            if (agreementLogoDataUrlPromise) {
+                return agreementLogoDataUrlPromise;
+            }
+
+            agreementLogoDataUrlPromise = fetch('png photos/Fast Logo - 111.png')
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Logo file could not be loaded.');
+                    }
+                    return response.blob();
+                })
+                .then((blob) => new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result || ''));
+                    reader.onerror = () => reject(new Error('Logo file could not be read.'));
+                    reader.readAsDataURL(blob);
+                }))
+                .catch(() => '');
+
+            return agreementLogoDataUrlPromise;
         }
 
         async function captureFlyerCanvas() {
@@ -7341,6 +7365,8 @@ function initNavbarDateTime() {
 
             try {
                 const JsPdfConstructor = await loadJsPdf();
+                const agreementLogoDataUrl = await loadAgreementLogoDataUrl();
+                const agreementData = buildAgreementData();
                 const { sections, fileName } = buildAgreementSections();
                 const pdf = new JsPdfConstructor({
                     orientation: 'portrait',
@@ -7363,6 +7389,60 @@ function initNavbarDateTime() {
                     cursorY = 58;
                 }
 
+                function renderSignatureBlock(title, fields) {
+                    const blockX = marginX;
+                    const blockWidth = contentWidth;
+                    const blockPadding = 18;
+                    const lineGap = 18;
+                    const rowGap = 20;
+                    const signatureLineGap = 24;
+                    const blockHeight = 168;
+
+                    ensurePage(blockHeight + 14);
+
+                    pdf.setDrawColor(205, 213, 225);
+                    pdf.setFillColor(249, 250, 251);
+                    pdf.roundedRect(blockX, cursorY, blockWidth, blockHeight, 14, 14, 'FD');
+
+                    let blockY = cursorY + blockPadding;
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(12);
+                    pdf.text(title, blockX + blockPadding, blockY);
+                    blockY += rowGap;
+
+                    fields.forEach((field) => {
+                        if (field.type === 'signature') {
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setFontSize(10);
+                            pdf.text(field.label, blockX + blockPadding, blockY);
+                            blockY += 8;
+
+                            pdf.setDrawColor(148, 163, 184);
+                            pdf.setLineWidth(1);
+                            pdf.line(blockX + blockPadding, blockY, blockX + blockWidth - blockPadding, blockY);
+
+                            if (String(field.value || '').trim()) {
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setFontSize(10);
+                                pdf.text(String(field.value), blockX + blockPadding + 6, blockY - 6);
+                            }
+
+                            blockY += signatureLineGap;
+                            return;
+                        }
+
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(10);
+                        pdf.text(`${field.label}:`, blockX + blockPadding, blockY);
+
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.text(String(field.value || ''), blockX + blockPadding + 78, blockY);
+                        blockY += lineGap;
+                    });
+
+                    cursorY += blockHeight + 16;
+                }
+
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(18);
                 pdf.text('FAST BRIDGE GROUP, LLC', marginX, cursorY);
@@ -7373,7 +7453,40 @@ function initNavbarDateTime() {
                 pdf.text('License Agreement / Data Use Agreement PDF Export', marginX, cursorY);
                 cursorY += 24;
 
+                if (agreementLogoDataUrl) {
+                    const logoSize = 180;
+                    const logoX = (pageWidth - logoSize) / 2;
+                    ensurePage(logoSize + 24);
+                    pdf.addImage(agreementLogoDataUrl, 'PNG', logoX, cursorY, logoSize, logoSize, undefined, 'FAST');
+                    cursorY += logoSize + 20;
+                }
+
                 sections.forEach((section, sectionIndex) => {
+                    if (section.heading === 'Signature Blocks') {
+                        ensurePage(42);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(12);
+                        pdf.text(section.heading, marginX, cursorY);
+                        cursorY += 24;
+
+                        renderSignatureBlock('Brokerage Signature', [
+                            { label: 'Name', value: agreementData.brokerageSignerName },
+                            { label: 'Title', value: agreementData.brokerageSignerTitle },
+                            { label: 'License #', value: agreementData.brokerageLicenseNumber },
+                            { label: 'Date', value: agreementData.brokerageSignDate },
+                            { label: 'Signature', value: agreementData.brokerageSignature, type: 'signature' }
+                        ]);
+
+                        renderSignatureBlock('FAST BRIDGE GROUP, LLC Signature', [
+                            { label: 'Name', value: agreementData.fastbridgeSignerName },
+                            { label: 'Title', value: agreementData.fastbridgeSignerTitle },
+                            { label: 'Date', value: agreementData.fastbridgeSignDate },
+                            { label: 'Signature', value: agreementData.fastbridgeSignature, type: 'signature' }
+                        ]);
+
+                        return;
+                    }
+
                     const bodyLines = [];
                     section.lines.forEach((line) => {
                         if (!String(line || '').trim()) {
