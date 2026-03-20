@@ -10094,6 +10094,82 @@ function initNavbarDateTime() {
                 return investorAttachmentPackages.find((entry) => entry.folderName === selectedFolder) || null;
             }
 
+            function getSelectedInvestorAttachmentProfile() {
+                const selectedPackage = getSelectedInvestorAttachmentPackage();
+                return selectedPackage && selectedPackage.offerProfile && typeof selectedPackage.offerProfile === 'object'
+                    ? selectedPackage.offerProfile
+                    : null;
+            }
+
+            function ensureSelectOption(selectEl, value, label) {
+                if (!selectEl || !value) {
+                    return;
+                }
+
+                const normalizedValue = String(value).trim();
+                const existingOption = Array.from(selectEl.options).find((option) => String(option.value || '').trim() === normalizedValue);
+                if (existingOption) {
+                    if (label && !String(existingOption.textContent || '').trim()) {
+                        existingOption.textContent = label;
+                    }
+                    return;
+                }
+
+                const option = document.createElement('option');
+                option.value = normalizedValue;
+                option.textContent = String(label || value).trim();
+                selectEl.appendChild(option);
+            }
+
+            function setFieldValue(id, value) {
+                const field = document.getElementById(id);
+                if (!field || value === undefined || value === null || value === '') {
+                    return;
+                }
+
+                field.value = String(value);
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            function applyInvestorAttachmentProfile(profile) {
+                if (!profile || typeof profile !== 'object') {
+                    return;
+                }
+
+                if (entitySelect && profile.entityValue && profile.entityLabel) {
+                    ensureSelectOption(entitySelect, profile.entityValue, profile.entityLabel);
+                    entitySelect.value = profile.entityValue;
+                    entitySelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                setFieldValue('offer-deposit-amount-mode', profile.depositMode);
+                setFieldValue('offer-deposit-flat-fee', profile.depositAmount);
+                setFieldValue('offer-close-escrow-days', profile.closeEscrowDays);
+                setFieldValue('offer-type', profile.offerType);
+                setFieldValue('offer-appraisal', profile.appraisal);
+                setFieldValue('offer-inspection-period', profile.inspectionPeriod);
+                setFieldValue('offer-termite-inspection', profile.termiteInspection);
+                setFieldValue('offer-escrow-fees', profile.escrowFees);
+                setFieldValue('offer-title-fees', profile.titleFees);
+                setFieldValue('offer-escrow', profile.escrowCompany);
+                setFieldValue('offer-title-company', profile.titleCompany);
+                setFieldValue('offer-other-terms', profile.otherTermsSummary);
+
+                if (profile.recipientName) {
+                    recipientNameInput.value = String(profile.recipientName).trim();
+                }
+                if (profile.recipientEmail) {
+                    recipientEmailInput.value = String(profile.recipientEmail).trim();
+                }
+
+                renderDocumentSummary();
+                if (includeTermsToggle.checked) {
+                    refreshPreparedEmail({ includeTerms: true, preserveManualEdits: false });
+                }
+                saveDraft();
+            }
+
             function getSelectedInvestorAttachmentPaths() {
                 const selectedPackage = getSelectedInvestorAttachmentPackage();
                 if (!selectedPackage || !Array.isArray(selectedPackage.files)) {
@@ -10260,16 +10336,17 @@ function initNavbarDateTime() {
 
             function buildDraftFromSelection(options = {}) {
                 const includeTerms = options.includeTerms !== false;
+                const investorProfile = getSelectedInvestorAttachmentProfile();
                 const senderName = senderNameInput.value.trim();
                 const recipientName = recipientNameInput.value.trim();
                 const recipientEmail = recipientEmailInput.value.trim();
-                const signerName = getOfferSignerName() || senderName || 'N/A';
-                const entityText = getOfferSelectText('offer-entity') || 'Selected Entity';
+                const signerName = String(investorProfile?.signerName || getOfferSignerName() || senderName || 'N/A').trim();
+                const entityText = String(investorProfile?.entityLabel || getOfferSelectText('offer-entity') || 'Selected Entity').trim();
                 const categoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.label || 'Offer Terms';
                 const subcategoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.subcategories[getEffectiveSubcategory()]?.label || 'General';
                 const templateLabel = templateSelect.selectedOptions[0] ? templateSelect.selectedOptions[0].textContent.trim() : 'Standard Template';
                 const purchasePrice = getOfferFieldValue('offer-purchase-price') || 'N/A';
-                const closeEscrowDays = getOfferFieldValue('offer-close-escrow-days') || 'N/A';
+                const closeEscrowDays = String(investorProfile?.closeEscrowNote || getOfferFieldValue('offer-close-escrow-days') || 'N/A').trim();
                 const depositMode = getOfferFieldValue('offer-deposit-amount-mode') === 'percentage' ? 'Percentage' : 'Flat Fee';
                 const depositAmountValue = getOfferFieldValue('offer-deposit-flat-fee');
                 const depositAmount = depositAmountValue ? (depositMode === 'Percentage' ? `${depositAmountValue}%` : depositAmountValue) : 'N/A';
@@ -10278,12 +10355,22 @@ function initNavbarDateTime() {
                 const termite = getOfferSelectText('offer-termite-inspection') || 'N/A';
                 const escrow = getOfferFieldValue('offer-escrow') || 'TBD';
                 const titleCompany = getOfferFieldValue('offer-title-company') || 'TBD';
+                const escrowFees = getOfferSelectText('offer-escrow-fees') || 'N/A';
+                const titleFees = getOfferSelectText('offer-title-fees') || 'N/A';
                 const offerType = getOfferSelectText('offer-type') || subcategoryLabel;
-                const otherTerms = getOfferFieldValue('offer-other-terms') || 'None listed.';
+                const otherTerms = getOfferFieldValue('offer-other-terms') || investorProfile?.otherTermsSummary || 'None listed.';
                 const sellerCompEnabled = document.getElementById('offer-seller-comp-enabled')?.checked;
                 const sellerCompPercent = getOfferFieldValue('offer-seller-comp-percent');
                 const sellerCompAmount = getOfferFieldValue('offer-seller-comp-amount');
                 const documents = getDocumentSummaryParts();
+                const investorAdditionalTerms = Array.isArray(investorProfile?.additionalTerms)
+                    ? investorProfile.additionalTerms.map((line) => String(line || '').trim()).filter(Boolean)
+                    : [];
+                const investorCustomSections = Array.isArray(investorProfile?.customSections)
+                    ? investorProfile.customSections
+                    : [];
+                const assignmentVerbiage = String(investorProfile?.assignmentVerbiage || '').trim()
+                    || 'EMD to be fully refundable in the instance of seller/assignor non-performance including property not being delivered vacant, not having clear and marketable title, or not in similar condition as when this assignment was executed. Buyer will not assume any payoffs, liens, or assessments. Buyer to walk through on date of funding to verify occupancy status and condition. Any personal property remaining at the property at close of escrow is expressly abandoned by the seller and otherwise released to the buyer.';
 
                 const subject = `${categoryLabel} | ${propertyAddress || 'Property'} | ${entityText}`;
 
@@ -10294,32 +10381,56 @@ function initNavbarDateTime() {
                 ];
 
                 if (includeTerms) {
-                    lines.push(
+                    const offerSummaryLines = [
                         '',
                         'Offer Summary',
                         `• Sender: ${senderName || 'FAST BRIDGE GROUP'}`,
                         `• Recipient: ${recipientName || recipientEmail || 'Listing Agent'}`,
                         `• Offer type: ${offerType}`,
                         `• Purchase price: ${purchasePrice}`,
-                        `• Close of escrow: ${closeEscrowDays} days`,
+                        `• Close of escrow: ${closeEscrowDays}${/day/i.test(closeEscrowDays) ? '' : ' days'}`,
                         `• Deposit (${depositMode}): ${depositAmount}`,
-                        `• Appraisal: ${appraisal}`,
-                        `• Inspection period: ${inspection}`,
-                        `• Termite: ${termite}`,
+                        `• Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite}`}`,
+                        `• Escrow fees: ${escrowFees}`,
+                        `• Title fees: ${titleFees}`,
                         `• Escrow: ${escrow}`,
                         `• Title company: ${titleCompany}`,
+                        investorProfile?.closingCostSummary ? `• Closing costs: ${investorProfile.closingCostSummary}` : '',
                         `• Additional terms: ${otherTerms}`,
-                        `• Buyer: Fast Bridge Group, LLC`,
+                        `• Buyer / vesting: ${entityText}`,
                         `• Signer: ${signerName}`,
                         sellerCompEnabled
                             ? `• Seller compensation: ${sellerCompPercent ? `${sellerCompPercent}%` : ''}${sellerCompPercent && sellerCompAmount ? ' | ' : ''}${sellerCompAmount ? `$${sellerCompAmount}` : ''}`
                             : '• Seller compensation: Not included'
-                    );
+                    ].filter(Boolean);
+                    lines.push(...offerSummaryLines);
+
+                    if (investorAdditionalTerms.length > 0) {
+                        lines.push('', 'Investor Specific Terms');
+                        investorAdditionalTerms.forEach((term) => {
+                            lines.push(`• ${term}`);
+                        });
+                    }
+
+                    investorCustomSections.forEach((section) => {
+                        const sectionHeading = String(section?.heading || '').trim();
+                        const sectionLines = Array.isArray(section?.lines)
+                            ? section.lines.map((line) => String(line || '').trim()).filter(Boolean)
+                            : [];
+                        if (!sectionHeading || sectionLines.length === 0) {
+                            return;
+                        }
+
+                        lines.push('', sectionHeading);
+                        sectionLines.forEach((line) => {
+                            lines.push(`• ${line}`);
+                        });
+                    });
 
                     lines.push(
                         '',
                         'Assignment / Contract Verbiage',
-                        '“EMD to be fully refundable in the instance of seller/assignor non-performance including property not being delivered vacant, not having clear and marketable title, or not in similar condition as when this assignment was executed. Buyer will not assume any payoffs, liens, or assessments. Buyer to walk through on date of funding to verify occupancy status and condition. Any personal property remaining at the property at close of escrow is expressly abandoned by the seller and otherwise released to the buyer.”'
+                        `“${assignmentVerbiage.replace(/^“|”$/g, '')}”`
                     );
                 }
 
@@ -10421,7 +10532,10 @@ function initNavbarDateTime() {
             }
             syncOpenButtonLabel();
             populateInvestorAttachmentOptions(savedDraft.investorAttachmentFolder || '');
-            loadInvestorAttachmentPackages().finally(renderDocumentSummary);
+            loadInvestorAttachmentPackages().finally(() => {
+                applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
+                renderDocumentSummary();
+            });
 
             fillOptions(categorySelect, Object.keys(OFFER_EMAIL_LIBRARY).map(value => ({
                 value,
@@ -10448,6 +10562,7 @@ function initNavbarDateTime() {
 
             templateSelect.addEventListener('change', saveDraft);
             investorAttachmentsSelect.addEventListener('change', () => {
+                applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
                 renderDocumentSummary();
                 saveDraft();
             });

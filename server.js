@@ -1124,6 +1124,61 @@ function resolveInvestorAttachmentPath(relativePath) {
   return absolutePath;
 }
 
+const INVESTOR_ATTACHMENT_PACKAGE_METADATA = {
+  Brad: {
+    label: 'Brad - Revive SO Cal LLC',
+    offerProfile: {
+      entityValue: 'revive-socal-llc',
+      entityLabel: 'Revive SoCal LLC',
+      signerName: 'Nick Battisto',
+      recipientName: 'Brad',
+      recipientEmail: 'brad@prophethomes.com',
+      depositMode: 'flat-fee',
+      depositAmount: '10000',
+      closeEscrowDays: '21',
+      closeEscrowNote: '21 days or sooner',
+      offerType: 'cash',
+      appraisal: 'no-appraisal-contingencies',
+      inspectionPeriod: '7',
+      termiteInspection: 'no-termite',
+      escrowFees: 'buyer',
+      titleFees: 'buyer',
+      escrowCompany: 'Prominent Escrow',
+      titleCompany: 'First Integrity Title',
+      otherTermsSummary: 'Property to be delivered vacant. Buyer confirms vacancy before wiring funds and may fund with a non-contingent line of credit.',
+      contingencySummary: '7 day physical inspection only. No loan, no appraisal, and no home warranty contingencies.',
+      closingCostSummary: 'Buyer to pay seller\'s escrow and title traditional closing costs when buyer chooses providers; otherwise escrow/title to be split 50/50.',
+      additionalTerms: [
+        'Buyers are licensed real estate brokers/agents in multiple states, including CA.',
+        'Buyers are investors who intend to purchase real estate and utilize all investment strategies for the subject property.',
+        'Property to be delivered vacant.',
+        'Buyer to confirm vacancy before wiring closing funds.',
+        'Buyer may fund with a non-contingent line of credit.',
+        'Buyer may pay invoices through escrow at buyers sole expense and approval.'
+      ],
+      customSections: [
+        {
+          heading: 'Escrow / Title Options',
+          lines: [
+            'Prominent Escrow: buyer to pay for seller\'s escrow and title traditional closing costs if buyer chooses providers; otherwise 50/50 split.',
+            'First Integrity Title: buyer to pay for seller\'s escrow and title traditional closing costs if buyer chooses providers; otherwise 50/50 split.'
+          ]
+        }
+      ],
+      assignmentVerbiage: 'Buyers are licensed real estate brokers/agents in multiple states, including CA. Buyers are investors who intend to purchase real estate and utilize all investment strategies for the subject property. Property to be delivered vacant. Buyer to confirm vacancy before wiring closing funds. Buyer may fund with a non-contingent line of credit. Buyer may pay invoices through escrow at buyers sole expense and approval.'
+    }
+  }
+};
+
+function getInvestorAttachmentPackageMetadata(folderName) {
+  const metadata = INVESTOR_ATTACHMENT_PACKAGE_METADATA[folderName];
+  if (!metadata || typeof metadata !== 'object') {
+    return null;
+  }
+
+  return JSON.parse(JSON.stringify(metadata));
+}
+
 function listInvestorAttachmentPackages() {
   if (!fs.existsSync(INVESTOR_ATTACHMENTS_ROOT)) {
     return [];
@@ -1133,6 +1188,7 @@ function listInvestorAttachmentPackages() {
     .filter((entry) => entry.isDirectory())
     .map((entry) => {
       const folderName = entry.name;
+      const metadata = getInvestorAttachmentPackageMetadata(folderName);
       const folderPath = path.join(INVESTOR_ATTACHMENTS_ROOT, folderName);
       const files = fs.readdirSync(folderPath, { withFileTypes: true })
         .filter((fileEntry) => fileEntry.isFile() && isAllowedInvestorAttachmentExtension(path.extname(fileEntry.name)))
@@ -1143,9 +1199,10 @@ function listInvestorAttachmentPackages() {
 
       return {
         folderName,
-        label: folderName,
+        label: metadata && metadata.label ? metadata.label : folderName,
         fileCount: files.length,
-        files
+        files,
+        offerProfile: metadata && metadata.offerProfile ? metadata.offerProfile : null
       };
     })
     .filter((entry) => entry.files.length > 0)
