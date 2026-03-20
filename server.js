@@ -114,8 +114,36 @@ function resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature }
   const perUserEnvConfig = getPerUserSmtpEnvConfig(normalizedDbUser || normalizedEmail);
   const fallbackGlobalUser = getFirstConfiguredEnvValue('SMTP_USER');
   const fallbackGlobalPass = getFirstConfiguredEnvValue('SMTP_PASS');
-  const resolvedUser = String(smtpUser || perUserEnvConfig.smtpUser || fallbackGlobalUser || '').trim().toLowerCase();
-  const resolvedPass = String(smtpPass || perUserEnvConfig.smtpPass || fallbackGlobalPass || '').trim();
+  const dbUser = String(smtpUser || '').trim().toLowerCase();
+  const dbPass = String(smtpPass || '').trim();
+  const perUserEnvUser = String(perUserEnvConfig.smtpUser || '').trim().toLowerCase();
+  const perUserEnvPass = String(perUserEnvConfig.smtpPass || '').trim();
+  const globalUser = String(fallbackGlobalUser || '').trim().toLowerCase();
+  const globalPass = String(fallbackGlobalPass || '').trim();
+
+  let resolvedUser = '';
+  let resolvedPass = '';
+
+  if (dbUser && dbPass) {
+    resolvedUser = dbUser;
+    resolvedPass = dbPass;
+  } else if (perUserEnvUser && perUserEnvPass) {
+    resolvedUser = perUserEnvUser;
+    resolvedPass = perUserEnvPass;
+  } else if (dbUser && globalUser && dbUser === globalUser && globalPass) {
+    resolvedUser = dbUser;
+    resolvedPass = globalPass;
+  } else if (perUserEnvUser && globalUser && perUserEnvUser === globalUser && globalPass) {
+    resolvedUser = perUserEnvUser;
+    resolvedPass = globalPass;
+  } else if (globalUser && globalPass) {
+    resolvedUser = globalUser;
+    resolvedPass = globalPass;
+  } else {
+    resolvedUser = dbUser || perUserEnvUser || globalUser;
+    resolvedPass = dbPass || perUserEnvPass || globalPass;
+  }
+
   const resolvedSignature = String(smtpSignature || perUserEnvConfig.smtpSignature || '').trim();
 
   return {
@@ -773,6 +801,43 @@ function formatAdminECardLabel(ownerName) {
 
 const ADMIN_ECARD_ROOT = path.resolve(__dirname, 'USERS');
 
+function listAdminECardImageCandidates(folderPath, relativeSegments = []) {
+  if (!fs.existsSync(folderPath)) {
+    return [];
+  }
+
+  return fs.readdirSync(folderPath, { withFileTypes: true })
+    .flatMap((entry) => {
+      const entryPath = path.join(folderPath, entry.name);
+      const nextRelativeSegments = [...relativeSegments, entry.name];
+
+      if (entry.isDirectory()) {
+        return listAdminECardImageCandidates(entryPath, nextRelativeSegments);
+      }
+
+      if (!entry.isFile()) {
+        return [];
+      }
+
+      const extension = path.extname(entry.name).toLowerCase();
+      if (!['.jpg', '.jpeg', '.png', '.webp'].includes(extension)) {
+        return [];
+      }
+
+      const relativePath = nextRelativeSegments.join('/');
+      if (!/e\s*-?\s*card/i.test(relativePath)) {
+        return [];
+      }
+
+      return [{
+        fileName: entry.name,
+        relativePath,
+        depth: nextRelativeSegments.length,
+        nestedECardFolder: relativeSegments.some((segment) => /e\s*-?\s*card/i.test(segment))
+      }];
+    });
+}
+
 function listAdminECardFiles() {
   if (!fs.existsSync(ADMIN_ECARD_ROOT)) {
     return [];
@@ -783,18 +848,31 @@ function listAdminECardFiles() {
     .map((entry) => {
       const folderName = entry.name;
       const folderPath = path.join(ADMIN_ECARD_ROOT, folderName);
-      const files = fs.readdirSync(folderPath, { withFileTypes: true })
-        .filter((fileEntry) => fileEntry.isFile())
-        .map((fileEntry) => fileEntry.name)
-        .filter((fileName) => ['.jpg', '.jpeg', '.png', '.webp'].includes(path.extname(fileName).toLowerCase()))
-        .filter((fileName) => /e\s*-?\s*card/i.test(fileName))
+      const files = listAdminECardImageCandidates(folderPath)
         .sort((left, right) => {
-          const leftPriority = /updated/i.test(left) ? 0 : 1;
-          const rightPriority = /updated/i.test(right) ? 0 : 1;
+          const leftUpdatedPriority = /updated/i.test(left.relativePath) ? 0 : 1;
+          const rightUpdatedPriority = /updated/i.test(right.relativePath) ? 0 : 1;
+          if (leftUpdatedPriority !== rightUpdatedPriority) {
+            return leftUpdatedPriority - rightUpdatedPriority;
+          }
+
+          const leftNestedPriority = left.nestedECardFolder ? 0 : 1;
+          const rightNestedPriority = right.nestedECardFolder ? 0 : 1;
+          if (leftNestedPriority !== rightNestedPriority) {
+            return leftNestedPriority - rightNestedPriority;
+          }
+
+          if (left.depth !== right.depth) {
+            return right.depth - left.depth;
+          }
+
+          const leftPriority = /updated/i.test(left.fileName) ? 0 : 1;
+          const rightPriority = /updated/i.test(right.fileName) ? 0 : 1;
           if (leftPriority !== rightPriority) {
             return leftPriority - rightPriority;
           }
-          return left.localeCompare(right);
+
+          return left.relativePath.localeCompare(right.relativePath);
         });
 
       if (files.length === 0) {
@@ -802,16 +880,16 @@ function listAdminECardFiles() {
       }
 
       const selectedFile = files[0];
-      const relativePath = `USERS/${folderName}/${selectedFile}`.replace(/\\/g, '/');
+      const relativePath = `USERS/${folderName}/${selectedFile.relativePath}`.replace(/\\/g, '/');
       const ownerName = getAdminECardOwnerName(folderName);
       return {
         folderName,
         ownerName,
         label: formatAdminECardLabel(ownerName),
-        fileName: selectedFile,
+        fileName: selectedFile.fileName,
         relativePath,
         normalizedFolderName: normalizeAdminECardMatchValue(folderName),
-        normalizedFileName: normalizeAdminECardMatchValue(selectedFile)
+        normalizedFileName: normalizeAdminECardMatchValue(selectedFile.fileName)
       };
     })
     .filter(Boolean);

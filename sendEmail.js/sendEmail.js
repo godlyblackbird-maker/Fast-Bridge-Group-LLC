@@ -108,11 +108,9 @@ function sendAgentEmail({ fromName, fromEmail, toName, toEmail, subject, body, h
   if (!resolvedUser) return Promise.reject(new Error('No Gmail account configured. Add your Gmail SMTP settings in Settings → Profile.'));
   if (!resolvedPass) return Promise.reject(new Error('No Gmail App Password configured. Add your Gmail SMTP settings in Settings → Profile.'));
   if (!to) return Promise.reject(new Error('Recipient email is required'));
-  if (requestedFromEmail && normalizedRequestedFromEmail !== normalizedResolvedUser) {
-    return Promise.reject(new Error(`The sender email must match the configured SMTP account (${resolvedUser}) to send from that address.`));
-  }
-
-  const actualFromEmail = requestedFromEmail || resolvedUser;
+  const actualFromEmail = normalizedRequestedFromEmail && normalizedRequestedFromEmail === normalizedResolvedUser
+    ? requestedFromEmail
+    : resolvedUser;
 
   const mailOptions = {
     from: `"${String(fromName || 'Real Estate Investor').trim()}" <${actualFromEmail}>`,
@@ -120,6 +118,10 @@ function sendAgentEmail({ fromName, fromEmail, toName, toEmail, subject, body, h
     subject: String(subject || '(No Subject)').trim(),
     text: appendSignatureToText(body, resolvedSignature)
   };
+
+  if (requestedFromEmail && normalizedRequestedFromEmail !== normalizedResolvedUser) {
+    mailOptions.replyTo = requestedFromEmail;
+  }
 
   const html = String(htmlBody || '').trim();
   if (html) {

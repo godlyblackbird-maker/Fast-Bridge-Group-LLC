@@ -11182,9 +11182,6 @@ function initNavbarDateTime() {
                     `Offer Price: ${formatMoney(offerPrice)}`,
                     `Total Purchase Costs: ${formatMoney(invTotalPurchaseCosts)} (${formatPercent((invTotalPurchaseCosts / arvBasis) * 100)})`,
                     `Total Development Cost: ${formatMoney(invTotalDevelopmentCost)} (${formatPercent((invTotalDevelopmentCost / arvBasis) * 100)})`,
-                    `Cash Required To Close: ${formatMoney(invCashRequiredToClose)}`,
-                    `Cash In w/ Payments: ${formatMoney(invTotalCashInvestment)}`,
-                    `Gross Profit To Seller: ${formatMoney(grossProfitToSeller)}`,
                     `Net Profit: ${formatMoney(invNetProfit)} (${formatPercent((invNetProfit / arvBasis) * 100)})`,
                     `Cash Profit: ${formatMoney(invCashProfit)} (${formatPercent((invCashProfit / arvBasis) * 100)})`
                 ].join('\n');
