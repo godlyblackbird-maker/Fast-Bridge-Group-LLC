@@ -438,14 +438,16 @@
                                 <div class="ia-readout">Total Purchase Cost: <strong id="ia-total-acquisition">$0</strong></div>
                                 <div class="ia-readout">Purchase % ARV: <strong id="ia-total-acquisition-arv">0.00%</strong></div>
 
-                                <label>After Repair Value (ARV)
+                                <label class="ia-span-2">After Repair Value (ARV)
                                     <input id="ia-arv" type="text" inputmode="numeric" autocomplete="off" value="694592">
                                 </label>
-                                <label>Sell-Side Closing (%)
-                                    <input id="ia-sell-side-percent" type="text" inputmode="decimal" autocomplete="off" value="4">
-                                </label>
+                                <div class="ia-grid ia-sell-side-row ia-span-2">
+                                    <label>Sell-Side Closing (%)
+                                        <input id="ia-sell-side-percent" type="text" inputmode="decimal" autocomplete="off" value="4">
+                                    </label>
 
-                                <div class="ia-readout ia-span-2">Sell-Side Closing Amount: <strong id="ia-sell-side-amount">$0</strong></div>
+                                    <div class="ia-readout">Sell-Side Closing Amount: <strong id="ia-sell-side-amount">$0</strong></div>
+                                </div>
                             </div>
                         </section>
 
@@ -485,11 +487,13 @@
                                 <div class="ia-readout ia-span-2 ia-strike-zone-readout">
                                     <span class="ia-strike-zone-label">Strike Zone Max Buy %</span>
                                     <strong id="ia-strike-zone-pct">NA</strong>
-                                    <div class="ia-strike-zone-meta">
-                                        <span>Total Acquisition: <strong id="ia-strike-zone-acq">$0</strong></span>
-                                        <span>Acquisition %: <strong id="ia-strike-zone-acq-pct">0.00%</strong></span>
+                                    <div class="ia-strike-zone-pill">
+                                        <span class="ia-strike-zone-pill-line">Total Acquisition:</span>
+                                        <strong id="ia-strike-zone-acq">$0</strong>
+                                        <span class="ia-strike-zone-pill-line">Acquisition %:</span>
+                                        <strong id="ia-strike-zone-acq-pct">0.00%</strong>
+                                        <small id="ia-strike-zone-gap">Gap to strike zone: NA</small>
                                     </div>
-                                    <small id="ia-strike-zone-gap">Gap to strike zone: NA</small>
                                     <small id="ia-strike-zone-area">Area: NA</small>
                                 </div>
                                 <div class="ia-readout">Offer % of ARV: <strong id="ia-offer-price-arv">0.00%</strong></div>

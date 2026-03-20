@@ -10546,6 +10546,10 @@ select.form-input option:checked,
     grid-column: span 2;
 }
 
+.ia-sell-side-row {
+    align-items: stretch;
+}
+
 .ia-calc-btn {
     flex: 1 1 100%;
     width: 100%;
@@ -10575,19 +10579,29 @@ select.form-input option:checked,
     gap: 4px;
 }
 
-.ia-strike-zone-meta {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    font-size: 12px;
-    color: inherit;
-    opacity: 0.92;
-}
-
-.ia-strike-zone-meta span {
+.ia-strike-zone-pill {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.ia-strike-zone-pill-line {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: inherit;
+    opacity: 0.78;
+}
+
+.ia-strike-zone-pill strong {
+    font-size: 15px;
+    line-height: 1.15;
 }
 
 .ia-strike-zone-label {
@@ -10623,12 +10637,6 @@ select.form-input option:checked,
 .ia-strike-zone-readout small.is-na {
     color: inherit;
     opacity: 0.82;
-}
-
-@media (max-width: 640px) {
-    .ia-strike-zone-meta {
-        grid-template-columns: 1fr;
-    }
 }
 
 .ia-other-costs {
