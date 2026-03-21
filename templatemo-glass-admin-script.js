@@ -322,7 +322,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.1.9';
+                versionLabel.textContent = 'v1.2.1';
             });
     }
 
@@ -1218,10 +1218,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         if (normalizedRole === 'broker') {
             return 'Broker';
         }
+        if (normalizedRole === 'premium user') {
+            return 'Premium User';
+        }
         if (normalizedRole === 'user') {
             return 'User';
         }
-        return normalizedRole || 'User';
+        return normalizedRole.replace(/\b\w/g, (char) => char.toUpperCase()) || 'User';
     }
 
     function isRegularUserRole(roleValue) {
@@ -2921,27 +2924,30 @@ function initNavbarDateTime() {
 
         if (tabLinks.length === 0) return;
 
+        function activateSettingsTab(tabId) {
+            const normalizedTabId = String(tabId || '').trim().toLowerCase() || 'profile';
+
+            document.querySelectorAll('.settings-nav-link').forEach(navLink => {
+                navLink.classList.toggle('active', navLink.getAttribute('data-tab') === normalizedTabId);
+            });
+
+            document.querySelectorAll('.settings-tab-content').forEach(tab => {
+                tab.classList.toggle('active', tab.id === 'tab-' + normalizedTabId);
+            });
+        }
+
         tabLinks.forEach(link => {
             link.addEventListener('click', event => {
                 event.preventDefault();
                 const tabId = link.getAttribute('data-tab');
-
-                document.querySelectorAll('.settings-nav-link').forEach(navLink => {
-                    navLink.classList.remove('active');
-                });
-
-                link.classList.add('active');
-
-                document.querySelectorAll('.settings-tab-content').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-
-                const targetTab = document.getElementById('tab-' + tabId);
-                if (targetTab) {
-                    targetTab.classList.add('active');
-                }
+                activateSettingsTab(tabId);
             });
         });
+
+        const requestedTab = new URLSearchParams(window.location.search).get('tab');
+        if (requestedTab) {
+            activateSettingsTab(requestedTab);
+        }
 
         const themeSelect = document.getElementById('theme-select');
         const accentSelect = document.getElementById('accent-color-select');
@@ -3033,7 +3039,7 @@ function initNavbarDateTime() {
 
             const controls = Array.from(tab.querySelectorAll('input, select, textarea')).filter(control => {
                 const controlType = String(control.type || '').toLowerCase();
-                return controlType !== 'password' && controlType !== 'file';
+                return controlType !== 'password' && controlType !== 'file' && control.dataset.settingsTransient !== 'true';
             });
 
             controls.forEach(control => {
@@ -3069,50 +3075,422 @@ function initNavbarDateTime() {
             });
         });
 
-        function initTwoFactorSettingsControls() {
+        function initSecuritySettingsControls() {
+            const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || '').trim();
+            const passwordStatus = document.getElementById('security-password-status');
+            const currentPassword = document.getElementById('security-current-password');
+            const newPassword = document.getElementById('security-new-password');
+            const confirmPassword = document.getElementById('security-confirm-password');
+            const passwordSave = document.getElementById('security-password-save');
+            const passwordReset = document.getElementById('security-password-reset');
             const enable2fa = document.getElementById('security-2fa-enable');
-            const sms2fa = document.getElementById('security-2fa-sms');
             const app2fa = document.getElementById('security-2fa-app');
+            const setupKeyInput = document.getElementById('security-2fa-setup-key');
+            const codeInput = document.getElementById('security-2fa-code');
+            const setupButton = document.getElementById('security-2fa-setup-btn');
+            const verifyButton = document.getElementById('security-2fa-verify-btn');
+            const twoFactorStatus = document.getElementById('security-2fa-status');
+            const sessionsStatus = document.getElementById('security-sessions-status');
+            const sessionsList = document.getElementById('security-sessions-list');
+            const sessionsRefresh = document.getElementById('security-sessions-refresh');
 
-            if (!enable2fa || !sms2fa || !app2fa) {
+            if (!passwordSave || !passwordReset || !enable2fa || !app2fa || !setupKeyInput || !codeInput || !setupButton || !verifyButton || !twoFactorStatus || !sessionsStatus || !sessionsList || !sessionsRefresh) {
                 return;
             }
 
-            const sync2faUi = () => {
-                const enabled = Boolean(enable2fa.checked);
+            let securitySettings = {
+                enabled: false,
+                appEnabled: false,
+                appVerified: false,
+                hasSecret: false,
+                setupKey: ''
+            };
 
-                sms2fa.disabled = !enabled;
-                app2fa.disabled = !enabled;
-
-                if (!enabled) {
+            const setPasswordStatus = (message, isError) => {
+                if (!passwordStatus) {
                     return;
                 }
+                passwordStatus.textContent = String(message || '');
+                passwordStatus.style.color = isError ? '#ef4444' : '';
+            };
 
-                if (!sms2fa.checked && !app2fa.checked) {
-                    sms2fa.checked = true;
-                    sms2fa.dispatchEvent(new Event('change', { bubbles: true }));
+            const setTwoFactorStatus = (message, isError) => {
+                twoFactorStatus.textContent = String(message || '');
+                twoFactorStatus.style.color = isError ? '#ef4444' : '';
+            };
+
+            const formatSessionTime = (value) => {
+                if (!value) {
+                    return 'Unknown';
+                }
+                const parsed = new Date(value);
+                if (Number.isNaN(parsed.getTime())) {
+                    return String(value);
+                }
+                return parsed.toLocaleString();
+            };
+
+            const sync2faUi = () => {
+                const enabled = Boolean(securitySettings.enabled);
+                const appReady = Boolean(securitySettings.appVerified && securitySettings.hasSecret);
+
+                enable2fa.checked = enabled;
+                app2fa.checked = Boolean(securitySettings.appEnabled || appReady || securitySettings.hasSecret);
+                app2fa.disabled = true;
+                setupKeyInput.value = securitySettings.setupKey || '';
+
+                if (appReady && enabled) {
+                    setTwoFactorStatus('Two-factor authentication is on. Authenticator app verification is active for this account.', false);
+                } else if (appReady) {
+                    setTwoFactorStatus('Authenticator app is verified. Turn on 2FA to require the code at sign-in.', false);
+                } else if (securitySettings.hasSecret) {
+                    setTwoFactorStatus('Setup key generated. Enter a current 6-digit code from your authenticator app to finish verification.', false);
+                } else {
+                    setTwoFactorStatus('Two-factor authentication is currently turned off.', false);
+                }
+
+                verifyButton.disabled = !securitySettings.hasSecret;
+            };
+
+            const securityFetch = async (url, options = {}) => {
+                const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || '').trim();
+                if (!authToken) {
+                    throw new Error('Sign in again to manage account security.');
+                }
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`,
+                        ...(options.headers || {})
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Security request failed.');
+                }
+                return data;
+            };
+
+            const loadTwoFactorSettings = async () => {
+                try {
+                    const data = await securityFetch('/api/security/2fa', { method: 'GET' });
+                    securitySettings = {
+                        enabled: Boolean(data.settings?.enabled),
+                        appEnabled: Boolean(data.settings?.appEnabled),
+                        appVerified: Boolean(data.settings?.appVerified),
+                        hasSecret: Boolean(data.settings?.hasSecret),
+                        setupKey: String(data.settings?.setupKey || '')
+                    };
+                    sync2faUi();
+                } catch (error) {
+                    setTwoFactorStatus(error.message || 'Unable to load two-factor settings.', true);
                 }
             };
 
-            enable2fa.addEventListener('change', () => {
-                sync2faUi();
-            });
+            const loadSessions = async () => {
+                sessionsStatus.textContent = 'Loading active sessions for this account.';
+                sessionsList.innerHTML = '';
+                try {
+                    const data = await securityFetch('/api/security/sessions', { method: 'GET' });
+                    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
 
-            [sms2fa, app2fa].forEach(control => {
-                control.addEventListener('change', () => {
-                    if (!enable2fa.checked) {
+                    if (!sessions.length) {
+                        sessionsStatus.textContent = 'No tracked sessions found for this account yet.';
                         return;
                     }
 
-                    if (!sms2fa.checked && !app2fa.checked) {
-                        control.checked = true;
-                        showDashboardToast('error', '2FA Method Required', 'Choose at least one 2FA method while 2FA is enabled.');
-                        control.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                });
+                    sessionsStatus.textContent = 'Review the devices and browsers that currently have access to this account.';
+                    sessions.forEach((session) => {
+                        const row = document.createElement('div');
+                        row.className = 'settings-row';
+
+                        const label = document.createElement('div');
+                        label.className = 'settings-label';
+
+                        const title = document.createElement('span');
+                        title.className = 'settings-label-title';
+                        title.textContent = session.userAgent || 'Unknown device';
+
+                        const desc = document.createElement('span');
+                        desc.className = 'settings-label-desc';
+                        const meta = [];
+                        if (session.ipAddress) {
+                            meta.push(session.ipAddress);
+                        }
+                        meta.push(session.current ? 'Current session' : `Last seen ${formatSessionTime(session.lastSeenAt || session.createdAt)}`);
+                        if (!session.active && session.revokedAt) {
+                            meta.push(`Revoked ${formatSessionTime(session.revokedAt)}`);
+                        }
+                        desc.textContent = meta.join(' • ');
+
+                        label.appendChild(title);
+                        label.appendChild(desc);
+                        row.appendChild(label);
+
+                        if (session.current) {
+                            const badge = document.createElement('span');
+                            badge.className = 'status-badge completed';
+                            badge.textContent = session.active ? 'Active' : 'Revoked';
+                            row.appendChild(badge);
+                        } else {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'card-btn';
+                            button.style.padding = '6px 12px';
+                            button.textContent = session.active ? 'Revoke' : 'Revoked';
+                            button.disabled = !session.active;
+                            button.addEventListener('click', async () => {
+                                button.disabled = true;
+                                try {
+                                    const revokeData = await securityFetch(`/api/security/sessions/${encodeURIComponent(session.id)}`, { method: 'DELETE' });
+                                    showDashboardToast('success', 'Session Revoked', revokeData.revokedCurrent ? 'The current session was revoked. You will need to sign in again.' : 'The selected session was revoked.', {
+                                        playSound: false
+                                    });
+                                    if (revokeData.revokedCurrent) {
+                                        if (window.logout) {
+                                            window.logout();
+                                            return;
+                                        }
+                                    }
+                                    loadSessions();
+                                } catch (error) {
+                                    showDashboardToast('error', 'Session Revoke Failed', error.message || 'Unable to revoke the selected session.');
+                                    button.disabled = false;
+                                }
+                            });
+                            row.appendChild(button);
+                        }
+
+                        sessionsList.appendChild(row);
+                    });
+                } catch (error) {
+                    sessionsStatus.textContent = error.message || 'Unable to load active sessions.';
+                    sessionsStatus.style.color = '#ef4444';
+                }
+            };
+
+            passwordSave.addEventListener('click', async () => {
+                const currentValue = String(currentPassword.value || '');
+                const newValue = String(newPassword.value || '');
+                const confirmValue = String(confirmPassword.value || '');
+
+                if (!currentValue || !newValue || !confirmValue) {
+                    setPasswordStatus('All password fields are required.', true);
+                    return;
+                }
+
+                passwordSave.disabled = true;
+                try {
+                    const data = await securityFetch('/api/security/change-password', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            currentPassword: currentValue,
+                            newPassword: newValue,
+                            confirmPassword: confirmValue
+                        })
+                    });
+                    currentPassword.value = '';
+                    newPassword.value = '';
+                    confirmPassword.value = '';
+                    setPasswordStatus(data.message || 'Password updated successfully.', false);
+                    showDashboardToast('success', 'Password Updated', data.message || 'Password updated successfully.', {
+                        playSound: false
+                    });
+                } catch (error) {
+                    setPasswordStatus(error.message || 'Unable to change password right now.', true);
+                    showDashboardToast('error', 'Password Update Failed', error.message || 'Unable to change password right now.');
+                } finally {
+                    passwordSave.disabled = false;
+                }
             });
 
-            sync2faUi();
+            passwordReset.addEventListener('click', () => {
+                currentPassword.value = '';
+                newPassword.value = '';
+                confirmPassword.value = '';
+                setPasswordStatus('Use at least 8 characters. Password changes apply immediately to this account.', false);
+            });
+
+            setupButton.addEventListener('click', async () => {
+                setupButton.disabled = true;
+                try {
+                    const data = await securityFetch('/api/security/2fa/app/setup', { method: 'POST', body: JSON.stringify({}) });
+                    securitySettings = {
+                        enabled: false,
+                        appEnabled: true,
+                        appVerified: false,
+                        hasSecret: Boolean(data.setupKey),
+                        setupKey: String(data.setupKey || '')
+                    };
+                    codeInput.value = '';
+                    sync2faUi();
+                    showDashboardToast('success', 'Setup Key Ready', 'Open your authenticator app, add the setup key, then verify with a fresh 6-digit code.', {
+                        playSound: false
+                    });
+                } catch (error) {
+                    setTwoFactorStatus(error.message || 'Unable to create a setup key.', true);
+                    showDashboardToast('error', '2FA Setup Failed', error.message || 'Unable to create a setup key.');
+                } finally {
+                    setupButton.disabled = false;
+                }
+            });
+
+            verifyButton.addEventListener('click', async () => {
+                const code = String(codeInput.value || '').trim();
+                if (!code) {
+                    setTwoFactorStatus('Enter the current 6-digit code from your authenticator app.', true);
+                    return;
+                }
+                verifyButton.disabled = true;
+                try {
+                    const data = await securityFetch('/api/security/2fa/app/verify', {
+                        method: 'POST',
+                        body: JSON.stringify({ code })
+                    });
+                    securitySettings = {
+                        enabled: Boolean(data.settings?.enabled),
+                        appEnabled: Boolean(data.settings?.appEnabled),
+                        appVerified: Boolean(data.settings?.appVerified),
+                        hasSecret: true,
+                        setupKey: setupKeyInput.value
+                    };
+                    codeInput.value = '';
+                    sync2faUi();
+                    showDashboardToast('success', 'Authenticator Verified', 'Two-factor authentication is now verified for this account.', {
+                        playSound: false
+                    });
+                } catch (error) {
+                    setTwoFactorStatus(error.message || 'Unable to verify authenticator app.', true);
+                    showDashboardToast('error', '2FA Verification Failed', error.message || 'Unable to verify authenticator app.');
+                } finally {
+                    verifyButton.disabled = false;
+                }
+            });
+
+            enable2fa.addEventListener('change', async () => {
+                const requestedEnabled = Boolean(enable2fa.checked);
+                if (requestedEnabled && !(securitySettings.appVerified && securitySettings.hasSecret)) {
+                    enable2fa.checked = false;
+                    setTwoFactorStatus('Verify your authenticator app before turning on 2FA.', true);
+                    return;
+                }
+
+                enable2fa.disabled = true;
+                try {
+                    const data = await securityFetch('/api/security/2fa', {
+                        method: 'PUT',
+                        body: JSON.stringify({
+                            enabled: requestedEnabled,
+                            appEnabled: true
+                        })
+                    });
+                    securitySettings.enabled = Boolean(data.settings?.enabled);
+                    securitySettings.appEnabled = Boolean(data.settings?.appEnabled);
+                    securitySettings.appVerified = Boolean(data.settings?.appVerified || securitySettings.appVerified);
+                    sync2faUi();
+                    showDashboardToast('success', requestedEnabled ? '2FA Enabled' : '2FA Disabled', requestedEnabled ? 'Sign-ins will now require an authenticator app code.' : 'Authenticator app sign-in protection has been turned off.', {
+                        playSound: false
+                    });
+                } catch (error) {
+                    enable2fa.checked = !requestedEnabled;
+                    setTwoFactorStatus(error.message || 'Unable to update 2FA settings.', true);
+                    showDashboardToast('error', '2FA Update Failed', error.message || 'Unable to update 2FA settings.');
+                } finally {
+                    enable2fa.disabled = false;
+                }
+            });
+
+            sessionsRefresh.addEventListener('click', () => {
+                loadSessions();
+            });
+
+            setPasswordStatus('Use at least 8 characters. Password changes apply immediately to this account.', false);
+            loadTwoFactorSettings();
+            loadSessions();
+        }
+
+        function initNotificationSettingsControls() {
+            const mlsToggle = document.getElementById('notifications-toggle-mls-new-listings');
+            const plannerToggle = document.getElementById('notifications-toggle-planner-popups');
+            const desktopToggle = document.getElementById('notifications-toggle-desktop');
+            const soundToggle = document.getElementById('notifications-toggle-sound');
+            const desktopStatus = document.getElementById('notifications-desktop-status');
+
+            if (!mlsToggle && !plannerToggle && !desktopToggle && !soundToggle) {
+                return;
+            }
+
+            function syncDesktopStatus() {
+                if (!desktopStatus) {
+                    return;
+                }
+
+                if (!('Notification' in window)) {
+                    desktopStatus.textContent = 'This browser does not support desktop notifications. Planner popups can still appear inside the app.';
+                    if (desktopToggle) {
+                        desktopToggle.checked = false;
+                        desktopToggle.disabled = true;
+                    }
+                    return;
+                }
+
+                const permission = String(Notification.permission || 'default');
+                if (permission === 'granted') {
+                    desktopStatus.textContent = 'Desktop notifications are allowed for this browser.';
+                    return;
+                }
+
+                if (permission === 'denied') {
+                    desktopStatus.textContent = 'Desktop notifications are blocked in this browser. Re-enable them in browser site settings if needed.';
+                    return;
+                }
+
+                desktopStatus.textContent = 'Desktop notifications are not granted yet. Turn this toggle on to request browser permission.';
+            }
+
+            if (desktopToggle && !desktopToggle.dataset.notificationPermissionBound) {
+                desktopToggle.dataset.notificationPermissionBound = 'true';
+                desktopToggle.addEventListener('change', async () => {
+                    if (!desktopToggle.checked) {
+                        syncDesktopStatus();
+                        return;
+                    }
+
+                    if (!('Notification' in window)) {
+                        desktopToggle.checked = false;
+                        desktopToggle.dispatchEvent(new Event('change', { bubbles: true }));
+                        showDashboardToast('error', 'Desktop Unsupported', 'This browser does not support desktop notifications.');
+                        syncDesktopStatus();
+                        return;
+                    }
+
+                    if (Notification.permission === 'default') {
+                        try {
+                            const permission = await Notification.requestPermission();
+                            if (permission !== 'granted') {
+                                desktopToggle.checked = false;
+                                desktopToggle.dispatchEvent(new Event('change', { bubbles: true }));
+                                showDashboardToast('error', 'Desktop Notifications Blocked', 'Browser permission was not granted, so desktop alerts remain off.');
+                            }
+                        } catch (error) {
+                            desktopToggle.checked = false;
+                            desktopToggle.dispatchEvent(new Event('change', { bubbles: true }));
+                            showDashboardToast('error', 'Permission Request Failed', 'The browser could not request desktop notification permission.');
+                        }
+                    } else if (Notification.permission === 'denied') {
+                        desktopToggle.checked = false;
+                        desktopToggle.dispatchEvent(new Event('change', { bubbles: true }));
+                        showDashboardToast('error', 'Desktop Notifications Blocked', 'Desktop notifications are blocked in your browser settings.');
+                    }
+
+                    syncDesktopStatus();
+                });
+            }
+
+            window.addEventListener('dashboard-user-settings-updated', syncDesktopStatus);
+            window.addEventListener('focus', syncDesktopStatus);
+            syncDesktopStatus();
         }
 
         function initSubscriptionSettingsControls() {
@@ -3120,28 +3498,62 @@ function initNavbarDateTime() {
             const currentPlanLabel = document.getElementById('subscription-current-plan');
             const planSummary = document.getElementById('subscription-plan-summary');
             const saveButton = document.getElementById('subscription-save-btn');
+            const billingSection = document.getElementById('subscription-billing-section');
+            const billingNote = document.getElementById('subscription-billing-note');
+            const billingForm = document.getElementById('subscription-billing-form');
 
-            if (planInputs.length === 0 || !currentPlanLabel || !planSummary || !saveButton) {
+            if (planInputs.length === 0 || !currentPlanLabel || !planSummary || !saveButton || !billingSection || !billingNote || !billingForm) {
                 return;
             }
 
+            const premiumRole = 'premium user';
+            const adminRole = 'admin';
+            const premiumPriceLabel = '$99';
+            const billingFields = {
+                billingName: document.getElementById('subscription-billing-name'),
+                billingEmail: document.getElementById('subscription-billing-email'),
+                billingPhone: document.getElementById('subscription-billing-phone'),
+                companyName: document.getElementById('subscription-billing-company'),
+                addressLine1: document.getElementById('subscription-billing-address1'),
+                addressLine2: document.getElementById('subscription-billing-address2'),
+                city: document.getElementById('subscription-billing-city'),
+                stateRegion: document.getElementById('subscription-billing-state'),
+                postalCode: document.getElementById('subscription-billing-postal'),
+                country: document.getElementById('subscription-billing-country'),
+                cardholderName: document.getElementById('subscription-cardholder-name'),
+                cardNumber: document.getElementById('subscription-card-number'),
+                expiryMonth: document.getElementById('subscription-card-exp-month'),
+                expiryYear: document.getElementById('subscription-card-exp-year'),
+                cvc: document.getElementById('subscription-card-cvc')
+            };
+
             const planCopy = {
+                admin: {
+                    label: 'Admin Access',
+                    summary: 'Administrator accounts already have full platform access and are not affected by user or premium subscriptions.'
+                },
                 basic: {
                     label: 'Basic',
                     summary: 'Basic keeps standard dashboard access active.'
                 },
                 premium: {
                     label: 'Premium',
-                    summary: 'Premium adds investment analysis tool access for property workflows.'
+                    summary: 'Premium costs $99 and unlocks all tabs for this account with the Premium User role.'
                 }
             };
 
-            const storedPlan = String(getUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, 'basic') || 'basic').trim().toLowerCase();
-            const resolvedPlan = Object.prototype.hasOwnProperty.call(planCopy, storedPlan) ? storedPlan : 'basic';
-            const selectedInput = planInputs.find((input) => input.value === resolvedPlan) || planInputs[0];
+            const storedUser = getStoredCurrentUserIdentity();
+            const initialRole = String(storedUser.role || workspaceUser.role || '').trim().toLowerCase();
+            const storedPlan = String(getUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, initialRole === premiumRole ? 'premium' : 'basic') || 'basic').trim().toLowerCase();
+            let currentRole = initialRole;
+            let activeSubscription = null;
 
-            if (selectedInput) {
-                selectedInput.checked = true;
+            function setSelectedPlan(planKey) {
+                const resolvedPlan = Object.prototype.hasOwnProperty.call(planCopy, planKey) ? planKey : 'basic';
+                const selectedInput = planInputs.find((input) => input.value === resolvedPlan) || planInputs[0];
+                planInputs.forEach((input) => {
+                    input.checked = input === selectedInput;
+                });
             }
 
             function getSelectedPlan() {
@@ -3150,27 +3562,184 @@ function initNavbarDateTime() {
                 return Object.prototype.hasOwnProperty.call(planCopy, nextPlan) ? nextPlan : 'basic';
             }
 
+            function getStoredAuthToken() {
+                return String(localStorage.getItem('authToken') || '').trim();
+            }
+
+            function fillBillingForm(profile) {
+                const safeProfile = profile && typeof profile === 'object' ? profile : {};
+                Object.entries(billingFields).forEach(([key, input]) => {
+                    if (!input || ['cardNumber', 'cvc'].includes(key)) {
+                        return;
+                    }
+                    input.value = String(safeProfile[key] || input.value || '').trim();
+                });
+
+                if (billingFields.cardNumber && safeProfile.cardLast4 && safeProfile.cardBrand) {
+                    billingFields.cardNumber.value = '';
+                    billingFields.cardNumber.placeholder = `${safeProfile.cardBrand} ending in ${safeProfile.cardLast4}`;
+                }
+
+                if (billingFields.cvc) {
+                    billingFields.cvc.value = '';
+                }
+            }
+
+            function buildBillingPayload() {
+                const payload = {};
+                Object.entries(billingFields).forEach(([key, input]) => {
+                    payload[key] = input ? String(input.value || '').trim() : '';
+                });
+                return payload;
+            }
+
+            function seedBillingDefaults() {
+                const currentUser = getStoredCurrentUserIdentity();
+                if (billingFields.billingName && !billingFields.billingName.value) {
+                    billingFields.billingName.value = String(currentUser.name || '').trim();
+                }
+                if (billingFields.billingEmail && !billingFields.billingEmail.value) {
+                    billingFields.billingEmail.value = String(currentUser.email || '').trim();
+                }
+                if (billingFields.cardholderName && !billingFields.cardholderName.value) {
+                    billingFields.cardholderName.value = String(currentUser.name || '').trim();
+                }
+                if (billingFields.country && !billingFields.country.value) {
+                    billingFields.country.value = 'United States';
+                }
+            }
+
             function syncSubscriptionUi() {
+                const isAdminUser = currentRole === adminRole;
+                const isPremiumUser = currentRole === premiumRole;
                 const activePlan = getSelectedPlan();
-                currentPlanLabel.textContent = planCopy[activePlan].label;
-                planSummary.textContent = planCopy[activePlan].summary;
+                const effectivePlan = isAdminUser ? 'admin' : (isPremiumUser ? 'premium' : activePlan);
+                currentPlanLabel.textContent = planCopy[effectivePlan].label;
+                planSummary.textContent = isAdminUser
+                    ? planCopy.admin.summary
+                    : (isPremiumUser
+                        ? 'Premium User is active. All tabs are unlocked for this account.'
+                        : planCopy[activePlan].summary);
+                billingSection.hidden = isAdminUser || !(activePlan === 'premium' || isPremiumUser);
+                if (billingNote) {
+                    billingNote.textContent = isAdminUser
+                        ? 'Administrator accounts already include every tab and do not need billing information.'
+                        : (isPremiumUser && activeSubscription?.billingProfile?.maskedCard
+                            ? `Premium User is active. Billing profile on file: ${activeSubscription.billingProfile.maskedCard}.`
+                            : `Enter billing details to activate Premium User access for ${premiumPriceLabel}.`);
+                }
+                saveButton.hidden = isAdminUser;
+                saveButton.textContent = isPremiumUser
+                    ? 'Update Billing Info'
+                    : (activePlan === 'premium' ? `Buy Premium - ${premiumPriceLabel}` : 'Stay on Basic');
 
                 planInputs.forEach((input) => {
                     const card = input.closest('[data-plan-card]');
                     if (!card) {
                         return;
                     }
+                    input.disabled = isAdminUser || (isPremiumUser && input.value === 'basic');
                     card.classList.toggle('is-selected', input.checked);
+                    card.classList.toggle('is-disabled', Boolean(input.disabled));
                 });
             }
 
-            saveButton.addEventListener('click', () => {
-                const activePlan = getSelectedPlan();
-                setUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, activePlan);
+            async function loadSubscriptionStatus() {
+                const token = getStoredAuthToken();
+                if (!token) {
+                    seedBillingDefaults();
+                    setSelectedPlan(storedPlan);
+                    syncSubscriptionUi();
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/subscription/status', {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Unable to load subscription details.');
+                    }
+
+                    activeSubscription = data.subscription || null;
+                    currentRole = String(data.user?.role || currentRole || '').trim().toLowerCase();
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    fillBillingForm(activeSubscription?.billingProfile);
+                    setSelectedPlan(activeSubscription?.plan === 'premium' ? 'premium' : (currentRole === premiumRole ? 'premium' : storedPlan));
+                } catch (error) {
+                    seedBillingDefaults();
+                    setSelectedPlan(storedPlan);
+                }
+
+                seedBillingDefaults();
                 syncSubscriptionUi();
-                showDashboardToast('success', 'Subscription Updated', `${planCopy[activePlan].label} plan saved for this workspace user.`, {
-                    playSound: false
-                });
+            }
+
+            saveButton.addEventListener('click', async () => {
+                if (currentRole === adminRole) {
+                    syncSubscriptionUi();
+                    return;
+                }
+
+                const activePlan = getSelectedPlan();
+                if (currentRole !== premiumRole && activePlan !== 'premium') {
+                    setUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, 'basic');
+                    syncSubscriptionUi();
+                    showDashboardToast('success', 'Basic Plan Active', 'This account will stay on the Basic plan until Premium is purchased.', {
+                        playSound: false
+                    });
+                    return;
+                }
+
+                const token = getStoredAuthToken();
+                if (!token) {
+                    showDashboardToast('error', 'Sign In Required', 'Sign in again before purchasing Premium.');
+                    return;
+                }
+
+                const originalLabel = saveButton.textContent;
+                saveButton.disabled = true;
+
+                try {
+                    const response = await fetch('/api/subscription/premium-checkout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify(buildBillingPayload())
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Unable to activate Premium.');
+                    }
+
+                    currentRole = String(data.user?.role || premiumRole).trim().toLowerCase();
+                    activeSubscription = data.subscription || null;
+                    localStorage.setItem('authToken', String(data.token || token));
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    setUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, 'premium');
+                    fillBillingForm(activeSubscription?.billingProfile);
+                    setSelectedPlan('premium');
+                    syncSubscriptionUi();
+                    showDashboardToast('success', 'Premium Activated', 'Premium User access is live and all tabs are now unlocked for this account.', {
+                        playSound: false
+                    });
+                    window.setTimeout(() => {
+                        window.location.reload();
+                    }, 480);
+                } catch (error) {
+                    showDashboardToast('error', 'Checkout Failed', error.message || 'Unable to activate Premium.');
+                } finally {
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalLabel;
+                    syncSubscriptionUi();
+                }
             });
 
             planInputs.forEach((input) => {
@@ -3179,10 +3748,11 @@ function initNavbarDateTime() {
                 });
             });
 
-            syncSubscriptionUi();
+            loadSubscriptionStatus();
         }
 
-        initTwoFactorSettingsControls();
+        initSecuritySettingsControls();
+        initNotificationSettingsControls();
         initSubscriptionSettingsControls();
 
         if (accentGlowToggle) {
@@ -5367,8 +5937,8 @@ function initNavbarDateTime() {
                 return;
             }
 
-            if (!['admin', 'user', 'broker'].includes(role)) {
-                showDashboardToast('error', 'Invalid Role', 'Role must be admin, user, or broker.');
+            if (!['admin', 'user', 'premium user', 'broker'].includes(role)) {
+                showDashboardToast('error', 'Invalid Role', 'Role must be admin, user, premium user, or broker.');
                 return;
             }
 
@@ -5467,6 +6037,143 @@ function initNavbarDateTime() {
         }
 
         loadUsers();
+    }
+
+    function initAdminOnlineUsersWidget() {
+        const list = document.getElementById('admin-online-users-list');
+        if (!list) {
+            return;
+        }
+
+        const subtitle = document.getElementById('admin-online-users-subtitle');
+        const refreshButton = document.getElementById('admin-online-users-refresh');
+        const token = localStorage.getItem('authToken');
+        let currentUser = null;
+        let refreshHandle = null;
+
+        try {
+            currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        } catch (error) {
+            currentUser = null;
+        }
+
+        if (!currentUser || currentUser.role !== 'admin') {
+            if (subtitle) {
+                subtitle.textContent = 'Only admin accounts can review currently active users.';
+            }
+            list.innerHTML = '<p class="outreach-empty">Admin access required.</p>';
+            return;
+        }
+
+        function escapeOnlineUserText(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatOnlineTime(value) {
+            if (!value) {
+                return 'Unknown';
+            }
+
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) {
+                return String(value);
+            }
+
+            return parsed.toLocaleString();
+        }
+
+        function renderUsers(payload) {
+            const users = Array.isArray(payload?.users) ? payload.users : [];
+            const windowMinutes = Number(payload?.windowMinutes) || 5;
+            list.innerHTML = '';
+
+            if (subtitle) {
+                const userCount = Number(payload?.totalUsersOnline) || users.length;
+                const sessionCount = Number(payload?.totalSessionsOnline) || 0;
+                subtitle.textContent = `${userCount} user${userCount === 1 ? '' : 's'} online across ${sessionCount} active session${sessionCount === 1 ? '' : 's'} in the last ${windowMinutes} minutes.`;
+            }
+
+            if (!users.length) {
+                list.innerHTML = '<p class="outreach-empty">No users have been active in the current online window.</p>';
+                return;
+            }
+
+            users.forEach((user) => {
+                const row = document.createElement('article');
+                row.className = 'outreach-item';
+                const sessionPreview = (Array.isArray(user.sessions) ? user.sessions : [])
+                    .slice(0, 3)
+                    .map((session) => {
+                        const agent = escapeOnlineUserText(session.userAgent || 'Unknown device');
+                        const ip = escapeOnlineUserText(session.ipAddress || 'No IP');
+                        return `<p class="outreach-owner">${agent} • ${ip} • Last seen ${escapeOnlineUserText(formatOnlineTime(session.lastSeenAt))}</p>`;
+                    })
+                    .join('');
+                const extraSessions = Math.max((Number(user.sessionCount) || 0) - 3, 0);
+
+                row.innerHTML = `
+                    <div class="outreach-item-head">
+                        <span class="outreach-item-title">${escapeOnlineUserText(user.name || 'Unknown user')}</span>
+                        <span class="outreach-status published">${escapeOnlineUserText(formatUserRoleLabel(user.role))}</span>
+                    </div>
+                    <p class="outreach-item-body">${escapeOnlineUserText(user.email || 'No email')}</p>
+                    <p class="outreach-owner">${escapeOnlineUserText(String(user.sessionCount || 0))} active device${Number(user.sessionCount) === 1 ? '' : 's'} • Last seen ${escapeOnlineUserText(formatOnlineTime(user.lastSeenAt))}</p>
+                    ${sessionPreview}
+                    ${extraSessions > 0 ? `<p class="outreach-owner">+${extraSessions} more active session${extraSessions === 1 ? '' : 's'}</p>` : ''}
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        async function loadOnlineUsers() {
+            if (!token) {
+                list.innerHTML = '<p class="outreach-empty">Missing auth token. Please sign in again.</p>';
+                return;
+            }
+
+            if (refreshButton) {
+                refreshButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch('/api/admin/online-users', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load online users');
+                }
+                renderUsers(data);
+            } catch (error) {
+                if (subtitle) {
+                    subtitle.textContent = 'Unable to refresh online user status right now.';
+                }
+                list.innerHTML = `<p class="outreach-empty">${escapeOnlineUserText(String(error.message || 'Unable to load online users.'))}</p>`;
+            } finally {
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+                }
+            }
+        }
+
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadOnlineUsers);
+        }
+
+        loadOnlineUsers();
+        refreshHandle = window.setInterval(loadOnlineUsers, 30000);
+        window.addEventListener('beforeunload', () => {
+            if (refreshHandle) {
+                window.clearInterval(refreshHandle);
+            }
+        }, { once: true });
     }
 
     function initAdminAccessRequests() {
@@ -9169,7 +9876,10 @@ function initNavbarDateTime() {
 
             button.classList.add('property-tab-btn-locked');
             button.setAttribute('aria-disabled', 'true');
-            button.setAttribute('title', `${tabId === 'ia' ? 'IA' : 'Comps'} is locked for User accounts.`);
+            button.setAttribute('title', 'upgrade to premium');
+            if (typeof window.attachPremiumUpgradeTooltip === 'function') {
+                window.attachPremiumUpgradeTooltip(button);
+            }
 
             if (!button.querySelector('.property-tab-lock-badge')) {
                 const badge = document.createElement('span');
@@ -13006,6 +13716,7 @@ function initNavbarDateTime() {
         initPersonalOutreachWorkspace();
         initAgentNotesWidget();
         initAgentWorkspaceEmailPrep();
+        initAdminOnlineUsersWidget();
         initAdminAccessRequests();
         initAdminSmtpApprovals();
         initAdminUserManager();

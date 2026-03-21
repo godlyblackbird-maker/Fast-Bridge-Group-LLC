@@ -42,10 +42,22 @@ app.get('/api/build-version', (req, res) => {
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
+const PREMIUM_USER_ROLE = 'premium user';
+const PREMIUM_PLAN_KEY = 'premium';
+const PREMIUM_PRICE_CENTS = 9900;
+const PREMIUM_CURRENCY = 'USD';
+const AUTH_SESSION_TTL = '24h';
+const TWO_FACTOR_CHALLENGE_TTL = '10m';
+const ONLINE_USER_ACTIVITY_WINDOW_MINUTES = 5;
+const TOTP_WINDOW = 1;
+const TOTP_PERIOD_SECONDS = 30;
+const TOTP_DIGITS = 6;
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 let cachedOpenAiApiKey = null;
 let cachedTwilioClient = null;
 let cachedTwilioClientKey = '';
+const revokedSessionIds = new Set();
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
@@ -446,7 +458,8 @@ function initializeDatabase() {
       // Migrate: add per-user SMTP columns (ignore error if columns already exist)
       db.run(`ALTER TABLE users ADD COLUMN smtp_user TEXT`, () => {});
       db.run(`ALTER TABLE users ADD COLUMN smtp_pass TEXT`, () => {});
-        db.run(`ALTER TABLE users ADD COLUMN smtp_signature TEXT`, () => {});
+      db.run(`ALTER TABLE users ADD COLUMN smtp_signature TEXT`, () => {});
+      db.run(`ALTER TABLE users ADD COLUMN phone TEXT`, () => {});
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
     }
@@ -514,6 +527,87 @@ function initializeDatabase() {
       console.log('Property assignments table ready');
     }
   });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS subscription_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      plan_key TEXT NOT NULL DEFAULT 'basic',
+      billing_name TEXT,
+      billing_email TEXT,
+      billing_phone TEXT,
+      company_name TEXT,
+      address_line1 TEXT,
+      address_line2 TEXT,
+      city TEXT,
+      state_region TEXT,
+      postal_code TEXT,
+      country TEXT,
+      cardholder_name TEXT,
+      card_brand TEXT,
+      card_last4 TEXT,
+      subscription_status TEXT NOT NULL DEFAULT 'inactive',
+      amount_cents INTEGER NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      activated_at DATETIME,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating subscription_profiles table:', err);
+    } else {
+      console.log('Subscription profiles table ready');
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_security_settings (
+      user_id INTEGER PRIMARY KEY,
+      two_factor_enabled INTEGER NOT NULL DEFAULT 0,
+      app_enabled INTEGER NOT NULL DEFAULT 0,
+      totp_secret TEXT,
+      app_verified_at DATETIME,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating user_security_settings table:', err);
+    } else {
+      console.log('User security settings table ready');
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      user_agent TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      revoked_at DATETIME,
+      revoked_reason TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating auth_sessions table:', err);
+    } else {
+      console.log('Auth sessions table ready');
+      db.all('SELECT id FROM auth_sessions WHERE revoked_at IS NOT NULL', (selectError, rows) => {
+        if (selectError) {
+          return;
+        }
+        rows.forEach((row) => {
+          if (row && row.id) {
+            revokedSessionIds.add(String(row.id));
+          }
+        });
+      });
+    }
+  });
 }
 
 function createOAuthState(provider) {
@@ -564,6 +658,300 @@ function dbRun(sql, params) {
       resolve(this);
     });
   });
+}
+
+function base32Encode(buffer) {
+  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || []);
+  let bits = 0;
+  let value = 0;
+  let output = '';
+
+  for (const byte of bytes) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+
+  if (bits > 0) {
+    output += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  }
+
+  return output;
+}
+
+function base32Decode(value) {
+  const normalized = String(value || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  let bits = 0;
+  let accumulator = 0;
+  const output = [];
+
+  for (const char of normalized) {
+    const index = BASE32_ALPHABET.indexOf(char);
+    if (index === -1) {
+      continue;
+    }
+    accumulator = (accumulator << 5) | index;
+    bits += 5;
+    if (bits >= 8) {
+      output.push((accumulator >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+
+  return Buffer.from(output);
+}
+
+function generateTotpSecret() {
+  return base32Encode(crypto.randomBytes(20));
+}
+
+function generateTotpCode(secret, timestamp = Date.now()) {
+  const key = base32Decode(secret);
+  const counter = Math.floor(timestamp / 1000 / TOTP_PERIOD_SECONDS);
+  const buffer = Buffer.alloc(8);
+  buffer.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  buffer.writeUInt32BE(counter >>> 0, 4);
+  const digest = crypto.createHmac('sha1', key).update(buffer).digest();
+  const offset = digest[digest.length - 1] & 0x0f;
+  const binary = ((digest[offset] & 0x7f) << 24)
+    | ((digest[offset + 1] & 0xff) << 16)
+    | ((digest[offset + 2] & 0xff) << 8)
+    | (digest[offset + 3] & 0xff);
+  return String(binary % (10 ** TOTP_DIGITS)).padStart(TOTP_DIGITS, '0');
+}
+
+function verifyTotpCode(secret, code) {
+  const normalizedCode = String(code || '').replace(/\D+/g, '');
+  if (normalizedCode.length !== TOTP_DIGITS || !secret) {
+    return false;
+  }
+
+  for (let offset = -TOTP_WINDOW; offset <= TOTP_WINDOW; offset += 1) {
+    const candidate = generateTotpCode(secret, Date.now() + (offset * TOTP_PERIOD_SECONDS * 1000));
+    if (candidate === normalizedCode) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getClientIp(req) {
+  return String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '')
+    .split(',')[0]
+    .trim()
+    .slice(0, 120);
+}
+
+async function createAuthSession(userId, req) {
+  const sessionId = crypto.randomUUID();
+  await dbRun(
+    'INSERT INTO auth_sessions (id, user_id, user_agent, ip_address) VALUES (?, ?, ?, ?)',
+    [sessionId, userId, String(req.headers['user-agent'] || '').slice(0, 255), getClientIp(req)]
+  );
+  return sessionId;
+}
+
+async function revokeAuthSession(sessionId, reason = 'revoked') {
+  const normalizedSessionId = String(sessionId || '').trim();
+  if (!normalizedSessionId) {
+    return;
+  }
+  revokedSessionIds.add(normalizedSessionId);
+  await dbRun(
+    'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP, revoked_reason = COALESCE(revoked_reason, ?) WHERE id = ? AND revoked_at IS NULL',
+    [String(reason || 'revoked').slice(0, 80), normalizedSessionId]
+  );
+}
+
+function issueTwoFactorChallenge(userLike) {
+  const serializedUser = serializeUser(userLike);
+  return jwt.sign(
+    {
+      id: serializedUser.id,
+      email: serializedUser.email,
+      name: serializedUser.name,
+      role: serializedUser.role,
+      purpose: 'two-factor-challenge'
+    },
+    JWT_SECRET,
+    { expiresIn: TWO_FACTOR_CHALLENGE_TTL }
+  );
+}
+
+function verifyTwoFactorChallenge(token) {
+  const decoded = jwt.verify(String(token || ''), JWT_SECRET);
+  if (!decoded || decoded.purpose !== 'two-factor-challenge') {
+    throw new Error('Invalid two-factor challenge');
+  }
+  return decoded;
+}
+
+async function getUserSecuritySettings(userId) {
+  const row = await dbGet(
+    `SELECT two_factor_enabled, app_enabled, totp_secret, app_verified_at, updated_at
+       FROM user_security_settings
+      WHERE user_id = ?`,
+    [userId]
+  );
+
+  return {
+    enabled: Boolean(row?.two_factor_enabled),
+    appEnabled: Boolean(row?.app_enabled),
+    totpSecret: String(row?.totp_secret || '').trim(),
+    appVerifiedAt: row?.app_verified_at || '',
+    updatedAt: row?.updated_at || ''
+  };
+}
+
+async function saveUserSecuritySettings(userId, settings) {
+  await dbRun(
+    `INSERT INTO user_security_settings (user_id, two_factor_enabled, app_enabled, totp_secret, app_verified_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(user_id) DO UPDATE SET
+       two_factor_enabled = excluded.two_factor_enabled,
+       app_enabled = excluded.app_enabled,
+       totp_secret = excluded.totp_secret,
+       app_verified_at = excluded.app_verified_at,
+       updated_at = CURRENT_TIMESTAMP`,
+    [
+      userId,
+      settings.enabled ? 1 : 0,
+      settings.appEnabled ? 1 : 0,
+      settings.totpSecret || '',
+      settings.appVerifiedAt || null
+    ]
+  );
+}
+
+function serializeUser(userLike) {
+  if (!userLike || typeof userLike !== 'object') {
+    return null;
+  }
+
+  return {
+    id: userLike.id,
+    name: userLike.name,
+    email: userLike.email,
+    role: isKnownAdminEmail(userLike.email) ? 'admin' : String(userLike.role || '').trim().toLowerCase()
+  };
+}
+
+function issueAuthToken(userLike, sessionId = '') {
+  const serializedUser = serializeUser(userLike);
+  return jwt.sign({ ...serializedUser, sessionId: String(sessionId || '').trim() }, JWT_SECRET, { expiresIn: AUTH_SESSION_TTL });
+}
+
+function detectCardBrand(cardNumber) {
+  const digits = String(cardNumber || '').replace(/\D+/g, '');
+  if (/^4\d{12}(\d{3})?(\d{3})?$/.test(digits)) {
+    return 'Visa';
+  }
+  if (/^(5[1-5]\d{14}|2(2[2-9]\d{12}|[3-6]\d{13}|7([01]\d{12}|20\d{12})))$/.test(digits)) {
+    return 'Mastercard';
+  }
+  if (/^3[47]\d{13}$/.test(digits)) {
+    return 'American Express';
+  }
+  if (/^6(?:011|5\d{2})\d{12}$/.test(digits)) {
+    return 'Discover';
+  }
+  return 'Card';
+}
+
+function hasValidLuhn(cardNumber) {
+  const digits = String(cardNumber || '').replace(/\D+/g, '');
+  if (digits.length < 13 || digits.length > 19) {
+    return false;
+  }
+
+  let sum = 0;
+  let shouldDouble = false;
+
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    let digit = Number.parseInt(digits[index], 10);
+    if (!Number.isFinite(digit)) {
+      return false;
+    }
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) {
+        digit -= 9;
+      }
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+
+  return sum % 10 === 0;
+}
+
+function isValidFutureExpiry(monthValue, yearValue) {
+  const month = Number.parseInt(String(monthValue || '').trim(), 10);
+  const rawYear = String(yearValue || '').trim();
+  const year = rawYear.length === 2 ? 2000 + Number.parseInt(rawYear, 10) : Number.parseInt(rawYear, 10);
+
+  if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year) || year < 2000) {
+    return false;
+  }
+
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  if (year < currentYear) {
+    return false;
+  }
+
+  if (year === currentYear && month < currentMonth) {
+    return false;
+  }
+
+  return year <= currentYear + 20;
+}
+
+function sanitizeBillingField(value, maxLength = 160) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function buildSubscriptionPayload(userRow, subscriptionRow) {
+  const role = String(userRow?.role || '').trim().toLowerCase();
+  const isAdmin = role === 'admin';
+  const isPremium = role === PREMIUM_USER_ROLE;
+  const activePlan = isAdmin ? 'admin' : (isPremium ? PREMIUM_PLAN_KEY : 'basic');
+  const maskedCard = subscriptionRow?.card_last4
+    ? `${subscriptionRow.card_brand || 'Card'} ending in ${subscriptionRow.card_last4}`
+    : '';
+
+  return {
+    plan: activePlan,
+    role: role || 'user',
+    amountCents: isPremium ? PREMIUM_PRICE_CENTS : 0,
+    currency: PREMIUM_CURRENCY,
+    unlockedAllTabs: isAdmin || isPremium,
+    adminAccess: isAdmin,
+    billingProfile: subscriptionRow ? {
+      billingName: subscriptionRow.billing_name || '',
+      billingEmail: subscriptionRow.billing_email || '',
+      billingPhone: subscriptionRow.billing_phone || '',
+      companyName: subscriptionRow.company_name || '',
+      addressLine1: subscriptionRow.address_line1 || '',
+      addressLine2: subscriptionRow.address_line2 || '',
+      city: subscriptionRow.city || '',
+      stateRegion: subscriptionRow.state_region || '',
+      postalCode: subscriptionRow.postal_code || '',
+      country: subscriptionRow.country || '',
+      cardholderName: subscriptionRow.cardholder_name || '',
+      cardBrand: subscriptionRow.card_brand || '',
+      cardLast4: subscriptionRow.card_last4 || '',
+      maskedCard,
+      status: subscriptionRow.subscription_status || 'inactive',
+      activatedAt: subscriptionRow.activated_at || ''
+    } : null
+  };
 }
 
 function normalizeUserKey(value) {
@@ -1239,8 +1627,7 @@ async function completeOAuthLogin({ email, name }) {
     name: normalizedName
   };
 
-  const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '24h' });
-  return { token, user: userPayload };
+  return { user: serializeUser(userPayload) };
 }
 
 function redirectOAuthError(res, message) {
@@ -1360,7 +1747,18 @@ app.get('/auth/google/callback', async (req, res) => {
       name: userInfo.name
     });
 
-    const params = new URLSearchParams({ token: login.token, oauth: 'google' });
+    const security = await getUserSecuritySettings(login.user.id);
+    const params = new URLSearchParams({ oauth: 'google' });
+    if (security.enabled && security.appEnabled && security.totpSecret && security.appVerifiedAt) {
+      params.set('two_factor', '1');
+      params.set('challenge', issueTwoFactorChallenge(login.user));
+      params.set('email', login.user.email);
+      return res.redirect(`/login.html?${params.toString()}`);
+    }
+
+    const sessionId = await createAuthSession(login.user.id, req);
+    await dbRun('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [login.user.id]);
+    params.set('token', issueAuthToken(login.user, sessionId));
     return res.redirect(`/login.html?${params.toString()}`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
@@ -1394,31 +1792,72 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // Update last login
-      db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+      const security = await getUserSecuritySettings(user.id);
+      if (security.enabled && security.appEnabled && security.totpSecret && security.appVerifiedAt) {
+        return res.json({
+          success: true,
+          requiresTwoFactor: true,
+          challengeToken: issueTwoFactorChallenge(user),
+          methods: ['app'],
+          user: {
+            email: user.email,
+            name: user.name
+          }
+        });
+      }
 
-      // Create JWT token
-      const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, name: user.name },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      await dbRun('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+      const sessionId = await createAuthSession(user.id, req);
+      const token = issueAuthToken(user, sessionId);
 
       return res.json({
         success: true,
         token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
+        user: serializeUser(user)
       });
     } catch (error) {
       console.error('Login error:', error);
       return res.status(500).json({ error: 'Server error' });
     }
   });
+});
+
+app.post('/api/login/2fa', async (req, res) => {
+  const challengeToken = String(req.body?.challengeToken || '').trim();
+  const code = String(req.body?.code || '').trim();
+
+  if (!challengeToken || !code) {
+    return res.status(400).json({ error: 'Challenge token and verification code are required.' });
+  }
+
+  try {
+    const challenge = verifyTwoFactorChallenge(challengeToken);
+    const user = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [challenge.id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const security = await getUserSecuritySettings(user.id);
+    if (!(security.enabled && security.appEnabled && security.totpSecret && security.appVerifiedAt)) {
+      return res.status(400).json({ error: 'Two-factor authentication is not configured for this account.' });
+    }
+
+    if (!verifyTotpCode(security.totpSecret, code)) {
+      return res.status(401).json({ error: 'Invalid verification code.' });
+    }
+
+    await dbRun('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+    const sessionId = await createAuthSession(user.id, req);
+    const token = issueAuthToken(user, sessionId);
+
+    return res.json({
+      success: true,
+      token,
+      user: serializeUser(user)
+    });
+  } catch (error) {
+    return res.status(401).json({ error: 'The two-factor challenge is invalid or expired.' });
+  }
 });
 
 // Public registration is disabled. Use admin-only endpoint below.
@@ -1453,8 +1892,8 @@ app.post('/api/admin/users', (req, res) => {
     return res.status(400).json({ error: 'Name, email, and password are required' });
   }
 
-  if (!['admin', 'user', 'broker'].includes(normalizedRole)) {
-    return res.status(400).json({ error: 'Role must be admin, user, or broker' });
+  if (!['admin', 'user', 'broker', PREMIUM_USER_ROLE].includes(normalizedRole)) {
+    return res.status(400).json({ error: 'Role must be admin, user, broker, or premium user' });
   }
 
   if (password.length < 6) {
@@ -1480,12 +1919,12 @@ app.post('/api/admin/users', (req, res) => {
         return res.json({
           success: true,
           message: 'User created successfully',
-          user: {
+          user: serializeUser({
             id: this.lastID,
             name: normalizedName,
             email: normalizedEmail,
             role: normalizedRole
-          }
+          })
         });
       }
     );
@@ -1579,6 +2018,84 @@ app.put('/api/admin/users/:id/email', (req, res) => {
   });
 });
 
+app.get('/api/admin/online-users', (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  db.all(
+    `SELECT
+        u.id AS user_id,
+        u.name,
+        u.email,
+        u.role,
+        s.id AS session_id,
+        s.user_agent,
+        s.ip_address,
+        s.created_at,
+        s.last_seen_at
+      FROM auth_sessions s
+      INNER JOIN users u ON u.id = s.user_id
+      WHERE s.revoked_at IS NULL
+        AND datetime(COALESCE(s.last_seen_at, s.created_at)) >= datetime('now', ?)
+      ORDER BY datetime(COALESCE(s.last_seen_at, s.created_at)) DESC`,
+    [`-${ONLINE_USER_ACTIVITY_WINDOW_MINUTES} minutes`],
+    (error, rows) => {
+      if (error) {
+        console.error('Online users query error:', error);
+        return res.status(500).json({ error: 'Unable to load online users.' });
+      }
+
+      const byUserId = new Map();
+      const sessions = Array.isArray(rows) ? rows : [];
+
+      sessions.forEach((row) => {
+        const userId = Number(row.user_id);
+        if (!byUserId.has(userId)) {
+          byUserId.set(userId, {
+            id: userId,
+            name: row.name,
+            email: row.email,
+            role: serializeUser(row)?.role || String(row.role || '').trim().toLowerCase(),
+            lastSeenAt: row.last_seen_at || row.created_at || '',
+            sessions: []
+          });
+        }
+
+        const item = byUserId.get(userId);
+        const sessionLastSeen = row.last_seen_at || row.created_at || '';
+        if (sessionLastSeen && (!item.lastSeenAt || new Date(sessionLastSeen).getTime() > new Date(item.lastSeenAt).getTime())) {
+          item.lastSeenAt = sessionLastSeen;
+        }
+
+        item.sessions.push({
+          id: row.session_id,
+          userAgent: String(row.user_agent || ''),
+          ipAddress: String(row.ip_address || ''),
+          createdAt: row.created_at,
+          lastSeenAt: row.last_seen_at || row.created_at || ''
+        });
+      });
+
+      const users = Array.from(byUserId.values())
+        .map((user) => ({
+          ...user,
+          sessionCount: user.sessions.length
+        }))
+        .sort((left, right) => new Date(right.lastSeenAt || 0).getTime() - new Date(left.lastSeenAt || 0).getTime());
+
+      return res.json({
+        success: true,
+        windowMinutes: ONLINE_USER_ACTIVITY_WINDOW_MINUTES,
+        totalUsersOnline: users.length,
+        totalSessionsOnline: sessions.length,
+        users
+      });
+    }
+  );
+});
+
 // Verify token endpoint
 app.post('/api/verify', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -1589,9 +2106,420 @@ app.post('/api/verify', (req, res) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    return res.json({ success: true, user: decoded });
+    db.get('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id], (error, userRow) => {
+      if (error) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (!userRow) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      return res.json({ success: true, user: serializeUser(userRow) });
+    });
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+app.post('/api/logout', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    if (decoded.sessionId) {
+      await revokeAuthSession(decoded.sessionId, 'logout');
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to end session.' });
+  }
+});
+
+app.post('/api/security/change-password', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentPassword = String(req.body?.currentPassword || '');
+  const newPassword = String(req.body?.newPassword || '');
+  const confirmPassword = String(req.body?.confirmPassword || '');
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return res.status(400).json({ error: 'All password fields are required.' });
+  }
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ error: 'New passwords do not match.' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  }
+
+  try {
+    const user = await dbGet('SELECT id, password_hash FROM users WHERE id = ?', [decoded.id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    const matches = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!matches) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+
+    const nextHash = await bcrypt.hash(newPassword, 10);
+    await dbRun('UPDATE users SET password_hash = ? WHERE id = ?', [nextHash, decoded.id]);
+    return res.json({ success: true, message: 'Password updated successfully.' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({ error: 'Unable to change password right now.' });
+  }
+});
+
+app.get('/api/security/2fa', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const settings = await getUserSecuritySettings(decoded.id);
+    return res.json({
+      success: true,
+      settings: {
+        enabled: settings.enabled,
+        appEnabled: settings.appEnabled,
+        appVerified: Boolean(settings.appVerifiedAt),
+        hasSecret: Boolean(settings.totpSecret),
+        updatedAt: settings.updatedAt,
+        setupKey: settings.appVerifiedAt ? '' : settings.totpSecret
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to load 2FA settings.' });
+  }
+});
+
+app.post('/api/security/2fa/app/setup', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const secret = generateTotpSecret();
+    await saveUserSecuritySettings(decoded.id, {
+      enabled: false,
+      appEnabled: true,
+      totpSecret: secret,
+      appVerifiedAt: ''
+    });
+
+    const issuer = encodeURIComponent('FAST BRIDGE GROUP');
+    const label = encodeURIComponent(decoded.email);
+    const otpauthUri = `otpauth://totp/${issuer}:${label}?secret=${secret}&issuer=${issuer}&digits=${TOTP_DIGITS}&period=${TOTP_PERIOD_SECONDS}`;
+    return res.json({ success: true, setupKey: secret, otpauthUri });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to create a 2FA setup key.' });
+  }
+});
+
+app.post('/api/security/2fa/app/verify', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const code = String(req.body?.code || '').trim();
+  if (!code) {
+    return res.status(400).json({ error: 'Verification code is required.' });
+  }
+
+  try {
+    const current = await getUserSecuritySettings(decoded.id);
+    if (!current.totpSecret) {
+      return res.status(400).json({ error: 'Create a setup key before verifying 2FA.' });
+    }
+    if (!verifyTotpCode(current.totpSecret, code)) {
+      return res.status(401).json({ error: 'Invalid verification code.' });
+    }
+
+    const verifiedAt = new Date().toISOString();
+    await saveUserSecuritySettings(decoded.id, {
+      enabled: true,
+      appEnabled: true,
+      totpSecret: current.totpSecret,
+      appVerifiedAt: verifiedAt
+    });
+
+    return res.json({ success: true, settings: { enabled: true, appEnabled: true, appVerified: true, updatedAt: verifiedAt } });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to verify 2FA.' });
+  }
+});
+
+app.put('/api/security/2fa', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const enabled = Boolean(req.body?.enabled);
+  const appEnabled = Boolean(req.body?.appEnabled);
+
+  try {
+    const current = await getUserSecuritySettings(decoded.id);
+    if (enabled && !(appEnabled && current.totpSecret && current.appVerifiedAt)) {
+      return res.status(400).json({ error: 'Verify your authenticator app before enabling 2FA.' });
+    }
+
+    await saveUserSecuritySettings(decoded.id, {
+      enabled,
+      appEnabled: appEnabled && Boolean(current.totpSecret),
+      totpSecret: current.totpSecret,
+      appVerifiedAt: current.appVerifiedAt
+    });
+
+    return res.json({
+      success: true,
+      settings: {
+        enabled,
+        appEnabled: appEnabled && Boolean(current.totpSecret),
+        appVerified: Boolean(current.appVerifiedAt)
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to update 2FA settings.' });
+  }
+});
+
+app.get('/api/security/sessions', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  db.all(
+    `SELECT id, user_agent, ip_address, created_at, last_seen_at, revoked_at
+       FROM auth_sessions
+      WHERE user_id = ?
+      ORDER BY datetime(created_at) DESC`,
+    [decoded.id],
+    (error, rows) => {
+      if (error) {
+        return res.status(500).json({ error: 'Unable to load active sessions.' });
+      }
+
+      const sessions = (Array.isArray(rows) ? rows : []).map((row) => ({
+        id: row.id,
+        userAgent: String(row.user_agent || ''),
+        ipAddress: String(row.ip_address || ''),
+        createdAt: row.created_at,
+        lastSeenAt: row.last_seen_at,
+        revokedAt: row.revoked_at,
+        current: String(decoded.sessionId || '') === String(row.id || ''),
+        active: !row.revoked_at
+      }));
+
+      return res.json({ success: true, sessions });
+    }
+  );
+});
+
+app.delete('/api/security/sessions/:id', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const sessionId = String(req.params?.id || '').trim();
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Session id is required.' });
+  }
+
+  try {
+    const session = await dbGet('SELECT id, user_id, revoked_at FROM auth_sessions WHERE id = ?', [sessionId]);
+    if (!session || Number(session.user_id) !== Number(decoded.id)) {
+      return res.status(404).json({ error: 'Session not found.' });
+    }
+    if (!session.revoked_at) {
+      await revokeAuthSession(sessionId, sessionId === decoded.sessionId ? 'current-session-revoked' : 'revoked-from-security');
+    }
+    return res.json({ success: true, revokedCurrent: sessionId === decoded.sessionId });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to revoke session.' });
+  }
+});
+
+app.get('/api/subscription/status', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const userRow = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id]);
+    if (!userRow) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const subscriptionRow = await dbGet(
+      `SELECT billing_name, billing_email, billing_phone, company_name, address_line1, address_line2,
+              city, state_region, postal_code, country, cardholder_name, card_brand, card_last4,
+              subscription_status, activated_at
+         FROM subscription_profiles
+        WHERE user_id = ?`,
+      [decoded.id]
+    );
+
+    return res.json({
+      success: true,
+      user: serializeUser(userRow),
+      subscription: buildSubscriptionPayload(userRow, subscriptionRow)
+    });
+  } catch (error) {
+    console.error('Subscription status error:', error);
+    return res.status(500).json({ error: 'Unable to load subscription status' });
+  }
+});
+
+app.post('/api/subscription/premium-checkout', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  if (String(decoded.role || '').trim().toLowerCase() === 'admin') {
+    return res.status(400).json({ error: 'Admin accounts already have full access and do not require a subscription.' });
+  }
+
+  const billingName = sanitizeBillingField(req.body?.billingName);
+  const billingEmail = sanitizeBillingField(req.body?.billingEmail).toLowerCase();
+  const billingPhone = sanitizeBillingField(req.body?.billingPhone, 40);
+  const companyName = sanitizeBillingField(req.body?.companyName);
+  const addressLine1 = sanitizeBillingField(req.body?.addressLine1);
+  const addressLine2 = sanitizeBillingField(req.body?.addressLine2);
+  const city = sanitizeBillingField(req.body?.city, 80);
+  const stateRegion = sanitizeBillingField(req.body?.stateRegion, 80);
+  const postalCode = sanitizeBillingField(req.body?.postalCode, 24);
+  const country = sanitizeBillingField(req.body?.country, 80) || 'United States';
+  const cardholderName = sanitizeBillingField(req.body?.cardholderName);
+  const cardNumber = String(req.body?.cardNumber || '').replace(/\D+/g, '');
+  const expiryMonth = sanitizeBillingField(req.body?.expiryMonth, 2);
+  const expiryYear = sanitizeBillingField(req.body?.expiryYear, 4);
+  const cvc = String(req.body?.cvc || '').replace(/\D+/g, '');
+
+  if (!billingName || !billingEmail || !addressLine1 || !city || !stateRegion || !postalCode || !cardholderName) {
+    return res.status(400).json({ error: 'Complete all required billing fields.' });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) {
+    return res.status(400).json({ error: 'Enter a valid billing email address.' });
+  }
+
+  if (!hasValidLuhn(cardNumber)) {
+    return res.status(400).json({ error: 'Enter a valid card number.' });
+  }
+
+  if (!isValidFutureExpiry(expiryMonth, expiryYear)) {
+    return res.status(400).json({ error: 'Enter a valid future expiration date.' });
+  }
+
+  if (!/^\d{3,4}$/.test(cvc)) {
+    return res.status(400).json({ error: 'Enter a valid CVC.' });
+  }
+
+  try {
+    const userRow = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id]);
+    if (!userRow) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const cardBrand = detectCardBrand(cardNumber);
+    const cardLast4 = cardNumber.slice(-4);
+
+    await dbRun('UPDATE users SET role = ? WHERE id = ?', [PREMIUM_USER_ROLE, decoded.id]);
+    await dbRun(
+      `INSERT INTO subscription_profiles (
+          user_id, plan_key, billing_name, billing_email, billing_phone, company_name,
+          address_line1, address_line2, city, state_region, postal_code, country,
+          cardholder_name, card_brand, card_last4, subscription_status, amount_cents,
+          currency, activated_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+          plan_key = excluded.plan_key,
+          billing_name = excluded.billing_name,
+          billing_email = excluded.billing_email,
+          billing_phone = excluded.billing_phone,
+          company_name = excluded.company_name,
+          address_line1 = excluded.address_line1,
+          address_line2 = excluded.address_line2,
+          city = excluded.city,
+          state_region = excluded.state_region,
+          postal_code = excluded.postal_code,
+          country = excluded.country,
+          cardholder_name = excluded.cardholder_name,
+          card_brand = excluded.card_brand,
+          card_last4 = excluded.card_last4,
+          subscription_status = 'active',
+          amount_cents = excluded.amount_cents,
+          currency = excluded.currency,
+          activated_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP`,
+      [
+        decoded.id,
+        PREMIUM_PLAN_KEY,
+        billingName,
+        billingEmail,
+        billingPhone,
+        companyName,
+        addressLine1,
+        addressLine2,
+        city,
+        stateRegion,
+        postalCode,
+        country,
+        cardholderName,
+        cardBrand,
+        cardLast4,
+        PREMIUM_PRICE_CENTS,
+        PREMIUM_CURRENCY
+      ]
+    );
+
+    const updatedUser = {
+      ...userRow,
+      role: PREMIUM_USER_ROLE
+    };
+    const token = issueAuthToken(updatedUser);
+
+    return res.json({
+      success: true,
+      message: 'Premium activated successfully.',
+      token,
+      user: serializeUser(updatedUser),
+      subscription: buildSubscriptionPayload(updatedUser, {
+        billing_name: billingName,
+        billing_email: billingEmail,
+        billing_phone: billingPhone,
+        company_name: companyName,
+        address_line1: addressLine1,
+        address_line2: addressLine2,
+        city,
+        state_region: stateRegion,
+        postal_code: postalCode,
+        country,
+        cardholder_name: cardholderName,
+        card_brand: cardBrand,
+        card_last4: cardLast4,
+        subscription_status: 'active',
+        activated_at: new Date().toISOString()
+      })
+    });
+  } catch (error) {
+    console.error('Premium checkout error:', error);
+    return res.status(500).json({ error: 'Unable to activate premium right now.' });
   }
 });
 
@@ -1624,7 +2552,16 @@ function requireAuth(req, res) {
     return null;
   }
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const sessionId = String(decoded?.sessionId || '').trim();
+    if (sessionId && revokedSessionIds.has(sessionId)) {
+      res.status(401).json({ error: 'Session has expired. Please sign in again.' });
+      return null;
+    }
+    if (sessionId) {
+      db.run('UPDATE auth_sessions SET last_seen_at = ? WHERE id = ? AND revoked_at IS NULL', [new Date().toISOString(), sessionId], () => {});
+    }
+    return decoded;
   } catch (e) {
     res.status(401).json({ error: 'Invalid or expired token' });
     return null;

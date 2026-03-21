@@ -779,6 +779,23 @@
                 return /\bagent\b/i.test(String(value || ''));
             }
 
+            function buildAgentSearchText(row) {
+                if (!row || typeof row !== 'object') {
+                    return '';
+                }
+
+                return [
+                    row.agentName,
+                    row.brokerage,
+                    row.email,
+                    row.cellPhone,
+                    row.market,
+                    row.specialty,
+                    row.status,
+                    row.notes
+                ].map(value => String(value || '').trim()).filter(Boolean).join(' ');
+            }
+
             function isLikelyImportedContactRow(row) {
                 if (!row || !isMeaningfulValue(row.agentName)) {
                     return false;
@@ -794,7 +811,11 @@
 
             function shouldKeepImportedAgentRow(row) {
                 const agentName = String(row && row.agentName || '').trim();
-                if (!agentName || !hasAgentLabel(agentName)) {
+                if (!agentName) {
+                    return false;
+                }
+
+                if (!hasAgentLabel(buildAgentSearchText(row))) {
                     return false;
                 }
 

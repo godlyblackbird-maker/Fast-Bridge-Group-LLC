@@ -691,7 +691,7 @@
     const initials = getInitials(resolvedName);
     const avatarImage = profileData.avatarImage || '';
     const email = profileData.email || 'No email set';
-    const role = profileData.role === 'admin' ? 'Administrator' : (profileData.role || 'Administrator');
+    const role = toRoleLabel(profileData.role || 'Administrator');
 
     if (settingsNameEl) {
       settingsNameEl.textContent = resolvedName;
@@ -736,11 +736,25 @@
   }
 
   function toRoleLabel(roleValue) {
-    const normalized = String(roleValue || '').trim();
+    const normalized = String(roleValue || '').trim().toLowerCase();
     if (!normalized) {
       return 'Broker / Investor';
     }
-    return normalized;
+    if (normalized === 'admin') {
+      return 'Administrator';
+    }
+    if (normalized === 'premium user') {
+      return 'Premium User';
+    }
+    if (normalized === 'user') {
+      return 'User';
+    }
+    if (normalized === 'broker') {
+      return 'Broker';
+    }
+    return normalized.replace(/\b\w/g, function(char) {
+      return char.toUpperCase();
+    });
   }
 
   function syncSettingsECardSection() {

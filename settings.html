@@ -425,19 +425,24 @@ https://templatemo.com/tm-607-glass-admin
                     <div class="settings-tab-content" id="tab-security">
                         <div class="settings-section">
                             <h3 class="settings-section-title">Change Password</h3>
-                            <div class="form-grid">
+                            <div class="form-grid" id="security-password-form">
                                 <div class="form-group-settings full-width">
-                                    <label>Current Password</label>
-                                    <input type="password" placeholder="Enter current password">
+                                    <label for="security-current-password">Current Password</label>
+                                    <input type="password" id="security-current-password" data-settings-transient="true" placeholder="Enter current password" autocomplete="current-password">
                                 </div>
                                 <div class="form-group-settings">
-                                    <label>New Password</label>
-                                    <input type="password" placeholder="Enter new password">
+                                    <label for="security-new-password">New Password</label>
+                                    <input type="password" id="security-new-password" data-settings-transient="true" placeholder="Enter new password" autocomplete="new-password">
                                 </div>
                                 <div class="form-group-settings">
-                                    <label>Confirm New Password</label>
-                                    <input type="password" placeholder="Confirm new password">
+                                    <label for="security-confirm-password">Confirm New Password</label>
+                                    <input type="password" id="security-confirm-password" data-settings-transient="true" placeholder="Confirm new password" autocomplete="new-password">
                                 </div>
+                            </div>
+                            <p class="subscription-billing-disclaimer" id="security-password-status">Use at least 8 characters. Password changes apply immediately to this account.</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" id="security-password-save" type="button" style="width: auto;">Update Password</button>
+                                <button class="btn btn-secondary" id="security-password-reset" type="button" style="width: auto;">Clear</button>
                             </div>
                         </div>
 
@@ -446,118 +451,58 @@ https://templatemo.com/tm-607-glass-admin
                             <div class="settings-row">
                                 <div class="settings-label">
                                     <span class="settings-label-title">Enable 2FA</span>
-                                    <span class="settings-label-desc">Add an extra layer of security to your account</span>
+                                    <span class="settings-label-desc">Require an authenticator app code whenever this account signs in.</span>
                                 </div>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="security-2fa-enable">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">SMS Authentication</span>
-                                    <span class="settings-label-desc">Receive codes via SMS</span>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="security-2fa-sms" checked>
+                                    <input type="checkbox" id="security-2fa-enable" data-settings-transient="true">
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
                             <div class="settings-row">
                                 <div class="settings-label">
                                     <span class="settings-label-title">Authenticator App</span>
-                                    <span class="settings-label-desc">Use Google Authenticator or similar</span>
+                                    <span class="settings-label-desc">Use Google Authenticator, Microsoft Authenticator, or any TOTP-compatible app.</span>
                                 </div>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="security-2fa-app">
+                                    <input type="checkbox" id="security-2fa-app" data-settings-transient="true">
                                     <span class="toggle-slider"></span>
                                 </label>
+                            </div>
+                            <div class="form-grid security-2fa-panel" id="security-2fa-panel">
+                                <div class="form-group-settings full-width">
+                                    <label for="security-2fa-setup-key">Setup Key</label>
+                                    <input type="text" id="security-2fa-setup-key" data-settings-transient="true" readonly placeholder="Generate a setup key to link your authenticator app.">
+                                </div>
+                                <div class="form-group-settings full-width">
+                                    <label for="security-2fa-code">Verification Code</label>
+                                    <input type="text" id="security-2fa-code" data-settings-transient="true" inputmode="numeric" maxlength="6" placeholder="Enter the 6-digit code from your authenticator app">
+                                </div>
+                            </div>
+                            <p class="subscription-billing-disclaimer" id="security-2fa-status">Two-factor authentication is currently turned off.</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" id="security-2fa-setup-btn" type="button" style="width: auto;">Generate Setup Key</button>
+                                <button class="btn btn-secondary" id="security-2fa-verify-btn" type="button" style="width: auto;">Verify Authenticator App</button>
                             </div>
                         </div>
 
                         <div class="settings-section">
                             <h3 class="settings-section-title">Active Sessions</h3>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Chrome on MacOS</span>
-                                    <span class="settings-label-desc">San Francisco, CA • Current session</span>
-                                </div>
-                                <span class="status-badge completed">Active</span>
+                            <p class="subscription-billing-disclaimer" id="security-sessions-status">Loading active sessions for this account.</p>
+                            <div id="security-sessions-list"></div>
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" id="security-sessions-refresh" type="button" style="width: auto;">Refresh Sessions</button>
                             </div>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Safari on iPhone</span>
-                                    <span class="settings-label-desc">San Francisco, CA • 2 hours ago</span>
-                                </div>
-                                <button class="card-btn" style="padding: 6px 12px;">Revoke</button>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Firefox on Windows</span>
-                                    <span class="settings-label-desc">New York, NY • 3 days ago</span>
-                                </div>
-                                <button class="card-btn" style="padding: 6px 12px;">Revoke</button>
-                            </div>
-                        </div>
-
-                        <div class="btn-group">
-                            <button class="btn btn-primary" style="width: auto;">Update Password</button>
-                            <button class="btn btn-secondary" style="width: auto;">Cancel</button>
                         </div>
                     </div>
 
                     <!-- Notifications Tab -->
                     <div class="settings-tab-content" id="tab-notifications">
                         <div class="settings-section">
-                            <h3 class="settings-section-title">Email Notifications</h3>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Account Activity</span>
-                                    <span class="settings-label-desc">Get notified about sign-ins and security changes</span>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">New Features</span>
-                                    <span class="settings-label-desc">Learn about new features and updates</span>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Weekly Reports</span>
-                                    <span class="settings-label-desc">Receive weekly analytics summary</span>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Marketing Emails</span>
-                                    <span class="settings-label-desc">Receive news about promotions and offers</span>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="settings-section">
-                            <h3 class="settings-section-title">Push Notifications</h3>
+                            <h3 class="settings-section-title">Notification Controls</h3>
                             <div class="settings-row">
                                 <div class="settings-label">
                                     <span class="settings-label-title">MLS New Listing Alerts</span>
-                                    <span class="settings-label-desc">Notify me when new MLS properties land in the hot deals board</span>
+                                    <span class="settings-label-desc">Trigger alerts when new MLS cards appear on the hot deals board.</span>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="notifications-toggle-mls-new-listings" checked>
@@ -567,7 +512,7 @@ https://templatemo.com/tm-607-glass-admin
                             <div class="settings-row">
                                 <div class="settings-label">
                                     <span class="settings-label-title">Planner Reminder Popups</span>
-                                    <span class="settings-label-desc">Show top-right planner alerts for upcoming and overdue tasks</span>
+                                    <span class="settings-label-desc">Show top-right planner alerts for overdue, due-today, and upcoming tasks.</span>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="notifications-toggle-planner-popups" checked>
@@ -577,7 +522,8 @@ https://templatemo.com/tm-607-glass-admin
                             <div class="settings-row">
                                 <div class="settings-label">
                                     <span class="settings-label-title">Desktop Notifications</span>
-                                    <span class="settings-label-desc">Show notifications on your desktop</span>
+                                    <span class="settings-label-desc">Allow browser notifications for planner reminders and MLS alerts.</span>
+                                    <span class="settings-label-desc" id="notifications-desktop-status">Browser permission status will appear here.</span>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="notifications-toggle-desktop" checked>
@@ -586,29 +532,15 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="settings-row">
                                 <div class="settings-label">
-                                    <span class="settings-label-title">Mobile Push</span>
-                                    <span class="settings-label-desc">Receive push notifications on mobile</span>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Sound</span>
-                                    <span class="settings-label-desc">Play sound for notifications</span>
+                                    <span class="settings-label-title">Notification Sound</span>
+                                    <span class="settings-label-desc">Play the alert sound for planner reminders and MLS listing notifications.</span>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="notifications-toggle-sound" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
-                        </div>
-
-                        <div class="btn-group">
-                            <button class="btn btn-primary" style="width: auto;">Save Preferences</button>
-                            <button class="btn btn-secondary" style="width: auto;">Reset to Default</button>
+                            <p class="subscription-billing-disclaimer">These notification settings save automatically for the current workspace user.</p>
                         </div>
                     </div>
 
@@ -653,17 +585,90 @@ https://templatemo.com/tm-607-glass-admin
                                     <div class="subscription-plan-head">
                                         <div>
                                             <h4>Premium</h4>
-                                            <p>Unlock additional property investment analysis tooling without changing MLS access.</p>
+                                            <p>Unlock every premium workspace tab with the full investor toolkit and premium user access.</p>
                                         </div>
-                                        <span class="subscription-plan-price">$49/mo</span>
+                                        <span class="subscription-plan-price">$99</span>
                                     </div>
                                     <ul class="subscription-feature-list">
-                                        <li>Investment analysis tool access for property workflows</li>
-                                        <li>Premium planning and underwriting workspace positioning</li>
-                                        <li>MLS access remains unchanged</li>
+                                        <li>Unlock all locked tabs for this account immediately</li>
+                                        <li>Investment analysis, comps, campaigns, and analytics access</li>
+                                        <li>Role upgrades from user to premium user after checkout</li>
                                     </ul>
                                 </label>
                             </div>
+                        </div>
+
+                        <div class="settings-section subscription-billing-section" id="subscription-billing-section" hidden>
+                            <div class="subscription-billing-head">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Billing Information</span>
+                                    <span class="settings-label-desc" id="subscription-billing-note">Enter billing details to activate Premium User access for $99.</span>
+                                </div>
+                                <span class="subscription-billing-price">$99</span>
+                            </div>
+                            <form class="form-grid" id="subscription-billing-form">
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-name">Billing Name</label>
+                                    <input type="text" id="subscription-billing-name" autocomplete="name" placeholder="Full billing name">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-email">Billing Email</label>
+                                    <input type="email" id="subscription-billing-email" autocomplete="email" placeholder="billing@email.com">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-phone">Phone</label>
+                                    <input type="tel" id="subscription-billing-phone" autocomplete="tel" placeholder="(555) 555-5555">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-company">Company</label>
+                                    <input type="text" id="subscription-billing-company" autocomplete="organization" placeholder="Optional company name">
+                                </div>
+                                <div class="form-group-settings full-width">
+                                    <label for="subscription-billing-address1">Address Line 1</label>
+                                    <input type="text" id="subscription-billing-address1" autocomplete="address-line1" placeholder="Street address">
+                                </div>
+                                <div class="form-group-settings full-width">
+                                    <label for="subscription-billing-address2">Address Line 2</label>
+                                    <input type="text" id="subscription-billing-address2" autocomplete="address-line2" placeholder="Suite, unit, or building (optional)">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-city">City</label>
+                                    <input type="text" id="subscription-billing-city" autocomplete="address-level2" placeholder="City">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-state">State / Region</label>
+                                    <input type="text" id="subscription-billing-state" autocomplete="address-level1" placeholder="State or region">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-postal">Postal Code</label>
+                                    <input type="text" id="subscription-billing-postal" autocomplete="postal-code" placeholder="ZIP / postal code">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-billing-country">Country</label>
+                                    <input type="text" id="subscription-billing-country" autocomplete="country-name" value="United States" placeholder="Country">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-cardholder-name">Cardholder Name</label>
+                                    <input type="text" id="subscription-cardholder-name" autocomplete="cc-name" placeholder="Name on card">
+                                </div>
+                                <div class="form-group-settings full-width">
+                                    <label for="subscription-card-number">Card Number</label>
+                                    <input type="text" id="subscription-card-number" inputmode="numeric" autocomplete="cc-number" placeholder="4111 1111 1111 1111">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-card-exp-month">Exp. Month</label>
+                                    <input type="text" id="subscription-card-exp-month" inputmode="numeric" autocomplete="cc-exp-month" placeholder="MM">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-card-exp-year">Exp. Year</label>
+                                    <input type="text" id="subscription-card-exp-year" inputmode="numeric" autocomplete="cc-exp-year" placeholder="YYYY">
+                                </div>
+                                <div class="form-group-settings">
+                                    <label for="subscription-card-cvc">CVC</label>
+                                    <input type="password" id="subscription-card-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="CVC">
+                                </div>
+                            </form>
+                            <p class="subscription-billing-disclaimer">Only your billing profile plus the card brand and last four digits are retained after checkout. Full card number and CVC are not stored.</p>
                         </div>
 
                         <div class="settings-section subscription-summary-section">
@@ -672,7 +677,7 @@ https://templatemo.com/tm-607-glass-admin
                                     <span class="settings-label-title">Plan Summary</span>
                                     <span class="settings-label-desc" id="subscription-plan-summary">Basic keeps standard dashboard access active.</span>
                                 </div>
-                                <button class="btn btn-primary" id="subscription-save-btn" type="button" style="width: auto;">Save Plan</button>
+                                <button class="btn btn-primary" id="subscription-save-btn" type="button" style="width: auto;">Buy Premium - $99</button>
                             </div>
                         </div>
                     </div>

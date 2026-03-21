@@ -24,6 +24,9 @@
   ];
   const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
   const ADMIN_CANONICAL_EMAILS = new Set();
+  const PREMIUM_SETTINGS_URL = '/settings.html?tab=subscriptions';
+  let premiumUpgradeTooltip = null;
+  let premiumUpgradeTooltipHideTimer = null;
 
   KNOWN_EMAIL_GROUPS.forEach((group) => {
     if (group.forceRole === 'admin') {
@@ -115,6 +118,10 @@
     return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'user');
   }
 
+  function isPremiumUser(userLike) {
+    return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'premium user');
+  }
+
   function formatRoleLabel(roleValue) {
     const normalizedRole = String(roleValue || '').trim().toLowerCase();
     if (normalizedRole === 'admin') {
@@ -122,6 +129,9 @@
     }
     if (normalizedRole === 'broker') {
       return 'Broker';
+    }
+    if (normalizedRole === 'premium user') {
+      return 'Premium User';
     }
     if (normalizedRole === 'user') {
       return 'User';
@@ -144,6 +154,130 @@
     return normalizedPath === '/campaigns.html' || normalizedPath.endsWith('/campaigns.html');
   }
 
+  function clearPremiumUpgradeTooltipHideTimer() {
+    if (premiumUpgradeTooltipHideTimer) {
+      window.clearTimeout(premiumUpgradeTooltipHideTimer);
+      premiumUpgradeTooltipHideTimer = null;
+    }
+  }
+
+  function ensurePremiumUpgradeTooltip() {
+    if (premiumUpgradeTooltip && document.body.contains(premiumUpgradeTooltip)) {
+      return premiumUpgradeTooltip;
+    }
+
+    premiumUpgradeTooltip = document.createElement('div');
+    premiumUpgradeTooltip.className = 'premium-upgrade-tooltip';
+    premiumUpgradeTooltip.setAttribute('role', 'tooltip');
+    premiumUpgradeTooltip.setAttribute('aria-hidden', 'true');
+    premiumUpgradeTooltip.innerHTML = '<span class="premium-upgrade-tooltip-label">Locked feature</span><a class="premium-upgrade-tooltip-link" href="' + PREMIUM_SETTINGS_URL + '">upgrade to premium</a>';
+
+    premiumUpgradeTooltip.addEventListener('mouseenter', () => {
+      clearPremiumUpgradeTooltipHideTimer();
+    });
+
+    premiumUpgradeTooltip.addEventListener('mouseleave', () => {
+      hidePremiumUpgradeTooltip(true);
+    });
+
+    document.body.appendChild(premiumUpgradeTooltip);
+    return premiumUpgradeTooltip;
+  }
+
+  function positionPremiumUpgradeTooltip(target) {
+    const tooltip = ensurePremiumUpgradeTooltip();
+    const targetRect = target.getBoundingClientRect();
+
+    tooltip.classList.add('is-visible');
+    tooltip.setAttribute('aria-hidden', 'false');
+
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const gutter = 12;
+    let top = targetRect.top + (targetRect.height / 2) - (tooltipRect.height / 2);
+    let left = targetRect.right + 14;
+
+    if (left + tooltipRect.width + gutter > viewportWidth) {
+      left = Math.max(gutter, targetRect.left - tooltipRect.width - 14);
+    }
+
+    if (left < gutter) {
+      left = Math.max(gutter, Math.min(viewportWidth - tooltipRect.width - gutter, targetRect.left));
+      top = targetRect.bottom + 10;
+    }
+
+    if (top + tooltipRect.height + gutter > viewportHeight) {
+      top = Math.max(gutter, viewportHeight - tooltipRect.height - gutter);
+    }
+
+    if (top < gutter) {
+      top = gutter;
+    }
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  }
+
+  function showPremiumUpgradeTooltip(target) {
+    if (!target) {
+      return;
+    }
+
+    clearPremiumUpgradeTooltipHideTimer();
+    positionPremiumUpgradeTooltip(target);
+  }
+
+  function hidePremiumUpgradeTooltip(withDelay) {
+    if (!premiumUpgradeTooltip) {
+      return;
+    }
+
+    clearPremiumUpgradeTooltipHideTimer();
+
+    const runHide = () => {
+      if (!premiumUpgradeTooltip) {
+        return;
+      }
+      premiumUpgradeTooltip.classList.remove('is-visible');
+      premiumUpgradeTooltip.setAttribute('aria-hidden', 'true');
+    };
+
+    if (withDelay) {
+      premiumUpgradeTooltipHideTimer = window.setTimeout(runHide, 120);
+      return;
+    }
+
+    runHide();
+  }
+
+  function attachPremiumUpgradeTooltip(target) {
+    if (!target || target.dataset.premiumUpgradeTooltipBound === 'true') {
+      return;
+    }
+
+    target.dataset.premiumUpgradeTooltipBound = 'true';
+    target.setAttribute('data-premium-upgrade', 'true');
+
+    target.addEventListener('mouseenter', () => {
+      showPremiumUpgradeTooltip(target);
+    });
+
+    target.addEventListener('mouseleave', () => {
+      hidePremiumUpgradeTooltip(true);
+    });
+
+    target.addEventListener('focus', () => {
+      showPremiumUpgradeTooltip(target);
+    });
+
+    target.addEventListener('blur', () => {
+      hidePremiumUpgradeTooltip(true);
+    });
+  }
+
+  window.attachPremiumUpgradeTooltip = attachPremiumUpgradeTooltip;
+
   function applyLockedActiveBuyersLink(link) {
     if (!link || link.dataset.lockedActiveBuyers === 'true') {
       return;
@@ -153,7 +287,8 @@
     link.classList.remove('active');
     link.classList.add('nav-link-locked');
     link.setAttribute('aria-disabled', 'true');
-    link.setAttribute('title', 'Active Buyers is restricted to administrators.');
+    link.setAttribute('title', 'upgrade to premium');
+    attachPremiumUpgradeTooltip(link);
 
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
@@ -177,7 +312,8 @@
     link.classList.remove('active');
     link.classList.add('nav-link-locked');
     link.setAttribute('aria-disabled', 'true');
-    link.setAttribute('title', 'Campaigns is locked for User accounts.');
+    link.setAttribute('title', 'upgrade to premium');
+    attachPremiumUpgradeTooltip(link);
 
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
@@ -201,7 +337,8 @@
     link.classList.remove('active');
     link.classList.add('nav-link-locked');
     link.setAttribute('aria-disabled', 'true');
-    link.setAttribute('title', 'Analytics is locked for User accounts.');
+    link.setAttribute('title', 'upgrade to premium');
+    attachPremiumUpgradeTooltip(link);
 
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
@@ -312,7 +449,7 @@
     const activeUser = window.getCurrentUser ? window.getCurrentUser() : null;
     const normalizedPath = String(currentPath || '').toLowerCase();
     if (isActiveBuyersPath(normalizedPath)) {
-      if (!isAdminUser(activeUser)) {
+      if (isRegularUser(activeUser)) {
         window.location.href = '/dashboard.html';
         return;
       }
@@ -358,8 +495,13 @@
 
     const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
     activeBuyersLinks.forEach(link => {
+      if (isRegularUser(activeUser)) {
+        applyLockedActiveBuyersLink(link);
+        return;
+      }
+
       const listItem = link.closest('.nav-item');
-      if (!isAdmin) {
+      if (!isAdmin && !isPremiumUser(activeUser)) {
         if (listItem) {
           listItem.remove();
         } else {
@@ -449,7 +591,20 @@
   };
 
   // Logout function
-  window.logout = function() {
+  window.logout = async function() {
+    const token = String(localStorage.getItem('authToken') || '').trim();
+    if (token) {
+      try {
+        await fetch('/api/logout', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      } catch (error) {
+        console.error('Logout request failed:', error);
+      }
+    }
     clearAuthState();
     window.location.href = '/login.html';
   };

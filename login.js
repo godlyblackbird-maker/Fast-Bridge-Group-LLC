@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   const loginForm = document.getElementById('login-form');
   const loginBtn = document.getElementById('login-btn');
+  const twoFactorForm = document.getElementById('two-factor-form');
+  const twoFactorBtn = document.getElementById('two-factor-btn');
+  const twoFactorCancelBtn = document.getElementById('two-factor-cancel-btn');
+  const twoFactorCodeInput = document.getElementById('two-factor-code');
+  const twoFactorMessage = document.getElementById('two-factor-message');
   const errorDiv = document.getElementById('error-message');
   const emailInput = document.getElementById('email');
   const googleSignInBtn = document.getElementById('google-signin-btn');
@@ -25,6 +30,50 @@ document.addEventListener('DOMContentLoaded', function() {
   const termsModal = document.getElementById('terms-modal');
   const termsContinueBtn = document.getElementById('terms-continue-btn');
   const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
+  let pendingTwoFactorChallenge = '';
+
+  function showLoginError(message) {
+    if (!errorDiv) {
+      return;
+    }
+    errorDiv.style.display = 'block';
+    errorDiv.style.color = '#ef4444';
+    errorDiv.textContent = String(message || '');
+  }
+
+  function clearLoginError() {
+    if (!errorDiv) {
+      return;
+    }
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+  }
+
+  function setTwoFactorMode(enabled, message) {
+    pendingTwoFactorChallenge = enabled ? pendingTwoFactorChallenge : '';
+    if (loginForm) {
+      loginForm.hidden = Boolean(enabled);
+    }
+    if (twoFactorForm) {
+      twoFactorForm.hidden = !enabled;
+    }
+    if (twoFactorMessage && message) {
+      twoFactorMessage.textContent = message;
+      twoFactorMessage.style.color = 'var(--text-secondary)';
+    }
+    if (twoFactorCodeInput) {
+      twoFactorCodeInput.value = '';
+      if (enabled) {
+        window.setTimeout(() => twoFactorCodeInput.focus(), 40);
+      }
+    }
+  }
+
+  function beginTwoFactorChallenge(challengeToken, message) {
+    pendingTwoFactorChallenge = String(challengeToken || '').trim();
+    setTwoFactorMode(true, message || 'Enter the current code from your authenticator app to finish signing in.');
+    clearLoginError();
+  }
 
   function openTermsModal() {
     if (!termsModal) {
@@ -74,13 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function showTermsRequiredMessage() {
-    if (!errorDiv) {
-      return;
-    }
-
-    errorDiv.style.display = 'block';
-    errorDiv.style.color = '#ef4444';
-    errorDiv.textContent = 'You must agree to the Terms and Conditions before signing in.';
+    showLoginError('You must agree to the Terms and Conditions before signing in.');
   }
 
   function getApiBaseOrigin() {
@@ -110,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       loginVersionLabel.textContent = `Version v${version}`;
     } catch (error) {
-      loginVersionLabel.textContent = 'Version v1.1.9';
+      loginVersionLabel.textContent = 'Version v1.2.1';
     }
   }
 
@@ -128,10 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const originalMarkup = googleSignInBtn.innerHTML;
     googleSignInBtn.disabled = true;
 
-    if (errorDiv) {
-      errorDiv.style.display = 'none';
-      errorDiv.textContent = '';
-    }
+    clearLoginError();
 
     try {
       const response = await fetch(`${getApiBaseOrigin()}/api/auth/google`, {
@@ -160,16 +200,30 @@ document.addEventListener('DOMContentLoaded', function() {
   const params = new URLSearchParams(window.location.search);
   const oauthToken = params.get('token');
   const oauthError = params.get('oauth_error');
+  const oauthTwoFactor = params.get('two_factor');
+  const oauthChallenge = params.get('challenge');
+  const oauthEmail = params.get('email');
 
-  if (oauthError && errorDiv) {
-    errorDiv.style.display = 'block';
-    errorDiv.style.color = '#ef4444';
-    errorDiv.textContent = decodeURIComponent(oauthError);
+  if (oauthError) {
+    showLoginError(decodeURIComponent(oauthError));
   }
 
   if (oauthToken) {
     completeOauthSignIn(oauthToken, errorDiv);
     return;
+  }
+
+  if (oauthTwoFactor === '1' && oauthChallenge) {
+    if (emailInput && oauthEmail) {
+      emailInput.value = oauthEmail;
+    }
+    beginTwoFactorChallenge(oauthChallenge, 'Google sign-in needs the current code from your authenticator app to finish.');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('two_factor');
+    url.searchParams.delete('challenge');
+    url.searchParams.delete('email');
+    url.searchParams.delete('oauth');
+    window.history.replaceState({}, document.title, url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''));
   }
 
   if (params.get('registered') === '1' && errorDiv) {
@@ -193,8 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
     termsAcceptCheckbox.checked = false;
     termsAcceptCheckbox.addEventListener('change', function() {
       if (errorDiv && hasAcceptedTerms() && errorDiv.textContent === 'You must agree to the Terms and Conditions before signing in.') {
-        errorDiv.style.display = 'none';
-        errorDiv.textContent = '';
+        clearLoginError();
       }
       syncLoginAvailability();
     });
@@ -231,8 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const password = document.getElementById('password').value;
 
       // Clear previous errors
-      errorDiv.style.display = 'none';
-      errorDiv.textContent = '';
+      clearLoginError();
 
       // Disable button and show loading state
       loginBtn.disabled = true;
@@ -251,6 +303,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = await response.json();
 
         if (response.ok && data.success) {
+          if (data.requiresTwoFactor && data.challengeToken) {
+            beginTwoFactorChallenge(data.challengeToken, 'Enter the current code from your authenticator app to finish signing in.');
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = originalText;
+            return;
+          }
+
           // Store token in localStorage
           localStorage.setItem('authToken', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
@@ -260,8 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
           window.location.href = '/dashboard.html';
         } else {
           // Show error message
-          errorDiv.textContent = data.error || 'Login failed';
-          errorDiv.style.display = 'block';
+          showLoginError(data.error || 'Login failed');
           loginBtn.disabled = false;
           loginBtn.innerHTML = originalText;
         }
@@ -277,6 +335,70 @@ document.addEventListener('DOMContentLoaded', function() {
         errorDiv.style.display = 'block';
         loginBtn.disabled = false;
         loginBtn.innerHTML = originalText;
+      }
+    });
+  }
+
+  if (twoFactorForm) {
+    twoFactorForm.addEventListener('submit', async function(event) {
+      event.preventDefault();
+
+      const code = String((twoFactorCodeInput && twoFactorCodeInput.value) || '').trim();
+      if (!pendingTwoFactorChallenge || !code) {
+        if (twoFactorMessage) {
+          twoFactorMessage.textContent = 'Enter the current 6-digit code from your authenticator app.';
+          twoFactorMessage.style.color = '#ef4444';
+        }
+        return;
+      }
+
+      const originalText = twoFactorBtn ? twoFactorBtn.innerHTML : '';
+      if (twoFactorBtn) {
+        twoFactorBtn.disabled = true;
+        twoFactorBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>';
+      }
+
+      try {
+        const response = await fetch('/api/login/2fa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            challengeToken: pendingTwoFactorChallenge,
+            code
+          })
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Authenticator code verification failed.');
+        }
+
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.removeItem('registeredEmail');
+        window.location.href = '/dashboard.html';
+      } catch (error) {
+        if (twoFactorMessage) {
+          twoFactorMessage.textContent = error.message || 'Authenticator code verification failed.';
+          twoFactorMessage.style.color = '#ef4444';
+        }
+        if (twoFactorBtn) {
+          twoFactorBtn.disabled = false;
+          twoFactorBtn.innerHTML = originalText;
+        }
+      }
+    });
+  }
+
+  if (twoFactorCancelBtn) {
+    twoFactorCancelBtn.addEventListener('click', function() {
+      pendingTwoFactorChallenge = '';
+      setTwoFactorMode(false);
+      if (twoFactorMessage) {
+        twoFactorMessage.textContent = 'Enter the current code from your authenticator app to finish signing in.';
+        twoFactorMessage.style.color = 'var(--text-secondary)';
       }
     });
   }
@@ -341,7 +463,20 @@ function checkAuthStatus() {
 }
 
 // Logout function (can be called from any page)
-function logout() {
+async function logout() {
+  const token = String(localStorage.getItem('authToken') || '').trim();
+  if (token) {
+    try {
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    }
+  }
   localStorage.removeItem('authToken');
   localStorage.removeItem('user');
   localStorage.removeItem('registeredEmail');

@@ -152,7 +152,7 @@
                 <div class="page-title-group">
                     <h1 class="page-title" style="display:flex;align-items:center;gap:16px;">
                         Admin Controls
-                        <span id="build-version-label" style="font-size:13px;font-weight:500; margin-left:16px;">v1.1.9</span>
+                        <span id="build-version-label" style="font-size:13px;font-weight:500; margin-left:16px;">v1.2.1</span>
                     </h1>
                     <p class="navbar-datetime" id="navbar-datetime" aria-live="polite"></p>
                 </div>
@@ -166,6 +166,19 @@
             </nav>
 
             <section class="outreach-workspace-grid">
+                <div class="glass-card widget-card outreach-card" data-widget-id="online-users" data-widget-title="Online Users">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Online Users</h2>
+                            <p class="card-subtitle" id="admin-online-users-subtitle">Tracking who has been active in the last few minutes.</p>
+                        </div>
+                        <button id="admin-online-users-refresh" type="button" class="card-btn">Refresh</button>
+                    </div>
+                    <div id="admin-online-users-list" class="outreach-list">
+                        <p class="outreach-empty">No online users loaded yet.</p>
+                    </div>
+                </div>
+
                 <div class="glass-card widget-card outreach-card" data-widget-id="requested-access" data-widget-title="Requested Access">
                     <div class="card-header">
                         <div>
@@ -215,6 +228,7 @@
                                 <label for="admin-new-user-role">Role</label>
                                 <select id="admin-new-user-role" class="form-input">
                                     <option value="user">user</option>
+                                    <option value="premium user">premium user</option>
                                     <option value="broker">broker</option>
                                     <option value="admin">admin</option>
                                 </select>
