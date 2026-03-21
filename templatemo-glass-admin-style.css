@@ -7766,25 +7766,41 @@ a {
     gap: 8px;
     padding: 18px;
     border-radius: 18px;
-    border: 1px solid rgba(var(--accent-rgb), 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.24);
     background:
-        radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.15), transparent 45%),
-        rgba(255, 255, 255, 0.04);
+        radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.18), transparent 46%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .subscription-hero-premium {
+    --tilt-rotate-x: 0deg;
+    --tilt-rotate-y: 0deg;
+    --tilt-depth: 0px;
+    --tilt-lift: 0px;
+    --tilt-scale: 1;
     position: relative;
     overflow: hidden;
     padding: 28px;
     border-radius: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     background:
-        radial-gradient(circle at 12% 18%, rgba(251, 191, 36, 0.18), transparent 22%),
-        radial-gradient(circle at 88% 24%, rgba(var(--accent-rgb), 0.24), transparent 28%),
-        linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
-        rgba(7, 12, 22, 0.62);
-    box-shadow: 0 26px 70px -42px rgba(0, 0, 0, 0.72);
+        radial-gradient(circle at 12% 18%, rgba(251, 191, 36, 0.26), transparent 24%),
+        radial-gradient(circle at 88% 24%, rgba(var(--accent-rgb), 0.22), transparent 30%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.1)),
+        rgba(26, 34, 48, 0.32);
+    box-shadow: 0 24px 56px -38px rgba(15, 23, 42, 0.46);
+    transform: perspective(1200px) rotateX(var(--tilt-rotate-x)) rotateY(var(--tilt-rotate-y)) translate3d(0, var(--tilt-lift), var(--tilt-depth)) scale(var(--tilt-scale));
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 140ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 220ms ease, border-color 220ms ease;
     isolation: isolate;
+}
+
+.subscription-hero-premium:hover {
+    --tilt-lift: -6px;
+    --tilt-scale: 1.01;
+    box-shadow: 0 30px 72px -42px rgba(15, 23, 42, 0.52);
 }
 
 .subscription-hero-premium::before,
@@ -7843,6 +7859,11 @@ a {
 }
 
 .subscription-plan-card {
+    --tilt-rotate-x: 0deg;
+    --tilt-rotate-y: 0deg;
+    --tilt-depth: 0px;
+    --tilt-lift: 0px;
+    --tilt-scale: 1;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -7850,13 +7871,15 @@ a {
     min-height: 100%;
     padding: 24px;
     border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03)),
-        rgba(10, 14, 22, 0.42);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08)),
+        rgba(26, 34, 48, 0.22);
     cursor: pointer;
+    transform: perspective(1200px) rotateX(var(--tilt-rotate-x)) rotateY(var(--tilt-rotate-y)) translate3d(0, var(--tilt-lift), var(--tilt-depth)) scale(var(--tilt-scale));
     transform-style: preserve-3d;
-    transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease, background 220ms ease, filter 220ms ease;
+    will-change: transform;
+    transition: transform 140ms cubic-bezier(0.2, 0.7, 0.2, 1), border-color 220ms ease, box-shadow 220ms ease, background 220ms ease, filter 220ms ease;
     overflow: hidden;
 }
 
@@ -7885,9 +7908,10 @@ a {
 }
 
 .subscription-plan-card:hover {
-    transform: perspective(1200px) rotateX(4deg) rotateY(-4deg) translateY(-8px) scale(1.01);
-    border-color: rgba(var(--accent-rgb), 0.28);
-    box-shadow: 0 28px 56px -30px rgba(0, 0, 0, 0.58);
+    --tilt-lift: -8px;
+    --tilt-scale: 1.01;
+    border-color: rgba(var(--accent-rgb), 0.34);
+    box-shadow: 0 24px 48px -28px rgba(15, 23, 42, 0.34);
     filter: saturate(1.08);
 }
 
@@ -7904,24 +7928,25 @@ a {
 
 .subscription-plan-card.is-selected {
     border-color: rgba(var(--accent-rgb), 0.58);
-    box-shadow: 0 28px 52px -30px rgba(0, 0, 0, 0.62);
+    box-shadow: 0 26px 50px -30px rgba(15, 23, 42, 0.34);
     background:
         radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.22), transparent 40%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+        linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.1));
 }
 
 .subscription-plan-card.is-selected:hover {
-    transform: perspective(1200px) rotateX(5deg) rotateY(-5deg) translateY(-10px) scale(1.015);
+    --tilt-lift: -10px;
+    --tilt-scale: 1.015;
 }
 
 .subscription-plan-card-premium {
     border-color: rgba(245, 158, 11, 0.26);
     background:
-        radial-gradient(circle at 86% 16%, rgba(250, 204, 21, 0.18), transparent 22%),
-        radial-gradient(circle at 10% 85%, rgba(249, 115, 22, 0.12), transparent 26%),
-        linear-gradient(160deg, rgba(255, 244, 214, 0.12), rgba(255, 255, 255, 0.04)),
-        rgba(18, 14, 10, 0.78);
-    box-shadow: 0 22px 54px -34px rgba(249, 115, 22, 0.42);
+        radial-gradient(circle at 86% 16%, rgba(250, 204, 21, 0.26), transparent 22%),
+        radial-gradient(circle at 10% 85%, rgba(249, 115, 22, 0.18), transparent 28%),
+        linear-gradient(160deg, rgba(255, 244, 214, 0.24), rgba(255, 255, 255, 0.12)),
+        rgba(74, 52, 24, 0.22);
+    box-shadow: 0 20px 46px -32px rgba(245, 158, 11, 0.26);
 }
 
 .subscription-plan-card-premium::before {
@@ -7931,11 +7956,11 @@ a {
 .subscription-plan-card-premium.is-selected {
     border-color: rgba(250, 204, 21, 0.54);
     background:
-        radial-gradient(circle at 86% 16%, rgba(250, 204, 21, 0.26), transparent 22%),
-        radial-gradient(circle at 12% 82%, rgba(251, 146, 60, 0.16), transparent 28%),
-        linear-gradient(160deg, rgba(255, 245, 220, 0.18), rgba(255, 255, 255, 0.05)),
-        rgba(24, 16, 10, 0.86);
-    box-shadow: 0 32px 74px -36px rgba(245, 158, 11, 0.54);
+        radial-gradient(circle at 86% 16%, rgba(250, 204, 21, 0.3), transparent 22%),
+        radial-gradient(circle at 12% 82%, rgba(251, 146, 60, 0.2), transparent 28%),
+        linear-gradient(160deg, rgba(255, 245, 220, 0.32), rgba(255, 255, 255, 0.14)),
+        rgba(96, 64, 24, 0.26);
+    box-shadow: 0 26px 58px -34px rgba(245, 158, 11, 0.34);
 }
 
 .subscription-plan-ribbon {
@@ -7988,15 +8013,22 @@ a {
 }
 
 .subscription-billing-section {
+    --tilt-rotate-x: 0deg;
+    --tilt-rotate-y: 0deg;
+    --tilt-depth: 0px;
+    --tilt-lift: 0px;
     position: relative;
     overflow: hidden;
     padding: 24px;
     border-radius: 22px;
-    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     background:
-        radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.12), transparent 42%),
-        rgba(255, 255, 255, 0.04);
-    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+        radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.16), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+    transform: perspective(1200px) rotateX(var(--tilt-rotate-x)) rotateY(var(--tilt-rotate-y)) translate3d(0, var(--tilt-lift), var(--tilt-depth));
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform 140ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 220ms ease, border-color 220ms ease;
 }
 
 .subscription-billing-section::before {
@@ -8013,9 +8045,9 @@ a {
 }
 
 .subscription-billing-section:hover {
-    transform: perspective(1200px) rotateX(2deg) rotateY(-2deg) translateY(-4px);
+    --tilt-lift: -4px;
     border-color: rgba(var(--accent-rgb), 0.34);
-    box-shadow: 0 30px 64px -36px rgba(0, 0, 0, 0.58);
+    box-shadow: 0 26px 56px -34px rgba(15, 23, 42, 0.32);
 }
 
 .subscription-billing-section:hover::before {
@@ -8149,7 +8181,8 @@ a {
     .subscription-plan-card:hover,
     .subscription-plan-card.is-selected:hover,
     .subscription-billing-section:hover {
-        transform: translateY(-4px);
+        --tilt-lift: -4px;
+        --tilt-scale: 1;
     }
 
     .subscription-summary-row {
@@ -8167,14 +8200,26 @@ a {
     }
 
     .subscription-plan-card,
-    .subscription-billing-section {
+    .subscription-billing-section,
+    .subscription-hero-premium {
         transition: none;
+    }
+
+    .subscription-hero-premium,
+    .subscription-plan-card,
+    .subscription-billing-section {
+        --tilt-rotate-x: 0deg !important;
+        --tilt-rotate-y: 0deg !important;
+        --tilt-depth: 0px !important;
+        --tilt-lift: 0px !important;
+        --tilt-scale: 1 !important;
     }
 
     .subscription-plan-card:hover,
     .subscription-plan-card.is-selected:hover,
     .subscription-billing-section:hover {
-        transform: none;
+        --tilt-lift: 0px !important;
+        --tilt-scale: 1 !important;
     }
 }
 

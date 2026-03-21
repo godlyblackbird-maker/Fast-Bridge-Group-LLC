@@ -2652,14 +2652,55 @@ function initNavbarDateTime() {
     // 3D Tilt Effect
     // ============================================
     function initTiltEffect() {
-        document.querySelectorAll('.glass-card-3d').forEach(card => {
-            card.addEventListener('mousemove', (event) => {
+        const variableTiltSelector = '.subscription-hero-premium, .subscription-plan-card, .subscription-billing-section';
+
+        document.querySelectorAll(`.glass-card-3d, ${variableTiltSelector}`).forEach(card => {
+            if (card.dataset.tiltInitialized === 'true') {
+                return;
+            }
+
+            card.dataset.tiltInitialized = 'true';
+
+            const usesVariableTilt = card.matches(variableTiltSelector);
+
+            const resetTilt = () => {
+                if (usesVariableTilt) {
+                    card.style.setProperty('--tilt-rotate-x', '0deg');
+                    card.style.setProperty('--tilt-rotate-y', '0deg');
+                    card.style.setProperty('--tilt-depth', '0px');
+                    return;
+                }
+
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+            };
+
+            card.addEventListener('pointermove', (event) => {
+                if (event.pointerType && event.pointerType !== 'mouse') {
+                    return;
+                }
+
                 const rect = card.getBoundingClientRect();
                 const x = event.clientX - rect.left;
                 const y = event.clientY - rect.top;
 
                 const centerX = rect.width / 2;
                 const centerY = rect.height / 2;
+
+                if (usesVariableTilt) {
+                    const maxTilt = Number.parseFloat(card.dataset.tiltMax)
+                        || (card.classList.contains('subscription-billing-section') ? 4 : 6);
+                    const depth = Number.parseFloat(card.dataset.tiltDepth)
+                        || (card.classList.contains('subscription-hero-premium') ? 16 : card.classList.contains('subscription-plan-card') ? 14 : 10);
+                    const normalizedX = rect.width > 0 ? (x / rect.width) - 0.5 : 0;
+                    const normalizedY = rect.height > 0 ? (y / rect.height) - 0.5 : 0;
+                    const rotateX = (normalizedY * -2 * maxTilt).toFixed(2);
+                    const rotateY = (normalizedX * 2 * maxTilt).toFixed(2);
+
+                    card.style.setProperty('--tilt-rotate-x', `${rotateX}deg`);
+                    card.style.setProperty('--tilt-rotate-y', `${rotateY}deg`);
+                    card.style.setProperty('--tilt-depth', `${depth}px`);
+                    return;
+                }
 
                 const divisor = Number.parseFloat(card.dataset.tiltDivisor) || 20;
                 const depth = Number.parseFloat(card.dataset.tiltDepth) || 10;
@@ -2678,9 +2719,8 @@ function initNavbarDateTime() {
                 card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`;
             });
 
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
-            });
+            card.addEventListener('pointerleave', resetTilt);
+            card.addEventListener('pointercancel', resetTilt);
         });
     }
 
