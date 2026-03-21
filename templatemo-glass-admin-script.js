@@ -7952,9 +7952,11 @@ function initNavbarDateTime() {
                         `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC and ${agreementData.brokerageName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`,
                         introWidth
                     ).slice(0, 4);
+                    const titleLineHeight = 16;
+                    const subtitleLineHeight = 13;
                     const titleY = heroY + 54;
-                    const subtitleY = titleY + (titleLines.length * 12) + 10;
-                    const introY = subtitleY + (subtitleLines.length * 12) + 16;
+                    const subtitleY = titleY + (titleLines.length * titleLineHeight) + 10;
+                    const introY = subtitleY + (subtitleLines.length * subtitleLineHeight) + 16;
                     const metaY = Math.max(heroY + 156, introY + (introLines.length * 14) + 14);
                     const heroHeight = Math.max(baseHeroHeight, (metaY - heroY) + 62 + 18);
 
@@ -7986,14 +7988,14 @@ function initNavbarDateTime() {
                     pdf.setFontSize(20);
                     setTextColor(brandColors.white);
                     titleLines.forEach((line, index) => {
-                        pdf.text(line, heroX + heroPadding, titleY + (index * 12));
+                        pdf.text(line, heroX + heroPadding, titleY + (index * titleLineHeight));
                     });
 
                     pdf.setFont('helvetica', 'normal');
                     pdf.setFontSize(11);
                     setTextColor([226, 232, 240]);
                     subtitleLines.forEach((line, index) => {
-                        pdf.text(line, heroX + heroPadding, subtitleY + (index * 12));
+                        pdf.text(line, heroX + heroPadding, subtitleY + (index * subtitleLineHeight));
                     });
 
                     pdf.setFontSize(10.5);
@@ -8077,15 +8079,20 @@ function initNavbarDateTime() {
                 }
 
                 function renderSectionIntro(title, copy) {
-                    const copyLines = pdf.splitTextToSize(copy, contentWidth - 22);
-                    const blockHeight = 34 + (copyLines.length * 12);
+                    const normalizedCopy = String(copy || '').trim();
+                    const copyLines = normalizedCopy ? pdf.splitTextToSize(normalizedCopy, contentWidth - 22) : [];
+                    const blockHeight = 22 + (copyLines.length * 12);
                     ensurePage(blockHeight + 10);
 
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(14);
                     setTextColor(brandColors.ink);
                     pdf.text(title, marginX, cursorY);
-                    cursorY += 18;
+                    cursorY += copyLines.length > 0 ? 18 : 10;
+
+                    if (!copyLines.length) {
+                        return;
+                    }
 
                     pdf.setFont('helvetica', 'normal');
                     pdf.setFontSize(10);
@@ -8191,7 +8198,7 @@ function initNavbarDateTime() {
                 renderNoticeCard();
                 renderSectionIntro(
                     'Core Clauses',
-                    'Each section below is formatted for cleaner legal review, easier signature routing, and a stronger presentation when exported as a formal PDF.'
+                    ''
                 );
 
                 clauseEntries.forEach((clause, index) => {
