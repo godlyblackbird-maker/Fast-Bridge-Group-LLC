@@ -2314,6 +2314,14 @@ app.post('/api/send-agent-email', async (req, res) => {
     }
   }
 
+  const normalizedRequestedFromEmail = normalizeKnownEmail(fromEmail);
+  const normalizedAuthenticatedEmail = normalizeKnownEmail(authenticatedUser?.email || '');
+  const normalizedResolvedSmtpUser = normalizeKnownEmail(smtpUser || '');
+  const safeFromEmail = normalizedRequestedFromEmail
+    && (normalizedRequestedFromEmail === normalizedAuthenticatedEmail || normalizedRequestedFromEmail === normalizedResolvedSmtpUser)
+      ? String(fromEmail || '').trim()
+      : String(smtpUser || fromEmail || '').trim();
+
   const fallbackECardRelativePath = includeECard
     ? resolveUserAdminECardRelativePath({
         name: authenticatedUser?.name || fromName,
@@ -2348,7 +2356,7 @@ app.post('/api/send-agent-email', async (req, res) => {
 
       await sendAgentEmail({
         fromName,
-        fromEmail,
+        fromEmail: safeFromEmail,
         toName,
         toEmail: email,
         subject,

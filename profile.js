@@ -2,6 +2,7 @@
 
 (function() {
   const USER_PROFILE_STORE_KEY = 'userProfilesByUser';
+  const SMTP_SETTINGS_STORE_KEY = 'smtpSettingsByUser';
   const KNOWN_EMAIL_GROUPS = [
     {
       canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -83,6 +84,15 @@
     }
   }
 
+  function getSmtpSettingsStore() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SMTP_SETTINGS_STORE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
   function setStoredProfileData(profileData) {
     const keys = getActiveUserKeys();
     const store = getProfileStore();
@@ -91,6 +101,22 @@
     });
     localStorage.setItem(USER_PROFILE_STORE_KEY, JSON.stringify(store));
     localStorage.setItem('userProfile', JSON.stringify(profileData || {}));
+  }
+
+  function setStoredSmtpSettings(settings) {
+    const normalizedSettings = {
+      smtpUser: String(settings?.smtpUser || '').trim(),
+      hasPassword: Boolean(settings?.hasPassword),
+      pendingRequest: settings?.pendingRequest || null,
+      smtpSignature: String(settings?.smtpSignature || '').trim()
+    };
+    const keys = getActiveUserKeys();
+    const store = getSmtpSettingsStore();
+    keys.forEach((key) => {
+      store[key] = normalizedSettings;
+    });
+    localStorage.setItem(SMTP_SETTINGS_STORE_KEY, JSON.stringify(store));
+    localStorage.setItem('smtpSettings', JSON.stringify(normalizedSettings));
   }
 
   function getStoredProfileData() {
@@ -1355,11 +1381,7 @@
     }
 
     function cacheSmtpSettings(settings) {
-      localStorage.setItem('smtpSettings', JSON.stringify({
-        smtpUser: String(settings?.smtpUser || '').trim(),
-        hasPassword: Boolean(settings?.hasPassword),
-        pendingRequest: settings?.pendingRequest || null
-      }));
+      setStoredSmtpSettings(settings);
     }
 
     function setSmtpStatus(msg, type) {

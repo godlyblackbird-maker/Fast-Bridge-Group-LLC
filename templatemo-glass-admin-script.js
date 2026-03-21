@@ -465,6 +465,40 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function getScopedSmtpSettings(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const candidateKeys = new Set([
+            String(workspaceUser.key || '').trim(),
+            ...((Array.isArray(workspaceUser.aliases) ? workspaceUser.aliases : []).map((alias) => String(alias || '').trim())),
+            normalizeUserNameKey(workspaceUser.name || '')
+        ]);
+
+        try {
+            const parsed = JSON.parse(localStorage.getItem('smtpSettingsByUser') || '{}');
+            const store = parsed && typeof parsed === 'object' ? parsed : {};
+            for (const key of candidateKeys) {
+                if (!key) {
+                    continue;
+                }
+                const value = store[key];
+                if (value && typeof value === 'object' && !Array.isArray(value)) {
+                    return value;
+                }
+            }
+        } catch (error) {
+            // Fall through to legacy cache.
+        }
+
+        try {
+            const legacy = JSON.parse(localStorage.getItem('smtpSettings') || '{}');
+            return legacy && typeof legacy === 'object' ? legacy : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
     function getPlannerDateKey(value) {
         const normalized = String(value || '').trim();
         if (!normalized) {
@@ -10718,7 +10752,7 @@ function initNavbarDateTime() {
             function getSenderProfile() {
                 const profile = readLocalJson('userProfile');
                 const user = readLocalJson('user');
-                const smtpSettings = readLocalJson('smtpSettings');
+                const smtpSettings = getScopedSmtpSettings(workspaceUser);
                 const smtpUser = String(smtpSettings && smtpSettings.smtpUser ? smtpSettings.smtpUser : '').trim();
                 return {
                     name: String(savedDraft.senderName || profile.name || user.name || workspaceUser.name || '').trim(),
@@ -10750,7 +10784,7 @@ function initNavbarDateTime() {
             }
 
             function getStoredSmtpSettings() {
-                const smtpSettings = readLocalJson('smtpSettings');
+                const smtpSettings = getScopedSmtpSettings(workspaceUser);
                 return smtpSettings && typeof smtpSettings === 'object' ? smtpSettings : {};
             }
 
