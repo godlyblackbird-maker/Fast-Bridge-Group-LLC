@@ -139,6 +139,31 @@
     return normalizedRole || 'User';
   }
 
+  function applyAdminControlsAccess(userLike) {
+    const hasKnownRole = !!String(userLike && userLike.role || '').trim();
+    const isAdmin = isAdminUser(userLike);
+    const adminLinks = document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]');
+
+    if (hasKnownRole && !isAdmin) {
+      adminLinks.forEach((link) => {
+        const listItem = link.closest('.nav-item');
+        if (listItem) {
+          listItem.remove();
+        } else {
+          link.remove();
+        }
+      });
+    }
+
+    const normalizedPath = String(window.location.pathname || '').trim().toLowerCase();
+    if (hasKnownRole && !isAdmin && (normalizedPath.endsWith('/admin-controls.html') || normalizedPath === '/admin-controls.html')) {
+      window.location.href = '/dashboard.html';
+      return false;
+    }
+
+    return true;
+  }
+
   function isActiveBuyersPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/active-buyers.html' || normalizedPath.endsWith('/active-buyers.html');
@@ -475,23 +500,19 @@
 
   // Run check when page loads
   document.addEventListener('DOMContentLoaded', async function() {
+    const storedUser = readStoredUser();
+    if (applyAdminControlsAccess(storedUser) === false) {
+      return;
+    }
+
     const syncedUser = await syncAuthenticatedUser();
     checkAuthentication();
 
     const activeUser = syncedUser || getCurrentUser();
     const isAdmin = isAdminUser(activeUser);
-
-    const adminLinks = document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]');
-    adminLinks.forEach(link => {
-      const listItem = link.closest('.nav-item');
-      if (!isAdmin) {
-        if (listItem) {
-          listItem.remove();
-        } else {
-          link.remove();
-        }
-      }
-    });
+    if (applyAdminControlsAccess(activeUser) === false) {
+      return;
+    }
 
     const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
     activeBuyersLinks.forEach(link => {
