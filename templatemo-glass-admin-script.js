@@ -7875,11 +7875,36 @@ function initNavbarDateTime() {
                     const heroPadding = 24;
                     const logoMaxWidth = 122;
                     const logoMaxHeight = 58;
-                    const logoTextGap = 34;
+                    const logoTextGap = 48;
                     const metaGap = 10;
+                    let logoRenderWidth = 0;
+                    let logoRenderHeight = 0;
+
+                    if (agreementLogoDataUrl) {
+                        try {
+                            const imageProps = typeof pdf.getImageProperties === 'function'
+                                ? pdf.getImageProperties(agreementLogoDataUrl)
+                                : null;
+                            const sourceWidth = Number(imageProps?.width || 0);
+                            const sourceHeight = Number(imageProps?.height || 0);
+
+                            logoRenderWidth = logoMaxWidth;
+                            logoRenderHeight = logoMaxHeight;
+
+                            if (sourceWidth > 0 && sourceHeight > 0) {
+                                const scale = Math.min(logoMaxWidth / sourceWidth, logoMaxHeight / sourceHeight);
+                                logoRenderWidth = sourceWidth * scale;
+                                logoRenderHeight = sourceHeight * scale;
+                            }
+                        } catch (imageError) {
+                            logoRenderWidth = logoMaxWidth;
+                            logoRenderHeight = logoMaxHeight;
+                        }
+                    }
+
                     const metaWidth = (heroWidth - (metaGap * 2) - (heroPadding * 2)) / 3;
-                    const mastheadWidth = agreementLogoDataUrl
-                        ? heroWidth - (heroPadding * 2) - logoMaxWidth - logoTextGap
+                    const mastheadWidth = logoRenderWidth > 0
+                        ? heroWidth - (heroPadding * 2) - logoRenderWidth - logoTextGap
                         : heroWidth - (heroPadding * 2);
                     const introWidth = heroWidth - (heroPadding * 2);
                     const titleLines = pdf.splitTextToSize(agreementTitle, mastheadWidth);
@@ -7904,27 +7929,13 @@ function initNavbarDateTime() {
 
                     if (agreementLogoDataUrl) {
                         try {
-                            const imageProps = typeof pdf.getImageProperties === 'function'
-                                ? pdf.getImageProperties(agreementLogoDataUrl)
-                                : null;
-                            const sourceWidth = Number(imageProps?.width || 0);
-                            const sourceHeight = Number(imageProps?.height || 0);
-                            let renderWidth = logoMaxWidth;
-                            let renderHeight = logoMaxHeight;
-
-                            if (sourceWidth > 0 && sourceHeight > 0) {
-                                const scale = Math.min(logoMaxWidth / sourceWidth, logoMaxHeight / sourceHeight);
-                                renderWidth = sourceWidth * scale;
-                                renderHeight = sourceHeight * scale;
-                            }
-
                             pdf.addImage(
                                 agreementLogoDataUrl,
                                 'PNG',
-                                heroX + heroWidth - heroPadding - renderWidth,
+                                heroX + heroWidth - heroPadding - logoRenderWidth,
                                 heroY + heroPadding,
-                                renderWidth,
-                                renderHeight,
+                                logoRenderWidth,
+                                logoRenderHeight,
                                 undefined,
                                 'FAST'
                             );
@@ -8056,11 +8067,11 @@ function initNavbarDateTime() {
                     const blockX = marginX;
                     const blockWidth = contentWidth;
                     const blockPadding = 18;
+                    const valueColumnOffset = 84;
                     const rowGap = 18;
                     const signatureLabelGap = 18;
                     const signatureLineGap = 46;
                     const signatureTextOffset = 22;
-                    const signatureLineStartOffset = 126;
                     const blockHeight = 214;
 
                     ensurePage(blockHeight + 12);
@@ -8080,7 +8091,7 @@ function initNavbarDateTime() {
                     let blockY = cursorY + 62;
                     fields.forEach((field) => {
                         if (field.type === 'signature') {
-                            const signatureLineStartX = blockX + blockPadding + signatureLineStartOffset;
+                            const signatureValueX = blockX + blockPadding + valueColumnOffset;
 
                             pdf.setFont('helvetica', 'bold');
                             pdf.setFontSize(10);
@@ -8090,13 +8101,13 @@ function initNavbarDateTime() {
 
                             setDrawColor(brandColors.line);
                             pdf.setLineWidth(1);
-                            pdf.line(signatureLineStartX, blockY, blockX + blockWidth - blockPadding, blockY);
+                            pdf.line(signatureValueX, blockY, blockX + blockWidth - blockPadding, blockY);
 
                             if (String(field.value || '').trim()) {
                                 pdf.setFont('helvetica', 'normal');
                                 pdf.setFontSize(10.5);
                                 setTextColor(brandColors.ink);
-                                pdf.text(String(field.value), signatureLineStartX + 8, blockY - signatureTextOffset);
+                                pdf.text(String(field.value), signatureValueX, blockY - signatureTextOffset);
                             }
 
                             blockY += signatureLineGap;
@@ -8111,7 +8122,7 @@ function initNavbarDateTime() {
                         pdf.setFont('helvetica', 'normal');
                         pdf.setFontSize(10.5);
                         setTextColor(brandColors.ink);
-                        pdf.text(String(field.value || ''), blockX + blockPadding + 84, blockY);
+                        pdf.text(String(field.value || ''), blockX + blockPadding + valueColumnOffset, blockY);
                         blockY += rowGap;
                     });
 
