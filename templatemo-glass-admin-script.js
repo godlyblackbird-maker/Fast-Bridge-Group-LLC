@@ -10075,8 +10075,13 @@ function initNavbarDateTime() {
         const tabPanels = Array.from(document.querySelectorAll('.property-tab-panel[data-panel]'));
         const propertyAccessRole = String(getWorkspaceUserContext().role || getStoredCurrentUserIdentity().role || '').trim().toLowerCase();
         const lockedTabs = isRegularUserRole(propertyAccessRole)
-            ? new Set(['comps', 'ia'])
+            ? new Set(['comps', 'ia', 'offer'])
             : new Set();
+        const lockedTabLabels = {
+            comps: 'Comps',
+            ia: 'IA',
+            offer: 'Offer'
+        };
 
         tabButtons.forEach((button) => {
             const tabId = String(button.dataset.tab || '').trim().toLowerCase();
@@ -10120,8 +10125,10 @@ function initNavbarDateTime() {
             button.dataset.propertyTabBound = 'true';
             button.addEventListener('click', () => {
                 const tabId = button.dataset.tab;
-                if (lockedTabs.has(String(tabId || '').trim().toLowerCase())) {
-                    showDashboardToast('error', 'Access Locked', `${tabId === 'ia' ? 'IA' : 'Comps'} is locked for User accounts.`);
+                const normalizedTabId = String(tabId || '').trim().toLowerCase();
+                if (lockedTabs.has(normalizedTabId)) {
+                    const tabLabel = lockedTabLabels[normalizedTabId] || 'This tab';
+                    showDashboardToast('error', 'Access Locked', `${tabLabel} is locked for User accounts. Upgrade to Premium to unlock it.`);
                     activatePropertyTab('piq');
                     return;
                 }
