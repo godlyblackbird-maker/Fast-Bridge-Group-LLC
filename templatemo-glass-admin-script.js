@@ -7909,7 +7909,7 @@ function initNavbarDateTime() {
                     const heroPadding = 24;
                     const logoMaxWidth = 122;
                     const logoMaxHeight = 58;
-                    const logoTextGap = 48;
+                    const logoTextGap = 64;
                     const metaGap = 10;
                     let logoRenderWidth = 0;
                     let logoRenderHeight = 0;
@@ -7941,14 +7941,18 @@ function initNavbarDateTime() {
                         ? heroWidth - (heroPadding * 2) - logoRenderWidth - logoTextGap
                         : heroWidth - (heroPadding * 2);
                     const introWidth = heroWidth - (heroPadding * 2);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(20);
                     const titleLines = pdf.splitTextToSize(agreementTitle, mastheadWidth);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(11);
                     const subtitleLines = pdf.splitTextToSize(agreementSubtitle, mastheadWidth);
+                    pdf.setFontSize(10.5);
                     const introLines = pdf.splitTextToSize(
                         `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC and ${agreementData.brokerageName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`,
                         introWidth
                     ).slice(0, 4);
-                    const eyebrowY = heroY + 48;
-                    const titleY = eyebrowY + 20;
+                    const titleY = heroY + 54;
                     const subtitleY = titleY + (titleLines.length * 12) + 10;
                     const introY = subtitleY + (subtitleLines.length * 12) + 16;
                     const metaY = Math.max(heroY + 156, introY + (introLines.length * 14) + 14);
@@ -7979,12 +7983,7 @@ function initNavbarDateTime() {
                     }
 
                     pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(10);
-                    setTextColor([148, 220, 242]);
-                    pdf.text('FAST CONTRACT SUITE', heroX + heroPadding, eyebrowY);
-
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(22);
+                    pdf.setFontSize(20);
                     setTextColor(brandColors.white);
                     titleLines.forEach((line, index) => {
                         pdf.text(line, heroX + heroPadding, titleY + (index * 12));
