@@ -7099,6 +7099,7 @@ function initNavbarDateTime() {
         }
 
         let jsPdfLoaderPromise = null;
+    let agreementLogoDataUrlPromise = null;
 
         const fieldReaders = {
             effectiveDate: () => document.getElementById('contract-effective-date')?.value || '',
@@ -7278,6 +7279,40 @@ function initNavbarDateTime() {
             return jsPdfLoaderPromise;
         }
 
+        function loadAgreementLogoDataUrl() {
+            if (agreementLogoDataUrlPromise) {
+                return agreementLogoDataUrlPromise;
+            }
+
+            agreementLogoDataUrlPromise = fetch('png photos/Fast Logo - 111.png')
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load agreement logo.');
+                    }
+                    return response.blob();
+                })
+                .then((blob) => new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(String(reader.result || ''));
+                    reader.onerror = () => reject(new Error('Unable to read agreement logo.'));
+                    reader.readAsDataURL(blob);
+                }))
+                .catch(() => null);
+
+            return agreementLogoDataUrlPromise;
+        }
+
+        function downloadPdfBlob(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
         function buildAgreementSections() {
             const agreementData = buildAgreementData();
             const clauses = buildAgreementClauses(agreementData);
@@ -7367,11 +7402,24 @@ function initNavbarDateTime() {
         async function downloadAgreementPdf() {
             downloadPdfBtn.disabled = true;
 
+            const agreementData = buildAgreementData();
+            const { sections, fileName } = buildAgreementSections();
+
+            const buildFallbackLines = () => {
+                const lines = [];
+                sections.forEach((section) => {
+                    lines.push(section.heading);
+                    section.lines.forEach((line) => {
+                        lines.push(String(line || ''));
+                    });
+                    lines.push('');
+                });
+                return lines;
+            };
+
             try {
                 const JsPdfConstructor = await loadJsPdf();
                 const agreementLogoDataUrl = await loadAgreementLogoDataUrl();
-                const agreementData = buildAgreementData();
-                const { sections, fileName } = buildAgreementSections();
                 const pdf = new JsPdfConstructor({
                     orientation: 'portrait',
                     unit: 'pt',
@@ -7527,7 +7575,13 @@ function initNavbarDateTime() {
                 pdf.save(fileName);
                 showDashboardToast('success', 'Agreement Downloaded', 'MLS Data License Only was downloaded as a PDF.');
             } catch (error) {
-                showDashboardToast('error', 'Download Failed', 'Unable to generate the agreement PDF right now.');
+                try {
+                    const fallbackBlob = buildSimplePdfBlob(buildFallbackLines());
+                    downloadPdfBlob(fallbackBlob, fileName);
+                    showDashboardToast('success', 'Agreement Downloaded', 'Agreement PDF downloaded using the backup export format.');
+                } catch (fallbackError) {
+                    showDashboardToast('error', 'Download Failed', 'Unable to generate the agreement PDF right now.');
+                }
             } finally {
                 downloadPdfBtn.disabled = false;
             }
