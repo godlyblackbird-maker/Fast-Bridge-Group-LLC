@@ -2652,7 +2652,7 @@ function initNavbarDateTime() {
     // 3D Tilt Effect
     // ============================================
     function initTiltEffect() {
-        const variableTiltSelector = '.subscription-hero-premium, .subscription-plan-card, .subscription-billing-section';
+        const variableTiltSelector = '.subscription-plan-card';
 
         document.querySelectorAll(`.glass-card-3d, ${variableTiltSelector}`).forEach(card => {
             if (card.dataset.tiltInitialized === 'true') {
