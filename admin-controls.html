@@ -115,7 +115,7 @@
                     <span class="nav-section-title">Main Menu</span>
                     <ul>
                         <li class="nav-item"><a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
-                        <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics<span class="nav-badge">New</span></a></li>
+                        <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics<span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span></a></li>
                         <li class="nav-item"><a href="mls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>MLS Hot Deals</a></li>
                         <li class="nav-item"><a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>MLS Search</a></li>
                         <li class="nav-item"><a href="deals.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>My Deals</a></li>
@@ -215,6 +215,7 @@
                                 <label for="admin-new-user-role">Role</label>
                                 <select id="admin-new-user-role" class="form-input">
                                     <option value="user">user</option>
+                                    <option value="broker">broker</option>
                                     <option value="admin">admin</option>
                                 </select>
                             </div>
@@ -306,8 +307,24 @@
                     </div>
 
                     <div class="contracts-intro-banner">
-                        <span class="contracts-intro-kicker">Working Draft</span>
+                        <div class="contracts-intro-top">
+                            <div>
+                                <span class="contracts-intro-kicker">Working Draft</span>
+                                <h3 class="contracts-intro-title">MLS Data Agreement Studio</h3>
+                            </div>
+                            <div class="contracts-status-stack" aria-label="Agreement status markers">
+                                <span class="contracts-status-pill">Authority-Ready</span>
+                                <span class="contracts-status-pill">California Governed</span>
+                                <span class="contracts-status-pill">MLS / IDX / VOW</span>
+                            </div>
+                        </div>
                         <p>This agreement is drafted to allow FAST BRIDGE GROUP, LLC to operate under brokerage supervision strictly for MLS, IDX, and VOW access and compliance. FAST BRIDGE retains ownership of its platform and non-MLS intellectual property, while the brokerage keeps limited authority to require changes necessary for legal, MLS, and licensing compliance. Final legal review is still recommended before signing.</p>
+                    </div>
+
+                    <div class="contracts-command-strip" aria-label="Agreement positioning">
+                        <span>Professional licensing posture</span>
+                        <span>Broker-supervised access only</span>
+                        <span>Platform ownership retained</span>
                     </div>
 
                     <div class="contracts-meta-grid">
@@ -334,9 +351,21 @@
                     </div>
 
                     <div class="contracts-agreement-shell">
+                        <div class="contracts-agreement-masthead">
+                            <div class="contracts-agreement-mark" aria-hidden="true">FBG</div>
+                            <div class="contracts-agreement-masthead-copy">
+                                <p class="contracts-agreement-label">Contract Preview</p>
+                                <h3>Compliance-Based MLS Authorization</h3>
+                                <p>Structured for clean presentation, broker confidence, and FAST BRIDGE control over platform ownership.</p>
+                            </div>
+                            <div class="contracts-agreement-seal">
+                                <span class="contracts-agreement-seal-line">Formal Use</span>
+                                <strong>Draft Authority</strong>
+                            </div>
+                        </div>
+
                         <div class="contracts-agreement-header">
                             <p class="contracts-agreement-type">MLS Data License &amp; Limited Use Agreement</p>
-                            <h3>Compliance-Based MLS Authorization</h3>
                             <p id="contract-preview-intro">This Agreement is entered into by and between <strong>FAST BRIDGE GROUP, LLC</strong>, a California limited liability company with its business address identified below, and <strong>the licensed brokerage identified below</strong>, acting through its duly authorized licensed broker and business address identified below, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.</p>
                         </div>
 
@@ -463,6 +492,11 @@
                         <div class="contracts-signature-header">
                             <h3>Signature Blocks</h3>
                             <p>Use these slots for the brokerage and FAST BRIDGE GROUP, LLC.</p>
+                            <div class="contracts-signature-badges" aria-label="Signature notes">
+                                <span>Execution-ready layout</span>
+                                <span>Broker authority visible</span>
+                                <span>FAST signature aligned</span>
+                            </div>
                         </div>
 
                         <div class="contracts-signature-grid">

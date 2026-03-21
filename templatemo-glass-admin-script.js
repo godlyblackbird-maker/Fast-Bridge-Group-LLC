@@ -20,9 +20,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
     const USER_THEME_KEY = 'dashboardThemeByUser';
+    const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
     const PLANNER_DRAFT_KEY = 'plannerDraftByUser';
+    const SUBSCRIPTION_PLAN_KEY = 'subscriptionPlanByUser';
     const LEGAL_FOOTER_LINKS = [
         { id: 'mls-data-disclaimer', label: 'MLS Data Disclaimer' },
         { id: 'idx-vow-disclaimer', label: 'IDX/VOW Disclaimer' },
@@ -771,6 +773,86 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return stored;
     }
 
+    function buildPropertyAssignmentMeta(assignmentLike) {
+        if (!assignmentLike || typeof assignmentLike !== 'object') {
+            return null;
+        }
+
+        return {
+            assignedTo: assignmentLike.assignedTo && typeof assignmentLike.assignedTo === 'object'
+                ? { ...assignmentLike.assignedTo }
+                : {},
+            assignedBy: assignmentLike.assignedBy && typeof assignmentLike.assignedBy === 'object'
+                ? { ...assignmentLike.assignedBy }
+                : {},
+            assignedAt: String(assignmentLike.assignedAt || '').trim()
+        };
+    }
+
+    function syncAssignmentIntoLocalDealCache(propertyKey, assignmentRecord, workspaceUserLike) {
+        const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+        if (!normalizedPropertyKey) {
+            return;
+        }
+
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const assignmentMeta = buildPropertyAssignmentMeta(assignmentRecord);
+        const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+        let clickedItemsChanged = false;
+
+        const nextClickedItems = clickedItems.map((item) => {
+            const itemSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                ? item.propertySnapshot
+                : null;
+            const itemPropertyKey = makePropertyStorageKey(
+                itemSnapshot?.address
+                || item?.address
+                || item?.propertyAddress
+            );
+
+            if (itemPropertyKey !== normalizedPropertyKey || !itemSnapshot) {
+                return item;
+            }
+
+            const nextSnapshot = { ...itemSnapshot };
+            if (assignmentMeta) {
+                nextSnapshot.propertyAssignment = assignmentMeta;
+            } else {
+                delete nextSnapshot.propertyAssignment;
+            }
+
+            clickedItemsChanged = true;
+            return {
+                ...item,
+                propertySnapshot: nextSnapshot
+            };
+        });
+
+        if (clickedItemsChanged) {
+            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
+        }
+
+        const persistedDetail = getPersistedSelectedPropertyDetail();
+        if (!persistedDetail || typeof persistedDetail !== 'object') {
+            return;
+        }
+
+        const persistedDetailKey = makePropertyStorageKey(persistedDetail.address || persistedDetail.propertyAddress);
+        if (persistedDetailKey !== normalizedPropertyKey) {
+            return;
+        }
+
+        const nextDetail = { ...persistedDetail };
+        if (assignmentMeta) {
+            nextDetail.propertyAssignment = assignmentMeta;
+        } else {
+            delete nextDetail.propertyAssignment;
+        }
+        persistSelectedPropertyDetail(nextDetail);
+    }
+
     function getPersistedSelectedPropertyDetail() {
         const storageReaders = [
             () => localStorage.getItem('selectedPropertyDetail'),
@@ -1094,6 +1176,24 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return 'beach';
     }
 
+    function formatUserRoleLabel(roleValue) {
+        const normalizedRole = String(roleValue || '').trim().toLowerCase();
+        if (normalizedRole === 'admin') {
+            return 'Administrator';
+        }
+        if (normalizedRole === 'broker') {
+            return 'Broker';
+        }
+        if (normalizedRole === 'user') {
+            return 'User';
+        }
+        return normalizedRole || 'User';
+    }
+
+    function isRegularUserRole(roleValue) {
+        return String(roleValue || '').trim().toLowerCase() === 'user';
+    }
+
     function saveThemePreference(theme) {
         const workspaceUser = getWorkspaceUserContext();
         setUserScopedObject(USER_THEME_KEY, workspaceUser.key, { value: theme });
@@ -1376,9 +1476,188 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function setUserScopedValueSilently(storageKey, userKey, value) {
+        let store = {};
+        try {
+            store = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (error) {
+            store = {};
+        }
+
+        if (!store || typeof store !== 'object' || Array.isArray(store)) {
+            store = {};
+        }
+
+        store[userKey] = value;
+        localStorage.setItem(storageKey, JSON.stringify(store));
+    }
+
     function parseMoneyValue(value) {
         const numeric = Number(String(value || '').replace(/[^0-9.-]/g, ''));
         return Number.isFinite(numeric) ? numeric : 0;
+    }
+
+    function initAnalyticsNavBadge() {
+        const analyticsLinks = Array.from(document.querySelectorAll('.nav-link[href="analytics.html"]'));
+        if (!analyticsLinks.length) {
+            return;
+        }
+
+        const watchedKeys = new Set([
+            AGENT_NOTES_KEY,
+            TODO_GOALS_KEY,
+            IA_CALCULATOR_STATE_KEY,
+            PIQ_AGENT_STATUS_KEY,
+            CLOSED_DEALS_KEY
+        ]);
+        const offerRegex = /\boffer\b|submitted|sent/i;
+
+        function ensureBadge(link) {
+            let badge = link.querySelector('[data-analytics-nav-badge="true"]') || link.querySelector('.nav-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'nav-badge';
+                badge.textContent = 'New';
+                link.appendChild(badge);
+            }
+
+            badge.dataset.analyticsNavBadge = 'true';
+            return badge;
+        }
+
+        function getLatestTimestamp(items, keys) {
+            return (Array.isArray(items) ? items : []).reduce((latest, item) => {
+                if (!item || typeof item !== 'object') {
+                    return latest;
+                }
+
+                const nextValue = keys.reduce((maxValue, key) => {
+                    const rawValue = item[key];
+                    const numericValue = Number(rawValue);
+                    const parsedValue = Number.isFinite(numericValue)
+                        ? numericValue
+                        : Date.parse(String(rawValue || ''));
+                    return Number.isFinite(parsedValue) ? Math.max(maxValue, parsedValue) : maxValue;
+                }, 0);
+
+                return Math.max(latest, nextValue);
+            }, 0);
+        }
+
+        function buildAnalyticsSnapshot() {
+            const workspaceUser = getWorkspaceUserContext();
+            const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
+            const plannerItems = getUserScopedItems(TODO_GOALS_KEY, workspaceUser.key);
+            const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
+            const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+            const manualClosedDeals = getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
+            const offerTermsSentSet = new Set();
+            const offerLeadSet = new Set();
+            const relevantOfferNotes = [];
+            const relevantPlannerItems = [];
+
+            Object.entries(scopedStatuses).forEach(([propertyKey, statusValue]) => {
+                const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
+                const normalizedKey = String(propertyKey || '').trim().toLowerCase();
+                if (normalizedStatus === 'offer-terms-sent' && normalizedKey) {
+                    offerTermsSentSet.add(normalizedKey);
+                }
+            });
+
+            notes.forEach((note) => {
+                const propertyAddress = String(note.propertyAddress || '').trim();
+                const propertyKey = propertyAddress.toLowerCase();
+                const noteStatus = String(
+                    scopedStatuses[propertyKey]
+                    || note.piqAgentStatus
+                    || note.propertySnapshot?.piqAgentStatus
+                    || 'none'
+                ).trim().toLowerCase();
+                const noteText = String(note.note || '');
+
+                if (noteStatus === 'offer-terms-sent' && propertyKey) {
+                    offerTermsSentSet.add(propertyKey);
+                    relevantOfferNotes.push(note);
+                }
+
+                if (propertyAddress && offerRegex.test(noteText)) {
+                    offerLeadSet.add(propertyAddress);
+                    relevantOfferNotes.push(note);
+                }
+            });
+
+            plannerItems.forEach((item) => {
+                const title = String(item.title || item.text || '').trim();
+                if (item.completed && title && offerRegex.test(title)) {
+                    offerLeadSet.add(`planner-${String(item.id || title).trim().toLowerCase()}`);
+                    relevantPlannerItems.push(item);
+                }
+            });
+
+            const normalizedStatuses = Object.entries(scopedStatuses)
+                .map(([propertyKey, statusValue]) => {
+                    const normalizedKey = String(propertyKey || '').trim().toLowerCase();
+                    const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
+                    return normalizedKey ? `${normalizedKey}:${normalizedStatus}` : '';
+                })
+                .filter(Boolean)
+                .filter((entry) => entry.endsWith(':offer-terms-sent') || entry.endsWith(':acquired'))
+                .sort();
+
+            const autoClosedKeys = normalizedStatuses
+                .filter((entry) => entry.endsWith(':acquired'));
+
+            const snapshot = {
+                iaCount: iaStates.length,
+                iaLatest: getLatestTimestamp(iaStates, ['updatedAt', 'createdAt']),
+                offerTermsSentCount: offerTermsSentSet.size,
+                offersSubmittedCount: offerLeadSet.size,
+                offerNotesLatest: getLatestTimestamp(relevantOfferNotes, ['updatedAt', 'createdAt']),
+                offerPlannerLatest: getLatestTimestamp(relevantPlannerItems, ['updatedAt', 'completedAt', 'createdAt']),
+                manualClosedCount: manualClosedDeals.length,
+                manualClosedLatest: getLatestTimestamp(manualClosedDeals, ['closeDate', 'createdAt']),
+                autoClosedCount: autoClosedKeys.length,
+                statusSignature: normalizedStatuses.join('|')
+            };
+
+            snapshot.hasActivity = snapshot.iaCount > 0
+                || snapshot.offerTermsSentCount > 0
+                || snapshot.offersSubmittedCount > 0
+                || snapshot.manualClosedCount > 0
+                || snapshot.autoClosedCount > 0;
+
+            return snapshot;
+        }
+
+        function renderBadge() {
+            const workspaceUser = getWorkspaceUserContext();
+            const snapshot = buildAnalyticsSnapshot();
+            const snapshotKey = JSON.stringify(snapshot);
+            const isAnalyticsPage = /(^|\/)analytics\.html$/i.test(window.location.pathname || '');
+
+            if (isAnalyticsPage) {
+                setUserScopedValueSilently(ANALYTICS_NAV_BADGE_STATE_KEY, workspaceUser.key, snapshotKey);
+            }
+
+            const seenSnapshot = isAnalyticsPage
+                ? snapshotKey
+                : String(getUserScopedValue(ANALYTICS_NAV_BADGE_STATE_KEY, workspaceUser.key, '') || '');
+            const shouldShow = snapshot.hasActivity && snapshotKey !== seenSnapshot;
+
+            analyticsLinks.forEach((link) => {
+                const badge = ensureBadge(link);
+                badge.textContent = 'New';
+                badge.hidden = !shouldShow;
+            });
+        }
+
+        renderBadge();
+        window.addEventListener('dashboard-data-updated', renderBadge);
+        window.addEventListener('storage', (event) => {
+            if (!event.key || watchedKeys.has(event.key) || event.key === ANALYTICS_NAV_BADGE_STATE_KEY) {
+                renderBadge();
+            }
+        });
     }
 
     function openOfferDocumentsDb() {
@@ -2679,7 +2958,7 @@ function initNavbarDateTime() {
         const workspaceUser = getWorkspaceUserContext();
         const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
         const settingsState = remembered.controls && typeof remembered.controls === 'object' ? remembered.controls : {};
-        const tabsToPersist = ['tab-security', 'tab-notifications', 'tab-appearance'];
+        const tabsToPersist = ['tab-security', 'tab-notifications', 'tab-subscriptions', 'tab-appearance'];
 
         function getControlStateKey(control) {
             if (control.id) {
@@ -2728,6 +3007,8 @@ function initNavbarDateTime() {
                 if (Object.prototype.hasOwnProperty.call(settingsState, key)) {
                     if (control.type === 'checkbox') {
                         control.checked = Boolean(settingsState[key]);
+                    } else if (control.type === 'radio') {
+                        control.checked = String(settingsState[key]) === String(control.value);
                     } else {
                         control.value = String(settingsState[key]);
                     }
@@ -2736,6 +3017,11 @@ function initNavbarDateTime() {
                 const persist = () => {
                     if (control.type === 'checkbox') {
                         settingsState[key] = Boolean(control.checked);
+                    } else if (control.type === 'radio') {
+                        if (!control.checked) {
+                            return;
+                        }
+                        settingsState[key] = control.value;
                     } else {
                         settingsState[key] = control.value;
                     }
@@ -2795,7 +3081,75 @@ function initNavbarDateTime() {
             sync2faUi();
         }
 
+        function initSubscriptionSettingsControls() {
+            const planInputs = Array.from(document.querySelectorAll('input[name="subscription-plan"]'));
+            const currentPlanLabel = document.getElementById('subscription-current-plan');
+            const planSummary = document.getElementById('subscription-plan-summary');
+            const saveButton = document.getElementById('subscription-save-btn');
+
+            if (planInputs.length === 0 || !currentPlanLabel || !planSummary || !saveButton) {
+                return;
+            }
+
+            const planCopy = {
+                basic: {
+                    label: 'Basic',
+                    summary: 'Basic keeps standard dashboard access active.'
+                },
+                premium: {
+                    label: 'Premium',
+                    summary: 'Premium adds investment analysis tool access for property workflows.'
+                }
+            };
+
+            const storedPlan = String(getUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, 'basic') || 'basic').trim().toLowerCase();
+            const resolvedPlan = Object.prototype.hasOwnProperty.call(planCopy, storedPlan) ? storedPlan : 'basic';
+            const selectedInput = planInputs.find((input) => input.value === resolvedPlan) || planInputs[0];
+
+            if (selectedInput) {
+                selectedInput.checked = true;
+            }
+
+            function getSelectedPlan() {
+                const activeInput = planInputs.find((input) => input.checked);
+                const nextPlan = activeInput ? String(activeInput.value || 'basic').trim().toLowerCase() : 'basic';
+                return Object.prototype.hasOwnProperty.call(planCopy, nextPlan) ? nextPlan : 'basic';
+            }
+
+            function syncSubscriptionUi() {
+                const activePlan = getSelectedPlan();
+                currentPlanLabel.textContent = planCopy[activePlan].label;
+                planSummary.textContent = planCopy[activePlan].summary;
+
+                planInputs.forEach((input) => {
+                    const card = input.closest('[data-plan-card]');
+                    if (!card) {
+                        return;
+                    }
+                    card.classList.toggle('is-selected', input.checked);
+                });
+            }
+
+            saveButton.addEventListener('click', () => {
+                const activePlan = getSelectedPlan();
+                setUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, activePlan);
+                syncSubscriptionUi();
+                showDashboardToast('success', 'Subscription Updated', `${planCopy[activePlan].label} plan saved for this workspace user.`, {
+                    playSound: false
+                });
+            });
+
+            planInputs.forEach((input) => {
+                input.addEventListener('change', () => {
+                    syncSubscriptionUi();
+                });
+            });
+
+            syncSubscriptionUi();
+        }
+
         initTwoFactorSettingsControls();
+        initSubscriptionSettingsControls();
 
         if (accentGlowToggle) {
             applyAccentGlowPreference(Boolean(accentGlowToggle.checked));
@@ -4797,7 +5151,8 @@ function initNavbarDateTime() {
             items.forEach(item => {
                 const row = document.createElement('article');
                 row.className = 'outreach-item';
-                const roleClass = String(item.role || '').toLowerCase() === 'admin' ? 'published' : 'draft';
+                const normalizedRole = String(item.role || '').toLowerCase();
+                const roleClass = normalizedRole === 'admin' ? 'published' : 'draft';
                 const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown';
                 const currentEmail = String(item.email || '').trim().toLowerCase();
                 const localPart = currentEmail.includes('@') ? currentEmail.split('@')[0] : currentEmail;
@@ -4805,7 +5160,7 @@ function initNavbarDateTime() {
                 row.innerHTML = `
                     <div class="outreach-item-head">
                         <span class="outreach-item-title">${item.name || 'User'}</span>
-                        <span class="outreach-status ${roleClass}">${item.role || 'user'}</span>
+                        <span class="outreach-status ${roleClass}">${formatUserRoleLabel(item.role)}</span>
                     </div>
                     <p class="outreach-item-body">${item.email || ''}</p>
                     <p class="outreach-owner">Created: ${createdAt}</p>
@@ -4978,8 +5333,8 @@ function initNavbarDateTime() {
                 return;
             }
 
-            if (!['admin', 'user'].includes(role)) {
-                showDashboardToast('error', 'Invalid Role', 'Role must be admin or user.');
+            if (!['admin', 'user', 'broker'].includes(role)) {
+                showDashboardToast('error', 'Invalid Role', 'Role must be admin, user, or broker.');
                 return;
             }
 
@@ -5011,7 +5366,7 @@ function initNavbarDateTime() {
                 if (passwordInput) passwordInput.value = '';
                 if (roleInput) roleInput.value = 'user';
 
-                showDashboardToast('success', 'Account Created', `${data.user.email} created as ${data.user.role}.`);
+                showDashboardToast('success', 'Account Created', `${data.user.email} created as ${formatUserRoleLabel(data.user.role)}.`);
                 await loadUsers();
             } catch (error) {
                 showDashboardToast('error', 'Create Failed', String(error.message || 'Unable to create account.'));
@@ -7430,53 +7785,303 @@ function initNavbarDateTime() {
                 const pageHeight = pdf.internal.pageSize.getHeight();
                 const pageWidth = pdf.internal.pageSize.getWidth();
                 const contentWidth = pageWidth - (marginX * 2);
+                const topMargin = 88;
                 const bottomMargin = 56;
-                let cursorY = 58;
+                const agreementTitle = 'MLS DATA LICENSE & LIMITED USE AGREEMENT';
+                const agreementSubtitle = 'Compliance-Based MLS Authorization';
+                const brandColors = {
+                    ink: [15, 23, 42],
+                    muted: [71, 85, 105],
+                    line: [203, 213, 225],
+                    panel: [248, 250, 252],
+                    accent: [14, 116, 144],
+                    accentSoft: [236, 253, 255],
+                    gold: [180, 83, 9],
+                    goldSoft: [255, 247, 237],
+                    white: [255, 255, 255]
+                };
+                const clauseEntries = buildAgreementClauses(agreementData);
+                let cursorY = topMargin;
+
+                function setFillColor(color) {
+                    pdf.setFillColor(color[0], color[1], color[2]);
+                }
+
+                function setDrawColor(color) {
+                    pdf.setDrawColor(color[0], color[1], color[2]);
+                }
+
+                function setTextColor(color) {
+                    pdf.setTextColor(color[0], color[1], color[2]);
+                }
+
+                function drawPageHeader() {
+                    setFillColor(brandColors.ink);
+                    pdf.rect(0, 0, pageWidth, 50, 'F');
+                    setFillColor(brandColors.accent);
+                    pdf.rect(0, 50, pageWidth, 4, 'F');
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(11);
+                    setTextColor(brandColors.white);
+                    pdf.text('FAST BRIDGE GROUP, LLC', marginX, 31);
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(10);
+                    pdf.text(agreementTitle, pageWidth - marginX, 31, { align: 'right' });
+                    setTextColor(brandColors.ink);
+                }
+
+                function addNewPage() {
+                    pdf.addPage();
+                    drawPageHeader();
+                    cursorY = topMargin;
+                }
 
                 function ensurePage(requiredHeight) {
                     if (cursorY + requiredHeight <= pageHeight - bottomMargin) {
                         return;
                     }
-                    pdf.addPage();
-                    cursorY = 58;
+                    addNewPage();
+                }
+
+                function renderMetaTile(x, y, width, label, value) {
+                    const tileHeight = 62;
+                    const valueLines = pdf.splitTextToSize(String(value || ''), width - 20);
+
+                    setDrawColor(brandColors.line);
+                    setFillColor([255, 255, 255]);
+                    pdf.roundedRect(x, y, width, tileHeight, 14, 14, 'FD');
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(9);
+                    setTextColor(brandColors.muted);
+                    pdf.text(label, x + 10, y + 16);
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(10);
+                    setTextColor(brandColors.ink);
+                    const renderedValue = valueLines.slice(0, 2);
+                    renderedValue.forEach((line, index) => {
+                        pdf.text(line, x + 10, y + 34 + (index * 12));
+                    });
+                }
+
+                function renderHeroPanel() {
+                    const heroX = marginX;
+                    const heroY = cursorY;
+                    const heroWidth = contentWidth;
+                    const heroHeight = 230;
+                    const heroPadding = 24;
+                    const logoMaxWidth = 122;
+                    const logoMaxHeight = 58;
+                    const metaGap = 10;
+                    const metaWidth = (heroWidth - (metaGap * 2) - (heroPadding * 2)) / 3;
+
+                    ensurePage(heroHeight + 16);
+
+                    setFillColor(brandColors.ink);
+                    pdf.roundedRect(heroX, heroY, heroWidth, heroHeight, 24, 24, 'F');
+                    setFillColor(brandColors.accent);
+                    pdf.roundedRect(heroX + heroPadding, heroY + heroPadding, 70, 6, 3, 3, 'F');
+
+                    if (agreementLogoDataUrl) {
+                        try {
+                            const imageProps = typeof pdf.getImageProperties === 'function'
+                                ? pdf.getImageProperties(agreementLogoDataUrl)
+                                : null;
+                            const sourceWidth = Number(imageProps?.width || 0);
+                            const sourceHeight = Number(imageProps?.height || 0);
+                            let renderWidth = logoMaxWidth;
+                            let renderHeight = logoMaxHeight;
+
+                            if (sourceWidth > 0 && sourceHeight > 0) {
+                                const scale = Math.min(logoMaxWidth / sourceWidth, logoMaxHeight / sourceHeight);
+                                renderWidth = sourceWidth * scale;
+                                renderHeight = sourceHeight * scale;
+                            }
+
+                            pdf.addImage(
+                                agreementLogoDataUrl,
+                                'PNG',
+                                heroX + heroWidth - heroPadding - renderWidth,
+                                heroY + heroPadding,
+                                renderWidth,
+                                renderHeight,
+                                undefined,
+                                'FAST'
+                            );
+                        } catch (imageError) {
+                            // Ignore image rendering errors and continue with the text layout.
+                        }
+                    }
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(10);
+                    setTextColor([148, 220, 242]);
+                    pdf.text('FAST CONTRACT SUITE', heroX + heroPadding, heroY + 48);
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(22);
+                    setTextColor(brandColors.white);
+                    pdf.text(agreementTitle, heroX + heroPadding, heroY + 76, { maxWidth: heroWidth - (heroPadding * 2) - 140 });
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(11);
+                    setTextColor([226, 232, 240]);
+                    pdf.text(
+                        agreementSubtitle,
+                        heroX + heroPadding,
+                        heroY + 104,
+                        { maxWidth: heroWidth - (heroPadding * 2) - 140 }
+                    );
+
+                    const introLines = pdf.splitTextToSize(
+                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC and ${agreementData.brokerageName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`,
+                        heroWidth - (heroPadding * 2)
+                    );
+                    pdf.setFontSize(10.5);
+                    introLines.slice(0, 4).forEach((line, index) => {
+                        pdf.text(line, heroX + heroPadding, heroY + 130 + (index * 14));
+                    });
+
+                    renderMetaTile(heroX + heroPadding, heroY + 156, metaWidth, 'Effective Date', agreementData.effectiveDate);
+                    renderMetaTile(heroX + heroPadding + metaWidth + metaGap, heroY + 156, metaWidth, 'MLS Market', agreementData.market);
+                    renderMetaTile(heroX + heroPadding + ((metaWidth + metaGap) * 2), heroY + 156, metaWidth, 'Brokerage', agreementData.brokerageName);
+
+                    cursorY += heroHeight + 14;
+                }
+
+                function renderNoticeCard() {
+                    const noticeLines = pdf.splitTextToSize(
+                        'This agreement is drafted to reflect a compliance-based MLS authorization structure only. FAST BRIDGE GROUP, LLC retains ownership of its platform and non-MLS intellectual property, while the brokerage retains the authority reasonably necessary to satisfy its MLS, legal, and broker risk-management obligations. Final legal review is still recommended before signing.',
+                        contentWidth - 52
+                    );
+                    const cardHeight = 52 + (noticeLines.length * 13) + 18;
+
+                    ensurePage(cardHeight + 12);
+
+                    setDrawColor(brandColors.gold);
+                    setFillColor(brandColors.goldSoft);
+                    pdf.roundedRect(marginX, cursorY, contentWidth, cardHeight, 18, 18, 'FD');
+                    setFillColor(brandColors.gold);
+                    pdf.roundedRect(marginX + 16, cursorY + 16, 62, 5, 2.5, 2.5, 'F');
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(11);
+                    setTextColor(brandColors.gold);
+                    pdf.text('WORKING DRAFT NOTICE', marginX + 16, cursorY + 36);
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(10.5);
+                    setTextColor(brandColors.ink);
+                    noticeLines.forEach((line, index) => {
+                        pdf.text(line, marginX + 16, cursorY + 58 + (index * 13));
+                    });
+
+                    cursorY += cardHeight + 14;
+                }
+
+                function renderClauseCard(index, title, body) {
+                    const cardPadding = 18;
+                    const badgeSize = 30;
+                    const textWidth = contentWidth - (cardPadding * 2) - badgeSize - 16;
+                    const bodyLines = pdf.splitTextToSize(String(body || ''), textWidth);
+                    const cardHeight = 44 + (bodyLines.length * 13) + 22;
+
+                    ensurePage(cardHeight + 12);
+
+                    setDrawColor(brandColors.line);
+                    setFillColor(brandColors.panel);
+                    pdf.roundedRect(marginX, cursorY, contentWidth, cardHeight, 18, 18, 'FD');
+
+                    setFillColor(index === 2 ? brandColors.goldSoft : brandColors.accentSoft);
+                    pdf.roundedRect(marginX, cursorY, 8, cardHeight, 8, 8, 'F');
+
+                    setFillColor(index === 2 ? brandColors.gold : brandColors.accent);
+                    pdf.roundedRect(marginX + cardPadding, cursorY + 16, badgeSize, badgeSize, 10, 10, 'F');
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(10);
+                    setTextColor(brandColors.white);
+                    pdf.text(String(index).padStart(2, '0'), marginX + cardPadding + (badgeSize / 2), cursorY + 35, { align: 'center' });
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(12);
+                    setTextColor(brandColors.ink);
+                    pdf.text(title, marginX + cardPadding + badgeSize + 16, cursorY + 28);
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(10.5);
+                    setTextColor(brandColors.muted);
+                    bodyLines.forEach((line, lineIndex) => {
+                        pdf.text(line, marginX + cardPadding + badgeSize + 16, cursorY + 48 + (lineIndex * 13));
+                    });
+
+                    cursorY += cardHeight + 12;
+                }
+
+                function renderSectionIntro(title, copy) {
+                    const copyLines = pdf.splitTextToSize(copy, contentWidth - 22);
+                    const blockHeight = 34 + (copyLines.length * 12);
+                    ensurePage(blockHeight + 10);
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(14);
+                    setTextColor(brandColors.ink);
+                    pdf.text(title, marginX, cursorY);
+                    cursorY += 18;
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(10);
+                    setTextColor(brandColors.muted);
+                    copyLines.forEach((line, index) => {
+                        pdf.text(line, marginX, cursorY + (index * 12));
+                    });
+                    cursorY += (copyLines.length * 12) + 10;
                 }
 
                 function renderSignatureBlock(title, fields) {
                     const blockX = marginX;
                     const blockWidth = contentWidth;
                     const blockPadding = 18;
-                    const lineGap = 18;
-                    const rowGap = 20;
-                    const signatureLineGap = 24;
-                    const blockHeight = 168;
+                    const rowGap = 18;
+                    const signatureLabelGap = 14;
+                    const signatureLineGap = 36;
+                    const signatureTextOffset = 14;
+                    const blockHeight = 194;
 
-                    ensurePage(blockHeight + 14);
+                    ensurePage(blockHeight + 12);
 
-                    pdf.setDrawColor(205, 213, 225);
-                    pdf.setFillColor(249, 250, 251);
-                    pdf.roundedRect(blockX, cursorY, blockWidth, blockHeight, 14, 14, 'FD');
+                    setDrawColor(brandColors.line);
+                    setFillColor(brandColors.panel);
+                    pdf.roundedRect(blockX, cursorY, blockWidth, blockHeight, 20, 20, 'FD');
+                    setFillColor(brandColors.ink);
+                    pdf.roundedRect(blockX, cursorY, blockWidth, 38, 20, 20, 'F');
+                    pdf.rect(blockX, cursorY + 20, blockWidth, 18, 'F');
 
-                    let blockY = cursorY + blockPadding;
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(12);
-                    pdf.text(title, blockX + blockPadding, blockY);
-                    blockY += rowGap;
+                    setTextColor(brandColors.white);
+                    pdf.text(title, blockX + blockPadding, cursorY + 24);
 
+                    let blockY = cursorY + 62;
                     fields.forEach((field) => {
                         if (field.type === 'signature') {
                             pdf.setFont('helvetica', 'bold');
                             pdf.setFontSize(10);
+                            setTextColor(brandColors.muted);
                             pdf.text(field.label, blockX + blockPadding, blockY);
-                            blockY += 8;
+                            blockY += signatureLabelGap;
 
-                            pdf.setDrawColor(148, 163, 184);
+                            setDrawColor(brandColors.line);
                             pdf.setLineWidth(1);
                             pdf.line(blockX + blockPadding, blockY, blockX + blockWidth - blockPadding, blockY);
 
                             if (String(field.value || '').trim()) {
                                 pdf.setFont('helvetica', 'normal');
-                                pdf.setFontSize(10);
-                                pdf.text(String(field.value), blockX + blockPadding + 6, blockY - 6);
+                                pdf.setFontSize(10.5);
+                                setTextColor(brandColors.ink);
+                                pdf.text(String(field.value), blockX + blockPadding + 8, blockY - signatureTextOffset);
                             }
 
                             blockY += signatureLineGap;
@@ -7485,92 +8090,76 @@ function initNavbarDateTime() {
 
                         pdf.setFont('helvetica', 'bold');
                         pdf.setFontSize(10);
+                        setTextColor(brandColors.muted);
                         pdf.text(`${field.label}:`, blockX + blockPadding, blockY);
 
                         pdf.setFont('helvetica', 'normal');
-                        pdf.text(String(field.value || ''), blockX + blockPadding + 78, blockY);
-                        blockY += lineGap;
+                        pdf.setFontSize(10.5);
+                        setTextColor(brandColors.ink);
+                        pdf.text(String(field.value || ''), blockX + blockPadding + 84, blockY);
+                        blockY += rowGap;
                     });
 
-                    cursorY += blockHeight + 16;
+                    cursorY += blockHeight + 14;
                 }
 
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(18);
-                pdf.text('FAST BRIDGE GROUP, LLC', marginX, cursorY);
-                cursorY += 24;
+                function renderAgreementFooters() {
+                    const totalPages = typeof pdf.getNumberOfPages === 'function'
+                        ? pdf.getNumberOfPages()
+                        : pdf.internal.getNumberOfPages();
+                    const footerY = pageHeight - 24;
+                    const footerLineY = pageHeight - 40;
+                    const footerTitle = 'MLS DATA LICENSE & LIMITED USE AGREEMENT';
 
-                pdf.setFontSize(11);
-                pdf.setFont('helvetica', 'normal');
-                pdf.text('License Agreement / Data Use Agreement PDF Export', marginX, cursorY);
-                cursorY += 24;
+                    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+                        pdf.setPage(pageNumber);
+                        pdf.setDrawColor(203, 213, 225);
+                        pdf.setLineWidth(0.75);
+                        pdf.line(marginX, footerLineY, pageWidth - marginX, footerLineY);
 
-                if (agreementLogoDataUrl) {
-                    const logoSize = 180;
-                    const logoX = (pageWidth - logoSize) / 2;
-                    ensurePage(logoSize + 24);
-                    pdf.addImage(agreementLogoDataUrl, 'PNG', logoX, cursorY, logoSize, logoSize, undefined, 'FAST');
-                    cursorY += logoSize + 20;
-                }
-
-                sections.forEach((section, sectionIndex) => {
-                    if (section.heading === 'Signature Blocks') {
-                        ensurePage(42);
-                        pdf.setFont('helvetica', 'bold');
-                        pdf.setFontSize(12);
-                        pdf.text(section.heading, marginX, cursorY);
-                        cursorY += 24;
-
-                        renderSignatureBlock('Brokerage Signature', [
-                            { label: 'Name', value: agreementData.brokerageSignerName },
-                            { label: 'Title', value: agreementData.brokerageSignerTitle },
-                            { label: 'License #', value: agreementData.brokerageLicenseNumber },
-                            { label: 'Date', value: agreementData.brokerageSignDate },
-                            { label: 'Signature', value: agreementData.brokerageSignature, type: 'signature' }
-                        ]);
-
-                        renderSignatureBlock('FAST BRIDGE GROUP, LLC Signature', [
-                            { label: 'Name', value: agreementData.fastbridgeSignerName },
-                            { label: 'Title', value: agreementData.fastbridgeSignerTitle },
-                            { label: 'Date', value: agreementData.fastbridgeSignDate },
-                            { label: 'Signature', value: agreementData.fastbridgeSignature, type: 'signature' }
-                        ]);
-
-                        return;
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.setFontSize(9);
+                        pdf.setTextColor(71, 85, 105);
+                        pdf.text(footerTitle, pageWidth / 2, footerY, { align: 'center' });
+                        pdf.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - marginX, footerY, { align: 'right' });
                     }
 
-                    const bodyLines = [];
-                    section.lines.forEach((line) => {
-                        if (!String(line || '').trim()) {
-                            bodyLines.push('');
-                            return;
-                        }
-                        const wrappedLines = pdf.splitTextToSize(String(line), contentWidth);
-                        wrappedLines.forEach((wrappedLine) => bodyLines.push(wrappedLine));
-                    });
+                    pdf.setTextColor(0, 0, 0);
+                }
 
-                    const estimatedHeight = 22 + (Math.max(1, bodyLines.length) * 14) + 10;
-                    ensurePage(estimatedHeight);
+                drawPageHeader();
+                renderHeroPanel();
+                renderNoticeCard();
+                renderSectionIntro(
+                    'Core Clauses',
+                    'Each section below is formatted for cleaner legal review, easier signature routing, and a stronger presentation when exported as a formal PDF.'
+                );
 
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(sectionIndex === 0 ? 16 : 12);
-                    pdf.text(section.heading, marginX, cursorY);
-                    cursorY += sectionIndex === 0 ? 22 : 18;
-
-                    pdf.setFont('helvetica', 'normal');
-                    pdf.setFontSize(11);
-                    bodyLines.forEach((line) => {
-                        if (!line) {
-                            cursorY += 8;
-                            return;
-                        }
-                        ensurePage(18);
-                        pdf.text(line, marginX, cursorY);
-                        cursorY += 14;
-                    });
-
-                    cursorY += 10;
+                clauseEntries.forEach((clause, index) => {
+                    renderClauseCard(index + 1, clause.title, clause.body);
                 });
+
+                renderSectionIntro(
+                    'Signature Blocks',
+                    'Prepared for execution by the brokerage and FAST BRIDGE GROUP, LLC.'
+                );
+
+                renderSignatureBlock('Brokerage Signature', [
+                    { label: 'Name', value: agreementData.brokerageSignerName },
+                    { label: 'Title', value: agreementData.brokerageSignerTitle },
+                    { label: 'License #', value: agreementData.brokerageLicenseNumber },
+                    { label: 'Date', value: agreementData.brokerageSignDate },
+                    { label: 'Signature', value: agreementData.brokerageSignature, type: 'signature' }
+                ]);
+
+                renderSignatureBlock('FAST BRIDGE GROUP, LLC Signature', [
+                    { label: 'Name', value: agreementData.fastbridgeSignerName },
+                    { label: 'Title', value: agreementData.fastbridgeSignerTitle },
+                    { label: 'Date', value: agreementData.fastbridgeSignDate },
+                    { label: 'Signature', value: agreementData.fastbridgeSignature, type: 'signature' }
+                ]);
+
+                renderAgreementFooters();
 
                 pdf.save(fileName);
                 showDashboardToast('success', 'Agreement Downloaded', 'MLS Data License Only was downloaded as a PDF.');
@@ -7818,10 +8407,69 @@ function initNavbarDateTime() {
         }
 
         function getAssignedItemsForWorkspaceUser() {
+            const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
             const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
-            return Object.values(assignmentStore)
-                .filter(item => item && typeof item === 'object')
-            .filter(item => usersMatch(item.assignedTo || {}, workspaceUser))
+            const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const mergedAssignments = new Map();
+
+            Object.entries(assignmentStore).forEach(([storedPropertyKey, item]) => {
+                if (!item || typeof item !== 'object') {
+                    return;
+                }
+
+                if (!usersMatch(item.assignedTo || {}, activeSessionUser)) {
+                    return;
+                }
+
+                const normalizedPropertyKey = makePropertyStorageKey(item.propertyKey || storedPropertyKey || item.propertyAddress);
+                if (!normalizedPropertyKey) {
+                    return;
+                }
+
+                mergedAssignments.set(normalizedPropertyKey, {
+                    ...item,
+                    propertyKey: normalizedPropertyKey,
+                    propertyAddress: String(item.propertyAddress || item.propertySnapshot?.address || 'Property').trim() || 'Property'
+                });
+            });
+
+            clickedItems.forEach((item) => {
+                if (!item || typeof item !== 'object') {
+                    return;
+                }
+
+                const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                const snapshotAssignment = snapshot?.propertyAssignment && typeof snapshot.propertyAssignment === 'object'
+                    ? snapshot.propertyAssignment
+                    : null;
+                if (!snapshotAssignment || !usersMatch(snapshotAssignment.assignedTo || {}, activeSessionUser)) {
+                    return;
+                }
+
+                const normalizedPropertyKey = makePropertyStorageKey(snapshot?.address || item.address || item.propertyAddress);
+                if (!normalizedPropertyKey) {
+                    return;
+                }
+
+                const existing = mergedAssignments.get(normalizedPropertyKey);
+                mergedAssignments.set(normalizedPropertyKey, {
+                    propertyKey: normalizedPropertyKey,
+                    propertyAddress: String(existing?.propertyAddress || snapshot?.address || item.address || item.propertyAddress || 'Property').trim() || 'Property',
+                    assignedTo: existing?.assignedTo || snapshotAssignment.assignedTo || {},
+                    assignedBy: existing?.assignedBy || snapshotAssignment.assignedBy || {},
+                    assignedAt: existing?.assignedAt || snapshotAssignment.assignedAt || '',
+                    propertySnapshot: existing?.propertySnapshot && typeof existing.propertySnapshot === 'object'
+                        ? existing.propertySnapshot
+                        : snapshot,
+                    imageUrl: existing?.imageUrl || item.imageUrl || snapshot?.propertyImages?.[0] || '',
+                    location: existing?.location || item.location || snapshot?.location || snapshot?.marketInfo || '',
+                    roi: existing?.roi || item.roi || snapshot?.roi || 0
+                });
+            });
+
+            return Array.from(mergedAssignments.values())
                 .sort((a, b) => new Date(b.assignedAt || 0).getTime() - new Date(a.assignedAt || 0).getTime());
         }
 
@@ -8442,16 +9090,39 @@ function initNavbarDateTime() {
 
         const tabButtons = Array.from(document.querySelectorAll('.property-tab-btn[data-tab]'));
         const tabPanels = Array.from(document.querySelectorAll('.property-tab-panel[data-panel]'));
+        const propertyAccessRole = String(getWorkspaceUserContext().role || getStoredCurrentUserIdentity().role || '').trim().toLowerCase();
+        const lockedTabs = isRegularUserRole(propertyAccessRole)
+            ? new Set(['comps', 'ia'])
+            : new Set();
+
+        tabButtons.forEach((button) => {
+            const tabId = String(button.dataset.tab || '').trim().toLowerCase();
+            if (!lockedTabs.has(tabId)) {
+                return;
+            }
+
+            button.classList.add('property-tab-btn-locked');
+            button.setAttribute('aria-disabled', 'true');
+            button.setAttribute('title', `${tabId === 'ia' ? 'IA' : 'Comps'} is locked for User accounts.`);
+
+            if (!button.querySelector('.property-tab-lock-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'property-tab-lock-badge';
+                badge.innerHTML = '<svg class="property-tab-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+                button.appendChild(badge);
+            }
+        });
 
         function activatePropertyTab(tabId) {
             const normalizedTabId = String(tabId || 'piq').trim().toLowerCase() || 'piq';
+            const nextTabId = lockedTabs.has(normalizedTabId) ? 'piq' : normalizedTabId;
 
             tabButtons.forEach(button => {
-                button.classList.toggle('active', button.dataset.tab === normalizedTabId);
+                button.classList.toggle('active', button.dataset.tab === nextTabId);
             });
 
             tabPanels.forEach(panel => {
-                panel.classList.toggle('active', panel.dataset.panel === normalizedTabId);
+                panel.classList.toggle('active', panel.dataset.panel === nextTabId);
             });
         }
 
@@ -8463,6 +9134,11 @@ function initNavbarDateTime() {
             button.dataset.propertyTabBound = 'true';
             button.addEventListener('click', () => {
                 const tabId = button.dataset.tab;
+                if (lockedTabs.has(String(tabId || '').trim().toLowerCase())) {
+                    showDashboardToast('error', 'Access Locked', `${tabId === 'ia' ? 'IA' : 'Comps'} is locked for User accounts.`);
+                    activatePropertyTab('piq');
+                    return;
+                }
                 activatePropertyTab(tabId);
             });
         });
@@ -8695,6 +9371,7 @@ function initNavbarDateTime() {
                             delete detailData.propertyAssignment;
                             localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
                             await setPropertyAssignmentRecord(propertyKey, null);
+                            syncAssignmentIntoLocalDealCache(propertyKey, null, workspaceUser);
                             renderOfferNegotiator(null);
                             showDashboardToast('success', 'Property Unassigned', 'This property is no longer assigned to a user.');
                             return;
@@ -8708,6 +9385,13 @@ function initNavbarDateTime() {
                         };
                         localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
                         const persistedRecord = await setPropertyAssignmentRecord(propertyKey, assignmentRecord);
+                        detailData.propertyAssignment = {
+                            assignedTo: persistedRecord?.assignedTo || assignmentRecord.assignedTo,
+                            assignedBy: persistedRecord?.assignedBy || assignmentRecord.assignedBy,
+                            assignedAt: persistedRecord?.assignedAt || assignmentRecord.assignedAt
+                        };
+                        localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+                        syncAssignmentIntoLocalDealCache(propertyKey, persistedRecord || assignmentRecord, workspaceUser);
                         renderOfferNegotiator(persistedRecord);
                         showDashboardToast('success', 'Property Assigned', `${assignmentRecord.propertyAddress} was assigned to ${selectedUser.name}.`);
                     } catch (error) {
@@ -8722,6 +9406,7 @@ function initNavbarDateTime() {
                         }
 
                         localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+                        syncAssignmentIntoLocalDealCache(propertyKey, previousAssignment || null, workspaceUser);
                         propertyAssigneeSelect.value = previousAssignedKey;
                         renderOfferNegotiator(previousAssignment);
                         showDashboardToast('error', 'Assignment Failed', String(error && error.message || 'Unable to save the property assignment.'));
@@ -12245,6 +12930,7 @@ function initNavbarDateTime() {
         initPasswordToggle();
         initPageTransitions();
         initSettingsTabs();
+        initAnalyticsNavBadge();
         initLiveKpiStats();
         initClosedDealsWidget();
         initWidgetControls();

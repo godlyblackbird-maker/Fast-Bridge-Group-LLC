@@ -111,9 +111,32 @@
     return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'admin');
   }
 
+  function isRegularUser(userLike) {
+    return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'user');
+  }
+
+  function formatRoleLabel(roleValue) {
+    const normalizedRole = String(roleValue || '').trim().toLowerCase();
+    if (normalizedRole === 'admin') {
+      return 'Administrator';
+    }
+    if (normalizedRole === 'broker') {
+      return 'Broker';
+    }
+    if (normalizedRole === 'user') {
+      return 'User';
+    }
+    return normalizedRole || 'User';
+  }
+
   function isActiveBuyersPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/active-buyers.html' || normalizedPath.endsWith('/active-buyers.html');
+  }
+
+  function isCampaignsPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/campaigns.html' || normalizedPath.endsWith('/campaigns.html');
   }
 
   function applyLockedActiveBuyersLink(link) {
@@ -126,6 +149,30 @@
     link.classList.add('nav-link-locked');
     link.setAttribute('aria-disabled', 'true');
     link.setAttribute('title', 'Active Buyers is restricted to administrators.');
+
+    if (!link.querySelector('.nav-lock-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-lock-badge';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+      link.appendChild(badge);
+    }
+
+    link.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
+  function applyLockedCampaignsLink(link) {
+    if (!link || link.dataset.lockedCampaigns === 'true') {
+      return;
+    }
+
+    link.dataset.lockedCampaigns = 'true';
+    link.classList.remove('active');
+    link.classList.add('nav-link-locked');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', 'Campaigns is locked for User accounts.');
 
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
@@ -241,6 +288,12 @@
         return;
       }
     }
+    if (isCampaignsPath(normalizedPath)) {
+      if (isRegularUser(activeUser)) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+    }
     if (normalizedPath.endsWith('/admin-controls.html') || normalizedPath === '/admin-controls.html') {
       if (!isAdminUser(activeUser)) {
         window.location.href = '/dashboard.html';
@@ -270,8 +323,20 @@
 
     const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
     activeBuyersLinks.forEach(link => {
+      const listItem = link.closest('.nav-item');
       if (!isAdmin) {
-        applyLockedActiveBuyersLink(link);
+        if (listItem) {
+          listItem.remove();
+        } else {
+          link.remove();
+        }
+      }
+    });
+
+    const campaignLinks = document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
+    campaignLinks.forEach(link => {
+      if (isRegularUser(activeUser)) {
+        applyLockedCampaignsLink(link);
       }
     });
 
@@ -303,7 +368,7 @@
       ...(storedProfile || {}),
       name: (storedProfile && storedProfile.name) || user.name,
       email: (storedProfile && storedProfile.email) || user.email,
-      role: user.role || 'Administrator'
+      role: user.role || 'admin'
     };
     const userNameEl = document.querySelector('.user-name');
     const userRoleEl = document.querySelector('.user-role');
@@ -314,7 +379,7 @@
     }
 
     if (userRoleEl) {
-      userRoleEl.textContent = resolvedUser.role === 'admin' ? 'Administrator' : resolvedUser.role || 'User';
+      userRoleEl.textContent = formatRoleLabel(resolvedUser.role);
     }
 
     if (userAvatarEl) {

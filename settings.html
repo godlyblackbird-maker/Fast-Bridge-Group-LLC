@@ -138,7 +138,7 @@ https://templatemo.com/tm-607-glass-admin
                                     <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
                                 </svg>
                                 Analytics
-                                <span class="nav-badge">New</span>
+                                <span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -308,6 +308,14 @@ https://templatemo.com/tm-607-glass-admin
                                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                                 </svg>
                                 Notifications
+                            </a>
+                        </li>
+                        <li class="settings-nav-item">
+                            <a href="#" class="settings-nav-link" data-tab="subscriptions">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14.5a3.5 3.5 0 0 1 0 7H6"/>
+                                </svg>
+                                Subscriptions
                             </a>
                         </li>
                         <li class="settings-nav-item">
@@ -601,6 +609,71 @@ https://templatemo.com/tm-607-glass-admin
                         <div class="btn-group">
                             <button class="btn btn-primary" style="width: auto;">Save Preferences</button>
                             <button class="btn btn-secondary" style="width: auto;">Reset to Default</button>
+                        </div>
+                    </div>
+
+                    <!-- Subscriptions Tab -->
+                    <div class="settings-tab-content" id="tab-subscriptions">
+                        <div class="settings-section">
+                            <div class="subscription-hero">
+                                <div>
+                                    <span class="subscription-eyebrow">Subscription Service</span>
+                                    <h3 class="settings-section-title subscription-title">Choose Your Plan</h3>
+                                    <p class="subscription-copy">Upgrade to access investment analysis tools for properties</p>
+                                    <p class="subscription-note">MLS data access stays exactly as-is and is not part of these subscription options.</p>
+                                </div>
+                                <div class="subscription-status-card">
+                                    <span class="subscription-status-label">Current plan</span>
+                                    <strong id="subscription-current-plan">Basic</strong>
+                                    <span class="subscription-status-meta">Per-user workspace subscription</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="subscription-plan-grid">
+                                <label class="subscription-plan-card" for="subscription-plan-basic" data-plan-card="basic">
+                                    <input type="radio" name="subscription-plan" id="subscription-plan-basic" value="basic" checked>
+                                    <div class="subscription-plan-head">
+                                        <div>
+                                            <h4>Basic</h4>
+                                            <p>Keep your core dashboard workflow with standard settings access.</p>
+                                        </div>
+                                        <span class="subscription-plan-price">$0</span>
+                                    </div>
+                                    <ul class="subscription-feature-list">
+                                        <li>Profile, security, notification, and appearance settings</li>
+                                        <li>Core dashboard workflow tools</li>
+                                        <li>No MLS entitlement changes</li>
+                                    </ul>
+                                </label>
+
+                                <label class="subscription-plan-card subscription-plan-card-premium" for="subscription-plan-premium" data-plan-card="premium">
+                                    <input type="radio" name="subscription-plan" id="subscription-plan-premium" value="premium">
+                                    <div class="subscription-plan-head">
+                                        <div>
+                                            <h4>Premium</h4>
+                                            <p>Unlock additional property investment analysis tooling without changing MLS access.</p>
+                                        </div>
+                                        <span class="subscription-plan-price">$49/mo</span>
+                                    </div>
+                                    <ul class="subscription-feature-list">
+                                        <li>Investment analysis tool access for property workflows</li>
+                                        <li>Premium planning and underwriting workspace positioning</li>
+                                        <li>MLS access remains unchanged</li>
+                                    </ul>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-section subscription-summary-section">
+                            <div class="subscription-summary-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Plan Summary</span>
+                                    <span class="settings-label-desc" id="subscription-plan-summary">Basic keeps standard dashboard access active.</span>
+                                </div>
+                                <button class="btn btn-primary" id="subscription-save-btn" type="button" style="width: auto;">Save Plan</button>
+                            </div>
                         </div>
                     </div>
 

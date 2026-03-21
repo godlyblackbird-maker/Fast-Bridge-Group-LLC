@@ -1453,8 +1453,8 @@ app.post('/api/admin/users', (req, res) => {
     return res.status(400).json({ error: 'Name, email, and password are required' });
   }
 
-  if (!['admin', 'user'].includes(normalizedRole)) {
-    return res.status(400).json({ error: 'Role must be either admin or user' });
+  if (!['admin', 'user', 'broker'].includes(normalizedRole)) {
+    return res.status(400).json({ error: 'Role must be admin, user, or broker' });
   }
 
   if (password.length < 6) {
