@@ -365,23 +365,23 @@ https://templatemo.com/tm-607-glass-admin
                             <form class="form-grid" id="settings-profile-form">
                                 <div class="form-group-settings">
                                     <label>First Name</label>
-                                    <input type="text" id="settings-first-name" value="Template">
+                                    <input type="text" id="settings-first-name" value="">
                                 </div>
                                 <div class="form-group-settings">
                                     <label>Last Name</label>
-                                    <input type="text" id="settings-last-name" value="Mo">
+                                    <input type="text" id="settings-last-name" value="">
                                 </div>
                                 <div class="form-group-settings">
                                     <label>Email Address</label>
-                                    <input type="email" id="settings-email" value="admin@templatemo.com">
+                                    <input type="email" id="settings-email" value="" readonly>
                                 </div>
                                 <div class="form-group-settings">
                                     <label>Phone Number</label>
-                                    <input type="tel" id="settings-phone" value="+1 (555) 123-4567">
+                                    <input type="tel" id="settings-phone" value="">
                                 </div>
                                 <div class="form-group-settings full-width">
                                     <label>Bio</label>
-                                    <textarea id="settings-bio">Dashboard template creator and web design enthusiast. Building beautiful interfaces for modern applications.</textarea>
+                                    <textarea id="settings-bio"></textarea>
                                 </div>
                             </form>
                         </div>
@@ -547,12 +547,12 @@ https://templatemo.com/tm-607-glass-admin
                     <!-- Subscriptions Tab -->
                     <div class="settings-tab-content" id="tab-subscriptions">
                         <div class="settings-section">
-                            <div class="subscription-hero">
+                            <div class="subscription-hero subscription-hero-premium">
                                 <div>
                                     <span class="subscription-eyebrow">Subscription Service</span>
                                     <h3 class="settings-section-title subscription-title">Choose Your Plan</h3>
-                                    <p class="subscription-copy">Upgrade to access investment analysis tools for properties</p>
-                                    <p class="subscription-note">MLS data access stays exactly as-is and is not part of these subscription options.</p>
+                                    <p class="subscription-copy">Turn on the full investor tier with a sharper, faster, all-access workspace.</p>
+                                    <p class="subscription-note">MLS data access stays exactly as-is. Premium is about unlocking the advanced investing workflow, analytics, comps, campaigns, and premium tools around it.</p>
                                 </div>
                                 <div class="subscription-status-card">
                                     <span class="subscription-status-label">Current plan</span>
@@ -582,6 +582,7 @@ https://templatemo.com/tm-607-glass-admin
 
                                 <label class="subscription-plan-card subscription-plan-card-premium" for="subscription-plan-premium" data-plan-card="premium">
                                     <input type="radio" name="subscription-plan" id="subscription-plan-premium" value="premium">
+                                    <span class="subscription-plan-ribbon">All Access</span>
                                     <div class="subscription-plan-head">
                                         <div>
                                             <h4>Premium</h4>
@@ -652,23 +653,12 @@ https://templatemo.com/tm-607-glass-admin
                                     <input type="text" id="subscription-cardholder-name" autocomplete="cc-name" placeholder="Name on card">
                                 </div>
                                 <div class="form-group-settings full-width">
-                                    <label for="subscription-card-number">Card Number</label>
-                                    <input type="text" id="subscription-card-number" inputmode="numeric" autocomplete="cc-number" placeholder="4111 1111 1111 1111">
-                                </div>
-                                <div class="form-group-settings">
-                                    <label for="subscription-card-exp-month">Exp. Month</label>
-                                    <input type="text" id="subscription-card-exp-month" inputmode="numeric" autocomplete="cc-exp-month" placeholder="MM">
-                                </div>
-                                <div class="form-group-settings">
-                                    <label for="subscription-card-exp-year">Exp. Year</label>
-                                    <input type="text" id="subscription-card-exp-year" inputmode="numeric" autocomplete="cc-exp-year" placeholder="YYYY">
-                                </div>
-                                <div class="form-group-settings">
-                                    <label for="subscription-card-cvc">CVC</label>
-                                    <input type="password" id="subscription-card-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="CVC">
+                                    <label for="subscription-stripe-card-element">Card Details</label>
+                                    <div id="subscription-stripe-card-element" class="subscription-stripe-card-host" aria-label="Secure Stripe card entry"></div>
+                                    <p class="subscription-billing-disclaimer subscription-stripe-status" id="subscription-stripe-status">Secure card entry powered by Stripe.</p>
                                 </div>
                             </form>
-                            <p class="subscription-billing-disclaimer">Only your billing profile plus the card brand and last four digits are retained after checkout. Full card number and CVC are not stored.</p>
+                            <p class="subscription-billing-disclaimer">Your card details stay inside Stripe. This app only keeps billing profile details plus the card brand and last four digits after checkout.</p>
                         </div>
 
                         <div class="settings-section subscription-summary-section">

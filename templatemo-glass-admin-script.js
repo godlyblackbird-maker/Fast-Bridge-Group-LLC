@@ -3501,8 +3501,10 @@ function initNavbarDateTime() {
             const billingSection = document.getElementById('subscription-billing-section');
             const billingNote = document.getElementById('subscription-billing-note');
             const billingForm = document.getElementById('subscription-billing-form');
+            const stripeCardHost = document.getElementById('subscription-stripe-card-element');
+            const stripeStatus = document.getElementById('subscription-stripe-status');
 
-            if (planInputs.length === 0 || !currentPlanLabel || !planSummary || !saveButton || !billingSection || !billingNote || !billingForm) {
+            if (planInputs.length === 0 || !currentPlanLabel || !planSummary || !saveButton || !billingSection || !billingNote || !billingForm || !stripeCardHost || !stripeStatus) {
                 return;
             }
 
@@ -3520,11 +3522,7 @@ function initNavbarDateTime() {
                 stateRegion: document.getElementById('subscription-billing-state'),
                 postalCode: document.getElementById('subscription-billing-postal'),
                 country: document.getElementById('subscription-billing-country'),
-                cardholderName: document.getElementById('subscription-cardholder-name'),
-                cardNumber: document.getElementById('subscription-card-number'),
-                expiryMonth: document.getElementById('subscription-card-exp-month'),
-                expiryYear: document.getElementById('subscription-card-exp-year'),
-                cvc: document.getElementById('subscription-card-cvc')
+                cardholderName: document.getElementById('subscription-cardholder-name')
             };
 
             const planCopy = {
@@ -3547,6 +3545,25 @@ function initNavbarDateTime() {
             const storedPlan = String(getUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, initialRole === premiumRole ? 'premium' : 'basic') || 'basic').trim().toLowerCase();
             let currentRole = initialRole;
             let activeSubscription = null;
+            let stripeModulePromise = null;
+            let stripeConfigPromise = null;
+            let stripeInstance = null;
+            let stripeElements = null;
+            let stripeCardElement = null;
+            let stripeEnabled = null;
+
+            function setStripeStatus(message, isError) {
+                stripeStatus.textContent = String(message || '');
+                stripeStatus.style.color = isError ? '#ef4444' : '';
+            }
+
+            function getStripeReadyMessage() {
+                const maskedCard = activeSubscription?.billingProfile?.maskedCard;
+                if (maskedCard) {
+                    return `Card on file: ${maskedCard}. Enter a new card in Stripe to replace it.`;
+                }
+                return 'Secure card entry powered by Stripe.';
+            }
 
             function setSelectedPlan(planKey) {
                 const resolvedPlan = Object.prototype.hasOwnProperty.call(planCopy, planKey) ? planKey : 'basic';
@@ -3566,23 +3583,106 @@ function initNavbarDateTime() {
                 return String(localStorage.getItem('authToken') || '').trim();
             }
 
+            async function loadStripeConfig() {
+                if (stripeConfigPromise) {
+                    return stripeConfigPromise;
+                }
+
+                stripeConfigPromise = (async () => {
+                    const token = getStoredAuthToken();
+                    if (!token) {
+                        throw new Error('Sign in again before using Stripe billing.');
+                    }
+
+                    const response = await fetch('/api/subscription/stripe-config', {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Unable to load Stripe billing settings.');
+                    }
+                    stripeEnabled = Boolean(data.enabled && data.publishableKey);
+                    return data;
+                })();
+
+                return stripeConfigPromise;
+            }
+
+            async function ensureStripeLibrary() {
+                if (stripeInstance) {
+                    return stripeInstance;
+                }
+
+                if (!stripeModulePromise) {
+                    stripeModulePromise = import('/node_modules/@stripe/stripe-js/dist/pure.mjs');
+                }
+
+                const stripeConfig = await loadStripeConfig();
+                if (!stripeConfig.enabled || !stripeConfig.publishableKey) {
+                    stripeEnabled = false;
+                    throw new Error('Stripe is not configured yet. Add STRIPE_PUBLISHABLE_KEY to the server environment to enable billing.');
+                }
+
+                const stripeModule = await stripeModulePromise;
+                stripeInstance = await stripeModule.loadStripe(stripeConfig.publishableKey);
+                if (!stripeInstance) {
+                    throw new Error('Stripe could not be initialized in this browser.');
+                }
+                return stripeInstance;
+            }
+
+            async function ensureStripeCardElement() {
+                if (stripeCardElement) {
+                    stripeCardHost.classList.remove('is-disabled');
+                    setStripeStatus(getStripeReadyMessage(), false);
+                    return stripeCardElement;
+                }
+
+                stripeCardHost.classList.add('is-disabled');
+                setStripeStatus('Loading Stripe secure card entry...', false);
+
+                const stripe = await ensureStripeLibrary();
+                stripeElements = stripe.elements({
+                    appearance: {
+                        theme: 'night',
+                        variables: {
+                            colorPrimary: '#34d399',
+                            colorBackground: 'rgba(0,0,0,0)',
+                            colorText: '#f8fafc',
+                            colorDanger: '#ef4444',
+                            fontFamily: 'Outfit, system-ui, sans-serif'
+                        }
+                    }
+                });
+                stripeCardElement = stripeElements.create('card', {
+                    hidePostalCode: true
+                });
+                stripeCardElement.mount('#subscription-stripe-card-element');
+                stripeCardElement.on('change', (event) => {
+                    stripeCardHost.classList.toggle('is-disabled', false);
+                    if (event.error) {
+                        setStripeStatus(event.error.message || 'Stripe card entry has an error.', true);
+                        return;
+                    }
+                    setStripeStatus(getStripeReadyMessage(), false);
+                });
+
+                stripeCardHost.classList.remove('is-disabled');
+                setStripeStatus(getStripeReadyMessage(), false);
+                return stripeCardElement;
+            }
+
             function fillBillingForm(profile) {
                 const safeProfile = profile && typeof profile === 'object' ? profile : {};
                 Object.entries(billingFields).forEach(([key, input]) => {
-                    if (!input || ['cardNumber', 'cvc'].includes(key)) {
+                    if (!input) {
                         return;
                     }
                     input.value = String(safeProfile[key] || input.value || '').trim();
                 });
-
-                if (billingFields.cardNumber && safeProfile.cardLast4 && safeProfile.cardBrand) {
-                    billingFields.cardNumber.value = '';
-                    billingFields.cardNumber.placeholder = `${safeProfile.cardBrand} ending in ${safeProfile.cardLast4}`;
-                }
-
-                if (billingFields.cvc) {
-                    billingFields.cvc.value = '';
-                }
+                setStripeStatus(getStripeReadyMessage(), false);
             }
 
             function buildBillingPayload() {
@@ -3607,6 +3707,62 @@ function initNavbarDateTime() {
                 if (billingFields.country && !billingFields.country.value) {
                     billingFields.country.value = 'United States';
                 }
+            }
+
+            function normalizeStripeCountryCode(value) {
+                const normalized = String(value || '').trim().toUpperCase();
+                if (/^[A-Z]{2}$/.test(normalized)) {
+                    return normalized;
+                }
+                if (normalized === 'UNITED STATES' || normalized === 'UNITED STATES OF AMERICA' || normalized === 'USA') {
+                    return 'US';
+                }
+                return undefined;
+            }
+
+            async function buildStripePaymentPayload() {
+                const stripe = await ensureStripeLibrary();
+                const cardElement = await ensureStripeCardElement();
+                const billingName = String(billingFields.billingName?.value || '').trim();
+                const billingEmail = String(billingFields.billingEmail?.value || '').trim();
+                const billingPhone = String(billingFields.billingPhone?.value || '').trim();
+                const cardholderName = String(billingFields.cardholderName?.value || billingName || '').trim();
+
+                if (!cardholderName) {
+                    throw new Error('Enter the cardholder name before continuing to Stripe.');
+                }
+
+                setStripeStatus('Tokenizing card details with Stripe...', false);
+                const result = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: cardElement,
+                    billing_details: {
+                        name: cardholderName,
+                        email: billingEmail || undefined,
+                        phone: billingPhone || undefined,
+                        address: {
+                            line1: String(billingFields.addressLine1?.value || '').trim() || undefined,
+                            line2: String(billingFields.addressLine2?.value || '').trim() || undefined,
+                            city: String(billingFields.city?.value || '').trim() || undefined,
+                            state: String(billingFields.stateRegion?.value || '').trim() || undefined,
+                            postal_code: String(billingFields.postalCode?.value || '').trim() || undefined,
+                            country: normalizeStripeCountryCode(billingFields.country?.value)
+                        }
+                    }
+                });
+
+                if (result.error || !result.paymentMethod) {
+                    throw new Error(result.error?.message || 'Stripe could not verify the card details.');
+                }
+
+                setStripeStatus(getStripeReadyMessage(), false);
+
+                return {
+                    paymentMethodId: String(result.paymentMethod.id || ''),
+                    cardholderName,
+                    cardBrand: String(result.paymentMethod.card?.brand || ''),
+                    cardLast4: String(result.paymentMethod.card?.last4 || '')
+                };
             }
 
             function syncSubscriptionUi() {
@@ -3642,6 +3798,13 @@ function initNavbarDateTime() {
                     card.classList.toggle('is-selected', input.checked);
                     card.classList.toggle('is-disabled', Boolean(input.disabled));
                 });
+
+                if (!billingSection.hidden) {
+                    void ensureStripeCardElement().catch((error) => {
+                        stripeCardHost.classList.add('is-disabled');
+                        setStripeStatus(error.message || 'Stripe is unavailable right now.', true);
+                    });
+                }
             }
 
             async function loadSubscriptionStatus() {
@@ -3705,13 +3868,17 @@ function initNavbarDateTime() {
                 saveButton.disabled = true;
 
                 try {
+                    const stripePayload = await buildStripePaymentPayload();
                     const response = await fetch('/api/subscription/premium-checkout', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             Authorization: `Bearer ${token}`
                         },
-                        body: JSON.stringify(buildBillingPayload())
+                        body: JSON.stringify({
+                            ...buildBillingPayload(),
+                            ...stripePayload
+                        })
                     });
                     const data = await response.json();
 
@@ -3725,6 +3892,9 @@ function initNavbarDateTime() {
                     localStorage.setItem('user', JSON.stringify(data.user));
                     setUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, 'premium');
                     fillBillingForm(activeSubscription?.billingProfile);
+                    if (stripeCardElement) {
+                        stripeCardElement.clear();
+                    }
                     setSelectedPlan('premium');
                     syncSubscriptionUi();
                     showDashboardToast('success', 'Premium Activated', 'Premium User access is live and all tabs are now unlocked for this account.', {

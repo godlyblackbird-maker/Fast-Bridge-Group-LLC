@@ -169,9 +169,12 @@
   function getResolvedProfileData() {
     const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     const stored = getStoredProfileData();
+    const activeEmail = normalizeKnownEmail((user && user.email) || '');
+    const storedEmail = normalizeKnownEmail(stored.email || '');
+    const resolvedEmail = activeEmail || storedEmail;
     return {
       name: stored.name || (user && user.name) || 'User',
-      email: normalizeKnownEmail(stored.email || (user && user.email) || ''),
+      email: resolvedEmail,
       phone: stored.phone || '',
       company: stored.company || '',
       address: stored.address || '',
@@ -1165,10 +1168,12 @@
     const lastName = document.getElementById('settings-last-name').value.trim();
     const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
     const existingProfile = getStoredProfileData();
+    const user = getCurrentUser();
+    const resolvedAccountEmail = normalizeKnownEmail((user && user.email) || existingProfile.email || '');
     const profileData = {
       ...existingProfile,
       name: fullName || existingProfile.name || 'User',
-      email: document.getElementById('settings-email').value.trim(),
+      email: resolvedAccountEmail,
       phone: document.getElementById('settings-phone').value.trim(),
       bio: document.getElementById('settings-bio').value.trim(),
       updatedAt: new Date().toISOString()
@@ -1176,10 +1181,9 @@
 
     setStoredProfileData(profileData);
 
-    const user = getCurrentUser();
     if (user) {
       user.name = profileData.name;
-      user.email = profileData.email;
+      user.email = resolvedAccountEmail;
       user.avatarImage = profileData.avatarImage || user.avatarImage || '';
       localStorage.setItem('user', JSON.stringify(user));
     }

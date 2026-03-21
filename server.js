@@ -42,6 +42,7 @@ app.get('/api/build-version', (req, res) => {
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
+const STRIPE_PUBLISHABLE_KEY = String(process.env.STRIPE_PUBLISHABLE_KEY || '').trim();
 const PREMIUM_USER_ROLE = 'premium user';
 const PREMIUM_PLAN_KEY = 'premium';
 const PREMIUM_PRICE_CENTS = 9900;
@@ -558,6 +559,7 @@ function initializeDatabase() {
       console.error('Error creating subscription_profiles table:', err);
     } else {
       console.log('Subscription profiles table ready');
+      db.run(`ALTER TABLE subscription_profiles ADD COLUMN stripe_payment_method_id TEXT`, () => {});
     }
   });
 
@@ -2384,6 +2386,19 @@ app.get('/api/subscription/status', async (req, res) => {
   }
 });
 
+app.get('/api/subscription/stripe-config', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  return res.json({
+    success: true,
+    enabled: Boolean(STRIPE_PUBLISHABLE_KEY),
+    publishableKey: STRIPE_PUBLISHABLE_KEY
+  });
+});
+
 app.post('/api/subscription/premium-checkout', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
@@ -2404,11 +2419,10 @@ app.post('/api/subscription/premium-checkout', async (req, res) => {
   const stateRegion = sanitizeBillingField(req.body?.stateRegion, 80);
   const postalCode = sanitizeBillingField(req.body?.postalCode, 24);
   const country = sanitizeBillingField(req.body?.country, 80) || 'United States';
-  const cardholderName = sanitizeBillingField(req.body?.cardholderName);
-  const cardNumber = String(req.body?.cardNumber || '').replace(/\D+/g, '');
-  const expiryMonth = sanitizeBillingField(req.body?.expiryMonth, 2);
-  const expiryYear = sanitizeBillingField(req.body?.expiryYear, 4);
-  const cvc = String(req.body?.cvc || '').replace(/\D+/g, '');
+  const cardholderName = sanitizeBillingField(req.body?.cardholderName) || billingName;
+  const paymentMethodId = sanitizeBillingField(req.body?.paymentMethodId, 160);
+  const cardBrand = sanitizeBillingField(req.body?.cardBrand, 40);
+  const cardLast4 = String(req.body?.cardLast4 || '').replace(/\D+/g, '').slice(-4);
 
   if (!billingName || !billingEmail || !addressLine1 || !city || !stateRegion || !postalCode || !cardholderName) {
     return res.status(400).json({ error: 'Complete all required billing fields.' });
@@ -2418,16 +2432,12 @@ app.post('/api/subscription/premium-checkout', async (req, res) => {
     return res.status(400).json({ error: 'Enter a valid billing email address.' });
   }
 
-  if (!hasValidLuhn(cardNumber)) {
-    return res.status(400).json({ error: 'Enter a valid card number.' });
+  if (!paymentMethodId) {
+    return res.status(400).json({ error: 'Add a card through Stripe before activating Premium.' });
   }
 
-  if (!isValidFutureExpiry(expiryMonth, expiryYear)) {
-    return res.status(400).json({ error: 'Enter a valid future expiration date.' });
-  }
-
-  if (!/^\d{3,4}$/.test(cvc)) {
-    return res.status(400).json({ error: 'Enter a valid CVC.' });
+  if (!cardBrand || !/^\d{4}$/.test(cardLast4)) {
+    return res.status(400).json({ error: 'Stripe card details are incomplete. Try re-entering the card.' });
   }
 
   try {
@@ -2436,17 +2446,14 @@ app.post('/api/subscription/premium-checkout', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const cardBrand = detectCardBrand(cardNumber);
-    const cardLast4 = cardNumber.slice(-4);
-
     await dbRun('UPDATE users SET role = ? WHERE id = ?', [PREMIUM_USER_ROLE, decoded.id]);
     await dbRun(
       `INSERT INTO subscription_profiles (
           user_id, plan_key, billing_name, billing_email, billing_phone, company_name,
           address_line1, address_line2, city, state_region, postal_code, country,
-          cardholder_name, card_brand, card_last4, subscription_status, amount_cents,
+          cardholder_name, card_brand, card_last4, stripe_payment_method_id, subscription_status, amount_cents,
           currency, activated_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ON CONFLICT(user_id) DO UPDATE SET
           plan_key = excluded.plan_key,
           billing_name = excluded.billing_name,
@@ -2462,6 +2469,7 @@ app.post('/api/subscription/premium-checkout', async (req, res) => {
           cardholder_name = excluded.cardholder_name,
           card_brand = excluded.card_brand,
           card_last4 = excluded.card_last4,
+          stripe_payment_method_id = excluded.stripe_payment_method_id,
           subscription_status = 'active',
           amount_cents = excluded.amount_cents,
           currency = excluded.currency,
@@ -2483,6 +2491,7 @@ app.post('/api/subscription/premium-checkout', async (req, res) => {
         cardholderName,
         cardBrand,
         cardLast4,
+        paymentMethodId,
         PREMIUM_PRICE_CENTS,
         PREMIUM_CURRENCY
       ]
