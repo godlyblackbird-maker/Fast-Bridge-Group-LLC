@@ -7875,9 +7875,12 @@ function initNavbarDateTime() {
                     const heroPadding = 24;
                     const logoMaxWidth = 122;
                     const logoMaxHeight = 58;
+                    const logoTextGap = 34;
                     const metaGap = 10;
                     const metaWidth = (heroWidth - (metaGap * 2) - (heroPadding * 2)) / 3;
-                    const mastheadWidth = heroWidth - (heroPadding * 2) - 140;
+                    const mastheadWidth = agreementLogoDataUrl
+                        ? heroWidth - (heroPadding * 2) - logoMaxWidth - logoTextGap
+                        : heroWidth - (heroPadding * 2);
                     const introWidth = heroWidth - (heroPadding * 2);
                     const titleLines = pdf.splitTextToSize(agreementTitle, mastheadWidth);
                     const subtitleLines = pdf.splitTextToSize(agreementSubtitle, mastheadWidth);
@@ -8057,6 +8060,7 @@ function initNavbarDateTime() {
                     const signatureLabelGap = 18;
                     const signatureLineGap = 46;
                     const signatureTextOffset = 22;
+                    const signatureLineStartOffset = 126;
                     const blockHeight = 214;
 
                     ensurePage(blockHeight + 12);
@@ -8076,6 +8080,8 @@ function initNavbarDateTime() {
                     let blockY = cursorY + 62;
                     fields.forEach((field) => {
                         if (field.type === 'signature') {
+                            const signatureLineStartX = blockX + blockPadding + signatureLineStartOffset;
+
                             pdf.setFont('helvetica', 'bold');
                             pdf.setFontSize(10);
                             setTextColor(brandColors.muted);
@@ -8084,13 +8090,13 @@ function initNavbarDateTime() {
 
                             setDrawColor(brandColors.line);
                             pdf.setLineWidth(1);
-                            pdf.line(blockX + blockPadding, blockY, blockX + blockWidth - blockPadding, blockY);
+                            pdf.line(signatureLineStartX, blockY, blockX + blockWidth - blockPadding, blockY);
 
                             if (String(field.value || '').trim()) {
                                 pdf.setFont('helvetica', 'normal');
                                 pdf.setFontSize(10.5);
                                 setTextColor(brandColors.ink);
-                                pdf.text(String(field.value), blockX + blockPadding + 8, blockY - signatureTextOffset);
+                                pdf.text(String(field.value), signatureLineStartX + 8, blockY - signatureTextOffset);
                             }
 
                             blockY += signatureLineGap;
