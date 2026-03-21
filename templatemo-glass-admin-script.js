@@ -7871,12 +7871,26 @@ function initNavbarDateTime() {
                     const heroX = marginX;
                     const heroY = cursorY;
                     const heroWidth = contentWidth;
-                    const heroHeight = 230;
+                    const baseHeroHeight = 230;
                     const heroPadding = 24;
                     const logoMaxWidth = 122;
                     const logoMaxHeight = 58;
                     const metaGap = 10;
                     const metaWidth = (heroWidth - (metaGap * 2) - (heroPadding * 2)) / 3;
+                    const mastheadWidth = heroWidth - (heroPadding * 2) - 140;
+                    const introWidth = heroWidth - (heroPadding * 2);
+                    const titleLines = pdf.splitTextToSize(agreementTitle, mastheadWidth);
+                    const subtitleLines = pdf.splitTextToSize(agreementSubtitle, mastheadWidth);
+                    const introLines = pdf.splitTextToSize(
+                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC and ${agreementData.brokerageName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`,
+                        introWidth
+                    ).slice(0, 4);
+                    const eyebrowY = heroY + 48;
+                    const titleY = eyebrowY + 20;
+                    const subtitleY = titleY + (titleLines.length * 12) + 10;
+                    const introY = subtitleY + (subtitleLines.length * 12) + 16;
+                    const metaY = Math.max(heroY + 156, introY + (introLines.length * 14) + 14);
+                    const heroHeight = Math.max(baseHeroHeight, (metaY - heroY) + 62 + 18);
 
                     ensurePage(heroHeight + 16);
 
@@ -7919,35 +7933,30 @@ function initNavbarDateTime() {
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(10);
                     setTextColor([148, 220, 242]);
-                    pdf.text('FAST CONTRACT SUITE', heroX + heroPadding, heroY + 48);
+                    pdf.text('FAST CONTRACT SUITE', heroX + heroPadding, eyebrowY);
 
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(22);
                     setTextColor(brandColors.white);
-                    pdf.text(agreementTitle, heroX + heroPadding, heroY + 76, { maxWidth: heroWidth - (heroPadding * 2) - 140 });
+                    titleLines.forEach((line, index) => {
+                        pdf.text(line, heroX + heroPadding, titleY + (index * 12));
+                    });
 
                     pdf.setFont('helvetica', 'normal');
                     pdf.setFontSize(11);
                     setTextColor([226, 232, 240]);
-                    pdf.text(
-                        agreementSubtitle,
-                        heroX + heroPadding,
-                        heroY + 104,
-                        { maxWidth: heroWidth - (heroPadding * 2) - 140 }
-                    );
-
-                    const introLines = pdf.splitTextToSize(
-                        `This Agreement is entered into by and between FAST BRIDGE GROUP, LLC and ${agreementData.brokerageName}, solely for the limited purpose of enabling lawful MLS data access, display, and compliance under brokerage supervision and applicable MLS authorization.`,
-                        heroWidth - (heroPadding * 2)
-                    );
-                    pdf.setFontSize(10.5);
-                    introLines.slice(0, 4).forEach((line, index) => {
-                        pdf.text(line, heroX + heroPadding, heroY + 130 + (index * 14));
+                    subtitleLines.forEach((line, index) => {
+                        pdf.text(line, heroX + heroPadding, subtitleY + (index * 12));
                     });
 
-                    renderMetaTile(heroX + heroPadding, heroY + 156, metaWidth, 'Effective Date', agreementData.effectiveDate);
-                    renderMetaTile(heroX + heroPadding + metaWidth + metaGap, heroY + 156, metaWidth, 'MLS Market', agreementData.market);
-                    renderMetaTile(heroX + heroPadding + ((metaWidth + metaGap) * 2), heroY + 156, metaWidth, 'Brokerage', agreementData.brokerageName);
+                    pdf.setFontSize(10.5);
+                    introLines.forEach((line, index) => {
+                        pdf.text(line, heroX + heroPadding, introY + (index * 14));
+                    });
+
+                    renderMetaTile(heroX + heroPadding, metaY, metaWidth, 'Effective Date', agreementData.effectiveDate);
+                    renderMetaTile(heroX + heroPadding + metaWidth + metaGap, metaY, metaWidth, 'MLS Market', agreementData.market);
+                    renderMetaTile(heroX + heroPadding + ((metaWidth + metaGap) * 2), metaY, metaWidth, 'Brokerage', agreementData.brokerageName);
 
                     cursorY += heroHeight + 14;
                 }
@@ -8045,10 +8054,10 @@ function initNavbarDateTime() {
                     const blockWidth = contentWidth;
                     const blockPadding = 18;
                     const rowGap = 18;
-                    const signatureLabelGap = 14;
-                    const signatureLineGap = 36;
-                    const signatureTextOffset = 14;
-                    const blockHeight = 194;
+                    const signatureLabelGap = 18;
+                    const signatureLineGap = 46;
+                    const signatureTextOffset = 22;
+                    const blockHeight = 214;
 
                     ensurePage(blockHeight + 12);
 

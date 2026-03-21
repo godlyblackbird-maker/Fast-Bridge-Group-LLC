@@ -134,6 +134,11 @@
     return normalizedPath === '/active-buyers.html' || normalizedPath.endsWith('/active-buyers.html');
   }
 
+  function isAnalyticsPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/analytics.html' || normalizedPath.endsWith('/analytics.html');
+  }
+
   function isCampaignsPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/campaigns.html' || normalizedPath.endsWith('/campaigns.html');
@@ -173,6 +178,30 @@
     link.classList.add('nav-link-locked');
     link.setAttribute('aria-disabled', 'true');
     link.setAttribute('title', 'Campaigns is locked for User accounts.');
+
+    if (!link.querySelector('.nav-lock-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-lock-badge';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+      link.appendChild(badge);
+    }
+
+    link.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
+  function applyLockedAnalyticsLink(link) {
+    if (!link || link.dataset.lockedAnalytics === 'true') {
+      return;
+    }
+
+    link.dataset.lockedAnalytics = 'true';
+    link.classList.remove('active');
+    link.classList.add('nav-link-locked');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', 'Analytics is locked for User accounts.');
 
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
@@ -288,6 +317,12 @@
         return;
       }
     }
+    if (isAnalyticsPath(normalizedPath)) {
+      if (isRegularUser(activeUser)) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+    }
     if (isCampaignsPath(normalizedPath)) {
       if (isRegularUser(activeUser)) {
         window.location.href = '/dashboard.html';
@@ -330,6 +365,13 @@
         } else {
           link.remove();
         }
+      }
+    });
+
+    const analyticsLinks = document.querySelectorAll('.nav-link[href="analytics.html"], .nav-link[href="/analytics.html"]');
+    analyticsLinks.forEach(link => {
+      if (isRegularUser(activeUser)) {
+        applyLockedAnalyticsLink(link);
       }
     });
 
