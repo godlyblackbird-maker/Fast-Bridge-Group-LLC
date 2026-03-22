@@ -99,7 +99,43 @@
       return null;
     }
     localStorage.setItem('user', JSON.stringify(normalizedUser));
+    syncLegacyUserProfile(normalizedUser);
     return normalizedUser;
+  }
+
+  function syncLegacyUserProfile(userLike) {
+    const normalizedUser = normalizeKnownUser(userLike);
+    if (!normalizedUser) {
+      return null;
+    }
+
+    const userKeys = getScopedKeys(normalizedUser);
+    let scopedProfile = null;
+
+    try {
+      const profileStore = JSON.parse(localStorage.getItem('userProfilesByUser') || '{}');
+      if (profileStore && typeof profileStore === 'object') {
+        for (const userKey of userKeys) {
+          if (profileStore[userKey] && typeof profileStore[userKey] === 'object') {
+            scopedProfile = profileStore[userKey];
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      scopedProfile = null;
+    }
+
+    const mirroredProfile = {
+      ...(scopedProfile || {}),
+      name: String((scopedProfile && scopedProfile.name) || normalizedUser.name || 'User').trim(),
+      email: normalizedUser.email,
+      role: String(normalizedUser.role || (scopedProfile && scopedProfile.role) || '').trim(),
+      avatarImage: String((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '').trim()
+    };
+
+    localStorage.setItem('userProfile', JSON.stringify(mirroredProfile));
+    return mirroredProfile;
   }
 
   function clearAuthState() {
@@ -501,6 +537,9 @@
   // Run check when page loads
   document.addEventListener('DOMContentLoaded', async function() {
     const storedUser = readStoredUser();
+    if (storedUser) {
+      syncLegacyUserProfile(storedUser);
+    }
     if (applyAdminControlsAccess(storedUser) === false) {
       return;
     }

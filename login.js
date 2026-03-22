@@ -1,5 +1,62 @@
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
+  function getStoredProfileMirror(userLike) {
+    const normalizedUser = userLike && typeof userLike === 'object' ? userLike : null;
+    if (!normalizedUser) {
+      return null;
+    }
+
+    const candidateKeys = new Set();
+    const email = String(normalizedUser.email || '').trim().toLowerCase();
+    const nameKey = String(normalizedUser.name || '').trim().toLowerCase().replace(/\s+/g, '-');
+
+    if (email) {
+      candidateKeys.add(email);
+    }
+    if (nameKey) {
+      candidateKeys.add(nameKey);
+    }
+
+    try {
+      const profileStore = JSON.parse(localStorage.getItem('userProfilesByUser') || '{}');
+      if (profileStore && typeof profileStore === 'object') {
+        for (const key of candidateKeys) {
+          if (profileStore[key] && typeof profileStore[key] === 'object') {
+            return profileStore[key];
+          }
+        }
+      }
+    } catch (error) {
+      return null;
+    }
+
+    return null;
+  }
+
+  function persistAuthenticatedUser(userLike) {
+    if (!userLike || typeof userLike !== 'object') {
+      return;
+    }
+
+    const normalizedUser = {
+      ...userLike,
+      email: String(userLike.email || '').trim().toLowerCase(),
+      role: String(userLike.role || '').trim().toLowerCase()
+    };
+
+    const scopedProfile = getStoredProfileMirror(normalizedUser);
+    const mirroredProfile = {
+      ...(scopedProfile || {}),
+      name: String((scopedProfile && scopedProfile.name) || normalizedUser.name || 'User').trim(),
+      email: normalizedUser.email,
+      role: String(normalizedUser.role || (scopedProfile && scopedProfile.role) || '').trim(),
+      avatarImage: String((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '').trim()
+    };
+
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    localStorage.setItem('userProfile', JSON.stringify(mirroredProfile));
+  }
+
     // Developer bypass for Isaac
     const devBypass = new URLSearchParams(window.location.search).get('devIsaac');
     if (devBypass === '1') {
@@ -11,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
         id: 'dev-isaac',
       };
       localStorage.setItem('authToken', 'devIsaacToken');
-      localStorage.setItem('user', JSON.stringify(user));
+      persistAuthenticatedUser(user);
       window.location.href = '/dashboard.html';
       return;
     }
@@ -312,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
           // Store token in localStorage
           localStorage.setItem('authToken', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
+          persistAuthenticatedUser(data.user);
           localStorage.removeItem('registeredEmail');
 
           // Redirect to dashboard
@@ -375,8 +432,8 @@ document.addEventListener('DOMContentLoaded', function() {
           throw new Error(data.error || 'Authenticator code verification failed.');
         }
 
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+  localStorage.setItem('authToken', data.token);
+  persistAuthenticatedUser(data.user);
         localStorage.removeItem('registeredEmail');
         window.location.href = '/dashboard.html';
       } catch (error) {
@@ -433,7 +490,7 @@ async function completeOauthSignIn(token, errorDiv) {
       throw new Error(verifyData.error || 'OAuth login could not be verified');
     }
 
-    localStorage.setItem('user', JSON.stringify(verifyData.user));
+    persistAuthenticatedUser(verifyData.user);
     localStorage.removeItem('registeredEmail');
 
     const url = new URL(window.location.href);

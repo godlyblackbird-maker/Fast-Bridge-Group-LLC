@@ -52,17 +52,48 @@
             font-family: 'Outfit', sans-serif;
             color: var(--text-primary);
             background:
-                radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 28%),
+                radial-gradient(circle at 12% 14%, rgba(var(--accent-light-rgb), 0.2), transparent 24%),
+                radial-gradient(circle at 88% 18%, rgba(255, 255, 255, 0.1), transparent 20%),
+                radial-gradient(circle at 50% 100%, rgba(var(--accent-rgb), 0.12), transparent 36%),
                 linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2) 45%, var(--bg-gradient-3));
             overflow-x: hidden;
+        }
+
+        body.version-history-page::before,
+        body.version-history-page::after {
+            content: '';
+            position: fixed;
+            inset: auto;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(8px);
+            opacity: 0.5;
+        }
+
+        body.version-history-page::before {
+            top: 84px;
+            right: -70px;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.28) 0%, rgba(var(--accent-rgb), 0.12) 36%, transparent 72%);
+        }
+
+        body.version-history-page::after {
+            left: -100px;
+            bottom: 40px;
+            width: 340px;
+            height: 220px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(var(--accent-light-rgb), 0.08) 44%, transparent 78%);
         }
 
         .version-history-shell {
             position: relative;
             z-index: 1;
-            max-width: 1180px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 40px 20px 72px;
+            padding: 32px 20px 88px;
         }
 
         .version-history-topbar {
@@ -70,23 +101,32 @@
             justify-content: space-between;
             align-items: center;
             gap: 16px;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
 
         .version-history-badge {
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 16px;
+            padding: 10px 18px;
             border-radius: 999px;
             border: 1px solid var(--glass-border);
-            background: var(--glass-bg);
-            backdrop-filter: blur(18px);
-            box-shadow: 0 18px 38px -26px var(--glass-shadow);
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.12), rgba(255, 255, 255, 0.08));
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px -28px var(--glass-shadow);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
             text-transform: uppercase;
+        }
+
+        .version-history-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--emerald-light), var(--gold));
+            box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.12);
         }
 
         .version-history-actions {
@@ -103,43 +143,293 @@
             padding: 0 18px;
             border-radius: 14px;
             border: 1px solid var(--glass-border);
-            background: var(--glass-bg);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(var(--accent-rgb), 0.08));
             color: var(--text-primary);
             text-decoration: none;
             font-weight: 600;
             backdrop-filter: blur(18px);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            box-shadow: 0 16px 30px -26px var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
         }
 
         .version-history-link:hover,
         .version-history-link:focus-visible {
-            transform: translateY(-1px);
-            box-shadow: 0 18px 36px -24px var(--glass-shadow);
+            transform: translateY(-2px);
+            animation: versionHistorySway 1.35s ease-in-out infinite alternate;
+            box-shadow: 0 22px 38px -22px var(--glass-shadow);
             border-color: color-mix(in srgb, var(--emerald) 55%, white 45%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(var(--accent-light-rgb), 0.14));
         }
 
         .version-history-hero {
-            padding: 34px;
-            border-radius: 30px;
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+            gap: 20px;
+            padding: 32px;
+            border-radius: 32px;
             border: 1px solid var(--glass-border);
-            background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            background:
+                linear-gradient(135deg, rgba(var(--accent-rgb), 0.14), transparent 40%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
             backdrop-filter: blur(24px);
-            box-shadow: 0 24px 60px -34px var(--glass-shadow);
-            margin-bottom: 26px;
+            box-shadow: 0 28px 70px -36px var(--glass-shadow);
+            margin-bottom: 22px;
+        }
+
+        .version-history-hero::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            right: -6%;
+            width: 220px;
+            height: 220px;
+            border-radius: 32px;
+            transform: rotate(18deg);
+            background: linear-gradient(135deg, rgba(var(--accent-light-rgb), 0.24), rgba(255, 255, 255, 0.04));
+            opacity: 0.7;
+        }
+
+        .version-history-hero-copy,
+        .version-history-hero-side {
+            position: relative;
+            z-index: 1;
+        }
+
+        .version-history-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .version-history-kicker::before {
+            content: '';
+            width: 38px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(var(--accent-light-rgb), 0.2), rgba(var(--accent-light-rgb), 0.8));
         }
 
         .version-history-hero h1 {
-            margin: 0 0 12px;
-            font-size: clamp(2rem, 4vw, 3.2rem);
-            line-height: 1.04;
+            margin: 0 0 14px;
+            max-width: 720px;
+            font-size: clamp(2.3rem, 5vw, 4.6rem);
+            line-height: 0.96;
+            letter-spacing: -0.04em;
         }
 
         .version-history-hero p {
             margin: 0;
-            max-width: 760px;
+            max-width: 680px;
             color: var(--text-secondary);
             font-size: 1rem;
+            line-height: 1.75;
+        }
+
+        .version-history-highlights {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .version-history-highlights span {
+            display: inline-flex;
+            align-items: center;
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            backdrop-filter: blur(14px);
+        }
+
+        .version-history-hero-side {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 14px;
+        }
+
+        .version-history-stat {
+            padding: 18px 18px 16px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+            backdrop-filter: blur(14px);
+        }
+
+        .version-history-stat strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 2rem;
+            line-height: 1;
+            letter-spacing: -0.05em;
+        }
+
+        .version-history-stat span {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        .version-history-featured {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.95fr);
+            gap: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border-radius: 28px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.22);
+            background:
+                linear-gradient(135deg, rgba(var(--accent-rgb), 0.16), transparent 44%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+            box-shadow: 0 26px 58px -34px var(--glass-shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .version-history-featured::after {
+            content: '';
+            position: absolute;
+            inset: auto -30px -38px auto;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.22) 0%, transparent 72%);
+            pointer-events: none;
+        }
+
+        .version-history-featured-copy,
+        .version-history-featured-list {
+            position: relative;
+            z-index: 1;
+        }
+
+        .version-history-featured-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .version-history-featured-label::before {
+            content: '';
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--emerald-light), var(--gold));
+        }
+
+        .version-history-featured h2 {
+            margin: 0 0 8px;
+            font-size: clamp(1.8rem, 3vw, 2.8rem);
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+
+        .version-history-featured p {
+            margin: 0;
+            max-width: 620px;
+            color: var(--text-secondary);
             line-height: 1.7;
+        }
+
+        .version-history-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .version-history-meta span {
+            display: inline-flex;
+            align-items: center;
+            min-height: 36px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+
+        .version-history-featured-list {
+            padding: 18px 18px 16px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            align-self: stretch;
+        }
+
+        .version-history-featured-list h3 {
+            margin: 0 0 12px;
+            font-size: 1rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .version-history-featured-list ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 10px;
+        }
+
+        .version-history-featured-list li {
+            position: relative;
+            padding-left: 18px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .version-history-featured-list li::before {
+            content: '';
+            position: absolute;
+            top: 0.7em;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--emerald-light), var(--gold));
+        }
+
+        .version-history-section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 14px;
+            margin: 0 0 18px;
+        }
+
+        .version-history-section-head h2 {
+            margin: 0;
+            font-size: clamp(1.4rem, 2vw, 1.8rem);
+            letter-spacing: -0.03em;
+        }
+
+        .version-history-section-head p {
+            margin: 0;
+            max-width: 560px;
+            color: var(--text-secondary);
+            line-height: 1.65;
         }
 
         .version-history-grid {
@@ -149,12 +439,62 @@
         }
 
         .version-card {
-            padding: 26px 24px;
+            position: relative;
+            overflow: hidden;
+            padding: 24px 22px;
             border-radius: 24px;
             border: 1px solid var(--glass-border);
-            background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
             backdrop-filter: blur(18px);
             box-shadow: 0 22px 46px -32px var(--glass-shadow);
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .version-card::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -16%;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.14) 0%, transparent 74%);
+            pointer-events: none;
+        }
+
+        .version-card:hover,
+        .version-card:focus-within {
+            transform: translateY(-4px);
+            animation: versionHistorySway 1.4s ease-in-out infinite alternate;
+            border-color: rgba(var(--accent-light-rgb), 0.28);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+            box-shadow: 0 28px 56px -28px var(--glass-shadow);
+        }
+
+        .version-card-head {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .version-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 74px;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.14);
+            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
         }
 
         .version-card h2 {
@@ -165,26 +505,67 @@
 
         .version-card .version-date {
             display: block;
-            margin-bottom: 14px;
+            margin-bottom: 0;
             color: var(--text-muted);
-            font-size: 0.88rem;
-            letter-spacing: 0.04em;
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
         }
 
         .version-card ul {
             margin: 0;
-            padding-left: 20px;
+            padding: 0;
+            list-style: none;
+            position: relative;
+            z-index: 1;
         }
 
         .version-card li {
-            margin-bottom: 10px;
+            position: relative;
+            margin-bottom: 12px;
+            padding-left: 18px;
             color: var(--text-secondary);
             line-height: 1.6;
         }
 
+        .version-card li::before {
+            content: '';
+            position: absolute;
+            top: 0.68em;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--emerald-light), var(--gold));
+            box-shadow: 0 0 0 5px rgba(var(--accent-rgb), 0.08);
+        }
+
         .version-card li:last-child {
             margin-bottom: 0;
+        }
+
+        @keyframes versionHistorySway {
+            0% {
+                transform: translateY(-4px) rotate(-0.45deg);
+            }
+            100% {
+                transform: translateY(-6px) rotate(0.45deg);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .version-history-link,
+            .version-card {
+                transition: none;
+            }
+
+            .version-history-link:hover,
+            .version-history-link:focus-visible,
+            .version-card:hover,
+            .version-card:focus-within {
+                animation: none;
+                transform: translateY(-2px);
+            }
         }
 
         @media (max-width: 720px) {
@@ -193,8 +574,22 @@
                 align-items: flex-start;
             }
 
+            .version-history-hero,
+            .version-history-featured {
+                grid-template-columns: 1fr;
+            }
+
             .version-history-hero {
                 padding: 26px 22px;
+            }
+
+            .version-history-featured {
+                padding: 20px;
+            }
+
+            .version-history-section-head {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -211,14 +606,42 @@
         </div>
 
         <section class="version-history-hero">
-            <h1>Recent Updates</h1>
-            <p>Track the latest build changes, feature additions, visual polish, and workflow improvements across the FAST BRIDGE GROUP platform. Each version below lists the key updates in bullet points for quick review.</p>
+            <div class="version-history-hero-copy">
+                <div class="version-history-kicker">Product Updates</div>
+                <h1>What changed, what shipped, what got sharper.</h1>
+                <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
+                <div class="version-history-highlights" aria-label="Release highlights">
+                    <span>Newest build: 1.2.2</span>
+                    <span>Theme polish + homepage fixes</span>
+                    <span>Auth, workflow, and UI upgrades</span>
+                </div>
+            </div>
+            <div class="version-history-hero-side" aria-label="Version history summary">
+                <div class="version-history-stat">
+                    <strong>5</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.2.2.</span>
+                </div>
+                <div class="version-history-stat">
+                    <strong>Fast</strong>
+                    <span>Scan the latest release first, then drop into earlier versions for the full change trail.</span>
+                </div>
+            </div>
         </section>
 
-        <section class="version-history-grid" aria-label="Version history list">
-            <article class="version-card">
+        <section class="version-history-featured" aria-label="Latest version highlight">
+            <div class="version-history-featured-copy">
+                <div class="version-history-featured-label">Latest Release</div>
                 <h2>Version 1.2.2</h2>
-                <span class="version-date">March 22, 2026</span>
+                <p>The recent push focused on tightening the product visually and behaviorally: cleaner homepage theme handling, stronger wallpaper presentation, and a more polished release layer across the app.</p>
+                <div class="version-history-meta">
+                    <span>March 22, 2026</span>
+                    <span>Homepage polish</span>
+                    <span>Theme cleanup</span>
+                    <span>Version history added</span>
+                </div>
+            </div>
+            <div class="version-history-featured-list">
+                <h3>Top changes</h3>
                 <ul>
                     <li>Bumped the website build version to 1.2.2 across package metadata and visible UI labels.</li>
                     <li>Added global seasonal themes for Japan, Holloween, and Christmas across homepage, settings, and dashboard pages.</li>
@@ -226,65 +649,92 @@
                     <li>Restricted new homepage visitors to switching only between Beach and Sunset while still honoring remembered user themes after login/logout.</li>
                     <li>Fixed homepage wallpaper fitting for Space, Japan, and Holloween so backgrounds fill the screen like Sunset mode.</li>
                     <li>Improved the Japan theme wallpaper visibility by removing heavy white overlay wash and reducing the blur haze.</li>
-                    <li>Fixed the Sunset homepage palm tree placement so it sits against the lower edge instead of floating.</li>
-                    <li>Added county and city PDF references plus new wallpaper assets used by the new theme rollouts.</li>
                 </ul>
-            </article>
+            </div>
+        </section>
 
-            <article class="version-card">
-                <h2>Version 1.2.1</h2>
-                <span class="version-date">March 21, 2026</span>
-                <ul>
-                    <li>Released version 1.2.1 with recent subscription, legal, and workflow improvements.</li>
-                    <li>Added notification history with saved recent alerts for each user.</li>
-                    <li>Stabilized assigned properties so user-specific assignments stop disappearing.</li>
-                    <li>Required Gmail setup approval before agent workspace email sending can be used.</li>
-                    <li>Made the legal disclosure card hover tilt move inward correctly toward the cursor.</li>
-                    <li>Improved premium subscription messaging, subscription UI, and access handling.</li>
-                    <li>Locked offer-related access correctly for basic users and tightened role-based controls.</li>
-                    <li>Refined contract PDF spacing, header, title, and signature layout behavior.</li>
-                </ul>
-            </article>
+        <section aria-label="Previous version history list">
+            <div class="version-history-section-head">
+                <h2>Previous Releases</h2>
+                <p>Earlier builds are still listed below for quick scanning, with the same bullet-point format and a simpler, cleaner release stack.</p>
+            </div>
 
-            <article class="version-card">
-                <h2>Version 1.2.0</h2>
-                <span class="version-date">March 21, 2026</span>
-                <ul>
-                    <li>Bumped the site from 1.1.x into the 1.2.0 release line.</li>
-                    <li>Expanded subscription and role access handling to support premium workflow separation.</li>
-                    <li>Refined legal hub navigation and strike-zone related actions.</li>
-                    <li>Scoped campaign email sender behavior by user.</li>
-                    <li>Improved analytics locks, broker/admin restrictions, and accent glow behavior.</li>
-                    <li>Polished contract PDF generation and surrounding agreement workflow details.</li>
-                </ul>
-            </article>
+            <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.2.1</h2>
+                            <span class="version-date">March 21, 2026</span>
+                        </div>
+                        <span class="version-chip">1.2.1</span>
+                    </div>
+                    <ul>
+                        <li>Released version 1.2.1 with recent subscription, legal, and workflow improvements.</li>
+                        <li>Added notification history with saved recent alerts for each user.</li>
+                        <li>Stabilized assigned properties so user-specific assignments stop disappearing.</li>
+                        <li>Required Gmail setup approval before agent workspace email sending can be used.</li>
+                        <li>Made the legal disclosure card hover tilt move inward correctly toward the cursor.</li>
+                        <li>Improved premium subscription messaging, subscription UI, and access handling.</li>
+                        <li>Locked offer-related access correctly for basic users and tightened role-based controls.</li>
+                        <li>Refined contract PDF spacing, header, title, and signature layout behavior.</li>
+                    </ul>
+                </article>
 
-            <article class="version-card">
-                <h2>Version 1.1.9</h2>
-                <span class="version-date">March 20, 2026</span>
-                <ul>
-                    <li>Released version 1.1.9 after refining analytics, MLS agreement, and property workflows.</li>
-                    <li>Added subscriptions and tightened role access across the workspace.</li>
-                    <li>Added agent workspace editing and upload-related improvements.</li>
-                    <li>Added MLS agreement PDF download support.</li>
-                    <li>Persisted property assignments across users.</li>
-                    <li>Fixed email sending behavior and expanded contact/e-card support.</li>
-                    <li>Simplified the legal disclosures hub and added standalone legal disclosure pages.</li>
-                </ul>
-            </article>
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.2.0</h2>
+                            <span class="version-date">March 21, 2026</span>
+                        </div>
+                        <span class="version-chip">1.2.0</span>
+                    </div>
+                    <ul>
+                        <li>Bumped the site from 1.1.x into the 1.2.0 release line.</li>
+                        <li>Expanded subscription and role access handling to support premium workflow separation.</li>
+                        <li>Refined legal hub navigation and strike-zone related actions.</li>
+                        <li>Scoped campaign email sender behavior by user.</li>
+                        <li>Improved analytics locks, broker/admin restrictions, and accent glow behavior.</li>
+                        <li>Polished contract PDF generation and surrounding agreement workflow details.</li>
+                    </ul>
+                </article>
 
-            <article class="version-card">
-                <h2>Version 1.1.8</h2>
-                <span class="version-date">March 19, 2026</span>
-                <ul>
-                    <li>Released version 1.1.8 with legal page, homepage, and calculator refinement work.</li>
-                    <li>Fixed homepage Sunset wallpaper styling and legal page theme rendering.</li>
-                    <li>Refined the investment calculator and legal docs hover behavior.</li>
-                    <li>Required the terms modal before login.</li>
-                    <li>Improved admin controls and offer email workflow behavior.</li>
-                    <li>Added SMTP approval flow and financing updates tied to the investment analysis tools.</li>
-                </ul>
-            </article>
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.1.9</h2>
+                            <span class="version-date">March 20, 2026</span>
+                        </div>
+                        <span class="version-chip">1.1.9</span>
+                    </div>
+                    <ul>
+                        <li>Released version 1.1.9 after refining analytics, MLS agreement, and property workflows.</li>
+                        <li>Added subscriptions and tightened role access across the workspace.</li>
+                        <li>Added agent workspace editing and upload-related improvements.</li>
+                        <li>Added MLS agreement PDF download support.</li>
+                        <li>Persisted property assignments across users.</li>
+                        <li>Fixed email sending behavior and expanded contact/e-card support.</li>
+                        <li>Simplified the legal disclosures hub and added standalone legal disclosure pages.</li>
+                    </ul>
+                </article>
+
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.1.8</h2>
+                            <span class="version-date">March 19, 2026</span>
+                        </div>
+                        <span class="version-chip">1.1.8</span>
+                    </div>
+                    <ul>
+                        <li>Released version 1.1.8 with legal page, homepage, and calculator refinement work.</li>
+                        <li>Fixed homepage Sunset wallpaper styling and legal page theme rendering.</li>
+                        <li>Refined the investment calculator and legal docs hover behavior.</li>
+                        <li>Required the terms modal before login.</li>
+                        <li>Improved admin controls and offer email workflow behavior.</li>
+                        <li>Added SMTP approval flow and financing updates tied to the investment analysis tools.</li>
+                    </ul>
+                </article>
+            </div>
         </section>
     </div>
 </body>

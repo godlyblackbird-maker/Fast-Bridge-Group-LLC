@@ -2308,6 +2308,232 @@
     box-shadow: 0 18px 30px -20px rgba(14, 116, 144, 0.34);
 }
 
+[data-theme="swamp"] .chatgpt-widget {
+    background:
+        radial-gradient(circle at top left, rgba(132, 204, 22, 0.18), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(234, 179, 8, 0.12), transparent 42%),
+        linear-gradient(145deg, rgba(33, 51, 31, 0.9), rgba(71, 85, 37, 0.74));
+    border-color: rgba(163, 230, 53, 0.22);
+    box-shadow: inset 0 1px 0 rgba(236, 252, 203, 0.16), 0 24px 48px -30px rgba(17, 24, 39, 0.34);
+}
+
+[data-theme="swamp"] .chatgpt-chat {
+    background:
+        radial-gradient(circle at top, rgba(163, 230, 53, 0.12), transparent 38%),
+        linear-gradient(180deg, rgba(30, 41, 22, 0.84), rgba(56, 67, 31, 0.7));
+    border-color: rgba(190, 242, 100, 0.16);
+}
+
+[data-theme="swamp"] .chatgpt-chip,
+[data-theme="swamp"] .chatgpt-msg.assistant,
+[data-theme="swamp"] .chatgpt-form .form-input,
+[data-theme="swamp"] .chatgpt-hero-tags span {
+    color: #f7fee7;
+}
+
+[data-theme="swamp"] .chatgpt-chip {
+    background: linear-gradient(135deg, rgba(101, 163, 13, 0.24), rgba(250, 204, 21, 0.1));
+    border-color: rgba(190, 242, 100, 0.18);
+}
+
+[data-theme="swamp"] .chatgpt-form .form-input,
+[data-theme="swamp"] .chatgpt-msg.assistant {
+    background: linear-gradient(135deg, rgba(66, 85, 35, 0.72), rgba(39, 58, 27, 0.84));
+    border-color: rgba(190, 242, 100, 0.18);
+}
+
+[data-theme="swamp"] .chatgpt-form .card-btn.active,
+[data-theme="swamp"] .chatgpt-status.live {
+    background: linear-gradient(135deg, rgba(132, 204, 22, 0.9), rgba(234, 179, 8, 0.8));
+    border-color: rgba(250, 204, 21, 0.34);
+    color: #1a2e05;
+}
+
+[data-theme="sunset"] .chatgpt-widget {
+    background:
+        radial-gradient(circle at top left, rgba(251, 146, 60, 0.24), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.16), transparent 44%),
+        linear-gradient(145deg, rgba(69, 31, 44, 0.88), rgba(132, 53, 63, 0.72));
+    border-color: rgba(253, 186, 116, 0.22);
+    box-shadow: inset 0 1px 0 rgba(255, 237, 213, 0.18), 0 24px 48px -30px rgba(76, 29, 36, 0.34);
+}
+
+[data-theme="sunset"] .chatgpt-chat {
+    background:
+        radial-gradient(circle at top, rgba(251, 146, 60, 0.18), transparent 38%),
+        linear-gradient(180deg, rgba(88, 28, 46, 0.8), rgba(124, 45, 18, 0.58));
+    border-color: rgba(253, 186, 116, 0.18);
+}
+
+[data-theme="sunset"] .chatgpt-chip,
+[data-theme="sunset"] .chatgpt-msg.assistant,
+[data-theme="sunset"] .chatgpt-form .form-input,
+[data-theme="sunset"] .chatgpt-hero-tags span {
+    color: #fff7ed;
+}
+
+[data-theme="sunset"] .chatgpt-chip {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.24), rgba(236, 72, 153, 0.14));
+    border-color: rgba(253, 186, 116, 0.2);
+}
+
+[data-theme="sunset"] .chatgpt-form .form-input,
+[data-theme="sunset"] .chatgpt-msg.assistant {
+    background: linear-gradient(135deg, rgba(124, 45, 18, 0.68), rgba(131, 24, 67, 0.74));
+    border-color: rgba(253, 186, 116, 0.18);
+}
+
+[data-theme="sunset"] .chatgpt-form .card-btn.active,
+[data-theme="sunset"] .chatgpt-status.live {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.94), rgba(244, 114, 182, 0.82));
+    border-color: rgba(253, 186, 116, 0.34);
+    color: #fff7ed;
+}
+
+[data-theme="space"] .chatgpt-widget {
+    background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.16), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(167, 139, 250, 0.12), transparent 46%),
+        linear-gradient(145deg, rgba(12, 18, 44, 0.92), rgba(29, 34, 78, 0.76));
+    border-color: rgba(147, 197, 253, 0.18);
+    box-shadow: inset 0 1px 0 rgba(219, 234, 254, 0.12), 0 24px 48px -30px rgba(2, 6, 23, 0.46);
+}
+
+[data-theme="space"] .chatgpt-chat {
+    background:
+        radial-gradient(circle at top, rgba(96, 165, 250, 0.14), transparent 38%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(30, 41, 59, 0.68));
+    border-color: rgba(165, 180, 252, 0.16);
+}
+
+[data-theme="space"] .chatgpt-chip {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(139, 92, 246, 0.12));
+    border-color: rgba(147, 197, 253, 0.18);
+}
+
+[data-theme="space"] .chatgpt-form .form-input,
+[data-theme="space"] .chatgpt-msg.assistant {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.86), rgba(30, 27, 75, 0.7));
+    border-color: rgba(165, 180, 252, 0.16);
+}
+
+[data-theme="space"] .chatgpt-form .card-btn.active,
+[data-theme="space"] .chatgpt-status.live {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(139, 92, 246, 0.78));
+    border-color: rgba(165, 180, 252, 0.32);
+    color: #eff6ff;
+}
+
+[data-theme="japan"] .chatgpt-widget {
+    background:
+        radial-gradient(circle at top left, rgba(220, 38, 38, 0.16), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.1), transparent 46%),
+        linear-gradient(145deg, rgba(252, 244, 232, 0.9), rgba(247, 229, 217, 0.84));
+    border-color: rgba(185, 28, 28, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 24px 48px -30px rgba(127, 29, 29, 0.18);
+}
+
+[data-theme="japan"] .chatgpt-chat {
+    background:
+        radial-gradient(circle at top, rgba(220, 38, 38, 0.08), transparent 38%),
+        linear-gradient(180deg, rgba(255, 251, 245, 0.84), rgba(247, 231, 220, 0.8));
+    border-color: rgba(185, 28, 28, 0.12);
+}
+
+[data-theme="japan"] .chatgpt-chip,
+[data-theme="japan"] .chatgpt-msg.assistant,
+[data-theme="japan"] .chatgpt-form .form-input,
+[data-theme="japan"] .chatgpt-hero-tags span,
+[data-theme="japan"] .chatgpt-msg-meta {
+    color: #7f1d1d;
+}
+
+[data-theme="japan"] .chatgpt-chip {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(254, 226, 226, 0.82));
+    border-color: rgba(185, 28, 28, 0.14);
+}
+
+[data-theme="japan"] .chatgpt-form .form-input,
+[data-theme="japan"] .chatgpt-msg.assistant {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(254, 242, 242, 0.82));
+    border-color: rgba(185, 28, 28, 0.12);
+}
+
+[data-theme="japan"] .chatgpt-form .card-btn.active,
+[data-theme="japan"] .chatgpt-status.live {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.88), rgba(251, 113, 133, 0.72));
+    border-color: rgba(220, 38, 38, 0.28);
+    color: #fff7ed;
+}
+
+[data-theme="holloween"] .chatgpt-widget {
+    background:
+        radial-gradient(circle at top left, rgba(249, 115, 22, 0.22), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 46%),
+        linear-gradient(145deg, rgba(28, 25, 23, 0.92), rgba(68, 35, 14, 0.78));
+    border-color: rgba(251, 146, 60, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 237, 213, 0.12), 0 24px 48px -30px rgba(0, 0, 0, 0.44);
+}
+
+[data-theme="holloween"] .chatgpt-chat {
+    background:
+        radial-gradient(circle at top, rgba(249, 115, 22, 0.14), transparent 38%),
+        linear-gradient(180deg, rgba(24, 24, 27, 0.88), rgba(67, 20, 7, 0.68));
+    border-color: rgba(251, 146, 60, 0.16);
+}
+
+[data-theme="holloween"] .chatgpt-chip {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.22), rgba(126, 34, 206, 0.12));
+    border-color: rgba(251, 146, 60, 0.2);
+}
+
+[data-theme="holloween"] .chatgpt-form .form-input,
+[data-theme="holloween"] .chatgpt-msg.assistant {
+    background: linear-gradient(135deg, rgba(41, 37, 36, 0.88), rgba(67, 20, 7, 0.76));
+    border-color: rgba(251, 146, 60, 0.16);
+}
+
+[data-theme="holloween"] .chatgpt-form .card-btn.active,
+[data-theme="holloween"] .chatgpt-status.live {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.92), rgba(168, 85, 247, 0.78));
+    border-color: rgba(251, 146, 60, 0.34);
+    color: #fff7ed;
+}
+
+[data-theme="christmas"] .chatgpt-widget {
+    background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.2), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(239, 68, 68, 0.14), transparent 46%),
+        linear-gradient(145deg, rgba(19, 78, 74, 0.9), rgba(127, 29, 29, 0.74));
+    border-color: rgba(110, 231, 183, 0.2);
+    box-shadow: inset 0 1px 0 rgba(240, 253, 244, 0.16), 0 24px 48px -30px rgba(20, 83, 45, 0.34);
+}
+
+[data-theme="christmas"] .chatgpt-chat {
+    background:
+        radial-gradient(circle at top, rgba(34, 197, 94, 0.14), transparent 38%),
+        linear-gradient(180deg, rgba(20, 83, 45, 0.84), rgba(127, 29, 29, 0.64));
+    border-color: rgba(110, 231, 183, 0.16);
+}
+
+[data-theme="christmas"] .chatgpt-chip {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(239, 68, 68, 0.12));
+    border-color: rgba(110, 231, 183, 0.18);
+}
+
+[data-theme="christmas"] .chatgpt-form .form-input,
+[data-theme="christmas"] .chatgpt-msg.assistant {
+    background: linear-gradient(135deg, rgba(20, 83, 45, 0.8), rgba(127, 29, 29, 0.74));
+    border-color: rgba(110, 231, 183, 0.16);
+}
+
+[data-theme="christmas"] .chatgpt-form .card-btn.active,
+[data-theme="christmas"] .chatgpt-status.live {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(239, 68, 68, 0.82));
+    border-color: rgba(110, 231, 183, 0.3);
+    color: #f0fdf4;
+}
+
 [data-theme="light"] .calendar-inline-form textarea,
 [data-theme="light"] .calendar-inline-form input,
 [data-theme="light"] .ia-grid input,

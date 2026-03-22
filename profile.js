@@ -75,6 +75,41 @@
     return getActiveUserKeys()[0] || 'default-user';
   }
 
+  function getActiveAccountIdentity() {
+    let activeUser = null;
+    if (typeof getCurrentUser === 'function') {
+      activeUser = getCurrentUser();
+    }
+
+    let fallbackUser = {};
+    try {
+      fallbackUser = JSON.parse(localStorage.getItem('user') || '{}');
+    } catch (error) {
+      fallbackUser = {};
+    }
+
+    const email = normalizeKnownEmail((activeUser && activeUser.email) || fallbackUser.email || '');
+    const name = String((activeUser && activeUser.name) || fallbackUser.name || 'User').trim();
+    const role = String((activeUser && activeUser.role) || fallbackUser.role || '').trim();
+
+    return {
+      email,
+      name,
+      role
+    };
+  }
+
+  function buildScopedProfileData(profileData) {
+    const identity = getActiveAccountIdentity();
+    return {
+      ...(profileData && typeof profileData === 'object' ? profileData : {}),
+      name: String((profileData && profileData.name) || identity.name || 'User').trim(),
+      email: identity.email || normalizeKnownEmail(profileData && profileData.email || ''),
+      role: String(identity.role || (profileData && profileData.role) || '').trim(),
+      avatarImage: String((profileData && profileData.avatarImage) || '').trim()
+    };
+  }
+
   function getProfileStore() {
     try {
       const parsed = JSON.parse(localStorage.getItem(USER_PROFILE_STORE_KEY) || '{}');
@@ -94,13 +129,14 @@
   }
 
   function setStoredProfileData(profileData) {
+    const nextProfile = buildScopedProfileData(profileData);
     const keys = getActiveUserKeys();
     const store = getProfileStore();
     keys.forEach((key) => {
-      store[key] = profileData || {};
+      store[key] = nextProfile;
     });
     localStorage.setItem(USER_PROFILE_STORE_KEY, JSON.stringify(store));
-    localStorage.setItem('userProfile', JSON.stringify(profileData || {}));
+    localStorage.setItem('userProfile', JSON.stringify(nextProfile));
   }
 
   function setStoredSmtpSettings(settings) {
@@ -567,11 +603,12 @@
   function loadProfileData() {
     const profileData = getStoredProfileData();
     const user = getCurrentUser();
+    const accountIdentity = getActiveAccountIdentity();
 
     if (profileData && Object.keys(profileData).length > 0) {
       const data = profileData;
       document.getElementById('profile-name').value = data.name || '';
-      document.getElementById('profile-email').value = data.email || '';
+      document.getElementById('profile-email').value = accountIdentity.email || data.email || '';
       document.getElementById('profile-phone').value = data.phone || '';
       document.getElementById('profile-company').value = data.company || '';
       document.getElementById('profile-address').value = data.address || '';
@@ -586,8 +623,15 @@
     } else if (user) {
       // Pre-fill with current user data
       document.getElementById('profile-name').value = user.name || '';
-      document.getElementById('profile-email').value = user.email || '';
+      document.getElementById('profile-email').value = accountIdentity.email || user.email || '';
       updateSidebarProfile(user);
+    }
+
+    const profileEmailInput = document.getElementById('profile-email');
+    if (profileEmailInput) {
+      profileEmailInput.readOnly = true;
+      profileEmailInput.setAttribute('aria-readonly', 'true');
+      profileEmailInput.title = 'Account email comes from the signed-in account.';
     }
 
     syncSettingsProfileSection();
@@ -600,9 +644,10 @@
       e.preventDefault();
 
       const existingProfile = getStoredProfileData();
+      const accountIdentity = getActiveAccountIdentity();
       const profileData = {
         name: document.getElementById('profile-name').value,
-        email: document.getElementById('profile-email').value,
+        email: accountIdentity.email || existingProfile.email || '',
         phone: document.getElementById('profile-phone').value,
         company: document.getElementById('profile-company').value,
         address: document.getElementById('profile-address').value,
