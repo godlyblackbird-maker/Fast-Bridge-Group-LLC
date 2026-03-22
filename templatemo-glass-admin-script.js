@@ -40,7 +40,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space'];
+    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space', 'japan', 'holloween', 'christmas'];
     const KNOWN_EMAIL_GROUPS = [
         {
             canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -606,7 +606,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.2.1';
+                versionLabel.textContent = 'v1.2.2';
             });
     }
 
@@ -1334,12 +1334,142 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         'los angeles'
     ]);
 
+    const COUNTY_FILTER_VALUE_ALIASES = {
+        'los angeles': 'los-angeles',
+        'los angeles county': 'los-angeles',
+        'la': 'los-angeles',
+        'la county': 'los-angeles',
+        'orange': 'orange',
+        'orange county': 'orange',
+        'san bernardino': 'san-bernardino',
+        'san bernardino county': 'san-bernardino',
+        'riverside': 'riverside',
+        'riverside county': 'riverside',
+        'san diego': 'san-diego',
+        'san diego county': 'san-diego',
+        'santa clara': 'santa-clara',
+        'santa clara county': 'santa-clara',
+        'ventura': 'ventura',
+        'ventura county': 'ventura',
+        'central county': 'central-county',
+        'fresno': 'central-county',
+        'fresno county': 'central-county',
+        'kern': 'central-county',
+        'kern county': 'central-county',
+        'sacramento': 'central-county',
+        'sacramento county': 'central-county',
+        'imperial': 'central-county',
+        'imperial county': 'central-county'
+    };
+
+    const COUNTY_FILTER_CITY_SUPPLEMENTS = {
+        'los-angeles': [
+            'los angeles', 'pasadena', 'long beach', 'glendale', 'burbank', 'inglewood', 'downey', 'culver city',
+            'north hollywood', 'pomona', 'whittier', 'torrance', 'hawthorne', 'gardena', 'norwalk', 'lakewood'
+        ],
+        orange: [
+            'anaheim', 'irvine', 'newport beach', 'costa mesa', 'huntington beach', 'santa ana', 'tustin', 'mission viejo',
+            'yorba linda', 'fullerton', 'orange', 'garden grove', 'laguna beach', 'san clemente'
+        ],
+        'san-bernardino': [
+            'san bernardino', 'ontario', 'upland', 'montclair', 'fontana', 'rialto', 'redlands', 'highland', 'victorville',
+            'hesperia', 'apple valley', 'adelanto', 'barstow', 'big bear lake', 'yucaipa', 'joshua tree', 'yucca valley'
+        ],
+        riverside: [
+            'riverside', 'moreno valley', 'perris', 'corona', 'eastvale', 'temecula', 'murrieta', 'menifee', 'lake elsinore',
+            'wildomar', 'palm springs', 'indio', 'coachella', 'hemet', 'san jacinto', 'beaumont', 'banning'
+        ],
+        'san-diego': [
+            'san diego', 'chula vista', 'oceanside', 'carlsbad', 'encinitas', 'la mesa', 'escondido', 'san marcos', 'vista',
+            'poway', 'national city', 'el cajon', 'spring valley', 'fallbrook', 'la jolla', 'lemon grove', 'pacific beach'
+        ],
+        'santa-clara': [
+            'san jose', 'santa clara', 'sunnyvale', 'mountain view', 'palo alto', 'cupertino', 'milpitas', 'campbell',
+            'los altos', 'los gatos', 'saratoga'
+        ],
+        'central-county': [
+            'bakersfield', 'fresno', 'sacramento', 'elk grove', 'galt', 'rancho cordova', 'citrus heights', 'folsom',
+            'orangevale', 'imperial', 'el centro'
+        ]
+    };
+
+    let countyCityLookupCache = null;
+
     function tokenizeStrikeZoneArea(area) {
         const genericTokens = new Set(['city', 'county', 'area', 'inland', 'coastal', 'rural']);
         return String(area || '')
             .split(/[\/,&]/)
             .map(part => normalizeStrikeZoneText(part))
             .filter(part => part && !genericTokens.has(part));
+    }
+
+    function normalizeCountyFilterValue(value) {
+        const normalized = normalizeStrikeZoneText(value).replace(/\bcounty\b/g, '').replace(/\s+/g, ' ').trim();
+        if (!normalized || normalized === 'all') {
+            return normalized;
+        }
+
+        return COUNTY_FILTER_VALUE_ALIASES[normalized]
+            || String(value || '').trim().toLowerCase();
+    }
+
+    function addCountyCityLookupEntry(lookup, cityLike, countyValue) {
+        const normalizedCity = normalizeStrikeZoneText(cityLike);
+        if (!normalizedCity) {
+            return;
+        }
+
+        lookup.set(normalizedCity, countyValue);
+
+        const withoutDirection = normalizedCity.replace(/\b(west|east|north|south)\b/g, ' ').replace(/\s+/g, ' ').trim();
+        if (withoutDirection && withoutDirection !== normalizedCity) {
+            lookup.set(withoutDirection, countyValue);
+        }
+    }
+
+    function getCountyCityLookup() {
+        if (countyCityLookupCache) {
+            return countyCityLookupCache;
+        }
+
+        const lookup = new Map();
+
+        STRIKE_ZONE_RULES.forEach((rule) => {
+            const countyValue = normalizeCountyFilterValue(rule && rule.county);
+            if (!countyValue) {
+                return;
+            }
+
+            tokenizeStrikeZoneArea(rule.area).forEach((token) => {
+                addCountyCityLookupEntry(lookup, token, countyValue);
+            });
+        });
+
+        Object.entries(COUNTY_FILTER_CITY_SUPPLEMENTS).forEach(([countyValue, cities]) => {
+            cities.forEach((city) => addCountyCityLookupEntry(lookup, city, countyValue));
+        });
+
+        countyCityLookupCache = lookup;
+        return countyCityLookupCache;
+    }
+
+    function resolveCountyFilterValueFromLocation(text) {
+        const normalized = normalizeStrikeZoneText(text);
+        if (!normalized) {
+            return '';
+        }
+
+        const aliasEntries = Object.entries(COUNTY_FILTER_VALUE_ALIASES)
+            .sort((left, right) => right[0].length - left[0].length);
+        const explicitCounty = aliasEntries.find(([alias]) => (` ${normalized} `).includes(` ${alias} `));
+        if (explicitCounty) {
+            return explicitCounty[1];
+        }
+
+        const cityEntries = Array.from(getCountyCityLookup().entries())
+            .sort((left, right) => right[0].length - left[0].length);
+        const cityMatch = cityEntries.find(([city]) => (` ${normalized} `).includes(` ${city} `));
+        return cityMatch ? cityMatch[1] : '';
     }
 
     function getCountyAlias(value) {
@@ -4010,8 +4140,8 @@ function initNavbarDateTime() {
                 },
                 basic: {
                     label: 'Basic',
-                    summary: 'Basic keeps standard dashboard access active.',
-                    cta: 'Stay with the core workspace if you do not need premium analysis, ROI visibility, comps workflow, or campaign tools yet.'
+                    summary: 'Basic keeps the core FAST workspace active with standard settings access and essential day-to-day dashboard tools.',
+                    cta: 'Stay on Basic if you want the standard workspace for account management and core workflow use, but do not need premium analysis, ROI visibility, comps workflow, analytics, or campaign tools yet.'
                 },
                 premium: {
                     label: 'Premium',
@@ -8197,9 +8327,20 @@ function initNavbarDateTime() {
             ].join(' ').toLowerCase();
         }
 
+        function getEffectiveCountyForCard(card) {
+            const inferredCounty = resolveCountyFilterValueFromLocation([
+                String(card.dataset.city || '').trim(),
+                String(card.dataset.county || '').trim(),
+                card.querySelector('.mls-location')?.textContent || '',
+                String(card.dataset.search || '').trim()
+            ].join(' '));
+
+            return inferredCounty || normalizeCountyFilterValue(card.dataset.county || '');
+        }
+
         function buildAgentRecordFromCard(card) {
             const address = parseAddress(card);
-            const county = card.dataset.county || '';
+            const county = getEffectiveCountyForCard(card);
             const city = card.dataset.city || '';
             const seedSource = `${address}-${city}-${county}`;
             const seed = seedSource.split('').reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -8479,6 +8620,11 @@ function initNavbarDateTime() {
                 card.dataset.status = fallbackStatuses[index % fallbackStatuses.length];
             }
             card.dataset.status = normalizeStatus(card.dataset.status);
+            const resolvedCounty = getEffectiveCountyForCard(card);
+            if (resolvedCounty) {
+                card.dataset.countyResolved = resolvedCounty;
+                card.dataset.county = resolvedCounty;
+            }
             card.dataset.listingAlertKey = getListingNotificationKey(card);
 
             const cardTop = card.querySelector('.mls-card-top');
@@ -8543,7 +8689,7 @@ function initNavbarDateTime() {
             const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
             const visibleCards = cards.filter(card => {
-                const matchesCounty = selectedCounty === 'all' || card.dataset.county === selectedCounty;
+                const matchesCounty = selectedCounty === 'all' || getEffectiveCountyForCard(card) === selectedCounty;
                 const matchesStatus = selectedStatus === 'all' || card.dataset.status === selectedStatus;
                 const searchableText = getKeywordText(card, keywordCategory);
                 const matchesQuery = !query || searchableText.includes(query);

@@ -33,7 +33,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
@@ -583,14 +583,14 @@ https://templatemo.com/tm-607-glass-admin
                                     <div class="subscription-plan-head">
                                         <div>
                                             <h4>Basic</h4>
-                                            <p>Keep your core dashboard workflow with standard settings access.</p>
+                                            <p>Keep the essential FAST workspace active with the standard tools you need to stay organized, manage your account, and keep day-to-day workflow moving without upgrading into the premium investor stack.</p>
                                         </div>
                                         <span class="subscription-plan-price">$0</span>
                                     </div>
                                     <ul class="subscription-feature-list">
-                                        <li>Profile, security, notification, and appearance settings</li>
-                                        <li>Core dashboard workflow tools</li>
-                                        <li>No MLS entitlement changes</li>
+                                        <li>Profile, security, notification, and appearance settings so this account can stay updated, secure, and personalized</li>
+                                        <li>Core dashboard workflow tools for standard daily use, navigation, and account-level workspace activity</li>
+                                        <li>No MLS entitlement changes, premium analysis unlocks, or upgraded investor workflow access included on this plan</li>
                                     </ul>
                                 </label>
 
@@ -741,6 +741,9 @@ https://templatemo.com/tm-607-glass-admin
                                     <option value="swamp">Swamp Mode</option>
                                     <option value="sunset">Sunset Mode</option>
                                     <option value="space">Space Mode</option>
+                                    <option value="japan">Japan Mode</option>
+                                    <option value="holloween">Holloween Mode</option>
+                                    <option value="christmas">Christmas Mode</option>
                                 </select>
                             </div>
                             <div class="settings-row">

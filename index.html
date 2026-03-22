@@ -12,11 +12,34 @@
     <script>
         (function () {
             try {
-                const storedTheme = String(localStorage.getItem('homepageTheme') || 'beach').trim().toLowerCase();
-                const nextTheme = storedTheme === 'sunset' ? 'sunset' : 'beach';
-                document.documentElement.setAttribute('data-theme', nextTheme);
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(theme)) {
+                    theme = 'beach';
+                }
+
+                document.documentElement.setAttribute('data-theme', theme);
             } catch (error) {
-                // Ignore theme bootstrap errors on the public home page.
+                document.documentElement.setAttribute('data-theme', 'beach');
             }
         })();
     </script>
@@ -180,11 +203,11 @@
             content: '';
             position: fixed;
             right: -70px;
-            bottom: -70px;
+            bottom: -180px;
             width: 520px;
             height: 520px;
             border-radius: 0;
-            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat center;
+            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat center bottom;
             background-size: contain;
             opacity: 0.12;
             filter: drop-shadow(0 18px 34px rgba(8, 47, 73, 0.24)) blur(1.6px) saturate(0.88);
@@ -284,6 +307,162 @@
             --primary-cta-end: rgba(255, 210, 138, 0.92);
         }
 
+        html[data-theme='space'] {
+            color-scheme: dark;
+            --bg: #050a18;
+            --panel: rgba(18, 24, 50, 0.42);
+            --border: rgba(135, 180, 255, 0.2);
+            --text: #eef4ff;
+            --muted: rgba(238, 244, 255, 0.8);
+            --accent: #6f8bff;
+            --accent-soft: #70e6ff;
+            --sand: #a45cff;
+            --shadow: 0 30px 80px rgba(3, 6, 20, 0.4);
+            --surface-top: rgba(255, 255, 255, 0.08);
+            --surface-bottom: rgba(255, 255, 255, 0.03);
+            --hero-orb: radial-gradient(circle, rgba(164, 92, 255, 0.24), transparent 70%);
+            --body-glow-a: rgba(111, 139, 255, 0.18);
+            --body-glow-b: rgba(112, 230, 255, 0.16);
+            --body-glow-c: #091228;
+            --body-glow-d: #13203f;
+            --body-glow-e: #382552;
+            --orb-a: rgba(111, 139, 255, 0.18);
+            --orb-b: rgba(112, 230, 255, 0.16);
+            --login-border: rgba(135, 180, 255, 0.28);
+            --login-shadow: 0 16px 34px rgba(3, 6, 20, 0.28);
+            --login-hover-border: rgba(151, 196, 255, 0.44);
+            --login-hover-shadow: 0 20px 38px rgba(3, 6, 20, 0.34);
+            --eyebrow-border: rgba(151, 196, 255, 0.2);
+            --eyebrow-bg: rgba(18, 24, 50, 0.52);
+            --secondary-border: rgba(135, 180, 255, 0.18);
+            --secondary-bg: rgba(255, 255, 255, 0.06);
+            --metric-bg: rgba(255, 255, 255, 0.08);
+            --metric-border: rgba(135, 180, 255, 0.12);
+            --ops-bg: rgba(255, 255, 255, 0.05);
+            --ops-border: rgba(135, 180, 255, 0.14);
+            --footer-text: rgba(238, 244, 255, 0.62);
+            --brand-shadow: rgba(3, 6, 20, 0.28);
+            --primary-cta-start: rgba(89, 112, 255, 1);
+            --primary-cta-end: rgba(112, 230, 255, 0.92);
+        }
+
+        html[data-theme='japan'] {
+            color-scheme: light;
+            --bg: #fff8f8;
+            --panel: rgba(255, 255, 255, 0.62);
+            --border: rgba(177, 22, 45, 0.18);
+            --text: #51111a;
+            --muted: rgba(81, 17, 26, 0.74);
+            --accent: #b91c2d;
+            --accent-soft: #f87171;
+            --sand: #ffffff;
+            --shadow: 0 30px 80px rgba(120, 20, 32, 0.16);
+            --surface-top: rgba(255, 255, 255, 0.84);
+            --surface-bottom: rgba(255, 245, 246, 0.62);
+            --hero-orb: radial-gradient(circle, rgba(185, 28, 45, 0.18), transparent 70%);
+            --body-glow-a: rgba(185, 28, 45, 0.12);
+            --body-glow-b: rgba(255, 255, 255, 0.86);
+            --body-glow-c: #fffdfd;
+            --body-glow-d: #fff5f6;
+            --body-glow-e: #ffe1e5;
+            --orb-a: rgba(185, 28, 45, 0.16);
+            --orb-b: rgba(248, 113, 113, 0.14);
+            --login-border: rgba(185, 28, 45, 0.3);
+            --login-shadow: 0 16px 34px rgba(120, 20, 32, 0.14);
+            --login-hover-border: rgba(185, 28, 45, 0.48);
+            --login-hover-shadow: 0 20px 38px rgba(120, 20, 32, 0.18);
+            --eyebrow-border: rgba(185, 28, 45, 0.16);
+            --eyebrow-bg: rgba(255, 250, 250, 0.86);
+            --secondary-border: rgba(177, 22, 45, 0.14);
+            --secondary-bg: rgba(255, 255, 255, 0.66);
+            --metric-bg: rgba(255, 255, 255, 0.72);
+            --metric-border: rgba(177, 22, 45, 0.1);
+            --ops-bg: rgba(255, 255, 255, 0.7);
+            --ops-border: rgba(177, 22, 45, 0.12);
+            --footer-text: rgba(81, 17, 26, 0.62);
+            --brand-shadow: rgba(120, 20, 32, 0.12);
+            --primary-cta-start: rgba(185, 28, 45, 1);
+            --primary-cta-end: rgba(248, 113, 113, 0.88);
+        }
+
+        html[data-theme='holloween'] {
+            color-scheme: dark;
+            --bg: #0d0907;
+            --panel: rgba(24, 14, 8, 0.7);
+            --border: rgba(251, 146, 60, 0.24);
+            --text: #fff2e8;
+            --muted: rgba(255, 242, 232, 0.74);
+            --accent: #f97316;
+            --accent-soft: #fb923c;
+            --sand: #fdba74;
+            --shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+            --surface-top: rgba(255, 255, 255, 0.08);
+            --surface-bottom: rgba(255, 255, 255, 0.03);
+            --hero-orb: radial-gradient(circle, rgba(249, 115, 22, 0.28), transparent 70%);
+            --body-glow-a: rgba(249, 115, 22, 0.16);
+            --body-glow-b: rgba(245, 158, 11, 0.12);
+            --body-glow-c: #120b08;
+            --body-glow-d: #1d120b;
+            --body-glow-e: #2f1408;
+            --orb-a: rgba(249, 115, 22, 0.18);
+            --orb-b: rgba(251, 146, 60, 0.14);
+            --login-border: rgba(251, 146, 60, 0.3);
+            --login-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
+            --login-hover-border: rgba(253, 186, 116, 0.48);
+            --login-hover-shadow: 0 20px 38px rgba(0, 0, 0, 0.36);
+            --eyebrow-border: rgba(251, 146, 60, 0.18);
+            --eyebrow-bg: rgba(35, 18, 10, 0.72);
+            --secondary-border: rgba(251, 146, 60, 0.16);
+            --secondary-bg: rgba(255, 255, 255, 0.06);
+            --metric-bg: rgba(255, 255, 255, 0.08);
+            --metric-border: rgba(251, 146, 60, 0.14);
+            --ops-bg: rgba(255, 255, 255, 0.05);
+            --ops-border: rgba(251, 146, 60, 0.14);
+            --footer-text: rgba(255, 242, 232, 0.62);
+            --brand-shadow: rgba(0, 0, 0, 0.26);
+            --primary-cta-start: rgba(249, 115, 22, 1);
+            --primary-cta-end: rgba(245, 158, 11, 0.92);
+        }
+
+        html[data-theme='christmas'] {
+            color-scheme: dark;
+            --bg: #08110d;
+            --panel: rgba(12, 27, 18, 0.72);
+            --border: rgba(212, 175, 55, 0.2);
+            --text: #f9f6ef;
+            --muted: rgba(249, 246, 239, 0.76);
+            --accent: #c1121f;
+            --accent-soft: #22c55e;
+            --sand: #d4a934;
+            --shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
+            --surface-top: rgba(255, 255, 255, 0.08);
+            --surface-bottom: rgba(255, 255, 255, 0.03);
+            --hero-orb: radial-gradient(circle, rgba(193, 18, 31, 0.22), transparent 70%);
+            --body-glow-a: rgba(193, 18, 31, 0.14);
+            --body-glow-b: rgba(34, 197, 94, 0.12);
+            --body-glow-c: #0b1510;
+            --body-glow-d: #102118;
+            --body-glow-e: #163127;
+            --orb-a: rgba(193, 18, 31, 0.18);
+            --orb-b: rgba(34, 197, 94, 0.16);
+            --login-border: rgba(212, 175, 55, 0.28);
+            --login-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+            --login-hover-border: rgba(238, 205, 101, 0.44);
+            --login-hover-shadow: 0 20px 38px rgba(0, 0, 0, 0.34);
+            --eyebrow-border: rgba(212, 175, 55, 0.18);
+            --eyebrow-bg: rgba(26, 45, 34, 0.74);
+            --secondary-border: rgba(212, 175, 55, 0.16);
+            --secondary-bg: rgba(255, 255, 255, 0.06);
+            --metric-bg: rgba(255, 255, 255, 0.08);
+            --metric-border: rgba(212, 175, 55, 0.14);
+            --ops-bg: rgba(255, 255, 255, 0.05);
+            --ops-border: rgba(212, 175, 55, 0.14);
+            --footer-text: rgba(249, 246, 239, 0.62);
+            --brand-shadow: rgba(0, 0, 0, 0.24);
+            --primary-cta-start: rgba(193, 18, 31, 1);
+            --primary-cta-end: rgba(34, 197, 94, 0.9);
+        }
+
         html[data-theme='swamp'] body::before {
             top: auto;
             right: -72px;
@@ -338,6 +517,121 @@
                 radial-gradient(70% 60% at 82% 84%, rgba(166, 93, 156, 0.26) 0%, rgba(166, 93, 156, 0) 70%);
             filter: blur(10px);
             opacity: 0.88;
+        }
+
+        html[data-theme='space'] body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            background:
+                radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.78) 0 1px, transparent 2px),
+                radial-gradient(circle at 38% 30%, rgba(201, 224, 255, 0.52) 0 1px, transparent 2px),
+                radial-gradient(circle at 67% 14%, rgba(255, 255, 255, 0.72) 0 1px, transparent 2px),
+                radial-gradient(circle at 82% 36%, rgba(160, 244, 255, 0.52) 0 1px, transparent 2px),
+                radial-gradient(circle at 56% 48%, rgba(182, 194, 255, 0.46) 0 1px, transparent 2px);
+            background-size: 240px 170px, 280px 210px, 320px 180px, 260px 220px, 360px 240px;
+            opacity: 0.7;
+            filter: blur(0.2px);
+            pointer-events: none;
+        }
+
+        html[data-theme='space'] body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            border-radius: 0;
+            background:
+                radial-gradient(ellipse 82% 58% at 14% 22%, rgba(108, 128, 255, 0.3) 0%, transparent 56%),
+                radial-gradient(ellipse 62% 44% at 84% 18%, rgba(70, 225, 255, 0.18) 0%, transparent 54%),
+                radial-gradient(ellipse 58% 42% at 54% 82%, rgba(167, 94, 255, 0.18) 0%, transparent 56%);
+            opacity: 0.9;
+            filter: blur(18px);
+            pointer-events: none;
+        }
+
+        html[data-theme='japan'] body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            border-radius: 0;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 244, 245, 0.16)),
+                url("Themes/Wallpaper%20Japan.jpg") center center / cover no-repeat;
+            opacity: 0.34;
+            filter: saturate(0.92) contrast(1.02);
+            pointer-events: none;
+        }
+
+        html[data-theme='japan'] body::after {
+            content: '';
+            position: fixed;
+            right: 10%;
+            top: 12%;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(185, 28, 45, 0.18) 0%, rgba(185, 28, 45, 0.1) 36%, rgba(185, 28, 45, 0) 72%);
+            filter: blur(6px);
+            pointer-events: none;
+        }
+
+        html[data-theme='holloween'] body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            border-radius: 0;
+            background:
+                linear-gradient(180deg, rgba(8, 5, 3, 0.44), rgba(20, 10, 5, 0.28)),
+                url("Themes/Wallpaper%20HOLLOWEEN.jpg") center center / cover no-repeat;
+            opacity: 0.4;
+            filter: saturate(1.04) contrast(1.04);
+            pointer-events: none;
+        }
+
+        html[data-theme='holloween'] body::after {
+            content: '';
+            position: fixed;
+            right: 8%;
+            top: 12%;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(249, 115, 22, 0.24) 0%, rgba(249, 115, 22, 0.12) 34%, rgba(249, 115, 22, 0) 72%);
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        html[data-theme='christmas'] body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            border-radius: 0;
+            background:
+                linear-gradient(180deg, rgba(7, 12, 9, 0.34), rgba(13, 24, 18, 0.2)),
+                url("Themes/Wallpaper%20CHRISTMAS.jpg") center center / cover no-repeat;
+            opacity: 0.4;
+            filter: saturate(1.02) contrast(1.02);
+            pointer-events: none;
+        }
+
+        html[data-theme='christmas'] body::after {
+            content: '';
+            position: fixed;
+            right: 8%;
+            top: 10%;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at center, rgba(212, 175, 55, 0.2) 0%, rgba(34, 197, 94, 0.12) 34%, rgba(212, 175, 55, 0) 72%);
+            filter: blur(10px);
+            pointer-events: none;
         }
 
         * {
@@ -1333,7 +1627,7 @@
 
             html[data-theme='beach'] body::before {
                 right: -98px;
-                bottom: -56px;
+                bottom: -138px;
                 width: 360px;
                 height: 360px;
                 opacity: 0.1;
@@ -1404,8 +1698,8 @@
             </a>
             <div class="topbar-actions">
                 <button class="theme-switch-btn" id="homepage-theme-toggle" type="button" aria-live="polite">
-                    <span class="theme-switch-label">Switch to Sunset Mode</span>
-                    <span class="theme-switch-current">Beach Mode</span>
+                    <span class="theme-switch-label">Switch Theme</span>
+                    <span class="theme-switch-current">Beach Theme</span>
                 </button>
                 <a class="login-btn" href="login.html">Log In</a>
             </div>
@@ -1611,11 +1905,64 @@
     <script>
         (function () {
             const HOMEPAGE_THEME_KEY = 'homepageTheme';
-            const ALLOWED_HOMEPAGE_THEMES = ['beach', 'sunset'];
+            const USER_THEME_KEY = 'dashboardThemeByUser';
+            const ALLOWED_HOMEPAGE_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space', 'japan', 'holloween', 'christmas'];
+            const THEME_LABELS = {
+                dark: 'Dark',
+                light: 'Light',
+                beach: 'Beach',
+                swamp: 'Swamp',
+                sunset: 'Sunset',
+                space: 'Space',
+                japan: 'Japan',
+                holloween: 'Holloween',
+                christmas: 'Christmas'
+            };
+
+            const readJson = (key) => {
+                try {
+                    return JSON.parse(localStorage.getItem(key) || '{}');
+                } catch (error) {
+                    return {};
+                }
+            };
+
+            const getUserThemeContext = () => {
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                return { userKey };
+            };
+
+            const resolveTheme = (value) => {
+                const normalized = String(value || '').trim().toLowerCase();
+                if (normalized === 'system') {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                return ALLOWED_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'beach';
+            };
+
+            const getStoredThemeValue = () => {
+                const { userKey } = getUserThemeContext();
+                const themeStore = readJson(USER_THEME_KEY);
+                return String((themeStore[userKey] && themeStore[userKey].value) || localStorage.getItem(HOMEPAGE_THEME_KEY) || 'beach').trim().toLowerCase();
+            };
 
             const getHomepageTheme = () => {
-                const storedValue = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || 'beach').trim().toLowerCase();
-                return ALLOWED_HOMEPAGE_THEMES.includes(storedValue) ? storedValue : 'beach';
+                return resolveTheme(getStoredThemeValue());
+            };
+
+            const saveThemePreference = (theme) => {
+                const normalized = resolveTheme(theme);
+                const { userKey } = getUserThemeContext();
+                const themeStore = readJson(USER_THEME_KEY);
+                const nextEntry = Object.assign({}, themeStore[userKey] || {}, { value: normalized });
+                themeStore[userKey] = nextEntry;
+                localStorage.setItem(USER_THEME_KEY, JSON.stringify(themeStore));
+                localStorage.setItem(HOMEPAGE_THEME_KEY, normalized);
+                localStorage.setItem('theme', normalized);
             };
 
             const homepageThemeToggle = document.getElementById('homepage-theme-toggle');
@@ -1624,18 +1971,20 @@
 
             const applyStoredTheme = () => {
                 const activeTheme = getHomepageTheme();
+                const currentIndex = ALLOWED_HOMEPAGE_THEMES.indexOf(activeTheme);
+                const nextTheme = ALLOWED_HOMEPAGE_THEMES[(currentIndex + 1) % ALLOWED_HOMEPAGE_THEMES.length] || 'beach';
                 document.documentElement.setAttribute('data-theme', activeTheme);
 
                 if (homepageThemeLabel) {
-                    homepageThemeLabel.textContent = activeTheme === 'beach' ? 'Switch to Sunset Mode' : 'Switch to Beach Mode';
+                    homepageThemeLabel.textContent = `Switch to ${THEME_LABELS[nextTheme]} Theme`;
                 }
 
                 if (homepageThemeCurrent) {
-                    homepageThemeCurrent.textContent = activeTheme === 'beach' ? 'Beach Mode' : 'Sunset Mode';
+                    homepageThemeCurrent.textContent = `${THEME_LABELS[activeTheme]} Theme`;
                 }
 
                 if (homepageThemeToggle) {
-                    homepageThemeToggle.setAttribute('aria-label', activeTheme === 'beach' ? 'Switch homepage theme to Sunset Mode' : 'Switch homepage theme to Beach Mode');
+                    homepageThemeToggle.setAttribute('aria-label', `Switch homepage theme to ${THEME_LABELS[nextTheme]} Theme`);
                 }
             };
 
@@ -1693,8 +2042,10 @@
 
             if (homepageThemeToggle) {
                 homepageThemeToggle.addEventListener('click', () => {
-                    const nextTheme = getHomepageTheme() === 'beach' ? 'sunset' : 'beach';
-                    localStorage.setItem(HOMEPAGE_THEME_KEY, nextTheme);
+                    const activeTheme = getHomepageTheme();
+                    const currentIndex = ALLOWED_HOMEPAGE_THEMES.indexOf(activeTheme);
+                    const nextTheme = ALLOWED_HOMEPAGE_THEMES[(currentIndex + 1) % ALLOWED_HOMEPAGE_THEMES.length] || 'beach';
+                    saveThemePreference(nextTheme);
                     applyStoredTheme();
                 });
             }

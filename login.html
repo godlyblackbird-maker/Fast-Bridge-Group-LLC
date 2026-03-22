@@ -33,7 +33,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
@@ -197,7 +197,7 @@ https://templatemo.com/tm-607-glass-admin
                     Access is admin-managed. Contact an administrator for account setup.
                 </p>
                 <p class="login-footer" id="login-version-label" style="margin-top:8px;font-size:12px;opacity:0.78;">
-                    Version v1.2.1
+                    Version v1.2.2
                 </p>
             </div>
         </div>

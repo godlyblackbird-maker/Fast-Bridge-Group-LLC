@@ -30,7 +30,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|swamp|sunset|space)$/.test(theme)) {
+                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(theme)) {
                     theme = 'beach';
                 }
                 document.documentElement.setAttribute('data-theme', theme);
