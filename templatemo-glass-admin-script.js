@@ -2674,8 +2674,9 @@ function initNavbarDateTime() {
     // ============================================
     function initTiltEffect() {
         const variableTiltSelector = '.subscription-plan-card';
+        const standardTiltSelector = '.glass-card-3d, .legal-hover-card';
 
-        document.querySelectorAll(`.glass-card-3d, ${variableTiltSelector}`).forEach(card => {
+        document.querySelectorAll(`${standardTiltSelector}, ${variableTiltSelector}`).forEach(card => {
             if (card.dataset.tiltInitialized === 'true') {
                 return;
             }
@@ -2726,6 +2727,14 @@ function initNavbarDateTime() {
                 const divisor = Number.parseFloat(card.dataset.tiltDivisor) || 20;
                 const depth = Number.parseFloat(card.dataset.tiltDepth) || 10;
                 const maxTilt = Number.parseFloat(card.dataset.tiltMax);
+                const lift = Number.parseFloat(card.dataset.tiltLift);
+                const scale = Number.parseFloat(card.dataset.tiltScale);
+                const resolvedLift = Number.isFinite(lift)
+                    ? lift
+                    : (card.classList.contains('legal-hover-card') ? -3 : 0);
+                const resolvedScale = Number.isFinite(scale)
+                    ? scale
+                    : (card.classList.contains('legal-hover-card') ? 1.01 : 1);
 
                 const clamp = (value) => {
                     if (!Number.isFinite(maxTilt) || maxTilt <= 0) {
@@ -2737,7 +2746,7 @@ function initNavbarDateTime() {
                 const rotateX = clamp((y - centerY) / divisor);
                 const rotateY = clamp((centerX - x) / divisor);
 
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`;
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px) translateY(${resolvedLift}px) scale(${resolvedScale})`;
             });
 
             card.addEventListener('pointerleave', resetTilt);
@@ -3559,6 +3568,7 @@ function initNavbarDateTime() {
             const currentPlanLabel = document.getElementById('subscription-current-plan');
             const planSummary = document.getElementById('subscription-plan-summary');
             const saveButton = document.getElementById('subscription-save-btn');
+            const ctaNote = document.getElementById('subscription-cta-note');
             const billingSection = document.getElementById('subscription-billing-section');
             const billingNote = document.getElementById('subscription-billing-note');
             const billingForm = document.getElementById('subscription-billing-form');
@@ -3593,11 +3603,13 @@ function initNavbarDateTime() {
                 },
                 basic: {
                     label: 'Basic',
-                    summary: 'Basic keeps standard dashboard access active.'
+                    summary: 'Basic keeps standard dashboard access active.',
+                    cta: 'Stay with the core workspace if you do not need premium analysis, ROI visibility, comps workflow, or campaign tools yet.'
                 },
                 premium: {
                     label: 'Premium',
-                    summary: 'Premium costs $99 and unlocks all tabs for this account with the Premium User role.'
+                    summary: 'Premium costs $99 and unlocks analysis, calculator tools, ROI visibility, comps, analytics, campaigns, and the full Premium User workspace.',
+                    cta: 'Get the full investor workspace with analysis, ROI visibility, comps, campaigns, and premium-only tools.'
                 }
             };
 
@@ -3837,18 +3849,25 @@ function initNavbarDateTime() {
                     : (isPremiumUser
                         ? 'Premium User is active. All tabs are unlocked for this account.'
                         : planCopy[activePlan].summary);
+                if (ctaNote) {
+                    ctaNote.textContent = isAdminUser
+                        ? 'Administrator accounts already include the full platform and do not need a separate subscription checkout.'
+                        : (isPremiumUser
+                            ? 'Premium is already live on this account. You can update billing details here anytime.'
+                            : planCopy[activePlan].cta);
+                }
                 billingSection.hidden = isAdminUser || !(activePlan === 'premium' || isPremiumUser);
                 if (billingNote) {
                     billingNote.textContent = isAdminUser
                         ? 'Administrator accounts already include every tab and do not need billing information.'
                         : (isPremiumUser && activeSubscription?.billingProfile?.maskedCard
                             ? `Premium User is active. Billing profile on file: ${activeSubscription.billingProfile.maskedCard}.`
-                            : `Enter billing details to activate Premium User access for ${premiumPriceLabel}.`);
+                            : `Enter billing details to activate Premium User access for ${premiumPriceLabel} and unlock the full investor toolkit.`);
                 }
                 saveButton.hidden = isAdminUser;
                 saveButton.textContent = isPremiumUser
-                    ? 'Update Billing Info'
-                    : (activePlan === 'premium' ? `Buy Premium - ${premiumPriceLabel}` : 'Stay on Basic');
+                    ? 'Keep Premium Billing Updated'
+                    : (activePlan === 'premium' ? `Unlock Premium Access - ${premiumPriceLabel}` : 'Stay on Basic');
 
                 planInputs.forEach((input) => {
                     const card = input.closest('[data-plan-card]');
