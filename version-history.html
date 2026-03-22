@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Version History - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Recent FAST BRIDGE GROUP updates and version history.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const root = document.documentElement;
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+
+                root.setAttribute('data-theme', theme);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        body.version-history-page {
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+            background:
+                radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 28%),
+                linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2) 45%, var(--bg-gradient-3));
+            overflow-x: hidden;
+        }
+
+        .version-history-shell {
+            position: relative;
+            z-index: 1;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 40px 20px 72px;
+        }
+
+        .version-history-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .version-history-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 18px 38px -26px var(--glass-shadow);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .version-history-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .version-history-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 14px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            backdrop-filter: blur(18px);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .version-history-link:hover,
+        .version-history-link:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 36px -24px var(--glass-shadow);
+            border-color: color-mix(in srgb, var(--emerald) 55%, white 45%);
+        }
+
+        .version-history-hero {
+            padding: 34px;
+            border-radius: 30px;
+            border: 1px solid var(--glass-border);
+            background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            backdrop-filter: blur(24px);
+            box-shadow: 0 24px 60px -34px var(--glass-shadow);
+            margin-bottom: 26px;
+        }
+
+        .version-history-hero h1 {
+            margin: 0 0 12px;
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            line-height: 1.04;
+        }
+
+        .version-history-hero p {
+            margin: 0;
+            max-width: 760px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .version-history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+        }
+
+        .version-card {
+            padding: 26px 24px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            backdrop-filter: blur(18px);
+            box-shadow: 0 22px 46px -32px var(--glass-shadow);
+        }
+
+        .version-card h2 {
+            margin: 0 0 6px;
+            font-size: 1.4rem;
+            line-height: 1.1;
+        }
+
+        .version-card .version-date {
+            display: block;
+            margin-bottom: 14px;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .version-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .version-card li {
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .version-card li:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 720px) {
+            .version-history-topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .version-history-hero {
+                padding: 26px 22px;
+            }
+        }
+    </style>
+</head>
+<body class="version-history-page">
+    <div class="version-history-shell">
+        <div class="version-history-topbar">
+            <div class="version-history-badge">Version History</div>
+            <div class="version-history-actions">
+                <a class="version-history-link" href="index.html">Homepage</a>
+                <a class="version-history-link" href="settings.html">Settings</a>
+                <a class="version-history-link" href="login.html">Login</a>
+            </div>
+        </div>
+
+        <section class="version-history-hero">
+            <h1>Recent Updates</h1>
+            <p>Track the latest build changes, feature additions, visual polish, and workflow improvements across the FAST BRIDGE GROUP platform. Each version below lists the key updates in bullet points for quick review.</p>
+        </section>
+
+        <section class="version-history-grid" aria-label="Version history list">
+            <article class="version-card">
+                <h2>Version 1.2.2</h2>
+                <span class="version-date">March 22, 2026</span>
+                <ul>
+                    <li>Bumped the website build version to 1.2.2 across package metadata and visible UI labels.</li>
+                    <li>Added global seasonal themes for Japan, Holloween, and Christmas across homepage, settings, and dashboard pages.</li>
+                    <li>Synced homepage theme behavior with saved per-user themes so remembered selections carry across the app.</li>
+                    <li>Restricted new homepage visitors to switching only between Beach and Sunset while still honoring remembered user themes after login/logout.</li>
+                    <li>Fixed homepage wallpaper fitting for Space, Japan, and Holloween so backgrounds fill the screen like Sunset mode.</li>
+                    <li>Improved the Japan theme wallpaper visibility by removing heavy white overlay wash and reducing the blur haze.</li>
+                    <li>Fixed the Sunset homepage palm tree placement so it sits against the lower edge instead of floating.</li>
+                    <li>Added county and city PDF references plus new wallpaper assets used by the new theme rollouts.</li>
+                </ul>
+            </article>
+
+            <article class="version-card">
+                <h2>Version 1.2.1</h2>
+                <span class="version-date">March 21, 2026</span>
+                <ul>
+                    <li>Released version 1.2.1 with recent subscription, legal, and workflow improvements.</li>
+                    <li>Added notification history with saved recent alerts for each user.</li>
+                    <li>Stabilized assigned properties so user-specific assignments stop disappearing.</li>
+                    <li>Required Gmail setup approval before agent workspace email sending can be used.</li>
+                    <li>Made the legal disclosure card hover tilt move inward correctly toward the cursor.</li>
+                    <li>Improved premium subscription messaging, subscription UI, and access handling.</li>
+                    <li>Locked offer-related access correctly for basic users and tightened role-based controls.</li>
+                    <li>Refined contract PDF spacing, header, title, and signature layout behavior.</li>
+                </ul>
+            </article>
+
+            <article class="version-card">
+                <h2>Version 1.2.0</h2>
+                <span class="version-date">March 21, 2026</span>
+                <ul>
+                    <li>Bumped the site from 1.1.x into the 1.2.0 release line.</li>
+                    <li>Expanded subscription and role access handling to support premium workflow separation.</li>
+                    <li>Refined legal hub navigation and strike-zone related actions.</li>
+                    <li>Scoped campaign email sender behavior by user.</li>
+                    <li>Improved analytics locks, broker/admin restrictions, and accent glow behavior.</li>
+                    <li>Polished contract PDF generation and surrounding agreement workflow details.</li>
+                </ul>
+            </article>
+
+            <article class="version-card">
+                <h2>Version 1.1.9</h2>
+                <span class="version-date">March 20, 2026</span>
+                <ul>
+                    <li>Released version 1.1.9 after refining analytics, MLS agreement, and property workflows.</li>
+                    <li>Added subscriptions and tightened role access across the workspace.</li>
+                    <li>Added agent workspace editing and upload-related improvements.</li>
+                    <li>Added MLS agreement PDF download support.</li>
+                    <li>Persisted property assignments across users.</li>
+                    <li>Fixed email sending behavior and expanded contact/e-card support.</li>
+                    <li>Simplified the legal disclosures hub and added standalone legal disclosure pages.</li>
+                </ul>
+            </article>
+
+            <article class="version-card">
+                <h2>Version 1.1.8</h2>
+                <span class="version-date">March 19, 2026</span>
+                <ul>
+                    <li>Released version 1.1.8 with legal page, homepage, and calculator refinement work.</li>
+                    <li>Fixed homepage Sunset wallpaper styling and legal page theme rendering.</li>
+                    <li>Refined the investment calculator and legal docs hover behavior.</li>
+                    <li>Required the terms modal before login.</li>
+                    <li>Improved admin controls and offer email workflow behavior.</li>
+                    <li>Added SMTP approval flow and financing updates tied to the investment analysis tools.</li>
+                </ul>
+            </article>
+        </section>
+    </div>
+</body>
+</html>
