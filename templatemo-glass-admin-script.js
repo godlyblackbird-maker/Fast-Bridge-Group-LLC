@@ -5643,8 +5643,13 @@ function initNavbarDateTime() {
     }
 
     function initAgentWorkspaceEmailPrep() {
+        const recipientNameInput = document.getElementById('agent-workspace-recipient-name');
+        const recipientEmailInput = document.getElementById('agent-workspace-recipient-email');
+        const senderNameInput = document.getElementById('agent-workspace-sender-name');
+        const senderEmailInput = document.getElementById('agent-workspace-sender-email');
         const subjectInput = document.getElementById('agent-workspace-email-subject');
         const bodyInput = document.getElementById('agent-workspace-email-body');
+        const sendButton = document.getElementById('agent-workspace-send-btn');
         const copySubjectButton = document.getElementById('agent-workspace-copy-subject-btn');
         const copyBodyButton = document.getElementById('agent-workspace-copy-body-btn');
         const copyDocListButton = document.getElementById('agent-workspace-copy-doc-list-btn');
@@ -5654,13 +5659,243 @@ function initNavbarDateTime() {
         const docsList = document.getElementById('agent-workspace-docs-list');
         const docsNote = document.getElementById('agent-workspace-docs-note');
 
-        if (!subjectInput || !bodyInput || !copySubjectButton || !copyBodyButton || !copyDocListButton || !categorySelect || !uploadButton || !uploadInput || !docsList || !docsNote) {
+        if (!recipientNameInput || !recipientEmailInput || !senderNameInput || !senderEmailInput || !subjectInput || !bodyInput || !sendButton || !copySubjectButton || !copyBodyButton || !copyDocListButton || !categorySelect || !uploadButton || !uploadInput || !docsList || !docsNote) {
             return;
         }
 
         const workspaceUser = getWorkspaceUserContext();
+        const cachedSmtpSettings = getScopedSmtpSettings(workspaceUser);
         let documents = [];
         let isSavingDraft = false;
+        let lastSuggestedRecipient = { name: '', email: '' };
+        let lastSuggestedSender = { name: '', email: '' };
+        let smtpConfigState = {
+            smtpUser: cleanFieldValue(cachedSmtpSettings && cachedSmtpSettings.smtpUser),
+            hasPassword: Boolean(cachedSmtpSettings && cachedSmtpSettings.hasPassword),
+            pendingRequest: cachedSmtpSettings && cachedSmtpSettings.pendingRequest ? cachedSmtpSettings.pendingRequest : null,
+            configured: false
+        };
+        let smtpStatusPromise = null;
+
+        smtpConfigState.configured = Boolean(smtpConfigState.smtpUser && smtpConfigState.hasPassword && !smtpConfigState.pendingRequest);
+
+        function cleanFieldValue(value) {
+            const normalized = String(value || '').trim();
+            return normalized === '-' ? '' : normalized;
+        }
+
+        function readLocalJson(key) {
+            try {
+                return JSON.parse(localStorage.getItem(key) || '{}');
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function getSmtpConfigState(settings) {
+            const normalizedSettings = settings && typeof settings === 'object' ? settings : {};
+            const smtpUser = cleanFieldValue(normalizedSettings.smtpUser);
+            const pendingRequest = normalizedSettings.pendingRequest && typeof normalizedSettings.pendingRequest === 'object'
+                ? normalizedSettings.pendingRequest
+                : null;
+            const hasPassword = Boolean(normalizedSettings.hasPassword);
+
+            return {
+                smtpUser,
+                hasPassword,
+                pendingRequest,
+                configured: Boolean(smtpUser && hasPassword && !pendingRequest)
+            };
+        }
+
+        function getGmailSettingsHref() {
+            return 'settings.html?tab=profile#smtp-settings-section';
+        }
+
+        function ensureGmailSetupModal() {
+            let modal = document.getElementById('agent-workspace-gmail-modal');
+            if (modal) {
+                return modal;
+            }
+
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="agent-workspace-gmail-modal" class="profile-modal" style="display: none;">
+                    <div class="profile-modal-overlay" data-agent-gmail-close="true"></div>
+                    <div class="profile-modal-content" style="max-width: 560px;">
+                        <div class="profile-modal-header">
+                            <h2 id="agent-workspace-gmail-modal-title">Connect Gmail</h2>
+                            <button type="button" class="profile-close-btn" data-agent-gmail-close="true" aria-label="Close Gmail setup prompt">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="profile-modal-body">
+                            <p id="agent-workspace-gmail-modal-copy" style="margin: 0; color: var(--text-secondary); line-height: 1.7;"></p>
+                            <div class="profile-modal-actions">
+                                <a id="agent-workspace-gmail-modal-link" class="btn btn-primary" href="settings.html?tab=profile#smtp-settings-section">Open Gmail Settings</a>
+                                <button type="button" class="btn btn-secondary" data-agent-gmail-close="true">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+
+            modal = document.getElementById('agent-workspace-gmail-modal');
+            modal.querySelectorAll('[data-agent-gmail-close="true"]').forEach((element) => {
+                element.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+            });
+
+            return modal;
+        }
+
+        function showGmailSetupPrompt(mode = 'missing') {
+            const modal = ensureGmailSetupModal();
+            const title = modal.querySelector('#agent-workspace-gmail-modal-title');
+            const copy = modal.querySelector('#agent-workspace-gmail-modal-copy');
+            const link = modal.querySelector('#agent-workspace-gmail-modal-link');
+
+            if (title) {
+                title.textContent = mode === 'pending' ? 'Gmail Approval Pending' : 'Connect Your Gmail';
+            }
+
+            if (copy) {
+                copy.textContent = mode === 'pending'
+                    ? 'Your Gmail outbox request is still waiting for admin approval. Open Settings to review or resubmit your Gmail account before sending email from Agent Workspace.'
+                    : 'This account cannot send email from Agent Workspace until you are logged in and your Gmail outbox is configured in Settings.';
+            }
+
+            if (link) {
+                link.href = getGmailSettingsHref();
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        async function loadApprovedGmailConfig(force = false) {
+            const token = getAuthToken();
+            if (!token) {
+                smtpConfigState = getSmtpConfigState({});
+                return smtpConfigState;
+            }
+
+            if (!force && smtpStatusPromise) {
+                return smtpStatusPromise;
+            }
+
+            smtpStatusPromise = (async () => {
+                try {
+                    const response = await fetch('/api/smtp-settings', {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Unable to load Gmail settings.');
+                    }
+
+                    const payload = await response.json().catch(() => ({}));
+                    smtpConfigState = getSmtpConfigState(payload);
+                    return smtpConfigState;
+                } catch (error) {
+                    smtpConfigState = getSmtpConfigState(getScopedSmtpSettings(workspaceUser));
+                    return smtpConfigState;
+                } finally {
+                    smtpStatusPromise = null;
+                }
+            })();
+
+            return smtpStatusPromise;
+        }
+
+        function getSenderProfile() {
+            const profile = readLocalJson('userProfile');
+            const user = readLocalJson('user');
+            return {
+                name: cleanFieldValue(senderNameInput.value) || cleanFieldValue(profile.name || user.name || workspaceUser.name || ''),
+                email: smtpConfigState.configured ? cleanFieldValue(smtpConfigState.smtpUser) : ''
+            };
+        }
+
+        function getAvailableSenderEmails() {
+            return smtpConfigState.configured && smtpConfigState.smtpUser
+                ? [cleanFieldValue(smtpConfigState.smtpUser)]
+                : [];
+        }
+
+        function renderSenderEmailOptions(preferredEmail = '') {
+            const currentValue = cleanFieldValue(preferredEmail || senderEmailInput.value);
+            const options = getAvailableSenderEmails();
+            senderEmailInput.innerHTML = '<option value="">Select sender email</option>';
+            options.forEach((email) => {
+                const option = document.createElement('option');
+                option.value = email;
+                option.textContent = email;
+                senderEmailInput.appendChild(option);
+            });
+            senderEmailInput.disabled = options.length === 0;
+            senderEmailInput.title = options.length === 0
+                ? (smtpConfigState.pendingRequest ? 'Your Gmail request is pending admin approval.' : 'Connect Gmail in Settings first.')
+                : '';
+            if (currentValue && options.includes(currentValue)) {
+                senderEmailInput.value = currentValue;
+            }
+        }
+
+        function getAgentWorkspaceRecipientDefaults() {
+            const currentAgentRecord = typeof getCurrentAgentRecordState === 'function'
+                ? getCurrentAgentRecordState()
+                : {};
+            return {
+                name: cleanFieldValue(currentAgentRecord && currentAgentRecord.name),
+                email: cleanFieldValue(currentAgentRecord && currentAgentRecord.email)
+            };
+        }
+
+        async function syncSenderDefaults(force = false, refreshSmtp = false) {
+            if (refreshSmtp) {
+                await loadApprovedGmailConfig(true);
+            }
+            const senderProfile = getSenderProfile();
+            const currentName = cleanFieldValue(senderNameInput.value);
+            const currentEmail = cleanFieldValue(senderEmailInput.value);
+            const suggestedEmail = cleanFieldValue(senderProfile.email);
+
+            renderSenderEmailOptions(currentEmail || suggestedEmail);
+
+            if (force || !currentName || currentName === lastSuggestedSender.name) {
+                senderNameInput.value = cleanFieldValue(senderProfile.name);
+            }
+
+            if (force || !currentEmail || currentEmail === lastSuggestedSender.email) {
+                senderEmailInput.value = suggestedEmail;
+            }
+
+            lastSuggestedSender = {
+                name: cleanFieldValue(senderProfile.name),
+                email: suggestedEmail
+            };
+        }
+
+        function syncRecipientDefaults(force = false) {
+            const nextRecipient = getAgentWorkspaceRecipientDefaults();
+            const currentName = cleanFieldValue(recipientNameInput.value);
+            const currentEmail = cleanFieldValue(recipientEmailInput.value);
+
+            if (force || !currentName || currentName === lastSuggestedRecipient.name) {
+                recipientNameInput.value = nextRecipient.name;
+            }
+
+            if (force || !currentEmail || currentEmail === lastSuggestedRecipient.email) {
+                recipientEmailInput.value = nextRecipient.email;
+            }
+
+            lastSuggestedRecipient = nextRecipient;
+        }
 
         function getAuthToken() {
             return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
@@ -5696,6 +5931,10 @@ function initNavbarDateTime() {
             }
 
             const nextDraft = {
+                recipientName: cleanFieldValue(recipientNameInput.value),
+                recipientEmail: cleanFieldValue(recipientEmailInput.value),
+                senderName: cleanFieldValue(senderNameInput.value),
+                senderEmail: cleanFieldValue(senderEmailInput.value),
                 subject: String(subjectInput.value || '').trim(),
                 bodyHtml: String(bodyInput.innerHTML || '').trim()
             };
@@ -5705,9 +5944,16 @@ function initNavbarDateTime() {
         function loadDraft() {
             const savedDraft = getUserScopedObject(AGENT_WORKSPACE_EMAIL_PREP_KEY, workspaceUser.key);
             isSavingDraft = true;
+            recipientNameInput.value = cleanFieldValue(savedDraft.recipientName || '');
+            recipientEmailInput.value = cleanFieldValue(savedDraft.recipientEmail || '');
+            senderNameInput.value = cleanFieldValue(savedDraft.senderName || '');
+            renderSenderEmailOptions(cleanFieldValue(savedDraft.senderEmail || ''));
+            senderEmailInput.value = cleanFieldValue(savedDraft.senderEmail || '');
             subjectInput.value = String(savedDraft.subject || '').trim();
             bodyInput.innerHTML = String(savedDraft.bodyHtml || '').trim();
             isSavingDraft = false;
+            void syncSenderDefaults();
+            syncRecipientDefaults();
         }
 
         function renderEmptyState() {
@@ -5756,6 +6002,40 @@ function initNavbarDateTime() {
             return documents
                 .map((documentItem) => `${documentItem.categoryLabel}: ${documentItem.fileName}`)
                 .join('\n');
+        }
+
+        async function buildServerEmailAttachments() {
+            if (!documents.length) {
+                return [];
+            }
+
+            const token = getAuthToken();
+            if (!token) {
+                throw new Error('Sign in again to send email attachments from the Agent Workspace.');
+            }
+
+            const attachments = [];
+            for (const documentItem of documents) {
+                const response = await fetch(`/api/agent-workspace-documents/${encodeURIComponent(documentItem.id)}/content?download=0`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(String(payload && payload.error || `Unable to attach ${documentItem.fileName || 'a saved document'}.`));
+                }
+
+                const blob = await response.blob();
+                attachments.push({
+                    filename: cleanFieldValue(documentItem.fileName) || 'agent-workspace-document',
+                    contentType: String(response.headers.get('content-type') || blob.type || 'application/octet-stream').trim() || 'application/octet-stream',
+                    contentBase64: await readBlobAsBase64(blob)
+                });
+            }
+
+            return attachments;
         }
 
         async function openDocument(documentItem, download = false) {
@@ -5914,6 +6194,97 @@ function initNavbarDateTime() {
             await copyTextValue(buildAttachmentList(), 'Attachment List Copied', 'Upload at least one file before copying the attachment list.');
         });
 
+        sendButton.addEventListener('click', async () => {
+            const token = getAuthToken();
+            if (!token) {
+                showDashboardToast('error', 'Sign In Required', 'Sign in again before sending email through the website.');
+                return;
+            }
+
+            const smtpConfig = await loadApprovedGmailConfig(true);
+            await syncSenderDefaults(true);
+
+            if (!smtpConfig.configured) {
+                showDashboardToast('error', smtpConfig.pendingRequest ? 'Gmail Approval Pending' : 'Gmail Setup Required', smtpConfig.pendingRequest
+                    ? 'Your Gmail request is still pending admin approval.'
+                    : 'Connect your Gmail in Settings before sending email from Agent Workspace.');
+                showGmailSetupPrompt(smtpConfig.pendingRequest ? 'pending' : 'missing');
+                return;
+            }
+
+            const recipientName = cleanFieldValue(recipientNameInput.value);
+            const recipientEmail = cleanFieldValue(recipientEmailInput.value);
+            const senderName = cleanFieldValue(senderNameInput.value);
+            const senderEmail = cleanFieldValue(smtpConfig.smtpUser || senderEmailInput.value);
+            const subject = String(subjectInput.value || '').trim();
+            const body = cleanFieldValue(bodyInput.innerText || bodyInput.textContent || '');
+            const htmlBody = String(bodyInput.innerHTML || '').trim();
+
+            if (!recipientEmail) {
+                showDashboardToast('error', 'Recipient Email Required', 'Pick or enter the agent email before sending.');
+                return;
+            }
+
+            if (!senderEmail) {
+                showDashboardToast('error', 'Sender Email Required', 'Select the sender email that should send this message.');
+                return;
+            }
+
+            if (!subject && !body) {
+                showDashboardToast('error', 'Email Content Required', 'Add a subject or email body before sending.');
+                return;
+            }
+
+            saveDraft();
+            sendButton.disabled = true;
+            sendButton.querySelector('span:last-child').textContent = 'Sending...';
+
+            try {
+                const attachments = await buildServerEmailAttachments();
+                const response = await fetch('/api/send-agent-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        fromName: senderName,
+                        fromEmail: senderEmail,
+                        toName: recipientName,
+                        toEmail: recipientEmail,
+                        subject,
+                        body,
+                        htmlBody,
+                        attachments
+                    })
+                });
+
+                const rawResponse = await response.text();
+                let result = {};
+                try {
+                    result = rawResponse ? JSON.parse(rawResponse) : {};
+                } catch (error) {
+                    result = { error: rawResponse || 'Could not send email.' };
+                }
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Could not send email.');
+                }
+
+                showDashboardToast('success', 'Email Sent', `Agent Workspace email sent to ${recipientName || recipientEmail}.`);
+            } catch (error) {
+                showDashboardToast('error', 'Send Failed', error.message || 'Could not send the Agent Workspace email.');
+            } finally {
+                sendButton.disabled = false;
+                sendButton.querySelector('span:last-child').textContent = 'Send Through Website';
+            }
+        });
+
+        [recipientNameInput, recipientEmailInput, senderNameInput, senderEmailInput].forEach((input) => {
+            input.addEventListener('input', saveDraft);
+            input.addEventListener('change', saveDraft);
+        });
+
         subjectInput.addEventListener('input', saveDraft);
         bodyInput.addEventListener('input', saveDraft);
 
@@ -5955,7 +6326,13 @@ function initNavbarDateTime() {
             }
         });
 
+        window.addEventListener('dashboard-data-updated', () => {
+            syncRecipientDefaults();
+            void syncSenderDefaults(false, true);
+        });
+
         loadDraft();
+        void syncSenderDefaults(true, true);
         loadDocuments();
     }
 

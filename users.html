@@ -309,6 +309,20 @@
                         </div>
                     </div>
                     <div class="agent-email-prep-grid">
+                        <label>Recipient Name
+                            <input id="agent-workspace-recipient-name" class="form-input" type="text" placeholder="Listing Agent Name">
+                        </label>
+                        <label>Recipient Email
+                            <input id="agent-workspace-recipient-email" class="form-input" type="email" placeholder="agent@example.com">
+                        </label>
+                        <label>Sender Name
+                            <input id="agent-workspace-sender-name" class="form-input" type="text" placeholder="Your Name">
+                        </label>
+                        <label>Sender Email
+                            <select id="agent-workspace-sender-email" class="form-input">
+                                <option value="">Select sender email</option>
+                            </select>
+                        </label>
                         <label class="agent-email-prep-span-2">Subject
                             <input id="agent-workspace-email-subject" class="form-input" type="text" placeholder="Executed Contract Package - 123 Main St">
                         </label>
@@ -318,10 +332,20 @@
                         </div>
                     </div>
                     <div class="offer-docs-actions agent-email-prep-actions">
+                        <button type="button" class="card-btn offer-email-send-btn" id="agent-workspace-send-btn">
+                            <span class="offer-email-send-btn-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 2L11 13"></path>
+                                    <path d="M22 2L15 22l-4-9-9-4 20-7z"></path>
+                                </svg>
+                            </span>
+                            <span>Send Through Website</span>
+                        </button>
                         <button type="button" class="card-btn" id="agent-workspace-copy-subject-btn">Copy Subject</button>
                         <button type="button" class="card-btn" id="agent-workspace-copy-body-btn">Copy Body</button>
                         <button type="button" class="card-btn" id="agent-workspace-copy-doc-list-btn">Copy Attachment List</button>
                     </div>
+                    <p class="offer-docs-note">Saved documents below will be attached automatically when you send from this workspace.</p>
 
                     <div class="offer-email-attach-box agent-email-library-box">
                         <div class="offer-attach-header">
