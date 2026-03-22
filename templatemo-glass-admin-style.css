@@ -2810,6 +2810,246 @@ a {
     box-shadow: 0 8px 18px rgba(224, 122, 95, 0.32), 0 0 16px rgba(224, 122, 95, 0.4);
 }
 
+.notification-center-open {
+    overflow: hidden;
+}
+
+.notification-center-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 15, 27, 0.44);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2190;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+}
+
+.notification-center-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.notification-center-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(420px, 100vw);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 26px 22px 22px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 94%, rgba(255, 255, 255, 0.08) 6%), color-mix(in srgb, var(--glass-bg) 98%, rgba(255, 255, 255, 0.03) 2%));
+    border-left: 1px solid var(--glass-border);
+    box-shadow: -30px 0 60px rgba(5, 12, 24, 0.32);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    z-index: 2200;
+    transform: translateX(100%);
+    transition: transform var(--transition-normal);
+}
+
+.notification-center-drawer.open {
+    transform: translateX(0);
+}
+
+.notification-center-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.notification-center-kicker {
+    margin: 0 0 6px;
+    color: var(--gold-light);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.notification-center-title {
+    margin: 0;
+    font-size: 24px;
+    color: var(--text-primary);
+}
+
+.notification-center-subtitle {
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.notification-center-close {
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.notification-center-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notification-center-count {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.notification-center-list {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.notification-center-empty {
+    padding: 20px;
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+}
+
+.notification-center-empty strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.notification-center-empty p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.notification-center-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.045);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.notification-center-item-error {
+    border-color: rgba(239, 68, 68, 0.24);
+}
+
+.notification-center-item-success {
+    border-color: rgba(52, 211, 153, 0.22);
+}
+
+.notification-center-item-reminder {
+    border-color: rgba(212, 165, 116, 0.24);
+}
+
+.notification-center-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notification-center-chip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.notification-center-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.notification-center-chip-type {
+    color: var(--text-primary);
+}
+
+.notification-center-time {
+    color: var(--text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.notification-center-item-title {
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.notification-center-item-message,
+.notification-center-item-meta,
+.notification-center-item-page {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.notification-center-item-page {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.notification-center-item-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notification-center-item-list-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.notification-center-item-list-entry small {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+@media (max-width: 640px) {
+    .notification-center-drawer {
+        width: 100vw;
+        padding: 22px 16px 18px;
+    }
+}
+
 /* ============================================
    GLASS CARD BASE
 ============================================ */

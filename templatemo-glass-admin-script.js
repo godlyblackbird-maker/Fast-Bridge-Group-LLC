@@ -13,8 +13,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const IA_CALCULATOR_STATE_KEY = 'iaCalculatorStateByUser';
     const PIQ_AGENT_STATUS_KEY = 'piqAgentStatusByUser';
     const CLOSED_DEALS_KEY = 'closedDealsByUser';
+    const NOTIFICATION_HISTORY_KEY = 'dashboardNotificationHistoryByUser';
     const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
+    const MAX_NOTIFICATION_HISTORY_ITEMS = 20;
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
     const DASHBOARD_NOTIFICATION_SOUND_PATH = 'Sound FX/Notification sound effect.wav';
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
@@ -219,6 +221,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             document.body.appendChild(stack);
         }
 
+        if (config.persist !== false) {
+            rememberDashboardNotification(type, title, message, config);
+        }
+
         if (config.playSound !== false) {
             playPlannerNotificationSound();
         }
@@ -296,6 +302,284 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         closeButton.addEventListener('click', dismiss);
         window.setTimeout(dismiss, Number.isFinite(config.duration) ? config.duration : (type === 'reminder' ? 7000 : 4000));
+    }
+
+    function normalizeNotificationHistoryEntries(entries) {
+        if (!Array.isArray(entries)) {
+            return [];
+        }
+
+        return entries
+            .filter((entry) => entry && typeof entry === 'object')
+            .map((entry) => ({
+                id: String(entry.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+                type: String(entry.type || 'info').trim() || 'info',
+                title: String(entry.title || 'Notice').trim() || 'Notice',
+                message: String(entry.message || '').trim(),
+                eyebrow: String(entry.eyebrow || '').trim(),
+                meta: String(entry.meta || '').trim(),
+                pageTitle: String(entry.pageTitle || '').trim(),
+                createdAt: Number(entry.createdAt) || Date.now(),
+                items: Array.isArray(entry.items)
+                    ? entry.items.slice(0, 4).map((item) => ({
+                        label: String(item && typeof item === 'object' ? item.label || '' : item || '').trim(),
+                        meta: String(item && typeof item === 'object' ? item.meta || '' : '').trim()
+                    })).filter((item) => item.label)
+                    : []
+            }))
+            .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0))
+            .slice(0, MAX_NOTIFICATION_HISTORY_ITEMS);
+    }
+
+    function getNotificationHistory(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const stored = getUserScopedObject(NOTIFICATION_HISTORY_KEY, workspaceUser.key);
+        return normalizeNotificationHistoryEntries(Array.isArray(stored.entries) ? stored.entries : []);
+    }
+
+    function setNotificationHistory(entries, workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const normalizedEntries = normalizeNotificationHistoryEntries(entries);
+        setUserScopedObject(NOTIFICATION_HISTORY_KEY, workspaceUser.key, {
+            entries: normalizedEntries,
+            updatedAt: Date.now()
+        });
+        window.dispatchEvent(new CustomEvent('dashboard-notifications-updated', {
+            detail: {
+                userKey: workspaceUser.key,
+                entries: normalizedEntries
+            }
+        }));
+    }
+
+    function rememberDashboardNotification(type, title, message, config) {
+        const workspaceUser = getWorkspaceUserContext();
+        const nextEntry = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: String(type || 'info').trim() || 'info',
+            title: String(title || 'Notice').trim() || 'Notice',
+            message: String(message || '').trim(),
+            eyebrow: String(config.eyebrow || '').trim(),
+            meta: String(config.meta || '').trim(),
+            pageTitle: String(document.title || '').trim(),
+            createdAt: Date.now(),
+            items: Array.isArray(config.items)
+                ? config.items.slice(0, 4).map((item) => ({
+                    label: String(item && typeof item === 'object' ? item.label || '' : item || '').trim(),
+                    meta: String(item && typeof item === 'object' ? item.meta || '' : '').trim()
+                })).filter((item) => item.label)
+                : []
+        };
+        const entries = [nextEntry, ...getNotificationHistory(workspaceUser)].slice(0, MAX_NOTIFICATION_HISTORY_ITEMS);
+        setNotificationHistory(entries, workspaceUser);
+    }
+
+    function initNotificationCenter() {
+        const triggerButtons = Array.from(document.querySelectorAll('.nav-btn')).filter((button) => button.querySelector('.notification-dot'));
+        if (!triggerButtons.length) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+        let historyEntries = getNotificationHistory(workspaceUser);
+        let drawer = document.getElementById('notification-center-drawer');
+        let overlay = document.getElementById('notification-center-overlay');
+
+        if (!drawer || !overlay) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="notification-center-overlay" class="notification-center-overlay" hidden></div>
+                <aside id="notification-center-drawer" class="notification-center-drawer" aria-hidden="true">
+                    <div class="notification-center-header">
+                        <div>
+                            <p class="notification-center-kicker">Recent Notification Popups</p>
+                            <h2 class="notification-center-title">Notification Center</h2>
+                            <p class="notification-center-subtitle">Last 20 notifications saved for this user.</p>
+                        </div>
+                        <button type="button" class="notification-center-close" id="notification-center-close" aria-label="Close notification center">×</button>
+                    </div>
+                    <div class="notification-center-toolbar">
+                        <span class="notification-center-count" id="notification-center-count">0 saved</span>
+                        <button type="button" class="card-btn" id="notification-center-clear-btn">Clear All</button>
+                    </div>
+                    <div class="notification-center-list" id="notification-center-list"></div>
+                </aside>
+            `);
+            drawer = document.getElementById('notification-center-drawer');
+            overlay = document.getElementById('notification-center-overlay');
+        }
+
+        const list = document.getElementById('notification-center-list');
+        const countLabel = document.getElementById('notification-center-count');
+        const clearButton = document.getElementById('notification-center-clear-btn');
+        const closeButton = document.getElementById('notification-center-close');
+
+        if (!drawer || !overlay || !list || !countLabel || !clearButton || !closeButton) {
+            return;
+        }
+
+        function formatNotificationTimestamp(timestamp) {
+            const date = new Date(Number(timestamp) || Date.now());
+            return date.toLocaleString([], {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function renderNotificationHistory() {
+            historyEntries = getNotificationHistory(workspaceUser);
+            countLabel.textContent = `${historyEntries.length} saved`;
+            list.innerHTML = '';
+
+            if (!historyEntries.length) {
+                list.innerHTML = `
+                    <div class="notification-center-empty">
+                        <strong>No recent notifications yet.</strong>
+                        <p>When a popup appears in the app, it will also be saved here for quick review.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            historyEntries.forEach((entry) => {
+                const article = document.createElement('article');
+                article.className = `notification-center-item notification-center-item-${entry.type}`;
+
+                const head = document.createElement('div');
+                head.className = 'notification-center-item-head';
+
+                const chipRow = document.createElement('div');
+                chipRow.className = 'notification-center-chip-row';
+                if (entry.eyebrow) {
+                    const eyebrowChip = document.createElement('span');
+                    eyebrowChip.className = 'notification-center-chip';
+                    eyebrowChip.textContent = entry.eyebrow;
+                    chipRow.appendChild(eyebrowChip);
+                }
+
+                const typeChip = document.createElement('span');
+                typeChip.className = 'notification-center-chip notification-center-chip-type';
+                typeChip.textContent = entry.type;
+                chipRow.appendChild(typeChip);
+
+                const time = document.createElement('time');
+                time.className = 'notification-center-time';
+                time.textContent = formatNotificationTimestamp(entry.createdAt);
+
+                head.appendChild(chipRow);
+                head.appendChild(time);
+                article.appendChild(head);
+
+                const title = document.createElement('strong');
+                title.className = 'notification-center-item-title';
+                title.textContent = entry.title;
+                article.appendChild(title);
+
+                if (entry.message) {
+                    const message = document.createElement('p');
+                    message.className = 'notification-center-item-message';
+                    message.textContent = entry.message;
+                    article.appendChild(message);
+                }
+
+                if (entry.meta) {
+                    const meta = document.createElement('p');
+                    meta.className = 'notification-center-item-meta';
+                    meta.textContent = entry.meta;
+                    article.appendChild(meta);
+                }
+
+                if (entry.pageTitle) {
+                    const page = document.createElement('p');
+                    page.className = 'notification-center-item-page';
+                    page.textContent = entry.pageTitle;
+                    article.appendChild(page);
+                }
+
+                if (Array.isArray(entry.items) && entry.items.length > 0) {
+                    const details = document.createElement('ul');
+                    details.className = 'notification-center-item-list';
+                    entry.items.forEach((item) => {
+                        const li = document.createElement('li');
+                        li.className = 'notification-center-item-list-entry';
+                        const label = document.createElement('span');
+                        label.textContent = item.label;
+                        li.appendChild(label);
+
+                        if (item.meta) {
+                            const small = document.createElement('small');
+                            small.textContent = item.meta;
+                            li.appendChild(small);
+                        }
+                        details.appendChild(li);
+                    });
+                    article.appendChild(details);
+                }
+
+                list.appendChild(article);
+            });
+        }
+
+        function setDrawerState(isOpen) {
+            drawer.classList.toggle('open', Boolean(isOpen));
+            drawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+            overlay.hidden = !isOpen;
+            overlay.classList.toggle('open', Boolean(isOpen));
+            document.body.classList.toggle('notification-center-open', Boolean(isOpen));
+            triggerButtons.forEach((button) => {
+                button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        }
+
+        triggerButtons.forEach((button) => {
+            button.setAttribute('aria-haspopup', 'dialog');
+            button.setAttribute('aria-controls', 'notification-center-drawer');
+            button.addEventListener('click', () => {
+                const isOpen = drawer.classList.contains('open');
+                renderNotificationHistory();
+                setDrawerState(!isOpen);
+            });
+        });
+
+        overlay.addEventListener('click', () => {
+            setDrawerState(false);
+        });
+
+        closeButton.addEventListener('click', () => {
+            setDrawerState(false);
+        });
+
+        clearButton.addEventListener('click', () => {
+            setNotificationHistory([], workspaceUser);
+            renderNotificationHistory();
+            showDashboardToast('success', 'Notifications Cleared', 'Saved notification history was cleared for this user.', {
+                persist: false,
+                playSound: false
+            });
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && drawer.classList.contains('open')) {
+                setDrawerState(false);
+            }
+        });
+
+        window.addEventListener('dashboard-notifications-updated', () => {
+            renderNotificationHistory();
+        });
+
+        window.addEventListener('storage', (event) => {
+            if (event.key === NOTIFICATION_HISTORY_KEY) {
+                renderNotificationHistory();
+            }
+        });
+
+        renderNotificationHistory();
     }
 
     function initBuildVersionLabel() {
@@ -466,9 +750,18 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             store = {};
         }
 
-        const scoped = store[userKey];
-        if (scoped && typeof scoped === 'object' && !Array.isArray(scoped)) {
-            return scoped;
+        const candidateKeys = getScopedStorageCandidateKeys(userKey);
+        const merged = {};
+
+        [...candidateKeys].reverse().forEach((candidateKey) => {
+            const scoped = store[candidateKey];
+            if (scoped && typeof scoped === 'object' && !Array.isArray(scoped)) {
+                Object.assign(merged, scoped);
+            }
+        });
+
+        if (Object.keys(merged).length > 0) {
+            return merged;
         }
         return {};
     }
@@ -724,6 +1017,32 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function isPopulatedObject(value) {
+        return !!(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0);
+    }
+
+    function mergePropertyAssignmentStores(primaryStore, fallbackStore) {
+        const merged = {};
+
+        if (isPopulatedObject(fallbackStore)) {
+            Object.entries(fallbackStore).forEach(([propertyKey, record]) => {
+                if (record && typeof record === 'object' && !Array.isArray(record)) {
+                    merged[propertyKey] = record;
+                }
+            });
+        }
+
+        if (isPopulatedObject(primaryStore)) {
+            Object.entries(primaryStore).forEach(([propertyKey, record]) => {
+                if (record && typeof record === 'object' && !Array.isArray(record)) {
+                    merged[propertyKey] = record;
+                }
+            });
+        }
+
+        return merged;
+    }
+
     function emitPropertyAssignmentUpdated(propertyKey, assignmentRecord) {
         window.dispatchEvent(new CustomEvent('property-assignment-updated', {
             detail: {
@@ -755,9 +1074,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     }
 
     async function fetchPropertyAssignmentsFromServer() {
-        const token = String(localStorage.getItem('authToken') || '').trim();
+        const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        const localAssignments = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
         if (!token) {
-            return getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
+            return localAssignments;
         }
 
         const response = await fetch('/api/property-assignments', {
@@ -774,9 +1094,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const assignments = payload && payload.assignments && typeof payload.assignments === 'object' && !Array.isArray(payload.assignments)
             ? payload.assignments
             : {};
+        const hydratedAssignments = isPopulatedObject(assignments)
+            ? mergePropertyAssignmentStores(assignments, localAssignments)
+            : localAssignments;
 
-        applyPropertyAssignmentStore(assignments);
-        return assignments;
+        applyPropertyAssignmentStore(hydratedAssignments);
+        return hydratedAssignments;
     }
 
     async function syncPropertyAssignmentRecordToServer(propertyKey, assignmentRecord) {
@@ -1460,6 +1783,64 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         applyAccentGlowPreference(getSavedAccentGlowEnabled());
     }
 
+    function getScopedStorageCandidateKeys(userKey) {
+        const rawKey = String(userKey || '').trim();
+        const normalizedKey = normalizeUserIdentityValue(rawKey);
+        const normalizedNameKey = normalizeUserNameKey(rawKey);
+        const candidates = new Set();
+
+        if (rawKey) {
+            candidates.add(rawKey);
+        }
+        if (normalizedKey) {
+            candidates.add(normalizedKey);
+        }
+        if (normalizedNameKey) {
+            candidates.add(normalizedNameKey);
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+        const workspaceAliases = Array.isArray(workspaceUser.aliases) ? workspaceUser.aliases : [];
+        const workspaceKeys = [
+            String(workspaceUser.key || '').trim(),
+            normalizeUserIdentityValue(workspaceUser.email || ''),
+            normalizeUserNameKey(workspaceUser.name || ''),
+            ...workspaceAliases.map((alias) => normalizeUserIdentityValue(alias))
+        ].filter(Boolean);
+        const workspaceKeySet = new Set(workspaceKeys);
+
+        if (workspaceKeySet.has(rawKey) || workspaceKeySet.has(normalizedKey) || workspaceKeySet.has(normalizedNameKey)) {
+            workspaceKeys.forEach((candidate) => candidates.add(candidate));
+        }
+
+        return Array.from(candidates).filter(Boolean);
+    }
+
+    function getScopedItemSignature(item) {
+        if (!item || typeof item !== 'object') {
+            return String(item);
+        }
+
+        if (item.id != null && String(item.id).trim()) {
+            return `id:${String(item.id).trim()}`;
+        }
+        if (item.propertyKey != null && String(item.propertyKey).trim()) {
+            return `property-key:${String(item.propertyKey).trim().toLowerCase()}`;
+        }
+        if (item.propertyAddress != null && String(item.propertyAddress).trim()) {
+            return `property-address:${String(item.propertyAddress).trim().toLowerCase()}`;
+        }
+        if (item.address != null && String(item.address).trim()) {
+            return `address:${String(item.address).trim().toLowerCase()}`;
+        }
+
+        try {
+            return `json:${JSON.stringify(item)}`;
+        } catch (error) {
+            return `fallback:${String(item)}`;
+        }
+    }
+
     function getUserScopedItems(storageKey, userKey) {
         let store = {};
         try {
@@ -1479,8 +1860,28 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return [];
         }
 
-        const items = store[userKey] || [];
-        return Array.isArray(items) ? items : [];
+        const candidateKeys = getScopedStorageCandidateKeys(userKey);
+        const mergedItems = [];
+        const seenSignatures = new Set();
+
+        candidateKeys.forEach((candidateKey) => {
+            const items = store[candidateKey] || [];
+            if (!Array.isArray(items)) {
+                return;
+            }
+
+            items.forEach((item) => {
+                const signature = getScopedItemSignature(item);
+                if (seenSignatures.has(signature)) {
+                    return;
+                }
+
+                seenSignatures.add(signature);
+                mergedItems.push(item);
+            });
+        });
+
+        return mergedItems;
     }
 
     function setUserScopedItems(storageKey, userKey, items) {
@@ -1512,9 +1913,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return fallbackValue;
         }
 
-        return Object.prototype.hasOwnProperty.call(store, userKey)
-            ? store[userKey]
-            : fallbackValue;
+        const candidateKeys = getScopedStorageCandidateKeys(userKey);
+        for (const candidateKey of candidateKeys) {
+            if (Object.prototype.hasOwnProperty.call(store, candidateKey)) {
+                return store[candidateKey];
+            }
+        }
+
+        return fallbackValue;
     }
 
     function setUserScopedValue(storageKey, userKey, value) {
@@ -14382,6 +14788,7 @@ function initNavbarDateTime() {
         initBuildVersionLabel();
         initNavbarDateTime();
         initNavbarSearch();
+        initNotificationCenter();
         initTiltEffect();
         initCounters();
         initMobileMenu();
