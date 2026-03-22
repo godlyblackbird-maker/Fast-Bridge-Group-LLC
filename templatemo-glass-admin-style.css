@@ -727,12 +727,12 @@
     content: '';
     position: fixed;
     inset: 0;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 246, 247, 0.18)),
-        url("Themes/Wallpaper%20Japan.jpg") no-repeat center center;
+    background: url("Themes/Wallpaper%20Japan.jpg") no-repeat center center;
     background-size: cover;
-    opacity: 0.34;
-    filter: saturate(0.94) contrast(1.02);
+    opacity: 0.42;
+    filter: blur(3px) saturate(0.96) contrast(1.02);
+    transform: scale(1.03);
+    transform-origin: center;
     pointer-events: none;
     z-index: -1;
 }
