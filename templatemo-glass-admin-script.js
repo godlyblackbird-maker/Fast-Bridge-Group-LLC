@@ -2729,6 +2729,7 @@ function initNavbarDateTime() {
                 const maxTilt = Number.parseFloat(card.dataset.tiltMax);
                 const lift = Number.parseFloat(card.dataset.tiltLift);
                 const scale = Number.parseFloat(card.dataset.tiltScale);
+                const inwardTiltDirection = card.classList.contains('legal-hover-card') ? -1 : 1;
                 const resolvedLift = Number.isFinite(lift)
                     ? lift
                     : (card.classList.contains('legal-hover-card') ? -3 : 0);
@@ -2743,8 +2744,8 @@ function initNavbarDateTime() {
                     return Math.max(-maxTilt, Math.min(maxTilt, value));
                 };
 
-                const rotateX = clamp((y - centerY) / divisor);
-                const rotateY = clamp((centerX - x) / divisor);
+                const rotateX = clamp(((y - centerY) / divisor) * inwardTiltDirection);
+                const rotateY = clamp(((centerX - x) / divisor) * inwardTiltDirection);
 
                 card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px) translateY(${resolvedLift}px) scale(${resolvedScale})`;
             });
