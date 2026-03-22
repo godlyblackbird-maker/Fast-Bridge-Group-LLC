@@ -203,7 +203,7 @@
             content: '';
             position: fixed;
             right: -70px;
-            bottom: -180px;
+            bottom: -194px;
             width: 520px;
             height: 520px;
             border-radius: 0;
@@ -789,30 +789,60 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 46px;
-            padding: 0 18px;
-            border-radius: 999px;
+            gap: 8px;
+            min-height: 38px;
+            padding: 6px 10px 6px 12px;
+            border-radius: 18px;
             border: 1px solid var(--secondary-border);
-            background: var(--secondary-bg);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
             color: var(--text);
             text-decoration: none;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 10px 24px rgba(8, 47, 73, 0.12);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 20px rgba(8, 47, 73, 0.1);
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .theme-switch-btn::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--sand));
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
         }
 
         .theme-switch-btn:hover,
         .theme-switch-btn:focus-visible {
             transform: translateY(-1px);
             border-color: var(--login-hover-border);
-            background: rgba(255, 255, 255, 0.22);
-            box-shadow: 0 16px 28px rgba(8, 47, 73, 0.18);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.1));
+            box-shadow: 0 14px 24px rgba(8, 47, 73, 0.16);
+        }
+
+        .theme-switch-btn .theme-switch-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
         }
 
         .theme-switch-btn .theme-switch-current {
-            opacity: 0.7;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: var(--text);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            opacity: 1;
         }
 
         .hero {
@@ -1617,6 +1647,22 @@
                 letter-spacing: 0.06em;
             }
 
+            .theme-switch-btn {
+                min-height: 34px;
+                padding: 5px 8px 5px 10px;
+                gap: 6px;
+            }
+
+            .theme-switch-btn .theme-switch-label {
+                display: none;
+            }
+
+            .theme-switch-btn .theme-switch-current {
+                min-height: 22px;
+                padding: 0 8px;
+                font-size: 10px;
+            }
+
             .hero-panel,
             .hero-side,
             .section-card {
@@ -1634,7 +1680,7 @@
 
             html[data-theme='beach'] body::before {
                 right: -98px;
-                bottom: -138px;
+                bottom: -148px;
                 width: 360px;
                 height: 360px;
                 opacity: 0.1;
@@ -1717,7 +1763,7 @@
             </a>
             <div class="topbar-actions">
                 <button class="theme-switch-btn" id="homepage-theme-toggle" type="button" aria-live="polite">
-                    <span class="theme-switch-label">Switch Theme</span>
+                    <span class="theme-switch-label">Theme</span>
                     <span class="theme-switch-current">Beach Theme</span>
                 </button>
                 <a class="login-btn" href="login.html">Log In</a>
@@ -2021,9 +2067,7 @@
                 document.documentElement.setAttribute('data-theme', activeTheme);
 
                 if (homepageThemeLabel) {
-                    homepageThemeLabel.textContent = availableThemes.length === 2
-                        ? `Switch between ${THEME_LABELS[availableThemes[0]]} and ${THEME_LABELS[availableThemes[1]]}`
-                        : `Switch to ${THEME_LABELS[nextTheme]} Theme`;
+                    homepageThemeLabel.textContent = 'Theme';
                 }
 
                 if (homepageThemeCurrent) {

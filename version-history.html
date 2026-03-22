@@ -13,6 +13,32 @@
         (function () {
             try {
                 const root = document.documentElement;
+                const KNOWN_EMAIL_GROUPS = [
+                    {
+                        canonical: 'isaac.haro@fastbridgegroupllc.com',
+                        aliases: [
+                            'isaac.haro@fastbridgegroupllc.com',
+                            'isaacs.hesed@fastbridgegroup.com',
+                            'isaacs.hesed@gmail.com'
+                        ]
+                    },
+                    {
+                        canonical: 'steve.medina@fastbridgegroupllc.com',
+                        aliases: [
+                            'steve.medina@fastbridgegroupllc.com',
+                            'medinafbg@gmail.com',
+                            'medinastj@gmail.com'
+                        ]
+                    }
+                ];
+                const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+
+                KNOWN_EMAIL_GROUPS.forEach((group) => {
+                    group.aliases.forEach((alias) => {
+                        KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
+                    });
+                });
+
                 const readJson = (key) => {
                     try {
                         return JSON.parse(localStorage.getItem(key) || '{}');
@@ -21,14 +47,52 @@
                     }
                 };
 
-                const profile = readJson('userProfile');
-                const user = readJson('user');
-                const email = String(user.email || profile.email || '').trim().toLowerCase();
-                const name = String(user.name || profile.name || 'User').trim();
-                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const normalizeKnownEmail = (value) => {
+                    const normalizedValue = String(value || '').trim().toLowerCase();
+                    return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedValue) || normalizedValue;
+                };
+
+                const buildUserKeys = () => {
+                    const profileStore = readJson('userProfilesByUser');
+                    const profile = readJson('userProfile');
+                    const user = readJson('user');
+                    const email = normalizeKnownEmail(user.email || profile.email || '');
+                    const name = String(user.name || profile.name || 'User').trim();
+                    const keys = new Set();
+
+                    if (email) {
+                        keys.add(email);
+                        const group = KNOWN_EMAIL_GROUPS.find((item) => item.canonical === email || item.aliases.includes(email));
+                        if (group) {
+                            group.aliases.forEach((alias) => keys.add(alias));
+                        }
+                    }
+
+                    if (name) {
+                        keys.add(name.toLowerCase().replace(/\s+/g, '-'));
+                    }
+
+                    const scopedProfileKeys = Object.keys(profileStore || {}).filter((key) => {
+                        const entry = profileStore[key];
+                        if (!entry || typeof entry !== 'object') {
+                            return false;
+                        }
+                        const scopedEmail = normalizeKnownEmail(entry.email || '');
+                        const scopedName = String(entry.name || '').trim().toLowerCase().replace(/\s+/g, '-');
+                        return (email && scopedEmail === email) || (name && scopedName === name.toLowerCase().replace(/\s+/g, '-'));
+                    });
+
+                    scopedProfileKeys.forEach((key) => keys.add(String(key || '').trim().toLowerCase()));
+                    return Array.from(keys).filter(Boolean);
+                };
+
                 const themeStore = readJson('dashboardThemeByUser');
                 const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
-                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+                const userKeys = buildUserKeys();
+                const scopedTheme = userKeys
+                    .map((key) => themeStore[key] && themeStore[key].value)
+                    .find((value) => typeof value === 'string' && value.trim());
+                let theme = String(scopedTheme || storedHomepageTheme || 'beach').trim().toLowerCase();
 
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -599,9 +663,8 @@
         <div class="version-history-topbar">
             <div class="version-history-badge">Version History</div>
             <div class="version-history-actions">
-                <a class="version-history-link" href="index.html">Homepage</a>
-                <a class="version-history-link" href="settings.html">Settings</a>
-                <a class="version-history-link" href="login.html">Login</a>
+                <a class="version-history-link" id="version-history-home-link" href="index.html">Back to Home</a>
+                <a class="version-history-link" id="version-history-account-link" href="login.html">Log In</a>
             </div>
         </div>
 
@@ -737,5 +800,38 @@
             </div>
         </section>
     </div>
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const authToken = String(localStorage.getItem('authToken') || '').trim();
+                const user = readJson('user');
+                const profile = readJson('userProfile');
+                const hasIdentity = Boolean(String(user.email || profile.email || '').trim() || String(user.name || profile.name || '').trim());
+                const isAuthenticated = Boolean(authToken && hasIdentity);
+                const homeLink = document.getElementById('version-history-home-link');
+                const accountLink = document.getElementById('version-history-account-link');
+
+                if (homeLink) {
+                    homeLink.textContent = isAuthenticated ? 'Homepage' : 'Back to Home';
+                    homeLink.href = 'index.html';
+                }
+
+                if (accountLink) {
+                    accountLink.textContent = isAuthenticated ? 'Dashboard' : 'Log In';
+                    accountLink.href = isAuthenticated ? 'dashboard.html' : 'login.html';
+                }
+            } catch (error) {
+                // Keep the default public actions if auth state can't be resolved.
+            }
+        })();
+    </script>
 </body>
 </html>
