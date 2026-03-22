@@ -425,6 +425,27 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
     }
 
+    function initLegalPageAccessLinks() {
+        const legalHeaderLinks = document.querySelectorAll('.legal-page-header .legal-login-link');
+        if (!legalHeaderLinks.length) {
+            return;
+        }
+
+        const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        const workspaceUser = getWorkspaceUserContext();
+        const hasAuthenticatedUser = !!(authToken && (workspaceUser.email || (workspaceUser.name && workspaceUser.name !== 'User')));
+
+        if (!hasAuthenticatedUser) {
+            return;
+        }
+
+        legalHeaderLinks.forEach((link) => {
+            link.href = 'dashboard.html';
+            link.textContent = 'Back to Dashboard';
+            link.setAttribute('title', 'Return to your dashboard');
+        });
+    }
+
     function initMyAgentsAccessRules() {
         document.querySelectorAll('a[href="my-agents.html"]').forEach((link) => {
             const navItem = link.closest('.nav-item');
@@ -12864,6 +12885,7 @@ function initNavbarDateTime() {
             const strikeZoneAcqPctEl = document.getElementById('ia-strike-zone-acq-pct');
             const strikeZoneGapEl = document.getElementById('ia-strike-zone-gap');
             const strikeZoneAreaEl = document.getElementById('ia-strike-zone-area');
+            const strikeZoneTargetButton = document.getElementById('ia-strike-zone-target-btn');
             const iaSummaryCopyBtn = document.getElementById('ia-summary-copy-btn');
             const cashNote = document.getElementById('ia-cash-note');
             const financingSection = document.getElementById('ia-financing-section');
@@ -12914,6 +12936,7 @@ function initNavbarDateTime() {
             let financingHoldCollapsed = false;
             let iaSummaryMessage = '';
             let investorSummaryMessage = '';
+            let strikeZoneTargetOffer = null;
 
             function sanitizeIaInvestorDefaults(defaults) {
                 const nextDefaults = defaults && typeof defaults === 'object'
@@ -13242,6 +13265,37 @@ function initNavbarDateTime() {
                 if (invDueDiligenceInput) investorDefaults.invDueDiligence = String(invDueDiligenceInput.value || investorDefaults.invDueDiligence);
                 if (invAcquisitionFeeInput) investorDefaults.invAcquisitionFee = String(invAcquisitionFeeInput.value || investorDefaults.invAcquisitionFee);
                 if (invCashForKeysInput) investorDefaults.invCashForKeys = String(invCashForKeysInput.value || investorDefaults.invCashForKeys);
+            }
+
+            function calculateZeroGapStrikeZoneOffer(arvBasis, strikeZonePct, grossPurchaseAdjustmentTotal, extraCosts) {
+                const maxAcquisitionAmount = Math.max(arvBasis, 0) * (Math.max(strikeZonePct, 0) / 100);
+                const offerBeforeClosingRate = maxAcquisitionAmount - Math.max(grossPurchaseAdjustmentTotal, 0) - Math.max(extraCosts, 0);
+                if (offerBeforeClosingRate <= 0) {
+                    return 0;
+                }
+
+                return Math.max(offerBeforeClosingRate / (1 + buySideRate), 0);
+            }
+
+            function updateStrikeZoneTargetButton(offerAmount) {
+                if (!strikeZoneTargetButton) {
+                    return;
+                }
+
+                const hasTarget = Number.isFinite(offerAmount) && offerAmount >= 0;
+                strikeZoneTargetOffer = hasTarget ? offerAmount : null;
+                strikeZoneTargetButton.hidden = !hasTarget;
+                strikeZoneTargetButton.disabled = !hasTarget;
+
+                if (!hasTarget) {
+                    strikeZoneTargetButton.textContent = 'Use 0% Gap Offer';
+                    strikeZoneTargetButton.removeAttribute('title');
+                    return;
+                }
+
+                const roundedOffer = Math.round(offerAmount);
+                strikeZoneTargetButton.textContent = `Use 0% Gap Offer (${formatMoney(roundedOffer)})`;
+                strikeZoneTargetButton.setAttribute('title', `Set offer price to ${formatMoney(roundedOffer)} for exactly 0% strike zone gap.`);
             }
 
             function getFinancingModeAssumptions(mode) {
@@ -13607,11 +13661,14 @@ function initNavbarDateTime() {
                 if (strikeZoneGapEl) {
                     if (strikeZonePct > 0) {
                         const strikeZoneGap = strikeZonePct - acquisitionPctOfArv;
+                        const zeroGapOffer = calculateZeroGapStrikeZoneOffer(arvBasis, strikeZonePct, grossPurchaseAdjustmentTotal, extraCosts);
+                        updateStrikeZoneTargetButton(zeroGapOffer);
                         updateStrikeZoneGapState(strikeZoneGap >= 0 ? 'is-under' : 'is-over');
                         strikeZoneGapEl.textContent = strikeZoneGap >= 0
                             ? `Gap to strike zone: ${formatPercent(strikeZoneGap)} under max`
                             : `Gap to strike zone: ${formatPercent(Math.abs(strikeZoneGap))} over max`;
                     } else {
+                        updateStrikeZoneTargetButton(null);
                         updateStrikeZoneGapState('is-na');
                         strikeZoneGapEl.textContent = 'Gap to strike zone: NA';
                     }
@@ -13756,6 +13813,19 @@ function initNavbarDateTime() {
                 formatNumericInputValue(offerPriceInput);
                 recalculate();
             });
+
+            if (strikeZoneTargetButton) {
+                strikeZoneTargetButton.addEventListener('click', () => {
+                    if (!Number.isFinite(strikeZoneTargetOffer)) {
+                        return;
+                    }
+
+                    offerPriceMode = 'manual';
+                    offerPriceInput.value = String(Math.round(strikeZoneTargetOffer));
+                    formatNumericInputValue(offerPriceInput);
+                    recalculate();
+                });
+            }
 
             [
                 arvInput,
@@ -13908,6 +13978,7 @@ function initNavbarDateTime() {
     // ============================================
     function init() {
         initSiteLegalFooter();
+        initLegalPageAccessLinks();
         initAccentPreference();
         initMyAgentsAccessRules();
         initThemeToggle();

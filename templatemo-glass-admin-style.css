@@ -11636,6 +11636,29 @@ select.form-input option:checked,
     opacity: 0.82;
 }
 
+.ia-strike-zone-action {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--accent-light-rgb), 0.42);
+    background: rgba(var(--accent-rgb), 0.16);
+    color: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.ia-strike-zone-action:hover,
+.ia-strike-zone-action:focus-visible {
+    transform: translateY(-1px);
+    background: rgba(var(--accent-rgb), 0.24);
+    border-color: rgba(var(--accent-light-rgb), 0.66);
+}
+
 .ia-other-costs {
     border: 1px dashed rgba(255, 255, 255, 0.14);
     border-radius: 10px;
