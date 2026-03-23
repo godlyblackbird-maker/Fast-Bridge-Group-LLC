@@ -620,7 +620,7 @@ async function checkAuthStatus() {
 
 // Logout function (can be called from any page)
 async function logout() {
-  const token = String(localStorage.getItem('authToken') || '').trim();
+  const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
   if (token) {
     try {
       await fetch('/api/logout', {
@@ -635,9 +635,11 @@ async function logout() {
   }
   localStorage.removeItem('authToken');
   localStorage.removeItem('user');
+  localStorage.removeItem('userProfile');
   localStorage.removeItem('registeredEmail');
   localStorage.removeItem('bypassAuth');
   localStorage.removeItem('bypassProfile');
+  sessionStorage.removeItem('authToken');
   window.location.href = '/login.html';
 }
 
@@ -649,5 +651,5 @@ function getCurrentUser() {
 
 // Check if user is authenticated
 function isAuthenticated() {
-  return localStorage.getItem('authToken') !== null;
+  return Boolean(String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim());
 }

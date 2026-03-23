@@ -144,6 +144,23 @@
     localStorage.removeItem('registeredEmail');
     localStorage.removeItem('bypassAuth');
     localStorage.removeItem('bypassProfile');
+    sessionStorage.removeItem('authToken');
+  }
+
+  function getStoredAuthToken() {
+    const localToken = String(localStorage.getItem('authToken') || '').trim();
+    if (localToken) {
+      return localToken;
+    }
+
+    const sessionToken = String(sessionStorage.getItem('authToken') || '').trim();
+    if (!sessionToken) {
+      return '';
+    }
+
+    localStorage.setItem('authToken', sessionToken);
+    sessionStorage.removeItem('authToken');
+    return sessionToken;
   }
 
   function isAdminUser(userLike) {
@@ -159,7 +176,7 @@
   }
 
   function hasStoredAuthToken() {
-    return Boolean(String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim());
+    return Boolean(getStoredAuthToken());
   }
 
   function sanitizeLegacyProfileMirror() {
@@ -443,7 +460,7 @@
   }
 
   async function syncAuthenticatedUser() {
-    const token = localStorage.getItem('authToken');
+    const token = getStoredAuthToken();
     if (!token) {
       return readStoredUser();
     }
@@ -524,7 +541,7 @@
   
   // Check if user is authenticated
   function checkAuthentication() {
-    const token = localStorage.getItem('authToken');
+    const token = getStoredAuthToken();
     const currentPath = window.location.pathname;
 
     // Pages that don't require authentication
@@ -689,7 +706,7 @@
 
   // Logout function
   window.logout = async function() {
-    const token = String(localStorage.getItem('authToken') || '').trim();
+    const token = getStoredAuthToken();
     if (token) {
       try {
         await fetch('/api/logout', {
@@ -708,11 +725,11 @@
 
   // Check authentication
   window.isAuthenticated = function() {
-    return localStorage.getItem('authToken') !== null;
+    return Boolean(getStoredAuthToken());
   };
 
   // Get auth token
   window.getAuthToken = function() {
-    return localStorage.getItem('authToken');
+    return getStoredAuthToken();
   };
 })();
