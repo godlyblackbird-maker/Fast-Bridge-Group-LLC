@@ -2000,12 +2000,16 @@
             const getUserThemeContext = () => {
                 const profile = readJson('userProfile');
                 const user = readJson('user');
-                const email = String(user.email || profile.email || '').trim().toLowerCase();
-                const name = String(user.name || profile.name || 'User').trim();
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 return {
                     userKey,
-                    hasIdentity: Boolean(email || String(user.name || profile.name || '').trim())
+                    hasIdentity: Boolean(email || String(user.name || (canUseProfileIdentity ? profile.name : '') || '').trim())
                 };
             };
 

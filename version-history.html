@@ -815,10 +815,13 @@
                     }
                 };
 
-                const authToken = String(localStorage.getItem('authToken') || '').trim();
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
                 const user = readJson('user');
                 const profile = readJson('userProfile');
-                const hasIdentity = Boolean(String(user.email || profile.email || '').trim() || String(user.name || profile.name || '').trim());
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const hasIdentity = Boolean(userEmail || (canUseProfileIdentity ? profileEmail : '') || String(user.name || (canUseProfileIdentity ? profile.name : '') || '').trim());
                 const isAuthenticated = Boolean(authToken && hasIdentity);
                 const homeLink = document.getElementById('version-history-home-link');
                 const accountLink = document.getElementById('version-history-account-link');

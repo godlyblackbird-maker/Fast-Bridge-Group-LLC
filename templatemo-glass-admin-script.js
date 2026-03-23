@@ -12788,26 +12788,34 @@ function initNavbarDateTime() {
             function getSenderProfile() {
                 const profile = readLocalJson('userProfile');
                 const user = readLocalJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = normalizeUserIdentityValue(user.email || '');
+                const profileEmail = normalizeUserIdentityValue(profile.email || '');
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
                 const smtpSettings = getScopedSmtpSettings(workspaceUser);
                 const smtpUser = String(smtpSettings && smtpSettings.smtpUser ? smtpSettings.smtpUser : '').trim();
-                const normalizedWorkspaceEmail = normalizeUserIdentityValue(workspaceUser.email || user.email || profile.email || '');
+                const normalizedWorkspaceEmail = normalizeUserIdentityValue(workspaceUser.email || userEmail || (canUseProfileIdentity ? profileEmail : ''));
                 const normalizedDraftSenderEmail = normalizeUserIdentityValue(savedDraft.senderEmail || '');
                 const safeDraftSenderEmail = normalizedDraftSenderEmail && normalizedDraftSenderEmail === normalizedWorkspaceEmail
                     ? String(savedDraft.senderEmail || '').trim()
                     : '';
                 return {
-                    name: String(savedDraft.senderName || profile.name || user.name || workspaceUser.name || '').trim(),
-                    email: String(smtpUser || safeDraftSenderEmail || workspaceUser.email || user.email || profile.email || '').trim()
+                    name: String(savedDraft.senderName || user.name || (canUseProfileIdentity ? profile.name : '') || workspaceUser.name || '').trim(),
+                    email: String(smtpUser || safeDraftSenderEmail || workspaceUser.email || userEmail || (canUseProfileIdentity ? profileEmail : '') || '').trim()
                 };
             }
 
             function getOfferSignerName() {
                 const profile = readLocalJson('userProfile');
                 const user = readLocalJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = normalizeUserIdentityValue(user.email || '');
+                const profileEmail = normalizeUserIdentityValue(profile.email || '');
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
                 return String(
                     savedDraft.senderName ||
-                    profile.name ||
                     user.name ||
+                    (canUseProfileIdentity ? profile.name : '') ||
                     workspaceUser.name ||
                     ''
                 ).trim();

@@ -839,8 +839,12 @@
             function getUserStorageKey() {
                 const profile = safeReadJson('userProfile');
                 const user = safeReadJson('user');
-                const email = String(user.email || profile.email || '').trim().toLowerCase();
-                const name = String(user.name || profile.name || 'default-user').trim().toLowerCase();
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'default-user').trim().toLowerCase();
                 const userKey = email || name.replace(/\s+/g, '-') || 'default-user';
                 return `${STORAGE_KEY_BASE}:${userKey}`;
             }
