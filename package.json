@@ -1,6 +1,6 @@
 {
   "name": "fast-investments-dashboard",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Secure Investment Dashboard",
   "main": "server.js",
   "scripts": {

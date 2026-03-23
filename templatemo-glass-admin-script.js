@@ -646,7 +646,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.2.2';
+                versionLabel.textContent = 'v1.2.3';
             });
     }
 
