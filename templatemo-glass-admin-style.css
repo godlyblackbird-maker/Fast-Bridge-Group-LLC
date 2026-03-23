@@ -3024,8 +3024,50 @@ a {
 
 /* Sidebar User Profile */
 .sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     padding-top: 20px;
     border-top: 1px solid var(--glass-border);
+}
+
+.sidebar-collapse-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 46px;
+    padding: 12px 16px;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.sidebar-collapse-button:hover,
+.sidebar-collapse-button:focus-visible {
+    background: var(--glass-hover);
+    color: var(--text-primary);
+    border-color: rgba(var(--accent-light-rgb), 0.32);
+}
+
+.sidebar-collapse-button:active {
+    transform: translateY(1px);
+}
+
+.sidebar-collapse-button svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.sidebar-collapse-button-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .user-profile {
@@ -3085,6 +3127,58 @@ a {
     margin-left: var(--sidebar-width);
     padding: 30px;
     min-height: 100vh;
+}
+
+body.sidebar-collapsed .sidebar {
+    width: 96px;
+    padding: 24px 14px;
+}
+
+body.sidebar-collapsed .sidebar-header {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+}
+
+body.sidebar-collapsed .logo-img {
+    width: 56px;
+    height: 56px;
+}
+
+body.sidebar-collapsed .nav-section-title,
+body.sidebar-collapsed .nav-badge,
+body.sidebar-collapsed .nav-lock-badge,
+body.sidebar-collapsed .user-info,
+body.sidebar-collapsed .user-profile > svg,
+body.sidebar-collapsed .sidebar-collapse-button-label {
+    display: none;
+}
+
+body.sidebar-collapsed .nav-link {
+    justify-content: center;
+    gap: 0;
+    padding: 14px 12px;
+    font-size: 0;
+}
+
+body.sidebar-collapsed .nav-icon {
+    width: 22px;
+    height: 22px;
+    margin: 0;
+}
+
+body.sidebar-collapsed .sidebar-footer {
+    align-items: center;
+}
+
+body.sidebar-collapsed .user-profile,
+body.sidebar-collapsed .sidebar-collapse-button {
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+body.sidebar-collapsed .main-content {
+    margin-left: 96px;
 }
 
 .site-legal-footer {
@@ -11282,6 +11376,10 @@ a {
     :root {
         --sidebar-width: 0px;
     }
+
+    body.sidebar-collapsed .main-content {
+        margin-left: 0;
+    }
     
     .sidebar {
         transform: translateX(-100%);
@@ -11300,6 +11398,10 @@ a {
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+
+    .sidebar-collapse-button {
+        display: none;
     }
     
     .bottom-grid {

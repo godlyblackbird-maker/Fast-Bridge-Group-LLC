@@ -22,6 +22,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
     const USER_THEME_KEY = 'dashboardThemeByUser';
+    const SIDEBAR_STATE_KEY = 'dashboardSidebarStateByUser';
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
@@ -3420,6 +3421,98 @@ function initNavbarDateTime() {
                 }
             });
         }
+    }
+
+    function initSidebarCollapse() {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) {
+            return;
+        }
+
+        const sidebarFooter = sidebar.querySelector('.sidebar-footer');
+        if (!sidebarFooter) {
+            return;
+        }
+
+        const desktopQuery = window.matchMedia('(max-width: 992px)');
+        const workspaceUser = getWorkspaceUserContext();
+        const storedState = getUserScopedObject(SIDEBAR_STATE_KEY, workspaceUser.key);
+        let isCollapsed = Boolean(storedState.collapsed);
+
+        let button = sidebar.querySelector('[data-sidebar-collapse-button="true"]');
+        if (!button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'sidebar-collapse-button';
+            button.dataset.sidebarCollapseButton = 'true';
+            button.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6"></path>
+                </svg>
+                <span class="sidebar-collapse-button-label">Collapse Sidebar</span>
+            `;
+            sidebarFooter.appendChild(button);
+        }
+
+        Array.from(sidebar.querySelectorAll('.nav-link')).forEach((link) => {
+            if (link.getAttribute('title')) {
+                return;
+            }
+            const label = String(link.textContent || '').replace(/\s+/g, ' ').trim();
+            if (label) {
+                link.setAttribute('title', label);
+            }
+        });
+
+        const label = button.querySelector('.sidebar-collapse-button-label');
+        const icon = button.querySelector('svg');
+
+        function persistState(nextCollapsed) {
+            setUserScopedObject(SIDEBAR_STATE_KEY, workspaceUser.key, {
+                collapsed: Boolean(nextCollapsed),
+                updatedAt: Date.now()
+            });
+        }
+
+        function applyCollapsedState(nextCollapsed, options) {
+            const config = options && typeof options === 'object' ? options : {};
+            isCollapsed = Boolean(nextCollapsed);
+            const shouldCollapse = isCollapsed && !desktopQuery.matches;
+
+            document.body.classList.toggle('sidebar-collapsed', shouldCollapse);
+            sidebar.classList.toggle('sidebar-collapsed', shouldCollapse);
+
+            if (label) {
+                label.textContent = shouldCollapse ? 'Expand Sidebar' : 'Collapse Sidebar';
+            }
+
+            if (icon) {
+                icon.style.transform = shouldCollapse ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+
+            button.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+            button.setAttribute('aria-label', shouldCollapse ? 'Expand sidebar' : 'Collapse sidebar');
+
+            if (config.persist !== false) {
+                persistState(isCollapsed);
+            }
+        }
+
+        button.addEventListener('click', () => {
+            applyCollapsedState(!isCollapsed);
+        });
+
+        const syncResponsiveState = () => {
+            applyCollapsedState(isCollapsed, { persist: false });
+        };
+
+        if (desktopQuery.addEventListener) {
+            desktopQuery.addEventListener('change', syncResponsiveState);
+        } else if (desktopQuery.addListener) {
+            desktopQuery.addListener(syncResponsiveState);
+        }
+
+        applyCollapsedState(isCollapsed, { persist: false });
     }
 
     function initMenuSoundEffects() {
@@ -15128,6 +15221,7 @@ function initNavbarDateTime() {
         initTiltEffect();
         initCounters();
         initMobileMenu();
+        initSidebarCollapse();
         initMenuSoundEffects();
         initSoundSettingsTab();
         initFormValidation();
