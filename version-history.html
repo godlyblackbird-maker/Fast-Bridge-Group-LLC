@@ -56,8 +56,12 @@
                     const profileStore = readJson('userProfilesByUser');
                     const profile = readJson('userProfile');
                     const user = readJson('user');
-                    const email = normalizeKnownEmail(user.email || profile.email || '');
-                    const name = String(user.name || profile.name || 'User').trim();
+                    const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                    const userEmail = normalizeKnownEmail(user.email || '');
+                    const profileEmail = normalizeKnownEmail(profile.email || '');
+                    const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                    const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                    const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                     const keys = new Set();
 
                     if (email) {

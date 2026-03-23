@@ -24,8 +24,12 @@
 
                 const profile = readJson('userProfile');
                 const user = readJson('user');
-                const email = String(user.email || profile.email || '').trim().toLowerCase();
-                const name = String(user.name || profile.name || 'User').trim();
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
 
                 const themeStore = readJson('dashboardThemeByUser');
@@ -386,6 +390,7 @@
                     <div id="assigned-properties-list" class="deals-compact-list">
                         <p class="deals-compact-empty">No properties have been assigned to you yet.</p>
                     </div>
+                    <div id="assigned-properties-pagination" class="deals-compact-pagination" hidden></div>
                 </div>
 
                 <div class="glass-card deals-compact-card">
@@ -399,6 +404,7 @@
                     <div id="deals-compact-list" class="deals-compact-list">
                         <p class="deals-compact-empty">No clicked properties yet. Open properties in MLS Hot Deals and they will appear here.</p>
                     </div>
+                    <div id="deals-compact-pagination" class="deals-compact-pagination" hidden></div>
                 </div>
             </section>
         </main>

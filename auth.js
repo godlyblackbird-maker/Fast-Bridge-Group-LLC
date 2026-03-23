@@ -158,6 +158,34 @@
     return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'premium user');
   }
 
+  function hasStoredAuthToken() {
+    return Boolean(String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim());
+  }
+
+  function sanitizeLegacyProfileMirror() {
+    const storedUser = readStoredUser();
+    if (!storedUser || !hasStoredAuthToken()) {
+      return;
+    }
+
+    let legacyProfile = null;
+    try {
+      legacyProfile = JSON.parse(localStorage.getItem('userProfile') || 'null');
+    } catch (error) {
+      legacyProfile = null;
+    }
+
+    if (!legacyProfile || typeof legacyProfile !== 'object') {
+      return;
+    }
+
+    const storedEmail = normalizeKnownEmail(storedUser.email || '');
+    const legacyEmail = normalizeKnownEmail(legacyProfile.email || '');
+    if (storedEmail && legacyEmail && storedEmail !== legacyEmail) {
+      localStorage.removeItem('userProfile');
+    }
+  }
+
   function formatRoleLabel(roleValue) {
     const normalizedRole = String(roleValue || '').trim().toLowerCase();
     if (normalizedRole === 'admin') {
@@ -536,8 +564,9 @@
 
   // Run check when page loads
   document.addEventListener('DOMContentLoaded', async function() {
+    sanitizeLegacyProfileMirror();
     const storedUser = readStoredUser();
-    if (storedUser) {
+    if (storedUser && !hasStoredAuthToken()) {
       syncLegacyUserProfile(storedUser);
     }
     if (applyAdminControlsAccess(storedUser) === false) {

@@ -696,9 +696,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         } catch (error) {
             user = {};
         }
-        const email = normalizeUserIdentityValue(user.email || profile.email || '');
-        const name = String(user.name || profile.name || 'User').trim();
-        const role = ADMIN_CANONICAL_EMAILS.has(email) ? 'admin' : normalizeUserIdentityValue(user.role || profile.role || '');
+        const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        const userEmail = normalizeUserIdentityValue(user.email || '');
+        const profileEmail = normalizeUserIdentityValue(profile.email || '');
+        const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+        const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+        const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+        const role = ADMIN_CANONICAL_EMAILS.has(email)
+            ? 'admin'
+            : normalizeUserIdentityValue(user.role || (canUseProfileIdentity ? profile.role : '') || '');
         const key = email || normalizeUserNameKey(name) || 'default-user';
         return {
             key,
@@ -10159,8 +10165,10 @@ function initNavbarDateTime() {
     async function initDealsPage() {
         const list = document.getElementById('deals-compact-list');
         const count = document.getElementById('deals-compact-count');
+        const listPagination = document.getElementById('deals-compact-pagination');
         const assignedList = document.getElementById('assigned-properties-list');
         const assignedCount = document.getElementById('assigned-properties-count');
+        const assignedPagination = document.getElementById('assigned-properties-pagination');
         const importOverlay = document.getElementById('deals-import-overlay');
         const importOpenButton = document.getElementById('deals-import-open');
         const importForm = document.getElementById('deals-import-form');
@@ -10168,8 +10176,13 @@ function initNavbarDateTime() {
         const importCloseButtons = importOverlay
             ? Array.from(importOverlay.querySelectorAll('[data-deals-import-close="true"]'))
             : [];
+        const pageSize = 10;
+        const paginationState = {
+            assigned: 1,
+            clicked: 1
+        };
 
-        if (!list || !count || !assignedList || !assignedCount) {
+        if (!list || !count || !assignedList || !assignedCount || !listPagination || !assignedPagination) {
             return;
         }
 
@@ -10465,17 +10478,87 @@ function initNavbarDateTime() {
             return `Assigned by ${assignedByName}`;
         }
 
+        function clampPage(page, totalItems) {
+            const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+            const numericPage = Number(page);
+            if (!Number.isFinite(numericPage)) {
+                return 1;
+            }
+
+            return Math.min(Math.max(1, Math.floor(numericPage)), totalPages);
+        }
+
+        function renderPagination(target, options) {
+            const { page, totalItems, onPageChange, label } = options;
+            const safePage = clampPage(page, totalItems);
+            const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+            target.innerHTML = '';
+
+            if (totalItems <= pageSize) {
+                target.hidden = true;
+                return safePage;
+            }
+
+            target.hidden = false;
+
+            const startItem = ((safePage - 1) * pageSize) + 1;
+            const endItem = Math.min(totalItems, safePage * pageSize);
+
+            const summary = document.createElement('p');
+            summary.className = 'deals-compact-page-summary';
+            summary.textContent = `Showing ${startItem}-${endItem} of ${totalItems} ${label}`;
+
+            const buttons = document.createElement('div');
+            buttons.className = 'deals-compact-page-buttons';
+
+            for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `deals-compact-page-btn${pageNumber === safePage ? ' is-active' : ''}`;
+                button.textContent = String(pageNumber);
+                button.setAttribute('aria-label', `${label} page ${pageNumber}`);
+                if (pageNumber === safePage) {
+                    button.setAttribute('aria-current', 'page');
+                }
+                button.addEventListener('click', () => onPageChange(pageNumber));
+                buttons.appendChild(button);
+            }
+
+            const nextButton = document.createElement('button');
+            nextButton.type = 'button';
+            nextButton.className = 'deals-compact-page-btn';
+            nextButton.textContent = 'Next';
+            nextButton.disabled = safePage >= totalPages;
+            nextButton.setAttribute('aria-label', `Next ${label} page`);
+            nextButton.addEventListener('click', () => {
+                if (safePage < totalPages) {
+                    onPageChange(safePage + 1);
+                }
+            });
+            buttons.appendChild(nextButton);
+
+            target.appendChild(summary);
+            target.appendChild(buttons);
+            return safePage;
+        }
+
         function renderAssigned() {
             const items = getAssignedItemsForWorkspaceUser();
+            paginationState.assigned = clampPage(paginationState.assigned, items.length);
             assignedCount.textContent = String(items.length);
             assignedList.innerHTML = '';
 
             if (items.length === 0) {
                 assignedList.innerHTML = '<p class="deals-compact-empty">No properties have been assigned to you yet.</p>';
+                assignedPagination.hidden = true;
                 return;
             }
 
-            items.forEach(item => {
+            const startIndex = (paginationState.assigned - 1) * pageSize;
+            const visibleItems = items.slice(startIndex, startIndex + pageSize);
+
+            visibleItems.forEach(item => {
                 const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
                     ? item.propertySnapshot
                     : {};
@@ -10511,6 +10594,16 @@ function initNavbarDateTime() {
 
                 assignedList.appendChild(row);
             });
+
+            paginationState.assigned = renderPagination(assignedPagination, {
+                page: paginationState.assigned,
+                totalItems: items.length,
+                label: 'assigned properties',
+                onPageChange(nextPage) {
+                    paginationState.assigned = nextPage;
+                    renderAssigned();
+                }
+            });
         }
 
         function render() {
@@ -10518,15 +10611,21 @@ function initNavbarDateTime() {
                 .slice()
                 .sort((a, b) => (Number(b.clickedAt) || 0) - (Number(a.clickedAt) || 0));
 
+            paginationState.clicked = clampPage(paginationState.clicked, items.length);
             count.textContent = String(items.length);
             list.innerHTML = '';
 
             if (items.length === 0) {
                 list.innerHTML = '<p class="deals-compact-empty">No clicked properties yet. Open properties in MLS Hot Deals and they will appear here.</p>';
+                listPagination.hidden = true;
+                renderAssigned();
                 return;
             }
 
-            items.forEach(item => {
+            const startIndex = (paginationState.clicked - 1) * pageSize;
+            const visibleItems = items.slice(startIndex, startIndex + pageSize);
+
+            visibleItems.forEach(item => {
                 const row = document.createElement('button');
                 row.type = 'button';
                 row.className = 'deals-compact-row';
@@ -10557,6 +10656,16 @@ function initNavbarDateTime() {
                 });
 
                 list.appendChild(row);
+            });
+
+            paginationState.clicked = renderPagination(listPagination, {
+                page: paginationState.clicked,
+                totalItems: items.length,
+                label: 'clicked properties',
+                onPageChange(nextPage) {
+                    paginationState.clicked = nextPage;
+                    render();
+                }
             });
 
             renderAssigned();

@@ -17,8 +17,12 @@
                 };
                 const profile = readJson('userProfile');
                 const user = readJson('user');
-                const email = String(user.email || profile.email || '').trim().toLowerCase();
-                const name = String(user.name || profile.name || 'User').trim();
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 const themeStore = readJson('dashboardThemeByUser');
                 let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
@@ -35,6 +39,480 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .mls-search-page {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .mls-search-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 24px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.22), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(var(--accent-rgb), 0.12), transparent 36%),
+                linear-gradient(145deg, rgba(10, 18, 24, 0.88), rgba(17, 32, 28, 0.72));
+            box-shadow: 0 26px 50px -34px rgba(0, 0, 0, 0.42);
+        }
+
+        .mls-search-hero::after {
+            content: '';
+            position: absolute;
+            inset: auto -8% -38% auto;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.18), transparent 68%);
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        .mls-search-hero-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.95fr);
+            gap: 18px;
+            align-items: stretch;
+        }
+
+        .mls-search-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .mls-search-kicker-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 1), rgba(var(--accent-light-rgb), 0.9));
+            box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.14);
+        }
+
+        .mls-search-hero h2 {
+            margin: 16px 0 10px;
+            font-size: clamp(28px, 3vw, 42px);
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+        }
+
+        .mls-search-hero-copy {
+            margin: 0;
+            max-width: 760px;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .mls-search-hero-actions,
+        .mls-search-jump-links,
+        .mls-search-pill-list,
+        .mls-search-sources,
+        .mls-search-preset-list,
+        .mls-search-checklist,
+        .mls-search-signal-list,
+        .mls-search-notes-list,
+        .mls-search-stat-grid,
+        .mls-search-query-pills,
+        .mls-search-action-row,
+        .mls-search-mini-stats,
+        .mls-search-brief-grid,
+        .mls-search-source-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .mls-search-jump-links {
+            margin-top: 20px;
+        }
+
+        .mls-jump-link,
+        .mls-preset-chip,
+        .mls-filter-chip,
+        .mls-source-link,
+        .mls-search-hero-btn,
+        .mls-search-action-btn,
+        .mls-quick-field {
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .mls-jump-link,
+        .mls-preset-chip,
+        .mls-search-hero-btn,
+        .mls-search-action-btn,
+        .mls-source-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+
+        .mls-search-hero-btn.is-primary,
+        .mls-search-action-btn.is-primary,
+        .mls-source-link.is-primary {
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.94), rgba(var(--accent-light-rgb), 0.78));
+            border-color: rgba(var(--accent-light-rgb), 0.34);
+            color: #f8fffc;
+            box-shadow: 0 18px 34px -26px rgba(var(--accent-rgb), 0.55);
+        }
+
+        .mls-jump-link:hover,
+        .mls-preset-chip:hover,
+        .mls-search-hero-btn:hover,
+        .mls-search-action-btn:hover,
+        .mls-source-link:hover,
+        .mls-quick-field:hover {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-light-rgb), 0.32);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .mls-search-hero-aside,
+        .mls-search-guidance,
+        .mls-search-brief,
+        .mls-search-ops {
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 18px;
+        }
+
+        .mls-search-hero-aside {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            justify-content: space-between;
+        }
+
+        .mls-search-panel-label,
+        .mls-search-section-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .mls-search-stat-grid,
+        .mls-search-mini-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .mls-search-stat,
+        .mls-search-mini-stat {
+            min-width: 0;
+            padding: 14px 14px 12px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mls-search-stat strong,
+        .mls-search-mini-stat strong {
+            display: block;
+            font-size: 22px;
+            line-height: 1;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .mls-search-stat span,
+        .mls-search-mini-stat span {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .mls-search-grid {
+            grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .mls-search-left,
+        .mls-search-right {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .mls-controls-card,
+        .mls-board-intro,
+        .mls-search-guidance,
+        .mls-search-ops {
+            padding: 20px;
+            border-radius: 22px;
+        }
+
+        .mls-controls-card .card-header,
+        .mls-board-intro .card-header,
+        .mls-search-guidance .card-header,
+        .mls-search-ops .card-header {
+            margin-bottom: 14px;
+        }
+
+        .mls-builder-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .mls-builder-stack {
+            display: grid;
+            gap: 16px;
+        }
+
+        .mls-builder-section {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mls-builder-section h3 {
+            margin: 0 0 6px;
+            font-size: 17px;
+        }
+
+        .mls-builder-section p {
+            margin: 0 0 14px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .mls-quick-field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .mls-quick-field {
+            padding: 12px 14px;
+        }
+
+        .mls-quick-field span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .mls-quick-field strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .mls-preset-chip {
+            font: inherit;
+        }
+
+        .mls-preset-chip.is-active,
+        .mls-filter-chip {
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.22), rgba(var(--accent-light-rgb), 0.18));
+            border-color: rgba(var(--accent-light-rgb), 0.28);
+            color: var(--text-primary);
+        }
+
+        .mls-filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .mls-search-summary {
+            min-height: 112px;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .mls-search-query-pills {
+            margin-top: 14px;
+        }
+
+        .mls-search-query-pills:empty,
+        .mls-search-pill-list:empty {
+            display: none;
+        }
+
+        .mls-search-brief-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .mls-search-brief-item {
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mls-search-brief-item span {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .mls-search-brief-item strong,
+        .mls-search-brief-item p {
+            display: block;
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .mls-search-source-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .mls-source-link {
+            justify-content: flex-start;
+            min-height: 58px;
+            padding: 14px 16px;
+        }
+
+        .mls-source-link small {
+            display: block;
+            color: var(--text-muted);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .mls-search-checklist,
+        .mls-search-signal-list,
+        .mls-search-notes-list {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .mls-search-checklist li,
+        .mls-search-signal-list li,
+        .mls-search-notes-list li {
+            list-style: none;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .mls-search-checklist strong,
+        .mls-search-signal-list strong,
+        .mls-search-notes-list strong {
+            color: var(--text-primary);
+        }
+
+        .mls-search-status {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .mls-search-status strong {
+            color: var(--text-primary);
+        }
+
+        .mls-search-action-row {
+            margin-top: 14px;
+        }
+
+        .mls-search-anchor {
+            scroll-margin-top: 92px;
+        }
+
+        @media (max-width: 1180px) {
+            .mls-search-hero-grid,
+            .mls-search-grid,
+            .mls-builder-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mls-search-source-grid,
+            .mls-search-brief-grid,
+            .mls-search-stat-grid,
+            .mls-search-mini-stats,
+            .mls-quick-field-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 760px) {
+            .mls-search-hero,
+            .mls-controls-card,
+            .mls-board-intro,
+            .mls-search-guidance,
+            .mls-search-ops {
+                padding: 16px;
+                border-radius: 18px;
+            }
+
+            .mls-search-source-grid,
+            .mls-search-brief-grid,
+            .mls-search-stat-grid,
+            .mls-search-mini-stats,
+            .mls-quick-field-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mls-search-hero h2 {
+                font-size: 30px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="background"></div>
@@ -102,69 +580,233 @@
                 </div>
             </nav>
 
-            <section class="mls-search-grid">
-                <div class="glass-card outreach-card mls-controls-card">
-                    <div class="card-header">
+            <div class="mls-search-page">
+                <section class="glass-card mls-search-hero">
+                    <div class="mls-search-hero-grid">
                         <div>
-                            <h2 class="card-title">Build Search</h2>
-                            <p class="card-subtitle">Create a fast search string and open it on your preferred listing sources.</p>
+                            <div class="mls-search-kicker"><span class="mls-search-kicker-dot"></span>Investor Search Desk</div>
+                            <h2>Build sharper MLS hunts without fighting the page.</h2>
+                            <p class="mls-search-hero-copy">Turn a rough buy box into a clean search brief, jump straight into the best listing sources, and keep your criteria organized so you can move faster on fix-and-flip, rental, or distress opportunities.</p>
+                            <div class="mls-search-jump-links">
+                                <a class="mls-jump-link" href="#mls-search-builder">Search Builder</a>
+                                <a class="mls-jump-link" href="#mls-search-preview">Live Brief</a>
+                                <a class="mls-jump-link" href="#mls-search-sources">Source Launchers</a>
+                                <a class="mls-jump-link" href="#mls-search-guidance">Workflow Tips</a>
+                            </div>
                         </div>
+                        <aside class="mls-search-hero-aside">
+                            <div>
+                                <span class="mls-search-panel-label">What this page does better now</span>
+                                <div class="mls-search-stat-grid">
+                                    <div class="mls-search-stat">
+                                        <strong>4</strong>
+                                        <span>Launch-ready source shortcuts with one brief</span>
+                                    </div>
+                                    <div class="mls-search-stat">
+                                        <strong>5</strong>
+                                        <span>Preset investor search modes to start fast</span>
+                                    </div>
+                                    <div class="mls-search-stat">
+                                        <strong>1</strong>
+                                        <span>Clear criteria summary you can actually skim</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mls-search-status" id="mls-search-status"><strong>Status:</strong> Ready to build a search brief.</div>
+                        </aside>
                     </div>
-                    <div class="outreach-input-grid">
-                        <div class="form-group">
-                            <label for="mls-search-location">City, ZIP, County, or Neighborhood</label>
-                            <input id="mls-search-location" class="form-input" type="text" placeholder="Anaheim, 92805, Orange County...">
-                        </div>
-                        <div class="form-group">
-                            <label for="mls-search-property-type">Property Type</label>
-                            <select id="mls-search-property-type" class="form-input">
-                                <option value="">Any</option>
-                                <option value="single family residence">Single Family Residence</option>
-                                <option value="multi family">Multi-Family</option>
-                                <option value="townhome">Townhome</option>
-                                <option value="condo">Condo</option>
-                                <option value="fixer">Fixer</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="mls-search-min-price">Min Price</label>
-                            <input id="mls-search-min-price" class="form-input" type="number" placeholder="200000">
-                        </div>
-                        <div class="form-group">
-                            <label for="mls-search-max-price">Max Price</label>
-                            <input id="mls-search-max-price" class="form-input" type="number" placeholder="650000">
-                        </div>
-                        <div class="form-group">
-                            <label for="mls-search-beds">Beds</label>
-                            <input id="mls-search-beds" class="form-input" type="number" min="0" placeholder="3">
-                        </div>
-                        <div class="form-group">
-                            <label for="mls-search-baths">Baths</label>
-                            <input id="mls-search-baths" class="form-input" type="number" min="0" step="0.5" placeholder="2">
-                        </div>
-                        <div class="form-group outreach-full-width">
-                            <label for="mls-search-keywords">Keywords / Buy Box Notes</label>
-                            <input id="mls-search-keywords" class="form-input" type="text" placeholder="corner lot, ADU potential, probate, value-add, pool...">
-                        </div>
-                    </div>
-                </div>
+                </section>
 
-                <div class="glass-card outreach-card mls-board-intro">
-                    <div class="card-header">
-                        <div>
-                            <h2 class="card-title">Live Query Preview</h2>
-                            <p class="card-subtitle">Your query updates as you type. Open it on Zillow, Redfin, Realtor, or Maps.</p>
+                <section class="mls-search-grid">
+                    <div class="mls-search-left">
+                        <div id="mls-search-builder" class="glass-card outreach-card mls-controls-card mls-search-anchor">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Search Builder</h2>
+                                    <p class="card-subtitle">Group the hunt by area, deal box, property specs, and distress signals so you can navigate the search faster.</p>
+                                </div>
+                            </div>
+
+                            <div class="mls-builder-grid">
+                                <div class="mls-builder-stack">
+                                    <section class="mls-builder-section">
+                                        <h3>Quick Start Presets</h3>
+                                        <p>Load a tighter default setup, then fine-tune it instead of rebuilding your buy box every time.</p>
+                                        <div class="mls-search-preset-list">
+                                            <button type="button" class="mls-preset-chip" data-mls-preset="flip">Fix &amp; Flip</button>
+                                            <button type="button" class="mls-preset-chip" data-mls-preset="rental">Rental Hold</button>
+                                            <button type="button" class="mls-preset-chip" data-mls-preset="distress">Distress / Probate</button>
+                                            <button type="button" class="mls-preset-chip" data-mls-preset="adu">ADU Hunt</button>
+                                            <button type="button" class="mls-preset-chip" data-mls-preset="entry">Entry Price</button>
+                                        </div>
+                                    </section>
+
+                                    <section class="mls-builder-section">
+                                        <h3>Market Area</h3>
+                                        <p>Start broad, then narrow by deal radius, submarket, or neighborhood-specific language.</p>
+                                        <div class="outreach-input-grid">
+                                            <div class="form-group outreach-full-width">
+                                                <label for="mls-search-location">City, ZIP, County, or Neighborhood</label>
+                                                <input id="mls-search-location" class="form-input" type="text" placeholder="Anaheim, 92805, Orange County, Eastvale...">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="mls-search-property-type">Property Type</label>
+                                                <select id="mls-search-property-type" class="form-input">
+                                                    <option value="">Any</option>
+                                                    <option value="single family residence">Single Family Residence</option>
+                                                    <option value="multi family">Multi-Family</option>
+                                                    <option value="townhome">Townhome</option>
+                                                    <option value="condo">Condo</option>
+                                                    <option value="fixer">Fixer</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="mls-search-radius">Drive Radius</label>
+                                                <select id="mls-search-radius" class="form-input">
+                                                    <option value="local pocket">Local pocket</option>
+                                                    <option value="3-mile radius">3-mile radius</option>
+                                                    <option value="5-mile radius">5-mile radius</option>
+                                                    <option value="county-wide">County-wide</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <div class="mls-builder-stack">
+                                    <section class="mls-builder-section">
+                                        <h3>Deal Box</h3>
+                                        <p>Keep price and bedroom guardrails obvious so you can quickly tell whether the brief still matches your investor box.</p>
+                                        <div class="outreach-input-grid">
+                                            <div class="form-group">
+                                                <label for="mls-search-min-price">Min Price</label>
+                                                <input id="mls-search-min-price" class="form-input" type="number" placeholder="200000">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="mls-search-max-price">Max Price</label>
+                                                <input id="mls-search-max-price" class="form-input" type="number" placeholder="650000">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="mls-search-beds">Beds</label>
+                                                <input id="mls-search-beds" class="form-input" type="number" min="0" placeholder="3">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="mls-search-baths">Baths</label>
+                                                <input id="mls-search-baths" class="form-input" type="number" min="0" step="0.5" placeholder="2">
+                                            </div>
+                                        </div>
+                                        <div class="mls-quick-field-grid" style="margin-top: 12px;">
+                                            <div class="mls-quick-field">
+                                                <span>Target Spread</span>
+                                                <strong id="mls-search-price-band">Add budget</strong>
+                                            </div>
+                                            <div class="mls-quick-field">
+                                                <span>Structure Need</span>
+                                                <strong id="mls-search-structure-need">Define beds / baths</strong>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="mls-builder-section">
+                                        <h3>Distress Signals &amp; Notes</h3>
+                                        <p>Write the terms you would normally keep in your head so the search brief stays clear when you open other sites.</p>
+                                        <div class="outreach-input-grid">
+                                            <div class="form-group outreach-full-width">
+                                                <label for="mls-search-keywords">Keywords / Buy Box Notes</label>
+                                                <input id="mls-search-keywords" class="form-input" type="text" placeholder="corner lot, ADU potential, probate, value-add, vacant, cosmetic fixer...">
+                                            </div>
+                                        </div>
+                                        <div class="mls-search-signal-list" id="mls-search-signal-list">
+                                            <li><strong>Focus:</strong> Add keywords to highlight distress, upside, or investor-fit language.</li>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+
+                            <div class="mls-search-action-row">
+                                <button type="button" id="mls-search-generate" class="mls-search-action-btn is-primary">Refresh Search Brief</button>
+                                <button type="button" id="mls-search-copy" class="mls-search-action-btn">Copy Search Brief</button>
+                                <button type="button" id="mls-search-clear" class="mls-search-action-btn">Clear Filters</button>
+                            </div>
+                        </div>
+
+                        <div id="mls-search-guidance" class="glass-card outreach-card mls-search-guidance mls-search-anchor">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Workflow Navigation</h2>
+                                    <p class="card-subtitle">Use the page like a repeatable acquisitions workflow instead of a loose note pad.</p>
+                                </div>
+                            </div>
+                            <ul class="mls-search-checklist">
+                                <li><strong>1. Build the market box.</strong> Start with area + property type so your external search results do not drift off target.</li>
+                                <li><strong>2. Lock the numbers.</strong> Add price, beds, and baths before you launch Zillow or Redfin so the brief already reflects the investor box.</li>
+                                <li><strong>3. Add distress language.</strong> Keywords like probate, value-add, vacant, or ADU potential make the brief more useful when you bounce between listing sites.</li>
+                            </ul>
                         </div>
                     </div>
-                    <div class="mls-search-summary" id="mls-search-summary"></div>
-                    <div class="mls-search-actions">
-                        <a id="mls-search-zillow" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Open Zillow</a>
-                        <a id="mls-search-redfin" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Open Redfin</a>
-                        <a id="mls-search-realtor" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Open Realtor</a>
-                        <a id="mls-search-maps" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Open Maps</a>
+
+                    <div class="mls-search-right">
+                        <div id="mls-search-preview" class="glass-card outreach-card mls-board-intro mls-search-anchor">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Live Search Brief</h2>
+                                    <p class="card-subtitle">A cleaner search summary you can skim before launching third-party sites.</p>
+                                </div>
+                            </div>
+                            <div class="mls-search-summary" id="mls-search-summary"></div>
+                            <div class="mls-search-query-pills" id="mls-search-query-pills"></div>
+                            <div class="mls-search-brief-grid">
+                                <div class="mls-search-brief-item">
+                                    <span>Primary Market</span>
+                                    <strong id="mls-search-primary-market">No market selected yet</strong>
+                                </div>
+                                <div class="mls-search-brief-item">
+                                    <span>Investor Fit</span>
+                                    <strong id="mls-search-investor-fit">Add a preset or a keyword focus</strong>
+                                </div>
+                                <div class="mls-search-brief-item">
+                                    <span>Criteria Weight</span>
+                                    <p id="mls-search-criteria-weight">No major filters applied yet.</p>
+                                </div>
+                                <div class="mls-search-brief-item">
+                                    <span>Launch Note</span>
+                                    <p id="mls-search-launch-note">Once the brief looks tight, open your preferred sources below.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="mls-search-sources" class="glass-card outreach-card mls-search-ops mls-search-anchor">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Source Launchers</h2>
+                                    <p class="card-subtitle">Jump into the right site with the same brief instead of rewriting your search each time.</p>
+                                </div>
+                            </div>
+                            <div class="mls-search-source-grid">
+                                <a id="mls-search-zillow" class="mls-source-link is-primary" href="#" target="_blank" rel="noopener noreferrer">Zillow<small>Fast visual scan and pricing tone</small></a>
+                                <a id="mls-search-redfin" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Redfin<small>Map view and cleaner filter stack</small></a>
+                                <a id="mls-search-realtor" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Realtor<small>Cross-check listings and listing language</small></a>
+                                <a id="mls-search-maps" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Google Maps<small>Street context, adjacency, and neighborhood feel</small></a>
+                            </div>
+                            <div class="mls-search-status"><strong>Tip:</strong> Open Zillow first for quick visual screening, then confirm shape and surrounding context in Maps before deeper underwriting.</div>
+                        </div>
+
+                        <div class="glass-card outreach-card mls-search-guidance">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Search Notes</h2>
+                                    <p class="card-subtitle">A few practical reminders so the search stays investor-focused.</p>
+                                </div>
+                            </div>
+                            <ul class="mls-search-notes-list">
+                                <li><strong>Use broad location terms first.</strong> If you start with a narrow neighborhood, you can miss nearby pockets with stronger spreads.</li>
+                                <li><strong>Keep keyword clutter low.</strong> Two to five good investor signals usually beat a long, muddy string.</li>
+                                <li><strong>Save the brief, not just the result.</strong> The brief is what makes your process reusable across sites and across deals.</li>
+                            </ul>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
         </main>
     </div>
 
@@ -175,5 +817,293 @@
     <script src="templatemo-glass-admin-script.js"></script>
     <script src="auth.js"></script>
     <script src="profile.js"></script>
+    <script>
+        (function () {
+            const fieldIds = {
+                location: 'mls-search-location',
+                type: 'mls-search-property-type',
+                radius: 'mls-search-radius',
+                minPrice: 'mls-search-min-price',
+                maxPrice: 'mls-search-max-price',
+                beds: 'mls-search-beds',
+                baths: 'mls-search-baths',
+                keywords: 'mls-search-keywords'
+            };
+
+            const fields = Object.fromEntries(Object.entries(fieldIds).map(([key, id]) => [key, document.getElementById(id)]));
+            const summaryEl = document.getElementById('mls-search-summary');
+            const pillsEl = document.getElementById('mls-search-query-pills');
+            const primaryMarketEl = document.getElementById('mls-search-primary-market');
+            const investorFitEl = document.getElementById('mls-search-investor-fit');
+            const criteriaWeightEl = document.getElementById('mls-search-criteria-weight');
+            const launchNoteEl = document.getElementById('mls-search-launch-note');
+            const statusEl = document.getElementById('mls-search-status');
+            const priceBandEl = document.getElementById('mls-search-price-band');
+            const structureNeedEl = document.getElementById('mls-search-structure-need');
+            const signalListEl = document.getElementById('mls-search-signal-list');
+            const copyBtn = document.getElementById('mls-search-copy');
+            const clearBtn = document.getElementById('mls-search-clear');
+            const generateBtn = document.getElementById('mls-search-generate');
+            const sourceLinks = {
+                zillow: document.getElementById('mls-search-zillow'),
+                redfin: document.getElementById('mls-search-redfin'),
+                realtor: document.getElementById('mls-search-realtor'),
+                maps: document.getElementById('mls-search-maps')
+            };
+
+            const presets = {
+                flip: {
+                    propertyType: 'fixer',
+                    minPrice: '250000',
+                    maxPrice: '700000',
+                    beds: '3',
+                    baths: '2',
+                    keywords: 'fixer, cosmetic rehab, value-add, below market'
+                },
+                rental: {
+                    propertyType: 'single family residence',
+                    minPrice: '275000',
+                    maxPrice: '600000',
+                    beds: '3',
+                    baths: '2',
+                    keywords: 'rental hold, stable neighborhood, low turnover, cash flow'
+                },
+                distress: {
+                    propertyType: '',
+                    minPrice: '200000',
+                    maxPrice: '650000',
+                    beds: '2',
+                    baths: '1',
+                    keywords: 'probate, trustee sale, distressed, value-add, vacant'
+                },
+                adu: {
+                    propertyType: 'single family residence',
+                    minPrice: '300000',
+                    maxPrice: '850000',
+                    beds: '3',
+                    baths: '2',
+                    keywords: 'adu potential, large lot, alley access, detached garage'
+                },
+                entry: {
+                    propertyType: 'condo',
+                    minPrice: '180000',
+                    maxPrice: '450000',
+                    beds: '2',
+                    baths: '1',
+                    keywords: 'starter price, clean title, cosmetic upside'
+                }
+            };
+
+            function formatCurrency(value) {
+                const numeric = Number(value || 0);
+                if (!Number.isFinite(numeric) || numeric <= 0) {
+                    return '';
+                }
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    maximumFractionDigits: 0
+                }).format(numeric);
+            }
+
+            function getFieldValue(key) {
+                return String((fields[key] && fields[key].value) || '').trim();
+            }
+
+            function buildSearchState() {
+                return {
+                    location: getFieldValue('location'),
+                    propertyType: getFieldValue('type'),
+                    radius: getFieldValue('radius'),
+                    minPrice: getFieldValue('minPrice'),
+                    maxPrice: getFieldValue('maxPrice'),
+                    beds: getFieldValue('beds'),
+                    baths: getFieldValue('baths'),
+                    keywords: getFieldValue('keywords')
+                };
+            }
+
+            function buildSearchSummary(state) {
+                const area = state.location || 'your target market';
+                const propertyType = state.propertyType || 'any property type';
+                const priceBand = [formatCurrency(state.minPrice), formatCurrency(state.maxPrice)].filter(Boolean).join(' to ');
+                const structure = [state.beds ? `${state.beds}+ bed` : '', state.baths ? `${state.baths}+ bath` : ''].filter(Boolean).join(' / ');
+                const detailBits = [
+                    propertyType,
+                    state.radius || '',
+                    priceBand ? `price band ${priceBand}` : '',
+                    structure || ''
+                ].filter(Boolean);
+
+                let summary = `Search ${area} for ${detailBits.join(', ') || 'investor-friendly listings'}.`;
+                if (state.keywords) {
+                    summary += ` Focus the scan on ${state.keywords}.`;
+                }
+                return summary;
+            }
+
+            function buildSignalItems(state) {
+                const rawKeywords = state.keywords
+                    .split(',')
+                    .map((keyword) => keyword.trim())
+                    .filter(Boolean);
+
+                if (!signalListEl) {
+                    return;
+                }
+
+                if (!rawKeywords.length) {
+                    signalListEl.innerHTML = '<li><strong>Focus:</strong> Add keywords to highlight distress, upside, or investor-fit language.</li>';
+                    return;
+                }
+
+                signalListEl.innerHTML = rawKeywords
+                    .slice(0, 5)
+                    .map((keyword) => `<li><strong>Signal:</strong> ${keyword}</li>`)
+                    .join('');
+            }
+
+            function buildQueryPills(state) {
+                const pills = [];
+                if (state.location) pills.push(state.location);
+                if (state.propertyType) pills.push(state.propertyType);
+                if (state.radius) pills.push(state.radius);
+                if (state.minPrice || state.maxPrice) pills.push([formatCurrency(state.minPrice), formatCurrency(state.maxPrice)].filter(Boolean).join(' - '));
+                if (state.beds) pills.push(`${state.beds}+ beds`);
+                if (state.baths) pills.push(`${state.baths}+ baths`);
+                if (state.keywords) {
+                    state.keywords.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 4).forEach((item) => pills.push(item));
+                }
+
+                if (pillsEl) {
+                    pillsEl.innerHTML = pills.map((pill) => `<span class="mls-filter-chip">${pill}</span>`).join('');
+                }
+
+                return pills.length;
+            }
+
+            function buildSearchUrls(state) {
+                const query = [state.location, state.propertyType, state.keywords].filter(Boolean).join(' ');
+                const encodedQuery = encodeURIComponent(query || 'investment property');
+                const encodedLocation = encodeURIComponent(state.location || 'California');
+                const minPrice = state.minPrice ? `&price=${encodeURIComponent(`${state.minPrice}-`)}` : '';
+                const maxPrice = state.maxPrice ? `&price=${encodeURIComponent(`-${state.maxPrice}`)}` : '';
+
+                return {
+                    zillow: `https://www.zillow.com/homes/${encodedLocation}/?searchQueryState=${encodeURIComponent(JSON.stringify({ usersSearchTerm: query || state.location || 'investment property' }))}`,
+                    redfin: `https://www.redfin.com/city/0/CA/${encodedLocation}/filter/property-type=${encodeURIComponent(state.propertyType || 'house')},min-price=${encodeURIComponent(state.minPrice || '')},max-price=${encodeURIComponent(state.maxPrice || '')},min-beds=${encodeURIComponent(state.beds || '')},min-baths=${encodeURIComponent(state.baths || '')}`,
+                    realtor: `https://www.realtor.com/realestateandhomes-search/${encodedLocation}${minPrice}${maxPrice}`,
+                    maps: `https://www.google.com/maps/search/${encodedQuery}`
+                };
+            }
+
+            async function copyBrief() {
+                const state = buildSearchState();
+                const brief = buildSearchSummary(state);
+                try {
+                    await navigator.clipboard.writeText(brief);
+                    if (statusEl) {
+                        statusEl.innerHTML = '<strong>Status:</strong> Search brief copied to clipboard.';
+                    }
+                } catch (error) {
+                    if (statusEl) {
+                        statusEl.innerHTML = '<strong>Status:</strong> Copy failed in this browser. You can still use the live brief below.';
+                    }
+                }
+            }
+
+            function clearFilters() {
+                Object.values(fields).forEach((field) => {
+                    if (!field) return;
+                    if (field.tagName === 'SELECT') {
+                        field.selectedIndex = 0;
+                    } else {
+                        field.value = '';
+                    }
+                });
+                updateSearchView();
+            }
+
+            function applyPreset(key) {
+                const preset = presets[key];
+                if (!preset) {
+                    return;
+                }
+
+                if (fields.type) fields.type.value = preset.propertyType || '';
+                if (fields.minPrice) fields.minPrice.value = preset.minPrice || '';
+                if (fields.maxPrice) fields.maxPrice.value = preset.maxPrice || '';
+                if (fields.beds) fields.beds.value = preset.beds || '';
+                if (fields.baths) fields.baths.value = preset.baths || '';
+                if (fields.keywords) fields.keywords.value = preset.keywords || '';
+
+                document.querySelectorAll('[data-mls-preset]').forEach((button) => {
+                    button.classList.toggle('is-active', button.getAttribute('data-mls-preset') === key);
+                });
+
+                updateSearchView();
+            }
+
+            function updateSearchView() {
+                const state = buildSearchState();
+                const summary = buildSearchSummary(state);
+                const pillCount = buildQueryPills(state);
+                const urls = buildSearchUrls(state);
+                const activeCriteria = [state.location, state.propertyType, state.minPrice, state.maxPrice, state.beds, state.baths, state.keywords].filter(Boolean).length;
+
+                if (summaryEl) {
+                    summaryEl.textContent = summary;
+                }
+                if (primaryMarketEl) {
+                    primaryMarketEl.textContent = state.location || 'No market selected yet';
+                }
+                if (investorFitEl) {
+                    investorFitEl.textContent = state.keywords || state.propertyType || 'Add a preset or a keyword focus';
+                }
+                if (criteriaWeightEl) {
+                    criteriaWeightEl.textContent = activeCriteria > 0
+                        ? `${activeCriteria} major filter${activeCriteria === 1 ? '' : 's'} are shaping this search.`
+                        : 'No major filters applied yet.';
+                }
+                if (launchNoteEl) {
+                    launchNoteEl.textContent = state.location
+                        ? 'Your source links below are ready to launch with this market focus.'
+                        : 'Add a market first so the launch links are more intentional.';
+                }
+                if (statusEl) {
+                    statusEl.innerHTML = `<strong>Status:</strong> ${pillCount > 0 ? `${pillCount} brief cue${pillCount === 1 ? '' : 's'} loaded.` : 'Ready to build a search brief.'}`;
+                }
+                if (priceBandEl) {
+                    priceBandEl.textContent = [formatCurrency(state.minPrice), formatCurrency(state.maxPrice)].filter(Boolean).join(' - ') || 'Add budget';
+                }
+                if (structureNeedEl) {
+                    structureNeedEl.textContent = [state.beds ? `${state.beds}+ beds` : '', state.baths ? `${state.baths}+ baths` : ''].filter(Boolean).join(' / ') || 'Define beds / baths';
+                }
+
+                buildSignalItems(state);
+
+                Object.entries(sourceLinks).forEach(([key, link]) => {
+                    if (!link) return;
+                    link.href = urls[key];
+                });
+            }
+
+            Object.values(fields).forEach((field) => {
+                if (!field) return;
+                field.addEventListener('input', updateSearchView);
+                field.addEventListener('change', updateSearchView);
+            });
+
+            document.querySelectorAll('[data-mls-preset]').forEach((button) => {
+                button.addEventListener('click', () => applyPreset(button.getAttribute('data-mls-preset')));
+            });
+
+            if (copyBtn) copyBtn.addEventListener('click', copyBrief);
+            if (clearBtn) clearBtn.addEventListener('click', clearFilters);
+            if (generateBtn) generateBtn.addEventListener('click', updateSearchView);
+
+            updateSearchView();
+        })();
+    </script>
 </body>
 </html>
