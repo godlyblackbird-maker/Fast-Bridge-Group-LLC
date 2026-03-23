@@ -166,6 +166,47 @@ function resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature }
   };
 }
 
+function getEmailFailureReason(error) {
+  const rawMessage = String(error?.message || error || '').trim();
+  const normalizedMessage = rawMessage.toLowerCase();
+  const errorCode = String(error?.code || '').trim().toUpperCase();
+  const responseCode = Number(error?.responseCode || 0);
+
+  if (!rawMessage) {
+    return 'The email could not be sent because the mail server did not return a reason.';
+  }
+
+  if (responseCode === 535 || normalizedMessage.includes('username and password not accepted') || normalizedMessage.includes('invalid login') || normalizedMessage.includes('missing credentials for "plain"')) {
+    return 'Gmail rejected the sign-in. Check that the SMTP email matches the mailbox that owns the App Password, confirm 2-Step Verification is enabled, and replace the App Password if it may have expired.';
+  }
+
+  if (normalizedMessage.includes('application-specific password required')) {
+    return 'Google requires an App Password for this mailbox. Create a Google App Password for the sending mailbox and save that value in the account SMTP settings or Render environment variables.';
+  }
+
+  if (normalizedMessage.includes('less secure') || normalizedMessage.includes('badcredentials')) {
+    return 'Google blocked the sign-in attempt. Use a Google App Password instead of the normal mailbox password.';
+  }
+
+  if (responseCode === 550 || normalizedMessage.includes('mailbox unavailable') || normalizedMessage.includes('user unknown') || normalizedMessage.includes('recipient address rejected')) {
+    return 'The recipient mailbox was rejected by the mail server. Verify the recipient email address is spelled correctly and still exists.';
+  }
+
+  if (errorCode === 'ETIMEDOUT' || errorCode === 'ESOCKET' || errorCode === 'ECONNECTION' || normalizedMessage.includes('timeout') || normalizedMessage.includes('connection closed')) {
+    return 'The app could not reach Gmail. Check the server connection and try again.';
+  }
+
+  if (errorCode === 'ENOTFOUND' || errorCode === 'EAI_AGAIN') {
+    return 'The server could not resolve Gmail while sending the email. Check DNS/network connectivity and try again.';
+  }
+
+  if (normalizedMessage.includes('email can only be sent from the approved gmail outbox') || normalizedMessage.includes('approved gmail outbox does not match') || normalizedMessage.includes('sign in again before sending email through the website') || normalizedMessage.includes('no gmail smtp credentials are configured') || normalizedMessage.includes('no gmail app password configured') || normalizedMessage.includes('no gmail account configured')) {
+    return rawMessage;
+  }
+
+  return rawMessage;
+}
+
 function getRequestOrigin(req) {
   const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
   const protocol = forwardedProto || req.protocol || 'http';
@@ -2815,7 +2856,7 @@ app.post('/api/test-smtp', async (req, res) => {
       return res.json({ success: true, message: `Test email sent to ${smtpUser}` });
     } catch (error) {
       console.error('Test SMTP error:', error);
-      return res.status(500).json({ error: error.message || 'Failed to send test email' });
+      return res.status(500).json({ error: getEmailFailureReason(error) || 'Failed to send test email' });
     }
   });
 });
@@ -3335,12 +3376,13 @@ app.post('/api/send-agent-email', async (req, res) => {
     } catch (err) {
       failed.push(email);
       if (!firstSendErrorMessage) {
-        firstSendErrorMessage = String(err?.message || '').trim();
+        firstSendErrorMessage = getEmailFailureReason(err);
       }
       console.error('Send agent email error:', {
         recipient: email,
         sender: safeFromEmail,
-        message: err?.message || 'Unknown send error'
+        message: err?.message || 'Unknown send error',
+        reason: getEmailFailureReason(err)
       });
     }
   }
