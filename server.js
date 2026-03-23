@@ -3308,6 +3308,7 @@ app.post('/api/send-agent-email', async (req, res) => {
 
   let sentCount = 0;
   let failed = [];
+  let firstSendErrorMessage = '';
   for (const email of emails) {
     try {
       let resolvedHtmlBody = htmlBody;
@@ -3333,15 +3334,25 @@ app.post('/api/send-agent-email', async (req, res) => {
       sentCount++;
     } catch (err) {
       failed.push(email);
+      if (!firstSendErrorMessage) {
+        firstSendErrorMessage = String(err?.message || '').trim();
+      }
+      console.error('Send agent email error:', {
+        recipient: email,
+        sender: safeFromEmail,
+        message: err?.message || 'Unknown send error'
+      });
     }
   }
 
   if (failed.length === 0) {
     return res.json({ success: true, message: `Email sent to ${sentCount} recipient(s)` });
   } else if (sentCount > 0) {
-    return res.json({ success: true, message: `Email sent to ${sentCount} recipient(s), but failed for: ${failed.join(', ')}` });
+    const partialFailureMessage = firstSendErrorMessage ? ` Reason: ${firstSendErrorMessage}` : '';
+    return res.json({ success: true, message: `Email sent to ${sentCount} recipient(s), but failed for: ${failed.join(', ')}.${partialFailureMessage}` });
   } else {
-    return res.status(500).json({ error: `Failed to send email to: ${failed.join(', ')}` });
+    const failureMessage = firstSendErrorMessage ? ` Reason: ${firstSendErrorMessage}` : '';
+    return res.status(500).json({ error: `Failed to send email to: ${failed.join(', ')}.${failureMessage}` });
   }
 });
 
