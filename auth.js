@@ -24,9 +24,12 @@
   ];
   const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
   const ADMIN_CANONICAL_EMAILS = new Set();
+  const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
   const PREMIUM_SETTINGS_URL = '/settings.html?tab=subscriptions';
   let premiumUpgradeTooltip = null;
   let premiumUpgradeTooltipHideTimer = null;
+  let authSyncInProgress = true;
+  let authNavigationGuardBound = false;
 
   KNOWN_EMAIL_GROUPS.forEach((group) => {
     if (group.forceRole === 'admin') {
@@ -86,20 +89,100 @@
   }
 
   function readStoredUser() {
+    let storedUser = null;
     try {
-      return normalizeKnownUser(JSON.parse(localStorage.getItem('user') || 'null'));
+      storedUser = normalizeKnownUser(JSON.parse(localStorage.getItem('user') || 'null'));
+    } catch (error) {
+      storedUser = null;
+    }
+
+    const lockedUser = getVerifiedAuthUserLock();
+    if (lockedUser && (!storedUser || normalizeKnownEmail(storedUser.email || '') !== normalizeKnownEmail(lockedUser.email || ''))) {
+      localStorage.setItem('user', JSON.stringify(lockedUser));
+      syncLegacyUserProfile(lockedUser);
+      return lockedUser;
+    }
+
+    return storedUser || lockedUser;
+  }
+
+  function writeStoredUser(userLike, options) {
+    const normalizedUser = normalizeKnownUser(userLike);
+    if (!normalizedUser) {
+      return null;
+    }
+
+    const config = options && typeof options === 'object' ? options : {};
+    const forceWrite = Boolean(config.force);
+    const lockedUser = getVerifiedAuthUserLock();
+    const lockedEmail = normalizeKnownEmail(lockedUser && lockedUser.email || '');
+    const nextEmail = normalizeKnownEmail(normalizedUser.email || '');
+
+    if (!forceWrite && lockedEmail && nextEmail && lockedEmail !== nextEmail) {
+      localStorage.setItem('user', JSON.stringify(lockedUser));
+      syncLegacyUserProfile(lockedUser);
+      return lockedUser;
+    }
+
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    syncLegacyUserProfile(normalizedUser);
+    persistVerifiedAuthUserLock(normalizedUser, { force: forceWrite });
+    return normalizedUser;
+  }
+
+  function readAuthUserLockRecord() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(AUTH_USER_LOCK_KEY) || 'null');
+      return parsed && typeof parsed === 'object' ? parsed : null;
     } catch (error) {
       return null;
     }
   }
 
-  function writeStoredUser(userLike) {
-    const normalizedUser = normalizeKnownUser(userLike);
-    if (!normalizedUser) {
+  function getVerifiedAuthUserLock() {
+    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    if (!activeToken) {
       return null;
     }
-    localStorage.setItem('user', JSON.stringify(normalizedUser));
-    syncLegacyUserProfile(normalizedUser);
+
+    const lockRecord = readAuthUserLockRecord();
+    if (!lockRecord) {
+      return null;
+    }
+
+    const lockToken = String(lockRecord.token || '').trim();
+    const lockedUser = normalizeKnownUser(lockRecord.user || lockRecord);
+    if (!lockToken || lockToken !== activeToken || !lockedUser || !String(lockedUser.email || '').trim()) {
+      return null;
+    }
+
+    return lockedUser;
+  }
+
+  function persistVerifiedAuthUserLock(userLike, options) {
+    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const normalizedUser = normalizeKnownUser(userLike);
+    if (!activeToken || !normalizedUser) {
+      return null;
+    }
+
+    const config = options && typeof options === 'object' ? options : {};
+    const forceWrite = Boolean(config.force);
+    const lockRecord = readAuthUserLockRecord();
+    const lockedUser = normalizeKnownUser(lockRecord && (lockRecord.user || lockRecord));
+    const lockedEmail = normalizeKnownEmail(lockedUser && lockedUser.email || '');
+    const nextEmail = normalizeKnownEmail(normalizedUser.email || '');
+    const lockToken = String(lockRecord && lockRecord.token || '').trim();
+
+    if (!forceWrite && lockToken === activeToken && lockedEmail && nextEmail && lockedEmail !== nextEmail) {
+      return lockedUser;
+    }
+
+    localStorage.setItem(AUTH_USER_LOCK_KEY, JSON.stringify({
+      token: activeToken,
+      user: normalizedUser,
+      updatedAt: Date.now()
+    }));
     return normalizedUser;
   }
 
@@ -144,7 +227,59 @@
     localStorage.removeItem('registeredEmail');
     localStorage.removeItem('bypassAuth');
     localStorage.removeItem('bypassProfile');
+    localStorage.removeItem(AUTH_USER_LOCK_KEY);
     sessionStorage.removeItem('authToken');
+  }
+
+  function setAuthSyncState(isSyncing) {
+    authSyncInProgress = Boolean(isSyncing);
+    document.documentElement.setAttribute('data-auth-sync', authSyncInProgress ? 'pending' : 'ready');
+  }
+
+  function shouldBlockNavigationWhileAuthSync(target) {
+    if (!authSyncInProgress || !target || typeof target.closest !== 'function') {
+      return false;
+    }
+
+    const link = target.closest('a[href]');
+    if (!link) {
+      return false;
+    }
+
+    const rawHref = String(link.getAttribute('href') || '').trim();
+    if (!rawHref || rawHref.startsWith('#') || /^javascript:/i.test(rawHref) || /^(mailto|tel):/i.test(rawHref)) {
+      return false;
+    }
+
+    if (link.hasAttribute('download') || String(link.getAttribute('target') || '').trim().toLowerCase() === '_blank') {
+      return false;
+    }
+
+    try {
+      const resolvedUrl = new URL(link.href, window.location.href);
+      return resolvedUrl.origin === window.location.origin;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function bindAuthNavigationGuard() {
+    if (authNavigationGuardBound) {
+      return;
+    }
+
+    authNavigationGuardBound = true;
+    document.addEventListener('click', function(event) {
+      if (!shouldBlockNavigationWhileAuthSync(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') {
+        event.stopImmediatePropagation();
+      }
+    }, true);
   }
 
   function getStoredAuthToken() {
@@ -489,7 +624,7 @@
         return readStoredUser();
       }
 
-      return writeStoredUser(data.user);
+      return writeStoredUser(data.user, { force: true });
     } catch (error) {
       return readStoredUser();
     }
@@ -581,72 +716,78 @@
 
   // Run check when page loads
   document.addEventListener('DOMContentLoaded', async function() {
-    sanitizeLegacyProfileMirror();
-    const storedUser = readStoredUser();
-    if (storedUser && !hasStoredAuthToken()) {
-      syncLegacyUserProfile(storedUser);
-    }
-    if (applyAdminControlsAccess(storedUser) === false) {
-      return;
-    }
+    setAuthSyncState(true);
 
-    const syncedUser = await syncAuthenticatedUser();
-    checkAuthentication();
-
-    const activeUser = syncedUser || getCurrentUser();
-    const isAdmin = isAdminUser(activeUser);
-    if (applyAdminControlsAccess(activeUser) === false) {
-      return;
-    }
-
-    const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
-    activeBuyersLinks.forEach(link => {
-      if (isRegularUser(activeUser)) {
-        applyLockedActiveBuyersLink(link);
+    try {
+      sanitizeLegacyProfileMirror();
+      const storedUser = readStoredUser();
+      if (storedUser && !hasStoredAuthToken()) {
+        syncLegacyUserProfile(storedUser);
+      }
+      if (applyAdminControlsAccess(storedUser) === false) {
         return;
       }
 
-      const listItem = link.closest('.nav-item');
-      if (!isAdmin && !isPremiumUser(activeUser)) {
-        if (listItem) {
-          listItem.remove();
-        } else {
-          link.remove();
+      const syncedUser = await syncAuthenticatedUser();
+      checkAuthentication();
+
+      const activeUser = syncedUser || getCurrentUser();
+      const isAdmin = isAdminUser(activeUser);
+      if (applyAdminControlsAccess(activeUser) === false) {
+        return;
+      }
+
+      const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
+      activeBuyersLinks.forEach(link => {
+        if (isRegularUser(activeUser)) {
+          applyLockedActiveBuyersLink(link);
+          return;
         }
-      }
-    });
 
-    const analyticsLinks = document.querySelectorAll('.nav-link[href="analytics.html"], .nav-link[href="/analytics.html"]');
-    analyticsLinks.forEach(link => {
-      if (isRegularUser(activeUser)) {
-        applyLockedAnalyticsLink(link);
-      }
-    });
-
-    const campaignLinks = document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
-    campaignLinks.forEach(link => {
-      if (isRegularUser(activeUser)) {
-        applyLockedCampaignsLink(link);
-      }
-    });
-
-    // Ensure sidebar/account logout link clears auth state.
-    const logoutLinks = document.querySelectorAll('.nav-link[href="login.html"], .nav-link[href="/login.html"]');
-    logoutLinks.forEach(link => {
-      const label = String(link.textContent || '').toLowerCase();
-      if (!label.includes('logout')) {
-        return;
-      }
-      link.addEventListener('click', function(event) {
-        event.preventDefault();
-        window.logout();
+        const listItem = link.closest('.nav-item');
+        if (!isAdmin && !isPremiumUser(activeUser)) {
+          if (listItem) {
+            listItem.remove();
+          } else {
+            link.remove();
+          }
+        }
       });
-    });
 
-    // Update user profile display if user info is available
-    const user = getCurrentUser();
-    if (user) {
-      updateUserProfile(user);
+      const analyticsLinks = document.querySelectorAll('.nav-link[href="analytics.html"], .nav-link[href="/analytics.html"]');
+      analyticsLinks.forEach(link => {
+        if (isRegularUser(activeUser)) {
+          applyLockedAnalyticsLink(link);
+        }
+      });
+
+      const campaignLinks = document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
+      campaignLinks.forEach(link => {
+        if (isRegularUser(activeUser)) {
+          applyLockedCampaignsLink(link);
+        }
+      });
+
+      // Ensure sidebar/account logout link clears auth state.
+      const logoutLinks = document.querySelectorAll('.nav-link[href="login.html"], .nav-link[href="/login.html"]');
+      logoutLinks.forEach(link => {
+        const label = String(link.textContent || '').toLowerCase();
+        if (!label.includes('logout')) {
+          return;
+        }
+        link.addEventListener('click', function(event) {
+          event.preventDefault();
+          window.logout();
+        });
+      });
+
+      // Update user profile display if user info is available
+      const user = getCurrentUser();
+      if (user) {
+        updateUserProfile(user);
+      }
+    } finally {
+      setAuthSyncState(false);
     }
   });
 
@@ -732,4 +873,6 @@
   window.getAuthToken = function() {
     return getStoredAuthToken();
   };
+
+  bindAuthNavigationGuard();
 })();
