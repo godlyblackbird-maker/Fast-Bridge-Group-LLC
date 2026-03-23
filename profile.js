@@ -139,6 +139,24 @@
     localStorage.setItem('userProfile', JSON.stringify(nextProfile));
   }
 
+  function persistCurrentUserIdentity(userLike) {
+    if (!userLike || typeof userLike !== 'object') {
+      return null;
+    }
+
+    if (typeof window.writeStoredUserIdentity === 'function') {
+      return window.writeStoredUserIdentity(userLike);
+    }
+
+    const normalizedUser = {
+      ...userLike,
+      email: normalizeKnownEmail(userLike.email || ''),
+      role: String(userLike.role || '').trim().toLowerCase()
+    };
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    return normalizedUser;
+  }
+
   function setStoredSmtpSettings(settings) {
     const normalizedSettings = {
       smtpUser: String(settings?.smtpUser || '').trim(),
@@ -671,7 +689,7 @@
         user.name = profileData.name;
         user.email = profileData.email;
         user.avatarImage = profileData.avatarImage;
-        localStorage.setItem('user', JSON.stringify(user));
+        persistCurrentUserIdentity(user);
       }
 
       // Update sidebar display
@@ -1230,7 +1248,7 @@
       user.name = profileData.name;
       user.email = resolvedAccountEmail;
       user.avatarImage = profileData.avatarImage || user.avatarImage || '';
-      localStorage.setItem('user', JSON.stringify(user));
+      persistCurrentUserIdentity(user);
     }
 
     updateSidebarProfile(profileData);
@@ -1251,7 +1269,7 @@
     const user = getCurrentUser();
     if (user) {
       user.avatarImage = avatarImage;
-      localStorage.setItem('user', JSON.stringify(user));
+      persistCurrentUserIdentity(user);
     }
 
     updateSidebarProfile({

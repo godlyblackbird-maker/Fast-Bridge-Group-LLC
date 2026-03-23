@@ -1284,6 +1284,21 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
     }
 
+    function persistStoredCurrentUserIdentity(userLike) {
+        if (!userLike || typeof userLike !== 'object') {
+            return buildUserIdentity({});
+        }
+
+        if (typeof window.writeStoredUserIdentity === 'function') {
+            const stored = window.writeStoredUserIdentity(userLike);
+            return buildUserIdentity(stored || userLike);
+        }
+
+        const normalizedUser = buildUserIdentity(userLike);
+        localStorage.setItem('user', JSON.stringify(normalizedUser));
+        return normalizedUser;
+    }
+
     function makePropertyStorageKey(address) {
         return String(address || '').trim().toLowerCase();
     }
@@ -4447,7 +4462,7 @@ function initNavbarDateTime() {
 
                     activeSubscription = data.subscription || null;
                     currentRole = String(data.user?.role || currentRole || '').trim().toLowerCase();
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    persistStoredCurrentUserIdentity(data.user);
                     fillBillingForm(activeSubscription?.billingProfile);
                     setSelectedPlan(activeSubscription?.plan === 'premium' ? 'premium' : (currentRole === premiumRole ? 'premium' : storedPlan));
                 } catch (error) {
@@ -4506,7 +4521,7 @@ function initNavbarDateTime() {
                     currentRole = String(data.user?.role || premiumRole).trim().toLowerCase();
                     activeSubscription = data.subscription || null;
                     localStorage.setItem('authToken', String(data.token || token));
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    persistStoredCurrentUserIdentity(data.user);
                     setUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, 'premium');
                     fillBillingForm(activeSubscription?.billingProfile);
                     if (stripeCardElement) {
@@ -7025,7 +7040,7 @@ function initNavbarDateTime() {
 
                         if (currentUser && Number(currentUser.id) === Number(userId)) {
                             currentUser.email = nextEmail;
-                            localStorage.setItem('user', JSON.stringify(currentUser));
+                            currentUser = persistStoredCurrentUserIdentity(currentUser);
                         }
 
                         showDashboardToast('success', 'Email Updated', `${data.user.name} now signs in with ${data.user.email}. Sign out and back in if this was your own account.`);
@@ -7207,7 +7222,7 @@ function initNavbarDateTime() {
                         const data = await updateUserEmail(item.id, nextEmail);
                         if (currentUser && Number(currentUser.id) === Number(item.id)) {
                             currentUser.email = data.user.email;
-                            localStorage.setItem('user', JSON.stringify(currentUser));
+                            currentUser = persistStoredCurrentUserIdentity(currentUser);
                         }
                         updatedCount += 1;
                     }

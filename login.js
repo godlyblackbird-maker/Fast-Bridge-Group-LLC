@@ -1,5 +1,72 @@
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
+  const KNOWN_EMAIL_GROUPS = [
+    {
+      canonical: 'isaac.haro@fastbridgegroupllc.com',
+      aliases: [
+        'isaac.haro@fastbridgegroupllc.com',
+        'isaacs.hesed@fastbridgegroup.com',
+        'isaacs.hesed@gmail.com'
+      ]
+    },
+    {
+      canonical: 'steve.medina@fastbridgegroupllc.com',
+      aliases: [
+        'steve.medina@fastbridgegroupllc.com',
+        'medinafbg@gmail.com',
+        'medinastj@gmail.com'
+      ]
+    }
+  ];
+  const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+
+  KNOWN_EMAIL_GROUPS.forEach((group) => {
+    group.aliases.forEach((alias) => {
+      KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
+    });
+  });
+
+  function normalizeKnownEmail(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
+  }
+
+  function readLocalJson(key) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function clearStoredAuthState() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userProfile');
+    localStorage.removeItem('registeredEmail');
+    sessionStorage.removeItem('authToken');
+  }
+
+  function storedIdentityMatchesUser(userLike) {
+    const normalizedVerifiedEmail = normalizeKnownEmail(userLike && userLike.email || '');
+    const storedUser = readLocalJson('user');
+    const storedProfile = readLocalJson('userProfile');
+    const storedUserEmail = normalizeKnownEmail(storedUser && storedUser.email || '');
+    const storedProfileEmail = normalizeKnownEmail(storedProfile && storedProfile.email || '');
+    const hasStoredIdentity = Boolean(storedUserEmail || storedProfileEmail);
+
+    if (!hasStoredIdentity) {
+      return true;
+    }
+
+    return Boolean(
+      normalizedVerifiedEmail
+      && (!storedUserEmail || storedUserEmail === normalizedVerifiedEmail)
+      && (!storedProfileEmail || storedProfileEmail === normalizedVerifiedEmail)
+    );
+  }
+
   function getStoredProfileMirror(userLike) {
     const normalizedUser = userLike && typeof userLike === 'object' ? userLike : null;
     if (!normalizedUser) {
@@ -471,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.head.appendChild(style);
 
   // Check if already logged in
-  checkAuthStatus();
+  void checkAuthStatus();
 });
 
 async function completeOauthSignIn(token, errorDiv) {
@@ -510,12 +577,44 @@ async function completeOauthSignIn(token, errorDiv) {
 }
 
 // Check authentication status
-function checkAuthStatus() {
-  const token = localStorage.getItem('authToken');
+async function checkAuthStatus() {
+  const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
   const bypassEnabled = localStorage.getItem('bypassAuth') === 'true';
-  if ((token || bypassEnabled) && window.location.pathname === '/login.html') {
-    // If user is logged in and on login page, redirect to dashboard
+  if (bypassEnabled && window.location.pathname === '/login.html') {
     window.location.href = '/dashboard.html';
+    return;
+  }
+
+  if (!token || window.location.pathname !== '/login.html') {
+    return;
+  }
+
+  try {
+    const verifyResponse = await fetch('/api/verify', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const verifyData = await verifyResponse.json().catch(() => ({}));
+    if (!verifyResponse.ok || !verifyData.success || !verifyData.user) {
+      clearStoredAuthState();
+      return;
+    }
+
+    if (!storedIdentityMatchesUser(verifyData.user)) {
+      clearStoredAuthState();
+      if (typeof showLoginError === 'function') {
+        showLoginError('Saved session belonged to a different account, so automatic sign-in was canceled. Please sign in again.');
+      }
+      return;
+    }
+
+    persistAuthenticatedUser(verifyData.user);
+    window.location.href = '/dashboard.html';
+  } catch (error) {
+    clearStoredAuthState();
   }
 }
 

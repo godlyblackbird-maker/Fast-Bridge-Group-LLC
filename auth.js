@@ -650,6 +650,14 @@
     return readStoredUser();
   };
 
+  window.writeStoredUserIdentity = function(userLike) {
+    return writeStoredUser(userLike);
+  };
+
+  window.clearStoredAuthState = function() {
+    clearAuthState();
+  };
+
   // Logout function
   window.logout = async function() {
     const token = String(localStorage.getItem('authToken') || '').trim();
