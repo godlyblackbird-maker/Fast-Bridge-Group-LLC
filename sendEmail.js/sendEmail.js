@@ -95,10 +95,9 @@ function sendNewLeadEmail(lead = {}) {
   return makeTransporter(process.env.SMTP_USER, process.env.SMTP_PASS).sendMail(mailOptions);
 }
 
-// smtpUser / smtpPass are optional per-user overrides; falls back to process.env
 function sendAgentEmail({ fromName, fromEmail, toName, toEmail, subject, body, htmlBody, ecardAttachmentPath, ecardAttachmentName, attachments, smtpSignature, smtpUser, smtpPass }) {
-  const resolvedUser = String(smtpUser || process.env.SMTP_USER || '').trim();
-  const resolvedPass = String(smtpPass || process.env.SMTP_PASS || '').trim();
+  const resolvedUser = String(smtpUser || '').trim();
+  const resolvedPass = String(smtpPass || '').trim();
   const requestedFromEmail = String(fromEmail || '').trim();
   const to = String(toEmail || '').trim();
   const resolvedSignature = String(smtpSignature || '').trim();
@@ -108,9 +107,11 @@ function sendAgentEmail({ fromName, fromEmail, toName, toEmail, subject, body, h
   if (!resolvedUser) return Promise.reject(new Error('No Gmail account configured. Add your Gmail SMTP settings in Settings → Profile.'));
   if (!resolvedPass) return Promise.reject(new Error('No Gmail App Password configured. Add your Gmail SMTP settings in Settings → Profile.'));
   if (!to) return Promise.reject(new Error('Recipient email is required'));
-  const actualFromEmail = normalizedRequestedFromEmail && normalizedRequestedFromEmail === normalizedResolvedUser
-    ? requestedFromEmail
-    : resolvedUser;
+  if (requestedFromEmail && normalizedRequestedFromEmail !== normalizedResolvedUser) {
+    return Promise.reject(new Error(`Email can only be sent from the approved Gmail outbox: ${resolvedUser}.`));
+  }
+
+  const actualFromEmail = requestedFromEmail || resolvedUser;
 
   const mailOptions = {
     from: `"${String(fromName || 'Real Estate Investor').trim()}" <${actualFromEmail}>`,
@@ -118,10 +119,6 @@ function sendAgentEmail({ fromName, fromEmail, toName, toEmail, subject, body, h
     subject: String(subject || '(No Subject)').trim(),
     text: appendSignatureToText(body, resolvedSignature)
   };
-
-  if (requestedFromEmail && normalizedRequestedFromEmail !== normalizedResolvedUser) {
-    mailOptions.replyTo = requestedFromEmail;
-  }
 
   const html = String(htmlBody || '').trim();
   if (html) {

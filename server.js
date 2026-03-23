@@ -122,40 +122,38 @@ function getPerUserSmtpEnvConfig(email) {
   };
 }
 
+function smtpIdentityMatchesAccount(candidateEmail, accountEmail) {
+  const normalizedCandidate = normalizeKnownEmail(candidateEmail);
+  const normalizedAccount = normalizeKnownEmail(accountEmail);
+
+  return Boolean(normalizedCandidate && normalizedAccount && normalizedCandidate === normalizedAccount);
+}
+
 function resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature }) {
   const normalizedEmail = normalizeKnownEmail(email);
-  const normalizedDbUser = normalizeKnownEmail(smtpUser || normalizedEmail);
-  const perUserEnvConfig = getPerUserSmtpEnvConfig(normalizedDbUser || normalizedEmail);
-  const fallbackGlobalUser = getFirstConfiguredEnvValue('SMTP_USER');
-  const fallbackGlobalPass = getFirstConfiguredEnvValue('SMTP_PASS');
+  const perUserEnvConfig = getPerUserSmtpEnvConfig(normalizedEmail);
   const dbUser = String(smtpUser || '').trim().toLowerCase();
   const dbPass = String(smtpPass || '').trim();
   const perUserEnvUser = String(perUserEnvConfig.smtpUser || '').trim().toLowerCase();
   const perUserEnvPass = String(perUserEnvConfig.smtpPass || '').trim();
-  const globalUser = String(fallbackGlobalUser || '').trim().toLowerCase();
-  const globalPass = String(fallbackGlobalPass || '').trim();
+  const dbUserMatchesAccount = smtpIdentityMatchesAccount(dbUser, normalizedEmail);
+  const envUserMatchesAccount = smtpIdentityMatchesAccount(perUserEnvUser, normalizedEmail);
 
   let resolvedUser = '';
   let resolvedPass = '';
 
-  if (dbUser && dbPass) {
+  if (dbUser && dbPass && dbUserMatchesAccount) {
     resolvedUser = dbUser;
     resolvedPass = dbPass;
-  } else if (perUserEnvUser && perUserEnvPass) {
+  } else if (perUserEnvUser && perUserEnvPass && envUserMatchesAccount) {
     resolvedUser = perUserEnvUser;
     resolvedPass = perUserEnvPass;
-  } else if (dbUser && globalUser && dbUser === globalUser && globalPass) {
+  } else if (dbUser && perUserEnvPass && dbUserMatchesAccount && envUserMatchesAccount && normalizeKnownEmail(dbUser) === normalizeKnownEmail(perUserEnvUser)) {
     resolvedUser = dbUser;
-    resolvedPass = globalPass;
-  } else if (perUserEnvUser && globalUser && perUserEnvUser === globalUser && globalPass) {
-    resolvedUser = perUserEnvUser;
-    resolvedPass = globalPass;
-  } else if (globalUser && globalPass) {
-    resolvedUser = globalUser;
-    resolvedPass = globalPass;
+    resolvedPass = perUserEnvPass;
   } else {
-    resolvedUser = dbUser || perUserEnvUser || globalUser;
-    resolvedPass = dbPass || perUserEnvPass || globalPass;
+    resolvedUser = dbUserMatchesAccount ? dbUser : (envUserMatchesAccount ? perUserEnvUser : '');
+    resolvedPass = dbUserMatchesAccount ? dbPass : (envUserMatchesAccount ? perUserEnvPass : '');
   }
 
   const resolvedSignature = String(smtpSignature || perUserEnvConfig.smtpSignature || '').trim();
@@ -3238,36 +3236,52 @@ app.post('/api/send-agent-email', async (req, res) => {
   let smtpPass;
   let smtpSignature = '';
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const row = await new Promise((resolve, reject) => {
-        db.get('SELECT name, email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, r) => {
-          if (err) reject(err); else resolve(r);
-        });
+  if (!token) {
+    return res.status(401).json({ error: 'Sign in again before sending email through the website.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const row = await new Promise((resolve, reject) => {
+      db.get('SELECT name, email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, r) => {
+        if (err) reject(err); else resolve(r);
       });
-      authenticatedUser = row || null;
-      const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
-        email: row?.email || decoded.email,
-        smtpUser: row?.smtp_user,
-        smtpPass: row?.smtp_pass,
-        smtpSignature: row?.smtp_signature
-      });
-      smtpUser = effectiveSmtpConfig.smtpUser;
-      smtpPass = effectiveSmtpConfig.smtpPass;
-      smtpSignature = effectiveSmtpConfig.smtpSignature;
-    } catch (e) {
-      // Invalid token or DB failure — proceed with env fallback
-    }
+    });
+    authenticatedUser = row || null;
+    const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
+      email: row?.email || decoded.email,
+      smtpUser: row?.smtp_user,
+      smtpPass: row?.smtp_pass,
+      smtpSignature: row?.smtp_signature
+    });
+    smtpUser = effectiveSmtpConfig.smtpUser;
+    smtpPass = effectiveSmtpConfig.smtpPass;
+    smtpSignature = effectiveSmtpConfig.smtpSignature;
+  } catch (e) {
+    return res.status(401).json({ error: 'Sign in again before sending email through the website.' });
+  }
+
+  if (!authenticatedUser?.email) {
+    return res.status(401).json({ error: 'Sign in again before sending email through the website.' });
+  }
+
+  if (!smtpUser || !smtpPass) {
+    return res.status(400).json({ error: 'Your account does not have an approved Gmail outbox configured. Connect your own Gmail in Settings and wait for approval before sending.' });
   }
 
   const normalizedRequestedFromEmail = normalizeKnownEmail(fromEmail);
   const normalizedAuthenticatedEmail = normalizeKnownEmail(authenticatedUser?.email || '');
   const normalizedResolvedSmtpUser = normalizeKnownEmail(smtpUser || '');
-  const safeFromEmail = normalizedRequestedFromEmail
-    && (normalizedRequestedFromEmail === normalizedAuthenticatedEmail || normalizedRequestedFromEmail === normalizedResolvedSmtpUser)
-      ? String(fromEmail || '').trim()
-      : String(smtpUser || fromEmail || '').trim();
+
+  if (normalizedRequestedFromEmail && normalizedRequestedFromEmail !== normalizedResolvedSmtpUser) {
+    return res.status(400).json({ error: `Email can only be sent from your approved Gmail outbox: ${smtpUser}.` });
+  }
+
+  if (!smtpIdentityMatchesAccount(smtpUser, normalizedAuthenticatedEmail)) {
+    return res.status(400).json({ error: 'Your approved Gmail outbox does not match the signed-in account. Update the account SMTP settings before sending.' });
+  }
+
+  const safeFromEmail = String(smtpUser || '').trim();
 
   const fallbackECardRelativePath = includeECard
     ? resolveUserAdminECardRelativePath({

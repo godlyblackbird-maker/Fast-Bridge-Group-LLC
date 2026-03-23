@@ -6357,6 +6357,27 @@ function initNavbarDateTime() {
             };
         }
 
+        function getSafeDraftSender(savedDraft) {
+            const rawSenderName = cleanFieldValue(savedDraft && savedDraft.senderName);
+            const rawSenderEmail = cleanFieldValue(savedDraft && savedDraft.senderEmail);
+            const normalizedDraftEmail = normalizeUserIdentityValue(rawSenderEmail);
+            const normalizedWorkspaceEmail = normalizeUserIdentityValue(workspaceUser.email || '');
+            const emailMatchesWorkspace = Boolean(normalizedDraftEmail && normalizedWorkspaceEmail && normalizedDraftEmail === normalizedWorkspaceEmail);
+            const nameMatchesWorkspace = rawSenderName && String(rawSenderName).trim() === String(workspaceUser.name || '').trim();
+
+            if (!emailMatchesWorkspace && !nameMatchesWorkspace) {
+                return {
+                    senderName: '',
+                    senderEmail: ''
+                };
+            }
+
+            return {
+                senderName: rawSenderName,
+                senderEmail: emailMatchesWorkspace ? rawSenderEmail : ''
+            };
+        }
+
         function getAvailableSenderEmails() {
             return smtpConfigState.configured && smtpConfigState.smtpUser
                 ? [cleanFieldValue(smtpConfigState.smtpUser)]
@@ -6479,16 +6500,17 @@ function initNavbarDateTime() {
 
         function loadDraft() {
             const savedDraft = getUserScopedObject(AGENT_WORKSPACE_EMAIL_PREP_KEY, workspaceUser.key);
+            const safeDraftSender = getSafeDraftSender(savedDraft);
             isSavingDraft = true;
             recipientNameInput.value = cleanFieldValue(savedDraft.recipientName || '');
             recipientEmailInput.value = cleanFieldValue(savedDraft.recipientEmail || '');
-            senderNameInput.value = cleanFieldValue(savedDraft.senderName || '');
-            renderSenderEmailOptions(cleanFieldValue(savedDraft.senderEmail || ''));
-            senderEmailInput.value = cleanFieldValue(savedDraft.senderEmail || '');
+            senderNameInput.value = safeDraftSender.senderName;
+            renderSenderEmailOptions(safeDraftSender.senderEmail);
+            senderEmailInput.value = safeDraftSender.senderEmail;
             subjectInput.value = String(savedDraft.subject || '').trim();
             bodyInput.innerHTML = String(savedDraft.bodyHtml || '').trim();
             isSavingDraft = false;
-            void syncSenderDefaults();
+            void syncSenderDefaults(true);
             syncRecipientDefaults();
         }
 
@@ -9019,8 +9041,7 @@ function initNavbarDateTime() {
             }
 
             const existingValue = String(contactUserSelect.value || '').trim();
-            const currentUser = getCurrentUser();
-            const currentUserEmail = normalizeEmail(currentUser.email || '');
+            const currentUserEmail = normalizeEmail(workspaceUser.email || '');
 
             contactUserSelect.innerHTML = '<option value="">Select a user for Contact Us</option>';
 
@@ -9043,10 +9064,6 @@ function initNavbarDateTime() {
             if (currentMatch) {
                 contactUserSelect.value = normalizeEmail(currentMatch.email || '') || makeNameKey(currentMatch.name || '');
                 return;
-            }
-
-            if (flyerContacts.length > 0) {
-                contactUserSelect.value = normalizeEmail(flyerContacts[0].email || '') || makeNameKey(flyerContacts[0].name || '');
             }
         }
 
@@ -9099,17 +9116,9 @@ function initNavbarDateTime() {
                 }
             }
 
-            const currentUser = getCurrentUser();
-            const currentName = normalizeName(currentUser.name || '');
-            const currentEmail = normalizeEmail(currentUser.email || '');
+            const currentName = normalizeName(workspaceUser.name || '');
+            const currentEmail = normalizeEmail(workspaceUser.email || '');
             const fallbackContacts = [];
-
-            // Keep core admins available in the flyer contact list even if API fetch is unavailable.
-            fallbackContacts.push({
-                name: 'Steve Medina',
-                email: 'steve.medina@fastbridgegroupllc.com',
-                phone: getUserPhoneHint('steve.medina@fastbridgegroupllc.com', 'Steve Medina')
-            });
 
             if (currentName || currentEmail) {
                 fallbackContacts.push({
@@ -12657,9 +12666,14 @@ function initNavbarDateTime() {
                 const user = readLocalJson('user');
                 const smtpSettings = getScopedSmtpSettings(workspaceUser);
                 const smtpUser = String(smtpSettings && smtpSettings.smtpUser ? smtpSettings.smtpUser : '').trim();
+                const normalizedWorkspaceEmail = normalizeUserIdentityValue(workspaceUser.email || user.email || profile.email || '');
+                const normalizedDraftSenderEmail = normalizeUserIdentityValue(savedDraft.senderEmail || '');
+                const safeDraftSenderEmail = normalizedDraftSenderEmail && normalizedDraftSenderEmail === normalizedWorkspaceEmail
+                    ? String(savedDraft.senderEmail || '').trim()
+                    : '';
                 return {
                     name: String(savedDraft.senderName || profile.name || user.name || workspaceUser.name || '').trim(),
-                    email: String(savedDraft.senderEmail || smtpUser || profile.email || user.email || '').trim()
+                    email: String(smtpUser || safeDraftSenderEmail || workspaceUser.email || user.email || profile.email || '').trim()
                 };
             }
 
@@ -13578,9 +13592,14 @@ function initNavbarDateTime() {
             sendAgentButton.addEventListener('click', async () => {
                 const recipientName = recipientNameInput.value.trim();
                 const recipientEmail = recipientEmailInput.value.trim();
+                const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
 
                 if (!recipientEmail) {
                     showDashboardToast('error', 'Recipient Email Required', 'Add the recipient email before sending.');
+                    return;
+                }
+                if (!token) {
+                    showDashboardToast('error', 'Sign In Required', 'Sign in again before sending email through the website.');
                     return;
                 }
                 saveDraft();
@@ -13599,7 +13618,6 @@ function initNavbarDateTime() {
                 sendAgentButton.textContent = 'Sending...';
 
                 try {
-                    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
                     const attachments = await buildServerEmailAttachments();
                     const investorAttachmentPaths = getSelectedInvestorAttachmentPaths();
                     const resolvedECardPath = ecardToggle && ecardToggle.checked ? (getSelectedECardPath() || userECardPath || '') : '';
