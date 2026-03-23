@@ -142,12 +142,12 @@ function resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature }
   let resolvedUser = '';
   let resolvedPass = '';
 
-  if (dbUser && dbPass && dbUserMatchesAccount) {
-    resolvedUser = dbUser;
-    resolvedPass = dbPass;
-  } else if (perUserEnvUser && perUserEnvPass && envUserMatchesAccount) {
+  if (perUserEnvUser && perUserEnvPass && envUserMatchesAccount) {
     resolvedUser = perUserEnvUser;
     resolvedPass = perUserEnvPass;
+  } else if (dbUser && dbPass && dbUserMatchesAccount) {
+    resolvedUser = dbUser;
+    resolvedPass = dbPass;
   } else if (dbUser && perUserEnvPass && dbUserMatchesAccount && envUserMatchesAccount && normalizeKnownEmail(dbUser) === normalizeKnownEmail(perUserEnvUser)) {
     resolvedUser = dbUser;
     resolvedPass = perUserEnvPass;
@@ -156,7 +156,7 @@ function resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature }
     resolvedPass = dbUserMatchesAccount ? dbPass : (envUserMatchesAccount ? perUserEnvPass : '');
   }
 
-  const resolvedSignature = String(smtpSignature || perUserEnvConfig.smtpSignature || '').trim();
+  const resolvedSignature = String(perUserEnvConfig.smtpSignature || smtpSignature || '').trim();
 
   return {
     smtpUser: resolvedUser,
