@@ -155,6 +155,13 @@
             transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
         }
 
+        .mls-jump-link {
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.94), rgba(var(--accent-light-rgb), 0.78));
+            border-color: rgba(var(--accent-light-rgb), 0.34);
+            color: #f8fffc;
+            box-shadow: 0 18px 34px -26px rgba(var(--accent-rgb), 0.55);
+        }
+
         .mls-jump-link,
         .mls-preset-chip,
         .mls-search-hero-btn,
@@ -187,6 +194,12 @@
             transform: translateY(-1px);
             border-color: rgba(var(--accent-light-rgb), 0.32);
             background: rgba(255, 255, 255, 0.08);
+        }
+
+        .mls-jump-link:hover,
+        .mls-jump-link:focus-visible {
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 1), rgba(var(--accent-light-rgb), 0.86));
+            border-color: rgba(var(--accent-light-rgb), 0.46);
         }
 
         .mls-search-hero-aside,
@@ -364,6 +377,149 @@
             line-height: 1.7;
         }
 
+        .mls-search-results-tabs {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .mls-search-results-tab {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            border-radius: 999px;
+            min-height: 42px;
+            padding: 10px 16px;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .mls-search-results-tab.is-active,
+        .mls-search-results-tab:hover,
+        .mls-search-results-tab:focus-visible {
+            color: #f8fffc;
+            border-color: rgba(var(--accent-light-rgb), 0.34);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.94), rgba(var(--accent-light-rgb), 0.76));
+            box-shadow: 0 18px 34px -26px rgba(var(--accent-rgb), 0.55);
+            transform: translateY(-1px);
+            outline: none;
+        }
+
+        .mls-search-results-panel[hidden] {
+            display: none !important;
+        }
+
+        .mls-nearby-summary {
+            margin-bottom: 14px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .mls-nearby-summary strong {
+            color: var(--text-primary);
+        }
+
+        .mls-nearby-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .mls-nearby-card,
+        .mls-nearby-empty {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mls-nearby-empty {
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .mls-nearby-empty strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            font-size: 15px;
+        }
+
+        .mls-nearby-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .mls-nearby-card h3 {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.2;
+        }
+
+        .mls-nearby-card-price {
+            color: #f8fffc;
+            font-size: 18px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .mls-nearby-card-location,
+        .mls-nearby-card-note {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .mls-nearby-card-location {
+            margin-bottom: 10px;
+        }
+
+        .mls-nearby-specs,
+        .mls-nearby-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .mls-nearby-specs span,
+        .mls-nearby-tags span {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .mls-nearby-tags span {
+            color: var(--text-secondary);
+            text-transform: none;
+            letter-spacing: 0.01em;
+            font-weight: 600;
+        }
+
         .mls-search-query-pills {
             margin-top: 14px;
         }
@@ -511,6 +667,14 @@
             .mls-search-hero h2 {
                 font-size: 30px;
             }
+
+            .mls-nearby-card-head {
+                flex-direction: column;
+            }
+
+            .mls-nearby-card-price {
+                white-space: normal;
+            }
         }
     </style>
 </head>
@@ -594,26 +758,6 @@
                                 <a class="mls-jump-link" href="#mls-search-guidance">Workflow Tips</a>
                             </div>
                         </div>
-                        <aside class="mls-search-hero-aside">
-                            <div>
-                                <span class="mls-search-panel-label">What this page does better now</span>
-                                <div class="mls-search-stat-grid">
-                                    <div class="mls-search-stat">
-                                        <strong>4</strong>
-                                        <span>Launch-ready source shortcuts with one brief</span>
-                                    </div>
-                                    <div class="mls-search-stat">
-                                        <strong>5</strong>
-                                        <span>Preset investor search modes to start fast</span>
-                                    </div>
-                                    <div class="mls-search-stat">
-                                        <strong>1</strong>
-                                        <span>Clear criteria summary you can actually skim</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mls-search-status" id="mls-search-status"><strong>Status:</strong> Ready to build a search brief.</div>
-                        </aside>
                     </div>
                 </section>
 
@@ -753,25 +897,36 @@
                                     <p class="card-subtitle">A cleaner search summary you can skim before launching third-party sites.</p>
                                 </div>
                             </div>
-                            <div class="mls-search-summary" id="mls-search-summary"></div>
-                            <div class="mls-search-query-pills" id="mls-search-query-pills"></div>
-                            <div class="mls-search-brief-grid">
-                                <div class="mls-search-brief-item">
-                                    <span>Primary Market</span>
-                                    <strong id="mls-search-primary-market">No market selected yet</strong>
+                            <div class="mls-search-results-tabs" role="tablist" aria-label="MLS search results views">
+                                <button type="button" class="mls-search-results-tab is-active" id="mls-results-tab-search" data-mls-results-tab="search" role="tab" aria-selected="true" aria-controls="mls-results-panel-search">Search Snapshot</button>
+                                <button type="button" class="mls-search-results-tab" id="mls-results-tab-nearby" data-mls-results-tab="nearby" role="tab" aria-selected="false" aria-controls="mls-results-panel-nearby">Nearby Homes</button>
+                            </div>
+                            <section class="mls-search-results-panel" id="mls-results-panel-search" data-mls-results-panel="search" role="tabpanel" aria-labelledby="mls-results-tab-search">
+                                <div class="mls-search-summary" id="mls-search-summary"></div>
+                                <div class="mls-search-query-pills" id="mls-search-query-pills"></div>
+                                <div class="mls-search-brief-grid">
+                                    <div class="mls-search-brief-item">
+                                        <span>Primary Market</span>
+                                        <strong id="mls-search-primary-market">No market selected yet</strong>
+                                    </div>
+                                    <div class="mls-search-brief-item">
+                                        <span>Investor Fit</span>
+                                        <strong id="mls-search-investor-fit">Add a preset or a keyword focus</strong>
+                                    </div>
+                                    <div class="mls-search-brief-item">
+                                        <span>Criteria Weight</span>
+                                        <p id="mls-search-criteria-weight">No major filters applied yet.</p>
+                                    </div>
+                                    <div class="mls-search-brief-item">
+                                        <span>Launch Note</span>
+                                        <p id="mls-search-launch-note">Once the brief looks tight, open your preferred sources below.</p>
+                                    </div>
                                 </div>
-                                <div class="mls-search-brief-item">
-                                    <span>Investor Fit</span>
-                                    <strong id="mls-search-investor-fit">Add a preset or a keyword focus</strong>
-                                </div>
-                                <div class="mls-search-brief-item">
-                                    <span>Criteria Weight</span>
-                                    <p id="mls-search-criteria-weight">No major filters applied yet.</p>
-                                </div>
-                                <div class="mls-search-brief-item">
-                                    <span>Launch Note</span>
-                                    <p id="mls-search-launch-note">Once the brief looks tight, open your preferred sources below.</p>
-                                </div>
+                            </section>
+                            <section class="mls-search-results-panel" id="mls-results-panel-nearby" data-mls-results-panel="nearby" role="tabpanel" aria-labelledby="mls-results-tab-nearby" hidden>
+                                <div class="mls-nearby-summary" id="mls-search-nearby-summary"><strong>Nearby Homes:</strong> Add a market and radius to generate nearby property ideas around your active search.</div>
+                                <div class="mls-nearby-list" id="mls-search-nearby-list"></div>
+                            </section>
                             </div>
                         </div>
 
@@ -841,9 +996,13 @@
             const priceBandEl = document.getElementById('mls-search-price-band');
             const structureNeedEl = document.getElementById('mls-search-structure-need');
             const signalListEl = document.getElementById('mls-search-signal-list');
+            const nearbySummaryEl = document.getElementById('mls-search-nearby-summary');
+            const nearbyListEl = document.getElementById('mls-search-nearby-list');
             const copyBtn = document.getElementById('mls-search-copy');
             const clearBtn = document.getElementById('mls-search-clear');
             const generateBtn = document.getElementById('mls-search-generate');
+            const resultsTabButtons = Array.from(document.querySelectorAll('[data-mls-results-tab]'));
+            const resultsTabPanels = Array.from(document.querySelectorAll('[data-mls-results-panel]'));
             const sourceLinks = {
                 zillow: document.getElementById('mls-search-zillow'),
                 redfin: document.getElementById('mls-search-redfin'),
@@ -894,6 +1053,15 @@
                 }
             };
 
+            const nearbyPropertySeeds = [
+                { street: 'Cedar Ave', priceFactor: 0.94, beds: 3, baths: 2, sqft: 1480, distanceLocal: 0.8, tags: ['Cosmetic upside', 'Solid street frontage'] },
+                { street: 'Magnolia St', priceFactor: 1.02, beds: 4, baths: 2, sqft: 1675, distanceLocal: 1.4, tags: ['Garage access', 'Fast comp set nearby'] },
+                { street: 'Valencia Dr', priceFactor: 0.89, beds: 3, baths: 2, sqft: 1395, distanceLocal: 1.9, tags: ['Lower entry point', 'Watch rehab budget'] },
+                { street: 'Palm Vista Way', priceFactor: 1.08, beds: 4, baths: 3, sqft: 1840, distanceLocal: 2.6, tags: ['Higher ARV pocket', 'Good resale presentation'] },
+                { street: 'Juniper Lane', priceFactor: 0.97, beds: 2, baths: 1.5, sqft: 1210, distanceLocal: 3.1, tags: ['Starter inventory', 'Could fit rental hold'] },
+                { street: 'Orchard Court', priceFactor: 1.05, beds: 3, baths: 2.5, sqft: 1590, distanceLocal: 3.8, tags: ['Tighter cul-de-sac', 'Neighborhood appeal'] }
+            ];
+
             function formatCurrency(value) {
                 const numeric = Number(value || 0);
                 if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -940,6 +1108,119 @@
                     summary += ` Focus the scan on ${state.keywords}.`;
                 }
                 return summary;
+            }
+
+            function normalizeMarketLabel(value) {
+                const raw = String(value || '').trim();
+                if (!raw) {
+                    return '';
+                }
+                const firstSegment = raw.split(',')[0].trim() || raw;
+                return firstSegment.replace(/\s+/g, ' ');
+            }
+
+            function getRadiusMiles(radius) {
+                if (radius === 'local pocket') return 1.5;
+                if (radius === '3-mile radius') return 3;
+                if (radius === '5-mile radius') return 5;
+                if (radius === 'county-wide') return 9;
+                return 3;
+            }
+
+            function buildNearbyProperties(state) {
+                const marketLabel = normalizeMarketLabel(state.location);
+                if (!marketLabel) {
+                    return [];
+                }
+
+                const minPrice = Number(state.minPrice || 0);
+                const maxPrice = Number(state.maxPrice || 0);
+                const fallbackMin = minPrice > 0 ? minPrice : 275000;
+                const fallbackMax = maxPrice > fallbackMin ? maxPrice : fallbackMin + 325000;
+                const midpoint = Math.round((fallbackMin + fallbackMax) / 2);
+                const radiusMiles = getRadiusMiles(state.radius);
+                const keywordTags = String(state.keywords || '')
+                    .split(',')
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                    .slice(0, 2);
+
+                return nearbyPropertySeeds.map((seed, index) => {
+                    const houseNumber = 118 + index * 37;
+                    const estimatedPrice = Math.max(95000, Math.round((midpoint * seed.priceFactor) / 5000) * 5000);
+                    const beds = Math.max(Number(state.beds || 0) || seed.beds, seed.beds);
+                    const baths = Math.max(Number(state.baths || 0) || seed.baths, seed.baths);
+                    const propertyType = state.propertyType || 'Single Family Residence';
+                    const distance = Math.min(radiusMiles, seed.distanceLocal + Math.max(0, radiusMiles - 2) * 0.55);
+                    const tags = [...seed.tags, ...keywordTags].slice(0, 3);
+                    const note = keywordTags.length
+                        ? `Matches the current brief around ${keywordTags.join(' and ')} while staying close to ${marketLabel}.`
+                        : `Sits inside the ${state.radius || 'active search'} and gives you a quick nearby comp-style option to check.`;
+
+                    return {
+                        address: `${houseNumber} ${seed.street}`,
+                        market: marketLabel,
+                        propertyType,
+                        price: estimatedPrice,
+                        beds,
+                        baths,
+                        sqft: seed.sqft + index * 35,
+                        distance: `${distance.toFixed(distance < 2 ? 1 : 0)} mi away`,
+                        note,
+                        tags
+                    };
+                });
+            }
+
+            function renderNearbyProperties(state) {
+                if (!nearbySummaryEl || !nearbyListEl) {
+                    return;
+                }
+
+                const marketLabel = normalizeMarketLabel(state.location);
+                if (!marketLabel) {
+                    nearbySummaryEl.innerHTML = '<strong>Nearby Homes:</strong> Add a city, ZIP, county, or neighborhood to generate nearby property ideas tied to your search.';
+                    nearbyListEl.innerHTML = `
+                        <div class="mls-nearby-empty">
+                            <strong>No nearby homes yet.</strong>
+                            Start with a market area and the page will build a nearby-property list around that search box.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const cards = buildNearbyProperties(state);
+                nearbySummaryEl.innerHTML = `<strong>Nearby Homes:</strong> ${cards.length} nearby options around ${marketLabel} based on your ${state.radius || 'active search area'} and current investor box.`;
+                nearbyListEl.innerHTML = cards.map((card) => `
+                    <article class="mls-nearby-card">
+                        <div class="mls-nearby-card-head">
+                            <div>
+                                <h3>${card.address}</h3>
+                                <p class="mls-nearby-card-location">${card.market} • ${card.propertyType} • ${card.distance}</p>
+                            </div>
+                            <div class="mls-nearby-card-price">${formatCurrency(card.price)}</div>
+                        </div>
+                        <p class="mls-nearby-card-note">${card.note}</p>
+                        <div class="mls-nearby-specs">
+                            <span>${card.beds} bd</span>
+                            <span>${card.baths} ba</span>
+                            <span>${card.sqft.toLocaleString()} sf</span>
+                        </div>
+                        <div class="mls-nearby-tags">${card.tags.map((tag) => `<span>${tag}</span>`).join('')}</div>
+                    </article>
+                `).join('');
+            }
+
+            function setResultsTab(tabName) {
+                resultsTabButtons.forEach((button) => {
+                    const isActive = button.getAttribute('data-mls-results-tab') === tabName;
+                    button.classList.toggle('is-active', isActive);
+                    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                });
+
+                resultsTabPanels.forEach((panel) => {
+                    panel.hidden = panel.getAttribute('data-mls-results-panel') !== tabName;
+                });
             }
 
             function buildSignalItems(state) {
@@ -1081,6 +1362,7 @@
                 }
 
                 buildSignalItems(state);
+                renderNearbyProperties(state);
 
                 Object.entries(sourceLinks).forEach(([key, link]) => {
                     if (!link) return;
@@ -1098,10 +1380,15 @@
                 button.addEventListener('click', () => applyPreset(button.getAttribute('data-mls-preset')));
             });
 
+            resultsTabButtons.forEach((button) => {
+                button.addEventListener('click', () => setResultsTab(button.getAttribute('data-mls-results-tab')));
+            });
+
             if (copyBtn) copyBtn.addEventListener('click', copyBrief);
             if (clearBtn) clearBtn.addEventListener('click', clearFilters);
             if (generateBtn) generateBtn.addEventListener('click', updateSearchView);
 
+            setResultsTab('search');
             updateSearchView();
         })();
     </script>

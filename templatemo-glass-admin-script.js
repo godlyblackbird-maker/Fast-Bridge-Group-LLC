@@ -384,6 +384,46 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return;
         }
 
+        function initFloatingNotificationTriggers(buttons) {
+            const uniqueButtons = buttons.filter((button, index, allButtons) => button && allButtons.indexOf(button) === index);
+            if (!uniqueButtons.length) {
+                return;
+            }
+
+            let releaseThreshold = 0;
+
+            function measureThreshold() {
+                const primaryButton = uniqueButtons[0];
+                const anchor = primaryButton.closest('.navbar') || primaryButton;
+                const anchorRect = anchor.getBoundingClientRect();
+                releaseThreshold = Math.max(0, window.scrollY + anchorRect.bottom);
+            }
+
+            function syncFloatingState() {
+                const shouldFloat = window.scrollY > releaseThreshold;
+                uniqueButtons.forEach((button) => {
+                    button.classList.toggle('notification-following', shouldFloat);
+                });
+            }
+
+            let resizeTimer = null;
+            const handleResize = () => {
+                window.clearTimeout(resizeTimer);
+                resizeTimer = window.setTimeout(() => {
+                    measureThreshold();
+                    syncFloatingState();
+                }, 60);
+            };
+
+            measureThreshold();
+            syncFloatingState();
+            window.addEventListener('scroll', syncFloatingState, { passive: true });
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('load', handleResize, { once: true });
+        }
+
+        initFloatingNotificationTriggers(triggerButtons);
+
         const workspaceUser = getWorkspaceUserContext();
         let historyEntries = getNotificationHistory(workspaceUser);
         let drawer = document.getElementById('notification-center-drawer');
