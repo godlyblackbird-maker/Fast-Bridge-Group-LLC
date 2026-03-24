@@ -28,6 +28,7 @@
                 const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
                 const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const isAuthenticated = Boolean(authToken && (email || name));
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 const themeStore = readJson('dashboardThemeByUser');
                 const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
@@ -42,8 +43,10 @@
                 }
 
                 document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
             } catch (error) {
                 document.documentElement.setAttribute('data-theme', 'beach');
+                document.documentElement.setAttribute('data-authenticated', 'false');
             }
         })();
     </script>
@@ -203,7 +206,7 @@
             --primary-cta-end: rgba(251, 146, 60, 0.92);
         }
 
-        html[data-theme='beach'] body::before {
+        html[data-theme='beach'][data-authenticated='true'] body::before {
             content: '';
             position: fixed;
             right: -150px;
@@ -1798,7 +1801,7 @@
                 grid-template-columns: 1fr;
             }
 
-            html[data-theme='beach'] body::before {
+            html[data-theme='beach'][data-authenticated='true'] body::before {
                 right: -96px;
                 bottom: -68px;
                 width: 320px;
@@ -1889,10 +1892,6 @@
                 </div>
             </a>
             <div class="topbar-actions">
-                <button class="theme-switch-btn" id="homepage-theme-toggle" type="button" aria-live="polite">
-                    <span class="theme-switch-label">Theme</span>
-                    <span class="theme-switch-current">Beach Theme</span>
-                </button>
                 <a class="login-btn" href="login.html">Log In</a>
             </div>
         </header>
@@ -2146,6 +2145,7 @@
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 return {
                     userKey,
+                    isAuthenticated: Boolean(authToken && (email || name)),
                     hasIdentity: Boolean(email || String(user.name || (canUseProfileIdentity ? profile.name : '') || '').trim())
                 };
             };
@@ -2184,44 +2184,11 @@
                 localStorage.setItem('theme', normalized);
             };
 
-            const homepageThemeToggle = document.getElementById('homepage-theme-toggle');
-            const homepageThemeLabel = homepageThemeToggle ? homepageThemeToggle.querySelector('.theme-switch-label') : null;
-            const homepageThemeCurrent = homepageThemeToggle ? homepageThemeToggle.querySelector('.theme-switch-current') : null;
-
-            const getThemeCycleContext = () => {
-                const activeTheme = getHomepageTheme();
-                const availableThemes = getAvailableHomepageThemes();
-                const currentIndex = availableThemes.indexOf(activeTheme);
-                const fallbackTheme = availableThemes[0] || 'beach';
-                const effectiveTheme = currentIndex === -1 ? activeTheme : availableThemes[currentIndex];
-                const nextTheme = currentIndex === -1
-                    ? fallbackTheme
-                    : availableThemes[(currentIndex + 1) % availableThemes.length] || fallbackTheme;
-
-                return {
-                    activeTheme: effectiveTheme,
-                    nextTheme,
-                    availableThemes,
-                    currentIndex,
-                    fallbackTheme
-                };
-            };
-
             const applyStoredTheme = () => {
-                const { activeTheme, nextTheme, availableThemes } = getThemeCycleContext();
+                const activeTheme = getHomepageTheme();
+                const { isAuthenticated } = getUserThemeContext();
                 document.documentElement.setAttribute('data-theme', activeTheme);
-
-                if (homepageThemeLabel) {
-                    homepageThemeLabel.textContent = 'Theme';
-                }
-
-                if (homepageThemeCurrent) {
-                    homepageThemeCurrent.textContent = `${THEME_LABELS[activeTheme]} Theme`;
-                }
-
-                if (homepageThemeToggle) {
-                    homepageThemeToggle.setAttribute('aria-label', `Switch homepage theme to ${THEME_LABELS[nextTheme]} Theme`);
-                }
+                document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
             };
 
             const modal = document.getElementById('access-request-modal');
@@ -2274,14 +2241,6 @@
 
             if (openButton) {
                 openButton.addEventListener('click', openModal);
-            }
-
-            if (homepageThemeToggle) {
-                homepageThemeToggle.addEventListener('click', () => {
-                    const { nextTheme } = getThemeCycleContext();
-                    saveThemePreference(nextTheme);
-                    applyStoredTheme();
-                });
             }
 
             if (closeButton) {

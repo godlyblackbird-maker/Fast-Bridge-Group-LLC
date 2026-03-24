@@ -3686,8 +3686,17 @@ function initNavbarDateTime() {
 
         if (tabLinks.length === 0) return;
 
+        const storedUser = getStoredCurrentUserIdentity();
+        const lockedTabs = isRegularUserRole(storedUser.role)
+            ? new Set(['appearance'])
+            : new Set();
+        const lockedTabLabels = {
+            appearance: 'Appearance settings'
+        };
+
         function activateSettingsTab(tabId) {
-            const normalizedTabId = String(tabId || '').trim().toLowerCase() || 'profile';
+            const requestedTabId = String(tabId || '').trim().toLowerCase() || 'profile';
+            const normalizedTabId = lockedTabs.has(requestedTabId) ? 'subscriptions' : requestedTabId;
 
             document.querySelectorAll('.settings-nav-link').forEach(navLink => {
                 navLink.classList.toggle('active', navLink.getAttribute('data-tab') === normalizedTabId);
@@ -3699,9 +3708,26 @@ function initNavbarDateTime() {
         }
 
         tabLinks.forEach(link => {
+            const tabId = String(link.getAttribute('data-tab') || '').trim().toLowerCase();
+            if (lockedTabs.has(tabId)) {
+                link.classList.add('nav-link-locked');
+                link.setAttribute('title', 'upgrade to premium');
+                link.setAttribute('aria-disabled', 'true');
+                if (typeof window.attachPremiumUpgradeTooltip === 'function') {
+                    window.attachPremiumUpgradeTooltip(link);
+                }
+            }
+
             link.addEventListener('click', event => {
                 event.preventDefault();
                 const tabId = link.getAttribute('data-tab');
+                const normalizedTabId = String(tabId || '').trim().toLowerCase();
+                if (lockedTabs.has(normalizedTabId)) {
+                    const tabLabel = lockedTabLabels[normalizedTabId] || 'This tab';
+                    showDashboardToast('error', 'Access Locked', `${tabLabel} are locked for Basic accounts. Upgrade to Premium to unlock them.`);
+                    activateSettingsTab('subscriptions');
+                    return;
+                }
                 activateSettingsTab(tabId);
             });
         });
@@ -4534,8 +4560,10 @@ function initNavbarDateTime() {
                 const isAdminUser = currentRole === adminRole;
                 const isPremiumUser = currentRole === premiumRole;
                 const activePlan = getSelectedPlan();
-                const effectivePlan = isAdminUser ? 'admin' : (isPremiumUser ? 'premium' : activePlan);
-                currentPlanLabel.textContent = planCopy[effectivePlan].label;
+                const actualPlan = isAdminUser
+                    ? 'admin'
+                    : ((isPremiumUser || activeSubscription?.plan === 'premium') ? 'premium' : 'basic');
+                currentPlanLabel.textContent = planCopy[actualPlan].label;
                 planSummary.textContent = isAdminUser
                     ? planCopy.admin.summary
                     : (isPremiumUser
