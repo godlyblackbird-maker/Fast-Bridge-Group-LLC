@@ -29,6 +29,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const PLANNER_DRAFT_KEY = 'plannerDraftByUser';
     const DASHBOARD_NOTES_KEY = 'dashboardNotesByUser';
     const SUBSCRIPTION_PLAN_KEY = 'subscriptionPlanByUser';
+    const CLOSED_DEAL_INLINE_DOCUMENT_MAX_BYTES = 1024 * 1024;
     const LEGAL_FOOTER_LINKS = [
         { id: 'mls-data-disclaimer', label: 'MLS Data Disclaimer' },
         { id: 'idx-vow-disclaimer', label: 'IDX/VOW Disclaimer' },
@@ -648,7 +649,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.2.5';
+                versionLabel.textContent = 'v1.2.6';
             });
     }
 
@@ -2483,6 +2484,24 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         });
     }
 
+    function createBlobFromBase64(base64, mimeType) {
+        const normalizedBase64 = String(base64 || '').trim();
+        if (!normalizedBase64) {
+            return null;
+        }
+
+        try {
+            const binary = window.atob(normalizedBase64);
+            const bytes = new Uint8Array(binary.length);
+            for (let index = 0; index < binary.length; index += 1) {
+                bytes[index] = binary.charCodeAt(index);
+            }
+            return new Blob([bytes], { type: String(mimeType || 'application/octet-stream') || 'application/octet-stream' });
+        } catch (error) {
+            return null;
+        }
+    }
+
     function formatAgentStatusLabel(value) {
         const labels = {
             acquired: '100% - Closed Deal',
@@ -2791,6 +2810,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const feesTotalEl = document.getElementById('analytics-closed-deals-fees-total');
         const earnedTotalEl = document.getElementById('analytics-closed-deals-earned-total');
         const listEl = document.getElementById('analytics-closed-deals-list');
+        const myFileListEl = document.getElementById('analytics-my-file-list');
+        const myFileCountEl = document.getElementById('analytics-my-file-count');
 
         if (!closedDealsValueEl || !closedDealsChangeEl || !listEl) {
             return;
@@ -2857,9 +2878,46 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     fileSize: Math.max(Number(documentItem && documentItem.fileSize) || 0, 0),
                     fileType: String(documentItem && documentItem.fileType || '').trim(),
                     storage: String(documentItem && documentItem.storage || 'indexeddb').trim() || 'indexeddb',
+                    contentBase64: String(documentItem && documentItem.contentBase64 || '').trim(),
                     createdAt: Number(documentItem && documentItem.createdAt) || Date.now()
                 }))
-                .filter((documentItem) => documentItem.id);
+                .filter((documentItem) => documentItem.id && (documentItem.storage !== 'inline-base64' || documentItem.contentBase64));
+        }
+
+        async function createStoredClosedDealDocument(file) {
+            const documentId = `closed-deal-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+            const fileName = String(file && file.name || 'Document').trim() || 'Document';
+            const fileSize = Math.max(Number(file && file.size) || 0, 0);
+            const fileType = String(file && file.type || '').trim() || 'File';
+
+            try {
+                await putOfferDocumentBlob(documentId, file);
+                return {
+                    id: documentId,
+                    label: fileName,
+                    fileName,
+                    fileSize,
+                    fileType,
+                    storage: 'indexeddb',
+                    createdAt: Date.now()
+                };
+            } catch (storageError) {
+                if (fileSize > CLOSED_DEAL_INLINE_DOCUMENT_MAX_BYTES) {
+                    throw new Error('This file is too large for the current browser storage fallback.');
+                }
+
+                const contentBase64 = await readBlobAsBase64(file);
+                return {
+                    id: documentId,
+                    label: fileName,
+                    fileName,
+                    fileSize,
+                    fileType,
+                    storage: 'inline-base64',
+                    contentBase64,
+                    createdAt: Date.now()
+                };
+            }
         }
 
         function renderPendingUploads() {
@@ -2907,7 +2965,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         async function openStoredClosedDealDocument(documentItem, download = false) {
-            const blob = await getOfferDocumentBlob(documentItem.id);
+            let blob = null;
+
+            if (documentItem.storage === 'inline-base64') {
+                blob = createBlobFromBase64(documentItem.contentBase64, documentItem.fileType);
+            } else {
+                blob = await getOfferDocumentBlob(documentItem.id);
+            }
+
             if (!blob) {
                 showDashboardToast('error', 'File Missing', 'This saved closed-deal document is no longer available in browser storage.');
                 return;
@@ -3052,10 +3117,157 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 .sort((left, right) => (Number(right.closeDate) || Date.parse(right.closeDate) || 0) - (Number(left.closeDate) || Date.parse(left.closeDate) || 0));
         }
 
+        function createClosedDealDocumentCard(documentItem) {
+            const documentCard = document.createElement('div');
+            documentCard.className = 'closed-deal-document-item';
+
+            const documentHead = document.createElement('div');
+            documentHead.className = 'closed-deal-document-head';
+
+            const copy = document.createElement('div');
+            const name = document.createElement('strong');
+            name.className = 'closed-deal-document-name';
+            name.textContent = documentItem.fileName || documentItem.label || 'Saved Document';
+            const meta = document.createElement('span');
+            meta.className = 'closed-deal-document-meta';
+            meta.textContent = [formatFileSize(documentItem.fileSize), documentItem.fileType || 'File'].filter(Boolean).join(' • ');
+            copy.appendChild(name);
+            copy.appendChild(meta);
+            documentHead.appendChild(copy);
+            documentCard.appendChild(documentHead);
+
+            const actions = document.createElement('div');
+            actions.className = 'closed-deal-document-actions';
+
+            const openButton = document.createElement('button');
+            openButton.type = 'button';
+            openButton.className = 'closed-deal-document-btn';
+            openButton.textContent = 'Open';
+            openButton.addEventListener('click', async () => {
+                await openStoredClosedDealDocument(documentItem, false);
+            });
+
+            const downloadButton = document.createElement('button');
+            downloadButton.type = 'button';
+            downloadButton.className = 'closed-deal-document-btn';
+            downloadButton.textContent = 'Download';
+            downloadButton.addEventListener('click', async () => {
+                await openStoredClosedDealDocument(documentItem, true);
+            });
+
+            actions.appendChild(openButton);
+            actions.appendChild(downloadButton);
+            documentCard.appendChild(actions);
+
+            return documentCard;
+        }
+
+        function createClosedDealCard(deal, options = {}) {
+            const { allowRemove = true } = options;
+
+            const card = document.createElement('article');
+            card.className = 'closed-deal-item';
+
+            const head = document.createElement('div');
+            head.className = 'closed-deal-item-head';
+
+            const title = document.createElement('div');
+            title.className = 'closed-deal-item-title';
+            title.textContent = deal.title;
+
+            const source = document.createElement('span');
+            source.className = `closed-deal-source ${deal.source}`;
+            source.textContent = deal.source === 'mixed'
+                ? 'Auto + Manual'
+                : deal.source === 'manual'
+                    ? 'Manual'
+                    : 'Auto';
+
+            const meta = document.createElement('p');
+            meta.className = 'closed-deal-item-meta';
+            meta.textContent = `Closed: ${formatClosedDealDate(deal.closeDate)}`;
+
+            head.appendChild(title);
+            head.appendChild(source);
+            card.appendChild(head);
+            card.appendChild(meta);
+
+            if (parseClosedDealMoney(deal.wholesaleFee) > 0 || parseClosedDealMoney(deal.earnedAmount) > 0) {
+                const financials = document.createElement('div');
+                financials.className = 'closed-deal-item-financials';
+
+                const feeItem = document.createElement('div');
+                feeItem.className = 'closed-deal-item-financial';
+                feeItem.innerHTML = `<span class="closed-deal-item-financial-label">Wholesale Fee</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.wholesaleFee))}</strong>`;
+
+                const earnedItem = document.createElement('div');
+                earnedItem.className = 'closed-deal-item-financial';
+                earnedItem.innerHTML = `<span class="closed-deal-item-financial-label">Net Earned</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.earnedAmount))}</strong>`;
+
+                financials.appendChild(feeItem);
+                financials.appendChild(earnedItem);
+                card.appendChild(financials);
+            }
+
+            if (deal.note) {
+                const note = document.createElement('p');
+                note.className = 'closed-deal-item-note';
+                note.textContent = deal.note;
+                card.appendChild(note);
+            }
+
+            if (Array.isArray(deal.documents) && deal.documents.length) {
+                deal.documents.forEach((documentItem) => {
+                    card.appendChild(createClosedDealDocumentCard(documentItem));
+                });
+            }
+
+            if (allowRemove && deal.manual) {
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'closed-deal-remove-btn';
+                removeButton.textContent = 'Remove manual entry';
+                removeButton.addEventListener('click', async () => {
+                    try {
+                        await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
+                    } catch (error) {
+                        showDashboardToast('error', 'Delete Failed', 'The closed-deal documents could not be removed from browser storage.');
+                        return;
+                    }
+
+                    const nextItems = getManualClosedDeals().filter((item) => String(item.id || '') !== String(deal.id || ''));
+                    setManualClosedDeals(nextItems);
+                });
+                card.appendChild(removeButton);
+            }
+
+            return card;
+        }
+
+        function renderClosedDealList(container, deals, options = {}) {
+            const { emptyMessage, allowRemove = true } = options;
+
+            if (!container) {
+                return;
+            }
+
+            container.innerHTML = '';
+            if (!deals.length) {
+                container.innerHTML = `<p class="outreach-empty">${emptyMessage}</p>`;
+                return;
+            }
+
+            deals.forEach((deal) => {
+                container.appendChild(createClosedDealCard(deal, { allowRemove }));
+            });
+        }
+
         function renderClosedDeals() {
             const manualDeals = getManualClosedDeals();
             const autoDeals = buildAutoClosedDeals();
             const combinedDeals = buildCombinedClosedDeals();
+            const filedDeals = combinedDeals.filter((deal) => Array.isArray(deal.documents) && deal.documents.length);
+            const filedDocumentCount = filedDeals.reduce((total, deal) => total + deal.documents.length, 0);
             const combinedTotals = combinedDeals.reduce((totals, deal) => {
                 totals.wholesaleFee += parseClosedDealMoney(deal.wholesaleFee);
                 totals.earnedAmount += parseClosedDealMoney(deal.earnedAmount);
@@ -3072,130 +3284,17 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 earnedTotalEl.textContent = formatMoney(combinedTotals.earnedAmount);
             }
 
-            listEl.innerHTML = '';
-            if (combinedDeals.length === 0) {
-                listEl.innerHTML = '<p class="outreach-empty">No closed deals recorded yet.</p>';
-                return;
+            if (myFileCountEl) {
+                myFileCountEl.textContent = `${filedDeals.length} filed deal${filedDeals.length === 1 ? '' : 's'} • ${filedDocumentCount} doc${filedDocumentCount === 1 ? '' : 's'}`;
             }
 
-            combinedDeals.forEach((deal) => {
-                const card = document.createElement('article');
-                card.className = 'closed-deal-item';
-
-                const head = document.createElement('div');
-                head.className = 'closed-deal-item-head';
-
-                const title = document.createElement('div');
-                title.className = 'closed-deal-item-title';
-                title.textContent = deal.title;
-
-                const source = document.createElement('span');
-                source.className = `closed-deal-source ${deal.source}`;
-                source.textContent = deal.source === 'mixed'
-                    ? 'Auto + Manual'
-                    : deal.source === 'manual'
-                        ? 'Manual'
-                        : 'Auto';
-
-                const meta = document.createElement('p');
-                meta.className = 'closed-deal-item-meta';
-                meta.textContent = `Closed: ${formatClosedDealDate(deal.closeDate)}`;
-
-                head.appendChild(title);
-                head.appendChild(source);
-                card.appendChild(head);
-                card.appendChild(meta);
-
-                if (parseClosedDealMoney(deal.wholesaleFee) > 0 || parseClosedDealMoney(deal.earnedAmount) > 0) {
-                    const financials = document.createElement('div');
-                    financials.className = 'closed-deal-item-financials';
-
-                    const feeItem = document.createElement('div');
-                    feeItem.className = 'closed-deal-item-financial';
-                    feeItem.innerHTML = `<span class="closed-deal-item-financial-label">Wholesale Fee</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.wholesaleFee))}</strong>`;
-
-                    const earnedItem = document.createElement('div');
-                    earnedItem.className = 'closed-deal-item-financial';
-                    earnedItem.innerHTML = `<span class="closed-deal-item-financial-label">Net Earned</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.earnedAmount))}</strong>`;
-
-                    financials.appendChild(feeItem);
-                    financials.appendChild(earnedItem);
-                    card.appendChild(financials);
-                }
-
-                if (deal.note) {
-                    const note = document.createElement('p');
-                    note.className = 'closed-deal-item-note';
-                    note.textContent = deal.note;
-                    card.appendChild(note);
-                }
-
-                if (Array.isArray(deal.documents) && deal.documents.length) {
-                    deal.documents.forEach((documentItem) => {
-                        const documentCard = document.createElement('div');
-                        documentCard.className = 'closed-deal-document-item';
-
-                        const documentHead = document.createElement('div');
-                        documentHead.className = 'closed-deal-document-head';
-
-                        const copy = document.createElement('div');
-                        const name = document.createElement('strong');
-                        name.className = 'closed-deal-document-name';
-                        name.textContent = documentItem.fileName || documentItem.label || 'Saved Document';
-                        const meta = document.createElement('span');
-                        meta.className = 'closed-deal-document-meta';
-                        meta.textContent = [formatFileSize(documentItem.fileSize), documentItem.fileType || 'File'].filter(Boolean).join(' • ');
-                        copy.appendChild(name);
-                        copy.appendChild(meta);
-                        documentHead.appendChild(copy);
-                        documentCard.appendChild(documentHead);
-
-                        const actions = document.createElement('div');
-                        actions.className = 'closed-deal-document-actions';
-
-                        const openButton = document.createElement('button');
-                        openButton.type = 'button';
-                        openButton.className = 'closed-deal-document-btn';
-                        openButton.textContent = 'Open';
-                        openButton.addEventListener('click', async () => {
-                            await openStoredClosedDealDocument(documentItem, false);
-                        });
-
-                        const downloadButton = document.createElement('button');
-                        downloadButton.type = 'button';
-                        downloadButton.className = 'closed-deal-document-btn';
-                        downloadButton.textContent = 'Download';
-                        downloadButton.addEventListener('click', async () => {
-                            await openStoredClosedDealDocument(documentItem, true);
-                        });
-
-                        actions.appendChild(openButton);
-                        actions.appendChild(downloadButton);
-                        documentCard.appendChild(actions);
-                        card.appendChild(documentCard);
-                    });
-                }
-
-                if (deal.manual) {
-                    const removeButton = document.createElement('button');
-                    removeButton.type = 'button';
-                    removeButton.className = 'closed-deal-remove-btn';
-                    removeButton.textContent = 'Remove manual entry';
-                    removeButton.addEventListener('click', async () => {
-                        try {
-                            await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
-                        } catch (error) {
-                            showDashboardToast('error', 'Delete Failed', 'The closed-deal documents could not be removed from browser storage.');
-                            return;
-                        }
-
-                        const nextItems = getManualClosedDeals().filter((item) => String(item.id || '') !== String(deal.id || ''));
-                        setManualClosedDeals(nextItems);
-                    });
-                    card.appendChild(removeButton);
-                }
-
-                listEl.appendChild(card);
+            renderClosedDealList(listEl, combinedDeals, {
+                emptyMessage: 'No closed deals recorded yet.',
+                allowRemove: true
+            });
+            renderClosedDealList(myFileListEl, filedDeals, {
+                emptyMessage: 'No closed-deal files saved yet. Attach documents when recording a close and they\'ll appear here.',
+                allowRemove: false
             });
         }
 
@@ -3245,24 +3344,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 const uploadedDocuments = [];
                 try {
                     for (const pendingItem of pendingUploads) {
-                        const documentId = `closed-deal-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
-                        await putOfferDocumentBlob(documentId, pendingItem.file);
-                        uploadedDocuments.push({
-                            id: documentId,
-                            label: pendingItem.file.name,
-                            fileName: pendingItem.file.name,
-                            fileSize: pendingItem.file.size,
-                            fileType: pendingItem.file.type || 'File',
-                            storage: 'indexeddb',
-                            createdAt: Date.now()
-                        });
+                        uploadedDocuments.push(await createStoredClosedDealDocument(pendingItem.file));
                     }
                 } catch (error) {
                     try {
                         await deleteClosedDealDocumentBlobs(uploadedDocuments);
                     } catch (cleanupError) {
                     }
-                    showDashboardToast('error', 'Upload Failed', 'The browser could not store one or more closed-deal documents.');
+                    showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'The browser could not store one or more closed-deal documents.');
                     return;
                 }
 
