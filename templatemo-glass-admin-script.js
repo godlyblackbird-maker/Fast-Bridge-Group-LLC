@@ -3479,6 +3479,7 @@ function initNavbarDateTime() {
             isCollapsed = Boolean(nextCollapsed);
             const shouldCollapse = isCollapsed && !desktopQuery.matches;
 
+            document.documentElement.setAttribute('data-sidebar-collapsed', shouldCollapse ? 'on' : 'off');
             document.body.classList.toggle('sidebar-collapsed', shouldCollapse);
             sidebar.classList.toggle('sidebar-collapsed', shouldCollapse);
 

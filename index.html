@@ -1154,10 +1154,13 @@
             gap: 24px;
             align-items: center;
             padding: 28px;
-            border-radius: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.22);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
             overflow: hidden;
             position: relative;
         }
@@ -1165,12 +1168,12 @@
         .seller-cta-card::after {
             content: '';
             position: absolute;
-            right: -80px;
-            bottom: -90px;
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(52, 211, 153, 0.24), rgba(52, 211, 153, 0));
+            inset: auto -30% -55% auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+            opacity: 0.72;
             pointer-events: none;
         }
 
@@ -1205,6 +1208,7 @@
             margin: 0 0 12px;
             font-size: clamp(28px, 4vw, 44px);
             letter-spacing: -0.04em;
+            color: var(--text);
         }
 
         .seller-cta-points {
@@ -1217,7 +1221,7 @@
             display: flex;
             gap: 10px;
             align-items: flex-start;
-            color: rgba(248, 252, 255, 0.86);
+            color: var(--text);
         }
 
         .seller-cta-point strong {
@@ -1233,7 +1237,7 @@
 
         .seller-cta-note {
             margin: 0;
-            color: rgba(248, 252, 255, 0.72);
+            color: var(--muted);
             line-height: 1.7;
         }
 

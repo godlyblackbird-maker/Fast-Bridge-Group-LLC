@@ -24,6 +24,11 @@
                 const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
                 const themeStore = readJson('dashboardThemeByUser');
                 let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
                 if (theme === 'system') {
