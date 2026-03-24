@@ -127,41 +127,41 @@
 
         html[data-theme='dark'] {
             color-scheme: dark;
-            --bg: #08110f;
-            --panel: rgba(10, 23, 20, 0.72);
+            --bg: #000000;
+            --panel: rgba(8, 8, 8, 0.82);
             --border: rgba(255, 255, 255, 0.12);
-            --text: #f6f7f2;
-            --muted: rgba(246, 247, 242, 0.72);
-            --accent: #15a36f;
-            --accent-soft: #7fe7b8;
-            --sand: #d3b07b;
-            --shadow: 0 30px 80px rgba(0, 0, 0, 0.36);
+            --text: #f5f5f5;
+            --muted: rgba(245, 245, 245, 0.72);
+            --accent: #111111;
+            --accent-soft: #2b2b2b;
+            --sand: #1f1f1f;
+            --shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
             --surface-top: rgba(255, 255, 255, 0.06);
             --surface-bottom: rgba(255, 255, 255, 0.02);
-            --hero-orb: radial-gradient(circle, rgba(211, 176, 123, 0.24), transparent 70%);
-            --body-glow-a: rgba(21, 163, 111, 0.18);
-            --body-glow-b: rgba(211, 176, 123, 0.16);
-            --body-glow-c: #0a1411;
-            --body-glow-d: #08110f;
-            --body-glow-e: #0b1713;
-            --orb-a: rgba(21, 163, 111, 0.16);
-            --orb-b: rgba(211, 176, 123, 0.14);
-            --login-border: rgba(127, 231, 184, 0.34);
-            --login-shadow: 0 16px 34px rgba(21, 163, 111, 0.24);
-            --login-hover-border: rgba(127, 231, 184, 0.56);
-            --login-hover-shadow: 0 20px 38px rgba(21, 163, 111, 0.28);
-            --eyebrow-border: rgba(127, 231, 184, 0.22);
-            --eyebrow-bg: rgba(12, 32, 26, 0.58);
+            --hero-orb: radial-gradient(circle, rgba(40, 40, 40, 0.28), transparent 70%);
+            --body-glow-a: rgba(14, 14, 14, 0.96);
+            --body-glow-b: rgba(4, 4, 4, 0.92);
+            --body-glow-c: #000000;
+            --body-glow-d: #020202;
+            --body-glow-e: #060606;
+            --orb-a: rgba(18, 18, 18, 0.9);
+            --orb-b: rgba(8, 8, 8, 0.86);
+            --login-border: rgba(255, 255, 255, 0.18);
+            --login-shadow: 0 16px 34px rgba(0, 0, 0, 0.42);
+            --login-hover-border: rgba(255, 255, 255, 0.3);
+            --login-hover-shadow: 0 20px 38px rgba(0, 0, 0, 0.56);
+            --eyebrow-border: rgba(255, 255, 255, 0.14);
+            --eyebrow-bg: rgba(10, 10, 10, 0.72);
             --secondary-border: rgba(255, 255, 255, 0.12);
             --secondary-bg: rgba(255, 255, 255, 0.04);
-            --metric-bg: rgba(7, 18, 16, 0.46);
+            --metric-bg: rgba(7, 7, 7, 0.72);
             --metric-border: rgba(255, 255, 255, 0.08);
             --ops-bg: rgba(255, 255, 255, 0.04);
             --ops-border: rgba(255, 255, 255, 0.08);
-            --footer-text: rgba(246, 247, 242, 0.56);
+            --footer-text: rgba(245, 245, 245, 0.56);
             --brand-shadow: rgba(0, 0, 0, 0.22);
-            --primary-cta-start: rgba(21, 163, 111, 1);
-            --primary-cta-end: rgba(211, 176, 123, 0.92);
+            --primary-cta-start: rgba(18, 18, 18, 1);
+            --primary-cta-end: rgba(44, 44, 44, 0.96);
         }
 
         html[data-theme='beach'] {
@@ -206,16 +206,16 @@
         html[data-theme='beach'] body::before {
             content: '';
             position: fixed;
-            right: -72px;
-            bottom: -10px;
-            width: 420px;
-            height: 420px;
+            right: -150px;
+            bottom: -20px;
+            width: 540px;
+            height: 540px;
             border-radius: 0;
-            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat right bottom;
-            background-size: contain;
-            opacity: 0.12;
+            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat center bottom;
+            background-size: 520px auto;
+            opacity: 0.14;
             filter: drop-shadow(0 18px 34px rgba(8, 47, 73, 0.24)) saturate(0.88);
-            transform: rotate(-3deg);
+            transform: none;
         }
 
         html[data-theme='beach'] body::after {
@@ -679,6 +679,11 @@
             background:
                 linear-gradient(180deg, rgba(56, 18, 54, 0.52), rgba(14, 10, 22, 0.18));
             background-color: #251422;
+        }
+
+        html[data-theme='dark'] body {
+            background: linear-gradient(180deg, #000000 0%, #020202 48%, #060606 100%);
+            background-color: #000000;
         }
 
         body::before,
@@ -1794,12 +1799,13 @@
             }
 
             html[data-theme='beach'] body::before {
-                right: -78px;
-                bottom: -8px;
-                width: 280px;
-                height: 280px;
-                background-size: contain;
-                opacity: 0.1;
+                right: -96px;
+                bottom: -12px;
+                width: 320px;
+                height: 320px;
+                background-position: center bottom;
+                background-size: 300px auto;
+                opacity: 0.12;
             }
 
             html[data-theme='beach'] body::after {

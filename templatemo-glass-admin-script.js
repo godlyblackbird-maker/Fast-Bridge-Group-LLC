@@ -11526,6 +11526,7 @@ function initNavbarDateTime() {
 
         if (calculatorToggle && calculatorWidget && calculatorDisplay) {
             let calculatorExpression = '';
+            const calculatorPrimaryKey = calculatorWidget.querySelector('[data-calculator-action="clear"]');
 
             function renderCalculatorDisplay(value) {
                 calculatorDisplay.textContent = String(value || '0');
@@ -11535,6 +11536,9 @@ function initNavbarDateTime() {
                 calculatorWidget.hidden = !isOpen;
                 calculatorToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                 calculatorToggle.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
+                if (isOpen && calculatorPrimaryKey) {
+                    requestAnimationFrame(() => calculatorPrimaryKey.focus());
+                }
             }
 
             function normalizeCalculatorExpression(rawValue) {
@@ -11595,6 +11599,46 @@ function initNavbarDateTime() {
                 renderCalculatorDisplay(calculatorExpression);
             }
 
+            function toggleCalculatorSign() {
+                if (!calculatorExpression) {
+                    calculatorExpression = '-';
+                    renderCalculatorDisplay(calculatorExpression);
+                    return;
+                }
+
+                if (/^[+*/%]$/.test(calculatorExpression.slice(-1))) {
+                    calculatorExpression += '-';
+                    renderCalculatorDisplay(calculatorExpression);
+                    return;
+                }
+
+                let startIndex = calculatorExpression.length;
+                while (startIndex > 0) {
+                    const previousCharacter = calculatorExpression.charAt(startIndex - 1);
+                    if (/[0-9.]/.test(previousCharacter)) {
+                        startIndex -= 1;
+                        continue;
+                    }
+                    if (previousCharacter === '-' && (startIndex - 1 === 0 || /[+\-*/%]/.test(calculatorExpression.charAt(startIndex - 2)))) {
+                        startIndex -= 1;
+                    }
+                    break;
+                }
+
+                const currentSegment = calculatorExpression.slice(startIndex);
+                if (!currentSegment || currentSegment === '-') {
+                    return;
+                }
+
+                if (currentSegment.startsWith('-')) {
+                    calculatorExpression = `${calculatorExpression.slice(0, startIndex)}${currentSegment.slice(1)}`;
+                } else {
+                    calculatorExpression = `${calculatorExpression.slice(0, startIndex)}-${currentSegment}`;
+                }
+
+                renderCalculatorDisplay(calculatorExpression || '0');
+            }
+
             calculatorToggle.addEventListener('click', () => {
                 setCalculatorOpenState(calculatorWidget.hidden);
             });
@@ -11611,6 +11655,10 @@ function initNavbarDateTime() {
                     if (action === 'clear') {
                         calculatorExpression = '';
                         renderCalculatorDisplay('0');
+                        return;
+                    }
+                    if (action === 'toggle-sign') {
+                        toggleCalculatorSign();
                         return;
                     }
                     if (action === 'backspace') {
