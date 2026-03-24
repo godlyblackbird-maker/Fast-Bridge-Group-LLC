@@ -7615,6 +7615,111 @@ function initNavbarDateTime() {
         loadRequests();
     }
 
+    function initAdminPropertySubmissions() {
+        const submissionsList = document.getElementById('admin-property-submissions-list');
+        if (!submissionsList) {
+            return;
+        }
+
+        const subtitle = document.getElementById('property-submissions-subtitle');
+        const token = localStorage.getItem('authToken');
+        let currentUser = null;
+
+        try {
+            currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        } catch (error) {
+            currentUser = null;
+        }
+
+        if (!currentUser || currentUser.role !== 'admin') {
+            if (subtitle) {
+                subtitle.textContent = 'Only admin accounts can review seller submissions.';
+            }
+            submissionsList.innerHTML = '<p class="outreach-empty">Admin access required.</p>';
+            return;
+        }
+
+        function escapeSubmissionText(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderSubmissions(items) {
+            submissionsList.innerHTML = '';
+
+            if (!Array.isArray(items) || items.length === 0) {
+                if (subtitle) {
+                    subtitle.textContent = 'Seller inquiries submitted from the public homepage form';
+                }
+                submissionsList.innerHTML = '<p class="outreach-empty">No property submissions yet.</p>';
+                return;
+            }
+
+            if (subtitle) {
+                subtitle.textContent = `${items.length} property submission${items.length === 1 ? '' : 's'} waiting for review`;
+            }
+
+            items.forEach((item) => {
+                const row = document.createElement('article');
+                row.className = 'outreach-item';
+                const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Unknown';
+                const propertyLine = [item.propertyAddress, item.propertyCity, item.propertyState, item.propertyZip]
+                    .map((entry) => String(entry || '').trim())
+                    .filter(Boolean)
+                    .join(', ');
+                const issues = Array.isArray(item.conditionIssues) && item.conditionIssues.length > 0
+                    ? item.conditionIssues.map((issue) => escapeSubmissionText(issue)).join(' • ')
+                    : 'No condition issues selected';
+
+                row.innerHTML = `
+                    <div class="outreach-item-head">
+                        <span class="outreach-item-title">${escapeSubmissionText(item.sellerName || 'Unknown seller')}</span>
+                        <span class="outreach-status draft">${escapeSubmissionText(item.status || 'new')}</span>
+                    </div>
+                    <p class="outreach-item-body">${escapeSubmissionText(propertyLine || item.propertyAddress || 'No property address provided')}</p>
+                    <p class="outreach-owner">Email: ${escapeSubmissionText(item.sellerEmail || 'No email provided')}</p>
+                    <p class="outreach-owner">Phone: ${escapeSubmissionText(item.sellerPhone || 'No phone submitted')}</p>
+                    <p class="outreach-owner">Property Type: ${escapeSubmissionText(item.propertyType || 'Not provided')}</p>
+                    <p class="outreach-owner">Beds / Baths / Sq Ft: ${escapeSubmissionText(item.bedrooms || '-') } / ${escapeSubmissionText(item.bathrooms || '-') } / ${escapeSubmissionText(item.squareFeet || '-')}</p>
+                    <p class="outreach-owner">Target Price: ${escapeSubmissionText(item.askingPrice || 'Not provided')}</p>
+                    <p class="outreach-owner">Timeline: ${escapeSubmissionText(item.timeline || 'Not provided')}</p>
+                    <p class="outreach-owner">Submitted: ${escapeSubmissionText(createdAt)}</p>
+                    <p class="outreach-item-body"><strong>Condition:</strong> ${issues}</p>
+                    <p class="outreach-item-body">${escapeSubmissionText(item.issueNotes || 'No extra property notes submitted.')}</p>
+                `;
+                submissionsList.appendChild(row);
+            });
+        }
+
+        async function loadSubmissions() {
+            if (!token) {
+                submissionsList.innerHTML = '<p class="outreach-empty">Missing auth token. Please sign in again.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/property-submissions', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load property submissions');
+                }
+                renderSubmissions(data.submissions || []);
+            } catch (error) {
+                submissionsList.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load property submissions.')}</p>`;
+            }
+        }
+
+        loadSubmissions();
+    }
+
     function initAdminSmtpApprovals() {
         const requestsList = document.getElementById('admin-smtp-requests-list');
         if (!requestsList) {
@@ -11335,7 +11440,7 @@ function initNavbarDateTime() {
             if (!button.querySelector('.property-tab-lock-badge')) {
                 const badge = document.createElement('span');
                 badge.className = 'property-tab-lock-badge';
-                badge.innerHTML = '<svg class="property-tab-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+                badge.innerHTML = '<svg class="property-tab-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
                 button.appendChild(badge);
             }
         });
@@ -11529,6 +11634,98 @@ function initNavbarDateTime() {
             });
         }
 
+        function initAgentWorkspaceControls() {
+            const workspaceCard = document.getElementById('agent-workspace-card');
+            const workspaceBody = document.getElementById('agent-workspace-body');
+            const minimizeButton = document.getElementById('agent-workspace-minimize-btn');
+            const fullscreenButton = document.getElementById('agent-workspace-fullscreen-btn');
+
+            if (!workspaceCard || !workspaceBody || !minimizeButton || !fullscreenButton) {
+                return;
+            }
+
+            const overlay = ensureWidgetOverlay();
+            const minimizeLabel = minimizeButton.querySelector('.agent-record-control-label');
+            const fullscreenLabel = fullscreenButton.querySelector('.agent-record-control-label');
+            let isMinimized = workspaceCard.classList.contains('is-minimized');
+            let isExpanded = workspaceCard.classList.contains('agent-record-expanded');
+
+            function syncMinimizedState(nextMinimized) {
+                isMinimized = Boolean(nextMinimized);
+                workspaceCard.classList.toggle('is-minimized', isMinimized);
+                minimizeButton.setAttribute('aria-pressed', isMinimized ? 'true' : 'false');
+                minimizeButton.setAttribute('aria-label', isMinimized ? 'Open agent workspace' : 'Minimize agent workspace');
+                if (minimizeLabel) {
+                    minimizeLabel.textContent = isMinimized ? 'Open' : 'Minimize';
+                }
+            }
+
+            function closeFullscreen() {
+                if (!isExpanded) {
+                    return;
+                }
+
+                isExpanded = false;
+                workspaceCard.classList.remove('agent-record-expanded');
+                overlay.classList.remove('active');
+                fullscreenButton.setAttribute('aria-pressed', 'false');
+                fullscreenButton.setAttribute('aria-label', 'Open agent workspace full screen');
+                if (fullscreenLabel) {
+                    fullscreenLabel.textContent = 'Full Screen';
+                }
+                document.body.style.overflow = '';
+            }
+
+            function openFullscreen() {
+                syncMinimizedState(false);
+                isExpanded = true;
+                workspaceCard.classList.add('agent-record-expanded');
+                overlay.classList.add('active');
+                fullscreenButton.setAttribute('aria-pressed', 'true');
+                fullscreenButton.setAttribute('aria-label', 'Exit agent workspace full screen');
+                if (fullscreenLabel) {
+                    fullscreenLabel.textContent = 'Exit Full Screen';
+                }
+                document.body.style.overflow = 'hidden';
+            }
+
+            minimizeButton.addEventListener('click', () => {
+                syncMinimizedState(!isMinimized);
+            });
+
+            fullscreenButton.addEventListener('click', () => {
+                if (isExpanded) {
+                    closeFullscreen();
+                    return;
+                }
+                openFullscreen();
+            });
+
+            overlay.addEventListener('click', () => {
+                closeFullscreen();
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closeFullscreen();
+                }
+            });
+
+            document.querySelectorAll('.property-tab-btn[data-tab]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    if (String(button.dataset.tab || '').trim().toLowerCase() !== 'agent') {
+                        closeFullscreen();
+                    }
+                });
+            });
+
+            syncMinimizedState(isMinimized);
+            if (isExpanded) {
+                openFullscreen();
+            }
+        }
+
+        initAgentWorkspaceControls();
         initAgentWorkspaceEditor();
 
         if (piqAgentStatusSelect) {
@@ -12697,7 +12894,9 @@ function initNavbarDateTime() {
             const investorAttachmentsSelect = document.getElementById('offer-email-investor-attachments');
             const sendModeSelect = document.getElementById('offer-email-send-mode');
             const ecardSelect = document.getElementById('offer-email-ecard');
-                const ecardToggle = document.getElementById('offer-email-ecard-toggle');
+            const ecardToggle = document.getElementById('offer-email-ecard-toggle');
+            const fbgOfferTermsToggle = document.getElementById('offer-email-fbg-terms-toggle');
+            const fbgOfferTermsNote = document.getElementById('offer-email-fbg-terms-note');
             const includeTermsToggle = document.getElementById('offer-email-include-terms');
             const subjectInput = document.getElementById('offer-email-subject');
             const bodyInput = document.getElementById('offer-email-body');
@@ -12709,7 +12908,7 @@ function initNavbarDateTime() {
             const emailNote = document.getElementById('offer-email-note');
             const entitySelect = document.getElementById('offer-entity');
 
-            if (!senderNameInput || !senderEmailInput || !recipientNameInput || !recipientEmailInput || !categorySelect || !subcategorySelect || !templateSelect || !investorAttachmentsSelect || !sendModeSelect || !includeTermsToggle || !subjectInput || !bodyInput || !copySubjectButton || !copyBodyButton || !sendAgentButton || !openButton || !docSummary || !emailNote || !entitySelect || !ecardSelect) {
+            if (!senderNameInput || !senderEmailInput || !recipientNameInput || !recipientEmailInput || !categorySelect || !subcategorySelect || !templateSelect || !investorAttachmentsSelect || !sendModeSelect || !includeTermsToggle || !subjectInput || !bodyInput || !copySubjectButton || !copyBodyButton || !sendAgentButton || !openButton || !docSummary || !emailNote || !entitySelect || !ecardSelect || !fbgOfferTermsToggle) {
                 return;
             }
 
@@ -12909,6 +13108,7 @@ function initNavbarDateTime() {
                 ? detailData.offerEmailDraft
                 : {};
             let investorAttachmentPackages = [];
+            let fbgOfferTermsFiles = [];
 
             function readLocalJson(key) {
                 try {
@@ -13188,6 +13388,7 @@ function initNavbarDateTime() {
                     sendMode: sendModeSelect.value,
                     ecard: ecardSelect.value,
                     includeECard: Boolean(ecardToggle && ecardToggle.checked),
+                    includeFbgOfferTerms: Boolean(fbgOfferTermsToggle.checked),
                     includeTerms: Boolean(includeTermsToggle.checked),
                     subject: subjectInput.value,
                     body: (bodyInput.contentEditable === 'true' ? bodyInput.innerHTML : getBodyValue()),
@@ -13316,6 +13517,28 @@ function initNavbarDateTime() {
                     investorAttachmentPackages = [];
                     populateInvestorAttachmentOptions('');
                     emailNote.textContent = 'Investor attachment folders could not be loaded right now. Uploaded files in the Offer Documents section below will still be sent automatically with Send To Agent.';
+                }
+            }
+
+            async function loadFbgOfferTermsFiles() {
+                try {
+                    const response = await fetch('/api/fbg-offer-terms');
+                    if (!response.ok) {
+                        throw new Error('Could not load FBG offer terms files.');
+                    }
+
+                    const result = await response.json();
+                    fbgOfferTermsFiles = Array.isArray(result?.files) ? result.files : [];
+                    if (fbgOfferTermsNote) {
+                        fbgOfferTermsNote.textContent = fbgOfferTermsFiles.length > 0
+                            ? `Attach ${fbgOfferTermsFiles.length} FAST BRIDGE offer terms PDF${fbgOfferTermsFiles.length === 1 ? '' : 's'} to Send To Agent emails.`
+                            : 'No FAST BRIDGE offer terms PDFs found in Email - Offer Terms.';
+                    }
+                } catch (error) {
+                    fbgOfferTermsFiles = [];
+                    if (fbgOfferTermsNote) {
+                        fbgOfferTermsNote.textContent = 'FBG offer terms PDFs could not be loaded right now.';
+                    }
                 }
             }
 
@@ -13474,7 +13697,8 @@ function initNavbarDateTime() {
                 const investorFiles = selectedInvestorPackage && Array.isArray(selectedInvestorPackage.files)
                     ? selectedInvestorPackage.files
                     : [];
-                const totalPreparedDocuments = documents.length + investorFiles.length;
+                const selectedFbgFiles = fbgOfferTermsToggle.checked ? fbgOfferTermsFiles : [];
+                const totalPreparedDocuments = documents.length + investorFiles.length + selectedFbgFiles.length;
 
                 if (totalPreparedDocuments === 0) {
                     docSummary.textContent = 'No offer documents attached yet.';
@@ -13501,10 +13725,16 @@ function initNavbarDateTime() {
                         lines.push(`- ${item.name}`);
                     });
                 }
+                if (selectedFbgFiles.length > 0) {
+                    lines.push('FBG Offer Terms package:');
+                    selectedFbgFiles.forEach(item => {
+                        lines.push(`- ${item.name}`);
+                    });
+                }
 
                 docSummary.textContent = lines.join('\n');
-                emailNote.textContent = uploads.length > 0 || investorFiles.length > 0
-                    ? 'Linked documents can be referenced in the body. Uploaded files and selected investor package files are sent automatically with Send To Agent. Open Email Draft still cannot auto-attach local files. Send To Agent can embed the selected E-card JPG inline.'
+                emailNote.textContent = uploads.length > 0 || investorFiles.length > 0 || selectedFbgFiles.length > 0
+                    ? 'Linked documents can be referenced in the body. Uploaded files, selected investor package files, and enabled FBG Offer Terms PDFs are sent automatically with Send To Agent. Open Email Draft still cannot auto-attach local files. Send To Agent can embed the selected E-card JPG inline.'
                     : 'All prepared documents are link-based and can be referenced directly in the email body. Send To Agent can embed the selected E-card JPG inline.';
             }
 
@@ -13746,6 +13976,7 @@ function initNavbarDateTime() {
             recipientEmailInput.value = String(savedDraft.recipientEmail || agentRecord.email || '').trim();
             setSubjectValue(String(savedDraft.subject || '').trim(), { userEdited: Boolean(savedDraft.subjectEdited) });
             includeTermsToggle.checked = Boolean(savedDraft.includeTerms);
+            fbgOfferTermsToggle.checked = Boolean(savedDraft.includeFbgOfferTerms);
             setBodyValue(savedDraft.body || '', { userEdited: Boolean(savedDraft.bodyEdited) });
             sendModeSelect.value = savedDraft.sendMode || 'mailto';
             loadAvailableECardOptions(String(savedDraft.ecard || '').trim()).finally(() => {
@@ -13762,6 +13993,9 @@ function initNavbarDateTime() {
             }
             syncOpenButtonLabel();
             populateInvestorAttachmentOptions(savedDraft.investorAttachmentFolder || '');
+            loadFbgOfferTermsFiles().finally(() => {
+                renderDocumentSummary();
+            });
             loadInvestorAttachmentPackages().finally(() => {
                 applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
                 renderDocumentSummary();
@@ -13793,6 +14027,10 @@ function initNavbarDateTime() {
             templateSelect.addEventListener('change', saveDraft);
             investorAttachmentsSelect.addEventListener('change', () => {
                 applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
+                renderDocumentSummary();
+                saveDraft();
+            });
+            fbgOfferTermsToggle.addEventListener('change', () => {
                 renderDocumentSummary();
                 saveDraft();
             });
@@ -13901,6 +14139,7 @@ function initNavbarDateTime() {
                             body,
                             htmlBody: buildServerEmailHtml(),
                             includeECard: Boolean(ecardToggle && ecardToggle.checked),
+                            includeFbgOfferTerms: Boolean(fbgOfferTermsToggle.checked),
                             ecardPath: resolvedECardPath,
                             ecardAttachmentName: resolvedECardPath ? getECardAttachmentName(resolvedECardPath) : '',
                             attachments,
@@ -15240,6 +15479,7 @@ function initNavbarDateTime() {
         initAgentWorkspaceEmailPrep();
         initAdminOnlineUsersWidget();
         initAdminAccessRequests();
+        initAdminPropertySubmissions();
         initAdminSmtpApprovals();
         initAdminUserManager();
         initTodoGoalsWidget();

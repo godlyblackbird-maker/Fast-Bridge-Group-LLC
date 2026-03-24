@@ -1144,6 +1144,99 @@
             padding: 14px 0 40px;
         }
 
+        .seller-cta-section {
+            padding: 8px 0 36px;
+        }
+
+        .seller-cta-card {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+            gap: 24px;
+            align-items: center;
+            padding: 28px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.22);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .seller-cta-card::after {
+            content: '';
+            position: absolute;
+            right: -80px;
+            bottom: -90px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(52, 211, 153, 0.24), rgba(52, 211, 153, 0));
+            pointer-events: none;
+        }
+
+        .seller-cta-copy,
+        .seller-cta-actions {
+            position: relative;
+            z-index: 1;
+        }
+
+        .seller-cta-copy p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.75;
+        }
+
+        .seller-cta-kicker {
+            display: inline-flex;
+            align-items: center;
+            margin-bottom: 14px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--eyebrow-border);
+            background: var(--eyebrow-bg);
+            color: var(--accent-soft);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .seller-cta-copy h2 {
+            margin: 0 0 12px;
+            font-size: clamp(28px, 4vw, 44px);
+            letter-spacing: -0.04em;
+        }
+
+        .seller-cta-points {
+            display: grid;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .seller-cta-point {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            color: rgba(248, 252, 255, 0.86);
+        }
+
+        .seller-cta-point strong {
+            flex-shrink: 0;
+            color: var(--accent-soft);
+        }
+
+        .seller-cta-actions {
+            display: grid;
+            gap: 12px;
+            justify-items: start;
+        }
+
+        .seller-cta-note {
+            margin: 0;
+            color: rgba(248, 252, 255, 0.72);
+            line-height: 1.7;
+        }
+
         .section-card {
             border-radius: 24px;
             padding: 24px;
@@ -1612,6 +1705,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .seller-cta-card {
+                grid-template-columns: 1fr;
+            }
+
             .social-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -1751,6 +1848,11 @@
             .social-grid {
                 grid-template-columns: 1fr;
             }
+
+            .seller-cta-card {
+                padding: 22px;
+                border-radius: 24px;
+            }
         }
     </style>
 </head>
@@ -1846,6 +1948,28 @@
                     <p>
                         From first look to final move, FAST helps agents and investors stay organized, react faster, and get real answers quickly so they can show up with more confidence in every deal conversation.
                     </p>
+                </article>
+            </section>
+
+            <section class="seller-cta-section" aria-labelledby="seller-cta-title">
+                <article class="seller-cta-card">
+                    <div class="seller-cta-copy">
+                        <span class="seller-cta-kicker">Selling your home?</span>
+                        <h2 id="seller-cta-title">Send the property to FAST and let us review it.</h2>
+                        <p>
+                            If you have a house to sell, submit the property details directly to our team.
+                            Tell us about the house, what you hope to get for it, and what issues it has so we can review it faster.
+                        </p>
+                        <div class="seller-cta-points">
+                            <div class="seller-cta-point"><strong>01</strong><span>Share your contact info and full property address.</span></div>
+                            <div class="seller-cta-point"><strong>02</strong><span>Tell us your target price and what condition the property is in.</span></div>
+                            <div class="seller-cta-point"><strong>03</strong><span>Your inquiry routes straight into the FAST admin review queue.</span></div>
+                        </div>
+                    </div>
+                    <div class="seller-cta-actions">
+                        <a class="primary-cta" href="submit-property.html">Submit Property</a>
+                        <p class="seller-cta-note">You will be able to explain what is wrong with the property using checkboxes and a notes field, so the team sees the situation clearly from the start.</p>
+                    </div>
                 </article>
             </section>
 

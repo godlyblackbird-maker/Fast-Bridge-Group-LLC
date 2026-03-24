@@ -526,6 +526,35 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS property_submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      seller_name TEXT NOT NULL,
+      seller_email TEXT NOT NULL,
+      seller_phone TEXT,
+      property_address TEXT NOT NULL,
+      property_city TEXT,
+      property_state TEXT,
+      property_zip TEXT,
+      property_type TEXT,
+      bedrooms TEXT,
+      bathrooms TEXT,
+      square_feet TEXT,
+      asking_price TEXT,
+      timeline TEXT,
+      condition_issues TEXT,
+      issue_notes TEXT,
+      status TEXT DEFAULT 'new',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating property_submissions table:', err);
+    } else {
+      console.log('Property submissions table ready');
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS smtp_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -1360,6 +1389,7 @@ function resolveUserAdminECardRelativePath({ name, email }) {
 }
 
 const INVESTOR_ATTACHMENTS_ROOT = path.resolve(__dirname, 'Investors Attatchments');
+const FBG_OFFER_TERMS_ROOT = path.resolve(__dirname, 'Email - Offer Terms');
 const AGENT_WORKSPACE_UPLOADS_ROOT = path.resolve(__dirname, 'AGENT_WORKSPACE_UPLOADS');
 const AGENT_WORKSPACE_DOCUMENT_CATEGORIES = Object.freeze({
   'executed-contracts': 'Executed Contracts',
@@ -1637,6 +1667,21 @@ function listInvestorAttachmentPackages() {
     })
     .filter((entry) => entry.files.length > 0)
     .sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function listFbgOfferTermsFiles() {
+  if (!fs.existsSync(FBG_OFFER_TERMS_ROOT)) {
+    return [];
+  }
+
+  return fs.readdirSync(FBG_OFFER_TERMS_ROOT, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && isAllowedInvestorAttachmentExtension(path.extname(entry.name)))
+    .map((entry) => ({
+      name: entry.name,
+      path: path.join(FBG_OFFER_TERMS_ROOT, entry.name)
+    }))
+    .filter((entry) => fs.existsSync(entry.path) && fs.statSync(entry.path).isFile())
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 async function completeOAuthLogin({ email, name }) {
@@ -2943,12 +2988,195 @@ app.get('/api/access-requests', (req, res) => {
   );
 });
 
+app.post('/api/property-submissions', (req, res) => {
+  const sellerName = String(req.body?.sellerName || '').trim();
+  const sellerEmail = String(req.body?.sellerEmail || '').trim().toLowerCase();
+  const sellerPhone = String(req.body?.sellerPhone || '').trim();
+  const propertyAddress = String(req.body?.propertyAddress || '').trim();
+  const propertyCity = String(req.body?.propertyCity || '').trim();
+  const propertyState = String(req.body?.propertyState || '').trim();
+  const propertyZip = String(req.body?.propertyZip || '').trim();
+  const propertyType = String(req.body?.propertyType || '').trim();
+  const bedrooms = String(req.body?.bedrooms || '').trim();
+  const bathrooms = String(req.body?.bathrooms || '').trim();
+  const squareFeet = String(req.body?.squareFeet || '').trim();
+  const askingPrice = String(req.body?.askingPrice || '').trim();
+  const timeline = String(req.body?.timeline || '').trim();
+  const issueNotes = String(req.body?.issueNotes || '').trim();
+  const rawIssues = Array.isArray(req.body?.conditionIssues) ? req.body.conditionIssues : [];
+  const conditionIssues = rawIssues
+    .map((issue) => String(issue || '').trim())
+    .filter(Boolean)
+    .slice(0, 20);
+
+  if (!sellerName || !sellerEmail || !propertyAddress) {
+    return res.status(400).json({ error: 'Seller name, seller email, and property address are required.' });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerEmail)) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+
+  db.run(
+    `INSERT INTO property_submissions (
+      seller_name,
+      seller_email,
+      seller_phone,
+      property_address,
+      property_city,
+      property_state,
+      property_zip,
+      property_type,
+      bedrooms,
+      bathrooms,
+      square_feet,
+      asking_price,
+      timeline,
+      condition_issues,
+      issue_notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      sellerName,
+      sellerEmail,
+      sellerPhone,
+      propertyAddress,
+      propertyCity,
+      propertyState,
+      propertyZip,
+      propertyType,
+      bedrooms,
+      bathrooms,
+      squareFeet,
+      askingPrice,
+      timeline,
+      JSON.stringify(conditionIssues),
+      issueNotes
+    ],
+    function onInsert(err) {
+      if (err) {
+        console.error('Failed to save property submission:', err);
+        return res.status(500).json({ error: 'Unable to save property submission.' });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Property submitted successfully.',
+        submission: {
+          id: this.lastID,
+          sellerName,
+          sellerEmail,
+          sellerPhone,
+          propertyAddress,
+          propertyCity,
+          propertyState,
+          propertyZip,
+          propertyType,
+          bedrooms,
+          bathrooms,
+          squareFeet,
+          askingPrice,
+          timeline,
+          conditionIssues,
+          issueNotes,
+          status: 'new'
+        }
+      });
+    }
+  );
+});
+
+app.get('/api/property-submissions', (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  db.all(
+    `SELECT
+      id,
+      seller_name,
+      seller_email,
+      seller_phone,
+      property_address,
+      property_city,
+      property_state,
+      property_zip,
+      property_type,
+      bedrooms,
+      bathrooms,
+      square_feet,
+      asking_price,
+      timeline,
+      condition_issues,
+      issue_notes,
+      status,
+      created_at
+     FROM property_submissions
+     ORDER BY datetime(created_at) DESC, id DESC`,
+    (err, rows) => {
+      if (err) {
+        console.error('Failed to load property submissions:', err);
+        return res.status(500).json({ error: 'Unable to load property submissions.' });
+      }
+
+      const submissions = Array.isArray(rows)
+        ? rows.map((row) => {
+            let conditionIssues = [];
+            try {
+              const parsed = JSON.parse(String(row.condition_issues || '[]'));
+              conditionIssues = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+            } catch (error) {
+              conditionIssues = [];
+            }
+
+            return {
+              id: row.id,
+              sellerName: String(row.seller_name || ''),
+              sellerEmail: String(row.seller_email || ''),
+              sellerPhone: String(row.seller_phone || ''),
+              propertyAddress: String(row.property_address || ''),
+              propertyCity: String(row.property_city || ''),
+              propertyState: String(row.property_state || ''),
+              propertyZip: String(row.property_zip || ''),
+              propertyType: String(row.property_type || ''),
+              bedrooms: String(row.bedrooms || ''),
+              bathrooms: String(row.bathrooms || ''),
+              squareFeet: String(row.square_feet || ''),
+              askingPrice: String(row.asking_price || ''),
+              timeline: String(row.timeline || ''),
+              conditionIssues,
+              issueNotes: String(row.issue_notes || ''),
+              status: String(row.status || 'new'),
+              createdAt: row.created_at
+            };
+          })
+        : [];
+
+      return res.json({ submissions });
+    }
+  );
+});
+
 app.get('/api/investor-attachments', (req, res) => {
   try {
     return res.json({ packages: listInvestorAttachmentPackages() });
   } catch (error) {
     console.error('Failed to list investor attachments:', error);
     return res.status(500).json({ error: 'Failed to load investor attachment packages.' });
+  }
+});
+
+app.get('/api/fbg-offer-terms', (req, res) => {
+  try {
+    const files = listFbgOfferTermsFiles().map((entry) => ({ name: entry.name }));
+    return res.json({
+      label: 'FBG Offer Terms',
+      files,
+      fileCount: files.length
+    });
+  } catch (error) {
+    console.error('Failed to list FBG offer terms files:', error);
+    return res.status(500).json({ error: 'Failed to load FBG offer terms files.' });
   }
 });
 
@@ -3233,6 +3461,7 @@ app.post('/api/send-agent-email', async (req, res) => {
   const ecardAttachmentName = String(req.body?.ecardAttachmentName || '').trim();
   const attachments = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
   const investorAttachmentPaths = Array.isArray(req.body?.investorAttachmentPaths) ? req.body.investorAttachmentPaths : [];
+  const includeFbgOfferTerms = Boolean(req.body?.includeFbgOfferTerms);
 
   if (!toEmail) {
     return res.status(400).json({ error: 'Recipient email is required' });
@@ -3269,6 +3498,15 @@ app.post('/api/send-agent-email', async (req, res) => {
       filename: path.basename(resolvedAttachmentPath),
       path: resolvedAttachmentPath
     });
+  }
+
+  if (includeFbgOfferTerms) {
+    for (const item of listFbgOfferTermsFiles()) {
+      normalizedAttachments.push({
+        filename: item.name,
+        path: item.path
+      });
+    }
   }
 
   // Look up the authenticated user's personal SMTP settings; fall back to env vars if not set

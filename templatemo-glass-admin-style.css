@@ -2955,15 +2955,11 @@ a {
     margin-left: auto;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
+    justify-content: center;
+    padding: 4px 7px;
     border-radius: 999px;
     background: rgba(224, 122, 95, 0.16);
     color: var(--coral);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
     flex-shrink: 0;
 }
 
@@ -12065,15 +12061,11 @@ body.sidebar-collapsed .main-content {
     margin-left: 2px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 2px 8px;
+    justify-content: center;
+    padding: 2px 6px;
     border-radius: 999px;
     background: rgba(224, 122, 95, 0.16);
     color: var(--coral);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
 }
 
 .property-tab-lock-icon {
@@ -12491,6 +12483,82 @@ body.sidebar-collapsed .main-content {
     display: flex;
     flex-direction: column;
     gap: 14px;
+}
+
+.agent-record-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.agent-record-controls {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.agent-record-control-btn {
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.agent-record-control-btn:hover,
+.agent-record-control-btn:focus-visible {
+    color: var(--text-primary);
+    border-color: rgba(52, 211, 153, 0.45);
+    background: rgba(52, 211, 153, 0.12);
+}
+
+.agent-record-control-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.agent-record-control-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.agent-record-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.agent-record.is-minimized .agent-record-body {
+    display: none;
+}
+
+.agent-record.agent-record-expanded {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(1180px, calc(100vw - 40px));
+    max-height: calc(100vh - 40px);
+    padding: 20px;
+    overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    background: rgba(10, 18, 32, 0.96);
+    box-shadow: 0 35px 90px rgba(0, 0, 0, 0.45);
+    z-index: 2000;
 }
 
 .agent-record-header h3 {
@@ -13148,6 +13216,27 @@ body.sidebar-collapsed .main-content {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .agent-record-toolbar {
+        flex-direction: column;
+    }
+
+    .agent-record-controls {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .agent-record-control-btn {
+        flex: 1 1 calc(50% - 5px);
+    }
+
+    .agent-record.agent-record-expanded {
+        width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        padding: 16px;
+    }
 }
 
 .agent-note-item {

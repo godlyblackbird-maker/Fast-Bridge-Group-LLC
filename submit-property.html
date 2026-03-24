@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Property - FAST BRIDGE GROUP</title>
+    <meta name="description" content="Submit your property to FAST BRIDGE GROUP for a direct review and offer response.">
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        :root {
+            --submit-bg: linear-gradient(180deg, #08121f 0%, #0c1828 54%, #0f1f33 100%);
+            --submit-panel: rgba(9, 17, 29, 0.86);
+            --submit-border: rgba(255, 255, 255, 0.11);
+            --submit-soft: rgba(255, 255, 255, 0.05);
+            --submit-copy: rgba(232, 239, 248, 0.82);
+            --submit-copy-muted: rgba(212, 222, 235, 0.62);
+            --submit-accent: #34d399;
+            --submit-accent-strong: #059669;
+            --submit-danger: #fb7185;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #f8fafc;
+            background: var(--submit-bg);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            inset: auto;
+            border-radius: 999px;
+            filter: blur(72px);
+            pointer-events: none;
+            opacity: 0.45;
+        }
+
+        body::before {
+            top: 44px;
+            right: -120px;
+            width: 320px;
+            height: 320px;
+            background: rgba(52, 211, 153, 0.18);
+        }
+
+        body::after {
+            left: -90px;
+            bottom: 30px;
+            width: 280px;
+            height: 280px;
+            background: rgba(212, 165, 116, 0.16);
+        }
+
+        .submit-shell {
+            width: min(1120px, calc(100vw - 32px));
+            margin: 0 auto;
+            padding: 28px 0 48px;
+        }
+
+        .submit-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .submit-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .submit-brand img {
+            width: 54px;
+            height: 54px;
+            object-fit: contain;
+        }
+
+        .submit-brand-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .submit-brand-copy strong {
+            font-size: 14px;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+        }
+
+        .submit-brand-copy span {
+            color: var(--submit-copy-muted);
+            font-size: 13px;
+        }
+
+        .submit-back-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 11px 18px;
+            border-radius: 999px;
+            border: 1px solid var(--submit-border);
+            color: #f8fafc;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .submit-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.2fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .submit-copy-panel,
+        .submit-form-panel,
+        .submit-success-card {
+            border: 1px solid var(--submit-border);
+            border-radius: 28px;
+            background: var(--submit-panel);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            box-shadow: 0 28px 90px rgba(0, 0, 0, 0.28);
+        }
+
+        .submit-copy-panel {
+            padding: 34px 30px;
+        }
+
+        .submit-kicker {
+            margin: 0 0 12px;
+            color: var(--submit-accent);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.24em;
+            text-transform: uppercase;
+        }
+
+        .submit-copy-panel h1 {
+            margin: 0;
+            font-size: clamp(36px, 5vw, 58px);
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+        }
+
+        .submit-copy-panel p {
+            margin: 18px 0 0;
+            color: var(--submit-copy);
+            font-size: 17px;
+            line-height: 1.65;
+        }
+
+        .submit-points {
+            display: grid;
+            gap: 12px;
+            margin-top: 26px;
+        }
+
+        .submit-point {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            background: var(--submit-soft);
+            padding: 14px 16px;
+        }
+
+        .submit-point strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .submit-point span {
+            color: var(--submit-copy-muted);
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .submit-form-panel,
+        .submit-success-card {
+            padding: 28px;
+        }
+
+        .submit-form-panel h2,
+        .submit-success-card h2 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .submit-form-panel > p,
+        .submit-success-card > p {
+            margin: 0 0 22px;
+            color: var(--submit-copy-muted);
+            line-height: 1.6;
+        }
+
+        .seller-property-form {
+            display: grid;
+            gap: 18px;
+        }
+
+        .submit-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .submit-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .submit-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .submit-field label,
+        .submit-checkbox-group > span {
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .submit-field input,
+        .submit-field select,
+        .submit-field textarea {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #f8fafc;
+            padding: 14px 16px;
+            font: inherit;
+        }
+
+        .submit-field textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .submit-field input::placeholder,
+        .submit-field textarea::placeholder {
+            color: rgba(226, 232, 240, 0.45);
+        }
+
+        .submit-checkbox-group {
+            display: grid;
+            gap: 12px;
+        }
+
+        .submit-checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .submit-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 12px 14px;
+            color: var(--submit-copy);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .submit-checkbox input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--submit-accent-strong);
+            flex-shrink: 0;
+        }
+
+        .submit-feedback {
+            min-height: 22px;
+            margin: 0;
+            color: var(--submit-copy-muted);
+            font-size: 14px;
+        }
+
+        .submit-feedback.is-error {
+            color: var(--submit-danger);
+        }
+
+        .submit-feedback.is-success {
+            color: var(--submit-accent);
+        }
+
+        .submit-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .submit-primary-btn {
+            position: relative;
+            overflow: hidden;
+            border: 0;
+            border-radius: 999px;
+            padding: 15px 24px;
+            color: #08261d;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            cursor: pointer;
+            background: linear-gradient(135deg, #f8f3ec 0%, #d4a574 54%, #34d399 100%);
+            box-shadow: 0 20px 40px rgba(5, 150, 105, 0.22);
+        }
+
+        .submit-primary-btn[disabled] {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .submit-success-card {
+            display: none;
+        }
+
+        .submit-success-card.is-visible {
+            display: block;
+        }
+
+        .submit-success-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            margin-bottom: 18px;
+            border-radius: 50%;
+            background: rgba(52, 211, 153, 0.16);
+            color: var(--submit-accent);
+        }
+
+        .submit-success-badge svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .submit-success-message {
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 18px;
+            color: var(--submit-copy);
+            line-height: 1.65;
+        }
+
+        .submit-success-message strong {
+            color: #f8fafc;
+        }
+
+        @media (max-width: 900px) {
+            .submit-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .submit-shell {
+                width: min(100vw - 20px, 1120px);
+                padding-top: 18px;
+            }
+
+            .submit-topbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .submit-grid,
+            .submit-checkbox-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .submit-copy-panel,
+            .submit-form-panel,
+            .submit-success-card {
+                padding: 22px;
+                border-radius: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="submit-shell">
+        <div class="submit-topbar">
+            <a class="submit-brand" href="index.html" aria-label="Return to FAST BRIDGE GROUP home page">
+                <img src="png photos/Fast Logo - 111.png" alt="FAST BRIDGE GROUP logo">
+                <div class="submit-brand-copy">
+                    <strong>FAST BRIDGE GROUP</strong>
+                    <span>Seller Property Intake</span>
+                </div>
+            </a>
+            <a class="submit-back-link" href="index.html">Back To Home</a>
+        </div>
+
+        <section class="submit-hero">
+            <div class="submit-copy-panel">
+                <p class="submit-kicker">Selling Your Home?</p>
+                <h1>Submit your property and let FAST review the deal.</h1>
+                <p>
+                    Give us your contact info, tell us about the house, and show us what shape it is in.
+                    The more direct you are, the faster our team can review it and decide whether it fits our buy box.
+                </p>
+                <div class="submit-points">
+                    <div class="submit-point">
+                        <strong>Fast intake</strong>
+                        <span>Send the basics once instead of repeating the same property story over and over.</span>
+                    </div>
+                    <div class="submit-point">
+                        <strong>Clear expectations</strong>
+                        <span>Tell us the price you hope to get and what issues the property has up front.</span>
+                    </div>
+                    <div class="submit-point">
+                        <strong>Direct review</strong>
+                        <span>Your submission routes straight into the FAST admin workspace so the team can work it immediately.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <section class="submit-form-panel" id="seller-property-form-panel">
+                    <h2>Property Submission</h2>
+                    <p>Complete the form below and our team will review the property details.</p>
+                    <form id="seller-property-form" class="seller-property-form">
+                        <div class="submit-grid">
+                            <div class="submit-field">
+                                <label for="seller-name">Your Name</label>
+                                <input id="seller-name" name="sellerName" type="text" placeholder="Full name" required>
+                            </div>
+                            <div class="submit-field">
+                                <label for="seller-email">Email</label>
+                                <input id="seller-email" name="sellerEmail" type="email" placeholder="name@example.com" required>
+                            </div>
+                            <div class="submit-field">
+                                <label for="seller-phone">Phone</label>
+                                <input id="seller-phone" name="sellerPhone" type="tel" placeholder="(555) 555-5555">
+                            </div>
+                            <div class="submit-field">
+                                <label for="property-type">Property Type</label>
+                                <select id="property-type" name="propertyType">
+                                    <option value="">Select one</option>
+                                    <option value="Single Family">Single Family</option>
+                                    <option value="Condo">Condo</option>
+                                    <option value="Townhome">Townhome</option>
+                                    <option value="Multi Family">Multi Family</option>
+                                    <option value="Mobile Home">Mobile Home</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="submit-field full-width">
+                                <label for="property-address">Property Address</label>
+                                <input id="property-address" name="propertyAddress" type="text" placeholder="123 Main St" required>
+                            </div>
+                            <div class="submit-field">
+                                <label for="property-city">City</label>
+                                <input id="property-city" name="propertyCity" type="text" placeholder="City">
+                            </div>
+                            <div class="submit-field">
+                                <label for="property-state">State</label>
+                                <input id="property-state" name="propertyState" type="text" placeholder="CA">
+                            </div>
+                            <div class="submit-field">
+                                <label for="property-zip">ZIP</label>
+                                <input id="property-zip" name="propertyZip" type="text" placeholder="90210">
+                            </div>
+                            <div class="submit-field">
+                                <label for="asking-price">How Much Would You Hope To Get?</label>
+                                <input id="asking-price" name="askingPrice" type="text" placeholder="$450,000">
+                            </div>
+                            <div class="submit-field">
+                                <label for="bedrooms">Bedrooms</label>
+                                <input id="bedrooms" name="bedrooms" type="text" placeholder="3">
+                            </div>
+                            <div class="submit-field">
+                                <label for="bathrooms">Bathrooms</label>
+                                <input id="bathrooms" name="bathrooms" type="text" placeholder="2">
+                            </div>
+                            <div class="submit-field">
+                                <label for="square-feet">Square Feet</label>
+                                <input id="square-feet" name="squareFeet" type="text" placeholder="1450">
+                            </div>
+                            <div class="submit-field">
+                                <label for="timeline">Ideal Selling Timeline</label>
+                                <input id="timeline" name="timeline" type="text" placeholder="ASAP, 30 days, 60 days, flexible">
+                            </div>
+                            <div class="submit-field full-width submit-checkbox-group">
+                                <span>What Is Wrong With It?</span>
+                                <div class="submit-checkbox-grid">
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Needs major repairs"><span>Needs major repairs</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Roof issues"><span>Roof issues</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Foundation issues"><span>Foundation issues</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Water damage"><span>Water damage</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Fire damage"><span>Fire damage</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Outdated interior"><span>Outdated interior</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Tenant occupied"><span>Tenant occupied</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Vacant property"><span>Vacant property</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Code violations"><span>Code violations</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Probate or inherited"><span>Probate or inherited</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Hoarder or heavy cleanup"><span>Hoarder or heavy cleanup</span></label>
+                                    <label class="submit-checkbox"><input type="checkbox" name="conditionIssues" value="Other problems not listed"><span>Other problems not listed</span></label>
+                                </div>
+                            </div>
+                            <div class="submit-field full-width">
+                                <label for="issue-notes">Tell Us More About The Property</label>
+                                <textarea id="issue-notes" name="issueNotes" placeholder="Add anything else we should know about the condition, occupancy, liens, timeline, or situation."></textarea>
+                            </div>
+                        </div>
+                        <div class="submit-actions">
+                            <p id="seller-property-feedback" class="submit-feedback" aria-live="polite"></p>
+                            <button id="seller-property-submit-btn" class="submit-primary-btn" type="submit">Submit Property</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="submit-success-card" id="seller-property-success-card" aria-live="polite">
+                    <div class="submit-success-badge" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+                    </div>
+                    <h2>Property Submitted</h2>
+                    <p>Your submission is now in the FAST review queue.</p>
+                    <div class="submit-success-message">
+                        <strong>Thank you, you will be getting a email within 1-3 business days with our offer!</strong>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        (function () {
+            const form = document.getElementById('seller-property-form');
+            const feedback = document.getElementById('seller-property-feedback');
+            const submitButton = document.getElementById('seller-property-submit-btn');
+            const formPanel = document.getElementById('seller-property-form-panel');
+            const successCard = document.getElementById('seller-property-success-card');
+
+            if (!form || !feedback || !submitButton || !formPanel || !successCard) {
+                return;
+            }
+
+            function setFeedback(message, state) {
+                feedback.textContent = String(message || '');
+                feedback.classList.remove('is-error', 'is-success');
+                if (state === 'error') {
+                    feedback.classList.add('is-error');
+                }
+                if (state === 'success') {
+                    feedback.classList.add('is-success');
+                }
+            }
+
+            form.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                setFeedback('', '');
+
+                const formData = new FormData(form);
+                const conditionIssues = formData.getAll('conditionIssues').map((item) => String(item || '').trim()).filter(Boolean);
+                const payload = {
+                    sellerName: String(formData.get('sellerName') || '').trim(),
+                    sellerEmail: String(formData.get('sellerEmail') || '').trim(),
+                    sellerPhone: String(formData.get('sellerPhone') || '').trim(),
+                    propertyAddress: String(formData.get('propertyAddress') || '').trim(),
+                    propertyCity: String(formData.get('propertyCity') || '').trim(),
+                    propertyState: String(formData.get('propertyState') || '').trim(),
+                    propertyZip: String(formData.get('propertyZip') || '').trim(),
+                    propertyType: String(formData.get('propertyType') || '').trim(),
+                    bedrooms: String(formData.get('bedrooms') || '').trim(),
+                    bathrooms: String(formData.get('bathrooms') || '').trim(),
+                    squareFeet: String(formData.get('squareFeet') || '').trim(),
+                    askingPrice: String(formData.get('askingPrice') || '').trim(),
+                    timeline: String(formData.get('timeline') || '').trim(),
+                    conditionIssues,
+                    issueNotes: String(formData.get('issueNotes') || '').trim()
+                };
+
+                if (!payload.sellerName || !payload.sellerEmail || !payload.propertyAddress) {
+                    setFeedback('Seller name, seller email, and property address are required.', 'error');
+                    return;
+                }
+
+                submitButton.disabled = true;
+                submitButton.textContent = 'Submitting...';
+
+                try {
+                    const response = await fetch('/api/property-submissions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to submit property.');
+                    }
+
+                    form.reset();
+                    formPanel.style.display = 'none';
+                    successCard.classList.add('is-visible');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } catch (error) {
+                    setFeedback(String(error.message || 'Unable to submit property.'), 'error');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Submit Property';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

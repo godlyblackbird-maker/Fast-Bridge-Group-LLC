@@ -97,7 +97,11 @@
     }
 
     const lockedUser = getVerifiedAuthUserLock();
-    if (lockedUser && (!storedUser || normalizeKnownEmail(storedUser.email || '') !== normalizeKnownEmail(lockedUser.email || ''))) {
+    if (lockedUser && storedUser && isAuthIdentityMismatch(lockedUser, storedUser)) {
+      return forceLogoutForAuthMismatch(lockedUser, storedUser);
+    }
+
+    if (lockedUser && !storedUser) {
       localStorage.setItem('user', JSON.stringify(lockedUser));
       syncLegacyUserProfile(lockedUser);
       return lockedUser;
@@ -119,9 +123,7 @@
     const nextEmail = normalizeKnownEmail(normalizedUser.email || '');
 
     if (!forceWrite && lockedEmail && nextEmail && lockedEmail !== nextEmail) {
-      localStorage.setItem('user', JSON.stringify(lockedUser));
-      syncLegacyUserProfile(lockedUser);
-      return lockedUser;
+      return forceLogoutForAuthMismatch(lockedUser, normalizedUser);
     }
 
     localStorage.setItem('user', JSON.stringify(normalizedUser));
@@ -159,6 +161,35 @@
     return lockedUser;
   }
 
+  function isAuthIdentityMismatch(expectedUser, actualUser) {
+    const expectedEmail = normalizeKnownEmail(expectedUser && expectedUser.email || '');
+    const actualEmail = normalizeKnownEmail(actualUser && actualUser.email || '');
+
+    if (!expectedEmail || !actualEmail) {
+      return false;
+    }
+
+    return expectedEmail !== actualEmail;
+  }
+
+  function forceLogoutForAuthMismatch(expectedUser, actualUser) {
+    const expectedEmail = normalizeKnownEmail(expectedUser && expectedUser.email || '');
+    const actualEmail = normalizeKnownEmail(actualUser && actualUser.email || '');
+
+    console.warn('Auth account mismatch detected. Logging out for safety.', {
+      expectedEmail,
+      actualEmail
+    });
+
+    clearAuthState();
+
+    if (window.location.pathname !== '/login.html') {
+      window.location.href = '/login.html';
+    }
+
+    return null;
+  }
+
   function persistVerifiedAuthUserLock(userLike, options) {
     const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
     const normalizedUser = normalizeKnownUser(userLike);
@@ -175,7 +206,7 @@
     const lockToken = String(lockRecord && lockRecord.token || '').trim();
 
     if (!forceWrite && lockToken === activeToken && lockedEmail && nextEmail && lockedEmail !== nextEmail) {
-      return lockedUser;
+      return forceLogoutForAuthMismatch(lockedUser, normalizedUser);
     }
 
     localStorage.setItem(AUTH_USER_LOCK_KEY, JSON.stringify({
@@ -304,6 +335,10 @@
 
   function isRegularUser(userLike) {
     return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'user');
+  }
+
+  function isBrokerUser(userLike) {
+    return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'broker');
   }
 
   function isPremiumUser(userLike) {
@@ -534,7 +569,7 @@
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
       badge.className = 'nav-lock-badge';
-      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
       link.appendChild(badge);
     }
 
@@ -559,7 +594,7 @@
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
       badge.className = 'nav-lock-badge';
-      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
       link.appendChild(badge);
     }
 
@@ -584,7 +619,7 @@
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
       badge.className = 'nav-lock-badge';
-      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Locked</span>';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
       link.appendChild(badge);
     }
 
@@ -624,7 +659,13 @@
         return readStoredUser();
       }
 
-      return writeStoredUser(data.user, { force: true });
+      const verifiedUser = normalizeKnownUser(data.user);
+      const lockedUser = getVerifiedAuthUserLock();
+      if (isAuthIdentityMismatch(lockedUser, verifiedUser)) {
+        return forceLogoutForAuthMismatch(lockedUser, verifiedUser);
+      }
+
+      return writeStoredUser(verifiedUser, { force: true });
     } catch (error) {
       return readStoredUser();
     }
@@ -690,7 +731,7 @@
     const activeUser = window.getCurrentUser ? window.getCurrentUser() : null;
     const normalizedPath = String(currentPath || '').toLowerCase();
     if (isActiveBuyersPath(normalizedPath)) {
-      if (isRegularUser(activeUser)) {
+      if (isRegularUser(activeUser) || isBrokerUser(activeUser)) {
         window.location.href = '/dashboard.html';
         return;
       }
@@ -745,7 +786,7 @@
         }
 
         const listItem = link.closest('.nav-item');
-        if (!isAdmin && !isPremiumUser(activeUser)) {
+        if (isBrokerUser(activeUser) || (!isAdmin && !isPremiumUser(activeUser))) {
           if (listItem) {
             listItem.remove();
           } else {

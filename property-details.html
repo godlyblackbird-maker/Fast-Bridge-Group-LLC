@@ -763,15 +763,29 @@
                     </div>
                 </article>
                 <article class="property-tab-panel" data-panel="agent">
-                    <section class="agent-record">
-                        <header class="agent-record-header">
-                            <h3 id="agent-name">Brandon Wasilewski</h3>
-                            <p class="agent-record-label" id="agent-record-title">Agent Record</p>
-                            <p id="agent-phone">(805) 856-8773</p>
-                            <p id="agent-email">lewskisells@gmail.com</p>
-                            <p id="agent-brokerage">Realty ONE Group Summit</p>
-                        </header>
+                    <section class="agent-record" id="agent-workspace-card">
+                        <div class="agent-record-toolbar">
+                            <header class="agent-record-header">
+                                <h3 id="agent-name">Brandon Wasilewski</h3>
+                                <p class="agent-record-label" id="agent-record-title">Agent Record</p>
+                                <p id="agent-phone">(805) 856-8773</p>
+                                <p id="agent-email">lewskisells@gmail.com</p>
+                                <p id="agent-brokerage">Realty ONE Group Summit</p>
+                            </header>
 
+                            <div class="agent-record-controls" aria-label="Agent workspace controls">
+                                <button id="agent-workspace-minimize-btn" type="button" class="agent-record-control-btn" aria-controls="agent-workspace-body" aria-pressed="false" aria-label="Minimize agent workspace">
+                                    <svg class="agent-record-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    <span class="agent-record-control-label">Minimize</span>
+                                </button>
+                                <button id="agent-workspace-fullscreen-btn" type="button" class="agent-record-control-btn" aria-controls="agent-workspace-card" aria-pressed="false" aria-label="Open agent workspace full screen">
+                                    <svg class="agent-record-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                                    <span class="agent-record-control-label">Full Screen</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="agent-record-body" id="agent-workspace-body">
                         <div class="outreach-actions agent-record-edit-actions">
                             <button id="agent-workspace-edit-btn" type="button" class="card-btn active">Edit Agent Workspace</button>
                         </div>
@@ -850,6 +864,7 @@
                             <div id="agent-note-list" class="agent-note-list">
                                 <p class="outreach-empty">No notes for this agent/property yet.</p>
                             </div>
+                        </div>
                         </div>
                     </section>
                 </article>
@@ -1141,6 +1156,17 @@
                                             <label class="offer-email-toggle-row offer-email-ecard-toggle" for="offer-email-ecard-toggle">
                                                 <input type="checkbox" id="offer-email-ecard-toggle">
                                                 <span class="offer-email-toggle-text">Include My E-Card</span>
+                                                <span class="offer-toggle-slider" aria-hidden="true"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="offer-email-span-2 offer-email-ecard-field">
+                                        <span class="offer-email-field-label">Static Attachments</span>
+                                        <div class="offer-email-ecard-row">
+                                            <div class="offer-email-static-attachment-note" id="offer-email-fbg-terms-note">Attach FAST BRIDGE offer terms PDFs to Send To Agent emails.</div>
+                                            <label class="offer-email-toggle-row offer-email-ecard-toggle" for="offer-email-fbg-terms-toggle">
+                                                <input type="checkbox" id="offer-email-fbg-terms-toggle">
+                                                <span class="offer-email-toggle-text">FBG Offer Terms</span>
                                                 <span class="offer-toggle-slider" aria-hidden="true"></span>
                                             </label>
                                         </div>
