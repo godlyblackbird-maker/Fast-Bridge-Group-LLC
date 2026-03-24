@@ -11528,8 +11528,58 @@ function initNavbarDateTime() {
             let calculatorExpression = '';
             const calculatorPrimaryKey = calculatorWidget.querySelector('[data-calculator-action="clear"]');
 
+            function formatCalculatorScientificNotation(value) {
+                const exponentialValue = value.toExponential(6).replace('e', 'E');
+                const parts = exponentialValue.split('E');
+                const mantissa = (parts[0] || '0').replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+                const exponent = String(Number(parts[1] || '0'));
+                return `${mantissa}E${exponent}`;
+            }
+
+            function formatCalculatorNumber(rawNumber) {
+                const stringValue = String(rawNumber || '0');
+                const hasTrailingDecimal = stringValue.endsWith('.');
+                const normalizedValue = stringValue.replace(/,/g, '');
+                const numericValue = Number(normalizedValue);
+                const parts = stringValue.split('.');
+                const integerPart = parts[0] || '0';
+                const decimalPart = parts[1] || '';
+                const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+                if (
+                    !hasTrailingDecimal &&
+                    Number.isFinite(numericValue) &&
+                    numericValue !== 0 &&
+                    (Math.abs(numericValue) >= 1e10 || Math.abs(numericValue) < 1e-6)
+                ) {
+                    return formatCalculatorScientificNotation(numericValue);
+                }
+
+                if (hasTrailingDecimal) {
+                    return `${formattedInteger}.`;
+                }
+
+                if (decimalPart) {
+                    return `${formattedInteger}.${decimalPart}`;
+                }
+
+                return formattedInteger;
+            }
+
+            function formatCalculatorDisplayValue(rawValue) {
+                const stringValue = String(rawValue || '0');
+                if (stringValue === 'Error') {
+                    return stringValue;
+                }
+
+                return stringValue
+                    .replace(/\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?\.?/g, match => formatCalculatorNumber(match))
+                    .replace(/\*/g, '×')
+                    .replace(/\//g, '÷');
+            }
+
             function renderCalculatorDisplay(value) {
-                calculatorDisplay.textContent = String(value || '0');
+                calculatorDisplay.textContent = formatCalculatorDisplayValue(value);
             }
 
             function setCalculatorOpenState(isOpen) {
