@@ -11758,14 +11758,18 @@ function initNavbarDateTime() {
         const importOpenButton = document.getElementById('deals-import-open');
         const importForm = document.getElementById('deals-import-form');
         const importResetButton = document.getElementById('deals-import-reset');
-        const importCloseButtons = importOverlay
-            ? Array.from(importOverlay.querySelectorAll('[data-deals-import-close="true"]'))
-            : [];
+        const importCloseButton = importOverlay
+            ? importOverlay.querySelector('.deals-import-close-btn[data-deals-import-close="true"]')
+            : null;
+        const importBackdrop = importOverlay
+            ? importOverlay.querySelector('.deals-import-backdrop[data-deals-import-close="true"]')
+            : null;
         const pageSize = 10;
         const paginationState = {
             assigned: 1,
             clicked: 1
         };
+        let importBackdropPointerDown = false;
 
         if (!list || !count || !assignedList || !assignedCount || !listPagination || !assignedPagination) {
             return;
@@ -11810,9 +11814,34 @@ function initNavbarDateTime() {
             importOpenButton.addEventListener('click', openImportWidget);
         }
 
-        importCloseButtons.forEach(button => {
-            button.addEventListener('click', closeImportWidget);
-        });
+        if (importCloseButton) {
+            importCloseButton.addEventListener('click', closeImportWidget);
+        }
+
+        if (importBackdrop) {
+            importBackdrop.addEventListener('pointerdown', event => {
+                importBackdropPointerDown = event.target === importBackdrop;
+            });
+
+            importBackdrop.addEventListener('pointerup', event => {
+                if (event.target !== importBackdrop) {
+                    importBackdropPointerDown = false;
+                }
+            });
+
+            importBackdrop.addEventListener('click', event => {
+                const activeSelection = window.getSelection ? window.getSelection() : null;
+                const hasHighlightedText = activeSelection && String(activeSelection.toString() || '').trim().length > 0;
+                const isDirectBackdropClick = event.target === importBackdrop && importBackdropPointerDown;
+                importBackdropPointerDown = false;
+
+                if (!isDirectBackdropClick || hasHighlightedText) {
+                    return;
+                }
+
+                closeImportWidget();
+            });
+        }
 
         if (importOverlay) {
             importOverlay.addEventListener('click', event => {
