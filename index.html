@@ -206,13 +206,13 @@
         html[data-theme='beach'] body::before {
             content: '';
             position: fixed;
-            right: -82px;
-            bottom: -252px;
-            width: 520px;
-            height: 520px;
+            right: -72px;
+            bottom: -10px;
+            width: 420px;
+            height: 420px;
             border-radius: 0;
             background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat right bottom;
-            background-size: 520px auto;
+            background-size: contain;
             opacity: 0.12;
             filter: drop-shadow(0 18px 34px rgba(8, 47, 73, 0.24)) saturate(0.88);
             transform: rotate(-3deg);
@@ -538,21 +538,24 @@
                 linear-gradient(180deg, rgba(4, 8, 22, 0.26), rgba(10, 16, 36, 0.16)),
                 url("Themes/Wallpaper%20STARLIGHT.jpg") center center / cover no-repeat;
             opacity: 0.42;
-            filter: blur(0.35px) saturate(1.04) contrast(1.06);
+            filter: saturate(1.04) contrast(1.06);
             pointer-events: none;
         }
 
         html[data-theme='space'] body::after {
             content: '';
             position: fixed;
-            inset: 0;
+            right: -34px;
+            top: -42px;
+            width: 560px;
+            height: 560px;
             border-radius: 0;
             background:
-                radial-gradient(ellipse 82% 58% at 14% 22%, rgba(108, 128, 255, 0.3) 0%, transparent 56%),
-                radial-gradient(ellipse 62% 44% at 84% 18%, rgba(70, 225, 255, 0.18) 0%, transparent 54%),
-                radial-gradient(ellipse 58% 42% at 54% 82%, rgba(167, 94, 255, 0.18) 0%, transparent 56%);
-            opacity: 0.9;
-            filter: blur(18px);
+                radial-gradient(circle at 48% 48%, rgba(170, 197, 255, 0.18), transparent 34%),
+                url("png photos/GLOWING MOON.png") no-repeat center;
+            background-size: 100% 100%, contain;
+            opacity: 0.94;
+            filter: drop-shadow(0 0 30px rgba(150, 193, 255, 0.36)) drop-shadow(0 0 72px rgba(112, 230, 255, 0.18));
             pointer-events: none;
         }
 
@@ -1791,11 +1794,11 @@
             }
 
             html[data-theme='beach'] body::before {
-                right: -116px;
-                bottom: -186px;
-                width: 360px;
-                height: 360px;
-                background-size: 360px auto;
+                right: -78px;
+                bottom: -8px;
+                width: 280px;
+                height: 280px;
+                background-size: contain;
                 opacity: 0.1;
             }
 
@@ -1895,14 +1898,6 @@
                     <p class="hero-copy">
                         FAST BRIDGE GROUP is built to connect agents and sellers to real cash buyers with sharper speed, stronger data, and cleaner execution.
                         When you use FAST, you are not just looking at a deal. You are working inside the bridge that moves opportunity from the field to actual buyer action.
-                    </p>
-                    <p class="hero-copy">
-                        The system brings together real MLS properties, comps, AI support, and accurate numbers so agents can run a hot deal on the spot and get answers immediately.
-                        Instead of waiting to get back to the office, users can pull out their phone, work the numbers in the field, and move with confidence while the opportunity is still live.
-                    </p>
-                    <p class="hero-copy">
-                        FAST is not only about finding the deal fast. It is about getting fast results, fast answers, and fast direction when timing matters most.
-                        It works for the FAST team, for agents in the field, and for investors who need a mobile-friendly system that is easy to navigate and ready when the pressure is on.
                     </p>
                     <div class="hero-actions">
                         <button class="primary-cta" id="open-access-request" type="button">Access FAST</button>

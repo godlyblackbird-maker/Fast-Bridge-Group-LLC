@@ -11027,6 +11027,9 @@ function initNavbarDateTime() {
         if (!addressEl) return;
         await propertyAssignmentsReady;
         const legacyCompsLine = 'Comparable set will include similar bed/bath properties within 1.0 mile radius and the last 6-12 month window.';
+        const calculatorToggle = document.getElementById('property-calculator-toggle');
+        const calculatorWidget = document.getElementById('property-calculator-widget');
+        const calculatorDisplay = document.getElementById('property-calculator-display');
 
         let detailData = null;
         detailData = getPersistedSelectedPropertyDetail();
@@ -11519,6 +11522,116 @@ function initNavbarDateTime() {
             tabPanels.forEach(panel => {
                 panel.classList.toggle('active', panel.dataset.panel === nextTabId);
             });
+        }
+
+        if (calculatorToggle && calculatorWidget && calculatorDisplay) {
+            let calculatorExpression = '';
+
+            function renderCalculatorDisplay(value) {
+                calculatorDisplay.textContent = String(value || '0');
+            }
+
+            function setCalculatorOpenState(isOpen) {
+                calculatorWidget.hidden = !isOpen;
+                calculatorToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                calculatorToggle.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
+            }
+
+            function normalizeCalculatorExpression(rawValue) {
+                return String(rawValue || '')
+                    .replace(/÷/g, '/')
+                    .replace(/×/g, '*')
+                    .replace(/\s+/g, '');
+            }
+
+            function evaluateCalculatorExpression(rawValue) {
+                const normalized = normalizeCalculatorExpression(rawValue);
+                if (!normalized) {
+                    return '0';
+                }
+                if (!/^[0-9+\-*/().%]+$/.test(normalized)) {
+                    throw new Error('Invalid expression');
+                }
+
+                const percentNormalized = normalized.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');
+                const result = Function(`"use strict"; return (${percentNormalized});`)();
+                if (!Number.isFinite(result)) {
+                    throw new Error('Invalid expression');
+                }
+
+                return Number(result.toFixed(6)).toString();
+            }
+
+            function appendCalculatorValue(nextValue) {
+                const safeValue = String(nextValue || '');
+                if (!safeValue) {
+                    return;
+                }
+
+                if (safeValue === '.') {
+                    const currentSegment = calculatorExpression.split(/[+\-*/]/).pop() || '';
+                    if (currentSegment.includes('.')) {
+                        return;
+                    }
+                    calculatorExpression += currentSegment ? '.' : '0.';
+                    renderCalculatorDisplay(calculatorExpression);
+                    return;
+                }
+
+                if (/^[+\-*/%]$/.test(safeValue)) {
+                    if (!calculatorExpression && safeValue !== '-') {
+                        return;
+                    }
+                    if (/^[+\-*/.]$/.test(calculatorExpression.slice(-1))) {
+                        calculatorExpression = `${calculatorExpression.slice(0, -1)}${safeValue}`;
+                    } else {
+                        calculatorExpression += safeValue;
+                    }
+                    renderCalculatorDisplay(calculatorExpression);
+                    return;
+                }
+
+                calculatorExpression += safeValue;
+                renderCalculatorDisplay(calculatorExpression);
+            }
+
+            calculatorToggle.addEventListener('click', () => {
+                setCalculatorOpenState(calculatorWidget.hidden);
+            });
+
+            calculatorWidget.querySelectorAll('[data-calculator-value]').forEach(button => {
+                button.addEventListener('click', () => {
+                    appendCalculatorValue(button.dataset.calculatorValue || '');
+                });
+            });
+
+            calculatorWidget.querySelectorAll('[data-calculator-action]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const action = String(button.dataset.calculatorAction || '').trim().toLowerCase();
+                    if (action === 'clear') {
+                        calculatorExpression = '';
+                        renderCalculatorDisplay('0');
+                        return;
+                    }
+                    if (action === 'backspace') {
+                        calculatorExpression = calculatorExpression.slice(0, -1);
+                        renderCalculatorDisplay(calculatorExpression || '0');
+                        return;
+                    }
+                    if (action === 'equals') {
+                        try {
+                            calculatorExpression = evaluateCalculatorExpression(calculatorExpression);
+                            renderCalculatorDisplay(calculatorExpression);
+                        } catch (error) {
+                            calculatorExpression = '';
+                            renderCalculatorDisplay('Error');
+                        }
+                    }
+                });
+            });
+
+            setCalculatorOpenState(false);
+            renderCalculatorDisplay('0');
         }
 
         tabButtons.forEach(button => {
