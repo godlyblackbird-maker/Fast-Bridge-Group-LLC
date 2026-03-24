@@ -6756,36 +6756,48 @@ function initNavbarDateTime() {
     }
 
     function initNotesWidget() {
-        const folderList = document.getElementById('notes-folder-list');
+        const folderTree = document.getElementById('notes-folder-tree');
         const noteList = document.getElementById('notes-note-list');
-        const backButton = document.getElementById('notes-back-btn');
         const addFolderButton = document.getElementById('notes-add-folder-btn');
         const addNoteButton = document.getElementById('notes-add-note-btn');
+        const quickNoteButton = document.getElementById('notes-quick-note-btn');
         const searchInput = document.getElementById('notes-search-input');
         const activeFolderLabel = document.getElementById('notes-active-folder-label');
         const countSummary = document.getElementById('notes-count-summary');
         const folderSummary = document.getElementById('notes-folder-summary');
+        const notesSubtitle = document.getElementById('notes-widget-subtitle');
         const editorEmpty = document.getElementById('notes-editor-empty');
         const editor = document.getElementById('notes-editor');
+        const backToListButton = document.getElementById('notes-back-to-list-btn');
         const titleInput = document.getElementById('notes-title-input');
         const folderSelect = document.getElementById('notes-folder-select');
+        const pinToggleButton = document.getElementById('notes-pin-toggle-btn');
+        const completeToggleButton = document.getElementById('notes-complete-toggle-btn');
         const bodyInput = document.getElementById('notes-body-input');
+        const fontToolButton = document.getElementById('notes-tool-font-btn');
+        const checklistToolButton = document.getElementById('notes-tool-checklist-btn');
+        const gridToolButton = document.getElementById('notes-tool-grid-btn');
+        const attachToolButton = document.getElementById('notes-tool-attach-btn');
+        const drawToolButton = document.getElementById('notes-tool-draw-btn');
+        const boldToolButton = document.getElementById('notes-tool-bold-btn');
         const metaLabel = document.getElementById('notes-meta-label');
         const deleteButton = document.getElementById('notes-delete-note-btn');
 
-        if (!folderList || !noteList || !backButton || !addFolderButton || !addNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !editorEmpty || !editor || !titleInput || !folderSelect || !bodyInput || !metaLabel || !deleteButton) {
+        if (!folderTree || !noteList || !addFolderButton || !addNoteButton || !quickNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !notesSubtitle || !editorEmpty || !editor || !backToListButton || !titleInput || !folderSelect || !pinToggleButton || !completeToggleButton || !bodyInput || !fontToolButton || !checklistToolButton || !gridToolButton || !attachToolButton || !drawToolButton || !boldToolButton || !metaLabel || !deleteButton) {
             return;
         }
 
         const workspaceUser = getWorkspaceUserContext();
         const DEFAULT_FOLDER_ID = 'folder-default';
-        const ALL_FOLDER_ID = '__all__';
         const DEFAULT_FOLDER_NAME = 'Notes';
-        let activeFolderId = ALL_FOLDER_ID;
+        const ALL_NOTES_FOLDER_ID = '__all_notes__';
         let selectedNoteId = '';
-        let libraryMode = 'folders';
+        let activeFolderId = ALL_NOTES_FOLDER_ID;
         let searchQuery = '';
         let persistTimer = null;
+        let pinnedCollapsed = false;
+        let draggedItem = null;
+        const expandedFolderIds = new Set([DEFAULT_FOLDER_ID]);
 
         function normalizeNotesData(rawValue) {
             const value = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) ? rawValue : {};
@@ -6801,6 +6813,7 @@ function initNavbarDateTime() {
                     return {
                         id,
                         name,
+                        parentId: String(folder && folder.parentId || '').trim(),
                         createdAt: Number(folder && folder.createdAt) || Date.now()
                     };
                 })
@@ -6810,9 +6823,20 @@ function initNavbarDateTime() {
                 folders.unshift({
                     id: DEFAULT_FOLDER_ID,
                     name: DEFAULT_FOLDER_NAME,
+                    parentId: '',
                     createdAt: Date.now()
                 });
             }
+
+            folders.forEach((folder) => {
+                if (!folder.parentId || folder.id === DEFAULT_FOLDER_ID) {
+                    folder.parentId = '';
+                    return;
+                }
+                if (!folders.some((candidate) => candidate.id === folder.parentId && candidate.id !== folder.id)) {
+                    folder.parentId = '';
+                }
+            });
 
             const knownFolderIds = new Set(folders.map((folder) => folder.id));
             const notes = rawNotes
@@ -6829,6 +6853,8 @@ function initNavbarDateTime() {
                         title: String(note && note.title || '').trim(),
                         body: String(note && note.body || '').trim(),
                         folderId,
+                        pinned: Boolean(note && note.pinned),
+                        completed: Boolean(note && note.completed),
                         createdAt: Number(note && note.createdAt) || Date.now(),
                         updatedAt: Number(note && note.updatedAt) || Date.now()
                     };
@@ -6851,6 +6877,42 @@ function initNavbarDateTime() {
             return matched ? matched.name : DEFAULT_FOLDER_NAME;
         }
 
+        function getFolderChildren(folders, parentId) {
+            return folders
+                .filter((folder) => String(folder.parentId || '') === String(parentId || ''))
+                .sort((left, right) => left.name.localeCompare(right.name));
+        }
+
+        function getDescendantFolderIds(data, folderId) {
+            const collected = new Set([folderId]);
+            const queue = [folderId];
+            while (queue.length) {
+                const currentId = queue.shift();
+                data.folders.forEach((folder) => {
+                    if (folder.parentId === currentId && !collected.has(folder.id)) {
+                        collected.add(folder.id);
+                        queue.push(folder.id);
+                    }
+                });
+            }
+            return collected;
+        }
+
+        function isFolderAncestor(data, ancestorId, folderId) {
+            let currentId = String(folderId || '');
+            while (currentId) {
+                const currentFolder = data.folders.find((folder) => folder.id === currentId);
+                if (!currentFolder || !currentFolder.parentId) {
+                    return false;
+                }
+                if (currentFolder.parentId === ancestorId) {
+                    return true;
+                }
+                currentId = currentFolder.parentId;
+            }
+            return false;
+        }
+
         function getNoteDisplayTitle(note) {
             const explicitTitle = String(note && note.title || '').trim();
             if (explicitTitle) {
@@ -6865,7 +6927,7 @@ function initNavbarDateTime() {
             if (body) {
                 return body;
             }
-            return 'No additional text yet.';
+            return 'No additional text';
         }
 
         function formatNoteTimestamp(value) {
@@ -6875,6 +6937,15 @@ function initNavbarDateTime() {
                 day: 'numeric',
                 hour: 'numeric',
                 minute: '2-digit'
+            });
+        }
+
+        function formatNoteListDate(value) {
+            const timestamp = Number(value) || Date.now();
+            return new Date(timestamp).toLocaleDateString(undefined, {
+                month: 'numeric',
+                day: 'numeric',
+                year: '2-digit'
             });
         }
 
@@ -6894,18 +6965,65 @@ function initNavbarDateTime() {
             element.textContent = nextValue;
         }
 
+        function focusEditableAtEnd(element) {
+            if (!element) {
+                return;
+            }
+            element.focus();
+            const selection = window.getSelection();
+            if (!selection) {
+                return;
+            }
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        function focusSelectedNoteForEditing() {
+            const data = getNotesData();
+            const selectedNote = data.notes.find((note) => note.id === selectedNoteId) || null;
+            if (!selectedNote) {
+                return;
+            }
+
+            if (!String(selectedNote.body || '').trim() && !String(selectedNote.title || '').trim()) {
+                focusEditableAtEnd(bodyInput);
+                return;
+            }
+
+            focusEditableAtEnd(bodyInput);
+        }
+
+        function insertBodyText(text) {
+            bodyInput.focus();
+            document.execCommand('insertText', false, text);
+        }
+
         function getFilteredNotes(data) {
             const normalizedQuery = searchQuery.trim().toLowerCase();
+            const allowedFolderIds = activeFolderId === ALL_NOTES_FOLDER_ID
+                ? null
+                : getDescendantFolderIds(data, activeFolderId);
             return data.notes
-                .filter((note) => activeFolderId === ALL_FOLDER_ID || note.folderId === activeFolderId)
+                .filter((note) => !allowedFolderIds || allowedFolderIds.has(note.folderId))
                 .filter((note) => {
                     if (!normalizedQuery) {
                         return true;
                     }
-                    const haystack = `${note.title}\n${note.body}`.toLowerCase();
+                    const haystack = `${note.title}\n${note.body}\n${getFolderName(note.folderId, data.folders)}`.toLowerCase();
                     return haystack.includes(normalizedQuery);
                 })
-                .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0));
+                .sort((left, right) => {
+                    if (Boolean(left.pinned) !== Boolean(right.pinned)) {
+                        return Number(Boolean(right.pinned)) - Number(Boolean(left.pinned));
+                    }
+                    if (Boolean(left.completed) !== Boolean(right.completed)) {
+                        return Number(Boolean(left.completed)) - Number(Boolean(right.completed));
+                    }
+                    return (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0);
+                });
         }
 
         function ensureSelection(data) {
@@ -6917,189 +7035,392 @@ function initNavbarDateTime() {
             if (!selectedNoteId && availableNotes[0]) {
                 selectedNoteId = availableNotes[0].id;
             }
-            if (!availableNotes.length && libraryMode === 'notes') {
-                selectedNoteId = '';
-            }
         }
 
         function renderFolderSelect(data, preferredFolderId) {
             const nextFolderId = String(preferredFolderId || '').trim();
             folderSelect.innerHTML = '';
-            data.folders.forEach((folder) => {
+            const appendOptions = (parentId, depth) => {
+                getFolderChildren(data.folders, parentId).forEach((folder) => {
+                    const option = document.createElement('option');
+                    option.value = folder.id;
+                    option.textContent = `${depth ? `${'  '.repeat(depth)}- ` : ''}${folder.name}`;
+                    folderSelect.appendChild(option);
+                    appendOptions(folder.id, depth + 1);
+                });
+            };
+            appendOptions('', 0);
+            if (!folderSelect.options.length) {
                 const option = document.createElement('option');
-                option.value = folder.id;
-                option.textContent = folder.name;
+                option.value = DEFAULT_FOLDER_ID;
+                option.textContent = DEFAULT_FOLDER_NAME;
                 folderSelect.appendChild(option);
-            });
+            }
             folderSelect.value = data.folders.some((folder) => folder.id === nextFolderId)
                 ? nextFolderId
                 : DEFAULT_FOLDER_ID;
         }
 
-        function renderFolders(data) {
-            const noteCounts = data.notes.reduce((counts, note) => {
-                counts[note.folderId] = (counts[note.folderId] || 0) + 1;
-                return counts;
-            }, {});
-            folderList.innerHTML = '';
+        function getFolderNoteCount(data, folderId) {
+            const descendantIds = getDescendantFolderIds(data, folderId);
+            return data.notes.filter((note) => descendantIds.has(note.folderId)).length;
+        }
 
-            const virtualFolders = [
-                {
-                    id: ALL_FOLDER_ID,
-                    name: 'All Notes',
-                    count: data.notes.length,
-                    removable: false
-                },
-                ...data.folders.map((folder) => ({
-                    id: folder.id,
-                    name: folder.name,
-                    count: noteCounts[folder.id] || 0,
-                    removable: folder.id !== DEFAULT_FOLDER_ID
-                }))
-            ];
-
-            virtualFolders.forEach((folder) => {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'notes-folder-item';
-                if (folder.id === activeFolderId) {
-                    button.classList.add('is-active');
+        function moveDraggedItemToFolder(targetFolderId) {
+            if (!draggedItem) {
+                return;
+            }
+            const data = getNotesData();
+            if (draggedItem.type === 'note') {
+                const noteIndex = data.notes.findIndex((note) => note.id === draggedItem.id);
+                if (noteIndex < 0) {
+                    return;
                 }
+                data.notes[noteIndex] = {
+                    ...data.notes[noteIndex],
+                    folderId: targetFolderId || DEFAULT_FOLDER_ID,
+                    updatedAt: Date.now()
+                };
+                saveNotesData(data);
+                render();
+                return;
+            }
 
-                const main = document.createElement('div');
-                main.className = 'notes-folder-main';
+            if (draggedItem.type === 'folder') {
+                const folderIndex = data.folders.findIndex((folder) => folder.id === draggedItem.id);
+                if (folderIndex < 0 || draggedItem.id === DEFAULT_FOLDER_ID) {
+                    return;
+                }
+                if (targetFolderId === draggedItem.id || isFolderAncestor(data, draggedItem.id, targetFolderId)) {
+                    showDashboardToast('error', 'Invalid Move', 'Folders cannot be placed inside themselves or their own children.');
+                    return;
+                }
+                data.folders[folderIndex] = {
+                    ...data.folders[folderIndex],
+                    parentId: targetFolderId || ''
+                };
+                saveNotesData(data);
+                expandedFolderIds.add(targetFolderId || '');
+                render();
+            }
+        }
 
-                const name = document.createElement('span');
-                name.className = 'notes-folder-name';
-                name.textContent = folder.name;
+        function attachFolderDropHandlers(element, targetFolderId) {
+            element.addEventListener('dragover', (event) => {
+                if (!draggedItem) {
+                    return;
+                }
+                event.preventDefault();
+                element.classList.add('is-drop-target');
+            });
+            element.addEventListener('dragleave', () => {
+                element.classList.remove('is-drop-target');
+            });
+            element.addEventListener('drop', (event) => {
+                event.preventDefault();
+                element.classList.remove('is-drop-target');
+                moveDraggedItemToFolder(targetFolderId);
+                draggedItem = null;
+            });
+        }
 
-                const count = document.createElement('span');
-                count.className = 'notes-folder-count';
-                count.textContent = `${folder.count} note${folder.count === 1 ? '' : 's'}`;
+        function renderFolderTree(data) {
+            folderTree.innerHTML = '';
 
-                main.appendChild(name);
-                main.appendChild(count);
-                button.appendChild(main);
+            const allNotesButton = document.createElement('button');
+            allNotesButton.type = 'button';
+            allNotesButton.className = 'notes-folder-item is-root';
+            if (activeFolderId === ALL_NOTES_FOLDER_ID) {
+                allNotesButton.classList.add('is-active');
+            }
+            allNotesButton.innerHTML = `<span class="notes-folder-main"><span class="notes-folder-name">All Notes</span><span class="notes-folder-count">${data.notes.length} note${data.notes.length === 1 ? '' : 's'}</span></span>`;
+            allNotesButton.addEventListener('click', () => {
+                activeFolderId = ALL_NOTES_FOLDER_ID;
+                render();
+            });
+            allNotesButton.draggable = true;
+            allNotesButton.addEventListener('dragstart', (event) => {
+                event.preventDefault();
+            });
+            attachFolderDropHandlers(allNotesButton, '');
+            folderTree.appendChild(allNotesButton);
 
-                if (folder.removable) {
-                    const removeButton = document.createElement('button');
-                    removeButton.type = 'button';
-                    removeButton.className = 'notes-folder-delete-btn';
-                    removeButton.textContent = '×';
-                    removeButton.setAttribute('aria-label', `Delete ${folder.name}`);
-                    removeButton.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        const confirmed = window.confirm(`Delete folder "${folder.name}"? Notes inside it will move to ${DEFAULT_FOLDER_NAME}.`);
-                        if (!confirmed) {
-                            return;
-                        }
-                        const nextData = getNotesData();
-                        nextData.folders = nextData.folders.filter((entry) => entry.id !== folder.id);
-                        nextData.notes = nextData.notes.map((note) => {
-                            if (note.folderId === folder.id) {
-                                return {
-                                    ...note,
-                                    folderId: DEFAULT_FOLDER_ID,
-                                    updatedAt: Date.now()
-                                };
+            const renderNodes = (parentId, depth) => {
+                const nodes = [];
+                const children = getFolderChildren(data.folders, parentId);
+                children.forEach((folder) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'notes-folder-node';
+
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'notes-folder-item';
+                    if (folder.id === activeFolderId) {
+                        item.classList.add('is-active');
+                    }
+                    item.draggable = folder.id !== DEFAULT_FOLDER_ID;
+
+                    for (let index = 0; index < depth; index += 1) {
+                        const indent = document.createElement('span');
+                        indent.className = 'notes-folder-indent';
+                        item.appendChild(indent);
+                    }
+
+                    const hasChildren = getFolderChildren(data.folders, folder.id).length > 0;
+                    const chevron = document.createElement('span');
+                    chevron.className = 'notes-folder-chevron';
+                    chevron.innerHTML = hasChildren ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>' : '';
+                    if (hasChildren && !expandedFolderIds.has(folder.id)) {
+                        chevron.classList.add('is-collapsed');
+                    }
+                    item.appendChild(chevron);
+
+                    const main = document.createElement('span');
+                    main.className = 'notes-folder-main';
+                    main.innerHTML = `<span class="notes-folder-name">${folder.name}</span><span class="notes-folder-count">${getFolderNoteCount(data, folder.id)} note${getFolderNoteCount(data, folder.id) === 1 ? '' : 's'}</span>`;
+                    item.appendChild(main);
+
+                    item.addEventListener('click', () => {
+                        activeFolderId = folder.id;
+                        if (hasChildren) {
+                            if (expandedFolderIds.has(folder.id)) {
+                                expandedFolderIds.delete(folder.id);
+                            } else {
+                                expandedFolderIds.add(folder.id);
                             }
-                            return note;
-                        });
-                        if (activeFolderId === folder.id) {
-                            activeFolderId = ALL_FOLDER_ID;
                         }
-                        saveNotesData(nextData);
-                        showDashboardToast('success', 'Folder Deleted', `Notes were moved to ${DEFAULT_FOLDER_NAME}.`);
                         render();
                     });
-                    button.appendChild(removeButton);
-                }
 
-                button.addEventListener('click', () => {
-                    activeFolderId = folder.id;
-                    libraryMode = 'notes';
-                    searchQuery = '';
-                    searchInput.value = '';
-                    render();
+                    item.addEventListener('dragstart', () => {
+                        if (folder.id === DEFAULT_FOLDER_ID) {
+                            return;
+                        }
+                        draggedItem = { type: 'folder', id: folder.id };
+                    });
+                    item.addEventListener('dragend', () => {
+                        draggedItem = null;
+                        item.classList.remove('is-drop-target');
+                    });
+
+                    attachFolderDropHandlers(item, folder.id);
+                    wrapper.appendChild(item);
+
+                    if (hasChildren && expandedFolderIds.has(folder.id)) {
+                        const childWrap = document.createElement('div');
+                        childWrap.className = 'notes-folder-children';
+                        renderNodes(folder.id, depth + 1).forEach((childNode) => childWrap.appendChild(childNode));
+                        wrapper.appendChild(childWrap);
+                    }
+
+                    nodes.push(wrapper);
                 });
 
-                folderList.appendChild(button);
+                return nodes;
+            };
+
+            renderNodes('', 0).forEach((node) => folderTree.appendChild(node));
+
+            if (folderTree.childElementCount === 1) {
+                const empty = document.createElement('p');
+                empty.className = 'notes-folder-tree-empty';
+                empty.textContent = 'Create folders, then drag notes into them.';
+                folderTree.appendChild(empty);
+            }
+        }
+
+        function getRelativeGroupKey(note) {
+            if (note.pinned) {
+                return 'pinned';
+            }
+
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const yesterdayStart = todayStart - (24 * 60 * 60 * 1000);
+            const previousWeekStart = todayStart - (7 * 24 * 60 * 60 * 1000);
+            const updatedAt = Number(note.updatedAt) || 0;
+
+            if (updatedAt >= todayStart) {
+                return 'today';
+            }
+            if (updatedAt >= yesterdayStart) {
+                return 'yesterday';
+            }
+            if (updatedAt >= previousWeekStart) {
+                return 'previous7';
+            }
+            return 'older';
+        }
+
+        function buildNoteGroups(notes) {
+            const groups = [
+                { key: 'pinned', title: 'Pinned', notes: [] },
+                { key: 'today', title: 'Today', notes: [] },
+                { key: 'yesterday', title: 'Yesterday', notes: [] },
+                { key: 'previous7', title: 'Previous 7 Days', notes: [] },
+                { key: 'older', title: 'Older', notes: [] }
+            ];
+            const groupLookup = new Map(groups.map((group) => [group.key, group]));
+            notes.forEach((note) => {
+                const group = groupLookup.get(getRelativeGroupKey(note));
+                if (group) {
+                    group.notes.push(note);
+                }
             });
+            return groups.filter((group) => group.notes.length);
+        }
+
+        function createNoteCard(note, data) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'notes-note-card';
+            if (note.id === selectedNoteId) {
+                card.classList.add('is-active');
+            }
+            if (note.completed) {
+                card.classList.add('is-completed');
+            }
+            card.draggable = true;
+
+            const head = document.createElement('div');
+            head.className = 'notes-note-card-head';
+
+            const title = document.createElement('p');
+            title.className = 'notes-note-card-title';
+            title.textContent = getNoteDisplayTitle(note);
+
+            const time = document.createElement('span');
+            time.className = 'notes-note-card-time';
+            time.textContent = formatNoteListDate(note.updatedAt);
+
+            head.appendChild(title);
+            head.appendChild(time);
+            card.appendChild(head);
+
+            const meta = document.createElement('div');
+            meta.className = 'notes-note-card-meta';
+
+            if (note.pinned) {
+                const pinned = document.createElement('span');
+                pinned.className = 'notes-note-card-pin';
+                pinned.textContent = 'Pinned';
+                meta.appendChild(pinned);
+            }
+
+            if (note.completed) {
+                const completed = document.createElement('span');
+                completed.className = 'notes-note-card-completed';
+                completed.textContent = 'Completed';
+                meta.appendChild(completed);
+            }
+
+            const folderName = getFolderName(note.folderId, data.folders);
+            if (folderName && folderName !== DEFAULT_FOLDER_NAME) {
+                const folder = document.createElement('span');
+                folder.className = 'notes-note-card-folder';
+                folder.textContent = folderName;
+                meta.appendChild(folder);
+            }
+
+            if (meta.childNodes.length) {
+                card.appendChild(meta);
+            }
+
+            const preview = document.createElement('p');
+            preview.className = 'notes-note-card-preview';
+            preview.textContent = getNotePreview(note);
+            card.appendChild(preview);
+
+            card.addEventListener('click', () => {
+                selectedNoteId = note.id;
+                renderEditor(getNotesData());
+                renderNoteList(getNotesData());
+                focusSelectedNoteForEditing();
+            });
+
+            card.addEventListener('dragstart', () => {
+                draggedItem = { type: 'note', id: note.id };
+            });
+            card.addEventListener('dragend', () => {
+                draggedItem = null;
+            });
+
+            return card;
+        }
+
+        function renderSummary(data, visibleNotes) {
+            const pinnedCount = data.notes.filter((note) => note.pinned).length;
+            notesSubtitle.textContent = `${data.notes.length} note${data.notes.length === 1 ? '' : 's'}`;
+            folderSummary.textContent = `${data.notes.length} total • ${pinnedCount} pinned`;
+            activeFolderLabel.textContent = searchQuery
+                ? 'Search Results'
+                : activeFolderId === ALL_NOTES_FOLDER_ID
+                    ? 'All Notes'
+                    : getFolderName(activeFolderId, data.folders);
+            countSummary.textContent = `${visibleNotes.length} result${visibleNotes.length === 1 ? '' : 's'}`;
         }
 
         function renderNoteList(data) {
             const visibleNotes = getFilteredNotes(data);
-            const activeFolderName = activeFolderId === ALL_FOLDER_ID ? 'All Notes' : getFolderName(activeFolderId, data.folders);
-            activeFolderLabel.textContent = activeFolderName;
-            countSummary.textContent = `${visibleNotes.length} result${visibleNotes.length === 1 ? '' : 's'}`;
+            renderSummary(data, visibleNotes);
             noteList.innerHTML = '';
 
             if (visibleNotes.length === 0) {
-                noteList.innerHTML = `<p class="outreach-empty">${searchQuery ? 'No notes match this search.' : 'No notes in this folder yet.'}</p>`;
+                noteList.innerHTML = `<p class="outreach-empty">${searchQuery ? 'No notes match this search.' : 'No notes yet. Tap quick note to start writing.'}</p>`;
                 return;
             }
 
-            visibleNotes.forEach((note) => {
-                const card = document.createElement('button');
-                card.type = 'button';
-                card.className = 'notes-note-card';
-                if (note.id === selectedNoteId) {
-                    card.classList.add('is-active');
-                }
+            buildNoteGroups(visibleNotes).forEach((group) => {
+                const section = document.createElement('section');
+                section.className = 'notes-note-group';
 
                 const head = document.createElement('div');
-                head.className = 'notes-note-card-head';
+                head.className = 'notes-note-group-head';
 
-                const title = document.createElement('p');
-                title.className = 'notes-note-card-title';
-                title.textContent = getNoteDisplayTitle(note);
+                const titleWrap = document.createElement('div');
+                titleWrap.className = 'notes-note-group-title-wrap';
 
-                const time = document.createElement('span');
-                time.className = 'notes-note-card-time';
-                time.textContent = formatNoteTimestamp(note.updatedAt);
+                const title = document.createElement('span');
+                title.className = 'notes-note-group-title';
+                title.textContent = group.title;
 
-                const folder = document.createElement('span');
-                folder.className = 'notes-note-card-folder';
-                folder.textContent = getFolderName(note.folderId, data.folders);
+                const count = document.createElement('span');
+                count.className = 'notes-note-group-count';
+                count.textContent = `${group.notes.length} note${group.notes.length === 1 ? '' : 's'}`;
 
-                const preview = document.createElement('p');
-                preview.className = 'notes-note-card-preview';
-                preview.textContent = getNotePreview(note);
+                titleWrap.appendChild(title);
+                titleWrap.appendChild(count);
+                head.appendChild(titleWrap);
 
-                head.appendChild(title);
-                head.appendChild(time);
-                card.appendChild(head);
-                card.appendChild(folder);
-                card.appendChild(preview);
+                if (group.key === 'pinned') {
+                    const collapseButton = document.createElement('button');
+                    collapseButton.type = 'button';
+                    collapseButton.className = 'notes-group-collapse-btn';
+                    if (pinnedCollapsed) {
+                        collapseButton.classList.add('is-collapsed');
+                    }
+                    collapseButton.setAttribute('aria-label', pinnedCollapsed ? 'Expand pinned notes' : 'Collapse pinned notes');
+                    collapseButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+                    collapseButton.addEventListener('click', () => {
+                        pinnedCollapsed = !pinnedCollapsed;
+                        renderNoteList(getNotesData());
+                    });
+                    head.appendChild(collapseButton);
+                }
 
-                card.addEventListener('click', () => {
-                    selectedNoteId = note.id;
-                    renderEditor(getNotesData());
-                    renderNoteList(getNotesData());
-                });
+                section.appendChild(head);
 
-                noteList.appendChild(card);
+                if (!(group.key === 'pinned' && pinnedCollapsed)) {
+                    const list = document.createElement('div');
+                    list.className = 'notes-note-group-list';
+                    group.notes.forEach((note) => {
+                        list.appendChild(createNoteCard(note, data));
+                    });
+                    section.appendChild(list);
+                }
+
+                noteList.appendChild(section);
             });
-        }
-
-        function renderLibraryChrome(data) {
-            const viewingFolders = libraryMode === 'folders';
-            const folderCount = data.folders.length + 1;
-            const activeFolderName = activeFolderId === ALL_FOLDER_ID ? 'All Notes' : getFolderName(activeFolderId, data.folders);
-
-            folderList.hidden = !viewingFolders;
-            noteList.hidden = viewingFolders;
-            backButton.hidden = viewingFolders;
-            searchInput.hidden = viewingFolders;
-
-            if (viewingFolders) {
-                activeFolderLabel.textContent = 'Folders';
-                countSummary.textContent = `${folderCount} folder${folderCount === 1 ? '' : 's'}`;
-                folderSummary.textContent = `${data.notes.length} note${data.notes.length === 1 ? '' : 's'} total`;
-            } else {
-                activeFolderLabel.textContent = activeFolderName;
-                folderSummary.textContent = activeFolderName;
-            }
         }
 
         function renderEditor(data) {
@@ -7110,31 +7431,38 @@ function initNavbarDateTime() {
                 setEditableText(titleInput, '');
                 setEditableText(bodyInput, '');
                 metaLabel.textContent = 'Last updated just now';
+                editor.classList.remove('is-completed');
+                pinToggleButton.textContent = 'Pin Note';
+                pinToggleButton.classList.remove('is-active');
+                pinToggleButton.setAttribute('aria-pressed', 'false');
+                completeToggleButton.classList.remove('is-active');
+                completeToggleButton.setAttribute('aria-pressed', 'false');
                 renderFolderSelect(data, DEFAULT_FOLDER_ID);
                 return;
             }
 
             editor.hidden = false;
             editorEmpty.hidden = true;
+            editor.classList.toggle('is-completed', Boolean(selectedNote.completed));
             setEditableText(titleInput, selectedNote.title);
             setEditableText(bodyInput, selectedNote.body);
             metaLabel.textContent = `Last updated ${formatNoteTimestamp(selectedNote.updatedAt)}`;
+            pinToggleButton.textContent = selectedNote.pinned ? 'Pinned' : 'Pin Note';
+            pinToggleButton.classList.toggle('is-active', Boolean(selectedNote.pinned));
+            pinToggleButton.setAttribute('aria-pressed', selectedNote.pinned ? 'true' : 'false');
+            completeToggleButton.classList.toggle('is-active', Boolean(selectedNote.completed));
+            completeToggleButton.setAttribute('aria-pressed', selectedNote.completed ? 'true' : 'false');
             renderFolderSelect(data, selectedNote.folderId);
         }
 
         function render() {
             const data = getNotesData();
-            if (activeFolderId !== ALL_FOLDER_ID && !data.folders.some((folder) => folder.id === activeFolderId)) {
-                activeFolderId = ALL_FOLDER_ID;
+            if (activeFolderId !== ALL_NOTES_FOLDER_ID && !data.folders.some((folder) => folder.id === activeFolderId)) {
+                activeFolderId = ALL_NOTES_FOLDER_ID;
             }
             ensureSelection(data);
-            renderLibraryChrome(data);
-            renderFolders(data);
-            if (libraryMode === 'notes') {
-                renderNoteList(data);
-            } else {
-                noteList.innerHTML = '';
-            }
+            renderFolderTree(data);
+            renderNoteList(data);
             renderEditor(data);
         }
 
@@ -7169,7 +7497,36 @@ function initNavbarDateTime() {
                 persistSelectedNote(mutator, { render: false });
                 const refreshedData = getNotesData();
                 renderNoteList(refreshedData);
+                renderEditor(refreshedData);
             }, 140);
+        }
+
+        function createNote(options = {}) {
+            const data = getNotesData();
+            const selectedNote = data.notes.find((note) => note.id === selectedNoteId) || null;
+            const noteId = `note-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+            const targetFolderId = activeFolderId !== ALL_NOTES_FOLDER_ID
+                ? activeFolderId
+                : selectedNote
+                    ? selectedNote.folderId
+                    : DEFAULT_FOLDER_ID;
+            data.notes.push({
+                id: noteId,
+                title: '',
+                body: '',
+                folderId: targetFolderId,
+                pinned: false,
+                completed: false,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            selectedNoteId = noteId;
+            saveNotesData(data);
+            render();
+            focusEditableAtEnd(bodyInput);
+            if (options.toast !== false) {
+                showDashboardToast('success', 'Note Created', `New note added to ${getFolderName(targetFolderId, data.folders)}.`);
+            }
         }
 
         addFolderButton.addEventListener('click', () => {
@@ -7186,40 +7543,24 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const folderId = `folder-${Date.now()}-${Math.round(Math.random() * 10000)}`;
             data.folders.push({
-                id: folderId,
+                id: `folder-${Date.now()}-${Math.round(Math.random() * 10000)}`,
                 name,
+                parentId: activeFolderId !== ALL_NOTES_FOLDER_ID ? activeFolderId : '',
                 createdAt: Date.now()
             });
-            activeFolderId = folderId;
-            libraryMode = 'notes';
             saveNotesData(data);
-            showDashboardToast('success', 'Folder Added', `${name} is ready for notes.`);
             render();
+            showDashboardToast('success', 'Folder Added', `${name} is ready for notes.`);
         });
 
         addNoteButton.addEventListener('click', () => {
-            const data = getNotesData();
-            const targetFolderId = activeFolderId !== ALL_FOLDER_ID && data.folders.some((folder) => folder.id === activeFolderId)
-                ? activeFolderId
-                : DEFAULT_FOLDER_ID;
-            const noteId = `note-${Date.now()}-${Math.round(Math.random() * 10000)}`;
-            data.notes.push({
-                id: noteId,
-                title: '',
-                body: '',
-                folderId: targetFolderId,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            });
-            activeFolderId = targetFolderId;
-            libraryMode = 'notes';
-            selectedNoteId = noteId;
-            saveNotesData(data);
-            render();
-            titleInput.focus();
-            showDashboardToast('success', 'Note Created', `New note added to ${getFolderName(targetFolderId, data.folders)}.`);
+            createNote();
+        });
+
+        quickNoteButton.addEventListener('click', () => {
+            createNote({ toast: false });
+            focusEditableAtEnd(bodyInput);
         });
 
         searchInput.addEventListener('input', () => {
@@ -7259,11 +7600,53 @@ function initNavbarDateTime() {
             }));
         });
 
-        backButton.addEventListener('click', () => {
-            libraryMode = 'folders';
-            searchQuery = '';
-            searchInput.value = '';
+        pinToggleButton.addEventListener('click', () => {
+            persistSelectedNote((note) => ({
+                ...note,
+                pinned: !note.pinned
+            }));
+        });
+
+        completeToggleButton.addEventListener('click', () => {
+            persistSelectedNote((note) => ({
+                ...note,
+                completed: !note.completed
+            }));
+        });
+
+        backToListButton.addEventListener('click', () => {
+            selectedNoteId = '';
             render();
+        });
+
+        fontToolButton.addEventListener('click', () => {
+            titleInput.focus();
+        });
+
+        checklistToolButton.addEventListener('click', () => {
+            insertBodyText('☐ ');
+        });
+
+        gridToolButton.addEventListener('click', () => {
+            insertBodyText('| Column 1 | Column 2 |\n| --- | --- |\n| Value | Value |\n');
+        });
+
+        attachToolButton.addEventListener('click', () => {
+            showDashboardToast('info', 'Attachments Coming Soon', 'Note attachments are not connected yet, but the toolbar button is ready.');
+        });
+
+        drawToolButton.addEventListener('click', () => {
+            showDashboardToast('info', 'Drawing Coming Soon', 'Drawing tools are not connected yet, but the toolbar button is ready.');
+        });
+
+        boldToolButton.addEventListener('click', () => {
+            const selection = window.getSelection();
+            const selectedText = selection ? String(selection.toString() || '') : '';
+            if (!selectedText) {
+                insertBodyText('**bold**');
+                return;
+            }
+            insertBodyText(`**${selectedText}**`);
         });
 
         deleteButton.addEventListener('click', () => {
@@ -14321,7 +14704,7 @@ function initNavbarDateTime() {
                     user.name ||
                     (canUseProfileIdentity ? profile.name : '') ||
                     workspaceUser.name ||
-                    ''
+                    'Steve Medina'
                 ).trim();
             }
 
@@ -14971,7 +15354,7 @@ function initNavbarDateTime() {
                 const senderName = senderNameInput.value.trim();
                 const recipientName = recipientNameInput.value.trim();
                 const recipientEmail = recipientEmailInput.value.trim();
-                const signerName = String(investorProfile?.signerName || getOfferSignerName() || senderName || 'N/A').trim();
+                const signerName = String(investorProfile?.signerName || getOfferSignerName() || 'Steve Medina').trim();
                 const entityText = String(investorProfile?.entityLabel || getOfferSelectText('offer-entity') || 'Selected Entity').trim();
                 const categoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.label || 'Offer Terms';
                 const subcategoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.subcategories[getEffectiveSubcategory()]?.label || 'General';
