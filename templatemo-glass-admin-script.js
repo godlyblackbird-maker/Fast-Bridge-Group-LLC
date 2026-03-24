@@ -7028,12 +7028,9 @@ function initNavbarDateTime() {
 
         function ensureSelection(data) {
             const availableNotes = getFilteredNotes(data);
-            const currentExists = data.notes.some((note) => note.id === selectedNoteId);
-            if (!currentExists) {
-                selectedNoteId = availableNotes[0] ? availableNotes[0].id : '';
-            }
-            if (!selectedNoteId && availableNotes[0]) {
-                selectedNoteId = availableNotes[0].id;
+            const selectedIsVisible = availableNotes.some((note) => note.id === selectedNoteId);
+            if (!selectedIsVisible) {
+                selectedNoteId = '';
             }
         }
 
@@ -7180,14 +7177,21 @@ function initNavbarDateTime() {
                     main.innerHTML = `<span class="notes-folder-name">${folder.name}</span><span class="notes-folder-count">${getFolderNoteCount(data, folder.id)} note${getFolderNoteCount(data, folder.id) === 1 ? '' : 's'}</span>`;
                     item.appendChild(main);
 
-                    item.addEventListener('click', () => {
-                        activeFolderId = folder.id;
-                        if (hasChildren) {
+                    item.addEventListener('click', (event) => {
+                        const clickedChevron = event.target instanceof Element && event.target.closest('.notes-folder-chevron');
+                        if (clickedChevron && hasChildren) {
                             if (expandedFolderIds.has(folder.id)) {
                                 expandedFolderIds.delete(folder.id);
                             } else {
                                 expandedFolderIds.add(folder.id);
                             }
+                            render();
+                            return;
+                        }
+
+                        activeFolderId = folder.id;
+                        if (hasChildren) {
+                            expandedFolderIds.add(folder.id);
                         }
                         render();
                     });
@@ -11926,6 +11930,18 @@ function initNavbarDateTime() {
             return match ? match[0] : fallback;
         }
 
+        function normalizeYearBuilt(value, fallback) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return fallback;
+            }
+            const year = Number.parseInt(raw.replace(/[^0-9]/g, ''), 10);
+            if (!Number.isInteger(year) || year < 1700 || year > 9999) {
+                return fallback;
+            }
+            return String(year);
+        }
+
         function getImportedPropertyImage(value) {
             const raw = String(value || '').trim();
             return raw || 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80';
@@ -11942,6 +11958,7 @@ function initNavbarDateTime() {
             const area = normalizeMetric(formData.get('area'), 'sqft', '0 sqft');
             const garageCount = normalizeGarageCount(formData.get('garage'), '0');
             const lotSize = normalizeMetric(formData.get('lotSize'), 'sqft', 'Lot Size TBD');
+            const yearBuilt = normalizeYearBuilt(formData.get('yearBuilt'), '-');
             const status = normalizeStatus(String(formData.get('status') || 'active').trim());
             const roi = Number(formData.get('roi'));
             const domValue = Number(formData.get('dom'));
@@ -11955,7 +11972,7 @@ function initNavbarDateTime() {
             const propertySnapshot = {
                 address,
                 propertyImages: [imageUrl],
-                propertyDetails: `Single Family / ${beds.replace('Beds', 'Br').trim()} / ${baths.replace('Baths', 'Ba').trim()} / ${garageCount} Gar / -- / ${area.replace('sqft', 'ft²').trim()} / ${lotSize.replace('sqft', 'ft²').trim()} / Pool: Unknown`,
+                propertyDetails: `Single Family / ${beds.replace('Beds', 'Br').trim()} / ${baths.replace('Baths', 'Ba').trim()} / ${garageCount} Gar / ${yearBuilt} / ${area.replace('sqft', 'ft²').trim()} / ${lotSize.replace('sqft', 'ft²').trim()} / Pool: Unknown`,
                 listPrice: price,
                 propensity: Math.max(1, Math.min(10, Math.round(Number.isFinite(roi) ? roi : 6))),
                 moderatePain: 'Imported Listing',
@@ -12009,6 +12026,7 @@ function initNavbarDateTime() {
                 commonWalls: '-',
                 garageCount,
                 lotSize,
+                yearBuilt,
                 lockboxType: '-',
                 occupied: '-',
                 showing: '-'
@@ -12421,6 +12439,7 @@ function initNavbarDateTime() {
             commonWalls: '-',
             garageCount: '3',
             lotSize: '170,320 ft²',
+            yearBuilt: '1978',
             lockboxType: '-',
             occupied: '-',
             showing: '-',
@@ -12787,6 +12806,7 @@ function initNavbarDateTime() {
             'property-common-walls': detailData.commonWalls,
             'property-garage': detailData.garageCount,
             'property-lot-size': detailData.lotSize,
+            'property-year-built': detailData.yearBuilt,
             'property-lockbox-type': detailData.lockboxType,
             'property-occupied': detailData.occupied,
             'property-showing': detailData.showing,

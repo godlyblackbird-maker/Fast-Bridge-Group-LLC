@@ -6757,6 +6757,7 @@ body.sidebar-collapsed .main-content {
 .notes-library-panel,
 .notes-editor-panel {
     min-width: 0;
+    min-height: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.03);
@@ -6764,6 +6765,7 @@ body.sidebar-collapsed .main-content {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    overflow: hidden;
 }
 
 .notes-panel-head {
@@ -6791,6 +6793,10 @@ body.sidebar-collapsed .main-content {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 0 0 auto;
+    max-height: 172px;
+    overflow-y: auto;
+    padding-right: 4px;
     padding-bottom: 4px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -6847,6 +6853,7 @@ body.sidebar-collapsed .main-content {
     height: 16px;
     flex: 0 0 auto;
     color: var(--text-muted);
+    cursor: pointer;
     transition: transform var(--transition-fast);
 }
 
@@ -6879,6 +6886,7 @@ body.sidebar-collapsed .main-content {
 
 .notes-note-list {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 12px;
     min-height: 0;
@@ -7140,10 +7148,12 @@ body.sidebar-collapsed .main-content {
 }
 
 .notes-editor {
+    flex: 1 1 auto;
     min-height: 100%;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow: hidden;
 }
 
 .notes-editor-topbar {
