@@ -32,20 +32,22 @@
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 const themeStore = readJson('dashboardThemeByUser');
                 const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
-                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+                let theme = isAuthenticated
+                    ? ((themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'sunset')
+                    : 'sunset';
 
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
                 if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(theme)) {
-                    theme = 'beach';
+                    theme = 'sunset';
                 }
 
                 document.documentElement.setAttribute('data-theme', theme);
                 document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
             } catch (error) {
-                document.documentElement.setAttribute('data-theme', 'beach');
+                document.documentElement.setAttribute('data-theme', 'sunset');
                 document.documentElement.setAttribute('data-authenticated', 'false');
             }
         })();
@@ -2160,13 +2162,16 @@
                 if (normalized === 'system') {
                     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                return ALLOWED_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'beach';
+                return ALLOWED_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'sunset';
             };
 
             const getStoredThemeValue = () => {
-                const { userKey } = getUserThemeContext();
+                const { userKey, isAuthenticated } = getUserThemeContext();
+                if (!isAuthenticated) {
+                    return 'sunset';
+                }
                 const themeStore = readJson(USER_THEME_KEY);
-                return String((themeStore[userKey] && themeStore[userKey].value) || localStorage.getItem(HOMEPAGE_THEME_KEY) || 'beach').trim().toLowerCase();
+                return String((themeStore[userKey] && themeStore[userKey].value) || localStorage.getItem(HOMEPAGE_THEME_KEY) || 'sunset').trim().toLowerCase();
             };
 
             const getHomepageTheme = () => {

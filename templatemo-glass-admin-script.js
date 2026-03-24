@@ -27,6 +27,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
     const PLANNER_DRAFT_KEY = 'plannerDraftByUser';
+    const DASHBOARD_NOTES_KEY = 'dashboardNotesByUser';
     const SUBSCRIPTION_PLAN_KEY = 'subscriptionPlanByUser';
     const LEGAL_FOOTER_LINKS = [
         { id: 'mls-data-disclaimer', label: 'MLS Data Disclaimer' },
@@ -6359,6 +6360,469 @@ function initNavbarDateTime() {
 
             notesList.appendChild(button);
         });
+    }
+
+    function initNotesWidget() {
+        const folderList = document.getElementById('notes-folder-list');
+        const noteList = document.getElementById('notes-note-list');
+        const addFolderButton = document.getElementById('notes-add-folder-btn');
+        const addNoteButton = document.getElementById('notes-add-note-btn');
+        const searchInput = document.getElementById('notes-search-input');
+        const activeFolderLabel = document.getElementById('notes-active-folder-label');
+        const countSummary = document.getElementById('notes-count-summary');
+        const folderSummary = document.getElementById('notes-folder-summary');
+        const editorEmpty = document.getElementById('notes-editor-empty');
+        const editor = document.getElementById('notes-editor');
+        const titleInput = document.getElementById('notes-title-input');
+        const folderSelect = document.getElementById('notes-folder-select');
+        const bodyInput = document.getElementById('notes-body-input');
+        const metaLabel = document.getElementById('notes-meta-label');
+        const deleteButton = document.getElementById('notes-delete-note-btn');
+
+        if (!folderList || !noteList || !addFolderButton || !addNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !editorEmpty || !editor || !titleInput || !folderSelect || !bodyInput || !metaLabel || !deleteButton) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+        const DEFAULT_FOLDER_ID = 'folder-default';
+        const ALL_FOLDER_ID = '__all__';
+        const DEFAULT_FOLDER_NAME = 'Notes';
+        let activeFolderId = ALL_FOLDER_ID;
+        let selectedNoteId = '';
+        let searchQuery = '';
+        let persistTimer = null;
+
+        function normalizeNotesData(rawValue) {
+            const value = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) ? rawValue : {};
+            const rawFolders = Array.isArray(value.folders) ? value.folders : [];
+            const rawNotes = Array.isArray(value.notes) ? value.notes : [];
+            const folders = rawFolders
+                .map((folder, index) => {
+                    const id = String(folder && folder.id || `folder-${index + 1}`).trim();
+                    const name = String(folder && (folder.name || folder.title) || '').trim();
+                    if (!id || !name) {
+                        return null;
+                    }
+                    return {
+                        id,
+                        name,
+                        createdAt: Number(folder && folder.createdAt) || Date.now()
+                    };
+                })
+                .filter(Boolean);
+
+            if (!folders.some((folder) => folder.id === DEFAULT_FOLDER_ID)) {
+                folders.unshift({
+                    id: DEFAULT_FOLDER_ID,
+                    name: DEFAULT_FOLDER_NAME,
+                    createdAt: Date.now()
+                });
+            }
+
+            const knownFolderIds = new Set(folders.map((folder) => folder.id));
+            const notes = rawNotes
+                .map((note, index) => {
+                    const id = String(note && note.id || `note-${index + 1}`).trim();
+                    if (!id) {
+                        return null;
+                    }
+                    const folderId = knownFolderIds.has(String(note && note.folderId || '').trim())
+                        ? String(note.folderId).trim()
+                        : DEFAULT_FOLDER_ID;
+                    return {
+                        id,
+                        title: String(note && note.title || '').trim(),
+                        body: String(note && note.body || '').trim(),
+                        folderId,
+                        createdAt: Number(note && note.createdAt) || Date.now(),
+                        updatedAt: Number(note && note.updatedAt) || Date.now()
+                    };
+                })
+                .filter(Boolean);
+
+            return { folders, notes };
+        }
+
+        function getNotesData() {
+            return normalizeNotesData(getUserScopedObject(DASHBOARD_NOTES_KEY, workspaceUser.key));
+        }
+
+        function saveNotesData(nextData) {
+            setUserScopedObject(DASHBOARD_NOTES_KEY, workspaceUser.key, normalizeNotesData(nextData));
+        }
+
+        function getFolderName(folderId, folders) {
+            const matched = folders.find((folder) => folder.id === folderId);
+            return matched ? matched.name : DEFAULT_FOLDER_NAME;
+        }
+
+        function getNoteDisplayTitle(note) {
+            const explicitTitle = String(note && note.title || '').trim();
+            if (explicitTitle) {
+                return explicitTitle;
+            }
+            const bodyTitle = String(note && note.body || '').split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+            return bodyTitle || 'New Note';
+        }
+
+        function getNotePreview(note) {
+            const body = String(note && note.body || '').replace(/\s+/g, ' ').trim();
+            if (body) {
+                return body;
+            }
+            return 'No additional text yet.';
+        }
+
+        function formatNoteTimestamp(value) {
+            const timestamp = Number(value) || Date.now();
+            return new Date(timestamp).toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function getFilteredNotes(data) {
+            const normalizedQuery = searchQuery.trim().toLowerCase();
+            return data.notes
+                .filter((note) => activeFolderId === ALL_FOLDER_ID || note.folderId === activeFolderId)
+                .filter((note) => {
+                    if (!normalizedQuery) {
+                        return true;
+                    }
+                    const haystack = `${note.title}\n${note.body}`.toLowerCase();
+                    return haystack.includes(normalizedQuery);
+                })
+                .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0));
+        }
+
+        function ensureSelection(data) {
+            const availableNotes = getFilteredNotes(data);
+            const currentExists = data.notes.some((note) => note.id === selectedNoteId);
+            if (!currentExists) {
+                selectedNoteId = availableNotes[0] ? availableNotes[0].id : '';
+            }
+            if (!selectedNoteId && availableNotes[0]) {
+                selectedNoteId = availableNotes[0].id;
+            }
+        }
+
+        function renderFolderSelect(data, preferredFolderId) {
+            const nextFolderId = String(preferredFolderId || '').trim();
+            folderSelect.innerHTML = '';
+            data.folders.forEach((folder) => {
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = folder.name;
+                folderSelect.appendChild(option);
+            });
+            folderSelect.value = data.folders.some((folder) => folder.id === nextFolderId)
+                ? nextFolderId
+                : DEFAULT_FOLDER_ID;
+        }
+
+        function renderFolders(data) {
+            const noteCounts = data.notes.reduce((counts, note) => {
+                counts[note.folderId] = (counts[note.folderId] || 0) + 1;
+                return counts;
+            }, {});
+            folderSummary.textContent = `${data.folders.length} folder${data.folders.length === 1 ? '' : 's'}`;
+            folderList.innerHTML = '';
+
+            const virtualFolders = [
+                {
+                    id: ALL_FOLDER_ID,
+                    name: 'All Notes',
+                    count: data.notes.length,
+                    removable: false
+                },
+                ...data.folders.map((folder) => ({
+                    id: folder.id,
+                    name: folder.name,
+                    count: noteCounts[folder.id] || 0,
+                    removable: folder.id !== DEFAULT_FOLDER_ID
+                }))
+            ];
+
+            virtualFolders.forEach((folder) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'notes-folder-item';
+                if (folder.id === activeFolderId) {
+                    button.classList.add('is-active');
+                }
+
+                const main = document.createElement('div');
+                main.className = 'notes-folder-main';
+
+                const name = document.createElement('span');
+                name.className = 'notes-folder-name';
+                name.textContent = folder.name;
+
+                const count = document.createElement('span');
+                count.className = 'notes-folder-count';
+                count.textContent = `${folder.count} note${folder.count === 1 ? '' : 's'}`;
+
+                main.appendChild(name);
+                main.appendChild(count);
+                button.appendChild(main);
+
+                if (folder.removable) {
+                    const removeButton = document.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.className = 'notes-folder-delete-btn';
+                    removeButton.textContent = '×';
+                    removeButton.setAttribute('aria-label', `Delete ${folder.name}`);
+                    removeButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        const confirmed = window.confirm(`Delete folder "${folder.name}"? Notes inside it will move to ${DEFAULT_FOLDER_NAME}.`);
+                        if (!confirmed) {
+                            return;
+                        }
+                        const nextData = getNotesData();
+                        nextData.folders = nextData.folders.filter((entry) => entry.id !== folder.id);
+                        nextData.notes = nextData.notes.map((note) => {
+                            if (note.folderId === folder.id) {
+                                return {
+                                    ...note,
+                                    folderId: DEFAULT_FOLDER_ID,
+                                    updatedAt: Date.now()
+                                };
+                            }
+                            return note;
+                        });
+                        if (activeFolderId === folder.id) {
+                            activeFolderId = ALL_FOLDER_ID;
+                        }
+                        saveNotesData(nextData);
+                        showDashboardToast('success', 'Folder Deleted', `Notes were moved to ${DEFAULT_FOLDER_NAME}.`);
+                        render();
+                    });
+                    button.appendChild(removeButton);
+                }
+
+                button.addEventListener('click', () => {
+                    activeFolderId = folder.id;
+                    render();
+                });
+
+                folderList.appendChild(button);
+            });
+        }
+
+        function renderNoteList(data) {
+            const visibleNotes = getFilteredNotes(data);
+            const activeFolderName = activeFolderId === ALL_FOLDER_ID ? 'All Notes' : getFolderName(activeFolderId, data.folders);
+            activeFolderLabel.textContent = activeFolderName;
+            countSummary.textContent = `${visibleNotes.length} result${visibleNotes.length === 1 ? '' : 's'}`;
+            noteList.innerHTML = '';
+
+            if (visibleNotes.length === 0) {
+                noteList.innerHTML = `<p class="outreach-empty">${searchQuery ? 'No notes match this search.' : 'No notes in this folder yet.'}</p>`;
+                return;
+            }
+
+            visibleNotes.forEach((note) => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'notes-note-card';
+                if (note.id === selectedNoteId) {
+                    card.classList.add('is-active');
+                }
+
+                const head = document.createElement('div');
+                head.className = 'notes-note-card-head';
+
+                const title = document.createElement('p');
+                title.className = 'notes-note-card-title';
+                title.textContent = getNoteDisplayTitle(note);
+
+                const time = document.createElement('span');
+                time.className = 'notes-note-card-time';
+                time.textContent = formatNoteTimestamp(note.updatedAt);
+
+                const folder = document.createElement('span');
+                folder.className = 'notes-note-card-folder';
+                folder.textContent = getFolderName(note.folderId, data.folders);
+
+                const preview = document.createElement('p');
+                preview.className = 'notes-note-card-preview';
+                preview.textContent = getNotePreview(note);
+
+                head.appendChild(title);
+                head.appendChild(time);
+                card.appendChild(head);
+                card.appendChild(folder);
+                card.appendChild(preview);
+
+                card.addEventListener('click', () => {
+                    selectedNoteId = note.id;
+                    render();
+                });
+
+                noteList.appendChild(card);
+            });
+        }
+
+        function renderEditor(data) {
+            const selectedNote = data.notes.find((note) => note.id === selectedNoteId) || null;
+            if (!selectedNote) {
+                editor.hidden = true;
+                editorEmpty.hidden = false;
+                titleInput.value = '';
+                bodyInput.value = '';
+                metaLabel.textContent = 'Last updated just now';
+                renderFolderSelect(data, DEFAULT_FOLDER_ID);
+                return;
+            }
+
+            editor.hidden = false;
+            editorEmpty.hidden = true;
+            titleInput.value = selectedNote.title;
+            bodyInput.value = selectedNote.body;
+            metaLabel.textContent = `Last updated ${formatNoteTimestamp(selectedNote.updatedAt)}`;
+            renderFolderSelect(data, selectedNote.folderId);
+        }
+
+        function render() {
+            const data = getNotesData();
+            if (activeFolderId !== ALL_FOLDER_ID && !data.folders.some((folder) => folder.id === activeFolderId)) {
+                activeFolderId = ALL_FOLDER_ID;
+            }
+            ensureSelection(data);
+            renderFolders(data);
+            renderNoteList(data);
+            renderEditor(data);
+        }
+
+        function persistSelectedNote(mutator) {
+            const data = getNotesData();
+            const noteIndex = data.notes.findIndex((note) => note.id === selectedNoteId);
+            if (noteIndex < 0) {
+                return;
+            }
+            const currentNote = data.notes[noteIndex];
+            const nextNote = mutator(currentNote);
+            if (!nextNote) {
+                return;
+            }
+            data.notes[noteIndex] = {
+                ...currentNote,
+                ...nextNote,
+                updatedAt: Date.now()
+            };
+            saveNotesData(data);
+            render();
+        }
+
+        function schedulePersist(mutator) {
+            window.clearTimeout(persistTimer);
+            persistTimer = window.setTimeout(() => {
+                persistSelectedNote(mutator);
+            }, 140);
+        }
+
+        addFolderButton.addEventListener('click', () => {
+            const proposedName = window.prompt('Folder name');
+            const name = String(proposedName || '').trim();
+            if (!name) {
+                return;
+            }
+
+            const data = getNotesData();
+            const duplicate = data.folders.some((folder) => folder.name.toLowerCase() === name.toLowerCase());
+            if (duplicate) {
+                showDashboardToast('error', 'Folder Exists', 'Choose a different folder name.');
+                return;
+            }
+
+            const folderId = `folder-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+            data.folders.push({
+                id: folderId,
+                name,
+                createdAt: Date.now()
+            });
+            activeFolderId = folderId;
+            saveNotesData(data);
+            showDashboardToast('success', 'Folder Added', `${name} is ready for notes.`);
+            render();
+        });
+
+        addNoteButton.addEventListener('click', () => {
+            const data = getNotesData();
+            const targetFolderId = activeFolderId !== ALL_FOLDER_ID && data.folders.some((folder) => folder.id === activeFolderId)
+                ? activeFolderId
+                : DEFAULT_FOLDER_ID;
+            const noteId = `note-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+            data.notes.push({
+                id: noteId,
+                title: '',
+                body: '',
+                folderId: targetFolderId,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            selectedNoteId = noteId;
+            saveNotesData(data);
+            render();
+            titleInput.focus();
+            showDashboardToast('success', 'Note Created', `New note added to ${getFolderName(targetFolderId, data.folders)}.`);
+        });
+
+        searchInput.addEventListener('input', () => {
+            searchQuery = String(searchInput.value || '').trim();
+            render();
+        });
+
+        titleInput.addEventListener('input', () => {
+            const nextValue = String(titleInput.value || '');
+            schedulePersist((note) => ({
+                ...note,
+                title: nextValue
+            }));
+        });
+
+        bodyInput.addEventListener('input', () => {
+            const nextValue = String(bodyInput.value || '');
+            schedulePersist((note) => ({
+                ...note,
+                body: nextValue
+            }));
+        });
+
+        folderSelect.addEventListener('change', () => {
+            const nextFolderId = String(folderSelect.value || DEFAULT_FOLDER_ID).trim();
+            persistSelectedNote((note) => ({
+                ...note,
+                folderId: nextFolderId || DEFAULT_FOLDER_ID
+            }));
+        });
+
+        deleteButton.addEventListener('click', () => {
+            if (!selectedNoteId) {
+                return;
+            }
+            const confirmed = window.confirm('Delete this note?');
+            if (!confirmed) {
+                return;
+            }
+            const data = getNotesData();
+            data.notes = data.notes.filter((note) => note.id !== selectedNoteId);
+            selectedNoteId = '';
+            saveNotesData(data);
+            showDashboardToast('success', 'Note Deleted', 'The note was removed from your dashboard.');
+            render();
+        });
+
+        window.addEventListener('dashboard-data-updated', render);
+        window.addEventListener('storage', (event) => {
+            if (!event.key || event.key === DASHBOARD_NOTES_KEY) {
+                render();
+            }
+        });
+
+        render();
     }
 
     function initAgentWorkspaceEmailPrep() {
@@ -15778,6 +16242,7 @@ function initNavbarDateTime() {
         initDailyBibleVerseWidget();
         initPersonalOutreachWorkspace();
         initAgentNotesWidget();
+        initNotesWidget();
         initAgentWorkspaceEmailPrep();
         initAdminOnlineUsersWidget();
         initAdminAccessRequests();

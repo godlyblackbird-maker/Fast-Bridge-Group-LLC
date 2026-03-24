@@ -435,6 +435,61 @@ https://templatemo.com/tm-607-glass-admin
                     </div>
                 </div>
 
+                <div class="glass-card widget-card outreach-card notes-dashboard-widget" data-widget-id="notes-organizer" data-widget-title="Notes">
+                    <div class="card-header notes-widget-header">
+                        <div>
+                            <h2 class="card-title">Notes</h2>
+                            <p class="card-subtitle">Organize notes into folders and keep your workspace clean</p>
+                        </div>
+                        <div class="notes-widget-header-actions">
+                            <button id="notes-add-folder-btn" type="button" class="card-btn">New Folder</button>
+                            <button id="notes-add-note-btn" type="button" class="card-btn active">New Note</button>
+                        </div>
+                    </div>
+                    <div class="notes-widget-shell">
+                        <aside class="notes-folder-panel" aria-label="Notes folders">
+                            <div class="notes-panel-head">
+                                <span>Folders</span>
+                                <span class="notes-panel-meta" id="notes-folder-summary">0 folders</span>
+                            </div>
+                            <div id="notes-folder-list" class="notes-folder-list">
+                                <p class="outreach-empty">Loading folders...</p>
+                            </div>
+                        </aside>
+
+                        <section class="notes-list-panel" aria-label="Notes list">
+                            <div class="notes-panel-head notes-panel-head-search">
+                                <div>
+                                    <span id="notes-active-folder-label">All Notes</span>
+                                    <span class="notes-panel-meta" id="notes-count-summary">0 notes</span>
+                                </div>
+                                <input id="notes-search-input" class="form-input notes-search-input" type="search" placeholder="Search notes...">
+                            </div>
+                            <div id="notes-note-list" class="notes-note-list">
+                                <p class="outreach-empty">No notes yet.</p>
+                            </div>
+                        </section>
+
+                        <section class="notes-editor-panel" aria-label="Note editor">
+                            <div id="notes-editor-empty" class="notes-editor-empty">
+                                <strong>No note selected</strong>
+                                <p>Create a note or pick one from the list to start writing.</p>
+                            </div>
+                            <div id="notes-editor" class="notes-editor" hidden>
+                                <div class="notes-editor-topbar">
+                                    <input id="notes-title-input" class="form-input notes-title-input" type="text" placeholder="Title">
+                                    <select id="notes-folder-select" class="form-input notes-folder-select" aria-label="Move note to folder"></select>
+                                </div>
+                                <textarea id="notes-body-input" class="form-input notes-body-input" placeholder="Start typing..."></textarea>
+                                <div class="notes-editor-footer">
+                                    <p class="notes-editor-meta" id="notes-meta-label">Last updated just now</p>
+                                    <button id="notes-delete-note-btn" type="button" class="card-btn">Delete Note</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
                 <div class="glass-card widget-card outreach-card daily-verse-widget" data-widget-id="daily-bible-verse" data-widget-title="Daily Bible Verse">
                     <div class="card-header">
                         <div>
