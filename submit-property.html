@@ -806,7 +806,7 @@
                             </div>
                             <div class="submit-field">
                                 <label for="asking-price">How Much Would You Hope To Get?</label>
-                                <input id="asking-price" name="askingPrice" type="text" placeholder="$450,000">
+                                <input id="asking-price" name="askingPrice" type="text" inputmode="numeric" data-submit-auto-commas="true" placeholder="$450,000">
                             </div>
                             <div class="submit-field">
                                 <label for="bedrooms">Bedrooms</label>
@@ -818,7 +818,7 @@
                             </div>
                             <div class="submit-field">
                                 <label for="square-feet">Square Feet</label>
-                                <input id="square-feet" name="squareFeet" type="text" placeholder="1450">
+                                <input id="square-feet" name="squareFeet" type="text" inputmode="numeric" data-submit-auto-commas="true" placeholder="1,450">
                             </div>
                             <div class="submit-field">
                                 <label for="timeline">Ideal Selling Timeline</label>
@@ -912,6 +912,59 @@
                     feedback.classList.add('is-success');
                 }
             }
+
+            function findGroupedCaretPosition(formattedValue, digitCount) {
+                if (digitCount <= 0) {
+                    return 0;
+                }
+
+                let seenDigits = 0;
+                for (let index = 0; index < formattedValue.length; index += 1) {
+                    if (/\d/.test(formattedValue.charAt(index))) {
+                        seenDigits += 1;
+                        if (seenDigits >= digitCount) {
+                            return index + 1;
+                        }
+                    }
+                }
+
+                return formattedValue.length;
+            }
+
+            function applySubmitDigitGrouping(input) {
+                if (!(input instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                const rawValue = String(input.value || '');
+                const digitsOnly = rawValue.replace(/\D/g, '');
+                if (!digitsOnly) {
+                    input.value = '';
+                    return;
+                }
+
+                const selectionStart = typeof input.selectionStart === 'number'
+                    ? input.selectionStart
+                    : rawValue.length;
+                const digitsBeforeCaret = rawValue.slice(0, selectionStart).replace(/\D/g, '').length;
+                const formattedValue = Number(digitsOnly).toLocaleString();
+
+                input.value = formattedValue;
+
+                if (document.activeElement === input && typeof input.setSelectionRange === 'function') {
+                    const nextCaret = findGroupedCaretPosition(formattedValue, digitsBeforeCaret);
+                    input.setSelectionRange(nextCaret, nextCaret);
+                }
+            }
+
+            Array.from(form.querySelectorAll('[data-submit-auto-commas="true"]')).forEach(function (input) {
+                input.addEventListener('input', function () {
+                    applySubmitDigitGrouping(input);
+                });
+                input.addEventListener('blur', function () {
+                    applySubmitDigitGrouping(input);
+                });
+            });
 
             form.addEventListener('submit', async function (event) {
                 event.preventDefault();

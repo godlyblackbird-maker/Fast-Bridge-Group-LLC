@@ -206,15 +206,15 @@
         html[data-theme='beach'] body::before {
             content: '';
             position: fixed;
-            right: -70px;
-            bottom: -194px;
+            right: -82px;
+            bottom: -252px;
             width: 520px;
             height: 520px;
             border-radius: 0;
-            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat center bottom;
-            background-size: contain;
+            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat right bottom;
+            background-size: 520px auto;
             opacity: 0.12;
-            filter: drop-shadow(0 18px 34px rgba(8, 47, 73, 0.24)) blur(1.6px) saturate(0.88);
+            filter: drop-shadow(0 18px 34px rgba(8, 47, 73, 0.24)) saturate(0.88);
             transform: rotate(-3deg);
         }
 
@@ -621,13 +621,20 @@
         html[data-theme='christmas'] body::before {
             content: '';
             position: fixed;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             border-radius: 0;
             background:
                 linear-gradient(180deg, rgba(7, 12, 9, 0.34), rgba(13, 24, 18, 0.2)),
                 url("Themes/Wallpaper%20CHRISTMAS.jpg") center center / cover no-repeat;
             opacity: 0.4;
-            filter: saturate(1.02) contrast(1.02);
+            filter: blur(2px) saturate(1.02) contrast(1.02);
+            transform: scale(1.03);
+            transform-origin: center;
             pointer-events: none;
         }
 
@@ -1784,10 +1791,11 @@
             }
 
             html[data-theme='beach'] body::before {
-                right: -98px;
-                bottom: -148px;
+                right: -116px;
+                bottom: -186px;
                 width: 360px;
                 height: 360px;
+                background-size: 360px auto;
                 opacity: 0.1;
             }
 

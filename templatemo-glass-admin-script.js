@@ -647,7 +647,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.2.3';
+                versionLabel.textContent = 'v1.2.5';
             });
     }
 
@@ -10481,6 +10481,68 @@ function initNavbarDateTime() {
                 closeImportWidget();
             }
         });
+
+        function findDigitGroupedCaretPosition(formattedValue, digitCount) {
+            if (digitCount <= 0) {
+                return 0;
+            }
+
+            let seenDigits = 0;
+            for (let index = 0; index < formattedValue.length; index += 1) {
+                if (/\d/.test(formattedValue.charAt(index))) {
+                    seenDigits += 1;
+                    if (seenDigits >= digitCount) {
+                        return index + 1;
+                    }
+                }
+            }
+
+            return formattedValue.length;
+        }
+
+        function applyDealsImportDigitGrouping(input) {
+            if (!(input instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const rawValue = String(input.value || '');
+            const digitsOnly = rawValue.replace(/\D/g, '');
+            if (!digitsOnly) {
+                input.value = '';
+                return;
+            }
+
+            const selectionStart = typeof input.selectionStart === 'number'
+                ? input.selectionStart
+                : rawValue.length;
+            const digitsBeforeCaret = rawValue.slice(0, selectionStart).replace(/\D/g, '').length;
+            const formattedValue = Number(digitsOnly).toLocaleString();
+
+            input.value = formattedValue;
+
+            if (document.activeElement === input && typeof input.setSelectionRange === 'function') {
+                const nextCaret = findDigitGroupedCaretPosition(formattedValue, digitsBeforeCaret);
+                input.setSelectionRange(nextCaret, nextCaret);
+            }
+        }
+
+        function bindDealsImportDigitGrouping(form) {
+            if (!(form instanceof HTMLFormElement)) {
+                return;
+            }
+
+            const groupedInputs = Array.from(form.querySelectorAll('[data-deals-auto-commas="true"]'));
+            groupedInputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    applyDealsImportDigitGrouping(input);
+                });
+                input.addEventListener('blur', () => {
+                    applyDealsImportDigitGrouping(input);
+                });
+            });
+        }
+
+        bindDealsImportDigitGrouping(importForm);
 
         function normalizeStatus(value) {
             return ['active', 'pending', 'on-hold', 'closed'].includes(value) ? value : 'active';
