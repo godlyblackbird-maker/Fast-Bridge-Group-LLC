@@ -4627,6 +4627,10 @@ body.sidebar-collapsed .main-content {
     font-size: 14px;
 }
 
+.closed-deals-money-input {
+    font-family: 'Space Mono', monospace;
+}
+
 .closed-deals-input:focus {
     outline: none;
     border-color: rgba(34, 197, 94, 0.5);
@@ -4641,6 +4645,108 @@ body.sidebar-collapsed .main-content {
 .closed-deals-actions {
     margin-top: 8px;
     display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.closed-deals-pending-docs {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.closed-deals-docs-empty {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.closed-deals-doc-item,
+.closed-deal-document-item {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 10px 12px;
+}
+
+.closed-deals-doc-item-head,
+.closed-deal-document-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.closed-deals-doc-name,
+.closed-deal-document-name {
+    display: block;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.closed-deals-doc-meta,
+.closed-deal-document-meta {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.closed-deals-doc-remove,
+.closed-deal-document-btn {
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
+
+.closed-deals-doc-remove:hover,
+.closed-deal-document-btn:hover {
+    color: var(--text-primary);
+}
+
+.closed-deal-document-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.closed-deals-summary-grid {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.closed-deals-summary-item {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 10px 12px;
+}
+
+.closed-deals-summary-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.closed-deals-summary-value {
+    display: block;
+    margin-top: 6px;
+    color: var(--text-primary);
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
 }
 
 .closed-deals-list {
@@ -4685,6 +4791,37 @@ body.sidebar-collapsed .main-content {
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.45;
+}
+
+.closed-deal-item-financials {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.closed-deal-item-financial {
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 8px 10px;
+}
+
+.closed-deal-item-financial-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.closed-deal-item-financial-value {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-primary);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .closed-deal-source {
@@ -6533,7 +6670,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .notes-dashboard-widget {
-    grid-column: 1 / -1;
+    grid-column: span 1;
 }
 
 .notes-widget-header {
@@ -6548,15 +6685,23 @@ body.sidebar-collapsed .main-content {
     margin-left: auto;
 }
 
+.notes-widget-folder-meta {
+    align-self: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
 .notes-widget-shell {
     display: grid;
-    grid-template-columns: 220px 280px minmax(0, 1fr);
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
     gap: 14px;
     min-height: 440px;
 }
 
-.notes-folder-panel,
-.notes-list-panel,
+.notes-library-panel,
 .notes-editor-panel {
     min-width: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -6580,11 +6725,28 @@ body.sidebar-collapsed .main-content {
 
 .notes-panel-head-search {
     align-items: flex-start;
+    flex-direction: column;
 }
 
-.notes-panel-head-search > div {
+.notes-panel-head-copy {
     display: grid;
-    gap: 2px;
+    gap: 4px;
+    width: 100%;
+}
+
+.notes-back-btn {
+    width: fit-content;
+    border: 0;
+    background: transparent;
+    color: var(--emerald-light);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
+
+.notes-back-btn:hover {
+    color: var(--text-primary);
 }
 
 .notes-panel-meta {
@@ -6594,7 +6756,8 @@ body.sidebar-collapsed .main-content {
 }
 
 .notes-search-input {
-    max-width: 180px;
+    max-width: none;
+    width: 100%;
     padding: 10px 14px;
 }
 
@@ -6764,18 +6927,43 @@ body.sidebar-collapsed .main-content {
     gap: 10px;
 }
 
-.notes-title-input {
-    font-size: 18px;
-    font-weight: 700;
+.notes-title-editor,
+.notes-body-editor {
+    border: 1px solid var(--glass-border);
+    background: color-mix(in srgb, var(--glass-bg) 92%, transparent);
+    color: var(--text-primary);
+    white-space: pre-wrap;
 }
 
-.notes-body-input {
+.notes-title-editor {
+    min-height: 52px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.notes-body-editor {
     flex: 1 1 auto;
     min-height: 280px;
-    resize: vertical;
     border-radius: 18px;
     padding: 16px 18px;
     line-height: 1.6;
+    overflow-y: auto;
+}
+
+.notes-title-editor:focus,
+.notes-body-editor:focus {
+    outline: none;
+    border-color: rgba(var(--accent-rgb), 0.45);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
+
+.notes-title-editor:empty::before,
+.notes-body-editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-muted);
 }
 
 .notes-editor-footer {
@@ -6792,22 +6980,24 @@ body.sidebar-collapsed .main-content {
     font-size: 12px;
 }
 
-[data-theme="light"] .notes-folder-panel,
-[data-theme="light"] .notes-list-panel,
+[data-theme="light"] .notes-library-panel,
 [data-theme="light"] .notes-editor-panel,
 [data-theme="light"] .notes-folder-item,
 [data-theme="light"] .notes-note-card,
-[data-theme="light"] .notes-editor-empty {
+[data-theme="light"] .notes-editor-empty,
+[data-theme="light"] .notes-title-editor,
+[data-theme="light"] .notes-body-editor {
     border-color: rgba(15, 23, 42, 0.1);
     background: rgba(255, 255, 255, 0.62);
 }
 
-[data-theme="beach"] .notes-folder-panel,
-[data-theme="beach"] .notes-list-panel,
+[data-theme="beach"] .notes-library-panel,
 [data-theme="beach"] .notes-editor-panel,
 [data-theme="beach"] .notes-folder-item,
 [data-theme="beach"] .notes-note-card,
-[data-theme="beach"] .notes-editor-empty {
+[data-theme="beach"] .notes-editor-empty,
+[data-theme="beach"] .notes-title-editor,
+[data-theme="beach"] .notes-body-editor {
     border-color: rgba(14, 116, 144, 0.22);
     background: rgba(239, 246, 255, 0.58);
 }
@@ -6815,7 +7005,8 @@ body.sidebar-collapsed .main-content {
 [data-theme="beach"] .notes-note-card-title,
 [data-theme="beach"] .notes-folder-name,
 [data-theme="beach"] .notes-panel-head,
-[data-theme="beach"] .notes-editor-empty strong {
+[data-theme="beach"] .notes-editor-empty strong,
+[data-theme="beach"] .notes-title-editor {
     color: #0c4a6e;
 }
 
@@ -6825,17 +7016,15 @@ body.sidebar-collapsed .main-content {
 [data-theme="beach"] .notes-folder-count,
 [data-theme="beach"] .notes-note-card-time,
 [data-theme="beach"] .notes-note-card-folder,
-[data-theme="beach"] .notes-panel-meta {
+[data-theme="beach"] .notes-panel-meta,
+[data-theme="beach"] .notes-body-editor,
+[data-theme="beach"] .notes-widget-folder-meta {
     color: rgba(8, 47, 73, 0.7);
 }
 
 @media (max-width: 1100px) {
     .notes-widget-shell {
-        grid-template-columns: 200px minmax(0, 1fr);
-    }
-
-    .notes-editor-panel {
-        grid-column: 1 / -1;
+        grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
     }
 }
 
@@ -6851,11 +7040,6 @@ body.sidebar-collapsed .main-content {
     .notes-widget-shell,
     .notes-editor-topbar {
         grid-template-columns: 1fr;
-    }
-
-    .notes-search-input {
-        max-width: none;
-        width: 100%;
     }
 }
 
@@ -12044,6 +12228,11 @@ body.sidebar-collapsed .main-content {
 
     .closed-deals-input {
         font-size: 13px;
+    }
+
+    .closed-deals-summary-grid,
+    .closed-deal-item-financials {
+        grid-template-columns: 1fr;
     }
 
     .closed-deals-list {

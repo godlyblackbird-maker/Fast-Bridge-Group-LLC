@@ -2549,6 +2549,20 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return now - (config.days * 24 * 60 * 60 * 1000);
         }
 
+        function getClosedDealTimestamp(item) {
+            const rawTimestamp = Number(item && (item.closeDate || item.updatedAt || item.createdAt));
+            if (Number.isFinite(rawTimestamp) && rawTimestamp > 0) {
+                return rawTimestamp;
+            }
+
+            const parsedTimestamp = Date.parse(String(item && (item.closeDate || item.updatedAt || item.createdAt) || ''));
+            return Number.isFinite(parsedTimestamp) ? parsedTimestamp : 0;
+        }
+
+        function getClosedDealEarnedAmount(item) {
+            return Math.max(parseMoneyValue(item && (item.earnedAmount ?? item.amountEarned ?? item.earned)), 0);
+        }
+
         function syncProfitWindowUi(activeWindow) {
             profitWindowButtons.forEach((button) => {
                 const isActive = button.dataset.profitWindow === activeWindow;
@@ -2632,6 +2646,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
             const plannerItems = getUserScopedItems(TODO_GOALS_KEY, workspaceUser.key);
             const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
+            const manualClosedDeals = getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
             const rawProfitGoal = getUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, '');
             const profitGoal = Math.max(parseMoneyValue(rawProfitGoal), 0);
@@ -2639,8 +2654,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const now = Date.now();
             const profitWindowStart = getProfitWindowRange(activeProfitWindow, now);
             const windowedIaStates = iaStates.filter((state) => getStateTimestamp(state) >= profitWindowStart);
+            const windowedClosedDeals = manualClosedDeals.filter((deal) => getClosedDealTimestamp(deal) >= profitWindowStart);
             const yearlyProfitStart = getProfitWindowRange('year', now);
             const yearlyIaStates = iaStates.filter((state) => getStateTimestamp(state) >= yearlyProfitStart);
+            const yearlyClosedDeals = manualClosedDeals.filter((deal) => getClosedDealTimestamp(deal) >= yearlyProfitStart);
 
             const latestByProperty = new Map();
             const offerLeadSet = new Set();
@@ -2690,7 +2707,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             });
 
-            const myProfitsTotal = windowedIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0);
+            const windowedClosedDealEarnings = windowedClosedDeals.reduce((sum, deal) => sum + getClosedDealEarnedAmount(deal), 0);
+            const myProfitsTotal = windowedIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + windowedClosedDealEarnings;
             const offerTermsSentCount = offerTermsSentSet.size;
             const offersSubmitted = offerLeadSet.size;
             const activeProfitWindowLabel = (PROFIT_WINDOW_CONFIG[activeProfitWindow] || PROFIT_WINDOW_CONFIG.year).label;
@@ -2701,7 +2719,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             syncProfitWindowUi(activeProfitWindow);
 
             if (myProfitsChangeEl) {
-                myProfitsChangeEl.textContent = `${windowedIaStates.length} saved IA deal${windowedIaStates.length === 1 ? '' : 's'} ${activeProfitWindowLabel}`;
+                const iaDealText = `${windowedIaStates.length} saved IA deal${windowedIaStates.length === 1 ? '' : 's'}`;
+                const closedDealText = `${windowedClosedDeals.length} closed deal earning${windowedClosedDeals.length === 1 ? '' : 's'}`;
+                myProfitsChangeEl.textContent = `${iaDealText} • ${closedDealText} ${activeProfitWindowLabel}`;
             }
             if (profitGoalInputEl) {
                 const formattedGoal = profitGoal > 0 ? Math.round(profitGoal).toLocaleString('en-US') : '';
@@ -2711,7 +2731,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
             if (profitGoalMetaEl) {
                 if (profitGoal > 0) {
-                    const yearlyProfitTotal = yearlyIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0);
+                    const yearlyClosedDealEarnings = yearlyClosedDeals.reduce((sum, deal) => sum + getClosedDealEarnedAmount(deal), 0);
+                    const yearlyProfitTotal = yearlyIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + yearlyClosedDealEarnings;
                     const remaining = Math.max(profitGoal - yearlyProfitTotal, 0);
                     const percentToGoal = Math.min((yearlyProfitTotal / profitGoal) * 100, 999);
                     profitGoalMetaEl.textContent = `${formatMoney(remaining)} to annual goal • ${percentToGoal.toFixed(1)}% reached`;
@@ -2760,8 +2781,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const closedDealsChangeEl = document.getElementById('kpi-closed-deals-change');
         const dealNameInput = document.getElementById('closed-deal-name');
         const dealDateInput = document.getElementById('closed-deal-date');
+        const dealWholesaleFeeInput = document.getElementById('closed-deal-wholesale-fee');
+        const dealEarnedInput = document.getElementById('closed-deal-earned');
         const dealNoteInput = document.getElementById('closed-deal-note');
+        const dealDocumentUploadInput = document.getElementById('closed-deal-document-upload');
+        const dealDocumentUploadButton = document.getElementById('closed-deal-upload-btn');
+        const pendingDocsEl = document.getElementById('closed-deal-pending-docs');
         const saveButton = document.getElementById('closed-deal-save-btn');
+        const feesTotalEl = document.getElementById('analytics-closed-deals-fees-total');
+        const earnedTotalEl = document.getElementById('analytics-closed-deals-earned-total');
         const listEl = document.getElementById('analytics-closed-deals-list');
 
         if (!closedDealsValueEl || !closedDealsChangeEl || !listEl) {
@@ -2769,6 +2797,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         const workspaceUser = getWorkspaceUserContext();
+    let pendingUploads = [];
 
         function getManualClosedDeals() {
             return getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
@@ -2784,6 +2813,127 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return 'Date not set';
             }
             return new Date(parsedTimestamp).toLocaleDateString();
+        }
+
+        function parseClosedDealMoney(value) {
+            return Math.max(parseMoneyValue(value), 0);
+        }
+
+        function formatMoneyInputValue(value) {
+            const amount = parseClosedDealMoney(value);
+            return amount > 0 ? formatMoney(amount) : '';
+        }
+
+        function attachMoneyFormatter(input) {
+            if (!input) {
+                return;
+            }
+
+            const syncValue = () => {
+                input.value = formatMoneyInputValue(input.value);
+            };
+
+            input.addEventListener('blur', syncValue);
+            input.addEventListener('change', syncValue);
+        }
+
+        function getClosedDealFinancials(item) {
+            return {
+                wholesaleFee: parseClosedDealMoney(item && item.wholesaleFee),
+                earnedAmount: parseClosedDealMoney(item && (item.earnedAmount ?? item.amountEarned ?? item.earned))
+            };
+        }
+
+        function normalizeClosedDealDocuments(item) {
+            if (!Array.isArray(item && item.documents)) {
+                return [];
+            }
+
+            return item.documents
+                .map((documentItem) => ({
+                    id: String(documentItem && documentItem.id || ''),
+                    fileName: String(documentItem && (documentItem.fileName || documentItem.label) || 'Document').trim() || 'Document',
+                    label: String(documentItem && (documentItem.label || documentItem.fileName) || 'Document').trim() || 'Document',
+                    fileSize: Math.max(Number(documentItem && documentItem.fileSize) || 0, 0),
+                    fileType: String(documentItem && documentItem.fileType || '').trim(),
+                    storage: String(documentItem && documentItem.storage || 'indexeddb').trim() || 'indexeddb',
+                    createdAt: Number(documentItem && documentItem.createdAt) || Date.now()
+                }))
+                .filter((documentItem) => documentItem.id);
+        }
+
+        function renderPendingUploads() {
+            if (!pendingDocsEl) {
+                return;
+            }
+
+            pendingDocsEl.innerHTML = '';
+            if (!pendingUploads.length) {
+                pendingDocsEl.innerHTML = '<p class="closed-deals-docs-empty">No documents selected for this deal yet.</p>';
+                return;
+            }
+
+            pendingUploads.forEach((fileItem) => {
+                const card = document.createElement('div');
+                card.className = 'closed-deals-doc-item';
+
+                const head = document.createElement('div');
+                head.className = 'closed-deals-doc-item-head';
+
+                const copy = document.createElement('div');
+                const name = document.createElement('strong');
+                name.className = 'closed-deals-doc-name';
+                name.textContent = fileItem.file.name || 'Selected Document';
+                const meta = document.createElement('span');
+                meta.className = 'closed-deals-doc-meta';
+                meta.textContent = [formatFileSize(fileItem.file.size), fileItem.file.type || 'File'].filter(Boolean).join(' • ');
+                copy.appendChild(name);
+                copy.appendChild(meta);
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'closed-deals-doc-remove';
+                removeButton.textContent = 'Remove';
+                removeButton.addEventListener('click', () => {
+                    pendingUploads = pendingUploads.filter((pendingItem) => pendingItem.id !== fileItem.id);
+                    renderPendingUploads();
+                });
+
+                head.appendChild(copy);
+                head.appendChild(removeButton);
+                card.appendChild(head);
+                pendingDocsEl.appendChild(card);
+            });
+        }
+
+        async function openStoredClosedDealDocument(documentItem, download = false) {
+            const blob = await getOfferDocumentBlob(documentItem.id);
+            if (!blob) {
+                showDashboardToast('error', 'File Missing', 'This saved closed-deal document is no longer available in browser storage.');
+                return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            if (download) {
+                link.download = documentItem.fileName || documentItem.label || 'closed-deal-document';
+            } else {
+                link.target = '_blank';
+                link.rel = 'noopener';
+            }
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+        }
+
+        async function deleteClosedDealDocumentBlobs(documents) {
+            for (const documentItem of documents) {
+                if (documentItem.storage === 'indexeddb' && documentItem.id) {
+                    await deleteOfferDocumentBlob(documentItem.id);
+                }
+            }
         }
 
         function buildClosedDealAddressLookup() {
@@ -2843,6 +2993,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                         title: addressLookup.get(propertyKey) || propertyKey || 'Closed Deal',
                         closeDate: latestTimestamp || Date.now(),
                         note: 'Auto-added from Agent Status: 100% - Closed Deal.',
+                        wholesaleFee: 0,
+                        earnedAmount: 0,
                         source: 'auto',
                         manual: false
                     };
@@ -2852,12 +3004,16 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         function buildCombinedClosedDeals() {
             const manualDeals = getManualClosedDeals().map((item) => {
                 const title = String(item.title || item.propertyAddress || '').trim() || 'Closed Deal';
+                const financials = getClosedDealFinancials(item);
                 return {
                     id: String(item.id || `manual-${Date.now()}`),
                     key: makePropertyStorageKey(title),
                     title,
                     closeDate: item.closeDate || item.createdAt || Date.now(),
                     note: String(item.note || '').trim(),
+                    wholesaleFee: financials.wholesaleFee,
+                    earnedAmount: financials.earnedAmount,
+                    documents: normalizeClosedDealDocuments(item),
                     source: 'manual',
                     manual: true,
                     createdAt: Number(item.createdAt) || Date.now()
@@ -2879,6 +3035,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                         title: deal.title || existing.title,
                         closeDate: deal.closeDate || existing.closeDate,
                         note: deal.note || existing.note,
+                        wholesaleFee: deal.wholesaleFee || existing.wholesaleFee || 0,
+                        earnedAmount: deal.earnedAmount || existing.earnedAmount || 0,
+                        documents: Array.isArray(deal.documents) && deal.documents.length ? deal.documents : (existing.documents || []),
                         source: 'mixed',
                         manual: true,
                         createdAt: deal.createdAt || existing.createdAt || Date.now()
@@ -2897,9 +3056,21 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const manualDeals = getManualClosedDeals();
             const autoDeals = buildAutoClosedDeals();
             const combinedDeals = buildCombinedClosedDeals();
+            const combinedTotals = combinedDeals.reduce((totals, deal) => {
+                totals.wholesaleFee += parseClosedDealMoney(deal.wholesaleFee);
+                totals.earnedAmount += parseClosedDealMoney(deal.earnedAmount);
+                return totals;
+            }, { wholesaleFee: 0, earnedAmount: 0 });
 
             closedDealsValueEl.textContent = String(combinedDeals.length);
-            closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} • ${manualDeals.length} manual`;
+            closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} • ${manualDeals.length} manual • ${formatMoney(combinedTotals.earnedAmount)} earned`;
+
+            if (feesTotalEl) {
+                feesTotalEl.textContent = formatMoney(combinedTotals.wholesaleFee);
+            }
+            if (earnedTotalEl) {
+                earnedTotalEl.textContent = formatMoney(combinedTotals.earnedAmount);
+            }
 
             listEl.innerHTML = '';
             if (combinedDeals.length === 0) {
@@ -2935,6 +3106,23 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 card.appendChild(head);
                 card.appendChild(meta);
 
+                if (parseClosedDealMoney(deal.wholesaleFee) > 0 || parseClosedDealMoney(deal.earnedAmount) > 0) {
+                    const financials = document.createElement('div');
+                    financials.className = 'closed-deal-item-financials';
+
+                    const feeItem = document.createElement('div');
+                    feeItem.className = 'closed-deal-item-financial';
+                    feeItem.innerHTML = `<span class="closed-deal-item-financial-label">Wholesale Fee</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.wholesaleFee))}</strong>`;
+
+                    const earnedItem = document.createElement('div');
+                    earnedItem.className = 'closed-deal-item-financial';
+                    earnedItem.innerHTML = `<span class="closed-deal-item-financial-label">Net Earned</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.earnedAmount))}</strong>`;
+
+                    financials.appendChild(feeItem);
+                    financials.appendChild(earnedItem);
+                    card.appendChild(financials);
+                }
+
                 if (deal.note) {
                     const note = document.createElement('p');
                     note.className = 'closed-deal-item-note';
@@ -2942,12 +3130,65 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     card.appendChild(note);
                 }
 
+                if (Array.isArray(deal.documents) && deal.documents.length) {
+                    deal.documents.forEach((documentItem) => {
+                        const documentCard = document.createElement('div');
+                        documentCard.className = 'closed-deal-document-item';
+
+                        const documentHead = document.createElement('div');
+                        documentHead.className = 'closed-deal-document-head';
+
+                        const copy = document.createElement('div');
+                        const name = document.createElement('strong');
+                        name.className = 'closed-deal-document-name';
+                        name.textContent = documentItem.fileName || documentItem.label || 'Saved Document';
+                        const meta = document.createElement('span');
+                        meta.className = 'closed-deal-document-meta';
+                        meta.textContent = [formatFileSize(documentItem.fileSize), documentItem.fileType || 'File'].filter(Boolean).join(' • ');
+                        copy.appendChild(name);
+                        copy.appendChild(meta);
+                        documentHead.appendChild(copy);
+                        documentCard.appendChild(documentHead);
+
+                        const actions = document.createElement('div');
+                        actions.className = 'closed-deal-document-actions';
+
+                        const openButton = document.createElement('button');
+                        openButton.type = 'button';
+                        openButton.className = 'closed-deal-document-btn';
+                        openButton.textContent = 'Open';
+                        openButton.addEventListener('click', async () => {
+                            await openStoredClosedDealDocument(documentItem, false);
+                        });
+
+                        const downloadButton = document.createElement('button');
+                        downloadButton.type = 'button';
+                        downloadButton.className = 'closed-deal-document-btn';
+                        downloadButton.textContent = 'Download';
+                        downloadButton.addEventListener('click', async () => {
+                            await openStoredClosedDealDocument(documentItem, true);
+                        });
+
+                        actions.appendChild(openButton);
+                        actions.appendChild(downloadButton);
+                        documentCard.appendChild(actions);
+                        card.appendChild(documentCard);
+                    });
+                }
+
                 if (deal.manual) {
                     const removeButton = document.createElement('button');
                     removeButton.type = 'button';
                     removeButton.className = 'closed-deal-remove-btn';
                     removeButton.textContent = 'Remove manual entry';
-                    removeButton.addEventListener('click', () => {
+                    removeButton.addEventListener('click', async () => {
+                        try {
+                            await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
+                        } catch (error) {
+                            showDashboardToast('error', 'Delete Failed', 'The closed-deal documents could not be removed from browser storage.');
+                            return;
+                        }
+
                         const nextItems = getManualClosedDeals().filter((item) => String(item.id || '') !== String(deal.id || ''));
                         setManualClosedDeals(nextItems);
                     });
@@ -2962,14 +3203,66 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             dealDateInput.value = new Date().toISOString().slice(0, 10);
         }
 
+        attachMoneyFormatter(dealWholesaleFeeInput);
+        attachMoneyFormatter(dealEarnedInput);
+        renderPendingUploads();
+
+        if (dealDocumentUploadButton && dealDocumentUploadInput) {
+            dealDocumentUploadButton.addEventListener('click', () => {
+                dealDocumentUploadInput.click();
+            });
+
+            dealDocumentUploadInput.addEventListener('change', () => {
+                const files = Array.from(dealDocumentUploadInput.files || []);
+                if (!files.length) {
+                    dealDocumentUploadInput.value = '';
+                    return;
+                }
+
+                const nextUploads = files.map((file) => ({
+                    id: `pending-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                    file
+                }));
+                pendingUploads = [...pendingUploads, ...nextUploads];
+                dealDocumentUploadInput.value = '';
+                renderPendingUploads();
+            });
+        }
+
         if (saveButton && dealNameInput && dealDateInput && dealNoteInput) {
-            saveButton.addEventListener('click', () => {
+            saveButton.addEventListener('click', async () => {
                 const title = String(dealNameInput.value || '').trim();
                 const closeDate = String(dealDateInput.value || '').trim();
+                const wholesaleFee = parseClosedDealMoney(dealWholesaleFeeInput && dealWholesaleFeeInput.value);
+                const earnedAmount = parseClosedDealMoney(dealEarnedInput && dealEarnedInput.value);
                 const note = String(dealNoteInput.value || '').trim();
 
                 if (!title) {
                     showDashboardToast('error', 'Deal Name Required', 'Add the property address or deal name before saving.');
+                    return;
+                }
+
+                const uploadedDocuments = [];
+                try {
+                    for (const pendingItem of pendingUploads) {
+                        const documentId = `closed-deal-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+                        await putOfferDocumentBlob(documentId, pendingItem.file);
+                        uploadedDocuments.push({
+                            id: documentId,
+                            label: pendingItem.file.name,
+                            fileName: pendingItem.file.name,
+                            fileSize: pendingItem.file.size,
+                            fileType: pendingItem.file.type || 'File',
+                            storage: 'indexeddb',
+                            createdAt: Date.now()
+                        });
+                    }
+                } catch (error) {
+                    try {
+                        await deleteClosedDealDocumentBlobs(uploadedDocuments);
+                    } catch (cleanupError) {
+                    }
+                    showDashboardToast('error', 'Upload Failed', 'The browser could not store one or more closed-deal documents.');
                     return;
                 }
 
@@ -2979,14 +3272,25 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     title,
                     propertyAddress: title,
                     closeDate: closeDate || new Date().toISOString().slice(0, 10),
+                    wholesaleFee,
+                    earnedAmount,
+                    documents: uploadedDocuments,
                     note,
                     createdAt: Date.now()
                 });
 
                 setManualClosedDeals(items);
+                pendingUploads = [];
                 dealNameInput.value = '';
+                if (dealWholesaleFeeInput) {
+                    dealWholesaleFeeInput.value = '';
+                }
+                if (dealEarnedInput) {
+                    dealEarnedInput.value = '';
+                }
                 dealNoteInput.value = '';
                 dealDateInput.value = new Date().toISOString().slice(0, 10);
+                renderPendingUploads();
                 showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to your analytics closed deals widget.');
             });
         }
@@ -6365,6 +6669,7 @@ function initNavbarDateTime() {
     function initNotesWidget() {
         const folderList = document.getElementById('notes-folder-list');
         const noteList = document.getElementById('notes-note-list');
+        const backButton = document.getElementById('notes-back-btn');
         const addFolderButton = document.getElementById('notes-add-folder-btn');
         const addNoteButton = document.getElementById('notes-add-note-btn');
         const searchInput = document.getElementById('notes-search-input');
@@ -6379,7 +6684,7 @@ function initNavbarDateTime() {
         const metaLabel = document.getElementById('notes-meta-label');
         const deleteButton = document.getElementById('notes-delete-note-btn');
 
-        if (!folderList || !noteList || !addFolderButton || !addNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !editorEmpty || !editor || !titleInput || !folderSelect || !bodyInput || !metaLabel || !deleteButton) {
+        if (!folderList || !noteList || !backButton || !addFolderButton || !addNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !editorEmpty || !editor || !titleInput || !folderSelect || !bodyInput || !metaLabel || !deleteButton) {
             return;
         }
 
@@ -6389,6 +6694,7 @@ function initNavbarDateTime() {
         const DEFAULT_FOLDER_NAME = 'Notes';
         let activeFolderId = ALL_FOLDER_ID;
         let selectedNoteId = '';
+        let libraryMode = 'folders';
         let searchQuery = '';
         let persistTimer = null;
 
@@ -6483,6 +6789,22 @@ function initNavbarDateTime() {
             });
         }
 
+        function getEditablePlainText(element, mode) {
+            const rawValue = String(element.innerText || '').replace(/\u00a0/g, '');
+            if (mode === 'title') {
+                return rawValue.replace(/\s+/g, ' ').trim();
+            }
+            return rawValue.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
+        }
+
+        function setEditableText(element, value) {
+            const nextValue = String(value || '');
+            if (document.activeElement === element) {
+                return;
+            }
+            element.textContent = nextValue;
+        }
+
         function getFilteredNotes(data) {
             const normalizedQuery = searchQuery.trim().toLowerCase();
             return data.notes
@@ -6506,6 +6828,9 @@ function initNavbarDateTime() {
             if (!selectedNoteId && availableNotes[0]) {
                 selectedNoteId = availableNotes[0].id;
             }
+            if (!availableNotes.length && libraryMode === 'notes') {
+                selectedNoteId = '';
+            }
         }
 
         function renderFolderSelect(data, preferredFolderId) {
@@ -6527,7 +6852,6 @@ function initNavbarDateTime() {
                 counts[note.folderId] = (counts[note.folderId] || 0) + 1;
                 return counts;
             }, {});
-            folderSummary.textContent = `${data.folders.length} folder${data.folders.length === 1 ? '' : 's'}`;
             folderList.innerHTML = '';
 
             const virtualFolders = [
@@ -6604,6 +6928,9 @@ function initNavbarDateTime() {
 
                 button.addEventListener('click', () => {
                     activeFolderId = folder.id;
+                    libraryMode = 'notes';
+                    searchQuery = '';
+                    searchInput.value = '';
                     render();
                 });
 
@@ -6658,11 +6985,32 @@ function initNavbarDateTime() {
 
                 card.addEventListener('click', () => {
                     selectedNoteId = note.id;
-                    render();
+                    renderEditor(getNotesData());
+                    renderNoteList(getNotesData());
                 });
 
                 noteList.appendChild(card);
             });
+        }
+
+        function renderLibraryChrome(data) {
+            const viewingFolders = libraryMode === 'folders';
+            const folderCount = data.folders.length + 1;
+            const activeFolderName = activeFolderId === ALL_FOLDER_ID ? 'All Notes' : getFolderName(activeFolderId, data.folders);
+
+            folderList.hidden = !viewingFolders;
+            noteList.hidden = viewingFolders;
+            backButton.hidden = viewingFolders;
+            searchInput.hidden = viewingFolders;
+
+            if (viewingFolders) {
+                activeFolderLabel.textContent = 'Folders';
+                countSummary.textContent = `${folderCount} folder${folderCount === 1 ? '' : 's'}`;
+                folderSummary.textContent = `${data.notes.length} note${data.notes.length === 1 ? '' : 's'} total`;
+            } else {
+                activeFolderLabel.textContent = activeFolderName;
+                folderSummary.textContent = activeFolderName;
+            }
         }
 
         function renderEditor(data) {
@@ -6670,8 +7018,8 @@ function initNavbarDateTime() {
             if (!selectedNote) {
                 editor.hidden = true;
                 editorEmpty.hidden = false;
-                titleInput.value = '';
-                bodyInput.value = '';
+                setEditableText(titleInput, '');
+                setEditableText(bodyInput, '');
                 metaLabel.textContent = 'Last updated just now';
                 renderFolderSelect(data, DEFAULT_FOLDER_ID);
                 return;
@@ -6679,8 +7027,8 @@ function initNavbarDateTime() {
 
             editor.hidden = false;
             editorEmpty.hidden = true;
-            titleInput.value = selectedNote.title;
-            bodyInput.value = selectedNote.body;
+            setEditableText(titleInput, selectedNote.title);
+            setEditableText(bodyInput, selectedNote.body);
             metaLabel.textContent = `Last updated ${formatNoteTimestamp(selectedNote.updatedAt)}`;
             renderFolderSelect(data, selectedNote.folderId);
         }
@@ -6691,12 +7039,18 @@ function initNavbarDateTime() {
                 activeFolderId = ALL_FOLDER_ID;
             }
             ensureSelection(data);
+            renderLibraryChrome(data);
             renderFolders(data);
-            renderNoteList(data);
+            if (libraryMode === 'notes') {
+                renderNoteList(data);
+            } else {
+                noteList.innerHTML = '';
+            }
             renderEditor(data);
         }
 
-        function persistSelectedNote(mutator) {
+        function persistSelectedNote(mutator, options = {}) {
+            const shouldRender = options.render !== false;
             const data = getNotesData();
             const noteIndex = data.notes.findIndex((note) => note.id === selectedNoteId);
             if (noteIndex < 0) {
@@ -6713,13 +7067,19 @@ function initNavbarDateTime() {
                 updatedAt: Date.now()
             };
             saveNotesData(data);
-            render();
+            if (shouldRender) {
+                render();
+            } else {
+                metaLabel.textContent = `Last updated ${formatNoteTimestamp(data.notes[noteIndex].updatedAt)}`;
+            }
         }
 
         function schedulePersist(mutator) {
             window.clearTimeout(persistTimer);
             persistTimer = window.setTimeout(() => {
-                persistSelectedNote(mutator);
+                persistSelectedNote(mutator, { render: false });
+                const refreshedData = getNotesData();
+                renderNoteList(refreshedData);
             }, 140);
         }
 
@@ -6744,6 +7104,7 @@ function initNavbarDateTime() {
                 createdAt: Date.now()
             });
             activeFolderId = folderId;
+            libraryMode = 'notes';
             saveNotesData(data);
             showDashboardToast('success', 'Folder Added', `${name} is ready for notes.`);
             render();
@@ -6763,6 +7124,8 @@ function initNavbarDateTime() {
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             });
+            activeFolderId = targetFolderId;
+            libraryMode = 'notes';
             selectedNoteId = noteId;
             saveNotesData(data);
             render();
@@ -6776,7 +7139,7 @@ function initNavbarDateTime() {
         });
 
         titleInput.addEventListener('input', () => {
-            const nextValue = String(titleInput.value || '');
+            const nextValue = getEditablePlainText(titleInput, 'title');
             schedulePersist((note) => ({
                 ...note,
                 title: nextValue
@@ -6784,11 +7147,19 @@ function initNavbarDateTime() {
         });
 
         bodyInput.addEventListener('input', () => {
-            const nextValue = String(bodyInput.value || '');
+            const nextValue = getEditablePlainText(bodyInput, 'body');
             schedulePersist((note) => ({
                 ...note,
                 body: nextValue
             }));
+        });
+
+        [titleInput, bodyInput].forEach((element) => {
+            element.addEventListener('paste', (event) => {
+                event.preventDefault();
+                const pastedText = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
+                document.execCommand('insertText', false, pastedText);
+            });
         });
 
         folderSelect.addEventListener('change', () => {
@@ -6797,6 +7168,13 @@ function initNavbarDateTime() {
                 ...note,
                 folderId: nextFolderId || DEFAULT_FOLDER_ID
             }));
+        });
+
+        backButton.addEventListener('click', () => {
+            libraryMode = 'folders';
+            searchQuery = '';
+            searchInput.value = '';
+            render();
         });
 
         deleteButton.addEventListener('click', () => {
@@ -12404,17 +12782,13 @@ function initNavbarDateTime() {
             const workspaceCard = document.getElementById('agent-workspace-card');
             const workspaceBody = document.getElementById('agent-workspace-body');
             const minimizeButton = document.getElementById('agent-workspace-minimize-btn');
-            const fullscreenButton = document.getElementById('agent-workspace-fullscreen-btn');
 
-            if (!workspaceCard || !workspaceBody || !minimizeButton || !fullscreenButton) {
+            if (!workspaceCard || !workspaceBody || !minimizeButton) {
                 return;
             }
 
-            const overlay = ensureWidgetOverlay();
             const minimizeLabel = minimizeButton.querySelector('.agent-record-control-label');
-            const fullscreenLabel = fullscreenButton.querySelector('.agent-record-control-label');
             let isMinimized = workspaceCard.classList.contains('is-minimized');
-            let isExpanded = workspaceCard.classList.contains('agent-record-expanded');
 
             function syncMinimizedState(nextMinimized) {
                 isMinimized = Boolean(nextMinimized);
@@ -12426,69 +12800,11 @@ function initNavbarDateTime() {
                 }
             }
 
-            function closeFullscreen() {
-                if (!isExpanded) {
-                    return;
-                }
-
-                isExpanded = false;
-                workspaceCard.classList.remove('agent-record-expanded');
-                overlay.classList.remove('active');
-                fullscreenButton.setAttribute('aria-pressed', 'false');
-                fullscreenButton.setAttribute('aria-label', 'Open agent workspace full screen');
-                if (fullscreenLabel) {
-                    fullscreenLabel.textContent = 'Full Screen';
-                }
-                document.body.style.overflow = '';
-            }
-
-            function openFullscreen() {
-                syncMinimizedState(false);
-                isExpanded = true;
-                workspaceCard.classList.add('agent-record-expanded');
-                overlay.classList.add('active');
-                fullscreenButton.setAttribute('aria-pressed', 'true');
-                fullscreenButton.setAttribute('aria-label', 'Exit agent workspace full screen');
-                if (fullscreenLabel) {
-                    fullscreenLabel.textContent = 'Exit Full Screen';
-                }
-                document.body.style.overflow = 'hidden';
-            }
-
             minimizeButton.addEventListener('click', () => {
                 syncMinimizedState(!isMinimized);
             });
 
-            fullscreenButton.addEventListener('click', () => {
-                if (isExpanded) {
-                    closeFullscreen();
-                    return;
-                }
-                openFullscreen();
-            });
-
-            overlay.addEventListener('click', () => {
-                closeFullscreen();
-            });
-
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape') {
-                    closeFullscreen();
-                }
-            });
-
-            document.querySelectorAll('.property-tab-btn[data-tab]').forEach((button) => {
-                button.addEventListener('click', () => {
-                    if (String(button.dataset.tab || '').trim().toLowerCase() !== 'agent') {
-                        closeFullscreen();
-                    }
-                });
-            });
-
             syncMinimizedState(isMinimized);
-            if (isExpanded) {
-                openFullscreen();
-            }
         }
 
         initAgentWorkspaceControls();

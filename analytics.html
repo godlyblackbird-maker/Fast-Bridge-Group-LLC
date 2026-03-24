@@ -404,10 +404,27 @@ https://templatemo.com/tm-607-glass-admin
                                 <div class="closed-deals-form-grid">
                                     <input id="closed-deal-name" class="closed-deals-input" type="text" autocomplete="off" placeholder="Property address or deal name">
                                     <input id="closed-deal-date" class="closed-deals-input" type="date">
+                                    <input id="closed-deal-wholesale-fee" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Wholesale fee">
+                                    <input id="closed-deal-earned" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Amount earned">
                                     <textarea id="closed-deal-note" class="closed-deals-input closed-deals-textarea" placeholder="Optional note about this close"></textarea>
                                 </div>
+                                <input id="closed-deal-document-upload" type="file" multiple hidden>
                                 <div class="closed-deals-actions">
+                                    <button type="button" class="card-btn" id="closed-deal-upload-btn">Attach Documents</button>
                                     <button type="button" class="card-btn active" id="closed-deal-save-btn">Save Closed Deal</button>
+                                </div>
+                                <div class="closed-deals-pending-docs" id="closed-deal-pending-docs">
+                                    <p class="closed-deals-docs-empty">No documents selected for this deal yet.</p>
+                                </div>
+                                <div class="closed-deals-summary-grid">
+                                    <div class="closed-deals-summary-item">
+                                        <span class="closed-deals-summary-label">Wholesale Fees</span>
+                                        <strong class="closed-deals-summary-value" id="analytics-closed-deals-fees-total">$0</strong>
+                                    </div>
+                                    <div class="closed-deals-summary-item">
+                                        <span class="closed-deals-summary-label">Net Earned</span>
+                                        <strong class="closed-deals-summary-value" id="analytics-closed-deals-earned-total">$0</strong>
+                                    </div>
                                 </div>
                                 <div class="closed-deals-list" id="analytics-closed-deals-list">
                                     <p class="outreach-empty">No closed deals recorded yet.</p>
