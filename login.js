@@ -1,128 +1,129 @@
-// Login handler script
-document.addEventListener('DOMContentLoaded', function() {
-  const KNOWN_EMAIL_GROUPS = [
-    {
-      canonical: 'isaac.haro@fastbridgegroupllc.com',
-      aliases: [
-        'isaac.haro@fastbridgegroupllc.com',
-        'isaacs.hesed@fastbridgegroup.com',
-        'isaacs.hesed@gmail.com'
-      ]
-    },
-    {
-      canonical: 'steve.medina@fastbridgegroupllc.com',
-      aliases: [
-        'steve.medina@fastbridgegroupllc.com',
-        'medinafbg@gmail.com',
-        'medinastj@gmail.com'
-      ]
-    }
-  ];
-  const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+const KNOWN_EMAIL_GROUPS = [
+  {
+    canonical: 'isaac.haro@fastbridgegroupllc.com',
+    aliases: [
+      'isaac.haro@fastbridgegroupllc.com',
+      'isaacs.hesed@fastbridgegroup.com',
+      'isaacs.hesed@gmail.com'
+    ]
+  },
+  {
+    canonical: 'steve.medina@fastbridgegroupllc.com',
+    aliases: [
+      'steve.medina@fastbridgegroupllc.com',
+      'medinafbg@gmail.com',
+      'medinastj@gmail.com'
+    ]
+  }
+];
+const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
 
-  KNOWN_EMAIL_GROUPS.forEach((group) => {
-    group.aliases.forEach((alias) => {
-      KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
-    });
+KNOWN_EMAIL_GROUPS.forEach((group) => {
+  group.aliases.forEach((alias) => {
+    KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
   });
+});
 
-  function normalizeKnownEmail(email) {
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
+function normalizeKnownEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
+}
+
+function readLocalJson(key) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function clearStoredAuthState() {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('user');
+  localStorage.removeItem('userProfile');
+  localStorage.removeItem('registeredEmail');
+  sessionStorage.removeItem('authToken');
+}
+
+function storedIdentityMatchesUser(userLike) {
+  const normalizedVerifiedEmail = normalizeKnownEmail(userLike && userLike.email || '');
+  const storedUser = readLocalJson('user');
+  const storedProfile = readLocalJson('userProfile');
+  const storedUserEmail = normalizeKnownEmail(storedUser && storedUser.email || '');
+  const storedProfileEmail = normalizeKnownEmail(storedProfile && storedProfile.email || '');
+  const hasStoredIdentity = Boolean(storedUserEmail || storedProfileEmail);
+
+  if (!hasStoredIdentity) {
+    return true;
   }
 
-  function readLocalJson(key) {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key) || 'null');
-      return parsed && typeof parsed === 'object' ? parsed : null;
-    } catch (error) {
-      return null;
-    }
-  }
+  return Boolean(
+    normalizedVerifiedEmail
+    && (!storedUserEmail || storedUserEmail === normalizedVerifiedEmail)
+    && (!storedProfileEmail || storedProfileEmail === normalizedVerifiedEmail)
+  );
+}
 
-  function clearStoredAuthState() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userProfile');
-    localStorage.removeItem('registeredEmail');
-    sessionStorage.removeItem('authToken');
-  }
-
-  function storedIdentityMatchesUser(userLike) {
-    const normalizedVerifiedEmail = normalizeKnownEmail(userLike && userLike.email || '');
-    const storedUser = readLocalJson('user');
-    const storedProfile = readLocalJson('userProfile');
-    const storedUserEmail = normalizeKnownEmail(storedUser && storedUser.email || '');
-    const storedProfileEmail = normalizeKnownEmail(storedProfile && storedProfile.email || '');
-    const hasStoredIdentity = Boolean(storedUserEmail || storedProfileEmail);
-
-    if (!hasStoredIdentity) {
-      return true;
-    }
-
-    return Boolean(
-      normalizedVerifiedEmail
-      && (!storedUserEmail || storedUserEmail === normalizedVerifiedEmail)
-      && (!storedProfileEmail || storedProfileEmail === normalizedVerifiedEmail)
-    );
-  }
-
-  function getStoredProfileMirror(userLike) {
-    const normalizedUser = userLike && typeof userLike === 'object' ? userLike : null;
-    if (!normalizedUser) {
-      return null;
-    }
-
-    const candidateKeys = new Set();
-    const email = String(normalizedUser.email || '').trim().toLowerCase();
-    const nameKey = String(normalizedUser.name || '').trim().toLowerCase().replace(/\s+/g, '-');
-
-    if (email) {
-      candidateKeys.add(email);
-    }
-    if (nameKey) {
-      candidateKeys.add(nameKey);
-    }
-
-    try {
-      const profileStore = JSON.parse(localStorage.getItem('userProfilesByUser') || '{}');
-      if (profileStore && typeof profileStore === 'object') {
-        for (const key of candidateKeys) {
-          if (profileStore[key] && typeof profileStore[key] === 'object') {
-            return profileStore[key];
-          }
-        }
-      }
-    } catch (error) {
-      return null;
-    }
-
+function getStoredProfileMirror(userLike) {
+  const normalizedUser = userLike && typeof userLike === 'object' ? userLike : null;
+  if (!normalizedUser) {
     return null;
   }
 
-  function persistAuthenticatedUser(userLike) {
-    if (!userLike || typeof userLike !== 'object') {
-      return;
-    }
+  const candidateKeys = new Set();
+  const email = String(normalizedUser.email || '').trim().toLowerCase();
+  const nameKey = String(normalizedUser.name || '').trim().toLowerCase().replace(/\s+/g, '-');
 
-    const normalizedUser = {
-      ...userLike,
-      email: String(userLike.email || '').trim().toLowerCase(),
-      role: String(userLike.role || '').trim().toLowerCase()
-    };
-
-    const scopedProfile = getStoredProfileMirror(normalizedUser);
-    const mirroredProfile = {
-      ...(scopedProfile || {}),
-      name: String((scopedProfile && scopedProfile.name) || normalizedUser.name || 'User').trim(),
-      email: normalizedUser.email,
-      role: String(normalizedUser.role || (scopedProfile && scopedProfile.role) || '').trim(),
-      avatarImage: String((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '').trim()
-    };
-
-    localStorage.setItem('user', JSON.stringify(normalizedUser));
-    localStorage.setItem('userProfile', JSON.stringify(mirroredProfile));
+  if (email) {
+    candidateKeys.add(email);
   }
+  if (nameKey) {
+    candidateKeys.add(nameKey);
+  }
+
+  try {
+    const profileStore = JSON.parse(localStorage.getItem('userProfilesByUser') || '{}');
+    if (profileStore && typeof profileStore === 'object') {
+      for (const key of candidateKeys) {
+        if (profileStore[key] && typeof profileStore[key] === 'object') {
+          return profileStore[key];
+        }
+      }
+    }
+  } catch (error) {
+    return null;
+  }
+
+  return null;
+}
+
+function persistAuthenticatedUser(userLike) {
+  if (!userLike || typeof userLike !== 'object') {
+    return;
+  }
+
+  const normalizedUser = {
+    ...userLike,
+    email: String(userLike.email || '').trim().toLowerCase(),
+    role: String(userLike.role || '').trim().toLowerCase()
+  };
+
+  const scopedProfile = getStoredProfileMirror(normalizedUser);
+  const mirroredProfile = {
+    ...(scopedProfile || {}),
+    name: String((scopedProfile && scopedProfile.name) || normalizedUser.name || 'User').trim(),
+    email: normalizedUser.email,
+    role: String(normalizedUser.role || (scopedProfile && scopedProfile.role) || '').trim(),
+    avatarImage: String((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '').trim()
+  };
+
+  localStorage.setItem('user', JSON.stringify(normalizedUser));
+  localStorage.setItem('userProfile', JSON.stringify(mirroredProfile));
+}
+
+// Login handler script
+document.addEventListener('DOMContentLoaded', function() {
 
     // Developer bypass for Isaac
     const devBypass = new URLSearchParams(window.location.search).get('devIsaac');

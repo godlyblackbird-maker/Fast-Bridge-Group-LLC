@@ -1722,16 +1722,52 @@ function redirectOAuthError(res, message) {
   res.redirect(`/login.html?${params.toString()}`);
 }
 
+function formatGoogleOAuthError(error) {
+  const rawMessage = String(error?.message || error || '').trim();
+  const normalized = rawMessage.toLowerCase();
+
+  if (!rawMessage) {
+    return 'Google sign-in failed';
+  }
+
+  if (normalized.includes('redirect_uri_mismatch')) {
+    return 'Google sign-in redirect URI mismatch. In Google Cloud, add https://fastbridgegroupllc.com/auth/google/callback as an authorized redirect URI.';
+  }
+
+  if (normalized.includes('invalid_client')) {
+    return 'Google sign-in client credentials are invalid. Update GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server environment.';
+  }
+
+  if (normalized.includes('access blocked') || normalized.includes('access_denied')) {
+    return 'Google blocked this OAuth app. Check the OAuth consent screen publishing status and allowed test users in Google Cloud.';
+  }
+
+  if (normalized.includes('did not return an access token')) {
+    return 'Google sign-in failed because Google did not return an access token.';
+  }
+
+  if (normalized.includes('userinfo')) {
+    return 'Google sign-in succeeded at authorization but failed while reading the Google account profile.';
+  }
+
+  if (normalized.includes('not fully configured')) {
+    return 'Google sign-in is not fully configured on the server. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to the environment.';
+  }
+
+  return rawMessage.length > 220 ? `${rawMessage.slice(0, 217)}...` : rawMessage;
+}
+
 // Routes
 
 app.get('/api/auth/google', (req, res) => {
   const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
   const redirectUri = getGoogleRedirectUri(req);
 
-  if (!clientId) {
+  if (!clientId || !clientSecret) {
     return res.status(503).json({
       configured: false,
-      error: 'Google sign-in is not configured yet'
+      error: 'Google sign-in is not fully configured on the server yet'
     });
   }
 
@@ -1754,10 +1790,11 @@ app.get('/api/auth/google', (req, res) => {
 // OAuth - Google start
 app.get('/auth/google', (req, res) => {
   const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
   const redirectUri = getGoogleRedirectUri(req);
 
-  if (!clientId) {
-    return redirectOAuthError(res, 'Google sign-in is not configured yet');
+  if (!clientId || !clientSecret) {
+    return redirectOAuthError(res, 'Google sign-in is not fully configured on the server yet');
   }
 
   const params = new URLSearchParams({
@@ -1849,7 +1886,7 @@ app.get('/auth/google/callback', async (req, res) => {
     return res.redirect(`/login.html?${params.toString()}`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
-    return redirectOAuthError(res, 'Google sign-in failed');
+    return redirectOAuthError(res, formatGoogleOAuthError(error));
   }
 });
 
