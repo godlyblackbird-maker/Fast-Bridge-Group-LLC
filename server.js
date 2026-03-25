@@ -3468,6 +3468,29 @@ function normalizePdfExtractText(value) {
     .trim();
 }
 
+function buildFullPdfText(parsedResult) {
+  const parsed = parsedResult && typeof parsedResult === 'object' ? parsedResult : {};
+  const pageTexts = Array.isArray(parsed.pages)
+    ? parsed.pages
+        .map((page) => normalizePdfExtractText(page && typeof page === 'object' ? page.text : ''))
+        .filter(Boolean)
+    : [];
+  const mergedPageText = pageTexts.join('\n\n');
+  const aggregateText = normalizePdfExtractText(parsed.text);
+
+  if (mergedPageText.length > aggregateText.length) {
+    return {
+      text: mergedPageText,
+      parsedPageCount: pageTexts.length
+    };
+  }
+
+  return {
+    text: aggregateText || mergedPageText,
+    parsedPageCount: pageTexts.length
+  };
+}
+
 function extractPdfFieldByLabel(lines, labels, valuePattern) {
   const labelMatchers = Array.isArray(labels) ? labels : [];
   for (let index = 0; index < lines.length; index += 1) {
@@ -3582,7 +3605,11 @@ async function extractMlsImportPdfFields(buffer) {
     const info = await parser.getInfo();
     pageCount = Number(info && info.total) || 0;
     const parsed = await parser.getText();
-    normalizedText = normalizePdfExtractText(parsed && parsed.text);
+    const fullTextResult = buildFullPdfText(parsed);
+    normalizedText = fullTextResult.text;
+    if (!pageCount && fullTextResult.parsedPageCount > 0) {
+      pageCount = fullTextResult.parsedPageCount;
+    }
   } finally {
     await parser.destroy().catch(() => {});
   }
