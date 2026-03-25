@@ -1938,6 +1938,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         if (normalizedRole === 'premium user') {
             return 'Premium User';
         }
+        if (normalizedRole === 'test user') {
+            return 'TEST USER';
+        }
         if (normalizedRole === 'user') {
             return 'User';
         }
@@ -9509,8 +9512,8 @@ function initNavbarDateTime() {
                 return;
             }
 
-            if (!['admin', 'user', 'premium user', 'broker'].includes(role)) {
-                showDashboardToast('error', 'Invalid Role', 'Role must be admin, user, premium user, or broker.');
+            if (!['admin', 'user', 'premium user', 'broker', 'test user'].includes(role)) {
+                showDashboardToast('error', 'Invalid Role', 'Role must be admin, user, premium user, broker, or test user.');
                 return;
             }
 

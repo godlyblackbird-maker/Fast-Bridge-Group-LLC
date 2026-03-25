@@ -26,10 +26,12 @@
   const ADMIN_CANONICAL_EMAILS = new Set();
   const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
   const PREMIUM_SETTINGS_URL = '/settings.html?tab=subscriptions';
+  const TEST_USER_ROLE = 'test user';
   let premiumUpgradeTooltip = null;
   let premiumUpgradeTooltipHideTimer = null;
   let authSyncInProgress = true;
   let authNavigationGuardBound = false;
+  let testUserBanner = null;
 
   KNOWN_EMAIL_GROUPS.forEach((group) => {
     if (group.forceRole === 'admin') {
@@ -345,6 +347,10 @@
     return !!(userLike && String(userLike.role || '').trim().toLowerCase() === 'premium user');
   }
 
+  function isTestUser(userLike) {
+    return !!(userLike && String(userLike.role || '').trim().toLowerCase() === TEST_USER_ROLE);
+  }
+
   function hasStoredAuthToken() {
     return Boolean(getStoredAuthToken());
   }
@@ -384,10 +390,228 @@
     if (normalizedRole === 'premium user') {
       return 'Premium User';
     }
+    if (normalizedRole === TEST_USER_ROLE) {
+      return 'TEST USER';
+    }
     if (normalizedRole === 'user') {
       return 'User';
     }
     return normalizedRole || 'User';
+  }
+
+  function ensureTestUserModeStyles() {
+    if (document.getElementById('test-user-mode-styles')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'test-user-mode-styles';
+    style.textContent = `
+      .test-user-banner {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 10000;
+        max-width: 320px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        background: rgba(15, 23, 42, 0.88);
+        color: #f8fafc;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.35);
+        backdrop-filter: blur(18px);
+      }
+
+      .test-user-banner strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+      }
+
+      .test-user-banner p {
+        margin: 0;
+        font-size: 0.82rem;
+        line-height: 1.45;
+        color: rgba(248, 250, 252, 0.82);
+      }
+
+      .test-user-locked-control,
+      [data-test-user-locked="true"] {
+        cursor: not-allowed !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensureTestUserBanner() {
+    ensureTestUserModeStyles();
+    if (testUserBanner && document.body.contains(testUserBanner)) {
+      return testUserBanner;
+    }
+
+    testUserBanner = document.createElement('aside');
+    testUserBanner.className = 'test-user-banner';
+    testUserBanner.setAttribute('aria-live', 'polite');
+    testUserBanner.innerHTML = '<strong>TEST USER</strong><p>Browse-only mode is active. Tabs and navigation work, but edits, sends, saves, uploads, and calculator actions are disabled.</p>';
+    document.body.appendChild(testUserBanner);
+    return testUserBanner;
+  }
+
+  function isAllowedTestUserNavigationLink(link) {
+    if (!link) {
+      return false;
+    }
+
+    const rawHref = String(link.getAttribute('href') || '').trim();
+    if (!rawHref || rawHref.startsWith('#') || /^javascript:/i.test(rawHref) || /^(mailto|tel):/i.test(rawHref)) {
+      return false;
+    }
+
+    if (link.hasAttribute('download') || String(link.getAttribute('target') || '').trim().toLowerCase() === '_blank') {
+      return false;
+    }
+
+    try {
+      const resolvedUrl = new URL(link.href, window.location.href);
+      return resolvedUrl.origin === window.location.origin;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function isAllowedTestUserControlTarget(target) {
+    if (!target || typeof target.closest !== 'function') {
+      return false;
+    }
+
+    if (target.closest('a.settings-nav-link[data-tab], .property-tab-btn[data-tab], [role="tab"], [data-mls-results-tab], .calendar-nav-btn, .calendar-back-btn, .piq-image-tab')) {
+      return true;
+    }
+
+    const link = target.closest('a[href]');
+    return isAllowedTestUserNavigationLink(link);
+  }
+
+  function markTestUserLockedControls() {
+    document.querySelectorAll('button, [role="button"], .btn, .card-btn').forEach((control) => {
+      if (isAllowedTestUserControlTarget(control)) {
+        return;
+      }
+
+      control.dataset.testUserLocked = 'true';
+      control.classList.add('test-user-locked-control');
+      if (!control.getAttribute('title')) {
+        control.setAttribute('title', 'TEST USER accounts are browse-only.');
+      }
+      control.setAttribute('aria-disabled', 'true');
+    });
+
+    document.querySelectorAll('input, textarea').forEach((field) => {
+      const type = String(field.getAttribute('type') || '').trim().toLowerCase();
+      if (type === 'hidden') {
+        return;
+      }
+
+      field.readOnly = true;
+      field.dataset.testUserLocked = 'true';
+      field.classList.add('test-user-locked-control');
+      if (!field.getAttribute('title')) {
+        field.setAttribute('title', 'TEST USER accounts are browse-only.');
+      }
+    });
+
+    document.querySelectorAll('input[type="checkbox"], input[type="radio"], input[type="file"], select').forEach((field) => {
+      field.disabled = true;
+      field.dataset.testUserLocked = 'true';
+      field.classList.add('test-user-locked-control');
+      if (!field.getAttribute('title')) {
+        field.setAttribute('title', 'TEST USER accounts are browse-only.');
+      }
+    });
+
+    document.querySelectorAll('[contenteditable=""], [contenteditable="true"]').forEach((field) => {
+      field.setAttribute('contenteditable', 'false');
+      field.dataset.testUserLocked = 'true';
+      field.classList.add('test-user-locked-control');
+      if (!field.getAttribute('title')) {
+        field.setAttribute('title', 'TEST USER accounts are browse-only.');
+      }
+    });
+  }
+
+  function bindTestUserBrowseOnlyGuard() {
+    if (document.documentElement.dataset.testUserBrowseOnlyBound === 'true') {
+      return;
+    }
+
+    document.documentElement.dataset.testUserBrowseOnlyBound = 'true';
+
+    const suppressEvent = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') {
+        event.stopImmediatePropagation();
+      }
+    };
+
+    document.addEventListener('click', (event) => {
+      if (!isTestUser(getCurrentUser())) {
+        return;
+      }
+
+      if (isAllowedTestUserControlTarget(event.target)) {
+        return;
+      }
+
+      const blockedTarget = event.target && typeof event.target.closest === 'function'
+        ? event.target.closest('button, [role="button"], input, select, textarea, form, label, a[href], [contenteditable], [data-tab]')
+        : null;
+
+      if (!blockedTarget) {
+        return;
+      }
+
+      suppressEvent(event);
+    }, true);
+
+    document.addEventListener('submit', (event) => {
+      if (!isTestUser(getCurrentUser())) {
+        return;
+      }
+      suppressEvent(event);
+    }, true);
+
+    document.addEventListener('keydown', (event) => {
+      if (!isTestUser(getCurrentUser())) {
+        return;
+      }
+
+      if (isAllowedTestUserControlTarget(event.target)) {
+        return;
+      }
+
+      const blockedField = event.target && typeof event.target.closest === 'function'
+        ? event.target.closest('input, select, textarea, [contenteditable], button, [role="button"]')
+        : null;
+
+      if (!blockedField) {
+        return;
+      }
+
+      suppressEvent(event);
+    }, true);
+  }
+
+  function applyTestUserBrowseOnlyMode(userLike) {
+    if (!isTestUser(userLike)) {
+      return;
+    }
+
+    document.documentElement.setAttribute('data-test-user-mode', 'browse-only');
+    ensureTestUserBanner();
+    markTestUserLockedControls();
+    bindTestUserBrowseOnlyGuard();
   }
 
   function applyAdminControlsAccess(userLike) {
@@ -731,7 +955,7 @@
     const activeUser = window.getCurrentUser ? window.getCurrentUser() : null;
     const normalizedPath = String(currentPath || '').toLowerCase();
     if (isActiveBuyersPath(normalizedPath)) {
-      if (isRegularUser(activeUser) || isBrokerUser(activeUser)) {
+      if (isRegularUser(activeUser) || isBrokerUser(activeUser) || isTestUser(activeUser)) {
         window.location.href = '/dashboard.html';
         return;
       }
@@ -777,6 +1001,8 @@
       if (applyAdminControlsAccess(activeUser) === false) {
         return;
       }
+
+      applyTestUserBrowseOnlyMode(activeUser);
 
       const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
       activeBuyersLinks.forEach(link => {

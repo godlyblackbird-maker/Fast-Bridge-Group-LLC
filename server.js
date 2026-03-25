@@ -46,6 +46,7 @@ const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 
 const DEFAULT_STRIPE_PUBLISHABLE_KEY = 'pk_test_51TDU29Q3MV5dyF2TauLp1mMkQukSL6PbAlgHN9zzm5fH9lzZsQIHN4iOTjh1Vu1eAsyOKGZ6bXSIANej5zS9XA2p00cn6NJsZL';
 const STRIPE_PUBLISHABLE_KEY = String(process.env.STRIPE_PUBLISHABLE_KEY || DEFAULT_STRIPE_PUBLISHABLE_KEY).trim();
 const PREMIUM_USER_ROLE = 'premium user';
+const TEST_USER_ROLE = 'test user';
 const PREMIUM_PLAN_KEY = 'premium';
 const PREMIUM_PRICE_CENTS = 9900;
 const PREMIUM_CURRENCY = 'USD';
@@ -1038,6 +1039,57 @@ async function queryOpenAiAssistant(question) {
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: false, limit: '25mb' }));
+
+function isTestUserRole(roleValue) {
+  return String(roleValue || '').trim().toLowerCase() === TEST_USER_ROLE;
+}
+
+function shouldAllowTestUserMutation(pathname) {
+  const normalizedPath = String(pathname || '').trim().toLowerCase();
+  return normalizedPath === '/api/login'
+    || normalizedPath === '/api/login/2fa'
+    || normalizedPath === '/api/logout'
+    || normalizedPath === '/api/verify';
+}
+
+function rejectTestUserWriteAccess(req, res, next) {
+  const method = String(req.method || 'GET').trim().toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+    next();
+    return;
+  }
+
+  if (shouldAllowTestUserMutation(req.path || req.originalUrl || '')) {
+    next();
+    return;
+  }
+
+  const authHeader = String(req.headers.authorization || '').trim();
+  if (!authHeader.toLowerCase().startsWith('bearer ')) {
+    next();
+    return;
+  }
+
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (isTestUserRole(decoded?.role)) {
+      res.status(403).json({ error: 'TEST USER accounts are browse-only and cannot perform this action.' });
+      return;
+    }
+  } catch (error) {
+    // Let route-level auth handlers return the appropriate auth error.
+  }
+
+  next();
+}
+
+app.use(rejectTestUserWriteAccess);
 app.use(express.static(path.join(__dirname)));
 
 app.post('/api/import-listing-by-address', async (req, res) => {
@@ -1685,6 +1737,7 @@ function buildSubscriptionPayload(userRow, subscriptionRow) {
   const role = String(userRow?.role || '').trim().toLowerCase();
   const isAdmin = role === 'admin';
   const isPremium = role === PREMIUM_USER_ROLE;
+  const isTestUser = role === TEST_USER_ROLE;
   const activePlan = isAdmin ? 'admin' : (isPremium ? PREMIUM_PLAN_KEY : 'basic');
   const maskedCard = subscriptionRow?.card_last4
     ? `${subscriptionRow.card_brand || 'Card'} ending in ${subscriptionRow.card_last4}`
@@ -1695,7 +1748,7 @@ function buildSubscriptionPayload(userRow, subscriptionRow) {
     role: role || 'user',
     amountCents: isPremium ? PREMIUM_PRICE_CENTS : 0,
     currency: PREMIUM_CURRENCY,
-    unlockedAllTabs: isAdmin || isPremium,
+    unlockedAllTabs: isAdmin || isPremium || isTestUser,
     adminAccess: isAdmin,
     billingProfile: subscriptionRow ? {
       billingName: subscriptionRow.billing_name || '',
@@ -2709,8 +2762,8 @@ app.post('/api/admin/users', (req, res) => {
     return res.status(400).json({ error: 'Name, email, and password are required' });
   }
 
-  if (!['admin', 'user', 'broker', PREMIUM_USER_ROLE].includes(normalizedRole)) {
-    return res.status(400).json({ error: 'Role must be admin, user, broker, or premium user' });
+  if (!['admin', 'user', 'broker', PREMIUM_USER_ROLE, TEST_USER_ROLE].includes(normalizedRole)) {
+    return res.status(400).json({ error: 'Role must be admin, user, broker, premium user, or test user' });
   }
 
   if (password.length < 6) {
