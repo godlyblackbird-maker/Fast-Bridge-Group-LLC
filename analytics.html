@@ -408,9 +408,9 @@ https://templatemo.com/tm-607-glass-admin
                                     <input id="closed-deal-earned" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Amount earned">
                                     <textarea id="closed-deal-note" class="closed-deals-input closed-deals-textarea" placeholder="Optional note about this close"></textarea>
                                 </div>
-                                <input id="closed-deal-document-upload" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" hidden>
+                                <input id="closed-deal-document-upload" class="closed-deal-document-upload-input" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" tabindex="-1" aria-hidden="true">
                                 <div class="closed-deals-actions">
-                                    <button type="button" class="card-btn" id="closed-deal-upload-btn">Attach Documents</button>
+                                    <label for="closed-deal-document-upload" class="card-btn closed-deal-upload-trigger" id="closed-deal-upload-btn" role="button" tabindex="0">Attach Documents</label>
                                     <button type="button" class="card-btn active" id="closed-deal-save-btn">Save Closed Deal</button>
                                 </div>
                                 <div class="closed-deals-pending-docs" id="closed-deal-pending-docs">

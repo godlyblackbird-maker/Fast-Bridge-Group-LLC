@@ -488,6 +488,296 @@ function extractListingImportData(html, requestUrl, source) {
   };
 }
 
+function normalizeAddressMatchText(value) {
+  return decodeHtmlEntities(String(value || ''))
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/\bapt\b/g, 'apartment')
+    .replace(/\bunit\b/g, 'unit')
+    .replace(/\bste\b/g, 'suite')
+    .replace(/\bst\b/g, 'street')
+    .replace(/\bave\b/g, 'avenue')
+    .replace(/\bdr\b/g, 'drive')
+    .replace(/\brd\b/g, 'road')
+    .replace(/\bln\b/g, 'lane')
+    .replace(/\bblvd\b/g, 'boulevard')
+    .replace(/\bct\b/g, 'court')
+    .replace(/\bcir\b/g, 'circle')
+    .replace(/\bpkwy\b/g, 'parkway')
+    .replace(/\bter\b/g, 'terrace')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenizeAddressMatchText(value) {
+  return normalizeAddressMatchText(value).split(' ').filter(Boolean);
+}
+
+function extractDuckDuckGoResultUrl(rawHref) {
+  const href = decodeHtmlEntities(String(rawHref || '').trim());
+  if (!href) {
+    return '';
+  }
+
+  try {
+    const parsedUrl = new URL(href, 'https://duckduckgo.com');
+    if (parsedUrl.hostname.includes('duckduckgo.com')) {
+      const redirected = parsedUrl.searchParams.get('uddg');
+      return redirected ? decodeURIComponent(redirected) : '';
+    }
+    return parsedUrl.href;
+  } catch (error) {
+    return '';
+  }
+}
+
+function extractDuckDuckGoSearchResults(html, source) {
+  const results = [];
+  const seenUrls = new Set();
+  const anchorPattern = /<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+
+  while ((match = anchorPattern.exec(String(html || '')))) {
+    const resolvedUrl = extractDuckDuckGoResultUrl(match[1]);
+    if (!resolvedUrl || inferListingSourceFromUrl(resolvedUrl) !== source || seenUrls.has(resolvedUrl)) {
+      continue;
+    }
+
+    seenUrls.add(resolvedUrl);
+    results.push({
+      url: resolvedUrl,
+      title: normalizeListingText(match[2])
+    });
+  }
+
+  return results;
+}
+
+function getAddressSearchQueries(address, source) {
+  const domain = source === 'redfin' ? 'redfin.com' : 'zillow.com';
+  const trimmedAddress = String(address || '').trim();
+  const normalizedAddress = normalizeAddressMatchText(trimmedAddress);
+  const withoutZip = normalizedAddress.replace(/\b\d{5}(?: \d{4})?\b/g, '').trim();
+  return Array.from(new Set([
+    `site:${domain} "${trimmedAddress}"`,
+    `site:${domain} ${trimmedAddress}`,
+    withoutZip ? `site:${domain} ${withoutZip}` : ''
+  ].filter(Boolean)));
+}
+
+function scoreListingSearchCandidate(candidate, address, source) {
+  const queryText = normalizeAddressMatchText(address);
+  const queryTokens = tokenizeAddressMatchText(address);
+  const titleText = normalizeAddressMatchText(candidate && candidate.title);
+  const urlText = normalizeAddressMatchText(candidate && candidate.url);
+  const zipMatch = queryText.match(/\b\d{5}\b/);
+  const streetNumberMatch = queryText.match(/^\d+[a-z]?\b/);
+  let score = 0;
+
+  if (queryText && titleText.includes(queryText)) {
+    score += 120;
+  }
+
+  if (queryText && urlText.includes(queryText)) {
+    score += 80;
+  }
+
+  if (streetNumberMatch && (titleText.includes(streetNumberMatch[0]) || urlText.includes(streetNumberMatch[0]))) {
+    score += 20;
+  }
+
+  if (zipMatch && (titleText.includes(zipMatch[0]) || urlText.includes(zipMatch[0]))) {
+    score += 25;
+  }
+
+  const tokenMatches = queryTokens.reduce((total, token) => {
+    if (token.length <= 1) {
+      return total;
+    }
+    return total + ((titleText.includes(token) || urlText.includes(token)) ? 1 : 0);
+  }, 0);
+  score += tokenMatches * 4;
+
+  if (source === 'zillow') {
+    if (/\/homedetails\//i.test(candidate.url || '')) {
+      score += 30;
+    }
+    if (/_zpid/i.test(candidate.url || '')) {
+      score += 15;
+    }
+    if (/\/apartments\//i.test(candidate.url || '')) {
+      score -= 10;
+    }
+  }
+
+  if (source === 'redfin') {
+    if (/\/home\//i.test(candidate.url || '')) {
+      score += 30;
+    }
+    if (/\/apartment\//i.test(candidate.url || '')) {
+      score -= 4;
+    }
+  }
+
+  return score;
+}
+
+async function searchListingUrlByAddress(address, source) {
+  const queries = getAddressSearchQueries(address, source);
+  const candidates = [];
+  const seenUrls = new Set();
+
+  for (const query of queries) {
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const response = await fetch(searchUrl, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        pragma: 'no-cache'
+      }
+    });
+
+    if (!response.ok) {
+      continue;
+    }
+
+    const html = await response.text();
+    const parsedResults = extractDuckDuckGoSearchResults(html, source);
+    parsedResults.forEach((candidate) => {
+      if (seenUrls.has(candidate.url)) {
+        return;
+      }
+      seenUrls.add(candidate.url);
+      candidates.push(candidate);
+    });
+
+    if (candidates.length >= 5) {
+      break;
+    }
+  }
+
+  const bestCandidate = candidates
+    .map((candidate) => ({
+      ...candidate,
+      score: scoreListingSearchCandidate(candidate, address, source)
+    }))
+    .sort((left, right) => right.score - left.score)[0];
+
+  return bestCandidate && bestCandidate.score > 0 ? bestCandidate.url : '';
+}
+
+async function fetchImportedListingFromUrl(rawUrl, requestedSource = '') {
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(String(rawUrl || '').trim());
+  } catch (error) {
+    throw new Error('Enter a valid property URL.');
+  }
+  const inferredSource = inferListingSourceFromUrl(parsedUrl.href);
+  const source = String(requestedSource || inferredSource).trim().toLowerCase();
+
+  if (!source || !['zillow', 'redfin'].includes(source)) {
+    throw new Error('Only Zillow and Redfin property links are supported right now.');
+  }
+
+  if (!inferListingSourceFromUrl(parsedUrl.href)) {
+    throw new Error('The pasted link does not look like a Zillow or Redfin property page.');
+  }
+
+  const response = await fetch(parsedUrl.href, {
+    method: 'GET',
+    redirect: 'follow',
+    headers: {
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'accept-language': 'en-US,en;q=0.9',
+      'cache-control': 'no-cache',
+      pragma: 'no-cache'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`The ${source === 'zillow' ? 'Zillow' : 'Redfin'} page could not be loaded right now.`);
+  }
+
+  const html = await response.text();
+  const listing = extractListingImportData(html, parsedUrl.href, source);
+
+  if (!listing.address && !listing.price && !listing.imageUrl) {
+    throw new Error(`FAST could not read enough public listing data from this ${source === 'zillow' ? 'Zillow' : 'Redfin'} page.`);
+  }
+
+  return {
+    source,
+    url: parsedUrl.href,
+    listing
+  };
+}
+
+function getListingCompletenessScore(listing) {
+  if (!listing || typeof listing !== 'object') {
+    return 0;
+  }
+
+  return [
+    listing.address,
+    listing.location,
+    listing.price,
+    listing.beds,
+    listing.baths,
+    listing.area,
+    listing.lotSize,
+    listing.yearBuilt,
+    listing.imageUrl,
+    listing.notes,
+    listing.mlsId
+  ].reduce((total, value) => total + (String(value || '').trim() ? 1 : 0), 0);
+}
+
+function mergeImportedListingsByQuality(results, address) {
+  const importedResults = Array.isArray(results)
+    ? results.filter((item) => item && item.listing && typeof item.listing === 'object')
+    : [];
+  const rankedResults = importedResults
+    .map((item) => ({
+      ...item,
+      score: getListingCompletenessScore(item.listing)
+    }))
+    .sort((left, right) => right.score - left.score);
+
+  if (!rankedResults.length) {
+    return {
+      primarySource: '',
+      primaryUrl: '',
+      listing: null
+    };
+  }
+
+  const primary = rankedResults[0];
+  const fallback = rankedResults[1] || null;
+  const mergedListing = {
+    ...((fallback && fallback.listing) || {}),
+    ...primary.listing,
+    address: String(primary.listing.address || (fallback && fallback.listing.address) || address || '').trim(),
+    location: String(primary.listing.location || (fallback && fallback.listing.location) || '').trim(),
+    notes: String(primary.listing.notes || (fallback && fallback.listing.notes) || '').trim(),
+    imageUrl: String(primary.listing.imageUrl || (fallback && fallback.listing.imageUrl) || '').trim(),
+    source: primary.source,
+    url: primary.url
+  };
+
+  return {
+    primarySource: primary.source,
+    primaryUrl: primary.url,
+    listing: mergedListing
+  };
+}
+
 function readOpenAiKeysFromDisk() {
   const candidates = [
     path.join(__dirname, 'Open AI Key', 'Open AI keys.txt'),
@@ -710,6 +1000,81 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: false, limit: '25mb' }));
 app.use(express.static(path.join(__dirname)));
 
+app.post('/api/import-listing-by-address', async (req, res) => {
+  const rawAddress = String(req.body?.address || '').trim();
+
+  if (!rawAddress) {
+    return res.status(400).json({ error: 'Add a property address before searching Zillow and Redfin.' });
+  }
+
+  const sourceResults = await Promise.allSettled(['zillow', 'redfin'].map(async (source) => {
+    const url = await searchListingUrlByAddress(rawAddress, source);
+    if (!url) {
+      return {
+        source,
+        url: '',
+        listing: null
+      };
+    }
+
+    try {
+      const imported = await fetchImportedListingFromUrl(url, source);
+      return imported;
+    } catch (error) {
+      return {
+        source,
+        url,
+        listing: null,
+        error: error && error.message ? error.message : 'The listing could not be imported.'
+      };
+    }
+  }));
+
+  const links = {};
+  const importedListings = [];
+  const missingSources = [];
+
+  sourceResults.forEach((result) => {
+    if (result.status !== 'fulfilled') {
+      return;
+    }
+
+    const value = result.value || {};
+    const source = String(value.source || '').trim().toLowerCase();
+    if (!source) {
+      return;
+    }
+
+    if (value.url) {
+      links[source] = value.url;
+    } else {
+      missingSources.push(source);
+    }
+
+    if (value.listing) {
+      importedListings.push(value);
+    }
+  });
+
+  if (!Object.keys(links).length) {
+    return res.status(404).json({ error: 'FAST could not find a matching Zillow or Redfin listing for this address.' });
+  }
+
+  const merged = mergeImportedListingsByQuality(importedListings, rawAddress);
+  if (!merged.listing) {
+    return res.status(422).json({ error: 'FAST found listing links but could not import enough public property details from them.' });
+  }
+
+  return res.json({
+    address: rawAddress,
+    links,
+    missingSources,
+    primarySource: merged.primarySource,
+    primaryUrl: merged.primaryUrl,
+    listing: merged.listing
+  });
+});
+
 app.post('/api/import-listing-preview', async (req, res) => {
   const rawUrl = String(req.body?.url || '').trim();
   const requestedSource = String(req.body?.source || '').trim().toLowerCase();
@@ -718,51 +1083,29 @@ app.post('/api/import-listing-preview', async (req, res) => {
     return res.status(400).json({ error: 'Paste a Zillow or Redfin listing URL first.' });
   }
 
-  let parsedUrl;
   try {
-    parsedUrl = new URL(rawUrl);
+    const imported = await fetchImportedListingFromUrl(rawUrl, requestedSource);
+    return res.json({ listing: imported.listing });
   } catch (error) {
-    return res.status(400).json({ error: 'Enter a valid property URL.' });
-  }
+    const message = error && error.message ? error.message : 'The listing import failed.';
+    const normalizedMessage = String(message).toLowerCase();
 
-  const inferredSource = inferListingSourceFromUrl(parsedUrl.href);
-  const source = requestedSource || inferredSource;
-
-  if (!source || !['zillow', 'redfin'].includes(source)) {
-    return res.status(400).json({ error: 'Only Zillow and Redfin property links are supported right now.' });
-  }
-
-  if (!inferListingSourceFromUrl(parsedUrl.href)) {
-    return res.status(400).json({ error: 'The pasted link does not look like a Zillow or Redfin property page.' });
-  }
-
-  try {
-    const response = await fetch(parsedUrl.href, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: {
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'accept-language': 'en-US,en;q=0.9',
-        'cache-control': 'no-cache',
-        pragma: 'no-cache'
-      }
-    });
-
-    if (!response.ok) {
-      return res.status(502).json({ error: `The ${source === 'zillow' ? 'Zillow' : 'Redfin'} page could not be loaded right now.` });
+    if (normalizedMessage.includes('valid property url')) {
+      return res.status(400).json({ error: message });
     }
-
-    const html = await response.text();
-    const listingData = extractListingImportData(html, parsedUrl.href, source);
-
-    if (!listingData.address && !listingData.price && !listingData.imageUrl) {
-      return res.status(422).json({ error: `FAST could not read enough public listing data from this ${source === 'zillow' ? 'Zillow' : 'Redfin'} page.` });
+    if (normalizedMessage.includes('supported')) {
+      return res.status(400).json({ error: message });
     }
-
-    return res.json({ listing: listingData });
-  } catch (error) {
-    return res.status(500).json({ error: error && error.message ? error.message : 'The listing import failed.' });
+    if (normalizedMessage.includes('does not look like')) {
+      return res.status(400).json({ error: message });
+    }
+    if (normalizedMessage.includes('could not be loaded')) {
+      return res.status(502).json({ error: message });
+    }
+    if (normalizedMessage.includes('could not read enough')) {
+      return res.status(422).json({ error: message });
+    }
+    return res.status(500).json({ error: message });
   }
 });
 

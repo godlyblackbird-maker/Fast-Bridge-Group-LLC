@@ -4441,6 +4441,13 @@ body.sidebar-collapsed .main-content {
     justify-content: space-between;
 }
 
+.stat-info {
+    min-width: 0;
+    flex: 1 1 auto;
+    position: relative;
+    z-index: 2;
+}
+
 .stat-info h3 {
     font-size: 13px;
     font-weight: 500;
@@ -4462,6 +4469,8 @@ body.sidebar-collapsed .main-content {
 }
 
 .profit-window-scroll {
+    position: relative;
+    z-index: 3;
     margin: 0 0 12px;
     overflow-x: auto;
     scrollbar-width: thin;
@@ -4482,9 +4491,13 @@ body.sidebar-collapsed .main-content {
     gap: 8px;
     min-width: max-content;
     padding-bottom: 4px;
+    position: relative;
+    z-index: 3;
 }
 
 .profit-window-pill {
+    position: relative;
+    z-index: 4;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
@@ -4496,6 +4509,12 @@ body.sidebar-collapsed .main-content {
     cursor: pointer;
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
     white-space: nowrap;
+}
+
+.profit-window-pill:focus-visible {
+    outline: none;
+    border-color: rgba(52, 211, 153, 0.55);
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
 }
 
 .profit-window-pill:hover {
@@ -4640,6 +4659,16 @@ body.sidebar-collapsed .main-content {
 .closed-deals-textarea {
     min-height: 78px;
     resize: vertical;
+}
+
+.closed-deal-document-upload-input {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .closed-deals-actions {
@@ -4942,6 +4971,8 @@ body.sidebar-collapsed .main-content {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
+    pointer-events: none;
 }
 
 .stat-icon.cyan {
@@ -6647,6 +6678,36 @@ body.sidebar-collapsed .main-content {
     align-items: center;
     gap: 8px;
     margin-bottom: 6px;
+}
+
+.agent-note-share-btn {
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    background: rgba(15, 23, 42, 0.28);
+    color: var(--emerald-light);
+    cursor: pointer;
+    transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.agent-note-share-btn:hover,
+.agent-note-share-btn:focus-visible {
+    border-color: rgba(52, 211, 153, 0.52);
+    background: rgba(52, 211, 153, 0.14);
+    color: #d1fae5;
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.agent-note-share-btn svg {
+    width: 15px;
+    height: 15px;
 }
 
 .agent-note-link-agent {
@@ -14180,6 +14241,17 @@ body.sidebar-collapsed .main-content {
     color: var(--accent-color);
     text-decoration: none;
     word-break: break-word;
+}
+
+.property-link-import-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.property-link-import-empty {
+    color: var(--text-secondary);
 }
 
 .property-link-import-link:hover,

@@ -26,6 +26,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
+    const ANALYTICS_CLOSED_DEAL_DRAFT_KEY = 'analyticsClosedDealDraftByUser';
     const PLANNER_DRAFT_KEY = 'plannerDraftByUser';
     const DASHBOARD_NOTES_KEY = 'dashboardNotesByUser';
     const SUBSCRIPTION_PLAN_KEY = 'subscriptionPlanByUser';
@@ -2314,22 +2315,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
             const manualClosedDeals = getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
-            const offerTermsSentSet = new Set();
+            const offerTermsSentSet = collectOfferTermsSentPropertyKeys(scopedStatuses, notes);
             const offerLeadSet = new Set();
             const relevantOfferNotes = [];
             const relevantPlannerItems = [];
 
-            Object.entries(scopedStatuses).forEach(([propertyKey, statusValue]) => {
-                const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
-                const normalizedKey = String(propertyKey || '').trim().toLowerCase();
-                if (normalizedStatus === 'offer-terms-sent' && normalizedKey) {
-                    offerTermsSentSet.add(normalizedKey);
-                }
-            });
-
             notes.forEach((note) => {
                 const propertyAddress = String(note.propertyAddress || '').trim();
-                const propertyKey = propertyAddress.toLowerCase();
+                const propertyKey = makePropertyStorageKey(note.propertyKey || propertyAddress);
                 const noteStatus = String(
                     scopedStatuses[propertyKey]
                     || note.piqAgentStatus
@@ -2628,6 +2621,296 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return labels[normalized] || labels.none;
     }
 
+    function buildDashboardPropertyDetailFallback(propertyAddress, statusValue, snapshotLike) {
+        const snapshot = snapshotLike && typeof snapshotLike === 'object' ? snapshotLike : {};
+        const normalizedStatus = String(statusValue || snapshot.piqAgentStatus || 'none').trim().toLowerCase() || 'none';
+        const address = String(snapshot.address || propertyAddress || 'Property').trim() || 'Property';
+        const propertyImages = Array.isArray(snapshot.propertyImages)
+            ? snapshot.propertyImages.filter(Boolean)
+            : [];
+
+        return {
+            address,
+            propertyImages,
+            propertyDetails: String(snapshot.propertyDetails || '').trim(),
+            listPrice: String(snapshot.listPrice || '$0').trim() || '$0',
+            propensity: Number.isFinite(Number(snapshot.propensity)) ? Number(snapshot.propensity) : 0,
+            moderatePain: String(snapshot.moderatePain || '-').trim() || '-',
+            taxDelinquency: String(snapshot.taxDelinquency || '-').trim() || '-',
+            highDebt: String(snapshot.highDebt || '-').trim() || '-',
+            marketInfo: String(snapshot.marketInfo || snapshot.location || '-').trim() || '-',
+            dom: Number(snapshot.dom) || 0,
+            cdom: Number(snapshot.cdom) || 0,
+            askingVsArv: String(snapshot.askingVsArv || 'N/A').trim() || 'N/A',
+            arv: String(snapshot.arv || '$0').trim() || '$0',
+            compData: String(snapshot.compData || '-').trim() || '-',
+            piqAgentStatus: normalizedStatus,
+            piq: String(snapshot.piq || 'About property notes will appear here.').trim() || 'About property notes will appear here.',
+            comps: String(snapshot.comps || '').trim(),
+            ia: String(snapshot.ia || 'IA tab content placeholder.').trim() || 'IA tab content placeholder.',
+            agentRecord: {
+                ...(snapshot.agentRecord && typeof snapshot.agentRecord === 'object' ? snapshot.agentRecord : {}),
+                agentStatus: formatAgentStatusLabel(normalizedStatus)
+            },
+            offer: String(snapshot.offer || 'Offer tab content placeholder.').trim() || 'Offer tab content placeholder.'
+        };
+    }
+
+    function getPropertySnapshotForWorkspace(propertyKey, workspaceUserLike) {
+        const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+        if (!normalizedPropertyKey) {
+            return null;
+        }
+
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const candidates = [];
+        const assignmentRecord = getPropertyAssignmentRecord(normalizedPropertyKey);
+
+        if (assignmentRecord && assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object') {
+            candidates.push(assignmentRecord.propertySnapshot);
+        }
+
+        getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key).forEach((item) => {
+            const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                ? item.propertySnapshot
+                : null;
+            const itemPropertyKey = makePropertyStorageKey(
+                snapshot?.address
+                || item?.address
+                || item?.propertyAddress
+            );
+
+            if (snapshot && itemPropertyKey === normalizedPropertyKey) {
+                candidates.push(snapshot);
+            }
+        });
+
+        getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key).forEach((item) => {
+            const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                ? item.propertySnapshot
+                : null;
+            const itemPropertyKey = makePropertyStorageKey(
+                item?.propertyKey
+                || item?.propertyAddress
+                || snapshot?.address
+            );
+
+            if (snapshot && itemPropertyKey === normalizedPropertyKey) {
+                candidates.push(snapshot);
+            }
+        });
+
+        const persistedDetail = getPersistedSelectedPropertyDetail();
+        if (persistedDetail && typeof persistedDetail === 'object') {
+            const persistedKey = makePropertyStorageKey(persistedDetail.address || persistedDetail.propertyAddress);
+            if (persistedKey === normalizedPropertyKey) {
+                candidates.push(persistedDetail);
+            }
+        }
+
+        return candidates.find((candidate) => candidate && typeof candidate === 'object') || null;
+    }
+
+    function initOffersAcceptedWidget() {
+        const offersAcceptedList = document.getElementById('dashboard-offers-accepted-list');
+        if (!offersAcceptedList) {
+            return;
+        }
+
+        const emailPrepRecipientNameInput = document.getElementById('agent-workspace-recipient-name');
+        const emailPrepRecipientEmailInput = document.getElementById('agent-workspace-recipient-email');
+        const emailPrepCard = document.querySelector('[data-widget-id="agent-email-prep"]');
+        const canShareToEmailPrep = Boolean(emailPrepRecipientNameInput && emailPrepRecipientEmailInput && emailPrepCard);
+
+        function openAcceptedProperty(snapshot, propertyAddress, statusValue) {
+            const payload = buildDashboardPropertyDetailFallback(propertyAddress, statusValue, snapshot);
+            persistSelectedPropertyDetail(payload);
+            window.location.href = 'property-details.html';
+        }
+
+        function render() {
+            const workspaceUser = getWorkspaceUserContext();
+            const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+            const acceptedItems = Object.entries(scopedStatuses || {})
+                .map(([propertyKey, statusValue]) => ({
+                    propertyKey: makePropertyStorageKey(propertyKey),
+                    statusValue: String(statusValue || 'none').trim().toLowerCase()
+                }))
+                .filter((item) => item.propertyKey && item.statusValue === 'offer-accepted')
+                .map((item) => {
+                    const assignmentRecord = getPropertyAssignmentRecord(item.propertyKey);
+                    const snapshot = getPropertySnapshotForWorkspace(item.propertyKey, workspaceUser);
+                    const propertyAddress = String(
+                        snapshot?.address
+                        || assignmentRecord?.propertyAddress
+                        || item.propertyKey
+                    ).trim() || 'Property';
+                    const acceptedAt = new Date(
+                        assignmentRecord?.assignedAt
+                        || snapshot?.updatedAt
+                        || snapshot?.createdAt
+                        || Date.now()
+                    );
+                    return {
+                        ...item,
+                        propertyAddress,
+                        snapshot,
+                        assignmentRecord,
+                        acceptedAt: Number.isNaN(acceptedAt.getTime()) ? 0 : acceptedAt.getTime()
+                    };
+                })
+                .sort((left, right) => right.acceptedAt - left.acceptedAt || left.propertyAddress.localeCompare(right.propertyAddress));
+
+            offersAcceptedList.innerHTML = '';
+
+            if (!acceptedItems.length) {
+                offersAcceptedList.innerHTML = '<p class="outreach-empty">No accepted offers yet.</p>';
+                return;
+            }
+
+            acceptedItems.forEach((item) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'agent-note-link';
+
+                const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+                const acceptedTime = item.acceptedAt > 0
+                    ? new Date(item.acceptedAt).toLocaleDateString()
+                    : 'Recently updated';
+                const statusLabel = formatAgentStatusLabel(item.statusValue);
+                const locationLabel = String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '-').trim() || '-';
+                const priceLabel = String(snapshot.listPrice || '$0').trim() || '$0';
+                const assignedLabel = item.assignmentRecord
+                    ? buildAssignedByLabel(item.assignmentRecord)
+                    : 'Click to open property details';
+
+                const head = document.createElement('div');
+                head.className = 'agent-note-link-head';
+
+                const acceptedLabel = document.createElement('span');
+                acceptedLabel.className = 'agent-note-link-agent';
+                acceptedLabel.textContent = 'Accepted Offer';
+
+                const timeText = document.createElement('span');
+                timeText.className = 'agent-note-link-time';
+                timeText.textContent = acceptedTime;
+
+                const addressText = document.createElement('p');
+                addressText.className = 'agent-note-link-address';
+                addressText.textContent = item.propertyAddress;
+
+                const statusText = document.createElement('p');
+                statusText.className = 'agent-note-link-status';
+                statusText.textContent = `Agent Status: ${statusLabel}`;
+
+                const bodyText = document.createElement('p');
+                bodyText.className = 'agent-note-link-body';
+                bodyText.textContent = `${locationLabel} • ${priceLabel} • ${assignedLabel}`;
+
+                head.appendChild(acceptedLabel);
+                head.appendChild(timeText);
+
+                if (canShareToEmailPrep) {
+                    const shareButton = document.createElement('button');
+                    shareButton.type = 'button';
+                    shareButton.className = 'agent-note-share-btn';
+                    shareButton.setAttribute('aria-label', `Share ${item.propertyAddress} agent to Email Prep`);
+                    shareButton.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <path d="M8.59 13.51 15.42 17.49"></path>
+                            <path d="M15.41 6.51 8.59 10.49"></path>
+                        </svg>
+                    `;
+
+                    shareButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const agentRecord = snapshot.agentRecord && typeof snapshot.agentRecord === 'object'
+                            ? snapshot.agentRecord
+                            : {};
+                        const recipientName = String(agentRecord.name || '').trim();
+                        const recipientEmail = String(agentRecord.email || '').trim();
+
+                        if (!recipientName && !recipientEmail) {
+                            showDashboardToast('error', 'Agent Missing', 'This accepted property does not have an agent name or email to send into Email Prep.');
+                            return;
+                        }
+
+                        window.dispatchEvent(new CustomEvent('agent-workspace-email-prefill', {
+                            detail: {
+                                recipientName,
+                                recipientEmail,
+                                propertyAddress: item.propertyAddress
+                            }
+                        }));
+                    });
+
+                    head.appendChild(shareButton);
+                }
+
+                button.appendChild(head);
+                button.appendChild(addressText);
+                button.appendChild(statusText);
+                button.appendChild(bodyText);
+
+                button.addEventListener('click', () => {
+                    openAcceptedProperty(snapshot, item.propertyAddress, item.statusValue);
+                });
+
+                offersAcceptedList.appendChild(button);
+            });
+        }
+
+        render();
+        window.addEventListener('storage', render);
+        window.addEventListener('dashboard-data-updated', render);
+        window.addEventListener('property-assignment-updated', render);
+    }
+
+    function collectOfferTermsSentPropertyKeys(scopedStatuses, notes) {
+        const offerTermsSentSet = new Set();
+        const safeStatuses = scopedStatuses && typeof scopedStatuses === 'object' && !Array.isArray(scopedStatuses)
+            ? scopedStatuses
+            : {};
+        const safeNotes = Array.isArray(notes) ? notes : [];
+
+        Object.entries(safeStatuses).forEach(([propertyKey, statusValue]) => {
+            const normalizedKey = makePropertyStorageKey(propertyKey);
+            const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
+            if (normalizedKey && normalizedStatus === 'offer-terms-sent') {
+                offerTermsSentSet.add(normalizedKey);
+            }
+        });
+
+        safeNotes.forEach((note) => {
+            const propertyKey = makePropertyStorageKey(
+                note && (note.propertyKey || note.propertyAddress || note.propertySnapshot?.address)
+            );
+            if (!propertyKey) {
+                return;
+            }
+
+            const noteStatus = String(
+                safeStatuses[propertyKey]
+                || (note && note.piqAgentStatus)
+                || (note && note.propertySnapshot?.piqAgentStatus)
+                || 'none'
+            ).trim().toLowerCase();
+
+            if (noteStatus === 'offer-terms-sent') {
+                offerTermsSentSet.add(propertyKey);
+            }
+        });
+
+        return offerTermsSentSet;
+    }
+
     function initLiveKpiStats() {
         const myProfitsValueEl = document.getElementById('kpi-my-profits');
         const offerTermsSentEl = document.getElementById('kpi-offer-terms-sent');
@@ -2643,6 +2926,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const myProfitsChangeEl = document.getElementById('kpi-my-profits-change');
         const offerTermsChangeEl = document.getElementById('kpi-offer-terms-change');
         const offersChangeEl = document.getElementById('kpi-offers-change');
+        const profitWindowTrackEl = document.getElementById('kpi-profit-window-track');
         const PROFIT_WINDOW_CONFIG = {
             week: { label: 'last 7 days', days: 7 },
             month: { label: 'last 30 days', days: 30 },
@@ -2650,6 +2934,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             'six-month': { label: 'last 6 months', days: 183 },
             year: { label: 'last 12 months', days: 365 }
         };
+        let activeProfitWindowState = getSelectedProfitWindow();
 
         function getSelectedProfitWindow() {
             const workspaceUser = getWorkspaceUserContext();
@@ -2661,6 +2946,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const workspaceUser = getWorkspaceUserContext();
             const normalizedWindow = String(windowKey || 'year').trim().toLowerCase();
             const nextWindow = PROFIT_WINDOW_CONFIG[normalizedWindow] ? normalizedWindow : 'year';
+            activeProfitWindowState = nextWindow;
             setUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, nextWindow);
         }
 
@@ -2692,7 +2978,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 const isActive = button.dataset.profitWindow === activeWindow;
                 button.classList.toggle('active', isActive);
                 button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                button.setAttribute('role', 'tab');
+                button.tabIndex = isActive ? 0 : -1;
             });
+
+            if (profitWindowTrackEl) {
+                profitWindowTrackEl.setAttribute('aria-activedescendant', `kpi-profit-window-${activeWindow}`);
+            }
         }
 
         function calculateIaNetProfit(state) {
@@ -2774,7 +3067,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
             const rawProfitGoal = getUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, '');
             const profitGoal = Math.max(parseMoneyValue(rawProfitGoal), 0);
-            const activeProfitWindow = getSelectedProfitWindow();
+            activeProfitWindowState = getSelectedProfitWindow();
+            const activeProfitWindow = activeProfitWindowState;
             const now = Date.now();
             const profitWindowStart = getProfitWindowRange(activeProfitWindow, now);
             const windowedIaStates = iaStates.filter((state) => getStateTimestamp(state) >= profitWindowStart);
@@ -2785,37 +3079,20 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
             const latestByProperty = new Map();
             const offerLeadSet = new Set();
-            const offerTermsSentSet = new Set();
+            const offerTermsSentSet = collectOfferTermsSentPropertyKeys(scopedStatuses, notes);
             const offerRegex = /\boffer\b|submitted|sent/i;
-
-            Object.entries(scopedStatuses).forEach(([propertyKey, statusValue]) => {
-                const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
-                if (normalizedStatus === 'offer-terms-sent') {
-                    offerTermsSentSet.add(String(propertyKey || '').trim().toLowerCase());
-                }
-            });
 
             notes.forEach(note => {
                 const propertyAddress = String(note.propertyAddress || '').trim();
                 if (!propertyAddress) {
                     return;
                 }
-                const propertyKey = propertyAddress.toLowerCase();
+                const propertyKey = makePropertyStorageKey(note.propertyKey || propertyAddress);
 
                 const createdAt = Number(note.createdAt) || 0;
                 const existing = latestByProperty.get(propertyAddress);
                 if (!existing || createdAt > (Number(existing.createdAt) || 0)) {
                     latestByProperty.set(propertyAddress, note);
-                }
-
-                const noteStatus = String(
-                    scopedStatuses[propertyKey]
-                    || note.piqAgentStatus
-                    || note.propertySnapshot?.piqAgentStatus
-                    || 'none'
-                ).trim().toLowerCase();
-                if (noteStatus === 'offer-terms-sent') {
-                    offerTermsSentSet.add(propertyKey);
                 }
 
                 const noteText = String(note.note || '');
@@ -2872,11 +3149,31 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
         }
 
+        function moveProfitWindowSelection(direction) {
+            if (!profitWindowButtons.length) {
+                return;
+            }
+
+            const orderedWindows = profitWindowButtons
+                .map((button) => String(button.dataset.profitWindow || '').trim())
+                .filter((windowKey) => PROFIT_WINDOW_CONFIG[windowKey]);
+            const currentIndex = Math.max(0, orderedWindows.indexOf(activeProfitWindowState));
+            const nextIndex = (currentIndex + direction + orderedWindows.length) % orderedWindows.length;
+            const nextWindow = orderedWindows[nextIndex] || 'year';
+            setSelectedProfitWindow(nextWindow);
+            refreshKpis();
+            const nextButton = profitWindowButtons.find((button) => button.dataset.profitWindow === nextWindow);
+            if (nextButton) {
+                nextButton.focus();
+            }
+        }
+
         if (profitGoalInputEl) {
             const persistProfitGoal = () => {
                 const workspaceUser = getWorkspaceUserContext();
                 const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
                 setUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, digitsOnly);
+                return digitsOnly;
             };
 
             profitGoalInputEl.addEventListener('input', () => {
@@ -2885,14 +3182,64 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 persistProfitGoal();
             });
 
-            profitGoalInputEl.addEventListener('change', persistProfitGoal);
-            profitGoalInputEl.addEventListener('blur', persistProfitGoal);
+            profitGoalInputEl.addEventListener('change', () => {
+                persistProfitGoal();
+                refreshKpis();
+            });
+
+            profitGoalInputEl.addEventListener('blur', () => {
+                persistProfitGoal();
+                refreshKpis();
+            });
+
+            profitGoalInputEl.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                persistProfitGoal();
+                refreshKpis();
+                profitGoalInputEl.blur();
+            });
         }
 
         profitWindowButtons.forEach((button) => {
             button.addEventListener('click', () => {
                 setSelectedProfitWindow(button.dataset.profitWindow);
                 refreshKpis();
+            });
+
+            button.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    moveProfitWindowSelection(1);
+                    return;
+                }
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    moveProfitWindowSelection(-1);
+                    return;
+                }
+                if (event.key === 'Home') {
+                    event.preventDefault();
+                    setSelectedProfitWindow('week');
+                    refreshKpis();
+                    const firstButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'week');
+                    if (firstButton) {
+                        firstButton.focus();
+                    }
+                    return;
+                }
+                if (event.key === 'End') {
+                    event.preventDefault();
+                    setSelectedProfitWindow('year');
+                    refreshKpis();
+                    const lastButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'year');
+                    if (lastButton) {
+                        lastButton.focus();
+                    }
+                }
             });
         });
 
@@ -2924,7 +3271,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         const workspaceUser = getWorkspaceUserContext();
-    let pendingUploads = [];
+        let pendingUploads = [];
 
         function getManualClosedDeals() {
             return getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
@@ -2932,6 +3279,62 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         function setManualClosedDeals(items) {
             setUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key, items);
+        }
+
+        function getClosedDealDraft() {
+            const savedDraft = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, null);
+            if (!savedDraft || typeof savedDraft !== 'object' || Array.isArray(savedDraft)) {
+                return null;
+            }
+
+            return {
+                title: String(savedDraft.title || ''),
+                closeDate: String(savedDraft.closeDate || ''),
+                wholesaleFee: String(savedDraft.wholesaleFee || ''),
+                earnedAmount: String(savedDraft.earnedAmount || ''),
+                note: String(savedDraft.note || ''),
+                documents: normalizeClosedDealDocuments(savedDraft)
+            };
+        }
+
+        function saveClosedDealDraft() {
+            setUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, {
+                title: String(dealNameInput && dealNameInput.value || ''),
+                closeDate: String(dealDateInput && dealDateInput.value || ''),
+                wholesaleFee: String(dealWholesaleFeeInput && dealWholesaleFeeInput.value || ''),
+                earnedAmount: String(dealEarnedInput && dealEarnedInput.value || ''),
+                note: String(dealNoteInput && dealNoteInput.value || ''),
+                documents: normalizeClosedDealDocuments({ documents: pendingUploads })
+            });
+        }
+
+        function clearClosedDealDraft() {
+            setUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, null);
+        }
+
+        function applyClosedDealDraft() {
+            const draft = getClosedDealDraft();
+            if (!draft) {
+                return;
+            }
+
+            if (dealNameInput) {
+                dealNameInput.value = draft.title;
+            }
+            if (dealDateInput) {
+                dealDateInput.value = draft.closeDate;
+            }
+            if (dealWholesaleFeeInput) {
+                dealWholesaleFeeInput.value = formatMoneyInputValue(draft.wholesaleFee);
+            }
+            if (dealEarnedInput) {
+                dealEarnedInput.value = formatMoneyInputValue(draft.earnedAmount);
+            }
+            if (dealNoteInput) {
+                dealNoteInput.value = draft.note;
+            }
+
+            pendingUploads = normalizeClosedDealDocuments({ documents: draft.documents });
         }
 
         function formatClosedDealDate(value) {
@@ -3047,10 +3450,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 const copy = document.createElement('div');
                 const name = document.createElement('strong');
                 name.className = 'closed-deals-doc-name';
-                name.textContent = fileItem.file.name || 'Selected Document';
+                name.textContent = fileItem.fileName || fileItem.label || 'Selected Document';
                 const meta = document.createElement('span');
                 meta.className = 'closed-deals-doc-meta';
-                meta.textContent = [formatFileSize(fileItem.file.size), fileItem.file.type || 'File'].filter(Boolean).join(' • ');
+                meta.textContent = [formatFileSize(fileItem.fileSize), fileItem.fileType || 'File'].filter(Boolean).join(' • ');
                 copy.appendChild(name);
                 copy.appendChild(meta);
 
@@ -3058,8 +3461,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 removeButton.type = 'button';
                 removeButton.className = 'closed-deals-doc-remove';
                 removeButton.textContent = 'Remove';
-                removeButton.addEventListener('click', () => {
+                removeButton.addEventListener('click', async () => {
+                    try {
+                        await deleteClosedDealDocumentBlobs([fileItem]);
+                    } catch (error) {
+                        showDashboardToast('error', 'Delete Failed', 'The draft document could not be removed from browser storage.');
+                        return;
+                    }
                     pendingUploads = pendingUploads.filter((pendingItem) => pendingItem.id !== fileItem.id);
+                    saveClosedDealDraft();
                     renderPendingUploads();
                 });
 
@@ -3381,11 +3791,44 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return Array.isArray(deal.documents) && deal.documents.length > 0;
         }
 
+        function buildFiledClosedDeals() {
+            const manualFiledDeals = getManualClosedDeals().map((item) => {
+                const title = String(item.title || item.propertyAddress || '').trim() || 'Closed Deal';
+                const financials = getClosedDealFinancials(item);
+                return {
+                    id: String(item.id || `manual-${Date.now()}`),
+                    key: makePropertyStorageKey(title) || String(item.id || title),
+                    title,
+                    closeDate: item.closeDate || item.createdAt || Date.now(),
+                    note: String(item.note || '').trim(),
+                    wholesaleFee: financials.wholesaleFee,
+                    earnedAmount: financials.earnedAmount,
+                    documents: normalizeClosedDealDocuments(item),
+                    source: 'manual',
+                    manual: true,
+                    createdAt: Number(item.createdAt) || Date.now()
+                };
+            });
+
+            const supplementalDeals = buildCombinedClosedDeals().filter((deal) => {
+                if (!deal || typeof deal !== 'object') {
+                    return false;
+                }
+                if (deal.manual) {
+                    return false;
+                }
+                return Array.isArray(deal.documents) && deal.documents.length > 0;
+            });
+
+            return [...manualFiledDeals, ...supplementalDeals]
+                .sort((left, right) => (Number(right.closeDate) || Date.parse(right.closeDate) || 0) - (Number(left.closeDate) || Date.parse(left.closeDate) || 0));
+        }
+
         function renderClosedDeals() {
             const manualDeals = getManualClosedDeals();
             const autoDeals = buildAutoClosedDeals();
             const combinedDeals = buildCombinedClosedDeals();
-            const filedDeals = combinedDeals.filter((deal) => hasClosedDealArchiveContent(deal));
+            const filedDeals = buildFiledClosedDeals().filter((deal) => hasClosedDealArchiveContent(deal));
             const filedDocumentCount = filedDeals.reduce((total, deal) => total + deal.documents.length, 0);
             const combinedTotals = combinedDeals.reduce((totals, deal) => {
                 totals.wholesaleFee += parseClosedDealMoney(deal.wholesaleFee);
@@ -3417,6 +3860,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
         }
 
+        applyClosedDealDraft();
+
         if (dealDateInput && !dealDateInput.value) {
             dealDateInput.value = new Date().toISOString().slice(0, 10);
         }
@@ -3424,6 +3869,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         attachMoneyFormatter(dealWholesaleFeeInput);
         attachMoneyFormatter(dealEarnedInput);
         renderPendingUploads();
+
+        [dealNameInput, dealDateInput, dealWholesaleFeeInput, dealEarnedInput, dealNoteInput]
+            .filter(Boolean)
+            .forEach((input) => {
+                input.addEventListener('input', saveClosedDealDraft);
+                input.addEventListener('change', saveClosedDealDraft);
+                input.addEventListener('blur', saveClosedDealDraft);
+            });
 
         function openClosedDealDocumentPicker() {
             if (!dealDocumentUploadInput) {
@@ -3438,28 +3891,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             } catch (error) {
             }
 
-            const hadHiddenAttribute = dealDocumentUploadInput.hasAttribute('hidden');
-            if (hadHiddenAttribute) {
-                dealDocumentUploadInput.removeAttribute('hidden');
-                dealDocumentUploadInput.style.position = 'fixed';
-                dealDocumentUploadInput.style.left = '-9999px';
-                dealDocumentUploadInput.style.top = '0';
-                dealDocumentUploadInput.style.opacity = '0';
-                dealDocumentUploadInput.style.pointerEvents = 'none';
-            }
-
             dealDocumentUploadInput.click();
-
-            if (hadHiddenAttribute) {
-                window.setTimeout(() => {
-                    dealDocumentUploadInput.setAttribute('hidden', 'hidden');
-                    dealDocumentUploadInput.style.position = '';
-                    dealDocumentUploadInput.style.left = '';
-                    dealDocumentUploadInput.style.top = '';
-                    dealDocumentUploadInput.style.opacity = '';
-                    dealDocumentUploadInput.style.pointerEvents = '';
-                }, 0);
-            }
         }
 
         if (dealDocumentUploadButton && dealDocumentUploadInput) {
@@ -3467,19 +3899,39 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 openClosedDealDocumentPicker();
             });
 
-            dealDocumentUploadInput.addEventListener('change', () => {
+            dealDocumentUploadButton.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                    return;
+                }
+                event.preventDefault();
+                openClosedDealDocumentPicker();
+            });
+
+            dealDocumentUploadInput.addEventListener('change', async () => {
                 const files = Array.from(dealDocumentUploadInput.files || []);
                 if (!files.length) {
                     dealDocumentUploadInput.value = '';
                     return;
                 }
 
-                const nextUploads = files.map((file) => ({
-                    id: `pending-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`,
-                    file
-                }));
-                pendingUploads = [...pendingUploads, ...nextUploads];
                 dealDocumentUploadInput.value = '';
+                const nextUploads = [];
+
+                try {
+                    for (const file of files) {
+                        nextUploads.push(await createStoredClosedDealDocument(file));
+                    }
+                } catch (error) {
+                    try {
+                        await deleteClosedDealDocumentBlobs(nextUploads);
+                    } catch (cleanupError) {
+                    }
+                    showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'The browser could not store one or more closed-deal documents.');
+                    return;
+                }
+
+                pendingUploads = [...pendingUploads, ...nextUploads];
+                saveClosedDealDraft();
                 renderPendingUploads();
                 showDashboardToast('success', 'Documents Added', `${nextUploads.length} file${nextUploads.length === 1 ? '' : 's'} ready to save with this closed deal.`);
             });
@@ -3498,19 +3950,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     return;
                 }
 
-                const uploadedDocuments = [];
-                try {
-                    for (const pendingItem of pendingUploads) {
-                        uploadedDocuments.push(await createStoredClosedDealDocument(pendingItem.file));
-                    }
-                } catch (error) {
-                    try {
-                        await deleteClosedDealDocumentBlobs(uploadedDocuments);
-                    } catch (cleanupError) {
-                    }
-                    showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'The browser could not store one or more closed-deal documents.');
-                    return;
-                }
+                const uploadedDocuments = normalizeClosedDealDocuments({ documents: pendingUploads });
 
                 const items = getManualClosedDeals();
                 items.push({
@@ -3527,6 +3967,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
                 setManualClosedDeals(items);
                 pendingUploads = [];
+                clearClosedDealDraft();
                 dealNameInput.value = '';
                 if (dealWholesaleFeeInput) {
                     dealWholesaleFeeInput.value = '';
@@ -3538,7 +3979,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 dealDateInput.value = new Date().toISOString().slice(0, 10);
                 renderPendingUploads();
                 renderClosedDeals();
-                showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to your analytics closed deals widget.');
+                showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to Closed Deals and the My File archive.');
             });
         }
 
@@ -6799,120 +7240,6 @@ function initNavbarDateTime() {
         renderScripts();
     }
 
-    function initAgentNotesWidget() {
-        const notesList = document.getElementById('dashboard-agent-notes-list');
-        if (!notesList) {
-            return;
-        }
-
-        const workspaceUser = getWorkspaceUserContext();
-        const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
-        const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key)
-            .slice()
-            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-        notesList.innerHTML = '';
-        if (notes.length === 0) {
-            notesList.innerHTML = '<p class="outreach-empty">No agent notes yet.</p>';
-            return;
-        }
-
-        notes.slice(0, 12).forEach(note => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'agent-note-link';
-
-            const timestamp = Number(note.createdAt) || Date.now();
-            const timeLabel = new Date(timestamp).toLocaleString();
-            const agentName = String(note.agentName || 'Agent').trim();
-            const propertyAddress = String(note.propertyAddress || 'Property not specified').trim();
-            const propertyKey = propertyAddress.toLowerCase();
-            const noteText = String(note.note || '').trim();
-            const noteStatusValue = String(scopedStatuses[propertyKey] || note.piqAgentStatus || note.propertySnapshot?.piqAgentStatus || 'none');
-            const noteStatusLabel = formatAgentStatusLabel(noteStatusValue);
-
-            const head = document.createElement('div');
-            head.className = 'agent-note-link-head';
-
-            const agentText = document.createElement('span');
-            agentText.className = 'agent-note-link-agent';
-            agentText.textContent = agentName;
-
-            const timeText = document.createElement('span');
-            timeText.className = 'agent-note-link-time';
-            timeText.textContent = timeLabel;
-
-            const addressText = document.createElement('p');
-            addressText.className = 'agent-note-link-address';
-            addressText.textContent = propertyAddress;
-
-            const statusText = document.createElement('p');
-            statusText.className = 'agent-note-link-status';
-            statusText.textContent = `Agent Status: ${noteStatusLabel}`;
-
-            const bodyText = document.createElement('p');
-            bodyText.className = 'agent-note-link-body';
-            bodyText.textContent = noteText || 'Open property details';
-
-            head.appendChild(agentText);
-            head.appendChild(timeText);
-            button.appendChild(head);
-            button.appendChild(addressText);
-            button.appendChild(statusText);
-            button.appendChild(bodyText);
-
-            button.addEventListener('click', () => {
-                const fallbackStatus = String(scopedStatuses[propertyKey] || note.piqAgentStatus || 'none');
-                const payload = note.propertySnapshot || {
-                    address: propertyAddress,
-                    propertyImages: [],
-                    propertyDetails: '',
-                    listPrice: '$0',
-                    propensity: 0,
-                    moderatePain: '-',
-                    taxDelinquency: '-',
-                    highDebt: '-',
-                    marketInfo: '-',
-                    dom: 0,
-                    cdom: 0,
-                    askingVsArv: '0.00%',
-                    arv: '$0',
-                    compData: '-',
-                    piqAgentStatus: fallbackStatus,
-                    piq: 'About property notes will appear here.',
-                    comps: '',
-                    ia: 'IA tab content placeholder.',
-                    agentRecord: {
-                        name: agentName,
-                        title: 'Agent Record',
-                        phone: note.agentPhone || '-',
-                        email: note.agentEmail || '-',
-                        brokerage: note.agentBrokerage || '-',
-                        lastCommunicationDate: '-',
-                        lastAddressDiscussed: propertyAddress,
-                        lastCommunicatedAA: '-',
-                        activeInLast2Years: '-',
-                        averageDealsPerYear: '-',
-                        doubleEnded: '-',
-                        investorSource: '-'
-                    },
-                    offer: 'Offer tab content placeholder.'
-                };
-
-                payload.piqAgentStatus = String(fallbackStatus || payload.piqAgentStatus || 'none').trim().toLowerCase() || 'none';
-                payload.agentRecord = {
-                    ...(payload.agentRecord || {}),
-                    agentStatus: formatAgentStatusLabel(payload.piqAgentStatus)
-                };
-
-                localStorage.setItem('selectedPropertyDetail', JSON.stringify(payload));
-                window.location.href = 'property-details.html';
-            });
-
-            notesList.appendChild(button);
-        });
-    }
-
     function initNotesWidget() {
         const notesWidgetShell = document.querySelector('.notes-widget-shell');
         const notesWidgetHeaderActions = document.querySelector('.notes-widget-header-actions');
@@ -8431,6 +8758,43 @@ function initNavbarDateTime() {
             setUserScopedObject(AGENT_WORKSPACE_EMAIL_PREP_KEY, workspaceUser.key, nextDraft);
         }
 
+        function prefillRecipientForEmailPrep(detail) {
+            const payload = detail && typeof detail === 'object' ? detail : {};
+            const recipientName = cleanFieldValue(payload.recipientName || '');
+            const recipientEmail = cleanFieldValue(payload.recipientEmail || '');
+            const propertyAddress = cleanFieldValue(payload.propertyAddress || '');
+
+            if (!recipientName && !recipientEmail) {
+                showDashboardToast('error', 'Agent Missing', 'Add an agent name or email before sending it to Email Prep.');
+                return;
+            }
+
+            isSavingDraft = true;
+            recipientNameInput.value = recipientName;
+            recipientEmailInput.value = recipientEmail;
+            isSavingDraft = false;
+            lastSuggestedRecipient = {
+                name: recipientName,
+                email: recipientEmail
+            };
+            saveDraft();
+
+            const prepCard = document.querySelector('[data-widget-id="agent-email-prep"]');
+            if (prepCard) {
+                prepCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            const focusTarget = recipientEmail ? recipientEmailInput : recipientNameInput;
+            window.setTimeout(() => {
+                focusTarget.focus();
+                if (typeof focusTarget.select === 'function') {
+                    focusTarget.select();
+                }
+            }, prepCard ? 180 : 0);
+
+            showDashboardToast('success', 'Email Prep Updated', `${recipientName || recipientEmail}${propertyAddress ? ` for ${propertyAddress}` : ''} was loaded into Email Prep.`);
+        }
+
         function loadDraft() {
             const savedDraft = getUserScopedObject(AGENT_WORKSPACE_EMAIL_PREP_KEY, workspaceUser.key);
             const safeDraftSender = getSafeDraftSender(savedDraft);
@@ -8820,6 +9184,10 @@ function initNavbarDateTime() {
         window.addEventListener('dashboard-data-updated', () => {
             syncRecipientDefaults();
             void syncSenderDefaults(false, true);
+        });
+
+        window.addEventListener('agent-workspace-email-prefill', (event) => {
+            prefillRecipientForEmailPrep(event && event.detail);
         });
 
         loadDraft();
@@ -13369,6 +13737,7 @@ function initNavbarDateTime() {
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
             scopedStatuses[propertyKey] = normalizedStatus;
             setUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key, scopedStatuses);
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
         function getPropertyOfferDocuments() {
@@ -13425,13 +13794,65 @@ function initNavbarDateTime() {
         }
 
         function renderPropertyListingLink() {
+            const sourceLinksEl = document.getElementById('property-listing-source-links');
             const sourceLinkEl = document.getElementById('property-listing-source-link');
+            if (!sourceLinksEl && !sourceLinkEl) {
+                return;
+            }
+
+            const savedLinks = detailData.sourceListingLinks && typeof detailData.sourceListingLinks === 'object'
+                ? detailData.sourceListingLinks
+                : {};
+            const zillowUrl = String(savedLinks.zillow || '').trim();
+            const redfinUrl = String(savedLinks.redfin || '').trim();
+            const sourceUrl = String(detailData.sourceListingUrl || '').trim();
+            const sourceLabel = String(detailData.sourceListingLabel || '').trim();
+
+            if (sourceLinksEl) {
+                sourceLinksEl.innerHTML = '';
+                const nextLinks = [
+                    zillowUrl ? { label: 'Zillow', url: zillowUrl } : null,
+                    redfinUrl ? { label: 'Redfin', url: redfinUrl } : null,
+                    (!zillowUrl && !redfinUrl && sourceUrl)
+                        ? { label: sourceLabel || 'Listing', url: sourceUrl }
+                        : null
+                ].filter(Boolean);
+
+                if (!nextLinks.length) {
+                    const emptyState = document.createElement('span');
+                    emptyState.className = 'property-link-import-empty';
+                    emptyState.textContent = 'No links added.';
+                    sourceLinksEl.appendChild(emptyState);
+                    if (sourceLinkEl) {
+                        sourceLinkEl.textContent = 'No link added.';
+                        sourceLinkEl.removeAttribute('href');
+                        sourceLinkEl.setAttribute('aria-disabled', 'true');
+                    }
+                    return;
+                }
+
+                nextLinks.forEach((linkItem, index) => {
+                    const link = document.createElement('a');
+                    link.className = 'property-link-import-link';
+                    link.href = linkItem.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = linkItem.label;
+                    sourceLinksEl.appendChild(link);
+
+                    if (index < nextLinks.length - 1) {
+                        const separator = document.createElement('span');
+                        separator.className = 'property-link-import-empty';
+                        separator.textContent = '•';
+                        sourceLinksEl.appendChild(separator);
+                    }
+                });
+            }
+
             if (!sourceLinkEl) {
                 return;
             }
 
-            const sourceUrl = String(detailData.sourceListingUrl || '').trim();
-            const sourceLabel = String(detailData.sourceListingLabel || '').trim();
             if (!sourceUrl) {
                 sourceLinkEl.textContent = 'No link added.';
                 sourceLinkEl.removeAttribute('href');
@@ -13867,7 +14288,7 @@ function initNavbarDateTime() {
             return `${summaryType} / ${beds} / ${baths} / ${garageCount} Gar / ${yearBuilt} / ${area} / ${lotSize} / Pool: Unknown`;
         }
 
-        function applyImportedListingToPropertyDetail(listing, sourceUrl, source) {
+        function applyImportedListingToPropertyDetail(listing, sourceUrl, source, sourceLinks = null) {
             const nextAddress = String(listing.address || '').trim();
             const nextLocation = String(listing.location || '').trim();
             const nextPrice = normalizeImportedMoney(listing.price, detailData.listPrice || '$0');
@@ -13875,6 +14296,13 @@ function initNavbarDateTime() {
             const nextNotes = String(listing.notes || '').trim();
             const nextMlsId = String(listing.mlsId || '').trim();
             const nextImageUrl = String(listing.imageUrl || '').trim();
+            const normalizedSourceLinks = sourceLinks && typeof sourceLinks === 'object'
+                ? {
+                    ...(detailData.sourceListingLinks && typeof detailData.sourceListingLinks === 'object' ? detailData.sourceListingLinks : {}),
+                    ...(String(sourceLinks.zillow || '').trim() ? { zillow: String(sourceLinks.zillow || '').trim() } : {}),
+                    ...(String(sourceLinks.redfin || '').trim() ? { redfin: String(sourceLinks.redfin || '').trim() } : {})
+                }
+                : (detailData.sourceListingLinks && typeof detailData.sourceListingLinks === 'object' ? detailData.sourceListingLinks : {});
 
             if (nextAddress) {
                 detailData.address = nextAddress;
@@ -13924,64 +14352,58 @@ function initNavbarDateTime() {
 
             detailData.sourceListingUrl = sourceUrl;
             detailData.sourceListingLabel = `${source === 'redfin' ? 'Redfin' : 'Zillow'} listing`;
+            detailData.sourceListingLinks = normalizedSourceLinks;
             persistCurrentPropertyDetail();
             renderPropertyDetailSnapshot();
             renderPropertyImages();
         }
 
-        async function promptAndImportPropertyListing() {
-            const existingUrl = String(detailData.sourceListingUrl || '').trim();
-            const rawLink = window.prompt('Paste the Zillow or Redfin property link.', existingUrl);
-            if (rawLink === null) {
+        async function importPropertyListingFromAddress() {
+            const existingAddress = String(detailData.address || '').trim();
+            const rawAddress = existingAddress || window.prompt('Enter the property address to search Zillow and Redfin.', existingAddress);
+            if (rawAddress === null) {
                 return;
             }
 
-            const trimmedLink = String(rawLink || '').trim();
-            if (!trimmedLink) {
-                showDashboardToast('error', 'Link Required', 'Paste a Zillow or Redfin property link to import public details.');
-                return;
-            }
-
-            let normalizedUrl = '';
-            try {
-                normalizedUrl = new URL(trimmedLink, window.location.href).href;
-            } catch (error) {
-                showDashboardToast('error', 'Invalid Link', 'Enter a valid Zillow or Redfin property URL.');
-                return;
-            }
-
-            const source = inferListingSourceFromPropertyUrl(normalizedUrl);
-            if (!source) {
-                showDashboardToast('error', 'Unsupported Link', 'Only Zillow and Redfin property links are supported here.');
+            const trimmedAddress = String(rawAddress || '').trim();
+            if (!trimmedAddress) {
+                showDashboardToast('error', 'Address Required', 'Add the property address before searching Zillow and Redfin.');
                 return;
             }
 
             if (propertyListingImportButton) {
                 propertyListingImportButton.disabled = true;
-                propertyListingImportButton.textContent = 'Loading...';
+                propertyListingImportButton.textContent = 'Finding...';
             }
 
             try {
-                const response = await fetch('/api/import-listing-preview', {
+                const response = await fetch('/api/import-listing-by-address', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        url: normalizedUrl,
-                        source
+                        address: trimmedAddress
                     })
                 });
 
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error(payload && payload.error ? payload.error : 'FAST could not pull the listing details from that link.');
+                    throw new Error(payload && payload.error ? payload.error : 'FAST could not find matching Zillow and Redfin listings for this address.');
                 }
 
-                applyImportedListingToPropertyDetail(payload.listing || {}, normalizedUrl, source);
-                showDashboardToast('success', 'Property Updated', `${source === 'redfin' ? 'Redfin' : 'Zillow'} public listing details were added to this property.`);
+                const primaryUrl = String(payload.primaryUrl || payload.listing?.url || '').trim();
+                const primarySource = String(payload.primarySource || inferListingSourceFromPropertyUrl(primaryUrl) || payload.listing?.source || 'zillow').trim().toLowerCase() || 'zillow';
+                const savedLinks = payload.links && typeof payload.links === 'object' ? payload.links : {};
+                applyImportedListingToPropertyDetail(payload.listing || {}, primaryUrl, primarySource, savedLinks);
+
+                const missingSources = Array.isArray(payload.missingSources) ? payload.missingSources : [];
+                const missingLabel = missingSources.length
+                    ? ` ${missingSources.map((item) => item === 'redfin' ? 'Redfin' : 'Zillow').join(' and ')} link${missingSources.length === 1 ? ' was' : 's were'} not found.`
+                    : '';
+                showDashboardToast('success', 'Property Updated', `Public Zillow and Redfin listing details were imported into this property.${missingLabel}`);
             } catch (error) {
-                showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not pull the listing details from that link.');
+                showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not search Zillow and Redfin for this property address.');
             } finally {
                 if (propertyListingImportButton) {
                     propertyListingImportButton.disabled = false;
@@ -14154,7 +14576,7 @@ function initNavbarDateTime() {
 
         if (propertyListingImportButton) {
             propertyListingImportButton.addEventListener('click', () => {
-                promptAndImportPropertyListing();
+                importPropertyListingFromAddress();
             });
         }
 
@@ -18033,7 +18455,7 @@ function initNavbarDateTime() {
         initDashboardChatGptWidget();
         initDailyBibleVerseWidget();
         initPersonalOutreachWorkspace();
-        initAgentNotesWidget();
+        initOffersAcceptedWidget();
         initNotesWidget();
         initAgentWorkspaceEmailPrep();
         initAdminOnlineUsersWidget();
