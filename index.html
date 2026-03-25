@@ -208,34 +208,35 @@
             --primary-cta-end: rgba(251, 146, 60, 0.92);
         }
 
-        html[data-theme='beach'][data-authenticated='true'] body::before {
+        html[data-theme='beach'] body::before {
             content: '';
             position: fixed;
-            right: 18px;
+            top: 0;
+            left: 0;
+            right: 0;
             bottom: 0;
-            width: 420px;
-            height: 420px;
+            width: 100vw;
+            height: 100vh;
             border-radius: 0;
-            background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat center bottom;
-            background-size: 400px auto;
-            opacity: 0.14;
-            filter: drop-shadow(0 18px 34px rgba(8, 47, 73, 0.24)) saturate(0.88);
+            background: url("Themes/Wallpaper Beach Mode.jpg") no-repeat center center;
+            background-size: cover;
+            opacity: 0.74;
+            filter: saturate(1.02) contrast(1.01);
             transform: none;
         }
 
         html[data-theme='beach'] body::after {
             content: '';
             position: fixed;
-            left: 18px;
-            top: 16px;
-            width: 430px;
-            height: 260px;
+            inset: 0;
             border-radius: 0;
-            background: url("png photos/pngtree-flock-flying-birds-silhouette-vector-png-image_6611910.png") no-repeat top left;
-            background-size: contain;
-            opacity: 0.24;
-            filter: blur(0.8px) saturate(0.92) contrast(1.04);
-            transform: rotate(-2deg);
+            background:
+                linear-gradient(180deg, rgba(205, 238, 247, 0.24), rgba(205, 238, 247, 0.08) 26%, rgba(255, 228, 181, 0.14) 100%),
+                radial-gradient(60% 45% at 12% 18%, rgba(14, 165, 233, 0.16) 0%, rgba(14, 165, 233, 0) 72%),
+                radial-gradient(42% 36% at 84% 22%, rgba(251, 146, 60, 0.16) 0%, rgba(251, 146, 60, 0) 72%);
+            opacity: 1;
+            filter: none;
+            transform: none;
         }
 
         html[data-theme='swamp'] {
@@ -1838,22 +1839,14 @@
                 grid-template-columns: 1fr;
             }
 
-            html[data-theme='beach'][data-authenticated='true'] body::before {
-                right: 0;
-                bottom: 0;
-                width: 240px;
-                height: 240px;
-                background-position: center bottom;
-                background-size: 228px auto;
-                opacity: 0.12;
+            html[data-theme='beach'] body::before {
+                background-position: center center;
+                background-size: cover;
+                opacity: 0.78;
             }
 
             html[data-theme='beach'] body::after {
-                left: -14px;
-                top: 12px;
-                width: 250px;
-                height: 150px;
-                opacity: 0.18;
+                opacity: 1;
             }
 
             html[data-theme='swamp'] body::before {
