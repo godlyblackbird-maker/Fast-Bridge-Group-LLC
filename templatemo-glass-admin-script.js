@@ -3237,6 +3237,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
                     const nextItems = getManualClosedDeals().filter((item) => String(item.id || '') !== String(deal.id || ''));
                     setManualClosedDeals(nextItems);
+                    renderClosedDeals();
                 });
                 card.appendChild(removeButton);
             }
@@ -3262,11 +3263,23 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
         }
 
+        function hasClosedDealArchiveContent(deal) {
+            if (!deal || typeof deal !== 'object') {
+                return false;
+            }
+
+            if (deal.manual) {
+                return true;
+            }
+
+            return Array.isArray(deal.documents) && deal.documents.length > 0;
+        }
+
         function renderClosedDeals() {
             const manualDeals = getManualClosedDeals();
             const autoDeals = buildAutoClosedDeals();
             const combinedDeals = buildCombinedClosedDeals();
-            const filedDeals = combinedDeals.filter((deal) => Array.isArray(deal.documents) && deal.documents.length);
+            const filedDeals = combinedDeals.filter((deal) => hasClosedDealArchiveContent(deal));
             const filedDocumentCount = filedDeals.reduce((total, deal) => total + deal.documents.length, 0);
             const combinedTotals = combinedDeals.reduce((totals, deal) => {
                 totals.wholesaleFee += parseClosedDealMoney(deal.wholesaleFee);
@@ -3285,7 +3298,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             if (myFileCountEl) {
-                myFileCountEl.textContent = `${filedDeals.length} filed deal${filedDeals.length === 1 ? '' : 's'} • ${filedDocumentCount} doc${filedDocumentCount === 1 ? '' : 's'}`;
+                myFileCountEl.textContent = `${filedDeals.length} saved deal${filedDeals.length === 1 ? '' : 's'} • ${filedDocumentCount} doc${filedDocumentCount === 1 ? '' : 's'}`;
             }
 
             renderClosedDealList(listEl, combinedDeals, {
@@ -3293,7 +3306,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 allowRemove: true
             });
             renderClosedDealList(myFileListEl, filedDeals, {
-                emptyMessage: 'No closed-deal files saved yet. Attach documents when recording a close and they\'ll appear here.',
+                emptyMessage: 'No saved closed deals yet. Record a close here and its details and attachments will appear in My File.',
                 allowRemove: false
             });
         }
@@ -3380,6 +3393,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 dealNoteInput.value = '';
                 dealDateInput.value = new Date().toISOString().slice(0, 10);
                 renderPendingUploads();
+                renderClosedDeals();
                 showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to your analytics closed deals widget.');
             });
         }

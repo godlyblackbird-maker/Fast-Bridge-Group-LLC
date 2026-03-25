@@ -408,7 +408,7 @@ https://templatemo.com/tm-607-glass-admin
                                     <input id="closed-deal-earned" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Amount earned">
                                     <textarea id="closed-deal-note" class="closed-deals-input closed-deals-textarea" placeholder="Optional note about this close"></textarea>
                                 </div>
-                                <input id="closed-deal-document-upload" type="file" multiple hidden>
+                                <input id="closed-deal-document-upload" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" hidden>
                                 <div class="closed-deals-actions">
                                     <button type="button" class="card-btn" id="closed-deal-upload-btn">Attach Documents</button>
                                     <button type="button" class="card-btn active" id="closed-deal-save-btn">Save Closed Deal</button>
@@ -445,9 +445,9 @@ https://templatemo.com/tm-607-glass-admin
                     <div class="card-header analytics-my-file-header">
                         <div>
                             <h2 class="card-title">My File</h2>
-                            <p class="card-subtitle">Closed deals with saved documents you can open anytime.</p>
+                            <p class="card-subtitle">Saved closed deals and attachments for this user, all in one archive.</p>
                         </div>
-                        <span class="analytics-my-file-count" id="analytics-my-file-count">0 filed deals</span>
+                        <span class="analytics-my-file-count" id="analytics-my-file-count">0 saved deals</span>
                     </div>
                     <div class="analytics-my-file-list" id="analytics-my-file-list">
                         <p class="outreach-empty">No closed-deal files saved yet.</p>
