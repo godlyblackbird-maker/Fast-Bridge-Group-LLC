@@ -47,7 +47,9 @@
     <style>
         :root {
             color-scheme: light;
-            --submit-bg: linear-gradient(180deg, #d8f3fb 0%, #cdeef7 54%, #bee6f4 100%);
+            --submit-bg:
+                linear-gradient(180deg, rgba(205, 238, 247, 0.22), rgba(205, 238, 247, 0.08) 28%, rgba(255, 228, 181, 0.16) 100%),
+                url("Themes/Wallpaper Beach Mode.jpg") center center / cover no-repeat;
             --submit-panel: rgba(255, 255, 255, 0.58);
             --submit-border: rgba(12, 74, 110, 0.16);
             --submit-soft: rgba(255, 255, 255, 0.22);
@@ -119,6 +121,9 @@
 
         html[data-theme='beach'] {
             color-scheme: light;
+            --submit-bg:
+                linear-gradient(180deg, rgba(205, 238, 247, 0.22), rgba(205, 238, 247, 0.08) 28%, rgba(255, 228, 181, 0.16) 100%),
+                url("Themes/Wallpaper Beach Mode.jpg") center center / cover no-repeat;
         }
 
         html[data-theme='swamp'] {

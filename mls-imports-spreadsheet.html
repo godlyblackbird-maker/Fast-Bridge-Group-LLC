@@ -360,7 +360,6 @@
                                     <th>LO Phone</th>
                                     <th>Offers Email</th>
                                     <th>LA Cell</th>
-                                    <th>Import Source</th>
                                     <th>Status</th>
                                     <th>PDF File</th>
                                 </tr>
@@ -454,7 +453,6 @@
                     loPhone: '',
                     offersEmail: '',
                     laCell: '',
-                    importSource: '',
                     status: '',
                     pdfFile: ''
                 }
@@ -505,14 +503,14 @@
 
             function createRow(row) {
                 const tr = document.createElement('tr');
-                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'importSource', 'status', 'pdfFile'].forEach((key) => {
+                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
                     tr.appendChild(createCell(row && row[key] ? row[key] : ''));
                 });
                 return tr;
             }
 
             function isMeaningfulRow(row) {
-                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'importSource', 'status', 'pdfFile']
+                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile']
                     .some((key) => String(row && row[key] || '').trim().length > 0);
             }
 
@@ -526,9 +524,8 @@
                         loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
                         offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
                         laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                        importSource: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
-                        status: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
-                        pdfFile: cells[8] ? normalizeCellValue(cells[8].textContent) : ''
+                        status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                        pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
                     };
                 });
             }
@@ -649,7 +646,6 @@
                             loPhone: normalizeCellValue(row && row.loPhone),
                             offersEmail: normalizeCellValue(row && row.offersEmail),
                             laCell: normalizeCellValue(row && row.laCell),
-                            importSource: normalizeCellValue(row && row.importSource),
                             status: normalizeCellValue(row && row.status),
                             pdfFile: normalizeCellValue(row && row.pdfFile)
                         }));
@@ -667,7 +663,7 @@
                     return;
                 }
 
-                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'Import Source', 'Status', 'PDF File'];
+                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'Status', 'PDF File'];
                 const lines = [headers.join(',')];
 
                 rows.forEach((row) => {
@@ -678,7 +674,6 @@
                         row.loPhone,
                         row.offersEmail,
                         row.laCell,
-                        row.importSource,
                         row.status,
                         row.pdfFile
                     ].map(escapeCsvValue).join(','));
@@ -696,7 +691,6 @@
                     loPhone: '',
                     offersEmail: '',
                     laCell: '',
-                    importSource: '',
                     status: '',
                     pdfFile: ''
                 };
@@ -770,8 +764,7 @@
                             loPhone: normalizeCellValue(row && row.loPhone),
                             offersEmail: normalizeCellValue(row && row.offersEmail),
                             laCell: normalizeCellValue(row && row.laCell),
-                            importSource: 'PDF Upload',
-                            status: 'Extracted',
+                            status: normalizeCellValue(row && row.status),
                             pdfFile: normalizeCellValue(payload.fileName || file.name || '')
                         }))
                         .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell].some((value) => String(value || '').trim()));

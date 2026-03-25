@@ -3375,6 +3375,8 @@ body.sidebar-collapsed .main-content {
 
 [data-theme="beach"] .legal-page {
     --legal-page-bg:
+        linear-gradient(180deg, rgba(205, 238, 247, 0.16), rgba(205, 238, 247, 0.08) 26%, rgba(255, 228, 181, 0.14) 100%),
+        url("Themes/Wallpaper Beach Mode.jpg") center center / cover no-repeat,
         radial-gradient(circle at 12% 12%, rgba(14, 165, 233, 0.18), transparent 28%),
         radial-gradient(circle at 86% 16%, rgba(251, 146, 60, 0.16), transparent 24%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),

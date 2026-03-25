@@ -3642,18 +3642,45 @@ function extractPropertyAddressFromPdfText(text, lines) {
   return addressMatch ? String(addressMatch[0] || '').trim() : '';
 }
 
+function extractLaNameFromLine(line) {
+  const normalizedLine = String(line || '').trim();
+  if (!normalizedLine || /^\s*(?:\d+\.?\s*)?cola\s*:/i.test(normalizedLine)) {
+    return '';
+  }
+
+  const inlineMatch = normalizedLine.match(/^\s*(?:\d+\.?\s*)?la\s*[:#-]\s*(.+)$/i);
+  if (!inlineMatch || !inlineMatch[1]) {
+    return '';
+  }
+
+  const candidate = cleanPersonName(inlineMatch[1]);
+  return isLikelyPersonName(candidate) ? candidate : '';
+}
+
 function extractAgentNameFromPdfText(lines) {
-  const labeledValue = extractPdfFieldByLabel(
-    lines,
-    [/^agent name\b/i, /^listing agent(?: name)?\b/i, /^la name\b/i, /^list agent\b/i, /^la\b/i],
-    /^(?:agent name|listing agent(?: name)?|la name|list agent|la)\s*[:#-]?\s*(.+)$/i,
-    {
-      lookahead: 4,
-      transform: cleanPersonName,
-      validate: isLikelyPersonName
+  const normalizedLines = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+    : [];
+
+  const agentOfficeIndex = normalizedLines.findIndex((line) => /agent\s*\/\s*office|agent\s+office/i.test(line));
+  if (agentOfficeIndex >= 0) {
+    const searchEnd = Math.min(normalizedLines.length, agentOfficeIndex + 18);
+    for (let index = agentOfficeIndex; index < searchEnd; index += 1) {
+      const candidate = extractLaNameFromLine(normalizedLines[index]);
+      if (candidate) {
+        return formatPersonName(candidate);
+      }
     }
-  );
-  return formatPersonName(labeledValue);
+  }
+
+  for (const line of normalizedLines) {
+    const candidate = extractLaNameFromLine(line);
+    if (candidate) {
+      return formatPersonName(candidate);
+    }
+  }
+
+  return '';
 }
 
 function extractLaCellFromPdfText(lines) {
@@ -3695,6 +3722,67 @@ function extractOffersEmailFromPdfText(lines) {
   return extractEmailAddress(labeledValue);
 }
 
+function normalizeMlsStatusLabel(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+
+  if (normalized.includes('pending') || normalized.includes('contingent')) {
+    return 'Pending';
+  }
+  if (normalized.includes('sold') || normalized.includes('closed')) {
+    return 'Closed';
+  }
+  if (normalized.includes('hold')) {
+    return 'Hold';
+  }
+  if (normalized.includes('active')) {
+    return 'Active';
+  }
+  if (normalized.includes('coming soon')) {
+    return 'Coming Soon';
+  }
+  if (normalized.includes('off market')) {
+    return 'Off Market';
+  }
+  if (normalized.includes('cancel')) {
+    return 'Cancelled';
+  }
+  if (normalized.includes('expire')) {
+    return 'Expired';
+  }
+  if (normalized.includes('withdraw')) {
+    return 'Withdrawn';
+  }
+
+  return '';
+}
+
+function extractStatusValue(value) {
+  const normalizedStatus = normalizeMlsStatusLabel(value);
+  return normalizedStatus || '';
+}
+
+function extractMlsStatusFromPdfText(text, lines) {
+  const labeledValue = extractPdfFieldByLabel(
+    lines,
+    [/^status\b/i, /^listing status\b/i, /^mls status\b/i, /^current status\b/i],
+    /^(?:listing status|mls status|current status|status)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 3,
+      transform: extractStatusValue,
+      validate: (value) => Boolean(extractStatusValue(value))
+    }
+  );
+  if (labeledValue) {
+    return extractStatusValue(labeledValue);
+  }
+
+  const statusMatch = String(text || '').match(/\b(active|pending|contingent|closed|sold|hold|coming soon|off market|cancelled|canceled|expired|withdrawn)\b/i);
+  return statusMatch ? extractStatusValue(statusMatch[0]) : '';
+}
+
 function extractMlsImportRowFromText(text) {
   const normalizedText = normalizePdfExtractText(text);
   if (!normalizedText) {
@@ -3707,7 +3795,8 @@ function extractMlsImportRowFromText(text) {
     laName: extractAgentNameFromPdfText(lines),
     loPhone: extractLoPhoneFromPdfText(lines),
     offersEmail: extractOffersEmailFromPdfText(lines),
-    laCell: extractLaCellFromPdfText(lines)
+    laCell: extractLaCellFromPdfText(lines),
+    status: extractMlsStatusFromPdfText(normalizedText, lines)
   };
 
   const hasMeaningfulValue = Object.values(row).some((value) => String(value || '').trim());
@@ -3728,7 +3817,8 @@ function dedupeMlsImportRows(rows) {
       String(row.laName || '').trim().toLowerCase(),
       String(row.loPhone || '').trim().toLowerCase(),
       String(row.offersEmail || '').trim().toLowerCase(),
-      String(row.laCell || '').trim().toLowerCase()
+      String(row.laCell || '').trim().toLowerCase(),
+      String(row.status || '').trim().toLowerCase()
     ].join('|');
 
     if (!signature.replace(/\|/g, '')) {
@@ -3789,6 +3879,7 @@ async function extractMlsImportPdfFields(buffer) {
     loPhone: String(primaryRow.loPhone || '').trim(),
     offersEmail: String(primaryRow.offersEmail || '').trim(),
     laCell: String(primaryRow.laCell || '').trim(),
+    status: String(primaryRow.status || '').trim(),
     rows: extractedRows.length > 0 ? extractedRows : (Object.values(fallbackRow).some(Boolean) ? [fallbackRow] : [])
   };
 }
