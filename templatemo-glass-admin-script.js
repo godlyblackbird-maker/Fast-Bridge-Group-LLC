@@ -3357,6 +3357,24 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             setUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key, items);
         }
 
+        function persistManualClosedDeal(nextDeal) {
+            const normalizedDeal = nextDeal && typeof nextDeal === 'object' ? { ...nextDeal } : null;
+            if (!normalizedDeal || !normalizedDeal.id) {
+                throw new Error('The closed deal record could not be prepared for saving.');
+            }
+
+            const nextItems = [...getManualClosedDeals(), normalizedDeal];
+            setManualClosedDeals(nextItems);
+
+            const storedItems = getManualClosedDeals();
+            const savedItem = storedItems.find((item) => String(item && item.id || '') === String(normalizedDeal.id));
+            if (!savedItem) {
+                throw new Error('The closed deal did not finish saving to this browser.');
+            }
+
+            return storedItems;
+        }
+
         function getClosedDealDraft() {
             const savedDraft = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, null);
             if (!savedDraft || typeof savedDraft !== 'object' || Array.isArray(savedDraft)) {
@@ -4035,8 +4053,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 try {
                     const uploadedDocuments = normalizeClosedDealDocuments({ documents: pendingUploads });
 
-                    const items = getManualClosedDeals();
-                    items.push({
+                    const closedDealRecord = {
                         id: `closed-${Date.now()}-${Math.round(Math.random() * 10000)}`,
                         title,
                         propertyAddress: title,
@@ -4046,9 +4063,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                         documents: uploadedDocuments,
                         note,
                         createdAt: Date.now()
-                    });
+                    };
 
-                    setManualClosedDeals(items);
+                    persistManualClosedDeal(closedDealRecord);
                     pendingUploads = [];
                     clearClosedDealDraft();
                     dealNameInput.value = '';
@@ -4065,6 +4082,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     renderPendingUploads();
                     renderClosedDeals();
                     showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to Closed Deals and the My File archive.');
+                } catch (error) {
+                    console.error('Failed to save closed deal:', error);
+                    showDashboardToast('error', 'Save Failed', error && error.message ? error.message : 'The closed deal could not be saved.');
                 } finally {
                     saveButton.disabled = false;
                 }
@@ -18700,50 +18720,66 @@ function initNavbarDateTime() {
     // ============================================
     // Initialize All Functions
     // ============================================
+    function safelyRunInitializer(name, initializer) {
+        if (typeof initializer !== 'function') {
+            return;
+        }
+
+        try {
+            initializer();
+        } catch (error) {
+            console.error(`Initializer failed: ${name}`, error);
+        }
+    }
+
     function init() {
-        initSiteLegalFooter();
-        initLegalPageAccessLinks();
-        initAccentPreference();
-        initMyAgentsAccessRules();
-        initThemeToggle();
-        initBuildVersionLabel();
-        initNavbarDateTime();
-        initNavbarSearch();
-        initNotificationCenter();
-        initTiltEffect();
-        initCounters();
-        initMobileMenu();
-        initSidebarCollapse();
-        initMenuSoundEffects();
-        initSoundSettingsTab();
-        initFormValidation();
-        initPasswordToggle();
-        initPageTransitions();
-        initSettingsTabs();
-        initAnalyticsNavBadge();
-        initLiveKpiStats();
-        initClosedDealsWidget();
-        initWidgetControls();
-        initInteractiveCalendar();
-        initDashboardChatGptWidget();
-        initDailyBibleVerseWidget();
-        initPersonalOutreachWorkspace();
-        initOffersAcceptedWidget();
-        initNotesWidget();
-        initAgentWorkspaceEmailPrep();
-        initAdminOnlineUsersWidget();
-        initAdminAccessRequests();
-        initAdminPropertySubmissions();
-        initAdminSmtpApprovals();
-        initAdminUserManager();
-        initTodoGoalsWidget();
-        initPlannerNotifications();
-        initContractsWidget();
-        initMlsDealsBoard();
-        initMlsSearchHub();
-        initFlyerMaker();
-        initDealsPage();
-        initPropertyDetailPage();
+        [
+            ['initSiteLegalFooter', initSiteLegalFooter],
+            ['initLegalPageAccessLinks', initLegalPageAccessLinks],
+            ['initAccentPreference', initAccentPreference],
+            ['initMyAgentsAccessRules', initMyAgentsAccessRules],
+            ['initThemeToggle', initThemeToggle],
+            ['initBuildVersionLabel', initBuildVersionLabel],
+            ['initNavbarDateTime', initNavbarDateTime],
+            ['initNavbarSearch', initNavbarSearch],
+            ['initNotificationCenter', initNotificationCenter],
+            ['initTiltEffect', initTiltEffect],
+            ['initCounters', initCounters],
+            ['initMobileMenu', initMobileMenu],
+            ['initSidebarCollapse', initSidebarCollapse],
+            ['initMenuSoundEffects', initMenuSoundEffects],
+            ['initSoundSettingsTab', initSoundSettingsTab],
+            ['initFormValidation', initFormValidation],
+            ['initPasswordToggle', initPasswordToggle],
+            ['initPageTransitions', initPageTransitions],
+            ['initSettingsTabs', initSettingsTabs],
+            ['initAnalyticsNavBadge', initAnalyticsNavBadge],
+            ['initLiveKpiStats', initLiveKpiStats],
+            ['initClosedDealsWidget', initClosedDealsWidget],
+            ['initWidgetControls', initWidgetControls],
+            ['initInteractiveCalendar', initInteractiveCalendar],
+            ['initDashboardChatGptWidget', initDashboardChatGptWidget],
+            ['initDailyBibleVerseWidget', initDailyBibleVerseWidget],
+            ['initPersonalOutreachWorkspace', initPersonalOutreachWorkspace],
+            ['initOffersAcceptedWidget', initOffersAcceptedWidget],
+            ['initNotesWidget', initNotesWidget],
+            ['initAgentWorkspaceEmailPrep', initAgentWorkspaceEmailPrep],
+            ['initAdminOnlineUsersWidget', initAdminOnlineUsersWidget],
+            ['initAdminAccessRequests', initAdminAccessRequests],
+            ['initAdminPropertySubmissions', initAdminPropertySubmissions],
+            ['initAdminSmtpApprovals', initAdminSmtpApprovals],
+            ['initAdminUserManager', initAdminUserManager],
+            ['initTodoGoalsWidget', initTodoGoalsWidget],
+            ['initPlannerNotifications', initPlannerNotifications],
+            ['initContractsWidget', initContractsWidget],
+            ['initMlsDealsBoard', initMlsDealsBoard],
+            ['initMlsSearchHub', initMlsSearchHub],
+            ['initFlyerMaker', initFlyerMaker],
+            ['initDealsPage', initDealsPage],
+            ['initPropertyDetailPage', initPropertyDetailPage]
+        ].forEach(([name, initializer]) => {
+            safelyRunInitializer(name, initializer);
+        });
     }
 
     if (document.readyState === 'loading') {
