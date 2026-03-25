@@ -3803,6 +3803,148 @@ function extractMlsImportRowFromText(text) {
   return hasMeaningfulValue ? row : null;
 }
 
+function isLikelyPropertyAddressLine(line) {
+  const normalizedLine = String(line || '').trim();
+  if (!normalizedLine) {
+    return false;
+  }
+
+  return /^\d{2,6}\s+[A-Za-z0-9.'#&\-/ ]+\b(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Circle|Cir|Way|Place|Pl|Terrace|Ter|Trail|Trl|Parkway|Pkwy|Highway|Hwy)\b(?:[^\n]*?,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?$/i.test(normalizedLine);
+}
+
+function isLikelyMlsListingFooterLine(line) {
+  const normalizedLine = String(line || '').trim();
+  if (!normalizedLine) {
+    return false;
+  }
+
+  return /\bprinted by\b/i.test(normalizedLine)
+    || (/\bagent full\b/i.test(normalizedLine) && /\blisting id\b/i.test(normalizedLine));
+}
+
+function splitMlsImportTextIntoBlocks(text) {
+  const lines = normalizePdfExtractText(text)
+    .split(/\n+/)
+    .map((line) => String(line || '').trim())
+    .filter(Boolean);
+  const blocks = [];
+  let currentBlock = [];
+  let currentBlockHasAddress = false;
+
+  const flushBlock = () => {
+    if (!currentBlock.length) {
+      return;
+    }
+    const blockText = normalizePdfExtractText(currentBlock.join('\n'));
+    if (blockText) {
+      blocks.push(blockText);
+    }
+    currentBlock = [];
+    currentBlockHasAddress = false;
+  };
+
+  lines.forEach((line) => {
+    const startsNewBlock = isLikelyPropertyAddressLine(line);
+
+    if (startsNewBlock && currentBlockHasAddress) {
+      flushBlock();
+    }
+
+    currentBlock.push(line);
+    if (startsNewBlock) {
+      currentBlockHasAddress = true;
+    }
+
+    if (currentBlockHasAddress && isLikelyMlsListingFooterLine(line)) {
+      flushBlock();
+    }
+  });
+
+  flushBlock();
+  return blocks;
+}
+
+function normalizeMlsImportRow(row) {
+  const source = row && typeof row === 'object' ? row : {};
+  return {
+    propertyAddress: String(source.propertyAddress || '').trim(),
+    laName: String(source.laName || '').trim(),
+    loPhone: String(source.loPhone || '').trim(),
+    offersEmail: String(source.offersEmail || '').trim(),
+    laCell: String(source.laCell || '').trim(),
+    status: String(source.status || '').trim()
+  };
+}
+
+function mergeMlsImportRowValues(previousValue, nextValue) {
+  const previous = String(previousValue || '').trim();
+  const next = String(nextValue || '').trim();
+  if (!previous) {
+    return next;
+  }
+  if (!next) {
+    return previous;
+  }
+  return previous;
+}
+
+function shouldMergeMlsImportRows(previousRow, nextRow) {
+  if (!previousRow || !nextRow) {
+    return false;
+  }
+
+  const previousAddress = String(previousRow.propertyAddress || '').trim().toLowerCase();
+  const nextAddress = String(nextRow.propertyAddress || '').trim().toLowerCase();
+
+  if (previousAddress && nextAddress && previousAddress === nextAddress) {
+    return true;
+  }
+
+  if (previousAddress && !nextAddress) {
+    const previousMissingContact = !previousRow.laName || !previousRow.loPhone || !previousRow.offersEmail || !previousRow.laCell || !previousRow.status;
+    const nextHasSupplementalValue = Boolean(nextRow.laName || nextRow.loPhone || nextRow.offersEmail || nextRow.laCell || nextRow.status);
+    return previousMissingContact && nextHasSupplementalValue;
+  }
+
+  if (!previousAddress && nextAddress) {
+    const previousHasSupplementalValue = Boolean(previousRow.laName || previousRow.loPhone || previousRow.offersEmail || previousRow.laCell || previousRow.status);
+    return previousHasSupplementalValue;
+  }
+
+  return false;
+}
+
+function mergeMlsImportRows(rows) {
+  const mergedRows = [];
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const normalizedRow = normalizeMlsImportRow(row);
+    const hasValue = Object.values(normalizedRow).some(Boolean);
+    if (!hasValue) {
+      return;
+    }
+
+    const previousRow = mergedRows[mergedRows.length - 1] || null;
+    if (!shouldMergeMlsImportRows(previousRow, normalizedRow)) {
+      mergedRows.push(normalizedRow);
+      return;
+    }
+
+    const mergedRow = {
+      propertyAddress: mergeMlsImportRowValues(previousRow.propertyAddress, normalizedRow.propertyAddress),
+      laName: mergeMlsImportRowValues(previousRow.laName, normalizedRow.laName),
+      loPhone: mergeMlsImportRowValues(previousRow.loPhone, normalizedRow.loPhone),
+      offersEmail: mergeMlsImportRowValues(previousRow.offersEmail, normalizedRow.offersEmail),
+      laCell: mergeMlsImportRowValues(previousRow.laCell, normalizedRow.laCell),
+      status: String(normalizedRow.status || previousRow.status || '').trim()
+    };
+
+    mergedRows[mergedRows.length - 1] = mergedRow;
+  });
+
+  return mergedRows;
+}
+
 function dedupeMlsImportRows(rows) {
   const seen = new Set();
   const deduped = [];
@@ -3840,7 +3982,6 @@ async function extractMlsImportPdfFields(buffer) {
   const parser = new PDFParse({ data: buffer });
   let normalizedText = '';
   let pageCount = 0;
-  let pageTexts = [];
 
   try {
     const info = await parser.getInfo();
@@ -3848,11 +3989,6 @@ async function extractMlsImportPdfFields(buffer) {
     const parsed = await parser.getText();
     const fullTextResult = buildFullPdfText(parsed);
     normalizedText = fullTextResult.text;
-    pageTexts = Array.isArray(parsed && parsed.pages)
-      ? parsed.pages
-          .map((page) => normalizePdfExtractText(page && typeof page === 'object' ? page.text : ''))
-          .filter(Boolean)
-      : [];
     if (!pageCount && fullTextResult.parsedPageCount > 0) {
       pageCount = fullTextResult.parsedPageCount;
     }
@@ -3864,10 +4000,13 @@ async function extractMlsImportPdfFields(buffer) {
     throw new Error('The PDF did not contain readable text.');
   }
 
+  const blockTexts = splitMlsImportTextIntoBlocks(normalizedText);
   const extractedRows = dedupeMlsImportRows(
-    (pageTexts.length > 0 ? pageTexts : [normalizedText])
-      .map((pageText) => extractMlsImportRowFromText(pageText))
-      .filter(Boolean)
+    mergeMlsImportRows(
+      (blockTexts.length > 0 ? blockTexts : [normalizedText])
+        .map((blockText) => extractMlsImportRowFromText(blockText))
+        .filter(Boolean)
+    )
   );
   const fallbackRow = extractMlsImportRowFromText(normalizedText) || {};
   const primaryRow = extractedRows[0] || fallbackRow;
