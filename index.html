@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <script>
         (function () {
             try {
@@ -659,6 +660,44 @@
             pointer-events: none;
         }
 
+        html[data-theme] {
+            --bg: var(--bg-dark);
+            --panel: var(--glass-bg);
+            --border: var(--glass-border);
+            --text: var(--text-primary);
+            --muted: var(--text-secondary);
+            --accent: var(--emerald);
+            --accent-soft: var(--emerald-light);
+            --sand: var(--gold);
+            --shadow: 0 30px 80px var(--glass-shadow);
+            --surface-top: rgba(255, 255, 255, 0.12);
+            --surface-bottom: rgba(255, 255, 255, 0.04);
+            --hero-orb: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.22), transparent 70%);
+            --body-glow-a: transparent;
+            --body-glow-b: transparent;
+            --body-glow-c: transparent;
+            --body-glow-d: transparent;
+            --body-glow-e: transparent;
+            --orb-a: transparent;
+            --orb-b: transparent;
+            --login-border: rgba(var(--accent-rgb), 0.28);
+            --login-shadow: 0 16px 34px rgba(var(--accent-rgb), 0.18);
+            --login-hover-border: rgba(var(--accent-light-rgb), 0.46);
+            --login-hover-shadow: 0 20px 38px rgba(var(--accent-rgb), 0.24);
+            --eyebrow-border: rgba(var(--accent-rgb), 0.18);
+            --eyebrow-bg: rgba(255, 255, 255, 0.08);
+            --secondary-border: rgba(var(--accent-rgb), 0.18);
+            --secondary-bg: rgba(255, 255, 255, 0.08);
+            --metric-bg: rgba(255, 255, 255, 0.1);
+            --metric-border: rgba(var(--accent-rgb), 0.14);
+            --ops-bg: rgba(255, 255, 255, 0.08);
+            --ops-border: rgba(var(--accent-rgb), 0.12);
+            --footer-text: var(--text-muted);
+            --brand-shadow: var(--glass-shadow);
+            --primary-cta-start: rgba(var(--accent-rgb), 0.96);
+            --primary-cta-end: rgba(var(--accent-light-rgb), 0.88);
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -672,49 +711,25 @@
             min-height: 100vh;
             font-family: 'Outfit', sans-serif;
             color: var(--text);
-            background:
-                radial-gradient(circle at top left, var(--body-glow-a), transparent 28%),
-                radial-gradient(circle at 85% 18%, var(--body-glow-b), transparent 24%),
-                linear-gradient(180deg, var(--body-glow-c) 0%, var(--body-glow-d) 48%, var(--body-glow-e) 100%);
+            background: transparent;
+            background-color: var(--bg-dark);
             overflow-x: hidden;
         }
 
         html[data-theme='sunset'] body {
-            background:
-                linear-gradient(180deg, rgba(56, 18, 54, 0.52), rgba(14, 10, 22, 0.18));
-            background-color: #251422;
+            background: transparent;
+            background-color: var(--bg-dark);
         }
 
         html[data-theme='dark'] body {
-            background: linear-gradient(180deg, #000000 0%, #020202 48%, #060606 100%);
-            background-color: #000000;
+            background: transparent;
+            background-color: var(--bg-dark);
         }
 
         body::before,
         body::after {
-            content: '';
-            position: fixed;
-            pointer-events: none;
-            z-index: 0;
-            border-radius: 999px;
-            filter: blur(24px);
-            opacity: 0.65;
-        }
-
-        body::before {
-            top: 100px;
-            right: -120px;
-            width: 320px;
-            height: 320px;
-            background: var(--orb-a);
-        }
-
-        body::after {
-            left: -90px;
-            bottom: 40px;
-            width: 260px;
-            height: 260px;
-            background: var(--orb-b);
+            content: none !important;
+            display: none !important;
         }
 
         .site-shell {
@@ -1882,6 +1897,10 @@
     </style>
 </head>
 <body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
     <div class="site-shell">
         <header class="topbar">
             <a class="brand" href="index.html" aria-label="FAST BRIDGE GROUP home page">

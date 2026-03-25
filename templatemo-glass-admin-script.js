@@ -1286,8 +1286,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return;
         }
 
+        const detailPropertyKey = makePropertyStorageKey(detail.address || detail.propertyAddress);
         const normalizedKeys = Array.from(new Set(
-            (Array.isArray(propertyKeys) ? propertyKeys : [propertyKeys])
+            [...(Array.isArray(propertyKeys) ? propertyKeys : [propertyKeys]), detailPropertyKey]
                 .map(key => makePropertyStorageKey(key))
                 .filter(Boolean)
         ));
@@ -1319,9 +1320,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const compactLocation = String(detail.areaLabel || detail.city || detail.county || detail.marketInfo || '').trim() || '-';
         const compactImageUrl = String((Array.isArray(detail.propertyImages) ? detail.propertyImages[0] : '') || detail.imageUrl || '').trim();
         const compactSnapshot = { ...detail };
-        let clickedItemsChanged = false;
+        const matchingItems = [];
+        const unmatchedItems = [];
 
-        const nextClickedItems = clickedItems.map((item) => {
+        clickedItems.forEach((item) => {
             const itemSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
                 ? item.propertySnapshot
                 : null;
@@ -1332,28 +1334,55 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             );
 
             if (!normalizedKeys.includes(itemPropertyKey)) {
-                return item;
+                unmatchedItems.push(item);
+                return;
             }
 
-            clickedItemsChanged = true;
-            return {
-                ...item,
-                address: String(detail.address || item.address || itemSnapshot?.address || 'Property').trim() || 'Property',
-                location: compactLocation,
-                price: String(detail.listPrice || item.price || '$0').trim() || '$0',
-                beds: compactBeds,
-                baths: compactBaths,
-                area: compactArea,
-                status: compactStatus || item.status || 'active',
-                imageUrl: compactImageUrl || item.imageUrl || '',
-                propertySnapshot: compactSnapshot
-            };
+            matchingItems.push(item);
         });
 
-        if (clickedItemsChanged) {
-            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
-            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        if (matchingItems.length === 0) {
+            return;
         }
+
+        const preferredMatch = matchingItems.find((item) => {
+            const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                ? item.propertySnapshot
+                : null;
+            const itemPropertyKey = makePropertyStorageKey(
+                snapshot?.address
+                || item?.address
+                || item?.propertyAddress
+            );
+            return itemPropertyKey === detailPropertyKey;
+        }) || matchingItems[0];
+
+        const mergedClickedAt = matchingItems.reduce((latest, item) => {
+            const nextValue = Number(item?.clickedAt) || 0;
+            return Math.max(latest, nextValue);
+        }, 0);
+
+        const mergedItem = {
+            ...preferredMatch,
+            id: String(preferredMatch?.id || `manual:${detailPropertyKey || Date.now()}`),
+            address: String(detail.address || preferredMatch?.address || preferredMatch?.propertySnapshot?.address || 'Property').trim() || 'Property',
+            location: compactLocation,
+            price: String(detail.listPrice || preferredMatch?.price || '$0').trim() || '$0',
+            beds: compactBeds,
+            baths: compactBaths,
+            area: compactArea,
+            status: compactStatus || preferredMatch?.status || 'active',
+            imageUrl: compactImageUrl || preferredMatch?.imageUrl || '',
+            clickedAt: mergedClickedAt || Date.now(),
+            propertySnapshot: compactSnapshot
+        };
+
+        const nextClickedItems = [mergedItem, ...unmatchedItems]
+            .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
+            .slice(0, 120);
+
+        setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
+        window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
     function getPersistedSelectedPropertyDetail() {
