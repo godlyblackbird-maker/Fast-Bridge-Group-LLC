@@ -211,6 +211,7 @@
             color: var(--text-primary);
             min-height: 42px;
             vertical-align: top;
+            white-space: nowrap;
         }
 
         .buyers-sheet-table tbody tr:nth-child(even) td {
@@ -488,11 +489,15 @@
                 });
             }
 
+            function normalizeCellValue(value) {
+                return String(value || '').replace(/\s+/g, ' ').trim();
+            }
+
             function createCell(value) {
                 const td = document.createElement('td');
                 td.contentEditable = 'true';
                 td.spellcheck = false;
-                td.textContent = String(value || '');
+                td.textContent = normalizeCellValue(value);
                 td.addEventListener('input', saveRows);
                 td.addEventListener('blur', saveRows);
                 return td;
@@ -515,15 +520,15 @@
                 return Array.from(tableBody.querySelectorAll('tr')).map((tr) => {
                     const cells = tr.querySelectorAll('td');
                     return {
-                        importDate: cells[0] ? cells[0].textContent.trim() : '',
-                        propertyAddress: cells[1] ? cells[1].textContent.trim() : '',
-                        laName: cells[2] ? cells[2].textContent.trim() : '',
-                        loPhone: cells[3] ? cells[3].textContent.trim() : '',
-                        offersEmail: cells[4] ? cells[4].textContent.trim() : '',
-                        laCell: cells[5] ? cells[5].textContent.trim() : '',
-                        importSource: cells[6] ? cells[6].textContent.trim() : '',
-                        status: cells[7] ? cells[7].textContent.trim() : '',
-                        pdfFile: cells[8] ? cells[8].textContent.trim() : ''
+                        importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                        propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                        laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                        loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                        offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                        laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                        importSource: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                        status: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
+                        pdfFile: cells[8] ? normalizeCellValue(cells[8].textContent) : ''
                     };
                 });
             }
@@ -637,7 +642,17 @@
                 try {
                     const stored = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
                     if (Array.isArray(stored) && stored.length > 0) {
-                        return stored;
+                        return stored.map((row) => ({
+                            importDate: normalizeCellValue(row && row.importDate),
+                            propertyAddress: normalizeCellValue(row && row.propertyAddress),
+                            laName: normalizeCellValue(row && row.laName),
+                            loPhone: normalizeCellValue(row && row.loPhone),
+                            offersEmail: normalizeCellValue(row && row.offersEmail),
+                            laCell: normalizeCellValue(row && row.laCell),
+                            importSource: normalizeCellValue(row && row.importSource),
+                            status: normalizeCellValue(row && row.status),
+                            pdfFile: normalizeCellValue(row && row.pdfFile)
+                        }));
                     }
                 } catch (error) {
                     // Ignore invalid stored values and fall back to defaults.
@@ -750,14 +765,14 @@
                     const normalizedRows = extractedRows
                         .map((row) => ({
                             importDate: new Date().toISOString().slice(0, 10),
-                            propertyAddress: String(row && row.propertyAddress || '').trim(),
-                            laName: String(row && row.laName || '').trim(),
-                            loPhone: String(row && row.loPhone || '').trim(),
-                            offersEmail: String(row && row.offersEmail || '').trim(),
-                            laCell: String(row && row.laCell || '').trim(),
+                            propertyAddress: normalizeCellValue(row && row.propertyAddress),
+                            laName: normalizeCellValue(row && row.laName),
+                            loPhone: normalizeCellValue(row && row.loPhone),
+                            offersEmail: normalizeCellValue(row && row.offersEmail),
+                            laCell: normalizeCellValue(row && row.laCell),
                             importSource: 'PDF Upload',
                             status: 'Extracted',
-                            pdfFile: String(payload.fileName || file.name || '').trim()
+                            pdfFile: normalizeCellValue(payload.fileName || file.name || '')
                         }))
                         .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell].some((value) => String(value || '').trim()));
 

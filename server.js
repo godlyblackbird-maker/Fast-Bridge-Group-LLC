@@ -3566,6 +3566,34 @@ function cleanPersonName(value) {
     .trim();
 }
 
+function formatPersonName(value) {
+  const cleaned = cleanPersonName(value).replace(/\s+/g, ' ').trim();
+  if (!cleaned) {
+    return '';
+  }
+
+  return cleaned
+    .split(' ')
+    .map((part) => {
+      if (!part) {
+        return '';
+      }
+
+      if (/^(jr|sr)\.?$/i.test(part)) {
+        return `${part.charAt(0).toUpperCase()}${part.charAt(1).toLowerCase()}.`;
+      }
+
+      if (/^(ii|iii|iv|v|vi|vii|viii|ix|x)$/i.test(part)) {
+        return part.toUpperCase();
+      }
+
+      return part
+        .toLowerCase()
+        .replace(/(^|[-'])[a-z]/g, (match) => match.toUpperCase());
+    })
+    .join(' ');
+}
+
 function isNoisePdfFieldValue(value) {
   const normalized = String(value || '').trim();
   if (!normalized) {
@@ -3617,15 +3645,15 @@ function extractPropertyAddressFromPdfText(text, lines) {
 function extractAgentNameFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^agent name\b/i, /^listing agent(?: name)?\b/i, /^la name\b/i, /^list agent\b/i],
-    /^(?:agent name|listing agent(?: name)?|la name|list agent)\s*[:#-]?\s*(.+)$/i,
+    [/^agent name\b/i, /^listing agent(?: name)?\b/i, /^la name\b/i, /^list agent\b/i, /^la\b/i],
+    /^(?:agent name|listing agent(?: name)?|la name|list agent|la)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       transform: cleanPersonName,
       validate: isLikelyPersonName
     }
   );
-  return cleanPersonName(labeledValue);
+  return formatPersonName(labeledValue);
 }
 
 function extractLaCellFromPdfText(lines) {
