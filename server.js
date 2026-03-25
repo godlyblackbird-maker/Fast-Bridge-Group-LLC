@@ -3628,6 +3628,51 @@ function isLikelyPersonName(value) {
   return true;
 }
 
+function normalizePdfPropertyAddressValue(value) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s+/g, ', ')
+    .trim();
+}
+
+function extractPropertyAddressCandidateFromLine(line) {
+  const normalizedLine = normalizePdfPropertyAddressValue(
+    String(line || '')
+      .replace(/^(?:property address|address|subject property)\s*[:#-]?\s*/i, '')
+      .replace(/\s+listing\b.*$/i, '')
+  );
+
+  if (!normalizedLine || !/^\d{2,6}\s+/.test(normalizedLine)) {
+    return '';
+  }
+
+  if (extractPhoneNumber(normalizedLine) || extractEmailAddress(normalizedLine)) {
+    return '';
+  }
+
+  if (/\b(?:listing id|agent full|printed by|residential|status|public remarks|private remarks|submit offers|showingtime)\b/i.test(normalizedLine)) {
+    return '';
+  }
+
+  const addressPatterns = [
+    /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10},\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)$/i,
+    /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10},\s*[A-Za-z .'-]+\s+\d{5}(?:-\d{4})?)$/i,
+    /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10},\s*[A-Za-z .'-]+(?:,\s*[A-Z]{2})?)$/i,
+    /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10})$/i
+  ];
+
+  for (const pattern of addressPatterns) {
+    const match = normalizedLine.match(pattern);
+    if (match && match[1]) {
+      return normalizePdfPropertyAddressValue(match[1]);
+    }
+  }
+
+  return '';
+}
+
 function extractPropertyAddressFromPdfText(text, lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
@@ -3635,11 +3680,24 @@ function extractPropertyAddressFromPdfText(text, lines) {
     /^(?:property address|address|subject property)\s*[:#-]?\s*(.+)$/i
   );
   if (labeledValue) {
-    return labeledValue;
+    const labeledAddress = extractPropertyAddressCandidateFromLine(labeledValue);
+    if (labeledAddress) {
+      return labeledAddress;
+    }
   }
 
-  const addressMatch = String(text || '').match(/\b\d{2,6}\s+[A-Za-z0-9.'#\- ]+\b(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Circle|Cir|Way|Place|Pl|Terrace|Ter|Trail|Trl|Parkway|Pkwy|Highway|Hwy)\b(?:[^\n]*?,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?/i);
-  return addressMatch ? String(addressMatch[0] || '').trim() : '';
+  const normalizedLines = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+    : [];
+
+  for (const line of normalizedLines) {
+    const candidate = extractPropertyAddressCandidateFromLine(line);
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return '';
 }
 
 function extractLaNameFromLine(line) {
@@ -3723,37 +3781,45 @@ function extractOffersEmailFromPdfText(lines) {
 }
 
 function normalizeMlsStatusLabel(value) {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
   if (!normalized) {
     return '';
   }
 
-  if (normalized.includes('pending') || normalized.includes('contingent')) {
-    return 'Pending';
+  const exactPatterns = [
+    { pattern: /active\s+under\s+contract|under\s+contract/i, value: 'Active Under Contract' },
+    { pattern: /active\s+option\s+contract/i, value: 'Active Option Contract' },
+    { pattern: /pending\s+sale/i, value: 'Pending Sale' },
+    { pattern: /coming\s+soon/i, value: 'Coming Soon' },
+    { pattern: /off\s+market/i, value: 'Off Market' },
+    { pattern: /backup/i, value: 'Backup' },
+    { pattern: /withdrawn/i, value: 'Withdrawn' },
+    { pattern: /cancelled|canceled/i, value: 'Cancelled' },
+    { pattern: /expired/i, value: 'Expired' },
+    { pattern: /sold|closed/i, value: 'Closed' },
+    { pattern: /pending|contingent/i, value: 'Pending' },
+    { pattern: /hold/i, value: 'Hold' },
+    { pattern: /active/i, value: 'Active' }
+  ];
+
+  for (const { pattern, value: canonicalValue } of exactPatterns) {
+    if (pattern.test(normalized)) {
+      return canonicalValue;
+    }
   }
-  if (normalized.includes('sold') || normalized.includes('closed')) {
-    return 'Closed';
-  }
-  if (normalized.includes('hold')) {
-    return 'Hold';
-  }
-  if (normalized.includes('active')) {
-    return 'Active';
-  }
-  if (normalized.includes('coming soon')) {
-    return 'Coming Soon';
-  }
-  if (normalized.includes('off market')) {
-    return 'Off Market';
-  }
-  if (normalized.includes('cancel')) {
-    return 'Cancelled';
-  }
-  if (normalized.includes('expire')) {
-    return 'Expired';
-  }
-  if (normalized.includes('withdraw')) {
-    return 'Withdrawn';
+
+  const cleanedStatus = normalized
+    .replace(/^(?:status|listing status|mls status|current status)\s*[:#-]?\s*/i, '')
+    .replace(/\b(?:mls|listing)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (/^[a-z][a-z /-]{2,40}$/i.test(cleanedStatus)) {
+    return cleanedStatus.replace(/\b([a-z])/g, (match) => match.toUpperCase());
   }
 
   return '';
@@ -3765,8 +3831,11 @@ function extractStatusValue(value) {
 }
 
 function extractMlsStatusFromPdfText(text, lines) {
+  const normalizedLines = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+    : [];
   const labeledValue = extractPdfFieldByLabel(
-    lines,
+    normalizedLines,
     [/^status\b/i, /^listing status\b/i, /^mls status\b/i, /^current status\b/i],
     /^(?:listing status|mls status|current status|status)\s*[:#-]?\s*(.+)$/i,
     {
@@ -3779,8 +3848,14 @@ function extractMlsStatusFromPdfText(text, lines) {
     return extractStatusValue(labeledValue);
   }
 
-  const statusMatch = String(text || '').match(/\b(active|pending|contingent|closed|sold|hold|coming soon|off market|cancelled|canceled|expired|withdrawn)\b/i);
-  return statusMatch ? extractStatusValue(statusMatch[0]) : '';
+  for (const line of normalizedLines) {
+    const lineStatus = extractStatusValue(line);
+    if (lineStatus && /^(?:active|pending|contingent|closed|sold|hold|coming soon|off market|cancelled|canceled|expired|withdrawn|under contract|backup)\b/i.test(line)) {
+      return lineStatus;
+    }
+  }
+
+  return '';
 }
 
 function extractMlsImportRowFromText(text) {
@@ -3804,12 +3879,7 @@ function extractMlsImportRowFromText(text) {
 }
 
 function isLikelyPropertyAddressLine(line) {
-  const normalizedLine = String(line || '').trim();
-  if (!normalizedLine) {
-    return false;
-  }
-
-  return /^\d{2,6}\s+[A-Za-z0-9.'#&\-/ ]+\b(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Circle|Cir|Way|Place|Pl|Terrace|Ter|Trail|Trl|Parkway|Pkwy|Highway|Hwy)\b(?:[^\n]*?,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?$/i.test(normalizedLine);
+  return Boolean(extractPropertyAddressCandidateFromLine(line));
 }
 
 function isLikelyMlsListingFooterLine(line) {

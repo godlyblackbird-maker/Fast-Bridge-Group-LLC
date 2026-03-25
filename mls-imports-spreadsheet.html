@@ -229,6 +229,40 @@
             background: var(--buyers-focus-bg);
         }
 
+        .buyers-sheet-copy-cell {
+            min-width: 72px;
+            width: 72px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .buyers-sheet-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: 1px solid var(--buyers-border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+        }
+
+        .buyers-sheet-copy-btn:hover,
+        .buyers-sheet-copy-btn:focus-visible {
+            border-color: var(--buyers-focus-ring);
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+            outline: none;
+        }
+
+        .buyers-sheet-copy-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
         .buyers-sheet-note {
             margin-top: 10px;
             font-size: 12px;
@@ -362,6 +396,7 @@
                                     <th>LA Cell</th>
                                     <th>Status</th>
                                     <th>PDF File</th>
+                                    <th>Copy</th>
                                 </tr>
                             </thead>
                             <tbody id="mls-imports-sheet-body"></tbody>
@@ -491,6 +526,52 @@
                 return String(value || '').replace(/\s+/g, ' ').trim();
             }
 
+            function getAgentFirstName(value) {
+                const normalized = normalizeCellValue(value);
+                if (!normalized) {
+                    return '';
+                }
+
+                return normalized.split(' ')[0] || normalized;
+            }
+
+            function normalizeStatusValue(value) {
+                return normalizeCellValue(value).toLowerCase();
+            }
+
+            function buildStatusTemplate(rowData) {
+                const laName = normalizeCellValue(rowData && rowData.laName);
+                const firstName = getAgentFirstName(laName) || 'there';
+                const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
+                const status = normalizeStatusValue(rowData && rowData.status);
+
+                if (!laName) {
+                    throw new Error('No listing agent name is available on this row yet.');
+                }
+
+                if (status.includes('active under contract') || status.includes('under contract') || status.includes('pending') || status.includes('contingent') || status.includes('backup')) {
+                    return `Hi ${firstName}, saw ${propertyAddress} is ${normalizeCellValue(rowData && rowData.status) || 'under contract'}. If anything changes or you want a clean backup cash option, we would love to take a look. Keep us in mind if it opens back up.`;
+                }
+
+                if (status.includes('expired') || status.includes('cancelled') || status.includes('withdrawn')) {
+                    return `Hi ${firstName}, reaching out about ${propertyAddress}. I saw the listing is ${normalizeCellValue(rowData && rowData.status) || 'off the market'}. If the seller is still open to options, we can make a clean cash offer and close fast. Happy to take a quick look if it is still available.`;
+                }
+
+                if (status.includes('closed') || status.includes('sold')) {
+                    return `Hi ${firstName}, congrats on ${propertyAddress}. If you come across another seller who needs a fast cash buyer, we would love to be a resource for you on the next one.`;
+                }
+
+                if (status.includes('coming soon')) {
+                    return `Hi ${firstName}, saw ${propertyAddress} is marked coming soon. If the seller is open to a direct cash option before it fully hits the market, we would love to take a look and see if it is a fit.`;
+                }
+
+                if (status.includes('hold') || status.includes('off market')) {
+                    return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, we can make a clean cash offer and move quickly if that would help.`;
+                }
+
+                return `Hi ${firstName}, saw your listing at ${propertyAddress}. If the seller is open to a strong cash offer, we would love to take a look and see if it is a fit. Let me know if you want us to send something over.`;
+            }
+
             function createCell(value) {
                 const td = document.createElement('td');
                 td.contentEditable = 'true';
@@ -501,11 +582,76 @@
                 return td;
             }
 
+            async function copyTextToClipboard(value) {
+                const text = normalizeCellValue(value);
+                if (!text) {
+                    throw new Error('No listing agent name is available on this row yet.');
+                }
+
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    await navigator.clipboard.writeText(text);
+                    return;
+                }
+
+                const fallbackInput = document.createElement('textarea');
+                fallbackInput.value = text;
+                fallbackInput.setAttribute('readonly', 'readonly');
+                fallbackInput.style.position = 'fixed';
+                fallbackInput.style.opacity = '0';
+                document.body.appendChild(fallbackInput);
+                fallbackInput.focus();
+                fallbackInput.select();
+                const copied = document.execCommand('copy');
+                fallbackInput.remove();
+
+                if (!copied) {
+                    throw new Error('Clipboard copy is not available in this browser.');
+                }
+            }
+
+            function createCopyCell() {
+                const td = document.createElement('td');
+                td.className = 'buyers-sheet-copy-cell';
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'buyers-sheet-copy-btn';
+                button.setAttribute('aria-label', 'Copy status-based outreach template');
+                button.title = 'Copy status-based outreach template';
+                button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                button.addEventListener('click', async () => {
+                    const row = button.closest('tr');
+                    const cells = row ? row.querySelectorAll('td') : [];
+                    const rowData = {
+                        importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                        propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                        laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                        loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                        offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                        laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                        status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                        pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                    };
+
+                    try {
+                        const template = buildStatusTemplate(rowData);
+                        await copyTextToClipboard(template);
+                        showToast('success', 'Template Copied', `Copied a ${rowData.status || 'default'} outreach template for ${rowData.laName}.`);
+                    } catch (error) {
+                        showToast('error', 'Copy Failed', error && error.message ? error.message : 'The outreach template could not be copied.');
+                    }
+                });
+
+                td.appendChild(button);
+                return td;
+            }
+
             function createRow(row) {
                 const tr = document.createElement('tr');
                 ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
                     tr.appendChild(createCell(row && row[key] ? row[key] : ''));
                 });
+                tr.appendChild(createCopyCell());
                 return tr;
             }
 
