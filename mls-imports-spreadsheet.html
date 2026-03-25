@@ -544,7 +544,7 @@
                     const candidateEmail = normalizeImportMatchValue(candidate && candidate.offersEmail);
                     const candidateCell = normalizeImportMatchValue(candidate && candidate.laCell);
 
-                    if (targetPdfFile && candidatePdfFile && targetPdfFile === candidatePdfFile) {
+                    if (targetPdfFile && candidatePdfFile && targetPdfFile === candidatePdfFile && targetAddress && candidateAddress && targetAddress === candidateAddress) {
                         return true;
                     }
 
@@ -582,6 +582,27 @@
                 renderRows(nextRows);
                 persistRows(nextRows);
                 return 'created';
+            }
+
+            function upsertImportedRows(nextRows) {
+                const rows = Array.isArray(nextRows) ? nextRows : [];
+                let createdCount = 0;
+                let updatedCount = 0;
+
+                rows.forEach((row) => {
+                    const result = upsertImportedRow(row);
+                    if (result === 'updated') {
+                        updatedCount += 1;
+                    } else if (result === 'created') {
+                        createdCount += 1;
+                    }
+                });
+
+                return {
+                    createdCount,
+                    updatedCount,
+                    totalCount: createdCount + updatedCount
+                };
             }
 
             function updateCount(rows) {
@@ -722,20 +743,29 @@
                     }
 
                     const extracted = payload && payload.extracted && typeof payload.extracted === 'object' ? payload.extracted : {};
+                    const extractedRows = Array.isArray(extracted.rows) && extracted.rows.length > 0
+                        ? extracted.rows
+                        : [extracted];
                     const extractedPageCount = Number(extracted.pageCount) || 0;
-                    const nextRow = {
-                        importDate: new Date().toISOString().slice(0, 10),
-                        propertyAddress: String(extracted.propertyAddress || '').trim(),
-                        laName: String(extracted.laName || '').trim(),
-                        loPhone: String(extracted.loPhone || '').trim(),
-                        offersEmail: String(extracted.offersEmail || '').trim(),
-                        laCell: String(extracted.laCell || '').trim(),
-                        importSource: 'PDF Upload',
-                        status: 'Extracted',
-                        pdfFile: String(payload.fileName || file.name || '').trim()
-                    };
+                    const normalizedRows = extractedRows
+                        .map((row) => ({
+                            importDate: new Date().toISOString().slice(0, 10),
+                            propertyAddress: String(row && row.propertyAddress || '').trim(),
+                            laName: String(row && row.laName || '').trim(),
+                            loPhone: String(row && row.loPhone || '').trim(),
+                            offersEmail: String(row && row.offersEmail || '').trim(),
+                            laCell: String(row && row.laCell || '').trim(),
+                            importSource: 'PDF Upload',
+                            status: 'Extracted',
+                            pdfFile: String(payload.fileName || file.name || '').trim()
+                        }))
+                        .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell].some((value) => String(value || '').trim()));
 
-                    const upsertResult = upsertImportedRow(nextRow);
+                    if (normalizedRows.length === 0) {
+                        throw new Error('The PDF was read, but no MLS contact rows could be extracted from it.');
+                    }
+
+                    const upsertResult = upsertImportedRows(normalizedRows);
                     const pageCountMessage = extractedPageCount > 1
                         ? ` Parsed all ${extractedPageCount} pages.`
                         : extractedPageCount === 1
@@ -743,10 +773,10 @@
                             : '';
                     showToast(
                         'success',
-                        upsertResult === 'updated' ? 'PDF Updated' : 'PDF Extracted',
-                        upsertResult === 'updated'
-                            ? `Matching MLS import row was updated instead of duplicated.${pageCountMessage}`
-                            : `Property Address, LA Name, LO Phone, Offers Email, and LA Cell were added to the sheet.${pageCountMessage}`
+                        upsertResult.updatedCount > 0 && upsertResult.createdCount === 0 ? 'PDF Updated' : 'PDF Extracted',
+                        upsertResult.updatedCount > 0
+                            ? `${upsertResult.createdCount} new row${upsertResult.createdCount === 1 ? '' : 's'} added and ${upsertResult.updatedCount} existing row${upsertResult.updatedCount === 1 ? '' : 's'} updated.${pageCountMessage}`
+                            : `${upsertResult.createdCount} MLS import row${upsertResult.createdCount === 1 ? '' : 's'} were added to the sheet.${pageCountMessage}`
                     );
                 } catch (error) {
                     showToast('error', 'PDF Extraction Failed', error && error.message ? error.message : 'The PDF could not be processed.');

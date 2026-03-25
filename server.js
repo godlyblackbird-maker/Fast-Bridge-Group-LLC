@@ -3667,10 +3667,62 @@ function extractOffersEmailFromPdfText(lines) {
   return extractEmailAddress(labeledValue);
 }
 
+function extractMlsImportRowFromText(text) {
+  const normalizedText = normalizePdfExtractText(text);
+  if (!normalizedText) {
+    return null;
+  }
+
+  const lines = normalizedText.split(/\n+/).map((line) => String(line || '').trim()).filter(Boolean);
+  const row = {
+    propertyAddress: extractPropertyAddressFromPdfText(normalizedText, lines),
+    laName: extractAgentNameFromPdfText(lines),
+    loPhone: extractLoPhoneFromPdfText(lines),
+    offersEmail: extractOffersEmailFromPdfText(lines),
+    laCell: extractLaCellFromPdfText(lines)
+  };
+
+  const hasMeaningfulValue = Object.values(row).some((value) => String(value || '').trim());
+  return hasMeaningfulValue ? row : null;
+}
+
+function dedupeMlsImportRows(rows) {
+  const seen = new Set();
+  const deduped = [];
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    if (!row || typeof row !== 'object') {
+      return;
+    }
+
+    const signature = [
+      String(row.propertyAddress || '').trim().toLowerCase(),
+      String(row.laName || '').trim().toLowerCase(),
+      String(row.loPhone || '').trim().toLowerCase(),
+      String(row.offersEmail || '').trim().toLowerCase(),
+      String(row.laCell || '').trim().toLowerCase()
+    ].join('|');
+
+    if (!signature.replace(/\|/g, '')) {
+      return;
+    }
+
+    if (seen.has(signature)) {
+      return;
+    }
+
+    seen.add(signature);
+    deduped.push(row);
+  });
+
+  return deduped;
+}
+
 async function extractMlsImportPdfFields(buffer) {
   const parser = new PDFParse({ data: buffer });
   let normalizedText = '';
   let pageCount = 0;
+  let pageTexts = [];
 
   try {
     const info = await parser.getInfo();
@@ -3678,6 +3730,11 @@ async function extractMlsImportPdfFields(buffer) {
     const parsed = await parser.getText();
     const fullTextResult = buildFullPdfText(parsed);
     normalizedText = fullTextResult.text;
+    pageTexts = Array.isArray(parsed && parsed.pages)
+      ? parsed.pages
+          .map((page) => normalizePdfExtractText(page && typeof page === 'object' ? page.text : ''))
+          .filter(Boolean)
+      : [];
     if (!pageCount && fullTextResult.parsedPageCount > 0) {
       pageCount = fullTextResult.parsedPageCount;
     }
@@ -3689,20 +3746,22 @@ async function extractMlsImportPdfFields(buffer) {
     throw new Error('The PDF did not contain readable text.');
   }
 
-  const lines = normalizedText.split(/\n+/).map((line) => String(line || '').trim()).filter(Boolean);
-  const propertyAddress = extractPropertyAddressFromPdfText(normalizedText, lines);
-  const laName = extractAgentNameFromPdfText(lines);
-  const laCell = extractLaCellFromPdfText(lines);
-  const loPhone = extractLoPhoneFromPdfText(lines);
-  const offersEmail = extractOffersEmailFromPdfText(lines);
+  const extractedRows = dedupeMlsImportRows(
+    (pageTexts.length > 0 ? pageTexts : [normalizedText])
+      .map((pageText) => extractMlsImportRowFromText(pageText))
+      .filter(Boolean)
+  );
+  const fallbackRow = extractMlsImportRowFromText(normalizedText) || {};
+  const primaryRow = extractedRows[0] || fallbackRow;
 
   return {
     pageCount,
-    propertyAddress,
-    laName,
-    loPhone,
-    offersEmail,
-    laCell
+    propertyAddress: String(primaryRow.propertyAddress || '').trim(),
+    laName: String(primaryRow.laName || '').trim(),
+    loPhone: String(primaryRow.loPhone || '').trim(),
+    offersEmail: String(primaryRow.offersEmail || '').trim(),
+    laCell: String(primaryRow.laCell || '').trim(),
+    rows: extractedRows.length > 0 ? extractedRows : (Object.values(fallbackRow).some(Boolean) ? [fallbackRow] : [])
   };
 }
 
