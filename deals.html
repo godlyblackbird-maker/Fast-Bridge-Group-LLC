@@ -314,6 +314,19 @@
                             </button>
                         </div>
                         <form id="deals-import-form" class="deals-import-form">
+                        <div class="deals-import-link-tools deals-import-span-2">
+                            <div class="deals-import-link-source-toggle" aria-label="Listing source selector">
+                                <button type="button" id="deals-import-source-zillow" class="deals-import-source-btn" data-import-source="zillow">Zillow</button>
+                                <button type="button" id="deals-import-source-redfin" class="deals-import-source-btn" data-import-source="redfin">Redfin</button>
+                            </div>
+                            <label class="deals-import-field deals-import-span-2">Listing URL
+                                <div class="deals-import-link-row">
+                                    <input id="deals-import-source-url" name="sourceUrl" class="form-input" type="url" placeholder="Paste the Zillow or Redfin property link here">
+                                    <button type="button" id="deals-import-source-fetch" class="btn-secondary">Autofill</button>
+                                </div>
+                                <span class="deals-import-link-help">Paste a public Zillow or Redfin property link to pull in the public listing details before importing.</span>
+                            </label>
+                        </div>
                         <label class="deals-import-field deals-import-span-2">Property Address
                             <input id="deals-import-address" name="address" class="form-input" type="text" placeholder="123 Main St, Ventura, CA 93003" required>
                         </label>

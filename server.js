@@ -246,6 +246,248 @@ function getGoogleRedirectUri(req) {
   return fallback;
 }
 
+function inferListingSourceFromUrl(rawUrl) {
+  try {
+    const parsedUrl = new URL(String(rawUrl || '').trim());
+    const hostname = String(parsedUrl.hostname || '').trim().toLowerCase();
+    if (hostname.includes('zillow.com')) {
+      return 'zillow';
+    }
+    if (hostname.includes('redfin.com')) {
+      return 'redfin';
+    }
+  } catch (error) {
+    return '';
+  }
+
+  return '';
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ');
+}
+
+function normalizeListingText(value) {
+  return decodeHtmlEntities(String(value || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+}
+
+function extractMetaTagContent(html, key) {
+  const escapedKey = String(key || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${escapedKey}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${escapedKey}["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+name=["']${escapedKey}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${escapedKey}["'][^>]*>`, 'i')
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      return normalizeListingText(match[1]);
+    }
+  }
+
+  return '';
+}
+
+function extractJsonLdObjects(html) {
+  const matches = Array.from(html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi));
+  const collected = [];
+
+  matches.forEach((match) => {
+    const rawBlock = String(match[1] || '').trim();
+    if (!rawBlock) {
+      return;
+    }
+
+    try {
+      collected.push(JSON.parse(rawBlock));
+    } catch (error) {
+      // Ignore malformed JSON-LD blocks.
+    }
+  });
+
+  return collected;
+}
+
+function collectStructuredObjects(value, results = []) {
+  if (!value || typeof value !== 'object') {
+    return results;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectStructuredObjects(entry, results));
+    return results;
+  }
+
+  results.push(value);
+  Object.values(value).forEach((entry) => collectStructuredObjects(entry, results));
+  return results;
+}
+
+function findStructuredListingObject(objects) {
+  const flattened = collectStructuredObjects(objects, []);
+  const scored = flattened
+    .map((entry) => {
+      const typeValue = Array.isArray(entry['@type']) ? entry['@type'].join(' ') : String(entry['@type'] || '');
+      const normalizedType = typeValue.toLowerCase();
+      let score = 0;
+
+      if (/(house|residence|apartment|singlefamilyresidence|single family|product|place|offer)/i.test(normalizedType)) {
+        score += 2;
+      }
+      if (entry.address) score += 3;
+      if (entry.offers) score += 2;
+      if (entry.numberOfBedrooms || entry.numberOfBathroomsTotal || entry.numberOfBathrooms || entry.floorSize) score += 2;
+      if (entry.image) score += 1;
+
+      return { entry, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score);
+
+  return scored.length ? scored[0].entry : null;
+}
+
+function formatStructuredAddress(address) {
+  if (!address) {
+    return '';
+  }
+
+  if (typeof address === 'string') {
+    return normalizeListingText(address);
+  }
+
+  const street = normalizeListingText(address.streetAddress || '');
+  const city = normalizeListingText(address.addressLocality || '');
+  const region = normalizeListingText(address.addressRegion || '');
+  const postalCode = normalizeListingText(address.postalCode || '');
+  return [street, [city, region].filter(Boolean).join(', '), postalCode].filter(Boolean).join(' ').trim();
+}
+
+function getListingLocationLabel(addressLike) {
+  if (!addressLike || typeof addressLike !== 'object') {
+    return '';
+  }
+
+  const city = normalizeListingText(addressLike.addressLocality || '');
+  const region = normalizeListingText(addressLike.addressRegion || '');
+  const postalCode = normalizeListingText(addressLike.postalCode || '');
+  return [city, region, postalCode].filter(Boolean).join(', ').replace(/,\s*,/g, ', ').trim();
+}
+
+function findFirstPatternMatch(text, patterns) {
+  const source = String(text || '');
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (match) {
+      const value = match.slice(1).find(Boolean);
+      if (value) {
+        return normalizeListingText(value);
+      }
+    }
+  }
+  return '';
+}
+
+function normalizeListingCurrency(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const digits = raw.replace(/[^0-9.]/g, '');
+  if (!digits) {
+    return '';
+  }
+
+  const amount = Number(digits);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return '';
+  }
+
+  return `$${Math.round(amount).toLocaleString()}`;
+}
+
+function extractListingFactsFromText(text) {
+  const source = normalizeListingText(text);
+  return {
+    price: normalizeListingCurrency(findFirstPatternMatch(source, [/\$\s*([\d,]+(?:\.\d+)?)/])),
+    beds: findFirstPatternMatch(source, [/(\d+(?:\.\d+)?)\s*(?:bed|beds|bd)\b/i]),
+    baths: findFirstPatternMatch(source, [/(\d+(?:\.\d+)?)\s*(?:bath|baths|ba)\b/i]),
+    area: findFirstPatternMatch(source, [/(\d[\d,]*)\s*(?:square feet|sq\.?\s*ft|sqft)\b/i]),
+    lotSize: findFirstPatternMatch(source, [/lot[^\d]*(\d[\d,]*\s*(?:sq\.?\s*ft|sqft|acres?))/i]),
+    yearBuilt: findFirstPatternMatch(source, [/(?:built in|year built|built)\D*(\d{4})/i]),
+    mlsId: findFirstPatternMatch(source, [/(?:mls|mls#|mls number|mls no\.)\D*([a-z0-9-]+)/i]),
+    status: findFirstPatternMatch(source, [/(active|pending|contingent|sold|off market|coming soon)/i])
+  };
+}
+
+function mapListingStatus(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return 'active';
+  }
+  if (normalized.includes('pending') || normalized.includes('contingent')) {
+    return 'pending';
+  }
+  if (normalized.includes('sold') || normalized.includes('closed')) {
+    return 'closed';
+  }
+  if (normalized.includes('hold')) {
+    return 'on-hold';
+  }
+  return 'active';
+}
+
+function extractListingImportData(html, requestUrl, source) {
+  const ogTitle = extractMetaTagContent(html, 'og:title') || extractMetaTagContent(html, 'twitter:title');
+  const ogDescription = extractMetaTagContent(html, 'og:description') || extractMetaTagContent(html, 'description') || extractMetaTagContent(html, 'twitter:description');
+  const ogImage = extractMetaTagContent(html, 'og:image') || extractMetaTagContent(html, 'twitter:image');
+  const structuredListing = findStructuredListingObject(extractJsonLdObjects(html));
+  const textFacts = extractListingFactsFromText(`${ogTitle} ${ogDescription} ${html}`);
+  const structuredAddress = formatStructuredAddress(structuredListing && structuredListing.address);
+  const locationLabel = getListingLocationLabel(structuredListing && structuredListing.address);
+  const structuredOffers = structuredListing && structuredListing.offers && typeof structuredListing.offers === 'object'
+    ? structuredListing.offers
+    : {};
+  const structuredImage = Array.isArray(structuredListing && structuredListing.image)
+    ? structuredListing.image.find(Boolean)
+    : (structuredListing && structuredListing.image) || '';
+  const structuredPrice = normalizeListingCurrency(structuredOffers.price || structuredOffers.lowPrice || structuredOffers.highPrice || '');
+  const structuredBeds = normalizeListingText(structuredListing && (structuredListing.numberOfBedrooms || structuredListing.numberOfRooms || ''));
+  const structuredBaths = normalizeListingText(structuredListing && (structuredListing.numberOfBathroomsTotal || structuredListing.numberOfBathrooms || ''));
+  const structuredArea = normalizeListingText(structuredListing && structuredListing.floorSize && (structuredListing.floorSize.value || structuredListing.floorSize.name || structuredListing.floorSize))
+    .replace(/[^\d,.]/g, '');
+  const structuredYearBuilt = normalizeListingText(structuredListing && structuredListing.yearBuilt);
+  const rawAddress = structuredAddress || normalizeListingText(ogTitle.split('|')[0].split(' - ')[0]);
+  const rawLocation = locationLabel || findFirstPatternMatch(rawAddress, [/^[^,]+,\s*(.+)$/]);
+  const description = ogDescription || normalizeListingText(structuredListing && structuredListing.description);
+
+  return {
+    source,
+    url: requestUrl,
+    address: rawAddress,
+    location: rawLocation,
+    mlsId: textFacts.mlsId,
+    price: structuredPrice || textFacts.price,
+    beds: structuredBeds || textFacts.beds,
+    baths: structuredBaths || textFacts.baths,
+    area: structuredArea || textFacts.area,
+    lotSize: textFacts.lotSize,
+    yearBuilt: structuredYearBuilt || textFacts.yearBuilt,
+    imageUrl: normalizeListingText(structuredImage || ogImage),
+    notes: description,
+    status: mapListingStatus(textFacts.status)
+  };
+}
+
 function readOpenAiKeysFromDisk() {
   const candidates = [
     path.join(__dirname, 'Open AI Key', 'Open AI keys.txt'),
@@ -467,6 +709,62 @@ app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: false, limit: '25mb' }));
 app.use(express.static(path.join(__dirname)));
+
+app.post('/api/import-listing-preview', async (req, res) => {
+  const rawUrl = String(req.body?.url || '').trim();
+  const requestedSource = String(req.body?.source || '').trim().toLowerCase();
+
+  if (!rawUrl) {
+    return res.status(400).json({ error: 'Paste a Zillow or Redfin listing URL first.' });
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(rawUrl);
+  } catch (error) {
+    return res.status(400).json({ error: 'Enter a valid property URL.' });
+  }
+
+  const inferredSource = inferListingSourceFromUrl(parsedUrl.href);
+  const source = requestedSource || inferredSource;
+
+  if (!source || !['zillow', 'redfin'].includes(source)) {
+    return res.status(400).json({ error: 'Only Zillow and Redfin property links are supported right now.' });
+  }
+
+  if (!inferListingSourceFromUrl(parsedUrl.href)) {
+    return res.status(400).json({ error: 'The pasted link does not look like a Zillow or Redfin property page.' });
+  }
+
+  try {
+    const response = await fetch(parsedUrl.href, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'no-cache',
+        pragma: 'no-cache'
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(502).json({ error: `The ${source === 'zillow' ? 'Zillow' : 'Redfin'} page could not be loaded right now.` });
+    }
+
+    const html = await response.text();
+    const listingData = extractListingImportData(html, parsedUrl.href, source);
+
+    if (!listingData.address && !listingData.price && !listingData.imageUrl) {
+      return res.status(422).json({ error: `FAST could not read enough public listing data from this ${source === 'zillow' ? 'Zillow' : 'Redfin'} page.` });
+    }
+
+    return res.json({ listing: listingData });
+  } catch (error) {
+    return res.status(500).json({ error: error && error.message ? error.message : 'The listing import failed.' });
+  }
+});
 
 // Database connection
 const db = new sqlite3.Database('./database.db', (err) => {

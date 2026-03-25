@@ -7100,6 +7100,49 @@ function initNavbarDateTime() {
             return getActiveNotes(data).filter((note) => descendantIds.has(note.folderId)).length;
         }
 
+        function deleteFolder(folderId) {
+            if (!folderId || folderId === DEFAULT_FOLDER_ID) {
+                return;
+            }
+
+            const data = getNotesData();
+            const targetFolder = data.folders.find((folder) => folder.id === folderId);
+            if (!targetFolder) {
+                return;
+            }
+
+            const descendantIds = getDescendantFolderIds(data, folderId);
+            const movedNotesCount = data.notes.filter((note) => descendantIds.has(note.folderId) && !note.deletedAt).length;
+            const removedFoldersCount = descendantIds.size;
+
+            data.notes = data.notes.map((note) => {
+                if (!descendantIds.has(note.folderId)) {
+                    return note;
+                }
+
+                return {
+                    ...note,
+                    folderId: DEFAULT_FOLDER_ID,
+                    updatedAt: Date.now()
+                };
+            });
+
+            data.folders = data.folders.filter((folder) => !descendantIds.has(folder.id));
+            descendantIds.forEach((id) => expandedFolderIds.delete(id));
+
+            if (descendantIds.has(activeFolderId)) {
+                activeFolderId = ALL_NOTES_FOLDER_ID;
+            }
+
+            saveNotesData(data);
+            render();
+            showDashboardToast(
+                'success',
+                'Folder Deleted',
+                `${targetFolder.name} was removed. ${movedNotesCount} note${movedNotesCount === 1 ? '' : 's'} moved to ${DEFAULT_FOLDER_NAME} and ${removedFoldersCount} folder${removedFoldersCount === 1 ? '' : 's'} deleted.`
+            );
+        }
+
         function moveDraggedItemToFolder(targetFolderId) {
             if (!draggedItem) {
                 return;
@@ -7193,6 +7236,9 @@ function initNavbarDateTime() {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'notes-folder-node';
 
+                    const row = document.createElement('div');
+                    row.className = 'notes-folder-row';
+
                     const item = document.createElement('button');
                     item.type = 'button';
                     item.className = 'notes-folder-item';
@@ -7252,7 +7298,26 @@ function initNavbarDateTime() {
                     });
 
                     attachFolderDropHandlers(item, folder.id);
-                    wrapper.appendChild(item);
+                    row.appendChild(item);
+
+                    if (folder.id !== DEFAULT_FOLDER_ID) {
+                        const deleteFolderButton = document.createElement('button');
+                        deleteFolderButton.type = 'button';
+                        deleteFolderButton.className = 'notes-folder-delete';
+                        deleteFolderButton.setAttribute('aria-label', `Delete folder ${folder.name}`);
+                        deleteFolderButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                        deleteFolderButton.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            const confirmed = window.confirm(`Delete folder "${folder.name}" and move its notes back to ${DEFAULT_FOLDER_NAME}?`);
+                            if (!confirmed) {
+                                return;
+                            }
+                            deleteFolder(folder.id);
+                        });
+                        row.appendChild(deleteFolderButton);
+                    }
+
+                    wrapper.appendChild(row);
 
                     if (hasChildren && expandedFolderIds.has(folder.id)) {
                         const childWrap = document.createElement('div');
@@ -11958,6 +12023,9 @@ function initNavbarDateTime() {
         const importOpenButton = document.getElementById('deals-import-open');
         const importForm = document.getElementById('deals-import-form');
         const importResetButton = document.getElementById('deals-import-reset');
+        const importSourceUrlInput = document.getElementById('deals-import-source-url');
+        const importSourceFetchButton = document.getElementById('deals-import-source-fetch');
+        const importSourceButtons = Array.from(document.querySelectorAll('[data-import-source]'));
         const importCloseButton = importOverlay
             ? importOverlay.querySelector('.deals-import-close-btn[data-deals-import-close="true"]')
             : null;
@@ -11970,6 +12038,7 @@ function initNavbarDateTime() {
             clicked: 1
         };
         let importBackdropPointerDown = false;
+        let importSource = 'zillow';
 
         if (!list || !count || !assignedList || !assignedCount || !listPagination || !assignedPagination) {
             return;
@@ -12003,15 +12072,144 @@ function initNavbarDateTime() {
             document.body.style.overflow = 'hidden';
 
             window.setTimeout(() => {
-                const firstInput = document.getElementById('deals-import-address');
+                const firstInput = document.getElementById('deals-import-source-url') || document.getElementById('deals-import-address');
                 if (firstInput) {
                     firstInput.focus();
                 }
             }, 40);
         }
 
+        function setDealsImportSource(nextSource) {
+            importSource = nextSource === 'redfin' ? 'redfin' : 'zillow';
+            importSourceButtons.forEach((button) => {
+                const isActive = button.getAttribute('data-import-source') === importSource;
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+
+            if (importSourceUrlInput) {
+                importSourceUrlInput.placeholder = importSource === 'redfin'
+                    ? 'Paste the Redfin property link here'
+                    : 'Paste the Zillow property link here';
+            }
+        }
+
+        function inferDealsImportSourceFromUrl(value) {
+            const raw = String(value || '').trim().toLowerCase();
+            if (raw.includes('redfin.com')) {
+                return 'redfin';
+            }
+            if (raw.includes('zillow.com')) {
+                return 'zillow';
+            }
+            return '';
+        }
+
+        function populateDealsImportForm(listing) {
+            if (!listing || typeof listing !== 'object' || !(importForm instanceof HTMLFormElement)) {
+                return;
+            }
+
+            const setFieldValue = (id, value) => {
+                const field = document.getElementById(id);
+                if (!field) {
+                    return;
+                }
+                field.value = String(value || '').trim();
+                if (field instanceof HTMLInputElement && field.dataset.dealsAutoCommas === 'true') {
+                    applyDealsImportDigitGrouping(field);
+                }
+            };
+
+            setFieldValue('deals-import-address', listing.address);
+            setFieldValue('deals-import-location', listing.location);
+            setFieldValue('deals-import-mls-id', listing.mlsId);
+            setFieldValue('deals-import-price', listing.price);
+            setFieldValue('deals-import-beds', listing.beds);
+            setFieldValue('deals-import-baths', listing.baths);
+            setFieldValue('deals-import-area', listing.area);
+            setFieldValue('deals-import-lot-size', listing.lotSize);
+            setFieldValue('deals-import-year-built', listing.yearBuilt);
+            setFieldValue('deals-import-image', listing.imageUrl);
+            setFieldValue('deals-import-notes', listing.notes);
+
+            const statusField = document.getElementById('deals-import-status');
+            if (statusField && listing.status) {
+                statusField.value = String(listing.status).trim().toLowerCase();
+            }
+        }
+
+        async function fetchListingPreviewFromSource() {
+            if (!importSourceUrlInput) {
+                return;
+            }
+
+            const sourceUrl = String(importSourceUrlInput.value || '').trim();
+            if (!sourceUrl) {
+                showDashboardToast('error', 'Link Required', 'Paste a Zillow or Redfin property link first.');
+                return;
+            }
+
+            const inferredSource = inferDealsImportSourceFromUrl(sourceUrl);
+            if (inferredSource) {
+                setDealsImportSource(inferredSource);
+            }
+
+            if (importSourceFetchButton) {
+                importSourceFetchButton.disabled = true;
+                importSourceFetchButton.textContent = 'Loading...';
+            }
+
+            try {
+                const response = await fetch('/api/import-listing-preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: sourceUrl,
+                        source: importSource
+                    })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'FAST could not pull the listing details from that link.');
+                }
+
+                populateDealsImportForm(payload.listing || {});
+                showDashboardToast('success', 'Property Autofilled', `${importSource === 'redfin' ? 'Redfin' : 'Zillow'} public listing details were added to the import form.`);
+            } catch (error) {
+                showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not pull the listing details from that link.');
+            } finally {
+                if (importSourceFetchButton) {
+                    importSourceFetchButton.disabled = false;
+                    importSourceFetchButton.textContent = 'Autofill';
+                }
+            }
+        }
+
         if (importOpenButton) {
             importOpenButton.addEventListener('click', openImportWidget);
+        }
+
+        importSourceButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                setDealsImportSource(button.getAttribute('data-import-source') || 'zillow');
+            });
+        });
+
+        if (importSourceUrlInput) {
+            importSourceUrlInput.addEventListener('input', () => {
+                const inferredSource = inferDealsImportSourceFromUrl(importSourceUrlInput.value);
+                if (inferredSource) {
+                    setDealsImportSource(inferredSource);
+                }
+            });
+        }
+
+        if (importSourceFetchButton) {
+            importSourceFetchButton.addEventListener('click', fetchListingPreviewFromSource);
         }
 
         if (importCloseButton) {
@@ -12118,6 +12316,7 @@ function initNavbarDateTime() {
         }
 
         bindDealsImportDigitGrouping(importForm);
+        setDealsImportSource(importSource);
 
         function normalizeStatus(value) {
             return ['active', 'pending', 'on-hold', 'closed'].includes(value) ? value : 'active';
@@ -12604,6 +12803,7 @@ function initNavbarDateTime() {
                 if (defaultStatus) {
                     defaultStatus.value = 'active';
                 }
+                setDealsImportSource('zillow');
             });
         }
     }
@@ -13350,8 +13550,10 @@ function initNavbarDateTime() {
         const previewGallery = document.getElementById('piq-property-image-preview');
         const imageGallery = document.getElementById('piq-property-image-gallery');
         const imageEditButton = document.getElementById('piq-property-image-edit-btn');
+        const imageAddButton = document.getElementById('piq-property-image-add-btn');
         const imageTabButtons = Array.from(document.querySelectorAll('.piq-image-tab[data-piq-image-tab]'));
         const imagePanels = Array.from(document.querySelectorAll('.piq-image-panel[data-piq-image-panel]'));
+        let imageEditMode = false;
 
         function getPropertyImages() {
             return Array.from(new Set(
@@ -13364,18 +13566,51 @@ function initNavbarDateTime() {
         function renderPropertyImages() {
             const images = getPropertyImages();
 
+            function createImageCard(url, index, variant) {
+                const card = document.createElement('div');
+                card.className = 'piq-image-thumb-card';
+
+                const image = document.createElement('img');
+                image.className = variant === 'large' ? 'piq-image-thumb-large' : 'piq-image-thumb-strip';
+                image.loading = 'lazy';
+                image.src = url;
+                image.alt = variant === 'large'
+                    ? `Property preview image ${index + 1}`
+                    : `Property image ${index + 1}`;
+                card.appendChild(image);
+
+                if (imageEditMode) {
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'piq-image-delete-btn';
+                    deleteButton.setAttribute('aria-label', `Delete property image ${index + 1}`);
+                    deleteButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                    deleteButton.addEventListener('click', () => {
+                        const confirmed = window.confirm('Delete this property image?');
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        const remainingImages = getPropertyImages().filter((imageUrl) => imageUrl !== url);
+                        detailData.propertyImages = remainingImages;
+                        detailData.imageUrl = remainingImages[0] || '';
+                        persistCurrentPropertyDetail();
+                        renderPropertyImages();
+                        showDashboardToast('success', 'Image Deleted', 'The property image was removed.');
+                    });
+                    card.appendChild(deleteButton);
+                }
+
+                return card;
+            }
+
             if (previewGallery) {
                 previewGallery.innerHTML = '';
                 if (images.length === 0) {
                     previewGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
                 } else {
                     images.slice(0, 4).forEach((url, index) => {
-                        const image = document.createElement('img');
-                        image.className = 'piq-image-thumb-large';
-                        image.loading = 'lazy';
-                        image.src = url;
-                        image.alt = `Property preview image ${index + 1}`;
-                        previewGallery.appendChild(image);
+                        previewGallery.appendChild(createImageCard(url, index, 'large'));
                     });
                 }
             }
@@ -13386,14 +13621,19 @@ function initNavbarDateTime() {
                     imageGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
                 } else {
                     images.forEach((url, index) => {
-                        const image = document.createElement('img');
-                        image.className = 'piq-image-thumb-strip';
-                        image.loading = 'lazy';
-                        image.src = url;
-                        image.alt = `Property image ${index + 1}`;
-                        imageGallery.appendChild(image);
+                        imageGallery.appendChild(createImageCard(url, index, 'strip'));
                     });
                 }
+            }
+
+            if (imageEditButton) {
+                imageEditButton.classList.toggle('is-active', imageEditMode);
+                imageEditButton.setAttribute('aria-pressed', imageEditMode ? 'true' : 'false');
+                imageEditButton.setAttribute('title', imageEditMode ? 'Done editing property images' : 'Edit property images');
+            }
+
+            if (imageAddButton) {
+                imageAddButton.hidden = !imageEditMode;
             }
         }
 
@@ -13420,6 +13660,13 @@ function initNavbarDateTime() {
 
         if (imageEditButton) {
             imageEditButton.addEventListener('click', () => {
+                imageEditMode = !imageEditMode;
+                renderPropertyImages();
+            });
+        }
+
+        if (imageAddButton) {
+            imageAddButton.addEventListener('click', () => {
                 const existingImages = getPropertyImages();
                 const nextImageUrl = window.prompt('Paste the property image URL.', existingImages[0] || '');
                 if (nextImageUrl === null) {
