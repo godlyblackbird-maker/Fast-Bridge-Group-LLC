@@ -1386,6 +1386,79 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function ensurePropertyWorkspaceSnapshot(detailLike, workspaceUserLike) {
+        const detail = detailLike && typeof detailLike === 'object' ? detailLike : null;
+        if (!detail) {
+            return;
+        }
+
+        const detailPropertyKey = makePropertyStorageKey(detail.address || detail.propertyAddress);
+        if (!detailPropertyKey) {
+            return;
+        }
+
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+        const summaryParts = String(detail.propertyDetails || '')
+            .split('/')
+            .map(part => String(part || '').trim())
+            .filter(Boolean);
+        const normalizeSummaryMetric = (value, fallback) => {
+            const raw = String(value || '').trim();
+            return raw || fallback;
+        };
+        const compactBeds = normalizeSummaryMetric(summaryParts[1], '').replace(/\bbr\b/i, 'Beds') || '0 Beds';
+        const compactBaths = normalizeSummaryMetric(summaryParts[2], '').replace(/\bba\b/i, 'Baths') || '0 Baths';
+        const compactArea = normalizeSummaryMetric(summaryParts[5], '').replace(/ft²/gi, 'sqft') || '0 sqft';
+        const compactStatus = String(detail.statusLabel || 'Active').trim().toLowerCase().replace(/\s+/g, '-');
+        const compactLocation = String(detail.areaLabel || detail.city || detail.county || detail.marketInfo || '').trim() || '-';
+        const compactImageUrl = String((Array.isArray(detail.propertyImages) ? detail.propertyImages[0] : '') || detail.imageUrl || '').trim();
+        const compactSnapshot = { ...detail };
+        const existingItem = Array.isArray(clickedItems)
+            ? clickedItems.find((item) => {
+                const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                const itemPropertyKey = makePropertyStorageKey(
+                    snapshot?.address
+                    || item?.address
+                    || item?.propertyAddress
+                );
+
+                return itemPropertyKey === detailPropertyKey;
+            })
+            : null;
+
+        const mergedItem = {
+            ...existingItem,
+            id: String(existingItem?.id || `manual:${detailPropertyKey}`),
+            address: String(detail.address || existingItem?.address || existingItem?.propertySnapshot?.address || 'Property').trim() || 'Property',
+            location: compactLocation,
+            price: String(detail.listPrice || existingItem?.price || '$0').trim() || '$0',
+            beds: compactBeds,
+            baths: compactBaths,
+            area: compactArea,
+            status: compactStatus || existingItem?.status || 'active',
+            imageUrl: compactImageUrl || existingItem?.imageUrl || '',
+            clickedAt: Date.now(),
+            propertySnapshot: compactSnapshot
+        };
+
+        const nextClickedItems = [
+            mergedItem,
+            ...(Array.isArray(clickedItems) ? clickedItems : []).filter((item) => {
+                const itemId = String(item?.id || '').trim();
+                return itemId !== mergedItem.id;
+            })
+        ]
+            .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
+            .slice(0, 120);
+
+        setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
+    }
+
     function getPersistedSelectedPropertyDetail() {
         const storageReaders = [
             () => localStorage.getItem('selectedPropertyDetail'),
@@ -3937,49 +4010,61 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
         }
 
-        if (saveButton && dealNameInput && dealDateInput && dealNoteInput) {
+        if (saveButton && dealNameInput && dealDateInput) {
             saveButton.addEventListener('click', async () => {
+                if (saveButton.disabled) {
+                    return;
+                }
+
                 const title = String(dealNameInput.value || '').trim();
                 const closeDate = String(dealDateInput.value || '').trim();
                 const wholesaleFee = parseClosedDealMoney(dealWholesaleFeeInput && dealWholesaleFeeInput.value);
                 const earnedAmount = parseClosedDealMoney(dealEarnedInput && dealEarnedInput.value);
-                const note = String(dealNoteInput.value || '').trim();
+                const note = String(dealNoteInput && dealNoteInput.value || '').trim();
 
                 if (!title) {
                     showDashboardToast('error', 'Deal Name Required', 'Add the property address or deal name before saving.');
                     return;
                 }
 
-                const uploadedDocuments = normalizeClosedDealDocuments({ documents: pendingUploads });
+                saveButton.disabled = true;
 
-                const items = getManualClosedDeals();
-                items.push({
-                    id: `closed-${Date.now()}-${Math.round(Math.random() * 10000)}`,
-                    title,
-                    propertyAddress: title,
-                    closeDate: closeDate || new Date().toISOString().slice(0, 10),
-                    wholesaleFee,
-                    earnedAmount,
-                    documents: uploadedDocuments,
-                    note,
-                    createdAt: Date.now()
-                });
+                try {
+                    const uploadedDocuments = normalizeClosedDealDocuments({ documents: pendingUploads });
 
-                setManualClosedDeals(items);
-                pendingUploads = [];
-                clearClosedDealDraft();
-                dealNameInput.value = '';
-                if (dealWholesaleFeeInput) {
-                    dealWholesaleFeeInput.value = '';
+                    const items = getManualClosedDeals();
+                    items.push({
+                        id: `closed-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                        title,
+                        propertyAddress: title,
+                        closeDate: closeDate || new Date().toISOString().slice(0, 10),
+                        wholesaleFee,
+                        earnedAmount,
+                        documents: uploadedDocuments,
+                        note,
+                        createdAt: Date.now()
+                    });
+
+                    setManualClosedDeals(items);
+                    pendingUploads = [];
+                    clearClosedDealDraft();
+                    dealNameInput.value = '';
+                    if (dealWholesaleFeeInput) {
+                        dealWholesaleFeeInput.value = '';
+                    }
+                    if (dealEarnedInput) {
+                        dealEarnedInput.value = '';
+                    }
+                    if (dealNoteInput) {
+                        dealNoteInput.value = '';
+                    }
+                    dealDateInput.value = new Date().toISOString().slice(0, 10);
+                    renderPendingUploads();
+                    renderClosedDeals();
+                    showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to Closed Deals and the My File archive.');
+                } finally {
+                    saveButton.disabled = false;
                 }
-                if (dealEarnedInput) {
-                    dealEarnedInput.value = '';
-                }
-                dealNoteInput.value = '';
-                dealDateInput.value = new Date().toISOString().slice(0, 10);
-                renderPendingUploads();
-                renderClosedDeals();
-                showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to Closed Deals and the My File archive.');
             });
         }
 
@@ -14819,7 +14904,10 @@ function initNavbarDateTime() {
             };
             setPersistedPiqStatus(detailData.piqAgentStatus);
             syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
-            localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+            persistSelectedPropertyDetail(detailData);
+            if (detailData.piqAgentStatus === 'offer-accepted') {
+                ensurePropertyWorkspaceSnapshot(detailData);
+            }
 
             if (agentCurrentStatusEl) {
                 agentCurrentStatusEl.textContent = formatAgentStatusLabel(piqAgentStatusSelect.value || defaultStatus);
@@ -14836,7 +14924,10 @@ function initNavbarDateTime() {
                 }
                 setPersistedPiqStatus(detailData.piqAgentStatus);
                 syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
-                localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+                persistSelectedPropertyDetail(detailData);
+                if (detailData.piqAgentStatus === 'offer-accepted') {
+                    ensurePropertyWorkspaceSnapshot(detailData);
+                }
                 syncCurrentAssignmentSnapshot();
             });
         }

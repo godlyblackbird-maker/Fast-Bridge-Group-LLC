@@ -3523,8 +3523,11 @@ function extractOffersEmailFromPdfText(lines) {
 async function extractMlsImportPdfFields(buffer) {
   const parser = new PDFParse({ data: buffer });
   let normalizedText = '';
+  let pageCount = 0;
 
   try {
+    const info = await parser.getInfo();
+    pageCount = Number(info && info.total) || 0;
     const parsed = await parser.getText();
     normalizedText = normalizePdfExtractText(parsed && parsed.text);
   } finally {
@@ -3543,6 +3546,7 @@ async function extractMlsImportPdfFields(buffer) {
   const offersEmail = extractOffersEmailFromPdfText(lines);
 
   return {
+    pageCount,
     propertyAddress,
     laName,
     loPhone,
