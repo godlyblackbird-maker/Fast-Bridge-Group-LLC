@@ -3358,6 +3358,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return digitsOnly;
             };
 
+            const commitProfitGoal = () => {
+                persistProfitGoal();
+                refreshKpis();
+                profitGoalInputEl.blur();
+            };
+
             profitGoalInputEl.addEventListener('input', () => {
                 const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
                 profitGoalInputEl.value = digitsOnly ? Number(digitsOnly).toLocaleString('en-US') : '';
@@ -3380,9 +3386,16 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
 
                 event.preventDefault();
-                persistProfitGoal();
-                refreshKpis();
-                profitGoalInputEl.blur();
+                commitProfitGoal();
+            });
+
+            profitGoalInputEl.addEventListener('keyup', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                commitProfitGoal();
             });
         }
 
@@ -4138,7 +4151,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         if (saveButton && dealNameInput && dealDateInput) {
-            saveButton.addEventListener('click', async () => {
+            const saveClosedDeal = async () => {
                 if (saveButton.disabled) {
                     return;
                 }
@@ -4194,7 +4207,35 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 } finally {
                     saveButton.disabled = false;
                 }
+            };
+
+            saveButton.addEventListener('click', async () => {
+                await saveClosedDeal();
             });
+
+            [dealNameInput, dealDateInput, dealWholesaleFeeInput, dealEarnedInput]
+                .filter(Boolean)
+                .forEach((input) => {
+                    input.addEventListener('keydown', async (event) => {
+                        if (event.key !== 'Enter') {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        await saveClosedDeal();
+                    });
+                });
+
+            if (dealNoteInput) {
+                dealNoteInput.addEventListener('keydown', async (event) => {
+                    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    await saveClosedDeal();
+                });
+            }
         }
 
         renderClosedDeals();
