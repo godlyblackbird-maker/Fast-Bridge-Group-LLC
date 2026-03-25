@@ -8,6 +8,7 @@ const twilio = require('twilio');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { PDFParse } = require('pdf-parse');
 
 require('dotenv').config();
 
@@ -3404,6 +3405,190 @@ function requireAdmin(req, res) {
 
   return decoded;
 }
+
+function normalizePdfExtractText(value) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractPdfFieldByLabel(lines, labels, valuePattern) {
+  const labelMatchers = Array.isArray(labels) ? labels : [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = String(lines[index] || '').trim();
+    if (!line) {
+      continue;
+    }
+
+    for (const labelMatcher of labelMatchers) {
+      if (!labelMatcher.test(line)) {
+        continue;
+      }
+
+      const inlineMatch = line.match(valuePattern);
+      if (inlineMatch && inlineMatch[1]) {
+        return String(inlineMatch[1] || '').trim();
+      }
+
+      for (let offset = 1; offset <= 2; offset += 1) {
+        const nextLine = String(lines[index + offset] || '').trim();
+        if (!nextLine) {
+          continue;
+        }
+        if (labelMatchers.some((matcher) => matcher.test(nextLine))) {
+          continue;
+        }
+        const nextMatch = nextLine.match(valuePattern);
+        if (nextMatch && nextMatch[1]) {
+          return String(nextMatch[1] || '').trim();
+        }
+        return nextLine;
+      }
+    }
+  }
+
+  return '';
+}
+
+function extractPhoneNumber(value) {
+  const match = String(value || '').match(/(\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}/);
+  return match ? String(match[0] || '').trim() : '';
+}
+
+function extractEmailAddress(value) {
+  const match = String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? String(match[0] || '').trim() : '';
+}
+
+function cleanPersonName(value) {
+  return String(value || '')
+    .replace(/^\(?[A-Z0-9]+\)?\s+/, '')
+    .replace(/^[-:|]+\s*/, '')
+    .trim();
+}
+
+function extractPropertyAddressFromPdfText(text, lines) {
+  const labeledValue = extractPdfFieldByLabel(
+    lines,
+    [/^property address\b/i, /^address\b/i, /^subject property\b/i],
+    /^(?:property address|address|subject property)\s*[:#-]?\s*(.+)$/i
+  );
+  if (labeledValue) {
+    return labeledValue;
+  }
+
+  const addressMatch = String(text || '').match(/\b\d{2,6}\s+[A-Za-z0-9.'#\- ]+\b(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Circle|Cir|Way|Place|Pl|Terrace|Ter|Trail|Trl|Parkway|Pkwy|Highway|Hwy)\b(?:[^\n]*?,\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?/i);
+  return addressMatch ? String(addressMatch[0] || '').trim() : '';
+}
+
+function extractAgentNameFromPdfText(lines) {
+  const labeledValue = extractPdfFieldByLabel(
+    lines,
+    [/^agent name\b/i, /^listing agent\b/i, /^la name\b/i, /^la\b/i, /^agent\b/i],
+    /^(?:agent name|listing agent|la name|la|agent)\s*[:#-]?\s*(.+)$/i
+  );
+  return cleanPersonName(labeledValue);
+}
+
+function extractLaCellFromPdfText(lines) {
+  const labeledValue = extractPdfFieldByLabel(
+    lines,
+    [/^\d*\.?\s*la cell\b/i, /^listing agent cell\b/i, /^la mobile\b/i, /^la phone\b/i],
+    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone)\s*[:#-]?\s*(.+)$/i
+  );
+  return extractPhoneNumber(labeledValue);
+}
+
+function extractLoPhoneFromPdfText(lines) {
+  const labeledValue = extractPdfFieldByLabel(
+    lines,
+    [/^lo phone\b/i, /^listing office phone\b/i, /^office phone\b/i, /^broker phone\b/i],
+    /^(?:lo phone|listing office phone|office phone|broker phone)\s*[:#-]?\s*(.+)$/i
+  );
+  return extractPhoneNumber(labeledValue);
+}
+
+function extractOffersEmailFromPdfText(lines) {
+  const labeledValue = extractPdfFieldByLabel(
+    lines,
+    [/^offers email\b/i, /^offer email\b/i, /^email\b/i, /^e-?mail\b/i],
+    /^(?:offers email|offer email|email|e-?mail)\s*[:#-]?\s*(.+)$/i
+  );
+  return extractEmailAddress(labeledValue);
+}
+
+async function extractMlsImportPdfFields(buffer) {
+  const parser = new PDFParse({ data: buffer });
+  let normalizedText = '';
+
+  try {
+    const parsed = await parser.getText();
+    normalizedText = normalizePdfExtractText(parsed && parsed.text);
+  } finally {
+    await parser.destroy().catch(() => {});
+  }
+
+  if (!normalizedText) {
+    throw new Error('The PDF did not contain readable text.');
+  }
+
+  const lines = normalizedText.split(/\n+/).map((line) => String(line || '').trim()).filter(Boolean);
+  const propertyAddress = extractPropertyAddressFromPdfText(normalizedText, lines);
+  const laName = extractAgentNameFromPdfText(lines);
+  const laCell = extractLaCellFromPdfText(lines);
+  const loPhone = extractLoPhoneFromPdfText(lines);
+  const offersEmail = extractOffersEmailFromPdfText(lines);
+
+  return {
+    propertyAddress,
+    laName,
+    loPhone,
+    offersEmail,
+    laCell
+  };
+}
+
+app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: '20mb' }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const fileName = String(req.body?.fileName || '').trim();
+    const contentBase64 = String(req.body?.contentBase64 || '').trim();
+    const extension = path.extname(fileName).toLowerCase();
+
+    if (!fileName || !contentBase64) {
+      return res.status(400).json({ error: 'A PDF file name and file content are required.' });
+    }
+
+    if (extension !== '.pdf') {
+      return res.status(400).json({ error: 'Only PDF files are supported in this import tool.' });
+    }
+
+    const buffer = Buffer.from(contentBase64, 'base64');
+    if (!buffer.length) {
+      return res.status(400).json({ error: 'The uploaded PDF was empty.' });
+    }
+
+    if (buffer.length > 15 * 1024 * 1024) {
+      return res.status(413).json({ error: 'PDF files must be 15 MB or smaller.' });
+    }
+
+    const extracted = await extractMlsImportPdfFields(buffer);
+    return res.json({
+      extracted,
+      fileName
+    });
+  } catch (error) {
+    console.error('Failed to extract MLS import PDF fields:', error);
+    return res.status(500).json({ error: error && error.message ? error.message : 'Failed to extract fields from the uploaded PDF.' });
+  }
+});
 
 // GET /api/smtp-settings — returns the authenticated user's Gmail SMTP settings
 app.get('/api/smtp-settings', (req, res) => {

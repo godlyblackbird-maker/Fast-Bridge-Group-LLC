@@ -12719,7 +12719,7 @@ function initNavbarDateTime() {
             } finally {
                 if (importSourceFetchButton) {
                     importSourceFetchButton.disabled = false;
-                    importSourceFetchButton.textContent = 'Autofill';
+                    importSourceFetchButton.textContent = 'Add Link';
                 }
             }
         }
@@ -14444,7 +14444,7 @@ function initNavbarDateTime() {
             } finally {
                 if (propertyListingImportButton) {
                     propertyListingImportButton.disabled = false;
-                    propertyListingImportButton.textContent = 'Autofill';
+                    propertyListingImportButton.textContent = 'Add Link';
                 }
             }
         }
@@ -14504,7 +14504,7 @@ function initNavbarDateTime() {
             } finally {
                 if (propertyListingImportButton) {
                     propertyListingImportButton.disabled = false;
-                    propertyListingImportButton.textContent = 'Autofill';
+                    propertyListingImportButton.textContent = 'Add Link';
                 }
             }
         }
@@ -14922,6 +14922,72 @@ function initNavbarDateTime() {
 
         const compsMapFrame = document.getElementById('comps-map-frame');
         const compsMapOpenLink = document.getElementById('comps-map-open-link');
+        const compsMapStreetViewButton = document.getElementById('comps-map-street-view-btn');
+
+        function buildGoogleMapsEmbedUrl(query) {
+            const encodedQuery = encodeURIComponent(String(query || '').trim() || 'California');
+            return `https://www.google.com/maps?q=${encodedQuery}&output=embed`;
+        }
+
+        function buildGoogleMapsSearchUrl(query) {
+            const encodedQuery = encodeURIComponent(String(query || '').trim() || 'California');
+            return `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+        }
+
+        function buildGoogleStreetViewUrl(lat, lng) {
+            return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${encodeURIComponent(`${lat},${lng}`)}`;
+        }
+
+        function getStreetViewAddressQuery(fallbackAddress = '') {
+            return String(detailData.address || fallbackAddress || 'California').trim() || 'California';
+        }
+
+        function setCompsStreetViewButtonState(isLoading) {
+            if (!compsMapStreetViewButton) {
+                return;
+            }
+            compsMapStreetViewButton.disabled = Boolean(isLoading);
+            compsMapStreetViewButton.textContent = isLoading ? 'Locating...' : 'Street View';
+        }
+
+        async function resolveStreetViewUrlForAddress(address) {
+            const trimmedAddress = String(address || '').trim();
+            if (!trimmedAddress) {
+                return buildGoogleMapsSearchUrl('California');
+            }
+
+            const cachedLat = Number(detailData.streetViewLat);
+            const cachedLng = Number(detailData.streetViewLng);
+            const cachedAddress = String(detailData.streetViewAddress || '').trim().toLowerCase();
+            if (Number.isFinite(cachedLat) && Number.isFinite(cachedLng) && cachedAddress === trimmedAddress.toLowerCase()) {
+                return buildGoogleStreetViewUrl(cachedLat, cachedLng);
+            }
+
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(trimmedAddress)}`, {
+                headers: {
+                    Accept: 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Street View lookup could not geocode this property address right now.');
+            }
+
+            const results = await response.json().catch(() => []);
+            const match = Array.isArray(results) ? results[0] : null;
+            const lat = Number(match && match.lat);
+            const lng = Number(match && match.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                throw new Error('Street View could not find coordinates for this property address.');
+            }
+
+            detailData.streetViewLat = lat;
+            detailData.streetViewLng = lng;
+            detailData.streetViewAddress = trimmedAddress;
+            persistCurrentPropertyDetail();
+            return buildGoogleStreetViewUrl(lat, lng);
+        }
+
         function initCompsExplorer() {
             const nearbyList = document.getElementById('comps-nearby-list');
             const summaryRow = document.getElementById('comps-applied-summary');
@@ -14932,9 +14998,8 @@ function initNavbarDateTime() {
             if (!nearbyList || !summaryRow || !resultsMeta || !applyBtn || !resetBtn) {
                 if (compsMapFrame || compsMapOpenLink) {
                     const locationQuery = `real estate comps near ${detailData.address || 'California'}`;
-                    const encodedQuery = encodeURIComponent(locationQuery);
-                    const mapsEmbedUrl = `https://www.google.com/maps?q=${encodedQuery}&output=embed`;
-                    const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+                    const mapsEmbedUrl = buildGoogleMapsEmbedUrl(locationQuery);
+                    const mapsSearchUrl = buildGoogleMapsSearchUrl(locationQuery);
 
                     if (compsMapFrame) compsMapFrame.src = mapsEmbedUrl;
                     if (compsMapOpenLink) compsMapOpenLink.href = mapsSearchUrl;
@@ -15141,13 +15206,30 @@ function initNavbarDateTime() {
                         ? filtered.map(comp => comp.address).join(' OR ')
                         : `real estate comps near ${detailData.address || 'California'}`;
                     const mapQuery = `${mapQueryCore} near ${detailData.address || 'Santa Paula, CA'}`;
-                    const encodedQuery = encodeURIComponent(mapQuery);
-                    const mapsEmbedUrl = `https://www.google.com/maps?q=${encodedQuery}&output=embed`;
-                    const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+                    const mapsEmbedUrl = buildGoogleMapsEmbedUrl(mapQuery);
+                    const mapsSearchUrl = buildGoogleMapsSearchUrl(mapQuery);
 
                     if (compsMapFrame) compsMapFrame.src = mapsEmbedUrl;
                     if (compsMapOpenLink) compsMapOpenLink.href = mapsSearchUrl;
                 }
+            }
+
+            if (compsMapStreetViewButton && compsMapStreetViewButton.dataset.bound !== 'true') {
+                compsMapStreetViewButton.dataset.bound = 'true';
+                compsMapStreetViewButton.addEventListener('click', async () => {
+                    const streetViewAddress = getStreetViewAddressQuery();
+                    setCompsStreetViewButtonState(true);
+                    try {
+                        const streetViewUrl = await resolveStreetViewUrlForAddress(streetViewAddress);
+                        window.open(streetViewUrl, '_blank', 'noopener,noreferrer');
+                    } catch (error) {
+                        const fallbackUrl = buildGoogleMapsSearchUrl(streetViewAddress);
+                        window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+                        showDashboardToast('error', 'Street View Fallback', String(error && error.message || 'Street View could not be loaded, so Google Maps was opened instead.'));
+                    } finally {
+                        setCompsStreetViewButtonState(false);
+                    }
+                });
             }
 
             applyBtn.addEventListener('click', renderResults);

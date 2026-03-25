@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLS Imports Spreadsheet - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <meta name="description" content="Admin spreadsheet for tracking MLS imports, source links, status, and follow-up notes.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                const accentGlow = Object.prototype.hasOwnProperty.call(controls, 'id:accent-glow-toggle')
+                    ? Boolean(controls['id:accent-glow-toggle'])
+                    : /^(on|true|1)$/i.test(String(localStorage.getItem('accentGlow') || ''));
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+                root.setAttribute('data-accent-color', palettes[accentChoice] ? accentChoice : 'emerald');
+                root.setAttribute('data-accent-glow', accentGlow ? 'on' : 'off');
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .buyers-sheet-wrap {
+            margin-top: 24px;
+            --buyers-border: rgba(var(--accent-light-rgb), 0.22);
+            --buyers-wrap-bg: linear-gradient(145deg, rgba(13, 26, 20, 0.46), rgba(19, 36, 25, 0.32));
+            --buyers-head-bg: linear-gradient(135deg, rgba(var(--accent-rgb), 0.72), rgba(10, 20, 16, 0.9));
+            --buyers-head-text: #f8fafc;
+            --buyers-row-bg: rgba(255, 255, 255, 0.04);
+            --buyers-row-bg-alt: rgba(255, 255, 255, 0.08);
+            --buyers-focus-bg: rgba(var(--accent-light-rgb), 0.2);
+            --buyers-focus-ring: rgba(var(--accent-light-rgb), 0.52);
+            --buyers-note: var(--text-secondary);
+            --buyers-scroll-thumb: rgba(var(--accent-light-rgb), 0.58);
+            --buyers-scroll-track: rgba(255, 255, 255, 0.08);
+            --buyers-count-bg: rgba(15, 23, 42, 0.72);
+            --buyers-count-border: rgba(148, 163, 184, 0.24);
+            --buyers-count-text: #f8fafc;
+            min-width: 0;
+        }
+
+        .buyers-sheet-card {
+            padding: 18px;
+            overflow: visible;
+        }
+
+        .buyers-sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            display: block;
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: auto;
+            scrollbar-color: var(--buyers-scroll-thumb) var(--buyers-scroll-track);
+            border: 1px solid var(--buyers-border);
+            border-radius: 16px;
+            background: var(--buyers-wrap-bg);
+            backdrop-filter: blur(8px);
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar {
+            height: 14px;
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar-thumb {
+            background: var(--buyers-scroll-thumb);
+            border-radius: 8px;
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar-track {
+            background: var(--buyers-scroll-track);
+            border-radius: 8px;
+        }
+
+        .buyers-sheet-table {
+            width: max-content;
+            min-width: 1460px;
+            max-width: none;
+            border-collapse: collapse;
+        }
+
+        .buyers-sheet-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--buyers-head-bg);
+            color: var(--buyers-head-text);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 12px;
+            text-align: left;
+            border-right: 1px solid var(--buyers-border);
+            white-space: nowrap;
+        }
+
+        .buyers-sheet-table thead th:last-child,
+        .buyers-sheet-table tbody td:last-child {
+            border-right: 0;
+        }
+
+        .buyers-sheet-table tbody td {
+            padding: 10px;
+            border-right: 1px solid var(--buyers-border);
+            border-top: 1px solid var(--buyers-border);
+            background: var(--buyers-row-bg);
+            color: var(--text-primary);
+            min-height: 42px;
+            vertical-align: top;
+        }
+
+        .buyers-sheet-table tbody tr:nth-child(even) td {
+            background: var(--buyers-row-bg-alt);
+        }
+
+        .buyers-sheet-table td[contenteditable="true"] {
+            outline: none;
+            min-width: 140px;
+            cursor: text;
+        }
+
+        .buyers-sheet-table td[contenteditable="true"]:focus {
+            box-shadow: inset 0 0 0 2px var(--buyers-focus-ring);
+            background: var(--buyers-focus-bg);
+        }
+
+        .buyers-sheet-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
+        .buyers-sheet-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: var(--buyers-count-bg);
+            border: 1px solid var(--buyers-count-border);
+            color: var(--buyers-count-text);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 900px) {
+            .buyers-sheet-table {
+                min-width: 1320px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .buyers-sheet-table {
+                min-width: 1240px;
+                font-size: 13px;
+            }
+
+            .buyers-sheet-table thead th,
+            .buyers-sheet-table tbody td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/Fast Logo - 111.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item"><a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
+                        <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics</a></li>
+                        <li class="nav-item"><a href="mls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>MLS Hot Deals</a></li>
+                        <li class="nav-item"><a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>MLS Search</a></li>
+                        <li class="nav-item"><a href="deals.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>My Deals</a></li>
+                        <li class="nav-item"><a href="active-buyers.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"/><path d="M3 12h18"/><path d="M3 19h18"/></svg>Active Buyers</a></li>
+                        <li class="nav-item"><a href="campaigns.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16" /><path d="M4 4h13l-2 5 2 5H4" /></svg>Campaigns</a></li>
+                        <li class="nav-item"><a href="users.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Agent workspace</a></li>
+                        <li class="nav-item"><a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
+                    </ul>
+                </li>
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item"><a href="admin-controls.html" class="nav-link active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>Admin Controls</a></li>
+                        <li class="nav-item"><a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My agents</a></li>
+                        <li class="nav-item"><a href="login.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-title-group">
+                    <h1 class="page-title">MLS Imports Spreadsheet</h1>
+                    <p class="navbar-datetime" id="navbar-datetime" aria-live="polite"></p>
+                </div>
+                <div class="navbar-right">
+                    <a href="admin-controls.html" class="card-btn">Back To Admin Controls</a>
+                </div>
+            </nav>
+
+            <section class="buyers-sheet-wrap">
+                <div class="glass-card buyers-sheet-card">
+                    <div class="buyers-sheet-header">
+                        <div>
+                            <h2 class="card-title">MLS Imports Spreadsheet</h2>
+                            <p class="card-subtitle">Upload an MLS PDF and extract only the property address, LA name, LO phone, offers email, and LA cell into this admin-only sheet.</p>
+                        </div>
+                        <div class="buyers-sheet-actions">
+                            <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
+                            <button id="mls-imports-add-pdf" class="card-btn" type="button">Add PDF</button>
+                            <button id="mls-imports-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="mls-imports-add-row" class="card-btn active" type="button">Add Row</button>
+                            <input id="mls-imports-pdf-input" type="file" accept=".pdf,application/pdf" hidden>
+                        </div>
+                    </div>
+
+                    <p class="buyers-sheet-note">PDF upload extracts only: Property Address, LA Name, LO Phone, Offers Email, and LA Cell.</p>
+
+                    <div class="buyers-sheet-table-wrap">
+                        <table class="buyers-sheet-table" id="mls-imports-sheet-table">
+                            <thead>
+                                <tr>
+                                    <th>Import Date</th>
+                                    <th>Property Address</th>
+                                    <th>LA Name</th>
+                                    <th>LO Phone</th>
+                                    <th>Offers Email</th>
+                                    <th>LA Cell</th>
+                                    <th>Import Source</th>
+                                    <th>Status</th>
+                                    <th>PDF File</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mls-imports-sheet-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="buyers-sheet-note">Tip: Click any cell to edit. This spreadsheet saves automatically in this browser for the current admin user.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <button class="mobile-menu-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+    <script>
+        (function () {
+            const STORAGE_KEY_BASE = 'mlsImportsSpreadsheetRows';
+
+            function safeReadJson(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key) || '{}');
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function getUserContext() {
+                const profile = safeReadJson('userProfile');
+                const user = safeReadJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'default-user').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                return { email, name, userKey };
+            }
+
+            function getStorageKey() {
+                return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function showToast(type, title, message) {
+                if (typeof window.showDashboardToast === 'function') {
+                    window.showDashboardToast(type, title, message);
+                }
+            }
+
+            function downloadCsvFile(fileName, content) {
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(url), 0);
+            }
+
+            function makeCsvFileName() {
+                const userContext = getUserContext();
+                const baseName = String(userContext.name || userContext.email || 'mls-imports')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '') || 'mls-imports';
+                return `${baseName}-mls-imports.csv`;
+            }
+
+            function escapeCsvValue(value) {
+                const normalized = String(value || '').replace(/\r?\n/g, ' ').trim();
+                if (/[",]/.test(normalized)) {
+                    return `"${normalized.replace(/"/g, '""')}"`;
+                }
+                return normalized;
+            }
+
+            const DEFAULT_ROWS = [
+                {
+                    importDate: new Date().toISOString().slice(0, 10),
+                    propertyAddress: '',
+                    laName: '',
+                    loPhone: '',
+                    offersEmail: '',
+                    laCell: '',
+                    importSource: '',
+                    status: '',
+                    pdfFile: ''
+                }
+            ];
+
+            const tableBody = document.getElementById('mls-imports-sheet-body');
+            const countBadge = document.getElementById('mls-imports-count');
+            const addRowButton = document.getElementById('mls-imports-add-row');
+            const addPdfButton = document.getElementById('mls-imports-add-pdf');
+            const pdfInput = document.getElementById('mls-imports-pdf-input');
+            const exportCsvButton = document.getElementById('mls-imports-export-csv');
+
+            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton) {
+                return;
+            }
+
+            function getAuthToken() {
+                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function readFileAsBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const result = String(reader.result || '');
+                        const parts = result.split(',');
+                        resolve(parts.length > 1 ? parts[1] : parts[0]);
+                    };
+                    reader.onerror = () => reject(new Error('The selected PDF could not be read.'));
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function createCell(value) {
+                const td = document.createElement('td');
+                td.contentEditable = 'true';
+                td.spellcheck = false;
+                td.textContent = String(value || '');
+                td.addEventListener('input', saveRows);
+                td.addEventListener('blur', saveRows);
+                return td;
+            }
+
+            function createRow(row) {
+                const tr = document.createElement('tr');
+                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'importSource', 'status', 'pdfFile'].forEach((key) => {
+                    tr.appendChild(createCell(row && row[key] ? row[key] : ''));
+                });
+                return tr;
+            }
+
+            function isMeaningfulRow(row) {
+                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'importSource', 'status', 'pdfFile']
+                    .some((key) => String(row && row[key] || '').trim().length > 0);
+            }
+
+            function getRowsFromDom() {
+                return Array.from(tableBody.querySelectorAll('tr')).map((tr) => {
+                    const cells = tr.querySelectorAll('td');
+                    return {
+                        importDate: cells[0] ? cells[0].textContent.trim() : '',
+                        propertyAddress: cells[1] ? cells[1].textContent.trim() : '',
+                        laName: cells[2] ? cells[2].textContent.trim() : '',
+                        loPhone: cells[3] ? cells[3].textContent.trim() : '',
+                        offersEmail: cells[4] ? cells[4].textContent.trim() : '',
+                        laCell: cells[5] ? cells[5].textContent.trim() : '',
+                        importSource: cells[6] ? cells[6].textContent.trim() : '',
+                        status: cells[7] ? cells[7].textContent.trim() : '',
+                        pdfFile: cells[8] ? cells[8].textContent.trim() : ''
+                    };
+                });
+            }
+
+            function updateCount(rows) {
+                const total = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
+                countBadge.textContent = `${total} Row${total === 1 ? '' : 's'}`;
+            }
+
+            function persistRows(rows) {
+                localStorage.setItem(getStorageKey(), JSON.stringify(rows));
+                updateCount(rows);
+            }
+
+            function saveRows() {
+                const rows = getRowsFromDom().filter(isMeaningfulRow);
+                persistRows(rows);
+            }
+
+            function renderRows(rows) {
+                tableBody.innerHTML = '';
+                rows.forEach((row) => {
+                    tableBody.appendChild(createRow(row));
+                });
+                updateCount(rows);
+            }
+
+            function loadRows() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+                    if (Array.isArray(stored) && stored.length > 0) {
+                        return stored;
+                    }
+                } catch (error) {
+                    // Ignore invalid stored values and fall back to defaults.
+                }
+                return DEFAULT_ROWS.slice();
+            }
+
+            function exportRowsToCsv() {
+                const rows = getRowsFromDom().filter(isMeaningfulRow);
+                if (rows.length === 0) {
+                    showToast('error', 'No Rows To Export', 'Add at least one MLS import row before exporting a CSV.');
+                    return;
+                }
+
+                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'Import Source', 'Status', 'PDF File'];
+                const lines = [headers.join(',')];
+
+                rows.forEach((row) => {
+                    lines.push([
+                        row.importDate,
+                        row.propertyAddress,
+                        row.laName,
+                        row.loPhone,
+                        row.offersEmail,
+                        row.laCell,
+                        row.importSource,
+                        row.status,
+                        row.pdfFile
+                    ].map(escapeCsvValue).join(','));
+                });
+
+                downloadCsvFile(makeCsvFileName(), lines.join('\r\n'));
+                showToast('success', 'CSV Saved', 'Your MLS Imports spreadsheet was downloaded as a CSV file.');
+            }
+
+            addRowButton.addEventListener('click', () => {
+                const nextRow = {
+                    importDate: new Date().toISOString().slice(0, 10),
+                    propertyAddress: '',
+                    laName: '',
+                    loPhone: '',
+                    offersEmail: '',
+                    laCell: '',
+                    importSource: '',
+                    status: '',
+                    pdfFile: ''
+                };
+                tableBody.appendChild(createRow(nextRow));
+                saveRows();
+                const lastRow = tableBody.lastElementChild;
+                const firstCell = lastRow ? lastRow.querySelector('td') : null;
+                if (firstCell) {
+                    firstCell.focus();
+                }
+            });
+
+            addPdfButton.addEventListener('click', () => {
+                if (typeof pdfInput.showPicker === 'function') {
+                    pdfInput.showPicker();
+                    return;
+                }
+                pdfInput.click();
+            });
+
+            pdfInput.addEventListener('change', async () => {
+                const file = Array.from(pdfInput.files || [])[0] || null;
+                pdfInput.value = '';
+                if (!file) {
+                    return;
+                }
+
+                if (!/\.pdf$/i.test(file.name)) {
+                    showToast('error', 'PDF Required', 'Select a PDF file for MLS field extraction.');
+                    return;
+                }
+
+                const authToken = getAuthToken();
+                if (!authToken) {
+                    showToast('error', 'Sign In Required', 'Sign in again before uploading MLS import PDFs.');
+                    return;
+                }
+
+                addPdfButton.disabled = true;
+                addPdfButton.textContent = 'Extracting...';
+
+                try {
+                    const contentBase64 = await readFileAsBase64(file);
+                    const response = await fetch('/api/admin/mls-imports/extract-pdf', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            contentBase64
+                        })
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload && payload.error ? payload.error : 'The PDF could not be processed.');
+                    }
+
+                    const extracted = payload && payload.extracted && typeof payload.extracted === 'object' ? payload.extracted : {};
+                    const nextRow = {
+                        importDate: new Date().toISOString().slice(0, 10),
+                        propertyAddress: String(extracted.propertyAddress || '').trim(),
+                        laName: String(extracted.laName || '').trim(),
+                        loPhone: String(extracted.loPhone || '').trim(),
+                        offersEmail: String(extracted.offersEmail || '').trim(),
+                        laCell: String(extracted.laCell || '').trim(),
+                        importSource: 'PDF Upload',
+                        status: 'Extracted',
+                        pdfFile: String(payload.fileName || file.name || '').trim()
+                    };
+
+                    tableBody.appendChild(createRow(nextRow));
+                    saveRows();
+                    showToast('success', 'PDF Extracted', 'Property Address, LA Name, LO Phone, Offers Email, and LA Cell were added to the sheet.');
+                } catch (error) {
+                    showToast('error', 'PDF Extraction Failed', error && error.message ? error.message : 'The PDF could not be processed.');
+                } finally {
+                    addPdfButton.disabled = false;
+                    addPdfButton.textContent = 'Add PDF';
+                }
+            });
+
+            exportCsvButton.addEventListener('click', exportRowsToCsv);
+
+            renderRows(loadRows());
+        })();
+    </script>
+</body>
+</html>
