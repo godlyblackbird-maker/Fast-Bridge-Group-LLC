@@ -728,8 +728,29 @@
 
         body::before,
         body::after {
-            content: none !important;
-            display: none !important;
+            content: '';
+            position: fixed;
+            pointer-events: none;
+            z-index: 0;
+            border-radius: 999px;
+            filter: blur(24px);
+            opacity: 0.65;
+        }
+
+        body::before {
+            top: 100px;
+            right: -120px;
+            width: 320px;
+            height: 320px;
+            background: var(--orb-a);
+        }
+
+        body::after {
+            left: -90px;
+            bottom: 40px;
+            width: 260px;
+            height: 260px;
+            background: var(--orb-b);
         }
 
         .site-shell {
@@ -2180,16 +2201,20 @@
                 if (normalized === 'system') {
                     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                return ALLOWED_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'sunset';
+                return ALLOWED_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'beach';
             };
 
             const getStoredThemeValue = () => {
                 const { userKey, isAuthenticated } = getUserThemeContext();
-                if (!isAuthenticated) {
-                    return 'sunset';
-                }
                 const themeStore = readJson(USER_THEME_KEY);
-                return String((themeStore[userKey] && themeStore[userKey].value) || localStorage.getItem(HOMEPAGE_THEME_KEY) || 'sunset').trim().toLowerCase();
+                const scopedTheme = String((themeStore[userKey] && themeStore[userKey].value) || '').trim().toLowerCase();
+                const homepageTheme = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
+
+                if (!isAuthenticated) {
+                    return homepageTheme || 'beach';
+                }
+
+                return scopedTheme || homepageTheme || 'beach';
             };
 
             const getHomepageTheme = () => {
