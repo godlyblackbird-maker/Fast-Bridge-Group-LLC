@@ -14611,6 +14611,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .deals-compact-row {
+    position: relative;
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
@@ -14625,9 +14626,57 @@ body.sidebar-collapsed .main-content {
     transition: all var(--transition-fast);
 }
 
-.deals-compact-row:hover {
+.deals-compact-row:hover,
+.deals-compact-row:focus-visible,
+.deals-compact-row:focus-within {
     border-color: rgba(52, 211, 153, 0.36);
     background: rgba(52, 211, 153, 0.1);
+}
+
+.deals-compact-row:focus-visible {
+    outline: 2px solid rgba(52, 211, 153, 0.32);
+    outline-offset: 2px;
+}
+
+.deals-compact-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(248, 113, 113, 0.32);
+    background: rgba(127, 29, 29, 0.78);
+    color: #fecaca;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-2px);
+    pointer-events: none;
+    transition: opacity var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.deals-compact-delete-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.deals-compact-row:hover .deals-compact-delete-btn,
+.deals-compact-row:focus-within .deals-compact-delete-btn,
+.deals-compact-delete-btn:focus-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.deals-compact-delete-btn:hover,
+.deals-compact-delete-btn:focus-visible {
+    border-color: rgba(252, 165, 165, 0.6);
+    background: rgba(153, 27, 27, 0.92);
+    color: #fee2e2;
+    outline: none;
 }
 
 .deals-compact-thumb-wrap {
@@ -14840,6 +14889,7 @@ body.sidebar-collapsed .main-content {
     .deals-compact-row {
         grid-template-columns: 48px minmax(0, 1fr);
         gap: 8px;
+        padding-top: 12px;
     }
 
     .deals-compact-side {
@@ -14853,6 +14903,12 @@ body.sidebar-collapsed .main-content {
     .deals-compact-thumb-wrap {
         width: 48px;
         height: 38px;
+    }
+
+    .deals-compact-delete-btn {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
     }
 
     .deals-compact-pagination {

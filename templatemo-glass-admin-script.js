@@ -12584,6 +12584,28 @@ function initNavbarDateTime() {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
+        function deleteClickedProperty(item) {
+            if (!item || typeof item !== 'object') {
+                return;
+            }
+
+            const itemId = String(item.id || '').trim();
+            if (!itemId) {
+                return;
+            }
+
+            const propertyLabel = String(item.address || 'this property').trim() || 'this property';
+            if (!window.confirm(`Delete ${propertyLabel} from My Deals?`)) {
+                return;
+            }
+
+            const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const nextItems = items.filter(entry => String(entry.id || '') !== itemId);
+            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+            showDashboardToast('success', 'Property Removed', `${propertyLabel} was removed from your My Deals list.`);
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+
         function getAssignedItemsForWorkspaceUser() {
             const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
             const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
@@ -12814,14 +12836,25 @@ function initNavbarDateTime() {
             const visibleItems = items.slice(startIndex, startIndex + pageSize);
 
             visibleItems.forEach(item => {
-                const row = document.createElement('button');
-                row.type = 'button';
+                const row = document.createElement('div');
                 row.className = 'deals-compact-row';
+                row.tabIndex = 0;
+                row.setAttribute('role', 'button');
+                row.setAttribute('aria-label', `Open ${String(item.address || 'property').trim() || 'property'}`);
 
                 const statusLabel = String(item.status || 'active').replace('-', ' ');
                 const roiText = Number(item.roi || 0).toFixed(1);
 
                 row.innerHTML = `
+                    <button type="button" class="deals-compact-delete-btn" aria-label="Delete ${String(item.address || 'property').trim() || 'property'} from My Deals">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6"></path>
+                            <path d="M18 6l-.8 11.2A2 2 0 0 1 15.2 19H8.8a2 2 0 0 1-1.99-1.8L6 6"></path>
+                            <path d="M10 10.25v5.5"></path>
+                            <path d="M14 10.25v5.5"></path>
+                        </svg>
+                    </button>
                     <div class="deals-compact-thumb-wrap">
                         <img class="deals-compact-thumb" src="${String(item.imageUrl || '').trim()}" alt="Property preview">
                     </div>
@@ -12836,12 +12869,33 @@ function initNavbarDateTime() {
                     </div>
                 `;
 
-                row.addEventListener('click', () => {
+                const openClickedProperty = () => {
                     if (item.propertySnapshot && typeof item.propertySnapshot === 'object') {
                         localStorage.setItem('selectedPropertyDetail', JSON.stringify(item.propertySnapshot));
                     }
                     window.location.href = 'property-details.html';
+                };
+
+                row.addEventListener('click', () => {
+                    openClickedProperty();
                 });
+
+                row.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+                    event.preventDefault();
+                    openClickedProperty();
+                });
+
+                const deleteButton = row.querySelector('.deals-compact-delete-btn');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        deleteClickedProperty(item);
+                    });
+                }
 
                 list.appendChild(row);
             });
