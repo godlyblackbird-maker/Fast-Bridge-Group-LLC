@@ -2892,6 +2892,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         profitWindowButtons.forEach((button) => {
             button.addEventListener('click', () => {
                 setSelectedProfitWindow(button.dataset.profitWindow);
+                refreshKpis();
             });
         });
 
@@ -3424,9 +3425,46 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         attachMoneyFormatter(dealEarnedInput);
         renderPendingUploads();
 
+        function openClosedDealDocumentPicker() {
+            if (!dealDocumentUploadInput) {
+                return;
+            }
+
+            try {
+                if (typeof dealDocumentUploadInput.showPicker === 'function') {
+                    dealDocumentUploadInput.showPicker();
+                    return;
+                }
+            } catch (error) {
+            }
+
+            const hadHiddenAttribute = dealDocumentUploadInput.hasAttribute('hidden');
+            if (hadHiddenAttribute) {
+                dealDocumentUploadInput.removeAttribute('hidden');
+                dealDocumentUploadInput.style.position = 'fixed';
+                dealDocumentUploadInput.style.left = '-9999px';
+                dealDocumentUploadInput.style.top = '0';
+                dealDocumentUploadInput.style.opacity = '0';
+                dealDocumentUploadInput.style.pointerEvents = 'none';
+            }
+
+            dealDocumentUploadInput.click();
+
+            if (hadHiddenAttribute) {
+                window.setTimeout(() => {
+                    dealDocumentUploadInput.setAttribute('hidden', 'hidden');
+                    dealDocumentUploadInput.style.position = '';
+                    dealDocumentUploadInput.style.left = '';
+                    dealDocumentUploadInput.style.top = '';
+                    dealDocumentUploadInput.style.opacity = '';
+                    dealDocumentUploadInput.style.pointerEvents = '';
+                }, 0);
+            }
+        }
+
         if (dealDocumentUploadButton && dealDocumentUploadInput) {
             dealDocumentUploadButton.addEventListener('click', () => {
-                dealDocumentUploadInput.click();
+                openClosedDealDocumentPicker();
             });
 
             dealDocumentUploadInput.addEventListener('change', () => {
@@ -3443,6 +3481,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 pendingUploads = [...pendingUploads, ...nextUploads];
                 dealDocumentUploadInput.value = '';
                 renderPendingUploads();
+                showDashboardToast('success', 'Documents Added', `${nextUploads.length} file${nextUploads.length === 1 ? '' : 's'} ready to save with this closed deal.`);
             });
         }
 

@@ -1933,6 +1933,10 @@
                 </div>
             </a>
             <div class="topbar-actions">
+                <button class="theme-switch-btn" id="homepage-theme-switch" type="button" aria-label="Switch homepage theme between Beach and Sunset">
+                    <span class="theme-switch-label">Theme</span>
+                    <span class="theme-switch-current" id="homepage-theme-label">Beach</span>
+                </button>
                 <a class="login-btn" href="login.html">Log In</a>
             </div>
         </header>
@@ -2153,17 +2157,9 @@
             const HOMEPAGE_THEME_KEY = 'homepageTheme';
             const USER_THEME_KEY = 'dashboardThemeByUser';
             const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset'];
-            const ALLOWED_HOMEPAGE_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space', 'japan', 'holloween', 'christmas'];
             const THEME_LABELS = {
-                dark: 'Dark',
-                light: 'Light',
                 beach: 'Beach',
-                swamp: 'Swamp',
-                sunset: 'Sunset',
-                space: 'Space',
-                japan: 'Japan',
-                holloween: 'Holloween',
-                christmas: 'Christmas'
+                sunset: 'Sunset'
             };
 
             const readJson = (key) => {
@@ -2192,29 +2188,17 @@
             };
 
             const getAvailableHomepageThemes = () => {
-                const { hasIdentity } = getUserThemeContext();
-                return hasIdentity ? ALLOWED_HOMEPAGE_THEMES : PUBLIC_HOMEPAGE_THEMES;
+                return PUBLIC_HOMEPAGE_THEMES;
             };
 
             const resolveTheme = (value) => {
                 const normalized = String(value || '').trim().toLowerCase();
-                if (normalized === 'system') {
-                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                }
-                return ALLOWED_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'beach';
+                return PUBLIC_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'beach';
             };
 
             const getStoredThemeValue = () => {
-                const { userKey, isAuthenticated } = getUserThemeContext();
-                const themeStore = readJson(USER_THEME_KEY);
-                const scopedTheme = String((themeStore[userKey] && themeStore[userKey].value) || '').trim().toLowerCase();
                 const homepageTheme = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
-
-                if (!isAuthenticated) {
-                    return homepageTheme || 'beach';
-                }
-
-                return scopedTheme || homepageTheme || 'beach';
+                return homepageTheme || 'beach';
             };
 
             const getHomepageTheme = () => {
@@ -2223,13 +2207,20 @@
 
             const saveThemePreference = (theme) => {
                 const normalized = resolveTheme(theme);
-                const { userKey } = getUserThemeContext();
-                const themeStore = readJson(USER_THEME_KEY);
-                const nextEntry = Object.assign({}, themeStore[userKey] || {}, { value: normalized });
-                themeStore[userKey] = nextEntry;
-                localStorage.setItem(USER_THEME_KEY, JSON.stringify(themeStore));
                 localStorage.setItem(HOMEPAGE_THEME_KEY, normalized);
                 localStorage.setItem('theme', normalized);
+            };
+
+            const updateThemeSwitchUi = (activeTheme) => {
+                const themeSwitchLabel = document.getElementById('homepage-theme-label');
+                const themeSwitchButton = document.getElementById('homepage-theme-switch');
+                if (themeSwitchLabel) {
+                    themeSwitchLabel.textContent = THEME_LABELS[activeTheme] || 'Beach';
+                }
+                if (themeSwitchButton) {
+                    themeSwitchButton.setAttribute('data-theme-choice', activeTheme);
+                    themeSwitchButton.setAttribute('aria-label', `Switch homepage theme. Current theme: ${THEME_LABELS[activeTheme] || 'Beach'}`);
+                }
             };
 
             const applyStoredTheme = () => {
@@ -2237,6 +2228,7 @@
                 const { isAuthenticated } = getUserThemeContext();
                 document.documentElement.setAttribute('data-theme', activeTheme);
                 document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
+                updateThemeSwitchUi(activeTheme);
             };
 
             const modal = document.getElementById('access-request-modal');
@@ -2248,6 +2240,7 @@
             const swayAccessButton = document.getElementById('open-access-request');
             const swayCards = Array.from(document.querySelectorAll('#platform .section-card'));
             const swayOpsItems = Array.from(document.querySelectorAll('.ops-item'));
+            const homepageThemeSwitchButton = document.getElementById('homepage-theme-switch');
 
             const setFeedback = (message, state) => {
                 if (!feedback) {
@@ -2411,6 +2404,17 @@
 
                 swayAccessButton.addEventListener('mouseleave', () => {
                     swayAccessButton.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+                });
+            }
+
+            if (homepageThemeSwitchButton) {
+                homepageThemeSwitchButton.addEventListener('click', () => {
+                    const availableThemes = getAvailableHomepageThemes();
+                    const activeTheme = getHomepageTheme();
+                    const activeIndex = availableThemes.indexOf(activeTheme);
+                    const nextTheme = availableThemes[(activeIndex + 1 + availableThemes.length) % availableThemes.length] || 'beach';
+                    saveThemePreference(nextTheme);
+                    applyStoredTheme();
                 });
             }
 
