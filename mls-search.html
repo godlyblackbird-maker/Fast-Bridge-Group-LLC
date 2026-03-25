@@ -758,9 +758,8 @@
                             <p class="mls-search-hero-copy">Turn a rough buy box into a clean search brief, jump straight into the best listing sources, and keep your criteria organized so you can move faster on fix-and-flip, rental, or distress opportunities.</p>
                             <div class="mls-search-jump-links">
                                 <a class="mls-jump-link" href="#mls-search-builder">Search Builder</a>
-                                <a class="mls-jump-link" href="#mls-search-preview">Live Brief</a>
-                                <a class="mls-jump-link" href="#mls-search-sources">Source Launchers</a>
-                                <a class="mls-jump-link" href="#mls-search-guidance">Workflow Tips</a>
+                                <a class="mls-jump-link" href="#mls-search-preview">Results</a>
+                                <a class="mls-jump-link" href="#mls-search-sources">Sources</a>
                             </div>
                         </div>
                     </div>
@@ -878,33 +877,18 @@
                                 <button type="button" id="mls-search-clear" class="mls-search-action-btn">Clear Filters</button>
                             </div>
                         </div>
-
-                        <div id="mls-search-guidance" class="glass-card outreach-card mls-search-guidance mls-search-anchor">
-                            <div class="card-header">
-                                <div>
-                                    <h2 class="card-title">Workflow Navigation</h2>
-                                    <p class="card-subtitle">Use the page like a repeatable acquisitions workflow instead of a loose note pad.</p>
-                                </div>
-                            </div>
-                            <ul class="mls-search-checklist">
-                                <li><strong>1. Build the market box.</strong> Start with area + property type so your external search results do not drift off target.</li>
-                                <li><strong>2. Lock the numbers.</strong> Add price, beds, and baths before you launch Zillow or Redfin so the brief already reflects the investor box.</li>
-                                <li><strong>3. Add distress language.</strong> Keywords like probate, value-add, vacant, or ADU potential make the brief more useful when you bounce between listing sites.</li>
-                            </ul>
-                        </div>
                     </div>
 
                     <div class="mls-search-right">
                         <div id="mls-search-preview" class="glass-card outreach-card mls-board-intro mls-search-anchor">
                             <div class="card-header">
                                 <div>
-                                    <h2 class="card-title">Live Search Brief</h2>
-                                    <p class="card-subtitle">A cleaner search summary you can skim before launching third-party sites.</p>
+                                    <h2 class="card-title">Results</h2>
                                 </div>
                             </div>
                             <div class="mls-search-results-tabs" role="tablist" aria-label="MLS search results views">
-                                <button type="button" class="mls-search-results-tab is-active" id="mls-results-tab-search" data-mls-results-tab="search" role="tab" aria-selected="true" aria-controls="mls-results-panel-search">Search Snapshot</button>
-                                <button type="button" class="mls-search-results-tab" id="mls-results-tab-nearby" data-mls-results-tab="nearby" role="tab" aria-selected="false" aria-controls="mls-results-panel-nearby">Nearby Homes</button>
+                                <button type="button" class="mls-search-results-tab is-active" id="mls-results-tab-search" data-mls-results-tab="search" role="tab" aria-selected="true" aria-controls="mls-results-panel-search">Search</button>
+                                <button type="button" class="mls-search-results-tab" id="mls-results-tab-nearby" data-mls-results-tab="nearby" role="tab" aria-selected="false" aria-controls="mls-results-panel-nearby">Nearby</button>
                             </div>
                             <section class="mls-search-results-panel" id="mls-results-panel-search" data-mls-results-panel="search" role="tabpanel" aria-labelledby="mls-results-tab-search">
                                 <div class="mls-search-summary" id="mls-search-summary"></div>
@@ -922,14 +906,10 @@
                                         <span>Criteria Weight</span>
                                         <p id="mls-search-criteria-weight">No major filters applied yet.</p>
                                     </div>
-                                    <div class="mls-search-brief-item">
-                                        <span>Launch Note</span>
-                                        <p id="mls-search-launch-note">Once the brief looks tight, open your preferred sources below.</p>
-                                    </div>
                                 </div>
                             </section>
                             <section class="mls-search-results-panel" id="mls-results-panel-nearby" data-mls-results-panel="nearby" role="tabpanel" aria-labelledby="mls-results-tab-nearby" hidden>
-                                <div class="mls-nearby-summary" id="mls-search-nearby-summary"><strong>Nearby Homes:</strong> Add a market and radius to generate nearby property ideas around your active search.</div>
+                                <div class="mls-nearby-summary" id="mls-search-nearby-summary">Add a market and radius to see nearby properties.</div>
                                 <div class="mls-nearby-list" id="mls-search-nearby-list"></div>
                             </section>
                             </div>
@@ -938,31 +918,15 @@
                         <div id="mls-search-sources" class="glass-card outreach-card mls-search-ops mls-search-anchor">
                             <div class="card-header">
                                 <div>
-                                    <h2 class="card-title">Source Launchers</h2>
-                                    <p class="card-subtitle">Jump into the right site with the same brief instead of rewriting your search each time.</p>
+                                    <h2 class="card-title">Sources</h2>
                                 </div>
                             </div>
                             <div class="mls-search-source-grid">
-                                <a id="mls-search-zillow" class="mls-source-link is-primary" href="#" target="_blank" rel="noopener noreferrer">Zillow<small>Fast visual scan and pricing tone</small></a>
-                                <a id="mls-search-redfin" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Redfin<small>Map view and cleaner filter stack</small></a>
-                                <a id="mls-search-realtor" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Realtor<small>Cross-check listings and listing language</small></a>
-                                <a id="mls-search-maps" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Google Maps<small>Street context, adjacency, and neighborhood feel</small></a>
+                                <a id="mls-search-zillow" class="mls-source-link is-primary" href="#" target="_blank" rel="noopener noreferrer">Zillow</a>
+                                <a id="mls-search-redfin" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Redfin</a>
+                                <a id="mls-search-realtor" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Realtor</a>
+                                <a id="mls-search-maps" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Google Maps</a>
                             </div>
-                            <div class="mls-search-status"><strong>Tip:</strong> Open Zillow first for quick visual screening, then confirm shape and surrounding context in Maps before deeper underwriting.</div>
-                        </div>
-
-                        <div class="glass-card outreach-card mls-search-guidance">
-                            <div class="card-header">
-                                <div>
-                                    <h2 class="card-title">Search Notes</h2>
-                                    <p class="card-subtitle">A few practical reminders so the search stays investor-focused.</p>
-                                </div>
-                            </div>
-                            <ul class="mls-search-notes-list">
-                                <li><strong>Use broad location terms first.</strong> If you start with a narrow neighborhood, you can miss nearby pockets with stronger spreads.</li>
-                                <li><strong>Keep keyword clutter low.</strong> Two to five good investor signals usually beat a long, muddy string.</li>
-                                <li><strong>Save the brief, not just the result.</strong> The brief is what makes your process reusable across sites and across deals.</li>
-                            </ul>
                         </div>
                     </div>
                 </section>
@@ -996,8 +960,6 @@
             const primaryMarketEl = document.getElementById('mls-search-primary-market');
             const investorFitEl = document.getElementById('mls-search-investor-fit');
             const criteriaWeightEl = document.getElementById('mls-search-criteria-weight');
-            const launchNoteEl = document.getElementById('mls-search-launch-note');
-            const statusEl = document.getElementById('mls-search-status');
             const priceBandEl = document.getElementById('mls-search-price-band');
             const structureNeedEl = document.getElementById('mls-search-structure-need');
             const signalListEl = document.getElementById('mls-search-signal-list');
@@ -1184,18 +1146,17 @@
 
                 const marketLabel = normalizeMarketLabel(state.location);
                 if (!marketLabel) {
-                    nearbySummaryEl.innerHTML = '<strong>Nearby Homes:</strong> Add a city, ZIP, county, or neighborhood to generate nearby property ideas tied to your search.';
+                    nearbySummaryEl.textContent = 'Add a market and radius to see nearby properties.';
                     nearbyListEl.innerHTML = `
                         <div class="mls-nearby-empty">
-                            <strong>No nearby homes yet.</strong>
-                            Start with a market area and the page will build a nearby-property list around that search box.
+                            Add a market area to generate nearby properties.
                         </div>
                     `;
                     return;
                 }
 
                 const cards = buildNearbyProperties(state);
-                nearbySummaryEl.innerHTML = `<strong>Nearby Homes:</strong> ${cards.length} nearby options around ${marketLabel} based on your ${state.radius || 'active search area'} and current investor box.`;
+                nearbySummaryEl.textContent = `${cards.length} nearby properties around ${marketLabel}.`;
                 nearbyListEl.innerHTML = cards.map((card) => `
                     <article class="mls-nearby-card">
                         <div class="mls-nearby-card-head">
@@ -1288,13 +1249,8 @@
                 const brief = buildSearchSummary(state);
                 try {
                     await navigator.clipboard.writeText(brief);
-                    if (statusEl) {
-                        statusEl.innerHTML = '<strong>Status:</strong> Search brief copied to clipboard.';
-                    }
                 } catch (error) {
-                    if (statusEl) {
-                        statusEl.innerHTML = '<strong>Status:</strong> Copy failed in this browser. You can still use the live brief below.';
-                    }
+                    // Ignore clipboard failures and keep the search UI usable.
                 }
             }
 
@@ -1350,14 +1306,6 @@
                     criteriaWeightEl.textContent = activeCriteria > 0
                         ? `${activeCriteria} major filter${activeCriteria === 1 ? '' : 's'} are shaping this search.`
                         : 'No major filters applied yet.';
-                }
-                if (launchNoteEl) {
-                    launchNoteEl.textContent = state.location
-                        ? 'Your source links below are ready to launch with this market focus.'
-                        : 'Add a market first so the launch links are more intentional.';
-                }
-                if (statusEl) {
-                    statusEl.innerHTML = `<strong>Status:</strong> ${pillCount > 0 ? `${pillCount} brief cue${pillCount === 1 ? '' : 's'} loaded.` : 'Ready to build a search brief.'}`;
                 }
                 if (priceBandEl) {
                     priceBandEl.textContent = [formatCurrency(state.minPrice), formatCurrency(state.maxPrice)].filter(Boolean).join(' - ') || 'Add budget';

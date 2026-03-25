@@ -6780,6 +6780,8 @@ function initNavbarDateTime() {
         const countSummary = document.getElementById('notes-count-summary');
         const folderSummary = document.getElementById('notes-folder-summary');
         const notesSubtitle = document.getElementById('notes-widget-subtitle');
+        const viewAllButton = document.getElementById('notes-view-all-btn');
+        const viewTrashButton = document.getElementById('notes-view-trash-btn');
         const editorEmpty = document.getElementById('notes-editor-empty');
         const editor = document.getElementById('notes-editor');
         const backToListButton = document.getElementById('notes-back-to-list-btn');
@@ -6797,7 +6799,7 @@ function initNavbarDateTime() {
         const metaLabel = document.getElementById('notes-meta-label');
         const deleteButton = document.getElementById('notes-delete-note-btn');
 
-        if (!folderTree || !noteList || !addFolderButton || !addNoteButton || !quickNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !notesSubtitle || !editorEmpty || !editor || !backToListButton || !titleInput || !folderSelect || !pinToggleButton || !completeToggleButton || !bodyInput || !fontToolButton || !checklistToolButton || !gridToolButton || !attachToolButton || !drawToolButton || !boldToolButton || !metaLabel || !deleteButton) {
+        if (!folderTree || !noteList || !addFolderButton || !addNoteButton || !quickNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !notesSubtitle || !viewAllButton || !viewTrashButton || !editorEmpty || !editor || !backToListButton || !titleInput || !folderSelect || !pinToggleButton || !completeToggleButton || !bodyInput || !fontToolButton || !checklistToolButton || !gridToolButton || !attachToolButton || !drawToolButton || !boldToolButton || !metaLabel || !deleteButton) {
             return;
         }
 
@@ -6805,8 +6807,10 @@ function initNavbarDateTime() {
         const DEFAULT_FOLDER_ID = 'folder-default';
         const DEFAULT_FOLDER_NAME = 'Notes';
         const ALL_NOTES_FOLDER_ID = '__all_notes__';
+        const NOTES_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
         let selectedNoteId = '';
         let activeFolderId = ALL_NOTES_FOLDER_ID;
+        let activeView = 'all';
         let searchQuery = '';
         let persistTimer = null;
         let pinnedCollapsed = false;
@@ -6817,6 +6821,7 @@ function initNavbarDateTime() {
             const value = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) ? rawValue : {};
             const rawFolders = Array.isArray(value.folders) ? value.folders : [];
             const rawNotes = Array.isArray(value.notes) ? value.notes : [];
+            const now = Date.now();
             const folders = rawFolders
                 .map((folder, index) => {
                     const id = String(folder && folder.id || `folder-${index + 1}`).trim();
@@ -6869,10 +6874,12 @@ function initNavbarDateTime() {
                         folderId,
                         pinned: Boolean(note && note.pinned),
                         completed: Boolean(note && note.completed),
+                        deletedAt: Number(note && note.deletedAt) || 0,
                         createdAt: Number(note && note.createdAt) || Date.now(),
                         updatedAt: Number(note && note.updatedAt) || Date.now()
                     };
                 })
+                .filter((note) => !note.deletedAt || (now - note.deletedAt) < NOTES_TRASH_RETENTION_MS)
                 .filter(Boolean);
 
             return { folders, notes };
@@ -6889,6 +6896,18 @@ function initNavbarDateTime() {
         function getFolderName(folderId, folders) {
             const matched = folders.find((folder) => folder.id === folderId);
             return matched ? matched.name : DEFAULT_FOLDER_NAME;
+        }
+
+        function isTrashView() {
+            return activeView === 'trash';
+        }
+
+        function getActiveNotes(data) {
+            return data.notes.filter((note) => !note.deletedAt);
+        }
+
+        function getDeletedNotes(data) {
+            return data.notes.filter((note) => note.deletedAt);
         }
 
         function getFolderChildren(folders, parentId) {
@@ -7017,11 +7036,12 @@ function initNavbarDateTime() {
 
         function getFilteredNotes(data) {
             const normalizedQuery = searchQuery.trim().toLowerCase();
+            const sourceNotes = isTrashView() ? getDeletedNotes(data) : getActiveNotes(data);
             const allowedFolderIds = activeFolderId === ALL_NOTES_FOLDER_ID
                 ? null
                 : getDescendantFolderIds(data, activeFolderId);
-            return data.notes
-                .filter((note) => !allowedFolderIds || allowedFolderIds.has(note.folderId))
+            return sourceNotes
+                .filter((note) => isTrashView() || !allowedFolderIds || allowedFolderIds.has(note.folderId))
                 .filter((note) => {
                     if (!normalizedQuery) {
                         return true;
@@ -7035,6 +7055,9 @@ function initNavbarDateTime() {
                     }
                     if (Boolean(left.completed) !== Boolean(right.completed)) {
                         return Number(Boolean(left.completed)) - Number(Boolean(right.completed));
+                    }
+                    if (isTrashView()) {
+                        return (Number(right.deletedAt) || 0) - (Number(left.deletedAt) || 0);
                     }
                     return (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0);
                 });
@@ -7074,7 +7097,7 @@ function initNavbarDateTime() {
 
         function getFolderNoteCount(data, folderId) {
             const descendantIds = getDescendantFolderIds(data, folderId);
-            return data.notes.filter((note) => descendantIds.has(note.folderId)).length;
+            return getActiveNotes(data).filter((note) => descendantIds.has(note.folderId)).length;
         }
 
         function moveDraggedItemToFolder(targetFolderId) {
@@ -7136,7 +7159,14 @@ function initNavbarDateTime() {
         }
 
         function renderFolderTree(data) {
+            folderTree.hidden = isTrashView();
+            if (isTrashView()) {
+                folderTree.innerHTML = '';
+                return;
+            }
+
             folderTree.innerHTML = '';
+            const activeNotes = getActiveNotes(data);
 
             const allNotesButton = document.createElement('button');
             allNotesButton.type = 'button';
@@ -7144,7 +7174,7 @@ function initNavbarDateTime() {
             if (activeFolderId === ALL_NOTES_FOLDER_ID) {
                 allNotesButton.classList.add('is-active');
             }
-            allNotesButton.innerHTML = `<span class="notes-folder-main"><span class="notes-folder-name">All Notes</span><span class="notes-folder-count">${data.notes.length} note${data.notes.length === 1 ? '' : 's'}</span></span>`;
+            allNotesButton.innerHTML = `<span class="notes-folder-main"><span class="notes-folder-name">All Notes</span><span class="notes-folder-count">${activeNotes.length} note${activeNotes.length === 1 ? '' : 's'}</span></span>`;
             allNotesButton.addEventListener('click', () => {
                 activeFolderId = ALL_NOTES_FOLDER_ID;
                 render();
@@ -7271,6 +7301,10 @@ function initNavbarDateTime() {
         }
 
         function buildNoteGroups(notes) {
+            if (isTrashView()) {
+                return [{ key: 'trash', title: 'Recently Deleted', notes }].filter((group) => group.notes.length);
+            }
+
             const groups = [
                 { key: 'pinned', title: 'Pinned', notes: [] },
                 { key: 'today', title: 'Today', notes: [] },
@@ -7288,17 +7322,81 @@ function initNavbarDateTime() {
             return groups.filter((group) => group.notes.length);
         }
 
+        function moveNoteToTrash(noteId) {
+            const data = getNotesData();
+            const noteIndex = data.notes.findIndex((note) => note.id === noteId);
+            if (noteIndex < 0) {
+                return;
+            }
+
+            data.notes[noteIndex] = {
+                ...data.notes[noteIndex],
+                pinned: false,
+                completed: false,
+                deletedAt: Date.now(),
+                updatedAt: Date.now()
+            };
+
+            if (selectedNoteId === noteId) {
+                selectedNoteId = '';
+            }
+
+            saveNotesData(data);
+            render();
+            showDashboardToast('success', 'Moved To Recently Deleted', 'The note can be restored for 30 days before it is permanently deleted.');
+        }
+
+        function restoreDeletedNote(noteId) {
+            const data = getNotesData();
+            const noteIndex = data.notes.findIndex((note) => note.id === noteId);
+            if (noteIndex < 0) {
+                return;
+            }
+
+            data.notes[noteIndex] = {
+                ...data.notes[noteIndex],
+                deletedAt: 0,
+                updatedAt: Date.now()
+            };
+
+            saveNotesData(data);
+            render();
+            showDashboardToast('success', 'Note Restored', 'The note was restored to your notes list.');
+        }
+
+        function permanentlyDeleteNote(noteId) {
+            const data = getNotesData();
+            data.notes = data.notes.filter((note) => note.id !== noteId);
+            if (selectedNoteId === noteId) {
+                selectedNoteId = '';
+            }
+            saveNotesData(data);
+            render();
+            showDashboardToast('success', 'Note Permanently Deleted', 'The note was removed from Recently Deleted.');
+        }
+
+        function formatDaysUntilDeletion(note) {
+            const deletedAt = Number(note && note.deletedAt) || 0;
+            if (!deletedAt) {
+                return '';
+            }
+            const remainingMs = Math.max((deletedAt + NOTES_TRASH_RETENTION_MS) - Date.now(), 0);
+            const remainingDays = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+            return `Deletes in ${remainingDays} day${remainingDays === 1 ? '' : 's'}`;
+        }
+
         function createNoteCard(note, data) {
-            const card = document.createElement('button');
-            card.type = 'button';
+            const card = document.createElement('article');
             card.className = 'notes-note-card';
+            card.tabIndex = 0;
+            card.setAttribute('role', isTrashView() ? 'group' : 'button');
             if (note.id === selectedNoteId) {
                 card.classList.add('is-active');
             }
             if (note.completed) {
                 card.classList.add('is-completed');
             }
-            card.draggable = true;
+            card.draggable = !isTrashView();
 
             const head = document.createElement('div');
             head.className = 'notes-note-card-head';
@@ -7309,10 +7407,54 @@ function initNavbarDateTime() {
 
             const time = document.createElement('span');
             time.className = 'notes-note-card-time';
-            time.textContent = formatNoteListDate(note.updatedAt);
+            time.textContent = formatNoteListDate(isTrashView() ? note.deletedAt : note.updatedAt);
+
+            const actions = document.createElement('div');
+            actions.className = 'notes-note-card-actions';
+
+            if (isTrashView()) {
+                const restoreButton = document.createElement('button');
+                restoreButton.type = 'button';
+                restoreButton.className = 'notes-note-card-action-btn notes-note-card-restore';
+                restoreButton.setAttribute('aria-label', 'Restore note');
+                restoreButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7v6h6"></path><path d="M21 17A9 9 0 0 0 6 9l-3 4"></path></svg>';
+                restoreButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    restoreDeletedNote(note.id);
+                });
+
+                const deleteForeverButton = document.createElement('button');
+                deleteForeverButton.type = 'button';
+                deleteForeverButton.className = 'notes-note-card-action-btn notes-note-card-permanent';
+                deleteForeverButton.setAttribute('aria-label', 'Delete permanently');
+                deleteForeverButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                deleteForeverButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    const confirmed = window.confirm('Permanently delete this note?');
+                    if (!confirmed) {
+                        return;
+                    }
+                    permanentlyDeleteNote(note.id);
+                });
+
+                actions.appendChild(restoreButton);
+                actions.appendChild(deleteForeverButton);
+            } else {
+                const trashButton = document.createElement('button');
+                trashButton.type = 'button';
+                trashButton.className = 'notes-note-card-delete';
+                trashButton.setAttribute('aria-label', 'Move note to recently deleted');
+                trashButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                trashButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    moveNoteToTrash(note.id);
+                });
+                actions.appendChild(trashButton);
+            }
 
             head.appendChild(title);
             head.appendChild(time);
+            head.appendChild(actions);
             card.appendChild(head);
 
             const meta = document.createElement('div');
@@ -7332,6 +7474,13 @@ function initNavbarDateTime() {
                 meta.appendChild(completed);
             }
 
+            if (isTrashView()) {
+                const trashMeta = document.createElement('span');
+                trashMeta.className = 'notes-note-card-trash-meta';
+                trashMeta.textContent = formatDaysUntilDeletion(note);
+                meta.appendChild(trashMeta);
+            }
+
             const folderName = getFolderName(note.folderId, data.folders);
             if (folderName && folderName !== DEFAULT_FOLDER_NAME) {
                 const folder = document.createElement('span');
@@ -7349,14 +7498,30 @@ function initNavbarDateTime() {
             preview.textContent = getNotePreview(note);
             card.appendChild(preview);
 
-            card.addEventListener('click', () => {
+            const openNote = () => {
+                if (isTrashView()) {
+                    return;
+                }
                 selectedNoteId = note.id;
                 renderEditor(getNotesData());
                 renderNoteList(getNotesData());
                 focusSelectedNoteForEditing();
+            };
+
+            card.addEventListener('click', openNote);
+
+            card.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                    return;
+                }
+                event.preventDefault();
+                openNote();
             });
 
             card.addEventListener('dragstart', () => {
+                if (isTrashView()) {
+                    return;
+                }
                 draggedItem = { type: 'note', id: note.id };
             });
             card.addEventListener('dragend', () => {
@@ -7367,15 +7532,24 @@ function initNavbarDateTime() {
         }
 
         function renderSummary(data, visibleNotes) {
-            const pinnedCount = data.notes.filter((note) => note.pinned).length;
-            notesSubtitle.textContent = `${data.notes.length} note${data.notes.length === 1 ? '' : 's'}`;
-            folderSummary.textContent = `${data.notes.length} total • ${pinnedCount} pinned`;
-            activeFolderLabel.textContent = searchQuery
+            const activeNotes = getActiveNotes(data);
+            const deletedNotes = getDeletedNotes(data);
+            const pinnedCount = activeNotes.filter((note) => note.pinned).length;
+            notesSubtitle.textContent = `${activeNotes.length} note${activeNotes.length === 1 ? '' : 's'}`;
+            folderSummary.textContent = `${activeNotes.length} active • ${deletedNotes.length} in trash`;
+            activeFolderLabel.textContent = isTrashView()
+                ? 'Recently Deleted'
+                : searchQuery
                 ? 'Search Results'
                 : activeFolderId === ALL_NOTES_FOLDER_ID
                     ? 'All Notes'
                     : getFolderName(activeFolderId, data.folders);
-            countSummary.textContent = `${visibleNotes.length} result${visibleNotes.length === 1 ? '' : 's'}`;
+            countSummary.textContent = isTrashView()
+                ? `${visibleNotes.length} deleted note${visibleNotes.length === 1 ? '' : 's'}`
+                : `${visibleNotes.length} result${visibleNotes.length === 1 ? '' : 's'}`;
+            viewAllButton.classList.toggle('is-active', !isTrashView());
+            viewTrashButton.classList.toggle('is-active', isTrashView());
+            viewTrashButton.textContent = deletedNotes.length ? `Recently Deleted (${deletedNotes.length})` : 'Recently Deleted';
         }
 
         function renderNoteList(data) {
@@ -7384,7 +7558,7 @@ function initNavbarDateTime() {
             noteList.innerHTML = '';
 
             if (visibleNotes.length === 0) {
-                noteList.innerHTML = `<p class="outreach-empty">${searchQuery ? 'No notes match this search.' : 'No notes yet. Tap quick note to start writing.'}</p>`;
+                noteList.innerHTML = `<p class="outreach-empty">${isTrashView() ? 'No deleted notes. Notes you move to the trash will stay here for 30 days.' : searchQuery ? 'No notes match this search.' : 'No notes yet. Tap quick note to start writing.'}</p>`;
                 return;
             }
 
@@ -7443,12 +7617,12 @@ function initNavbarDateTime() {
 
         function renderEditor(data) {
             const selectedNote = data.notes.find((note) => note.id === selectedNoteId) || null;
-            if (!selectedNote) {
+            if (!selectedNote || isTrashView() || selectedNote.deletedAt) {
                 editor.hidden = true;
                 editorEmpty.hidden = false;
                 setEditableText(titleInput, '');
                 setEditableText(bodyInput, '');
-                metaLabel.textContent = 'Last updated just now';
+                metaLabel.textContent = isTrashView() ? 'Restore a note from Recently Deleted to edit it again.' : 'Last updated just now';
                 editor.classList.remove('is-completed');
                 pinToggleButton.textContent = 'Pin Note';
                 pinToggleButton.classList.remove('is-active');
@@ -7477,6 +7651,9 @@ function initNavbarDateTime() {
             const data = getNotesData();
             if (activeFolderId !== ALL_NOTES_FOLDER_ID && !data.folders.some((folder) => folder.id === activeFolderId)) {
                 activeFolderId = ALL_NOTES_FOLDER_ID;
+            }
+            if (isTrashView()) {
+                selectedNoteId = '';
             }
             ensureSelection(data);
             renderFolderTree(data);
@@ -7535,9 +7712,11 @@ function initNavbarDateTime() {
                 folderId: targetFolderId,
                 pinned: false,
                 completed: false,
+                deletedAt: 0,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             });
+            activeView = 'all';
             selectedNoteId = noteId;
             saveNotesData(data);
             render();
@@ -7583,6 +7762,18 @@ function initNavbarDateTime() {
 
         searchInput.addEventListener('input', () => {
             searchQuery = String(searchInput.value || '').trim();
+            render();
+        });
+
+        viewAllButton.addEventListener('click', () => {
+            activeView = 'all';
+            selectedNoteId = '';
+            render();
+        });
+
+        viewTrashButton.addEventListener('click', () => {
+            activeView = 'trash';
+            selectedNoteId = '';
             render();
         });
 
@@ -7671,16 +7862,11 @@ function initNavbarDateTime() {
             if (!selectedNoteId) {
                 return;
             }
-            const confirmed = window.confirm('Delete this note?');
+            const confirmed = window.confirm('Move this note to Recently Deleted?');
             if (!confirmed) {
                 return;
             }
-            const data = getNotesData();
-            data.notes = data.notes.filter((note) => note.id !== selectedNoteId);
-            selectedNoteId = '';
-            saveNotesData(data);
-            showDashboardToast('success', 'Note Deleted', 'The note was removed from your dashboard.');
-            render();
+            moveNoteToTrash(selectedNoteId);
         });
 
         window.addEventListener('dashboard-data-updated', render);
@@ -13163,45 +13349,60 @@ function initNavbarDateTime() {
 
         const previewGallery = document.getElementById('piq-property-image-preview');
         const imageGallery = document.getElementById('piq-property-image-gallery');
+        const imageEditButton = document.getElementById('piq-property-image-edit-btn');
         const imageTabButtons = Array.from(document.querySelectorAll('.piq-image-tab[data-piq-image-tab]'));
         const imagePanels = Array.from(document.querySelectorAll('.piq-image-panel[data-piq-image-panel]'));
-        const images = Array.from(new Set(
-            (Array.isArray(detailData.propertyImages) ? detailData.propertyImages : [])
-                .map(url => String(url || '').trim())
-                .filter(url => url.length > 0)
-        ));
 
-        if (previewGallery) {
-            previewGallery.innerHTML = '';
-            if (images.length === 0) {
-                previewGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
-            } else {
-                images.slice(0, 4).forEach((url, index) => {
-                    const image = document.createElement('img');
-                    image.className = 'piq-image-thumb-large';
-                    image.loading = 'lazy';
-                    image.src = url;
-                    image.alt = `Property preview image ${index + 1}`;
-                    previewGallery.appendChild(image);
-                });
+        function getPropertyImages() {
+            return Array.from(new Set(
+                (Array.isArray(detailData.propertyImages) ? detailData.propertyImages : [])
+                    .map(url => String(url || '').trim())
+                    .filter(url => url.length > 0)
+            ));
+        }
+
+        function renderPropertyImages() {
+            const images = getPropertyImages();
+
+            if (previewGallery) {
+                previewGallery.innerHTML = '';
+                if (images.length === 0) {
+                    previewGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
+                } else {
+                    images.slice(0, 4).forEach((url, index) => {
+                        const image = document.createElement('img');
+                        image.className = 'piq-image-thumb-large';
+                        image.loading = 'lazy';
+                        image.src = url;
+                        image.alt = `Property preview image ${index + 1}`;
+                        previewGallery.appendChild(image);
+                    });
+                }
+            }
+
+            if (imageGallery) {
+                imageGallery.innerHTML = '';
+                if (images.length === 0) {
+                    imageGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
+                } else {
+                    images.forEach((url, index) => {
+                        const image = document.createElement('img');
+                        image.className = 'piq-image-thumb-strip';
+                        image.loading = 'lazy';
+                        image.src = url;
+                        image.alt = `Property image ${index + 1}`;
+                        imageGallery.appendChild(image);
+                    });
+                }
             }
         }
 
-        if (imageGallery) {
-            imageGallery.innerHTML = '';
-            if (images.length === 0) {
-                imageGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
-            } else {
-                images.forEach((url, index) => {
-                    const image = document.createElement('img');
-                    image.className = 'piq-image-thumb-strip';
-                    image.loading = 'lazy';
-                    image.src = url;
-                    image.alt = `Property image ${index + 1}`;
-                    imageGallery.appendChild(image);
-                });
-            }
+        function persistCurrentPropertyDetail() {
+            persistSelectedPropertyDetail(detailData);
+            syncCurrentAssignmentSnapshot();
         }
+
+        renderPropertyImages();
 
         if (imageTabButtons.length > 0 && imagePanels.length > 0) {
             imageTabButtons.forEach(button => {
@@ -13214,6 +13415,34 @@ function initNavbarDateTime() {
                         panel.classList.toggle('active', panel.dataset.piqImagePanel === selectedTab);
                     });
                 });
+            });
+        }
+
+        if (imageEditButton) {
+            imageEditButton.addEventListener('click', () => {
+                const existingImages = getPropertyImages();
+                const nextImageUrl = window.prompt('Paste the property image URL.', existingImages[0] || '');
+                if (nextImageUrl === null) {
+                    return;
+                }
+
+                const trimmedImageUrl = String(nextImageUrl || '').trim();
+                if (!trimmedImageUrl) {
+                    showDashboardToast('error', 'Image Link Required', 'Paste a full image URL to update the property image.');
+                    return;
+                }
+
+                try {
+                    const normalizedUrl = new URL(trimmedImageUrl, window.location.href).href;
+                    const remainingImages = existingImages.filter(url => url !== normalizedUrl);
+                    detailData.propertyImages = [normalizedUrl, ...remainingImages];
+                    detailData.imageUrl = normalizedUrl;
+                    persistCurrentPropertyDetail();
+                    renderPropertyImages();
+                    showDashboardToast('success', 'Image Updated', 'The property image link was updated for this property.');
+                } catch (error) {
+                    showDashboardToast('error', 'Invalid Image Link', 'Paste a valid image URL before saving.');
+                }
             });
         }
 

@@ -454,6 +454,10 @@ https://templatemo.com/tm-607-glass-admin
                                     <span id="notes-active-folder-label">All Notes</span>
                                     <span class="notes-panel-meta" id="notes-count-summary">0 notes</span>
                                 </div>
+                                <div class="notes-view-tabs" aria-label="Notes views">
+                                    <button id="notes-view-all-btn" type="button" class="notes-view-tab is-active">Notes</button>
+                                    <button id="notes-view-trash-btn" type="button" class="notes-view-tab">Recently Deleted</button>
+                                </div>
                             </div>
                             <div id="notes-folder-tree" class="notes-folder-tree">
                                 <p class="outreach-empty">Loading folders...</p>
@@ -480,7 +484,7 @@ https://templatemo.com/tm-607-glass-admin
                             <div id="notes-editor" class="notes-editor" hidden>
                                 <div class="notes-editor-topbar">
                                     <button id="notes-back-to-list-btn" type="button" class="notes-editor-back-btn" aria-label="Back to notes list">&lsaquo;</button>
-                                    <div id="notes-title-input" class="notes-title-editor" contenteditable="true" role="textbox" aria-label="Note title" data-placeholder=""></div>
+                                    <div id="notes-title-input" class="notes-title-editor" contenteditable="true" role="textbox" aria-label="Note title" data-placeholder="Title"></div>
                                     <div class="notes-editor-actions">
                                         <button id="notes-pin-toggle-btn" type="button" class="notes-pin-toggle-btn" aria-pressed="false">Pin Note</button>
                                         <div class="notes-editor-action-stack">
@@ -491,7 +495,7 @@ https://templatemo.com/tm-607-glass-admin
                                         </div>
                                     </div>
                                 </div>
-                                <div id="notes-body-input" class="notes-body-editor" contenteditable="true" role="textbox" aria-label="Note body" data-placeholder=""></div>
+                                <div id="notes-body-input" class="notes-body-editor" contenteditable="true" role="textbox" aria-label="Note body" data-placeholder="Start typing your note here..."></div>
                                 <div class="notes-editor-toolbar" aria-label="Note tools">
                                     <button id="notes-tool-font-btn" type="button" class="notes-tool-btn" aria-label="Font tool">Aa</button>
                                     <button id="notes-tool-checklist-btn" type="button" class="notes-tool-btn" aria-label="Checklist tool">
