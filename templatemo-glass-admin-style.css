@@ -217,15 +217,14 @@
 [data-theme="beach"] body::before {
     content: '';
     position: fixed;
-    right: -70px;
-    bottom: -70px;
-    width: 520px;
-    height: 520px;
-    background: url("png photos/pngtree-palm-tree-png-png-image_8371984.png") no-repeat center;
-    background-size: contain;
-    opacity: 0.12;
-    filter: blur(2.8px) saturate(0.85);
-    transform: rotate(-3deg);
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: url("Themes/Wallpaper Beach Mode.jpg") no-repeat center center;
+    background-size: cover;
+    opacity: 0.72;
+    filter: saturate(1.02) contrast(1.01);
+    transform: none;
     pointer-events: none;
     z-index: -1;
 }
@@ -233,15 +232,14 @@
 [data-theme="beach"] body::after {
     content: '';
     position: fixed;
-    left: 18px;
-    top: 16px;
-    width: 430px;
-    height: 260px;
-    background: url("png photos/pngtree-flock-flying-birds-silhouette-vector-png-image_6611910.png") no-repeat top left;
-    background-size: contain;
-    opacity: 0.24;
-    filter: blur(0.8px) saturate(0.92) contrast(1.04);
-    transform: rotate(-2deg);
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(205, 238, 247, 0.24), rgba(205, 238, 247, 0.08) 26%, rgba(255, 228, 181, 0.14) 100%),
+        radial-gradient(60% 45% at 12% 18%, rgba(14, 165, 233, 0.16) 0%, rgba(14, 165, 233, 0) 72%),
+        radial-gradient(42% 36% at 84% 22%, rgba(251, 146, 60, 0.16) 0%, rgba(251, 146, 60, 0) 72%);
+    opacity: 1;
+    filter: none;
+    transform: none;
     pointer-events: none;
     z-index: -1;
 }
@@ -1842,15 +1840,14 @@
 [data-theme="swamp"] body::after {
     content: '';
     position: fixed;
-    left: 18px;
-    top: 16px;
-    width: 430px;
-    height: 260px;
-    background: url("png photos/pngtree-flock-flying-birds-silhouette-vector-png-image_6611910.png") no-repeat top left;
-    background-size: contain;
+    inset: 0;
+    background:
+        radial-gradient(48% 34% at 16% 18%, rgba(52, 211, 153, 0.12) 0%, rgba(52, 211, 153, 0) 72%),
+        radial-gradient(34% 28% at 82% 20%, rgba(163, 230, 53, 0.09) 0%, rgba(163, 230, 53, 0) 70%),
+        linear-gradient(180deg, rgba(17, 24, 39, 0.08), rgba(17, 24, 39, 0.18));
     opacity: 0.16;
-    filter: blur(1px) saturate(0.35) sepia(0.48) hue-rotate(-28deg);
-    transform: rotate(-2deg);
+    filter: blur(1px) saturate(0.45) sepia(0.38) hue-rotate(-18deg);
+    transform: none;
     pointer-events: none;
     z-index: -1;
 }
