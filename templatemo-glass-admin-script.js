@@ -14242,6 +14242,29 @@ function initNavbarDateTime() {
             return '';
         }
 
+        function persistListingSourceLink(sourceUrl, source, sourceLinks = null) {
+            const normalizedSource = String(source || inferListingSourceFromPropertyUrl(sourceUrl) || '').trim().toLowerCase();
+            const normalizedUrl = String(sourceUrl || '').trim();
+            const normalizedSourceLinks = sourceLinks && typeof sourceLinks === 'object'
+                ? {
+                    ...(detailData.sourceListingLinks && typeof detailData.sourceListingLinks === 'object' ? detailData.sourceListingLinks : {}),
+                    ...(String(sourceLinks.zillow || '').trim() ? { zillow: String(sourceLinks.zillow || '').trim() } : {}),
+                    ...(String(sourceLinks.redfin || '').trim() ? { redfin: String(sourceLinks.redfin || '').trim() } : {})
+                }
+                : {
+                    ...(detailData.sourceListingLinks && typeof detailData.sourceListingLinks === 'object' ? detailData.sourceListingLinks : {}),
+                    ...(normalizedSource && normalizedUrl ? { [normalizedSource]: normalizedUrl } : {})
+                };
+
+            if (normalizedUrl) {
+                detailData.sourceListingUrl = normalizedUrl;
+                detailData.sourceListingLabel = `${normalizedSource === 'redfin' ? 'Redfin' : 'Zillow'} listing`;
+            }
+            detailData.sourceListingLinks = normalizedSourceLinks;
+            persistCurrentPropertyDetail();
+            renderPropertyDetailSnapshot();
+        }
+
         function normalizeImportedMoney(value, fallback) {
             const raw = String(value || '').trim();
             if (!raw) {
@@ -14358,6 +14381,74 @@ function initNavbarDateTime() {
             renderPropertyImages();
         }
 
+        async function promptAndImportPropertyListing(existingUrl = '') {
+            const rawLink = window.prompt('Paste the Zillow or Redfin property link.', String(existingUrl || detailData.sourceListingUrl || '').trim());
+            if (rawLink === null) {
+                return false;
+            }
+
+            const trimmedLink = String(rawLink || '').trim();
+            if (!trimmedLink) {
+                showDashboardToast('error', 'Link Required', 'Paste a Zillow or Redfin property link to import public details.');
+                return false;
+            }
+
+            let normalizedUrl = '';
+            try {
+                normalizedUrl = new URL(trimmedLink, window.location.href).href;
+            } catch (error) {
+                showDashboardToast('error', 'Invalid Link', 'Enter a valid Zillow or Redfin property URL.');
+                return false;
+            }
+
+            const source = inferListingSourceFromPropertyUrl(normalizedUrl);
+            if (!source) {
+                showDashboardToast('error', 'Unsupported Link', 'Only Zillow and Redfin property links are supported here.');
+                return false;
+            }
+
+            if (propertyListingImportButton) {
+                propertyListingImportButton.disabled = true;
+                propertyListingImportButton.textContent = 'Importing...';
+            }
+
+            try {
+                const response = await fetch('/api/import-listing-preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: normalizedUrl,
+                        source
+                    })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'FAST could not pull the listing details from that link.');
+                }
+
+                applyImportedListingToPropertyDetail(payload.listing || {}, normalizedUrl, source, { [source]: normalizedUrl });
+                showDashboardToast('success', 'Property Updated', `${source === 'redfin' ? 'Redfin' : 'Zillow'} public listing details were added to this property.`);
+                return true;
+            } catch (error) {
+                const message = error && error.message ? error.message : 'FAST could not pull the listing details from that link.';
+                if (/blocking automated access|could not be loaded/i.test(message)) {
+                    persistListingSourceLink(normalizedUrl, source, { [source]: normalizedUrl });
+                    showDashboardToast('success', 'Link Saved', `${source === 'redfin' ? 'Redfin' : 'Zillow'} blocked automated import right now, but the listing link was saved to this property.`);
+                    return false;
+                }
+                showDashboardToast('error', 'Import Failed', message);
+                return false;
+            } finally {
+                if (propertyListingImportButton) {
+                    propertyListingImportButton.disabled = false;
+                    propertyListingImportButton.textContent = 'Autofill';
+                }
+            }
+        }
+
         async function importPropertyListingFromAddress() {
             const existingAddress = String(detailData.address || '').trim();
             const rawAddress = existingAddress || window.prompt('Enter the property address to search Zillow and Redfin.', existingAddress);
@@ -14403,11 +14494,17 @@ function initNavbarDateTime() {
                     : '';
                 showDashboardToast('success', 'Property Updated', `Public Zillow and Redfin listing details were imported into this property.${missingLabel}`);
             } catch (error) {
-                showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not search Zillow and Redfin for this property address.');
+                const message = error && error.message ? error.message : 'FAST could not search Zillow and Redfin for this property address.';
+                if (/paste a direct listing link|blocked automated address lookup/i.test(message)) {
+                    showDashboardToast('error', 'Lookup Blocked', message);
+                    await promptAndImportPropertyListing();
+                } else {
+                    showDashboardToast('error', 'Import Failed', message);
+                }
             } finally {
                 if (propertyListingImportButton) {
                     propertyListingImportButton.disabled = false;
-                    propertyListingImportButton.textContent = 'Add Link';
+                    propertyListingImportButton.textContent = 'Autofill';
                 }
             }
         }

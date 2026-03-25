@@ -532,6 +532,25 @@ function extractDuckDuckGoResultUrl(rawHref) {
   }
 }
 
+function isBotProtectionResponse(body) {
+  const text = String(body || '').trim().toLowerCase();
+  if (!text) {
+    return false;
+  }
+
+  return [
+    'anomaly.js',
+    'px-captcha',
+    'perimeterx',
+    'human verification',
+    'press & hold to confirm you are a human',
+    'complete the security check',
+    'request blocked',
+    'access to this page has been denied',
+    'captcha'
+  ].some((marker) => text.includes(marker));
+}
+
 function extractDuckDuckGoSearchResults(html, source) {
   const results = [];
   const seenUrls = new Set();
@@ -627,6 +646,7 @@ async function searchListingUrlByAddress(address, source) {
   const queries = getAddressSearchQueries(address, source);
   const candidates = [];
   const seenUrls = new Set();
+  let blockedByBotProtection = false;
 
   for (const query of queries) {
     const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
@@ -642,11 +662,21 @@ async function searchListingUrlByAddress(address, source) {
       }
     });
 
+    if (response.status === 202) {
+      blockedByBotProtection = true;
+      continue;
+    }
+
     if (!response.ok) {
       continue;
     }
 
     const html = await response.text();
+    if (isBotProtectionResponse(html)) {
+      blockedByBotProtection = true;
+      continue;
+    }
+
     const parsedResults = extractDuckDuckGoSearchResults(html, source);
     parsedResults.forEach((candidate) => {
       if (seenUrls.has(candidate.url)) {
@@ -667,6 +697,10 @@ async function searchListingUrlByAddress(address, source) {
       score: scoreListingSearchCandidate(candidate, address, source)
     }))
     .sort((left, right) => right.score - left.score)[0];
+
+  if ((!bestCandidate || bestCandidate.score <= 0) && blockedByBotProtection) {
+    throw new Error(`Automated ${source === 'redfin' ? 'Redfin' : 'Zillow'} lookup is currently blocked by bot protection.`);
+  }
 
   return bestCandidate && bestCandidate.score > 0 ? bestCandidate.url : '';
 }
@@ -701,11 +735,16 @@ async function fetchImportedListingFromUrl(rawUrl, requestedSource = '') {
     }
   });
 
+  const html = await response.text();
+
+  if (isBotProtectionResponse(html)) {
+    throw new Error(`The ${source === 'zillow' ? 'Zillow' : 'Redfin'} page is blocking automated access right now.`);
+  }
+
   if (!response.ok) {
     throw new Error(`The ${source === 'zillow' ? 'Zillow' : 'Redfin'} page could not be loaded right now.`);
   }
 
-  const html = await response.text();
   const listing = extractListingImportData(html, parsedUrl.href, source);
 
   if (!listing.address && !listing.price && !listing.imageUrl) {
@@ -1033,9 +1072,17 @@ app.post('/api/import-listing-by-address', async (req, res) => {
   const links = {};
   const importedListings = [];
   const missingSources = [];
+  const blockedSources = [];
 
   sourceResults.forEach((result) => {
     if (result.status !== 'fulfilled') {
+      const message = String(result.reason && result.reason.message || '').trim().toLowerCase();
+      if (message.includes('bot protection')) {
+        const sourceMatch = message.includes('redfin') ? 'redfin' : (message.includes('zillow') ? 'zillow' : '');
+        if (sourceMatch) {
+          blockedSources.push(sourceMatch);
+        }
+      }
       return;
     }
 
@@ -1057,6 +1104,10 @@ app.post('/api/import-listing-by-address', async (req, res) => {
   });
 
   if (!Object.keys(links).length) {
+    if (blockedSources.length) {
+      const label = Array.from(new Set(blockedSources)).map((source) => source === 'redfin' ? 'Redfin' : 'Zillow').join(' and ');
+      return res.status(502).json({ error: `${label} blocked automated address lookup right now. Paste a direct listing link to keep importing this property.` });
+    }
     return res.status(404).json({ error: 'FAST could not find a matching Zillow or Redfin listing for this address.' });
   }
 
