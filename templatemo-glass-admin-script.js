@@ -12923,8 +12923,8 @@ function initNavbarDateTime() {
 
         const workspaceUser = getWorkspaceUserContext();
         const activeUser = getStoredCurrentUserIdentity();
-        const propertyAddress = String(detailData.address || '').trim();
-        const propertyKey = makePropertyStorageKey(propertyAddress);
+        let propertyAddress = String(detailData.address || '').trim();
+        let propertyKey = makePropertyStorageKey(propertyAddress);
         const persistedAssignment = getPropertyAssignmentRecord(propertyKey);
 
         if (persistedAssignment) {
@@ -13167,14 +13167,12 @@ function initNavbarDateTime() {
             }));
         }
 
-        const compactPropertyDetails = String(detailData.propertyDetails || '').replace(/\s*\/\s*/g, '\n');
         const currentStatusValue = String(getPersistedPiqStatus() || detailData.piqAgentStatus || 'none');
         detailData.piqAgentStatus = currentStatusValue;
         detailData.agentRecord = {
             ...(detailData.agentRecord || {}),
             agentStatus: formatAgentStatusLabel(currentStatusValue)
         };
-        const currentStatusLabel = formatAgentStatusLabel(currentStatusValue);
 
         function applyAgentWorkspaceRecord(agentRecordState) {
             const safeAgentRecord = {
@@ -13204,70 +13202,97 @@ function initNavbarDateTime() {
             });
         }
 
-        const idMap = {
-            'property-address-title': detailData.address,
-            'property-details-line': detailData.propertyDetails,
-            'property-list-price': detailData.listPrice,
-            'property-propensity': String(detailData.propensity),
-            'property-moderate-pain': detailData.moderatePain,
-            'property-tax-delinquency': detailData.taxDelinquency,
-            'property-high-debt': detailData.highDebt,
-            'property-market-info': detailData.marketInfo,
-            'property-dom-cdom': `DOM: ${detailData.dom} / CDOM: ${detailData.cdom}`,
-            'property-record-created': detailData.recordCreated,
-            'property-listing-date': detailData.listingDate,
-            'property-idx': detailData.idx,
-            'property-type': detailData.propertyType,
-            'property-mls-number': detailData.mlsNumber,
-            'property-status-label': detailData.statusLabel,
-            'property-auto-tracker': detailData.autoTracker,
-            'property-area': detailData.areaLabel,
-            'property-cover': detailData.propertyCover,
-            'property-public-comments': detailData.publicComments,
-            'property-agent-comments': detailData.agentComments,
-            'property-apn': detailData.apn,
-            'property-unit-number': detailData.unitNumber,
-            'property-total-floors': detailData.totalFloors,
-            'property-sewer': detailData.sewer,
-            'property-condition': detailData.propertyCondition,
-            'property-zoning': detailData.zoning,
-            'property-association-dues': detailData.associationDues,
-            'property-common-walls': detailData.commonWalls,
-            'property-garage': detailData.garageCount,
-            'property-lot-size': detailData.lotSize,
-            'property-year-built': detailData.yearBuilt,
-            'property-lockbox-type': detailData.lockboxType,
-            'property-occupied': detailData.occupied,
-            'property-showing': detailData.showing,
-            'property-asking-vs-arv': detailData.askingVsArv,
-            'property-arv': detailData.arv,
-            'property-comp-data': detailData.compData,
-            'comps-summary-property-details': compactPropertyDetails,
-            'comps-summary-list-price': detailData.listPrice,
-            'comps-summary-propensity': String(detailData.propensity),
-            'comps-summary-moderate-pain': detailData.moderatePain,
-            'comps-summary-tax-delinquency': detailData.taxDelinquency,
-            'comps-summary-high-debt': detailData.highDebt,
-            'comps-summary-market-info': detailData.marketInfo,
-            'comps-summary-dom-cdom': `DOM: ${detailData.dom} / CDOM: ${detailData.cdom}`,
-            'comps-summary-asking-vs-arv': detailData.askingVsArv,
-            'comps-summary-arv': detailData.arv,
-            'comps-summary-comp-data': detailData.compData,
-            'tab-content-piq': detailData.piq,
-            'tab-content-comps': detailData.comps,
-            'tab-content-ia': detailData.ia,
-            'agent-current-status': currentStatusLabel,
-            'tab-content-offer': detailData.offer
-        };
-
-        Object.keys(idMap).forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = idMap[id];
+        function renderPropertyListingLink() {
+            const sourceLinkEl = document.getElementById('property-listing-source-link');
+            if (!sourceLinkEl) {
+                return;
             }
-        });
 
-        applyAgentWorkspaceRecord(getCurrentAgentRecordState());
+            const sourceUrl = String(detailData.sourceListingUrl || '').trim();
+            const sourceLabel = String(detailData.sourceListingLabel || '').trim();
+            if (!sourceUrl) {
+                sourceLinkEl.textContent = 'No link added.';
+                sourceLinkEl.removeAttribute('href');
+                sourceLinkEl.setAttribute('aria-disabled', 'true');
+                return;
+            }
+
+            sourceLinkEl.href = sourceUrl;
+            sourceLinkEl.textContent = sourceLabel || sourceUrl;
+            sourceLinkEl.removeAttribute('aria-disabled');
+        }
+
+        function renderPropertyDetailSnapshot() {
+            const compactPropertyDetails = String(detailData.propertyDetails || '').replace(/\s*\/\s*/g, '\n');
+            const currentStatusLabel = formatAgentStatusLabel(detailData.piqAgentStatus || 'none');
+            const idMap = {
+                'property-address-title': detailData.address,
+                'property-details-line': detailData.propertyDetails,
+                'property-list-price': detailData.listPrice,
+                'property-propensity': String(detailData.propensity),
+                'property-moderate-pain': detailData.moderatePain,
+                'property-tax-delinquency': detailData.taxDelinquency,
+                'property-high-debt': detailData.highDebt,
+                'property-market-info': detailData.marketInfo,
+                'property-dom-cdom': `DOM: ${detailData.dom} / CDOM: ${detailData.cdom}`,
+                'property-record-created': detailData.recordCreated,
+                'property-listing-date': detailData.listingDate,
+                'property-idx': detailData.idx,
+                'property-type': detailData.propertyType,
+                'property-mls-number': detailData.mlsNumber,
+                'property-status-label': detailData.statusLabel,
+                'property-auto-tracker': detailData.autoTracker,
+                'property-area': detailData.areaLabel,
+                'property-cover': detailData.propertyCover,
+                'property-public-comments': detailData.publicComments,
+                'property-agent-comments': detailData.agentComments,
+                'property-apn': detailData.apn,
+                'property-unit-number': detailData.unitNumber,
+                'property-total-floors': detailData.totalFloors,
+                'property-sewer': detailData.sewer,
+                'property-condition': detailData.propertyCondition,
+                'property-zoning': detailData.zoning,
+                'property-association-dues': detailData.associationDues,
+                'property-common-walls': detailData.commonWalls,
+                'property-garage': detailData.garageCount,
+                'property-lot-size': detailData.lotSize,
+                'property-year-built': detailData.yearBuilt,
+                'property-lockbox-type': detailData.lockboxType,
+                'property-occupied': detailData.occupied,
+                'property-showing': detailData.showing,
+                'property-asking-vs-arv': detailData.askingVsArv,
+                'property-arv': detailData.arv,
+                'property-comp-data': detailData.compData,
+                'comps-summary-property-details': compactPropertyDetails,
+                'comps-summary-list-price': detailData.listPrice,
+                'comps-summary-propensity': String(detailData.propensity),
+                'comps-summary-moderate-pain': detailData.moderatePain,
+                'comps-summary-tax-delinquency': detailData.taxDelinquency,
+                'comps-summary-high-debt': detailData.highDebt,
+                'comps-summary-market-info': detailData.marketInfo,
+                'comps-summary-dom-cdom': `DOM: ${detailData.dom} / CDOM: ${detailData.cdom}`,
+                'comps-summary-asking-vs-arv': detailData.askingVsArv,
+                'comps-summary-arv': detailData.arv,
+                'comps-summary-comp-data': detailData.compData,
+                'tab-content-piq': detailData.piq,
+                'tab-content-comps': detailData.comps,
+                'tab-content-ia': detailData.ia,
+                'agent-current-status': currentStatusLabel,
+                'tab-content-offer': detailData.offer
+            };
+
+            Object.keys(idMap).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = idMap[id];
+                }
+            });
+
+            applyAgentWorkspaceRecord(getCurrentAgentRecordState());
+            renderPropertyListingLink();
+        }
+
+        renderPropertyDetailSnapshot();
 
         const tabButtons = Array.from(document.querySelectorAll('.property-tab-btn[data-tab]'));
         const tabPanels = Array.from(document.querySelectorAll('.property-tab-panel[data-panel]'));
@@ -13550,10 +13575,198 @@ function initNavbarDateTime() {
         const previewGallery = document.getElementById('piq-property-image-preview');
         const imageGallery = document.getElementById('piq-property-image-gallery');
         const imageEditButton = document.getElementById('piq-property-image-edit-btn');
-        const imageAddButton = document.getElementById('piq-property-image-add-btn');
+        const propertyListingImportButton = document.getElementById('property-listing-import-btn');
         const imageTabButtons = Array.from(document.querySelectorAll('.piq-image-tab[data-piq-image-tab]'));
         const imagePanels = Array.from(document.querySelectorAll('.piq-image-panel[data-piq-image-panel]'));
         let imageEditMode = false;
+
+        function formatImportedStatusLabel(status) {
+            const normalizedStatus = String(status || '').trim().toLowerCase();
+            if (!normalizedStatus) {
+                return detailData.statusLabel || 'Active';
+            }
+            return normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).replace('-', ' ');
+        }
+
+        function inferListingSourceFromPropertyUrl(value) {
+            const raw = String(value || '').trim().toLowerCase();
+            if (raw.includes('redfin.com')) {
+                return 'redfin';
+            }
+            if (raw.includes('zillow.com')) {
+                return 'zillow';
+            }
+            return '';
+        }
+
+        function normalizeImportedMoney(value, fallback) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return fallback;
+            }
+            if (/^\$/.test(raw)) {
+                return raw;
+            }
+            const amount = Number(raw.replace(/[^0-9.]/g, ''));
+            if (!Number.isFinite(amount)) {
+                return fallback;
+            }
+            return `$${Math.round(amount).toLocaleString()}`;
+        }
+
+        function normalizeImportedMetric(value, suffix, fallback) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return fallback;
+            }
+            return /[a-zA-Z]/.test(raw) ? raw : `${raw} ${suffix}`;
+        }
+
+        function normalizeImportedYear(value, fallback) {
+            const raw = String(value || '').trim();
+            const year = Number.parseInt(raw.replace(/[^0-9]/g, ''), 10);
+            if (!Number.isInteger(year) || year < 1700 || year > 9999) {
+                return fallback;
+            }
+            return String(year);
+        }
+
+        function buildPropertyDetailsLineFromListing(listing) {
+            const propertyType = String(detailData.propertyType || '').trim();
+            const summaryType = propertyType && propertyType !== '-' && propertyType !== 'Residential'
+                ? propertyType
+                : 'Single Family';
+            const beds = normalizeImportedMetric(listing.beds, 'Beds', '0 Beds').replace('Beds', 'Br').trim();
+            const baths = normalizeImportedMetric(listing.baths, 'Baths', '0 Baths').replace('Baths', 'Ba').trim();
+            const area = normalizeImportedMetric(listing.area, 'sqft', '0 sqft').replace('sqft', 'ft²').trim();
+            const lotSize = normalizeImportedMetric(listing.lotSize, 'sqft', detailData.lotSize || 'Lot Size TBD').replace('sqft', 'ft²').trim();
+            const garageCount = String(detailData.garageCount || '0').trim() || '0';
+            const yearBuilt = normalizeImportedYear(listing.yearBuilt, detailData.yearBuilt || '-');
+            return `${summaryType} / ${beds} / ${baths} / ${garageCount} Gar / ${yearBuilt} / ${area} / ${lotSize} / Pool: Unknown`;
+        }
+
+        function applyImportedListingToPropertyDetail(listing, sourceUrl, source) {
+            const nextAddress = String(listing.address || '').trim();
+            const nextLocation = String(listing.location || '').trim();
+            const nextPrice = normalizeImportedMoney(listing.price, detailData.listPrice || '$0');
+            const nextStatusLabel = formatImportedStatusLabel(listing.status);
+            const nextNotes = String(listing.notes || '').trim();
+            const nextMlsId = String(listing.mlsId || '').trim();
+            const nextImageUrl = String(listing.imageUrl || '').trim();
+
+            if (nextAddress) {
+                detailData.address = nextAddress;
+                propertyAddress = nextAddress;
+                propertyKey = makePropertyStorageKey(nextAddress);
+            }
+
+            if (nextLocation) {
+                detailData.areaLabel = nextLocation;
+            }
+
+            detailData.listPrice = nextPrice;
+            detailData.statusLabel = nextStatusLabel;
+            detailData.marketInfo = `${detailData.dom} Days / ${nextStatusLabel}`;
+            detailData.propertyDetails = buildPropertyDetailsLineFromListing(listing);
+            detailData.idx = `${source === 'redfin' ? 'Redfin' : 'Zillow'} Import`;
+            detailData.propertyCover = detailData.address || detailData.propertyCover;
+
+            if (nextMlsId) {
+                detailData.mlsNumber = nextMlsId;
+                detailData.taxDelinquency = `MLS ID ${nextMlsId}`;
+            }
+
+            if (listing.beds) {
+                detailData.compData = `Imported listing • ${String(listing.beds).trim()} • ${String(listing.baths || '').trim() || 'Baths TBD'} • ${String(listing.area || '').trim() || 'Area TBD'}`;
+            }
+
+            if (listing.lotSize) {
+                detailData.lotSize = normalizeImportedMetric(listing.lotSize, 'sqft', detailData.lotSize || 'Lot Size TBD');
+            }
+
+            if (listing.yearBuilt) {
+                detailData.yearBuilt = normalizeImportedYear(listing.yearBuilt, detailData.yearBuilt || '-');
+            }
+
+            if (nextNotes) {
+                detailData.publicComments = nextNotes;
+                detailData.agentComments = `${source === 'redfin' ? 'Redfin' : 'Zillow'} public listing import. Verify disclosures, showing instructions, and seller notes.`;
+                detailData.piq = nextNotes;
+            }
+
+            if (nextImageUrl) {
+                const nextImages = [nextImageUrl, ...getPropertyImages().filter((url) => url !== nextImageUrl)];
+                detailData.propertyImages = nextImages;
+                detailData.imageUrl = nextImageUrl;
+            }
+
+            detailData.sourceListingUrl = sourceUrl;
+            detailData.sourceListingLabel = `${source === 'redfin' ? 'Redfin' : 'Zillow'} listing`;
+            persistCurrentPropertyDetail();
+            renderPropertyDetailSnapshot();
+            renderPropertyImages();
+        }
+
+        async function promptAndImportPropertyListing() {
+            const existingUrl = String(detailData.sourceListingUrl || '').trim();
+            const rawLink = window.prompt('Paste the Zillow or Redfin property link.', existingUrl);
+            if (rawLink === null) {
+                return;
+            }
+
+            const trimmedLink = String(rawLink || '').trim();
+            if (!trimmedLink) {
+                showDashboardToast('error', 'Link Required', 'Paste a Zillow or Redfin property link to import public details.');
+                return;
+            }
+
+            let normalizedUrl = '';
+            try {
+                normalizedUrl = new URL(trimmedLink, window.location.href).href;
+            } catch (error) {
+                showDashboardToast('error', 'Invalid Link', 'Enter a valid Zillow or Redfin property URL.');
+                return;
+            }
+
+            const source = inferListingSourceFromPropertyUrl(normalizedUrl);
+            if (!source) {
+                showDashboardToast('error', 'Unsupported Link', 'Only Zillow and Redfin property links are supported here.');
+                return;
+            }
+
+            if (propertyListingImportButton) {
+                propertyListingImportButton.disabled = true;
+                propertyListingImportButton.textContent = 'Loading...';
+            }
+
+            try {
+                const response = await fetch('/api/import-listing-preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: normalizedUrl,
+                        source
+                    })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'FAST could not pull the listing details from that link.');
+                }
+
+                applyImportedListingToPropertyDetail(payload.listing || {}, normalizedUrl, source);
+                showDashboardToast('success', 'Property Updated', `${source === 'redfin' ? 'Redfin' : 'Zillow'} public listing details were added to this property.`);
+            } catch (error) {
+                showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not pull the listing details from that link.');
+            } finally {
+                if (propertyListingImportButton) {
+                    propertyListingImportButton.disabled = false;
+                    propertyListingImportButton.textContent = 'Add Link';
+                }
+            }
+        }
 
         function getPropertyImages() {
             return Array.from(new Set(
@@ -13561,6 +13774,32 @@ function initNavbarDateTime() {
                     .map(url => String(url || '').trim())
                     .filter(url => url.length > 0)
             ));
+        }
+
+        function promptForPropertyImageUrl() {
+            const existingImages = getPropertyImages();
+            const nextImageUrl = window.prompt('Paste the property image URL.', existingImages[0] || '');
+            if (nextImageUrl === null) {
+                return;
+            }
+
+            const trimmedImageUrl = String(nextImageUrl || '').trim();
+            if (!trimmedImageUrl) {
+                showDashboardToast('error', 'Image Link Required', 'Paste a full image URL to update the property image.');
+                return;
+            }
+
+            try {
+                const normalizedUrl = new URL(trimmedImageUrl, window.location.href).href;
+                const remainingImages = existingImages.filter(url => url !== normalizedUrl);
+                detailData.propertyImages = [normalizedUrl, ...remainingImages];
+                detailData.imageUrl = normalizedUrl;
+                persistCurrentPropertyDetail();
+                renderPropertyImages();
+                showDashboardToast('success', 'Image Updated', 'The property image link was updated for this property.');
+            } catch (error) {
+                showDashboardToast('error', 'Invalid Image Link', 'Paste a valid image URL before saving.');
+            }
         }
 
         function renderPropertyImages() {
@@ -13580,6 +13819,21 @@ function initNavbarDateTime() {
                 card.appendChild(image);
 
                 if (imageEditMode) {
+                    const actions = document.createElement('div');
+                    actions.className = 'piq-image-card-actions';
+
+                    if (index === 0) {
+                        const addButton = document.createElement('button');
+                        addButton.type = 'button';
+                        addButton.className = 'piq-image-inline-add-btn';
+                        addButton.setAttribute('aria-label', 'Add property image link');
+                        addButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>';
+                        addButton.addEventListener('click', () => {
+                            promptForPropertyImageUrl();
+                        });
+                        actions.appendChild(addButton);
+                    }
+
                     const deleteButton = document.createElement('button');
                     deleteButton.type = 'button';
                     deleteButton.className = 'piq-image-delete-btn';
@@ -13598,7 +13852,8 @@ function initNavbarDateTime() {
                         renderPropertyImages();
                         showDashboardToast('success', 'Image Deleted', 'The property image was removed.');
                     });
-                    card.appendChild(deleteButton);
+                    actions.appendChild(deleteButton);
+                    card.appendChild(actions);
                 }
 
                 return card;
@@ -13607,7 +13862,18 @@ function initNavbarDateTime() {
             if (previewGallery) {
                 previewGallery.innerHTML = '';
                 if (images.length === 0) {
-                    previewGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
+                    if (imageEditMode) {
+                        const emptyButton = document.createElement('button');
+                        emptyButton.type = 'button';
+                        emptyButton.className = 'card-btn active';
+                        emptyButton.textContent = 'Add property image';
+                        emptyButton.addEventListener('click', () => {
+                            promptForPropertyImageUrl();
+                        });
+                        previewGallery.appendChild(emptyButton);
+                    } else {
+                        previewGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
+                    }
                 } else {
                     images.slice(0, 4).forEach((url, index) => {
                         previewGallery.appendChild(createImageCard(url, index, 'large'));
@@ -13631,10 +13897,6 @@ function initNavbarDateTime() {
                 imageEditButton.setAttribute('aria-pressed', imageEditMode ? 'true' : 'false');
                 imageEditButton.setAttribute('title', imageEditMode ? 'Done editing property images' : 'Edit property images');
             }
-
-            if (imageAddButton) {
-                imageAddButton.hidden = !imageEditMode;
-            }
         }
 
         function persistCurrentPropertyDetail() {
@@ -13643,6 +13905,7 @@ function initNavbarDateTime() {
         }
 
         renderPropertyImages();
+        renderPropertyListingLink();
 
         if (imageTabButtons.length > 0 && imagePanels.length > 0) {
             imageTabButtons.forEach(button => {
@@ -13665,31 +13928,9 @@ function initNavbarDateTime() {
             });
         }
 
-        if (imageAddButton) {
-            imageAddButton.addEventListener('click', () => {
-                const existingImages = getPropertyImages();
-                const nextImageUrl = window.prompt('Paste the property image URL.', existingImages[0] || '');
-                if (nextImageUrl === null) {
-                    return;
-                }
-
-                const trimmedImageUrl = String(nextImageUrl || '').trim();
-                if (!trimmedImageUrl) {
-                    showDashboardToast('error', 'Image Link Required', 'Paste a full image URL to update the property image.');
-                    return;
-                }
-
-                try {
-                    const normalizedUrl = new URL(trimmedImageUrl, window.location.href).href;
-                    const remainingImages = existingImages.filter(url => url !== normalizedUrl);
-                    detailData.propertyImages = [normalizedUrl, ...remainingImages];
-                    detailData.imageUrl = normalizedUrl;
-                    persistCurrentPropertyDetail();
-                    renderPropertyImages();
-                    showDashboardToast('success', 'Image Updated', 'The property image link was updated for this property.');
-                } catch (error) {
-                    showDashboardToast('error', 'Invalid Image Link', 'Paste a valid image URL before saving.');
-                }
+        if (propertyListingImportButton) {
+            propertyListingImportButton.addEventListener('click', () => {
+                promptAndImportPropertyListing();
             });
         }
 

@@ -395,12 +395,6 @@
                                     <button type="button" class="piq-image-tab active" data-piq-image-tab="preview">Preview</button>
                                     <button type="button" class="piq-image-tab" data-piq-image-tab="more">View more</button>
                                 </div>
-                                <button type="button" id="piq-property-image-add-btn" class="piq-image-edit-btn" aria-label="Add property image link" title="Add property image link" hidden>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <path d="M12 5v14"/>
-                                        <path d="M5 12h14"/>
-                                    </svg>
-                                </button>
                                 <button type="button" id="piq-property-image-edit-btn" class="piq-image-edit-btn" aria-label="Edit property image link" title="Edit property image link">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path d="M12 20h9"/>
@@ -420,6 +414,17 @@
                             </div>
                         </div>
                     </div>
+
+                    <section class="agent-record-section property-link-import-card">
+                        <div class="property-link-import-head">
+                            <div>
+                                <h4>LISTING LINK</h4>
+                                <p class="property-link-import-copy">Paste a Redfin or Zillow property link to pull public details into this property.</p>
+                            </div>
+                            <button type="button" id="property-listing-import-btn" class="card-btn active">Add Link</button>
+                        </div>
+                        <p class="property-link-import-meta">Current link: <a id="property-listing-source-link" class="property-link-import-link" href="#" target="_blank" rel="noopener noreferrer">No link added.</a></p>
+                    </section>
 
                     <section class="agent-record-section">
                         <h4>BASIC INFORMATION</h4>
