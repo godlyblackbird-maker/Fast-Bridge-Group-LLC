@@ -829,6 +829,51 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
+    function setUserScopedPropertyStatus(storageKey, userLike, propertyKey, statusValue, options) {
+        const config = options && typeof options === 'object' ? options : {};
+        const normalizedUser = buildUserIdentity(userLike);
+        const scopedUserKey = String(normalizedUser.key || '').trim();
+        const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+
+        if (!scopedUserKey || !normalizedPropertyKey) {
+            return;
+        }
+
+        let store = {};
+        try {
+            store = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (error) {
+            store = {};
+        }
+
+        if (!store || typeof store !== 'object' || Array.isArray(store)) {
+            store = {};
+        }
+
+        const nextScopedObject = store[scopedUserKey] && typeof store[scopedUserKey] === 'object' && !Array.isArray(store[scopedUserKey])
+            ? { ...store[scopedUserKey] }
+            : {};
+        const normalizedStatus = String(statusValue || '').trim().toLowerCase();
+
+        if (normalizedStatus && normalizedStatus !== 'none') {
+            nextScopedObject[normalizedPropertyKey] = normalizedStatus;
+        } else {
+            delete nextScopedObject[normalizedPropertyKey];
+        }
+
+        if (Object.keys(nextScopedObject).length > 0) {
+            store[scopedUserKey] = nextScopedObject;
+        } else {
+            delete store[scopedUserKey];
+        }
+
+        localStorage.setItem(storageKey, JSON.stringify(store));
+
+        if (!config.silent) {
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+    }
+
     function getScopedSmtpSettings(workspaceUserLike) {
         const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
             ? workspaceUserLike
@@ -2732,6 +2777,92 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
     }
 
+    function getAcceptedOfferItemsForWorkspace(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+        const acceptedByPropertyKey = new Map();
+        const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+        const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
+
+        Object.entries(scopedStatuses || {}).forEach(([propertyKey, statusValue]) => {
+            const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+            const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
+            if (!normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
+                return;
+            }
+
+            acceptedByPropertyKey.set(normalizedPropertyKey, {
+                propertyKey: normalizedPropertyKey,
+                statusValue: normalizedStatus,
+                snapshot: null,
+                assignmentRecord: null
+            });
+        });
+
+        Object.entries(assignmentStore || {}).forEach(([storedPropertyKey, assignmentRecord]) => {
+            if (!assignmentRecord || typeof assignmentRecord !== 'object') {
+                return;
+            }
+
+            if (!usersMatch(assignmentRecord.assignedTo || {}, activeSessionUser)) {
+                return;
+            }
+
+            const snapshot = assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object'
+                ? assignmentRecord.propertySnapshot
+                : null;
+            const normalizedPropertyKey = makePropertyStorageKey(
+                assignmentRecord.propertyKey
+                || storedPropertyKey
+                || assignmentRecord.propertyAddress
+                || snapshot?.address
+            );
+            const normalizedStatus = String(snapshot?.piqAgentStatus || 'none').trim().toLowerCase();
+
+            if (!normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
+                return;
+            }
+
+            const existing = acceptedByPropertyKey.get(normalizedPropertyKey) || {};
+            acceptedByPropertyKey.set(normalizedPropertyKey, {
+                propertyKey: normalizedPropertyKey,
+                statusValue: 'offer-accepted',
+                snapshot: existing.snapshot || snapshot,
+                assignmentRecord: assignmentRecord
+            });
+        });
+
+        return Array.from(acceptedByPropertyKey.values())
+            .map((item) => {
+                const assignmentRecord = item.assignmentRecord || getPropertyAssignmentRecord(item.propertyKey);
+                const snapshot = item.snapshot && typeof item.snapshot === 'object'
+                    ? item.snapshot
+                    : getPropertySnapshotForWorkspace(item.propertyKey, workspaceUser);
+                const propertyAddress = String(
+                    snapshot?.address
+                    || assignmentRecord?.propertyAddress
+                    || item.propertyKey
+                ).trim() || 'Property';
+                const acceptedAt = new Date(
+                    assignmentRecord?.assignedAt
+                    || snapshot?.updatedAt
+                    || snapshot?.createdAt
+                    || Date.now()
+                );
+
+                return {
+                    ...item,
+                    propertyAddress,
+                    snapshot,
+                    assignmentRecord,
+                    acceptedAt: Number.isNaN(acceptedAt.getTime()) ? 0 : acceptedAt.getTime()
+                };
+            })
+            .sort((left, right) => right.acceptedAt - left.acceptedAt || left.propertyAddress.localeCompare(right.propertyAddress));
+    }
+
     function getPropertySnapshotForWorkspace(propertyKey, workspaceUserLike) {
         const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
         if (!normalizedPropertyKey) {
@@ -2808,36 +2939,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         function render() {
             const workspaceUser = getWorkspaceUserContext();
-            const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
-            const acceptedItems = Object.entries(scopedStatuses || {})
-                .map(([propertyKey, statusValue]) => ({
-                    propertyKey: makePropertyStorageKey(propertyKey),
-                    statusValue: String(statusValue || 'none').trim().toLowerCase()
-                }))
-                .filter((item) => item.propertyKey && item.statusValue === 'offer-accepted')
-                .map((item) => {
-                    const assignmentRecord = getPropertyAssignmentRecord(item.propertyKey);
-                    const snapshot = getPropertySnapshotForWorkspace(item.propertyKey, workspaceUser);
-                    const propertyAddress = String(
-                        snapshot?.address
-                        || assignmentRecord?.propertyAddress
-                        || item.propertyKey
-                    ).trim() || 'Property';
-                    const acceptedAt = new Date(
-                        assignmentRecord?.assignedAt
-                        || snapshot?.updatedAt
-                        || snapshot?.createdAt
-                        || Date.now()
-                    );
-                    return {
-                        ...item,
-                        propertyAddress,
-                        snapshot,
-                        assignmentRecord,
-                        acceptedAt: Number.isNaN(acceptedAt.getTime()) ? 0 : acceptedAt.getTime()
-                    };
-                })
-                .sort((left, right) => right.acceptedAt - left.acceptedAt || left.propertyAddress.localeCompare(right.propertyAddress));
+            const acceptedItems = getAcceptedOfferItemsForWorkspace(workspaceUser);
 
             offersAcceptedList.innerHTML = '';
 
@@ -13842,9 +13944,13 @@ function initNavbarDateTime() {
                 return;
             }
             const normalizedStatus = String(statusValue || 'none').trim().toLowerCase() || 'none';
-            const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
-            scopedStatuses[propertyKey] = normalizedStatus;
-            setUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key, scopedStatuses);
+            const currentAssignment = getPropertyAssignmentRecord(propertyKey);
+            setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, workspaceUser, propertyKey, normalizedStatus, { silent: true });
+
+            if (currentAssignment?.assignedTo && !usersMatch(currentAssignment.assignedTo, workspaceUser)) {
+                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, currentAssignment.assignedTo, propertyKey, normalizedStatus, { silent: true });
+            }
+
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
@@ -14988,8 +15094,12 @@ function initNavbarDateTime() {
                             delete detailData.propertyAssignment;
                             localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
                             await setPropertyAssignmentRecord(propertyKey, null);
+                            if (previousAssignment?.assignedTo && !usersMatch(previousAssignment.assignedTo, workspaceUser)) {
+                                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, previousAssignment.assignedTo, propertyKey, 'none', { silent: true });
+                            }
                             syncAssignmentIntoLocalDealCache(propertyKey, null, workspaceUser);
                             renderOfferNegotiator(null);
+                            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
                             showDashboardToast('success', 'Property Unassigned', 'This property is no longer assigned to a user.');
                             return;
                         }
@@ -15008,8 +15118,19 @@ function initNavbarDateTime() {
                             assignedAt: persistedRecord?.assignedAt || assignmentRecord.assignedAt
                         };
                         localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+                        if (previousAssignment?.assignedTo && !usersMatch(previousAssignment.assignedTo, persistedRecord?.assignedTo || assignmentRecord.assignedTo) && !usersMatch(previousAssignment.assignedTo, workspaceUser)) {
+                            setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, previousAssignment.assignedTo, propertyKey, 'none', { silent: true });
+                        }
+                        setUserScopedPropertyStatus(
+                            PIQ_AGENT_STATUS_KEY,
+                            persistedRecord?.assignedTo || assignmentRecord.assignedTo,
+                            propertyKey,
+                            detailData.piqAgentStatus,
+                            { silent: true }
+                        );
                         syncAssignmentIntoLocalDealCache(propertyKey, persistedRecord || assignmentRecord, workspaceUser);
                         renderOfferNegotiator(persistedRecord);
+                        window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
                         showDashboardToast('success', 'Property Assigned', `${assignmentRecord.propertyAddress} was assigned to ${selectedUser.name}.`);
                     } catch (error) {
                         if (previousAssignment) {
