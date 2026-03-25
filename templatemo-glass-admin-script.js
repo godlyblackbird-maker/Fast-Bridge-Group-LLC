@@ -3094,6 +3094,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const offerTermsSentEl = document.getElementById('kpi-offer-terms-sent');
         const offersSubmittedEl = document.getElementById('kpi-offers-submitted');
         const profitGoalInputEl = document.getElementById('kpi-profit-goal-input');
+        const profitGoalDisplayEl = document.getElementById('kpi-profit-goal-display');
         const profitGoalMetaEl = document.getElementById('kpi-profit-goal-meta');
         const profitWindowButtons = Array.from(document.querySelectorAll('[data-profit-window]'));
 
@@ -3308,16 +3309,19 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     profitGoalInputEl.value = formattedGoal;
                 }
             }
-            if (profitGoalMetaEl) {
+            if (profitGoalDisplayEl) {
                 if (profitGoal > 0) {
                     const yearlyClosedDealEarnings = yearlyClosedDeals.reduce((sum, deal) => sum + getClosedDealEarnedAmount(deal), 0);
                     const yearlyProfitTotal = yearlyIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + yearlyClosedDealEarnings;
                     const remaining = Math.max(profitGoal - yearlyProfitTotal, 0);
                     const percentToGoal = Math.min((yearlyProfitTotal / profitGoal) * 100, 999);
-                    profitGoalMetaEl.textContent = `${formatMoney(remaining)} to annual goal • ${percentToGoal.toFixed(1)}% reached`;
+                    profitGoalDisplayEl.textContent = `Goal: ${formatMoney(profitGoal)} • ${formatMoney(remaining)} left • ${percentToGoal.toFixed(1)}% reached`;
                 } else {
-                    profitGoalMetaEl.textContent = 'Set your target for this year.';
+                    profitGoalDisplayEl.textContent = 'Set your target for this year.';
                 }
+            }
+            if (profitGoalMetaEl) {
+                profitGoalMetaEl.textContent = 'Press Enter to save your yearly target.';
             }
             if (offerTermsChangeEl) {
                 offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} at offer terms sent`;

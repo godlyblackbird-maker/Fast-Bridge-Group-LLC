@@ -4571,6 +4571,14 @@ body.sidebar-collapsed .main-content {
     margin-top: 14px;
 }
 
+.profit-goal-display {
+    margin-top: 8px;
+    color: var(--success);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
 .profit-goal-label {
     display: block;
     margin-bottom: 6px;
