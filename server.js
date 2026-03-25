@@ -3491,8 +3491,16 @@ function buildFullPdfText(parsedResult) {
   };
 }
 
-function extractPdfFieldByLabel(lines, labels, valuePattern) {
+function extractPdfFieldByLabel(lines, labels, valuePattern, options = {}) {
   const labelMatchers = Array.isArray(labels) ? labels : [];
+  const lookahead = Math.max(1, Math.min(Number(options.lookahead) || 2, 6));
+  const transform = typeof options.transform === 'function'
+    ? options.transform
+    : (value) => String(value || '').trim();
+  const isValid = typeof options.validate === 'function'
+    ? options.validate
+    : (value) => Boolean(String(value || '').trim());
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = String(lines[index] || '').trim();
     if (!line) {
@@ -3506,10 +3514,13 @@ function extractPdfFieldByLabel(lines, labels, valuePattern) {
 
       const inlineMatch = line.match(valuePattern);
       if (inlineMatch && inlineMatch[1]) {
-        return String(inlineMatch[1] || '').trim();
+        const transformedInline = transform(inlineMatch[1]);
+        if (isValid(transformedInline, { sourceLine: line, lineIndex: index, offset: 0 })) {
+          return String(transformedInline || '').trim();
+        }
       }
 
-      for (let offset = 1; offset <= 2; offset += 1) {
+      for (let offset = 1; offset <= lookahead; offset += 1) {
         const nextLine = String(lines[index + offset] || '').trim();
         if (!nextLine) {
           continue;
@@ -3519,9 +3530,17 @@ function extractPdfFieldByLabel(lines, labels, valuePattern) {
         }
         const nextMatch = nextLine.match(valuePattern);
         if (nextMatch && nextMatch[1]) {
-          return String(nextMatch[1] || '').trim();
+          const transformedMatch = transform(nextMatch[1]);
+          if (isValid(transformedMatch, { sourceLine: nextLine, lineIndex: index + offset, offset })) {
+            return String(transformedMatch || '').trim();
+          }
+          continue;
         }
-        return nextLine;
+
+        const transformedLine = transform(nextLine);
+        if (isValid(transformedLine, { sourceLine: nextLine, lineIndex: index + offset, offset })) {
+          return String(transformedLine || '').trim();
+        }
       }
     }
   }
@@ -3543,7 +3562,42 @@ function cleanPersonName(value) {
   return String(value || '')
     .replace(/^\(?[A-Z0-9]+\)?\s+/, '')
     .replace(/^[-:|]+\s*/, '')
+    .replace(/^[\\/]+\s*/, '')
     .trim();
+}
+
+function isNoisePdfFieldValue(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return true;
+  }
+
+  return /office contact priority|submit offers|offer instructions|showingtime|private remarks|public remarks|agent remarks|broker remarks|confidential|occupant|tenant occupied|call listing office|see remarks/i.test(normalized);
+}
+
+function isLikelyPersonName(value) {
+  const cleaned = cleanPersonName(value);
+  if (!cleaned || isNoisePdfFieldValue(cleaned)) {
+    return false;
+  }
+  if (extractPhoneNumber(cleaned) || extractEmailAddress(cleaned)) {
+    return false;
+  }
+  if ((cleaned.match(/\d/g) || []).length > 1) {
+    return false;
+  }
+
+  const normalized = cleaned
+    .replace(/[\\/|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = normalized.match(/[A-Za-z][A-Za-z.'-]*/g) || [];
+
+  if (words.length < 2 || words.length > 6) {
+    return false;
+  }
+
+  return true;
 }
 
 function extractPropertyAddressFromPdfText(text, lines) {
@@ -3563,8 +3617,13 @@ function extractPropertyAddressFromPdfText(text, lines) {
 function extractAgentNameFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^agent name\b/i, /^listing agent\b/i, /^la name\b/i, /^la\b/i, /^agent\b/i],
-    /^(?:agent name|listing agent|la name|la|agent)\s*[:#-]?\s*(.+)$/i
+    [/^agent name\b/i, /^listing agent(?: name)?\b/i, /^la name\b/i, /^list agent\b/i],
+    /^(?:agent name|listing agent(?: name)?|la name|list agent)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 4,
+      transform: cleanPersonName,
+      validate: isLikelyPersonName
+    }
   );
   return cleanPersonName(labeledValue);
 }
@@ -3573,7 +3632,11 @@ function extractLaCellFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
     [/^\d*\.?\s*la cell\b/i, /^listing agent cell\b/i, /^la mobile\b/i, /^la phone\b/i],
-    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone)\s*[:#-]?\s*(.+)$/i
+    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 4,
+      validate: (value) => Boolean(extractPhoneNumber(value))
+    }
   );
   return extractPhoneNumber(labeledValue);
 }
@@ -3582,7 +3645,11 @@ function extractLoPhoneFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
     [/^lo phone\b/i, /^listing office phone\b/i, /^office phone\b/i, /^broker phone\b/i],
-    /^(?:lo phone|listing office phone|office phone|broker phone)\s*[:#-]?\s*(.+)$/i
+    /^(?:lo phone|listing office phone|office phone|broker phone)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 4,
+      validate: (value) => Boolean(extractPhoneNumber(value))
+    }
   );
   return extractPhoneNumber(labeledValue);
 }
@@ -3590,8 +3657,12 @@ function extractLoPhoneFromPdfText(lines) {
 function extractOffersEmailFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^offers email\b/i, /^offer email\b/i, /^email\b/i, /^e-?mail\b/i],
-    /^(?:offers email|offer email|email|e-?mail)\s*[:#-]?\s*(.+)$/i
+    [/^offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i],
+    /^(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 4,
+      validate: (value) => Boolean(extractEmailAddress(value))
+    }
   );
   return extractEmailAddress(labeledValue);
 }

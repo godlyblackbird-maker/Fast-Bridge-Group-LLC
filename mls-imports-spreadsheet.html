@@ -341,6 +341,7 @@
                             <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
                             <button id="mls-imports-add-pdf" class="card-btn" type="button">Add PDF</button>
                             <button id="mls-imports-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="mls-imports-clear-all" class="card-btn" type="button">Clear All</button>
                             <button id="mls-imports-add-row" class="card-btn active" type="button">Add Row</button>
                             <input id="mls-imports-pdf-input" type="file" accept=".pdf,application/pdf" hidden>
                         </div>
@@ -464,8 +465,9 @@
             const addPdfButton = document.getElementById('mls-imports-add-pdf');
             const pdfInput = document.getElementById('mls-imports-pdf-input');
             const exportCsvButton = document.getElementById('mls-imports-export-csv');
+            const clearAllButton = document.getElementById('mls-imports-clear-all');
 
-            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton) {
+            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !clearAllButton) {
                 return;
             }
 
@@ -590,6 +592,11 @@
             function persistRows(rows) {
                 localStorage.setItem(getStorageKey(), JSON.stringify(rows));
                 updateCount(rows);
+            }
+
+            function clearAllRows() {
+                localStorage.removeItem(getStorageKey());
+                renderRows([]);
             }
 
             function saveRows() {
@@ -750,6 +757,22 @@
             });
 
             exportCsvButton.addEventListener('click', exportRowsToCsv);
+
+            clearAllButton.addEventListener('click', () => {
+                const existingRows = getRowsFromDom().filter(isMeaningfulRow);
+                if (existingRows.length === 0) {
+                    showToast('error', 'Nothing To Clear', 'There are no MLS import rows to clear right now.');
+                    return;
+                }
+
+                const confirmed = window.confirm('Clear all MLS Imports spreadsheet rows for this admin in this browser?');
+                if (!confirmed) {
+                    return;
+                }
+
+                clearAllRows();
+                showToast('success', 'Spreadsheet Cleared', 'All MLS Imports spreadsheet rows were removed.');
+            });
 
             renderRows(loadRows());
         })();
