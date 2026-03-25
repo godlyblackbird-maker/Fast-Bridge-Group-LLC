@@ -1280,6 +1280,82 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         persistSelectedPropertyDetail(nextDetail);
     }
 
+    function syncPropertyDetailIntoLocalDealCache(propertyKeys, detailLike, workspaceUserLike) {
+        const detail = detailLike && typeof detailLike === 'object' ? detailLike : null;
+        if (!detail) {
+            return;
+        }
+
+        const normalizedKeys = Array.from(new Set(
+            (Array.isArray(propertyKeys) ? propertyKeys : [propertyKeys])
+                .map(key => makePropertyStorageKey(key))
+                .filter(Boolean)
+        ));
+
+        if (normalizedKeys.length === 0) {
+            return;
+        }
+
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+        if (!Array.isArray(clickedItems) || clickedItems.length === 0) {
+            return;
+        }
+
+        const summaryParts = String(detail.propertyDetails || '')
+            .split('/')
+            .map(part => String(part || '').trim())
+            .filter(Boolean);
+        const normalizeSummaryMetric = (value, fallback) => {
+            const raw = String(value || '').trim();
+            return raw || fallback;
+        };
+        const compactBeds = normalizeSummaryMetric(summaryParts[1], '').replace(/\bbr\b/i, 'Beds') || '0 Beds';
+        const compactBaths = normalizeSummaryMetric(summaryParts[2], '').replace(/\bba\b/i, 'Baths') || '0 Baths';
+        const compactArea = normalizeSummaryMetric(summaryParts[5], '').replace(/ft²/gi, 'sqft') || '0 sqft';
+        const compactStatus = String(detail.statusLabel || 'Active').trim().toLowerCase().replace(/\s+/g, '-');
+        const compactLocation = String(detail.areaLabel || detail.city || detail.county || detail.marketInfo || '').trim() || '-';
+        const compactImageUrl = String((Array.isArray(detail.propertyImages) ? detail.propertyImages[0] : '') || detail.imageUrl || '').trim();
+        const compactSnapshot = { ...detail };
+        let clickedItemsChanged = false;
+
+        const nextClickedItems = clickedItems.map((item) => {
+            const itemSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                ? item.propertySnapshot
+                : null;
+            const itemPropertyKey = makePropertyStorageKey(
+                itemSnapshot?.address
+                || item?.address
+                || item?.propertyAddress
+            );
+
+            if (!normalizedKeys.includes(itemPropertyKey)) {
+                return item;
+            }
+
+            clickedItemsChanged = true;
+            return {
+                ...item,
+                address: String(detail.address || item.address || itemSnapshot?.address || 'Property').trim() || 'Property',
+                location: compactLocation,
+                price: String(detail.listPrice || item.price || '$0').trim() || '$0',
+                beds: compactBeds,
+                baths: compactBaths,
+                area: compactArea,
+                status: compactStatus || item.status || 'active',
+                imageUrl: compactImageUrl || item.imageUrl || '',
+                propertySnapshot: compactSnapshot
+            };
+        });
+
+        if (clickedItemsChanged) {
+            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+    }
+
     function getPersistedSelectedPropertyDetail() {
         const storageReaders = [
             () => localStorage.getItem('selectedPropertyDetail'),
@@ -6770,6 +6846,8 @@ function initNavbarDateTime() {
     }
 
     function initNotesWidget() {
+        const notesWidgetShell = document.querySelector('.notes-widget-shell');
+        const notesWidgetHeaderActions = document.querySelector('.notes-widget-header-actions');
         const folderTree = document.getElementById('notes-folder-tree');
         const noteList = document.getElementById('notes-note-list');
         const addFolderButton = document.getElementById('notes-add-folder-btn');
@@ -6799,7 +6877,7 @@ function initNavbarDateTime() {
         const metaLabel = document.getElementById('notes-meta-label');
         const deleteButton = document.getElementById('notes-delete-note-btn');
 
-        if (!folderTree || !noteList || !addFolderButton || !addNoteButton || !quickNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !notesSubtitle || !viewAllButton || !viewTrashButton || !editorEmpty || !editor || !backToListButton || !titleInput || !folderSelect || !pinToggleButton || !completeToggleButton || !bodyInput || !fontToolButton || !checklistToolButton || !gridToolButton || !attachToolButton || !drawToolButton || !boldToolButton || !metaLabel || !deleteButton) {
+        if (!notesWidgetShell || !folderTree || !noteList || !addFolderButton || !addNoteButton || !quickNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !notesSubtitle || !viewAllButton || !viewTrashButton || !editorEmpty || !editor || !backToListButton || !titleInput || !folderSelect || !pinToggleButton || !completeToggleButton || !bodyInput || !fontToolButton || !checklistToolButton || !gridToolButton || !attachToolButton || !drawToolButton || !boldToolButton || !metaLabel || !deleteButton) {
             return;
         }
 
@@ -7617,6 +7695,26 @@ function initNavbarDateTime() {
             viewTrashButton.textContent = deletedNotes.length ? `Recently Deleted (${deletedNotes.length})` : 'Recently Deleted';
         }
 
+        function shouldShowEditorPanel(data) {
+            if (isTrashView()) {
+                return false;
+            }
+            if (!selectedNoteId) {
+                return false;
+            }
+            return data.notes.some((note) => note.id === selectedNoteId && !note.deletedAt);
+        }
+
+        function syncNotesWidgetMode(data) {
+            const showEditor = shouldShowEditorPanel(data);
+            notesWidgetShell.classList.toggle('is-editor-mode', showEditor);
+            notesWidgetShell.classList.toggle('is-library-mode', !showEditor);
+            if (notesWidgetHeaderActions) {
+                notesWidgetHeaderActions.hidden = showEditor;
+            }
+            backToListButton.hidden = !showEditor;
+        }
+
         function renderNoteList(data) {
             const visibleNotes = getFilteredNotes(data);
             renderSummary(data, visibleNotes);
@@ -7721,6 +7819,7 @@ function initNavbarDateTime() {
                 selectedNoteId = '';
             }
             ensureSelection(data);
+            syncNotesWidgetMode(data);
             renderFolderTree(data);
             renderNoteList(data);
             renderEditor(data);
@@ -12925,6 +13024,7 @@ function initNavbarDateTime() {
         const activeUser = getStoredCurrentUserIdentity();
         let propertyAddress = String(detailData.address || '').trim();
         let propertyKey = makePropertyStorageKey(propertyAddress);
+        let linkedDealPropertyKey = propertyKey;
         const persistedAssignment = getPropertyAssignmentRecord(propertyKey);
 
         if (persistedAssignment) {
@@ -13901,6 +14001,8 @@ function initNavbarDateTime() {
 
         function persistCurrentPropertyDetail() {
             persistSelectedPropertyDetail(detailData);
+            syncPropertyDetailIntoLocalDealCache([linkedDealPropertyKey, propertyKey], detailData, workspaceUser);
+            linkedDealPropertyKey = propertyKey;
             syncCurrentAssignmentSnapshot();
         }
 

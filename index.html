@@ -31,23 +31,22 @@
                 const isAuthenticated = Boolean(authToken && (email || name));
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 const themeStore = readJson('dashboardThemeByUser');
-                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
                 let theme = isAuthenticated
-                    ? ((themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'sunset')
-                    : 'sunset';
+                    ? ((themeStore[userKey] && themeStore[userKey].value) || 'beach')
+                    : 'beach';
 
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
                 if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(theme)) {
-                    theme = 'sunset';
+                    theme = 'beach';
                 }
 
                 document.documentElement.setAttribute('data-theme', theme);
                 document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
             } catch (error) {
-                document.documentElement.setAttribute('data-theme', 'sunset');
+                document.documentElement.setAttribute('data-theme', 'beach');
                 document.documentElement.setAttribute('data-authenticated', 'false');
             }
         })();

@@ -6803,8 +6803,18 @@ body.sidebar-collapsed .main-content {
 
 .notes-widget-shell {
     display: grid;
-    grid-template-columns: minmax(248px, 296px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
+    min-height: 430px;
+}
+
+.notes-widget-shell.is-library-mode .notes-editor-panel,
+.notes-widget-shell.is-editor-mode .notes-library-panel {
+    display: none;
+}
+
+.notes-widget-shell.is-library-mode .notes-library-panel,
+.notes-widget-shell.is-editor-mode .notes-editor-panel {
     min-height: 430px;
 }
 
@@ -7676,7 +7686,7 @@ body.sidebar-collapsed .main-content {
 }
 @media (max-width: 1100px) {
     .notes-widget-shell {
-        grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
