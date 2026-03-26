@@ -3561,9 +3561,9 @@ function extractEmailAddress(value) {
 function cleanPersonName(value) {
   return String(value || '')
     .replace(/^(?:\([A-Za-z0-9_-]+\)\s*)+/, '')
-    .replace(/^\(?[A-Z0-9]+\)?\s+/, '')
     .replace(/^[-:|]+\s*/, '')
     .replace(/^[\\/]+\s*/, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -3720,12 +3720,16 @@ function extractLaNameFromLine(line) {
     return '';
   }
 
-  const inlineMatch = normalizedLine.match(/^\s*(?:\d+\.?\s*)?la\s*[:#-]\s*(.+)$/i);
+  const inlineMatch = normalizedLine.match(/^\s*(?:\d+\.?\s*)?la\s*[:#-]\s*(?:\([^)]+\)\s*)*(.+)$/i);
   if (!inlineMatch || !inlineMatch[1]) {
     return '';
   }
 
-  const candidate = cleanPersonName(inlineMatch[1]);
+  const candidate = String(inlineMatch[1] || '')
+    .replace(/^[-:|]+\s*/, '')
+    .replace(/^[\\/]+\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return isLikelyPersonName(candidate) ? candidate : '';
 }
 
@@ -3740,7 +3744,7 @@ function extractAgentNameFromPdfText(lines) {
     for (let index = agentOfficeIndex; index < searchEnd; index += 1) {
       const candidate = extractLaNameFromLine(normalizedLines[index]);
       if (candidate) {
-        return formatPersonName(candidate);
+        return candidate;
       }
     }
   }
@@ -3748,7 +3752,7 @@ function extractAgentNameFromPdfText(lines) {
   for (const line of normalizedLines) {
     const candidate = extractLaNameFromLine(line);
     if (candidate) {
-      return formatPersonName(candidate);
+      return candidate;
     }
   }
 
