@@ -3481,14 +3481,50 @@ function buildFullPdfText(parsedResult) {
   if (mergedPageText.length > aggregateText.length) {
     return {
       text: mergedPageText,
+      pageTexts,
       parsedPageCount: pageTexts.length
     };
   }
 
   return {
     text: aggregateText || mergedPageText,
+    pageTexts,
     parsedPageCount: pageTexts.length
   };
+}
+
+function buildMlsImportExtractionTextVariants(fullText, pageTexts) {
+  const variants = [];
+  const seenTexts = new Set();
+  const normalizedPages = (Array.isArray(pageTexts) ? pageTexts : [])
+    .map((pageText) => normalizePdfExtractText(pageText))
+    .filter(Boolean);
+
+  const pushVariant = (value) => {
+    const normalizedValue = normalizePdfExtractText(value);
+    if (!normalizedValue || seenTexts.has(normalizedValue)) {
+      return;
+    }
+
+    seenTexts.add(normalizedValue);
+    variants.push(normalizedValue);
+  };
+
+  pushVariant(fullText);
+  normalizedPages.forEach((pageText) => {
+    pushVariant(pageText);
+  });
+
+  for (let startIndex = 0; startIndex < normalizedPages.length; startIndex += 1) {
+    pushVariant([normalizedPages[startIndex], normalizedPages[startIndex + 1]].filter(Boolean).join('\n\n'));
+    pushVariant([
+      normalizedPages[startIndex],
+      normalizedPages[startIndex + 1],
+      normalizedPages[startIndex + 2]
+    ].filter(Boolean).join('\n\n'));
+  }
+
+  return variants;
 }
 
 function buildPdfPartialPageList(pageCount) {
@@ -3711,6 +3747,7 @@ function extractPropertyAddressCandidateFromLine(line) {
   const normalizedLine = normalizePdfPropertyAddressValue(
     String(line || '')
       .replace(/^(?:property address|address|subject property)\s*[:#-]?\s*/i, '')
+      .replace(/\s+(?:status|list price|recent|next oh|bed\s*\/\s*bath|sqft\(src\)|price per sqft|lot\(src\)|listing id)\b.*$/i, '')
       .replace(/\s+listing\b.*$/i, '')
   );
 
@@ -3743,7 +3780,7 @@ function extractPropertyAddressCandidateFromLine(line) {
     /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10},\s*[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)$/i,
     /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10},\s*[A-Za-z .'-]+\s+\d{5}(?:-\d{4})?)$/i,
     /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10},\s*[A-Za-z .'-]+(?:,\s*[A-Z]{2})?)$/i,
-    /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10})$/i
+    /^(\d{2,6}\s+[A-Za-z0-9.'#&\-/]+(?:\s+[A-Za-z0-9.'#&\-/]+){0,10}\s+(?:street|st|avenue|ave|boulevard|blvd|drive|dr|road|rd|court|ct|lane|ln|place|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|way|trail|trl))$/i
   ];
 
   for (const pattern of addressPatterns) {
@@ -4007,6 +4044,24 @@ function normalizeMlsImportRow(row) {
   };
 }
 
+function countMlsImportRowValues(row) {
+  const normalizedRow = normalizeMlsImportRow(row);
+  return Object.values(normalizedRow).filter(Boolean).length;
+}
+
+function hasMeaningfulMlsImportRowAddress(row) {
+  return Boolean(String(row && row.propertyAddress || '').trim());
+}
+
+function createMlsImportAddressMergeKey(value) {
+  const normalizedAddress = normalizePropertyAddressForComparison(value)
+    .replace(/\bca\b\s*\d{5}(?:-\d{4})?$/i, '')
+    .replace(/\d{5}(?:-\d{4})?$/i, '')
+    .trim();
+
+  return normalizedAddress || normalizePropertyAddressForComparison(value);
+}
+
 function mergeMlsImportRowValues(previousValue, nextValue) {
   const previous = String(previousValue || '').trim();
   const next = String(nextValue || '').trim();
@@ -4109,10 +4164,77 @@ function dedupeMlsImportRows(rows) {
   return deduped;
 }
 
+function mergeMlsImportRowObjects(previousRow, nextRow) {
+  const previous = normalizeMlsImportRow(previousRow);
+  const next = normalizeMlsImportRow(nextRow);
+
+  return {
+    propertyAddress: mergeMlsImportRowValues(previous.propertyAddress, next.propertyAddress),
+    laName: mergeMlsImportRowValues(previous.laName, next.laName),
+    loPhone: mergeMlsImportRowValues(previous.loPhone, next.loPhone),
+    offersEmail: mergeMlsImportRowValues(previous.offersEmail, next.offersEmail),
+    laCell: mergeMlsImportRowValues(previous.laCell, next.laCell),
+    status: mergeMlsImportRowValues(previous.status, next.status)
+  };
+}
+
+function consolidateMlsImportRows(rows) {
+  const consolidatedRows = [];
+  const addressIndexByKey = new Map();
+  const seenSignatures = new Set();
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const normalizedRow = normalizeMlsImportRow(row);
+    const hasValue = Object.values(normalizedRow).some(Boolean);
+    if (!hasValue) {
+      return;
+    }
+
+    const addressKey = createMlsImportAddressMergeKey(normalizedRow.propertyAddress);
+    if (addressKey) {
+      const existingIndex = addressIndexByKey.get(addressKey);
+      if (typeof existingIndex === 'number') {
+        consolidatedRows[existingIndex] = mergeMlsImportRowObjects(consolidatedRows[existingIndex], normalizedRow);
+        return;
+      }
+
+      addressIndexByKey.set(addressKey, consolidatedRows.length);
+      consolidatedRows.push(normalizedRow);
+      return;
+    }
+
+    const signature = [
+      normalizedRow.propertyAddress.toLowerCase(),
+      normalizedRow.laName.toLowerCase(),
+      normalizedRow.loPhone.toLowerCase(),
+      normalizedRow.offersEmail.toLowerCase(),
+      normalizedRow.laCell.toLowerCase(),
+      normalizedRow.status.toLowerCase()
+    ].join('|');
+
+    if (seenSignatures.has(signature)) {
+      return;
+    }
+
+    seenSignatures.add(signature);
+    consolidatedRows.push(normalizedRow);
+  });
+
+  const addressBackedRows = consolidatedRows.filter((row) => hasMeaningfulMlsImportRowAddress(row));
+  const prioritizedRows = addressBackedRows.length > 0 ? addressBackedRows : consolidatedRows;
+
+  return prioritizedRows.sort((previousRow, nextRow) => {
+    const previousScore = countMlsImportRowValues(previousRow);
+    const nextScore = countMlsImportRowValues(nextRow);
+    return nextScore - previousScore;
+  });
+}
+
 async function extractMlsImportPdfFields(buffer) {
   const parser = new PDFParse({ data: buffer });
   let normalizedText = '';
   let pageCount = 0;
+  let pageTexts = [];
 
   try {
     const info = await parser.getInfo();
@@ -4123,6 +4245,7 @@ async function extractMlsImportPdfFields(buffer) {
     });
     const fullTextResult = buildFullPdfText(parsed);
     normalizedText = fullTextResult.text;
+    pageTexts = Array.isArray(fullTextResult.pageTexts) ? fullTextResult.pageTexts : [];
     if (!pageCount && fullTextResult.parsedPageCount > 0) {
       pageCount = fullTextResult.parsedPageCount;
     }
@@ -4134,13 +4257,23 @@ async function extractMlsImportPdfFields(buffer) {
     throw new Error('The PDF did not contain readable text.');
   }
 
-  const blockTexts = splitMlsImportTextIntoBlocks(normalizedText);
-  const extractedRows = dedupeMlsImportRows(
-    mergeMlsImportRows(
-      (blockTexts.length > 0 ? blockTexts : [normalizedText])
-        .map((blockText) => extractMlsImportRowFromText(blockText))
-        .filter(Boolean)
-    )
+  const candidateRows = buildMlsImportExtractionTextVariants(normalizedText, pageTexts)
+    .flatMap((candidateText) => {
+      const blockTexts = splitMlsImportTextIntoBlocks(candidateText);
+      const sourceRows = mergeMlsImportRows(
+        (blockTexts.length > 0 ? blockTexts : [candidateText])
+          .map((blockText) => extractMlsImportRowFromText(blockText))
+          .filter(Boolean)
+      );
+      const wholeTextRow = extractMlsImportRowFromText(candidateText);
+      if (sourceRows.length > 0) {
+        return sourceRows;
+      }
+
+      return wholeTextRow ? [wholeTextRow] : [];
+    });
+  const extractedRows = consolidateMlsImportRows(
+    dedupeMlsImportRows(candidateRows)
   );
   const fallbackRow = extractMlsImportRowFromText(normalizedText) || {};
   const primaryRow = extractedRows[0] || fallbackRow;

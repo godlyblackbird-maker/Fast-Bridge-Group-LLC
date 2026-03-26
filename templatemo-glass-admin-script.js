@@ -3467,6 +3467,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const listEl = document.getElementById('analytics-closed-deals-list');
         const myFileListEl = document.getElementById('analytics-my-file-list');
         const myFileCountEl = document.getElementById('analytics-my-file-count');
+        const myFileCardEl = document.querySelector('.analytics-my-file-card');
 
         if (!closedDealsValueEl || !closedDealsChangeEl || !listEl) {
             return;
@@ -3569,9 +3570,35 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return Math.max(parseMoneyValue(value), 0);
         }
 
+        function formatClosedDealMoney(value, digits = 0) {
+            if (typeof formatMoney === 'function') {
+                return formatMoney(value, digits);
+            }
+
+            const safe = Number.isFinite(value) ? value : 0;
+            return '$' + safe.toLocaleString(undefined, {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        }
+
         function formatMoneyInputValue(value) {
             const amount = parseClosedDealMoney(value);
-            return amount > 0 ? formatMoney(amount) : '';
+            return amount > 0 ? formatClosedDealMoney(amount) : '';
+        }
+
+        function revealMyFileArchive() {
+            const scrollTarget = myFileCardEl || myFileListEl;
+            if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
+                scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            if (myFileListEl) {
+                myFileListEl.setAttribute('tabindex', '-1');
+                window.setTimeout(() => {
+                    myFileListEl.focus({ preventScroll: true });
+                }, 160);
+            }
         }
 
         function attachMoneyFormatter(input) {
@@ -3934,11 +3961,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
                 const feeItem = document.createElement('div');
                 feeItem.className = 'closed-deal-item-financial';
-                feeItem.innerHTML = `<span class="closed-deal-item-financial-label">Wholesale Fee</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.wholesaleFee))}</strong>`;
+                feeItem.innerHTML = `<span class="closed-deal-item-financial-label">Wholesale Fee</span><strong class="closed-deal-item-financial-value">${formatClosedDealMoney(parseClosedDealMoney(deal.wholesaleFee))}</strong>`;
 
                 const earnedItem = document.createElement('div');
                 earnedItem.className = 'closed-deal-item-financial';
-                earnedItem.innerHTML = `<span class="closed-deal-item-financial-label">Net Earned</span><strong class="closed-deal-item-financial-value">${formatMoney(parseClosedDealMoney(deal.earnedAmount))}</strong>`;
+                earnedItem.innerHTML = `<span class="closed-deal-item-financial-label">Net Earned</span><strong class="closed-deal-item-financial-value">${formatClosedDealMoney(parseClosedDealMoney(deal.earnedAmount))}</strong>`;
 
                 financials.appendChild(feeItem);
                 financials.appendChild(earnedItem);
@@ -4057,13 +4084,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }, { wholesaleFee: 0, earnedAmount: 0 });
 
             closedDealsValueEl.textContent = String(combinedDeals.length);
-            closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} • ${manualDeals.length} manual • ${formatMoney(combinedTotals.earnedAmount)} earned`;
+            closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} • ${manualDeals.length} manual • ${formatClosedDealMoney(combinedTotals.earnedAmount)} earned`;
 
             if (feesTotalEl) {
-                feesTotalEl.textContent = formatMoney(combinedTotals.wholesaleFee);
+                feesTotalEl.textContent = formatClosedDealMoney(combinedTotals.wholesaleFee);
             }
             if (earnedTotalEl) {
-                earnedTotalEl.textContent = formatMoney(combinedTotals.earnedAmount);
+                earnedTotalEl.textContent = formatClosedDealMoney(combinedTotals.earnedAmount);
             }
 
             if (myFileCountEl) {
@@ -4208,6 +4235,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     renderPendingUploads();
                     renderClosedDeals();
                     showDashboardToast('success', 'Closed Deal Saved', 'The deal was added to Closed Deals and the My File archive.');
+                    revealMyFileArchive();
                 } catch (error) {
                     console.error('Failed to save closed deal:', error);
                     showDashboardToast('error', 'Save Failed', error && error.message ? error.message : 'The closed deal could not be saved.');
@@ -11881,7 +11909,7 @@ function initNavbarDateTime() {
                 return agreementLogoDataUrlPromise;
             }
 
-            agreementLogoDataUrlPromise = fetch('png photos/Fast Logo - 111.png')
+            agreementLogoDataUrlPromise = fetch('png photos/FAST LOGO 777.png')
                 .then((response) => {
                     if (!response.ok) {
                         throw new Error('Logo file could not be loaded.');
@@ -12237,7 +12265,7 @@ function initNavbarDateTime() {
                 return agreementLogoDataUrlPromise;
             }
 
-            agreementLogoDataUrlPromise = fetch('png photos/Fast Logo - 111.png')
+            agreementLogoDataUrlPromise = fetch('png photos/FAST LOGO 777.png')
                 .then((response) => {
                     if (!response.ok) {
                         throw new Error('Failed to load agreement logo.');

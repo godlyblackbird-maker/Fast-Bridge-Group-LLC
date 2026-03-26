@@ -1141,7 +1141,7 @@
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = () => resolve(null);
-      image.src = 'png photos/Fast Logo 333.png';
+      image.src = 'png photos/FAST LOGO 777.png';
     });
 
     if (logoImage) {
