@@ -3094,6 +3094,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const offerTermsSentEl = document.getElementById('kpi-offer-terms-sent');
         const offersSubmittedEl = document.getElementById('kpi-offers-submitted');
         const profitGoalInputEl = document.getElementById('kpi-profit-goal-input');
+        const profitGoalSubmitEl = document.getElementById('kpi-profit-goal-submit');
         const profitGoalDisplayEl = document.getElementById('kpi-profit-goal-display');
         const profitGoalMetaEl = document.getElementById('kpi-profit-goal-meta');
         const profitWindowButtons = Array.from(document.querySelectorAll('[data-profit-window]'));
@@ -3321,7 +3322,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             }
             if (profitGoalMetaEl) {
-                profitGoalMetaEl.textContent = 'Press Enter to save your yearly target.';
+                profitGoalMetaEl.textContent = 'Press Enter or click the arrow to save your yearly target.';
             }
             if (offerTermsChangeEl) {
                 offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} at offer terms sent`;
@@ -3397,6 +3398,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 event.preventDefault();
                 commitProfitGoal();
             });
+
+            if (profitGoalSubmitEl) {
+                profitGoalSubmitEl.addEventListener('click', () => {
+                    commitProfitGoal();
+                });
+            }
         }
 
         profitWindowButtons.forEach((button) => {

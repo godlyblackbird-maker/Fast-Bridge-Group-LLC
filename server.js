@@ -3560,6 +3560,7 @@ function extractEmailAddress(value) {
 
 function cleanPersonName(value) {
   return String(value || '')
+    .replace(/^(?:\([A-Za-z0-9_-]+\)\s*)+/, '')
     .replace(/^\(?[A-Z0-9]+\)?\s+/, '')
     .replace(/^[-:|]+\s*/, '')
     .replace(/^[\\/]+\s*/, '')
@@ -3648,7 +3649,20 @@ function extractPropertyAddressCandidateFromLine(line) {
     return '';
   }
 
+  const withoutHouseNumber = normalizedLine.replace(/^\d{2,6}\s+/, '').trim();
+  if (!withoutHouseNumber || !/[A-Za-z]/.test(withoutHouseNumber)) {
+    return '';
+  }
+
+  if (/^\d{2,6}\s+\d{2,6}(?:[\s-]\d{2,6})*$/.test(normalizedLine)) {
+    return '';
+  }
+
   if (extractPhoneNumber(normalizedLine) || extractEmailAddress(normalizedLine)) {
+    return '';
+  }
+
+  if (/\b(?:sq\.?\s*ft|sqft|square feet|yard|yards|acre|acres|lot size|lot|garage|garages|bed|beds|bath|baths|story|stories|carport|patio|pool|room|rooms)\b/i.test(normalizedLine)) {
     return '';
   }
 
@@ -3780,78 +3794,49 @@ function extractOffersEmailFromPdfText(lines) {
   return extractEmailAddress(labeledValue);
 }
 
-function normalizeMlsStatusLabel(value) {
-  const normalized = String(value || '')
+function formatMlsStatusFieldValue(value) {
+  const cleaned = String(value || '')
     .replace(/\u00a0/g, ' ')
+    .replace(/\|+/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-  if (!normalized) {
+    .replace(/^(?:status|listing status|mls status|current status)\s*:\s*/i, '')
+    .replace(/\s{2,}(?:dom|cdom|listing id|mls(?:#| no\.?| number)?|beds?|baths?|price|printed by|agent full)\b.*$/i, '')
+    .trim();
+
+  if (!cleaned) {
     return '';
   }
 
-  const exactPatterns = [
-    { pattern: /active\s+under\s+contract|under\s+contract/i, value: 'Active Under Contract' },
-    { pattern: /active\s+option\s+contract/i, value: 'Active Option Contract' },
-    { pattern: /pending\s+sale/i, value: 'Pending Sale' },
-    { pattern: /coming\s+soon/i, value: 'Coming Soon' },
-    { pattern: /off\s+market/i, value: 'Off Market' },
-    { pattern: /backup/i, value: 'Backup' },
-    { pattern: /withdrawn/i, value: 'Withdrawn' },
-    { pattern: /cancelled|canceled/i, value: 'Cancelled' },
-    { pattern: /expired/i, value: 'Expired' },
-    { pattern: /sold|closed/i, value: 'Closed' },
-    { pattern: /pending|contingent/i, value: 'Pending' },
-    { pattern: /hold/i, value: 'Hold' },
-    { pattern: /active/i, value: 'Active' }
-  ];
-
-  for (const { pattern, value: canonicalValue } of exactPatterns) {
-    if (pattern.test(normalized)) {
-      return canonicalValue;
-    }
+  if (!/^[a-z][a-z /&-]{1,50}$/i.test(cleaned)) {
+    return '';
   }
 
-  const cleanedStatus = normalized
-    .replace(/^(?:status|listing status|mls status|current status)\s*[:#-]?\s*/i, '')
-    .replace(/\b(?:mls|listing)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (/^[a-z][a-z /-]{2,40}$/i.test(cleanedStatus)) {
-    return cleanedStatus.replace(/\b([a-z])/g, (match) => match.toUpperCase());
-  }
-
-  return '';
-}
-
-function extractStatusValue(value) {
-  const normalizedStatus = normalizeMlsStatusLabel(value);
-  return normalizedStatus || '';
+  return cleaned
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (match) => match.toUpperCase());
 }
 
 function extractMlsStatusFromPdfText(text, lines) {
   const normalizedLines = Array.isArray(lines)
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
     : [];
-  const labeledValue = extractPdfFieldByLabel(
-    normalizedLines,
-    [/^status\b/i, /^listing status\b/i, /^mls status\b/i, /^current status\b/i],
-    /^(?:listing status|mls status|current status|status)\s*[:#-]?\s*(.+)$/i,
-    {
-      lookahead: 3,
-      transform: extractStatusValue,
-      validate: (value) => Boolean(extractStatusValue(value))
-    }
-  );
-  if (labeledValue) {
-    return extractStatusValue(labeledValue);
-  }
 
-  for (const line of normalizedLines) {
-    const lineStatus = extractStatusValue(line);
-    if (lineStatus && /^(?:active|pending|contingent|closed|sold|hold|coming soon|off market|cancelled|canceled|expired|withdrawn|under contract|backup)\b/i.test(line)) {
-      return lineStatus;
+  for (let index = 0; index < normalizedLines.length; index += 1) {
+    const line = normalizedLines[index];
+    const inlineMatch = line.match(/^(?:listing status|mls status|current status|status)\s*:\s*(.+)$/i);
+    if (inlineMatch && inlineMatch[1]) {
+      const inlineStatus = formatMlsStatusFieldValue(inlineMatch[1]);
+      if (inlineStatus) {
+        return inlineStatus;
+      }
+    }
+
+    if (/^(?:listing status|mls status|current status|status)\s*:$/i.test(line)) {
+      const nextLine = normalizedLines[index + 1] || '';
+      const nextStatus = formatMlsStatusFieldValue(nextLine);
+      if (nextStatus) {
+        return nextStatus;
+      }
     }
   }
 
