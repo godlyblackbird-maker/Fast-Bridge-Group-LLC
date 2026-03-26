@@ -3491,6 +3491,15 @@ function buildFullPdfText(parsedResult) {
   };
 }
 
+function buildPdfPartialPageList(pageCount) {
+  const totalPages = Number(pageCount) || 0;
+  if (totalPages <= 0) {
+    return undefined;
+  }
+
+  return Array.from({ length: totalPages }, (_, index) => index + 1);
+}
+
 function extractPdfFieldByLabel(lines, labels, valuePattern, options = {}) {
   const labelMatchers = Array.isArray(labels) ? labels : [];
   const lookahead = Math.max(1, Math.min(Number(options.lookahead) || 2, 6));
@@ -3636,6 +3645,66 @@ function normalizePdfPropertyAddressValue(value) {
     .replace(/\s+,/g, ',')
     .replace(/,\s+/g, ', ')
     .trim();
+}
+
+function normalizePropertyAddressForComparison(value) {
+  return normalizePdfPropertyAddressValue(value)
+    .toLowerCase()
+    .replace(/\bcalifornia\b/g, 'ca')
+    .replace(/\bstreet\b/g, 'st')
+    .replace(/\bavenue\b/g, 'ave')
+    .replace(/\bboulevard\b/g, 'blvd')
+    .replace(/\bdrive\b/g, 'dr')
+    .replace(/\broad\b/g, 'rd')
+    .replace(/\bcourt\b/g, 'ct')
+    .replace(/\blane\b/g, 'ln')
+    .replace(/\bplace\b/g, 'pl')
+    .replace(/\bterrace\b/g, 'ter')
+    .replace(/\bcircle\b/g, 'cir')
+    .replace(/\bhighway\b/g, 'hwy')
+    .replace(/\bparkway\b/g, 'pkwy')
+    .replace(/\bmountain\b/g, 'mtn')
+    .replace(/\bsaint\b/g, 'st')
+    .replace(/[.,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function areMatchingPropertyAddresses(previousAddress, nextAddress) {
+  const previous = normalizePropertyAddressForComparison(previousAddress);
+  const next = normalizePropertyAddressForComparison(nextAddress);
+  if (!previous || !next) {
+    return false;
+  }
+
+  if (previous === next) {
+    return true;
+  }
+
+  const previousWithoutStateZip = previous
+    .replace(/\bca\b\s*\d{5}(?:-\d{4})?$/i, '')
+    .replace(/\d{5}(?:-\d{4})?$/i, '')
+    .trim();
+  const nextWithoutStateZip = next
+    .replace(/\bca\b\s*\d{5}(?:-\d{4})?$/i, '')
+    .replace(/\d{5}(?:-\d{4})?$/i, '')
+    .trim();
+
+  return Boolean(previousWithoutStateZip)
+    && previousWithoutStateZip === nextWithoutStateZip;
+}
+
+function isDuplicatePropertyAddressLine(currentBlock, nextLine) {
+  const nextAddress = extractPropertyAddressCandidateFromLine(nextLine);
+  if (!nextAddress) {
+    return false;
+  }
+
+  const existingAddresses = (Array.isArray(currentBlock) ? currentBlock : [])
+    .map((line) => extractPropertyAddressCandidateFromLine(line))
+    .filter(Boolean);
+
+  return existingAddresses.some((existingAddress) => areMatchingPropertyAddresses(existingAddress, nextAddress));
 }
 
 function extractPropertyAddressCandidateFromLine(line) {
@@ -3904,8 +3973,11 @@ function splitMlsImportTextIntoBlocks(text) {
 
   lines.forEach((line) => {
     const startsNewBlock = isLikelyPropertyAddressLine(line);
+    const isDuplicateAddressLine = startsNewBlock
+      && currentBlockHasAddress
+      && isDuplicatePropertyAddressLine(currentBlock, line);
 
-    if (startsNewBlock && currentBlockHasAddress) {
+    if (startsNewBlock && currentBlockHasAddress && !isDuplicateAddressLine) {
       flushBlock();
     }
 
@@ -4045,7 +4117,10 @@ async function extractMlsImportPdfFields(buffer) {
   try {
     const info = await parser.getInfo();
     pageCount = Number(info && info.total) || 0;
-    const parsed = await parser.getText();
+    const parsed = await parser.getText({
+      partial: buildPdfPartialPageList(pageCount),
+      pageJoiner: '\n\n'
+    });
     const fullTextResult = buildFullPdfText(parsed);
     normalizedText = fullTextResult.text;
     if (!pageCount && fullTextResult.parsedPageCount > 0) {
