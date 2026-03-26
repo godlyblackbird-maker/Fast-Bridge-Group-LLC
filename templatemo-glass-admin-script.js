@@ -16849,7 +16849,96 @@ function initNavbarDateTime() {
                     .replace(/'/g, '&#39;');
             }
 
+            function sanitizeOfferEmailBodyHtml(value) {
+                const rawValue = String(value || '').trim();
+                if (!rawValue) {
+                    return '';
+                }
+
+                const parser = new DOMParser();
+                const documentFragment = parser.parseFromString(`<div>${rawValue}</div>`, 'text/html');
+                const container = documentFragment.body && documentFragment.body.firstElementChild
+                    ? documentFragment.body.firstElementChild
+                    : null;
+
+                if (!container) {
+                    return '';
+                }
+
+                const allowedTags = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
+                const blockedTags = new Set([
+                    'BODY', 'BUTTON', 'FORM', 'HEAD', 'HTML', 'IFRAME', 'IMG', 'INPUT', 'LINK', 'META',
+                    'NOSCRIPT', 'OBJECT', 'OPTION', 'SCRIPT', 'SELECT', 'STYLE', 'SVG', 'TEXTAREA', 'TITLE'
+                ]);
+
+                const sanitizeNode = (node) => {
+                    if (!node) {
+                        return null;
+                    }
+
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        return document.createTextNode(node.textContent || '');
+                    }
+
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                        return null;
+                    }
+
+                    const tagName = String(node.tagName || '').toUpperCase();
+                    if (!tagName || blockedTags.has(tagName)) {
+                        return null;
+                    }
+
+                    if (!allowedTags.has(tagName)) {
+                        const fragment = document.createDocumentFragment();
+                        Array.from(node.childNodes || []).forEach((childNode) => {
+                            const sanitizedChild = sanitizeNode(childNode);
+                            if (sanitizedChild) {
+                                fragment.appendChild(sanitizedChild);
+                            }
+                        });
+                        return fragment;
+                    }
+
+                    const cleanNode = document.createElement(tagName.toLowerCase());
+                    if (tagName === 'A') {
+                        const href = String(node.getAttribute('href') || '').trim();
+                        if (/^(https?:|mailto:|tel:)/i.test(href)) {
+                            cleanNode.setAttribute('href', href);
+                            cleanNode.setAttribute('target', '_blank');
+                            cleanNode.setAttribute('rel', 'noopener noreferrer');
+                        }
+                    }
+
+                    Array.from(node.childNodes || []).forEach((childNode) => {
+                        const sanitizedChild = sanitizeNode(childNode);
+                        if (sanitizedChild) {
+                            cleanNode.appendChild(sanitizedChild);
+                        }
+                    });
+                    return cleanNode;
+                };
+
+                const sanitizedWrapper = document.createElement('div');
+                Array.from(container.childNodes || []).forEach((childNode) => {
+                    const sanitizedChild = sanitizeNode(childNode);
+                    if (sanitizedChild) {
+                        sanitizedWrapper.appendChild(sanitizedChild);
+                    }
+                });
+
+                return sanitizedWrapper.innerHTML.trim();
+            }
+
             function saveDraft() {
+                const sanitizedBodyHtml = sanitizeOfferEmailBodyHtml(
+                    bodyInput.contentEditable === 'true' ? bodyInput.innerHTML : getBodyValue()
+                );
+
+                if (bodyInput.contentEditable === 'true' && String(bodyInput.innerHTML || '').trim() !== sanitizedBodyHtml) {
+                    bodyInput.innerHTML = sanitizedBodyHtml;
+                }
+
                 detailData.offerEmailDraft = {
                     senderName: senderNameInput.value.trim(),
                     senderEmail: senderEmailInput.value.trim(),
@@ -16865,7 +16954,7 @@ function initNavbarDateTime() {
                     includeFbgOfferTerms: Boolean(fbgOfferTermsToggle.checked),
                     includeTerms: Boolean(includeTermsToggle.checked),
                     subject: subjectInput.value,
-                    body: (bodyInput.contentEditable === 'true' ? bodyInput.innerHTML : getBodyValue()),
+                    body: sanitizedBodyHtml,
                     subjectEdited: Boolean(subjectInput.dataset.userEdited === 'true'),
                     bodyEdited: Boolean(bodyInput.dataset.userEdited === 'true'),
                     fontFamily: (document.getElementById('offer-email-font-family') || {}).value || DEFAULT_EMAIL_FONT_FAMILY,
@@ -16887,8 +16976,11 @@ function initNavbarDateTime() {
                     return escapeHtml(bodyInput.value).replace(/\n/g, '<br>');
                 }
 
-                const rawHtml = String(bodyInput.innerHTML || '').trim();
+                const rawHtml = sanitizeOfferEmailBodyHtml(bodyInput.innerHTML || '');
                 if (rawHtml) {
+                    if (String(bodyInput.innerHTML || '').trim() !== rawHtml) {
+                        bodyInput.innerHTML = rawHtml;
+                    }
                     return rawHtml;
                 }
 
@@ -17122,8 +17214,7 @@ function initNavbarDateTime() {
                 if (typeof bodyInput.value === 'string') {
                     bodyInput.value = safeValue;
                 } else if (/<[a-z][\s\S]*>/i.test(safeValue)) {
-                    // If the value already contains HTML tags (e.g. saved draft with formatting), inject as HTML.
-                    bodyInput.innerHTML = safeValue;
+                    bodyInput.innerHTML = sanitizeOfferEmailBodyHtml(safeValue);
                 } else {
                     bodyInput.innerHTML = safeValue
                         .replace(/&/g, '&amp;')
@@ -17452,6 +17543,10 @@ function initNavbarDateTime() {
             includeTermsToggle.checked = Boolean(savedDraft.includeTerms);
             fbgOfferTermsToggle.checked = Boolean(savedDraft.includeFbgOfferTerms);
             setBodyValue(savedDraft.body || '', { userEdited: Boolean(savedDraft.bodyEdited) });
+            if (detailData.offerEmailDraft && detailData.offerEmailDraft.body !== String(bodyInput.innerHTML || '').trim()) {
+                detailData.offerEmailDraft.body = String(bodyInput.innerHTML || '').trim();
+                localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+            }
             sendModeSelect.value = savedDraft.sendMode || 'mailto';
             loadAvailableECardOptions(String(savedDraft.ecard || '').trim()).finally(() => {
                 userECardPath = getUserECardJpgPath();

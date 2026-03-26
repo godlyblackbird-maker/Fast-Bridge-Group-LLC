@@ -57,11 +57,16 @@ const TOTP_WINDOW = 1;
 const TOTP_PERIOD_SECONDS = 30;
 const TOTP_DIGITS = 6;
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+const MLS_IMPORT_PDF_BODY_LIMIT = '160mb';
+const MLS_IMPORT_PDF_MAX_BYTES = 100 * 1024 * 1024;
+const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
+const MLS_IMPORT_PDF_JOB_TTL_MS = 30 * 60 * 1000;
 
 let cachedOpenAiApiKey = null;
 let cachedTwilioClient = null;
 let cachedTwilioClientKey = '';
 const revokedSessionIds = new Set();
+const mlsImportPdfJobs = new Map();
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
@@ -3515,13 +3520,38 @@ function buildMlsImportExtractionTextVariants(fullText, pageTexts) {
     pushVariant(pageText);
   });
 
-  for (let startIndex = 0; startIndex < normalizedPages.length; startIndex += 1) {
-    pushVariant([normalizedPages[startIndex], normalizedPages[startIndex + 1]].filter(Boolean).join('\n\n'));
-    pushVariant([
-      normalizedPages[startIndex],
-      normalizedPages[startIndex + 1],
-      normalizedPages[startIndex + 2]
-    ].filter(Boolean).join('\n\n'));
+  const windowSizes = normalizedPages.length > 120
+    ? [2, 3, 5, 8, 12, 20]
+    : normalizedPages.length > 40
+      ? [2, 3, 5, 8, 12]
+      : [2, 3, 5, 8];
+
+  windowSizes.forEach((windowSize) => {
+    if (windowSize <= 0 || normalizedPages.length === 0) {
+      return;
+    }
+
+    const step = windowSize >= 12 ? Math.max(2, Math.floor(windowSize / 3)) : 1;
+    for (let startIndex = 0; startIndex < normalizedPages.length; startIndex += step) {
+      pushVariant(
+        normalizedPages
+          .slice(startIndex, startIndex + windowSize)
+          .filter(Boolean)
+          .join('\n\n')
+      );
+    }
+  });
+
+  if (normalizedPages.length > 60) {
+    const quarterSize = Math.max(15, Math.ceil(normalizedPages.length / 4));
+    for (let startIndex = 0; startIndex < normalizedPages.length; startIndex += quarterSize) {
+      pushVariant(
+        normalizedPages
+          .slice(startIndex, startIndex + quarterSize)
+          .filter(Boolean)
+          .join('\n\n')
+      );
+    }
   }
 
   return variants;
@@ -3534,6 +3564,143 @@ function buildPdfPartialPageList(pageCount) {
   }
 
   return Array.from({ length: totalPages }, (_, index) => index + 1);
+}
+
+function splitPdfPagesIntoBatches(pageCount, batchSize = MLS_IMPORT_PDF_PAGE_BATCH_SIZE) {
+  const totalPages = Number(pageCount) || 0;
+  const safeBatchSize = Math.max(1, Number(batchSize) || MLS_IMPORT_PDF_PAGE_BATCH_SIZE);
+  const batches = [];
+
+  if (totalPages <= 0) {
+    return batches;
+  }
+
+  for (let startPage = 1; startPage <= totalPages; startPage += safeBatchSize) {
+    const endPage = Math.min(totalPages, startPage + safeBatchSize - 1);
+    batches.push(Array.from({ length: endPage - startPage + 1 }, (_, index) => startPage + index));
+  }
+
+  return batches;
+}
+
+function cleanupExpiredMlsImportPdfJobs() {
+  const now = Date.now();
+  mlsImportPdfJobs.forEach((job, jobId) => {
+    const updatedAt = Number(job && job.updatedAt) || 0;
+    if (!updatedAt || now - updatedAt > MLS_IMPORT_PDF_JOB_TTL_MS) {
+      mlsImportPdfJobs.delete(jobId);
+    }
+  });
+}
+
+function createMlsImportPdfJob({ requesterId, fileName }) {
+  cleanupExpiredMlsImportPdfJobs();
+  const jobId = crypto.randomUUID();
+  const now = Date.now();
+  const job = {
+    id: jobId,
+    requesterId: Number(requesterId) || 0,
+    fileName: String(fileName || '').trim(),
+    status: 'queued',
+    message: 'Queued MLS PDF extraction...',
+    pageCount: 0,
+    startedAt: now,
+    updatedAt: now,
+    extracted: null,
+    error: ''
+  };
+  mlsImportPdfJobs.set(jobId, job);
+  return job;
+}
+
+function updateMlsImportPdfJob(jobId, patch) {
+  const currentJob = mlsImportPdfJobs.get(jobId);
+  if (!currentJob) {
+    return null;
+  }
+
+  const nextJob = {
+    ...currentJob,
+    ...(patch && typeof patch === 'object' ? patch : {}),
+    updatedAt: Date.now()
+  };
+  mlsImportPdfJobs.set(jobId, nextJob);
+  return nextJob;
+}
+
+function getMlsImportPdfJob(jobId) {
+  cleanupExpiredMlsImportPdfJobs();
+  return mlsImportPdfJobs.get(jobId) || null;
+}
+
+function serializeMlsImportPdfJob(job) {
+  if (!job || typeof job !== 'object') {
+    return null;
+  }
+
+  return {
+    id: job.id,
+    fileName: job.fileName,
+    status: job.status,
+    message: job.message,
+    pageCount: Number(job.pageCount) || 0,
+    startedAt: job.startedAt,
+    updatedAt: job.updatedAt,
+    extracted: job.status === 'completed' ? job.extracted : null,
+    error: job.status === 'failed' ? String(job.error || '').trim() : ''
+  };
+}
+
+async function extractPdfTextByPageBatches(parser, pageCount, options = {}) {
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+  const pageBatches = splitPdfPagesIntoBatches(pageCount);
+
+  if (pageBatches.length === 0) {
+    const parsed = await parser.getText({ pageJoiner: '\n\n' });
+    return buildFullPdfText(parsed);
+  }
+
+  const combinedPageTexts = [];
+  const combinedTexts = [];
+
+  for (let batchIndex = 0; batchIndex < pageBatches.length; batchIndex += 1) {
+    const partialPages = pageBatches[batchIndex];
+    const startPage = Number(partialPages[0]) || 0;
+    const endPage = Number(partialPages[partialPages.length - 1]) || startPage;
+    if (onProgress) {
+      onProgress({
+        phase: 'parsing-pages',
+        batchIndex: batchIndex + 1,
+        totalBatches: pageBatches.length,
+        pageCount,
+        startPage,
+        endPage,
+        message: `Parsing pages ${startPage}-${endPage} of ${pageCount}...`
+      });
+    }
+
+    const parsed = await parser.getText({
+      partial: partialPages,
+      pageJoiner: '\n\n'
+    });
+    const batchResult = buildFullPdfText(parsed);
+    if (Array.isArray(batchResult.pageTexts) && batchResult.pageTexts.length > 0) {
+      combinedPageTexts.push(...batchResult.pageTexts);
+    } else if (batchResult.text) {
+      combinedTexts.push(batchResult.text);
+    }
+  }
+
+  const resolvedPageTexts = combinedPageTexts.map((pageText) => normalizePdfExtractText(pageText)).filter(Boolean);
+  const mergedText = resolvedPageTexts.length > 0
+    ? resolvedPageTexts.join('\n\n')
+    : normalizePdfExtractText(combinedTexts.join('\n\n'));
+
+  return {
+    text: mergedText,
+    pageTexts: resolvedPageTexts,
+    parsedPageCount: resolvedPageTexts.length
+  };
 }
 
 function extractPdfFieldByLabel(lines, labels, valuePattern, options = {}) {
@@ -3917,6 +4084,23 @@ function formatMlsStatusFieldValue(value) {
     return '';
   }
 
+  const normalized = cleaned.toLowerCase();
+  const knownStatuses = [
+    { pattern: /\bactive\b/i, value: 'Active' },
+    { pattern: /\bunder\s+contract\b/i, value: 'Under Contract' },
+    { pattern: /\bpending\b/i, value: 'Pending' },
+    { pattern: /\boff\s+market\b/i, value: 'Off Market' },
+    { pattern: /\bon\s+hold\b/i, value: 'On Hold' },
+    { pattern: /\bcontingent\b/i, value: 'Contingent' },
+    { pattern: /\bcoming\s+soon\b/i, value: 'Coming Soon' },
+    { pattern: /\bsold\b/i, value: 'Sold' }
+  ];
+
+  const matchedStatus = knownStatuses.find((entry) => entry.pattern.test(normalized));
+  if (matchedStatus) {
+    return matchedStatus.value;
+  }
+
   if (!/^[a-z][a-z /&-]{1,50}$/i.test(cleaned)) {
     return '';
   }
@@ -3930,10 +4114,26 @@ function extractMlsStatusFromPdfText(text, lines) {
   const normalizedLines = Array.isArray(lines)
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
     : [];
+  const normalizedText = normalizePdfExtractText(text);
+
+  const labeledStatusPatterns = [
+    /(?:listing status|mls status|current status|status)\s*[:#-]\s*([^\n]+)/i,
+    /(?:listing status|mls status|current status|status)\s+([^\n]{2,60})/i
+  ];
+
+  for (const pattern of labeledStatusPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      const formattedStatus = formatMlsStatusFieldValue(match[1]);
+      if (formattedStatus) {
+        return formattedStatus;
+      }
+    }
+  }
 
   for (let index = 0; index < normalizedLines.length; index += 1) {
     const line = normalizedLines[index];
-    const inlineMatch = line.match(/^(?:listing status|mls status|current status|status)\s*:\s*(.+)$/i);
+    const inlineMatch = line.match(/^(?:listing status|mls status|current status|status)\s*[:#-]?\s*(.+)$/i);
     if (inlineMatch && inlineMatch[1]) {
       const inlineStatus = formatMlsStatusFieldValue(inlineMatch[1]);
       if (inlineStatus) {
@@ -3941,12 +4141,17 @@ function extractMlsStatusFromPdfText(text, lines) {
       }
     }
 
-    if (/^(?:listing status|mls status|current status|status)\s*:$/i.test(line)) {
+    if (/^(?:listing status|mls status|current status|status)\s*[:#-]?$/i.test(line)) {
       const nextLine = normalizedLines[index + 1] || '';
       const nextStatus = formatMlsStatusFieldValue(nextLine);
       if (nextStatus) {
         return nextStatus;
       }
+    }
+
+    const standaloneStatus = formatMlsStatusFieldValue(line);
+    if (standaloneStatus && /^(?:active|under contract|pending|off market|on hold|contingent|coming soon|sold)$/i.test(line)) {
+      return standaloneStatus;
     }
   }
 
@@ -4231,19 +4436,43 @@ function consolidateMlsImportRows(rows) {
 }
 
 async function extractMlsImportPdfFields(buffer) {
+  const options = arguments[1] && typeof arguments[1] === 'object' ? arguments[1] : {};
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
   const parser = new PDFParse({ data: buffer });
   let normalizedText = '';
   let pageCount = 0;
   let pageTexts = [];
 
   try {
+    if (onProgress) {
+      onProgress({ phase: 'metadata', message: 'Reading PDF metadata...' });
+    }
     const info = await parser.getInfo();
     pageCount = Number(info && info.total) || 0;
-    const parsed = await parser.getText({
-      partial: buildPdfPartialPageList(pageCount),
-      pageJoiner: '\n\n'
-    });
-    const fullTextResult = buildFullPdfText(parsed);
+    if (onProgress && pageCount > 0) {
+      onProgress({
+        phase: 'prepare',
+        pageCount,
+        message: `Preparing ${pageCount} PDF page${pageCount === 1 ? '' : 's'} for extraction...`
+      });
+    }
+    if (onProgress && pageCount > 0 && pageCount <= MLS_IMPORT_PDF_PAGE_BATCH_SIZE) {
+      onProgress({
+        phase: 'parsing-pages',
+        batchIndex: 1,
+        totalBatches: 1,
+        pageCount,
+        startPage: 1,
+        endPage: pageCount,
+        message: `Parsing pages 1-${pageCount} of ${pageCount}...`
+      });
+    }
+    const fullTextResult = pageCount > MLS_IMPORT_PDF_PAGE_BATCH_SIZE
+      ? await extractPdfTextByPageBatches(parser, pageCount, { onProgress })
+      : buildFullPdfText(await parser.getText({
+          partial: buildPdfPartialPageList(pageCount),
+          pageJoiner: '\n\n'
+        }));
     normalizedText = fullTextResult.text;
     pageTexts = Array.isArray(fullTextResult.pageTexts) ? fullTextResult.pageTexts : [];
     if (!pageCount && fullTextResult.parsedPageCount > 0) {
@@ -4255,6 +4484,16 @@ async function extractMlsImportPdfFields(buffer) {
 
   if (!normalizedText) {
     throw new Error('The PDF did not contain readable text.');
+  }
+
+  if (onProgress) {
+    onProgress({
+      phase: 'analyzing',
+      pageCount,
+      message: pageCount > 0
+        ? `Analyzing extracted MLS data from ${pageCount} page${pageCount === 1 ? '' : 's'}...`
+        : 'Analyzing extracted MLS data...'
+    });
   }
 
   const candidateRows = buildMlsImportExtractionTextVariants(normalizedText, pageTexts)
@@ -4290,7 +4529,7 @@ async function extractMlsImportPdfFields(buffer) {
   };
 }
 
-app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: '20mb' }), async (req, res) => {
+app.post('/api/admin/mls-imports/extract-pdf-job', express.json({ limit: MLS_IMPORT_PDF_BODY_LIMIT }), async (req, res) => {
   const decoded = requireAdmin(req, res);
   if (!decoded) {
     return;
@@ -4314,8 +4553,103 @@ app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: '20mb' }), 
       return res.status(400).json({ error: 'The uploaded PDF was empty.' });
     }
 
-    if (buffer.length > 15 * 1024 * 1024) {
-      return res.status(413).json({ error: 'PDF files must be 15 MB or smaller.' });
+    if (buffer.length > MLS_IMPORT_PDF_MAX_BYTES) {
+      return res.status(413).json({ error: 'PDF files must be 100 MB or smaller.' });
+    }
+
+    const job = createMlsImportPdfJob({ requesterId: decoded.id, fileName });
+    updateMlsImportPdfJob(job.id, {
+      status: 'running',
+      message: 'Starting MLS PDF extraction...'
+    });
+
+    setImmediate(async () => {
+      try {
+        const extracted = await extractMlsImportPdfFields(buffer, {
+          onProgress: (progress) => {
+            updateMlsImportPdfJob(job.id, {
+              status: 'running',
+              pageCount: Number(progress && progress.pageCount) || 0,
+              message: String(progress && progress.message || 'Extracting MLS PDF...').trim()
+            });
+          }
+        });
+
+        updateMlsImportPdfJob(job.id, {
+          status: 'completed',
+          pageCount: Number(extracted && extracted.pageCount) || 0,
+          message: Number(extracted && extracted.pageCount) > 0
+            ? `Finished parsing all ${Number(extracted.pageCount)} pages.`
+            : 'Finished parsing the PDF.',
+          extracted,
+          error: ''
+        });
+      } catch (error) {
+        console.error('Failed to extract MLS import PDF fields:', error);
+        updateMlsImportPdfJob(job.id, {
+          status: 'failed',
+          message: 'MLS PDF extraction failed.',
+          error: error && error.message ? error.message : 'Failed to extract fields from the uploaded PDF.'
+        });
+      }
+    });
+
+    return res.status(202).json({ job: serializeMlsImportPdfJob(getMlsImportPdfJob(job.id)) });
+  } catch (error) {
+    console.error('Failed to start MLS import PDF extraction job:', error);
+    return res.status(500).json({ error: error && error.message ? error.message : 'Failed to start PDF extraction.' });
+  }
+});
+
+app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const jobId = String(req.params?.jobId || '').trim();
+  if (!jobId) {
+    return res.status(400).json({ error: 'A valid job id is required.' });
+  }
+
+  const job = getMlsImportPdfJob(jobId);
+  if (!job) {
+    return res.status(404).json({ error: 'The MLS PDF extraction job was not found or has expired.' });
+  }
+
+  if (Number(job.requesterId) > 0 && Number(decoded.id) !== Number(job.requesterId)) {
+    return res.status(403).json({ error: 'You do not have access to this MLS PDF extraction job.' });
+  }
+
+  return res.json({ job: serializeMlsImportPdfJob(job) });
+});
+
+app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: MLS_IMPORT_PDF_BODY_LIMIT }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const fileName = String(req.body?.fileName || '').trim();
+    const contentBase64 = String(req.body?.contentBase64 || '').trim();
+    const extension = path.extname(fileName).toLowerCase();
+
+    if (!fileName || !contentBase64) {
+      return res.status(400).json({ error: 'A PDF file name and file content are required.' });
+    }
+
+    if (extension !== '.pdf') {
+      return res.status(400).json({ error: 'Only PDF files are supported in this import tool.' });
+    }
+
+    const buffer = Buffer.from(contentBase64, 'base64');
+    if (!buffer.length) {
+      return res.status(400).json({ error: 'The uploaded PDF was empty.' });
+    }
+
+    if (buffer.length > MLS_IMPORT_PDF_MAX_BYTES) {
+      return res.status(413).json({ error: 'PDF files must be 100 MB or smaller.' });
     }
 
     const extracted = await extractMlsImportPdfFields(buffer);

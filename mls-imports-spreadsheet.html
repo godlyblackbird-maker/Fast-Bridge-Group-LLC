@@ -347,6 +347,62 @@
             color: var(--buyers-note);
         }
 
+        .buyers-sheet-progress {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(var(--accent-rgb, 5, 150, 105), 0.28);
+            background: rgba(var(--accent-rgb, 5, 150, 105), 0.12);
+            color: var(--text-primary, #e5eef8);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .buyers-sheet-progress[hidden] {
+            display: none;
+        }
+
+        .buyers-sheet-progress-spinner {
+            position: relative;
+            width: 18px;
+            height: 18px;
+            flex: 0 0 18px;
+            border-radius: 999px;
+            border: 2px solid rgba(var(--accent-rgb, 5, 150, 105), 0.2);
+            border-top-color: rgba(var(--accent-rgb, 5, 150, 105), 0.95);
+            animation: buyersSheetSpin 0.9s linear infinite;
+        }
+
+        .buyers-sheet-progress-spinner::after {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            margin-left: -2.5px;
+            border-radius: 999px;
+            background: rgba(var(--accent-light-rgb, 52, 211, 153), 0.98);
+            box-shadow: 0 0 10px rgba(var(--accent-light-rgb, 52, 211, 153), 0.45);
+        }
+
+        .buyers-sheet-progress-text {
+            display: block;
+            min-height: 18px;
+        }
+
+        @keyframes buyersSheetSpin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .buyers-sheet-count {
             display: inline-flex;
             align-items: center;
@@ -462,6 +518,10 @@
                     </div>
 
                     <p class="buyers-sheet-note">PDF upload extracts only: Property Address, LA Name, LO Phone, Offers Email, and LA Cell.</p>
+                    <div id="mls-imports-progress" class="buyers-sheet-progress" hidden aria-live="polite">
+                        <span class="buyers-sheet-progress-spinner" aria-hidden="true"></span>
+                        <span id="mls-imports-progress-text" class="buyers-sheet-progress-text">Preparing MLS PDF extraction...</span>
+                    </div>
 
                     <div class="buyers-sheet-table-wrap">
                         <table class="buyers-sheet-table" id="mls-imports-sheet-table">
@@ -590,6 +650,8 @@
             const exportCsvButton = document.getElementById('mls-imports-export-csv');
             const addToMyAgentsButton = document.getElementById('mls-imports-add-to-my-agents');
             const clearAllButton = document.getElementById('mls-imports-clear-all');
+            const progressBox = document.getElementById('mls-imports-progress');
+            const progressText = document.getElementById('mls-imports-progress-text');
 
             if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !addToMyAgentsButton || !clearAllButton) {
                 return;
@@ -597,6 +659,64 @@
 
             function getAuthToken() {
                 return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function setPdfProgressState(message) {
+                if (!progressBox || !progressText) {
+                    return;
+                }
+
+                progressText.textContent = String(message || 'Extracting MLS PDF...').trim();
+                progressBox.hidden = false;
+            }
+
+            function clearPdfProgressState() {
+                if (!progressBox || !progressText) {
+                    return;
+                }
+
+                progressText.textContent = 'Preparing MLS PDF extraction...';
+                progressBox.hidden = true;
+            }
+
+            function waitForPdfProgressPoll(delayMs) {
+                return new Promise((resolve) => {
+                    window.setTimeout(resolve, Math.max(150, Number(delayMs) || 0));
+                });
+            }
+
+            async function pollPdfExtractionJob(jobId, authToken) {
+                const normalizedJobId = String(jobId || '').trim();
+                if (!normalizedJobId) {
+                    throw new Error('The MLS PDF extraction job did not return a valid id.');
+                }
+
+                while (true) {
+                    await waitForPdfProgressPoll(900);
+                    const response = await fetch(`/api/admin/mls-imports/extract-pdf-job/${encodeURIComponent(normalizedJobId)}`, {
+                        method: 'GET',
+                        headers: {
+                            Authorization: `Bearer ${authToken}`
+                        }
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload && payload.error ? payload.error : 'Unable to check MLS PDF extraction progress.');
+                    }
+
+                    const job = payload && payload.job && typeof payload.job === 'object' ? payload.job : {};
+                    if (job.message) {
+                        setPdfProgressState(job.message);
+                    }
+
+                    if (job.status === 'completed') {
+                        return job;
+                    }
+
+                    if (job.status === 'failed') {
+                        throw new Error(job.error || 'The MLS PDF extraction job failed.');
+                    }
+                }
             }
 
             function readFileAsBase64(file) {
@@ -733,7 +853,7 @@
                     return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, we can make a clean cash offer and move quickly if that would help.`;
                 }
 
-                return `Hi ${firstName}, saw your listing at ${propertyAddress}. If the seller is open to a strong cash offer, we would love to take a look and see if it is a fit. Let me know if you want us to send something over.`;
+                return `Hey ${firstName} hope you're having a great afternoon! I am Isaac Haro, an investor. I see you have a property in ${propertyAddress}, I do flipping around that area, close quick and would let you represent me. Are you open to cash offers?`;
             }
 
             function createCell(value, key) {
@@ -1235,8 +1355,10 @@
                 addPdfButton.textContent = 'Extracting...';
 
                 try {
+                    setPdfProgressState('Reading PDF in your browser...');
                     const contentBase64 = await readFileAsBase64(file);
-                    const response = await fetch('/api/admin/mls-imports/extract-pdf', {
+                    setPdfProgressState('Uploading PDF and starting extraction...');
+                    const response = await fetch('/api/admin/mls-imports/extract-pdf-job', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1253,7 +1375,13 @@
                         throw new Error(payload && payload.error ? payload.error : 'The PDF could not be processed.');
                     }
 
-                    const extracted = payload && payload.extracted && typeof payload.extracted === 'object' ? payload.extracted : {};
+                    const startedJob = payload && payload.job && typeof payload.job === 'object' ? payload.job : {};
+                    if (startedJob.message) {
+                        setPdfProgressState(startedJob.message);
+                    }
+
+                    const completedJob = await pollPdfExtractionJob(startedJob.id, authToken);
+                    const extracted = completedJob && completedJob.extracted && typeof completedJob.extracted === 'object' ? completedJob.extracted : {};
                     const extractedRows = Array.isArray(extracted.rows) && extracted.rows.length > 0
                         ? extracted.rows
                         : [extracted];
@@ -1291,6 +1419,7 @@
                 } catch (error) {
                     showToast('error', 'PDF Extraction Failed', error && error.message ? error.message : 'The PDF could not be processed.');
                 } finally {
+                    clearPdfProgressState();
                     addPdfButton.disabled = false;
                     addPdfButton.textContent = 'Add PDF';
                 }
