@@ -1029,6 +1029,86 @@
                 ].join('|');
             }
 
+            function normalizeMatchValue(value) {
+                return normalizeCellValue(value).toLowerCase();
+            }
+
+            function normalizePhoneMatchValue(value) {
+                return String(value || '').replace(/\D+/g, '');
+            }
+
+            function splitUniqueParts(value) {
+                return String(value || '')
+                    .split('|')
+                    .map((part) => normalizeCellValue(part))
+                    .filter(Boolean);
+            }
+
+            function mergeUniqueFieldValues(previousValue, nextValue) {
+                const combined = [...splitUniqueParts(previousValue), ...splitUniqueParts(nextValue)];
+                const seen = new Set();
+                const uniqueValues = [];
+
+                combined.forEach((part) => {
+                    const key = part.toLowerCase();
+                    if (seen.has(key)) {
+                        return;
+                    }
+                    seen.add(key);
+                    uniqueValues.push(part);
+                });
+
+                return uniqueValues.join(' | ');
+            }
+
+            function findMyAgentsMatchIndex(rows, nextRow) {
+                const targetName = normalizeMatchValue(nextRow && nextRow.laName);
+                const targetOffersEmail = normalizeMatchValue(nextRow && nextRow.offersEmail);
+                const targetLoPhone = normalizePhoneMatchValue(nextRow && nextRow.loPhone);
+                const targetLaCell = normalizePhoneMatchValue(nextRow && nextRow.laCell);
+
+                return (Array.isArray(rows) ? rows : []).findIndex((candidate) => {
+                    const candidateName = normalizeMatchValue(candidate && candidate.laName);
+                    const candidateOffersEmail = normalizeMatchValue(candidate && candidate.offersEmail);
+                    const candidateLoPhone = normalizePhoneMatchValue(candidate && candidate.loPhone);
+                    const candidateLaCell = normalizePhoneMatchValue(candidate && candidate.laCell);
+
+                    if (targetName && candidateName && targetName === candidateName) {
+                        return true;
+                    }
+
+                    if (targetOffersEmail && candidateOffersEmail && targetOffersEmail === candidateOffersEmail) {
+                        return true;
+                    }
+
+                    if (targetLoPhone && (targetLoPhone === candidateLoPhone || targetLoPhone === candidateLaCell)) {
+                        return true;
+                    }
+
+                    if (targetLaCell && (targetLaCell === candidateLoPhone || targetLaCell === candidateLaCell)) {
+                        return true;
+                    }
+
+                    return false;
+                });
+            }
+
+            function mergeMyAgentsRows(previousRow, nextRow) {
+                const currentRow = normalizeMyAgentsRow(previousRow);
+                const incomingRow = normalizeMyAgentsRow(nextRow);
+
+                return {
+                    importDate: mergeUniqueFieldValues(currentRow.importDate, incomingRow.importDate),
+                    propertyAddress: mergeUniqueFieldValues(currentRow.propertyAddress, incomingRow.propertyAddress),
+                    laName: mergeUniqueFieldValues(currentRow.laName, incomingRow.laName),
+                    loPhone: mergeUniqueFieldValues(currentRow.loPhone, incomingRow.loPhone),
+                    offersEmail: mergeUniqueFieldValues(currentRow.offersEmail, incomingRow.offersEmail),
+                    laCell: mergeUniqueFieldValues(currentRow.laCell, incomingRow.laCell),
+                    status: mergeUniqueFieldValues(currentRow.status, incomingRow.status),
+                    pdfFile: mergeUniqueFieldValues(currentRow.pdfFile, incomingRow.pdfFile)
+                };
+            }
+
             function loadMyAgentsRows() {
                 try {
                     const stored = JSON.parse(localStorage.getItem(getMyAgentsStorageKey()) || '[]');
@@ -1044,28 +1124,37 @@
 
             function mergeIntoMyAgents(rowsToAdd) {
                 const existingRows = loadMyAgentsRows();
-                const mergedRows = [];
-                const seen = new Set();
+                const mergedRows = existingRows.map(normalizeMyAgentsRow);
+                let enrichedCount = 0;
+                let addedCount = 0;
 
-                [...existingRows, ...(Array.isArray(rowsToAdd) ? rowsToAdd : [])]
+                (Array.isArray(rowsToAdd) ? rowsToAdd : [])
                     .map(normalizeMyAgentsRow)
                     .filter(isMeaningfulRow)
                     .forEach((row) => {
-                        const key = createMyAgentsDedupKey(row);
-                        if (key.replace(/\|/g, '') && seen.has(key)) {
+                        const matchIndex = findMyAgentsMatchIndex(mergedRows, row);
+
+                        if (matchIndex >= 0) {
+                            const mergedRow = mergeMyAgentsRows(mergedRows[matchIndex], row);
+                            const beforeKey = createMyAgentsDedupKey(mergedRows[matchIndex]) + '::' + normalizeCellValue(mergedRows[matchIndex].status) + '::' + normalizeCellValue(mergedRows[matchIndex].propertyAddress) + '::' + normalizeCellValue(mergedRows[matchIndex].pdfFile);
+                            const afterKey = createMyAgentsDedupKey(mergedRow) + '::' + normalizeCellValue(mergedRow.status) + '::' + normalizeCellValue(mergedRow.propertyAddress) + '::' + normalizeCellValue(mergedRow.pdfFile);
+                            mergedRows[matchIndex] = mergedRow;
+                            if (beforeKey !== afterKey) {
+                                enrichedCount += 1;
+                            }
                             return;
                         }
-                        if (key.replace(/\|/g, '')) {
-                            seen.add(key);
-                        }
+
                         mergedRows.push(row);
+                        addedCount += 1;
                     });
 
                 localStorage.setItem(getMyAgentsStorageKey(), JSON.stringify(mergedRows));
                 return {
                     existingCount: existingRows.length,
                     totalCount: mergedRows.length,
-                    addedCount: Math.max(mergedRows.length - existingRows.length, 0)
+                    addedCount,
+                    enrichedCount
                 };
             }
 
@@ -1217,10 +1306,17 @@
                 }
 
                 const transferResult = mergeIntoMyAgents(rows);
-                if (transferResult.addedCount === 0) {
-                    showToast('success', 'Already In My Agents', 'Every current MLS import row is already in My Agents. Opening My Agents now.');
+                if (transferResult.addedCount === 0 && transferResult.enrichedCount === 0) {
+                    showToast('success', 'Already In My Agents', 'Every current MLS import row already matches My Agents. Opening My Agents now.');
                 } else {
-                    showToast('success', 'Added To My Agents', `${transferResult.addedCount} new agent row${transferResult.addedCount === 1 ? '' : 's'} were added to My Agents. Opening it now.`);
+                    const messageParts = [];
+                    if (transferResult.addedCount > 0) {
+                        messageParts.push(`${transferResult.addedCount} new agent row${transferResult.addedCount === 1 ? '' : 's'} added`);
+                    }
+                    if (transferResult.enrichedCount > 0) {
+                        messageParts.push(`${transferResult.enrichedCount} existing row${transferResult.enrichedCount === 1 ? '' : 's'} enriched`);
+                    }
+                    showToast('success', 'Added To My Agents', `${messageParts.join(' and ')}. Opening it now.`);
                 }
 
                 window.setTimeout(() => {

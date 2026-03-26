@@ -621,9 +621,11 @@
                         </div>
                         <div class="buyers-sheet-actions">
                             <span id="my-agents-count" class="buyers-sheet-count">0 Rows</span>
+                            <button id="my-agents-insert-vcf" class="card-btn" type="button">Insert .vcf</button>
                             <button id="my-agents-export-csv" class="card-btn" type="button">Save CSV</button>
                             <button id="my-agents-clear-all" class="card-btn" type="button">Clear All</button>
                             <button id="my-agents-add-row" class="card-btn active" type="button">Add Row</button>
+                            <input id="my-agents-vcf-input" type="file" accept=".vcf,text/vcard" multiple hidden>
                         </div>
                     </div>
 
@@ -645,7 +647,7 @@
                             <tbody id="my-agents-sheet-body"></tbody>
                         </table>
                     </div>
-                    <p class="buyers-sheet-note">Tip: Click any cell to edit. Phone cells can be copied directly, and the copy icon keeps a green check after you copy the outreach template for that row.</p>
+                    <p class="buyers-sheet-note">Tip: Click any cell to edit. You can still import .vcf contact files here, phone cells can be copied directly, and the copy icon keeps a green check after you copy the outreach template for that row.</p>
                 </div>
             </section>
         </main>
@@ -760,11 +762,13 @@
 
             const body = document.getElementById('my-agents-sheet-body');
             const countBadge = document.getElementById('my-agents-count');
+            const insertVcfBtn = document.getElementById('my-agents-insert-vcf');
+            const vcfInput = document.getElementById('my-agents-vcf-input');
             const addRowBtn = document.getElementById('my-agents-add-row');
             const exportCsvBtn = document.getElementById('my-agents-export-csv');
             const clearAllBtn = document.getElementById('my-agents-clear-all');
 
-            if (!body || !countBadge || !addRowBtn || !exportCsvBtn || !clearAllBtn) {
+            if (!body || !countBadge || !insertVcfBtn || !vcfInput || !addRowBtn || !exportCsvBtn || !clearAllBtn) {
                 return;
             }
 
@@ -1078,6 +1082,159 @@
                 });
             }
 
+            function parseVcfText(text) {
+                const normalizedText = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                const unfolded = normalizedText.replace(/\n[ \t]/g, '');
+                const cards = unfolded.match(/BEGIN:VCARD[\s\S]*?END:VCARD/gim) || [];
+
+                return cards.map((cardText) => {
+                    const card = {
+                        fullName: '',
+                        title: '',
+                        organization: '',
+                        emails: [],
+                        phones: [],
+                        categories: [],
+                        notes: []
+                    };
+
+                    const lines = cardText.split('\n').map((line) => line.trim()).filter(Boolean);
+                    lines.forEach((line) => {
+                        if (!line || /^BEGIN:VCARD$/i.test(line) || /^END:VCARD$/i.test(line) || /^VERSION:/i.test(line)) {
+                            return;
+                        }
+
+                        const separatorIndex = line.indexOf(':');
+                        if (separatorIndex === -1) {
+                            return;
+                        }
+
+                        const rawKey = line.slice(0, separatorIndex);
+                        const rawValue = line.slice(separatorIndex + 1)
+                            .replace(/\\n/gi, ' ')
+                            .replace(/\\,/g, ',')
+                            .replace(/\\;/g, ';')
+                            .trim();
+                        const baseKey = rawKey.split(';')[0].toUpperCase();
+
+                        if (!rawValue) {
+                            return;
+                        }
+
+                        if (baseKey === 'FN') {
+                            card.fullName = rawValue;
+                            return;
+                        }
+
+                        if (baseKey === 'N' && !card.fullName) {
+                            const nameParts = rawValue.split(';').map((part) => part.trim()).filter(Boolean);
+                            card.fullName = [nameParts[1], nameParts[0]].filter(Boolean).join(' ').trim();
+                            return;
+                        }
+
+                        if (baseKey === 'TITLE') {
+                            card.title = rawValue;
+                            return;
+                        }
+
+                        if (baseKey === 'ORG') {
+                            card.organization = rawValue.split(';').filter(Boolean).join(' ').trim();
+                            return;
+                        }
+
+                        if (baseKey === 'EMAIL') {
+                            card.emails.push(rawValue);
+                            return;
+                        }
+
+                        if (baseKey === 'TEL') {
+                            card.phones.push(rawValue);
+                            return;
+                        }
+
+                        if (baseKey === 'CATEGORIES') {
+                            rawValue.split(',').map((value) => value.trim()).filter(Boolean).forEach((value) => card.categories.push(value));
+                            return;
+                        }
+
+                        if (baseKey === 'NOTE') {
+                            card.notes.push(rawValue);
+                        }
+                    });
+
+                    return card;
+                });
+            }
+
+            function isAgentNamedVcfCard(card) {
+                return /\bagent\b/i.test(String(card && card.fullName || '').trim());
+            }
+
+            function mapVcfCardsToRows(cards) {
+                return dedupeRows((Array.isArray(cards) ? cards : []).filter(isAgentNamedVcfCard).map((card) => ({
+                    importDate: new Date().toISOString().slice(0, 10),
+                    propertyAddress: '',
+                    laName: normalizeCellValue(card.fullName),
+                    loPhone: normalizeCellValue((card.phones && card.phones[1]) || ''),
+                    offersEmail: normalizeCellValue((card.emails && card.emails[0]) || ''),
+                    laCell: normalizeCellValue((card.phones && card.phones[0]) || ''),
+                    status: normalizeCellValue(Array.isArray(card.categories) ? card.categories.join(', ') : ''),
+                    pdfFile: [card.organization, card.title, Array.isArray(card.notes) ? card.notes.join(' | ') : 'VCF Import']
+                        .map(normalizeCellValue)
+                        .filter(Boolean)
+                        .join(' | ')
+                })).filter(isMeaningfulRow));
+            }
+
+            async function readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result || ''));
+                    reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
+                    reader.readAsText(file);
+                });
+            }
+
+            async function importVcfFiles(files) {
+                const selectedFiles = Array.from(files || []).filter((file) => /\.vcf$/i.test(String(file.name || '')) || String(file.type || '').toLowerCase().includes('vcard'));
+                if (selectedFiles.length === 0) {
+                    showToast('error', 'No .vcf Selected', 'Choose at least one .vcf contact file to import.');
+                    return;
+                }
+
+                try {
+                    const importedCards = [];
+
+                    for (const file of selectedFiles) {
+                        const text = await readFileAsText(file);
+                        importedCards.push(...parseVcfText(text));
+                    }
+
+                    const importedRows = mapVcfCardsToRows(importedCards);
+                    if (importedRows.length === 0) {
+                        showToast('error', 'No Agent Contacts Found', 'The selected .vcf files did not contain any contacts with "agent" in the contact name.');
+                        return;
+                    }
+
+                    const mergedRows = dedupeRows([...getRowsFromDom(), ...importedRows]);
+                    const previousCount = dedupeRows(getRowsFromDom()).length;
+                    const addedCount = Math.max(mergedRows.length - previousCount, 0);
+
+                    renderRows(mergedRows);
+                    persistRows(mergedRows);
+
+                    if (addedCount === 0) {
+                        showToast('success', 'Contacts Already Added', 'Those .vcf contacts are already in My Agents.');
+                    } else {
+                        showToast('success', 'VCF Imported', `${addedCount} new contact row${addedCount === 1 ? '' : 's'} were added to My Agents.`);
+                    }
+                } catch (error) {
+                    showToast('error', 'VCF Import Failed', 'The selected .vcf file could not be processed.');
+                } finally {
+                    vcfInput.value = '';
+                }
+            }
+
             function loadRows() {
                 const storageCandidates = [getStorageKey(), LEGACY_STORAGE_KEY];
 
@@ -1170,6 +1327,18 @@
                 renderRows(DEFAULT_ROWS.slice());
                 showToast('success', 'Sheet Cleared', 'My Agents was reset to a blank starter row.');
             }
+
+            insertVcfBtn.addEventListener('click', () => {
+                if (typeof vcfInput.showPicker === 'function') {
+                    vcfInput.showPicker();
+                    return;
+                }
+                vcfInput.click();
+            });
+
+            vcfInput.addEventListener('change', () => {
+                importVcfFiles(vcfInput.files);
+            });
 
             addRowBtn.addEventListener('click', () => {
                 body.appendChild(createRow(DEFAULT_ROWS[0]));
