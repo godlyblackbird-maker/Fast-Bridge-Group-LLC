@@ -678,16 +678,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.2.8</span>
+                    <span>Newest build: 1.2.9</span>
                     <span>Property detail workflow upgrade</span>
-                    <span>Zillow and Redfin importing</span>
-                    <span>Homepage theme sync</span>
+                    <span>MLS import parser cleanup</span>
+                    <span>Analytics goal quick-save</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>11</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.2.8, including the full 1.2.3 to 1.2.8 release sequence.</span>
+                    <strong>12</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.2.9, including the full 1.2.3 to 1.2.9 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -699,29 +699,25 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.2.8</h2>
-                <p>This release packages the newest Agent Workspace follow-up flow, version bump cleanup, and the latest Property Details autofill recovery changes so the listing-import workflow fails more gracefully when Zillow or Redfin blocks automated lookups.</p>
+                <h2>Version 1.2.9</h2>
+                <p>This release sharpens the MLS Imports Spreadsheet parser so extracted rows stop pulling junk addresses or fallback statuses, adds cleaner listing-agent name extraction, and adds a one-click arrow action for saving Analytics yearly profit goals.</p>
                 <div class="version-history-meta">
                     <span>March 25, 2026</span>
-                    <span>Agent workspace workflow</span>
-                    <span>Autofill fallback</span>
-                    <span>Version 1.2.8</span>
+                    <span>MLS import cleanup</span>
+                    <span>Analytics quick-save</span>
+                    <span>Version 1.2.9</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Bumped the website build version to 1.2.8 across package metadata, lockfile metadata, fallback labels, and visible login and admin version badges.</li>
-                    <li>Added an Offers Accepted section in Agent Workspace so accepted properties are grouped in one place for follow-up.</li>
-                    <li>Added a share action on accepted properties that sends the saved listing agent directly into Agent Workspace Email Prep.</li>
-                    <li>Made Property Details status changes refresh dashboard workspace data immediately when an offer becomes accepted.</li>
-                    <li>Improved Analytics persistence so yearly goals and closed-deal drafts are less likely to be lost between refreshes.</li>
-                    <li>Updated Analytics KPI counting so Offer Terms Sent stays in sync with the persisted PIQ agent status.</li>
-                    <li>Added a blocked-lookup fallback on Property Details Autofill so users can paste a direct Zillow or Redfin link when automated address search is challenged.</li>
-                    <li>Saved listing source links even when public import is blocked, so the property still retains the Zillow or Redfin reference.</li>
-                    <li>Kept the Property Details Add Link control in place while preserving the newer autofill fallback behind that same action.</li>
-                    <li>Set Property Details email-offer defaults so Disclosures starts at 5 and Possession starts at 3.</li>
-                    <li>Updated the version history page so 1.2.8 now sits at the top and 1.2.7 remains listed below in the release stack.</li>
+                    <li>Bumped the website build version to 1.2.9 across package metadata, lockfile metadata, fallback labels, and visible login and admin version badges.</li>
+                    <li>Tightened MLS Imports Spreadsheet address extraction so lot-size lines, phone-like fragments, and other numeric junk are no longer treated as property addresses.</li>
+                    <li>Changed MLS status extraction so the importer now reads directly from the explicit Status field in the PDF block instead of guessing from other text.</li>
+                    <li>Improved listing-agent extraction under AGENT / OFFICE so parenthesized codes like `(CV44544)` are stripped and only the actual LA name is saved.</li>
+                    <li>Added a clipboard action on every MLS Imports Spreadsheet row that copies a status-based outreach template for the listing agent.</li>
+                    <li>Added a save-arrow action to the Analytics My Profits yearly goal input so the target can be committed without pressing Enter.</li>
+                    <li>Updated the version history page so 1.2.9 now sits at the top and 1.2.8 moves into the previous release stack.</li>
                 </ul>
             </div>
         </section>
@@ -733,6 +729,29 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.2.8</h2>
+                            <span class="version-date">March 25, 2026</span>
+                        </div>
+                        <span class="version-chip">1.2.8</span>
+                    </div>
+                    <ul>
+                        <li>Bumped the website build version to 1.2.8 across package metadata, lockfile metadata, fallback labels, and visible login and admin version badges.</li>
+                        <li>Added an Offers Accepted section in Agent Workspace so accepted properties are grouped in one place for follow-up.</li>
+                        <li>Added a share action on accepted properties that sends the saved listing agent directly into Agent Workspace Email Prep.</li>
+                        <li>Made Property Details status changes refresh dashboard workspace data immediately when an offer becomes accepted.</li>
+                        <li>Improved Analytics persistence so yearly goals and closed-deal drafts are less likely to be lost between refreshes.</li>
+                        <li>Updated Analytics KPI counting so Offer Terms Sent stays in sync with the persisted PIQ agent status.</li>
+                        <li>Added a blocked-lookup fallback on Property Details Autofill so users can paste a direct Zillow or Redfin link when automated address search is challenged.</li>
+                        <li>Saved listing source links even when public import is blocked, so the property still retains the Zillow or Redfin reference.</li>
+                        <li>Kept the Property Details Add Link control in place while preserving the newer autofill fallback behind that same action.</li>
+                        <li>Set Property Details email-offer defaults so Disclosures starts at 5 and Possession starts at 3.</li>
+                        <li>Updated the version history page so 1.2.8 now sits at the top and 1.2.7 remains listed below in the release stack.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>
