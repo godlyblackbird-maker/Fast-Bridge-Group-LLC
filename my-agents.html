@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Agents - FAST BRIDGE GROUP Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
-    <meta name="description" content="Private agent roster spreadsheet">
+    <meta name="description" content="Private agent outreach spreadsheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -122,12 +122,32 @@
             --buyers-count-bg: rgba(15, 23, 42, 0.72);
             --buyers-count-border: rgba(148, 163, 184, 0.24);
             --buyers-count-text: #f8fafc;
+            min-width: 0;
+        }
+
+        .buyers-sheet-card {
+            padding: 18px;
+            overflow: visible;
+        }
+
+        .buyers-sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .buyers-sheet-table-wrap {
             width: 100%;
             max-width: 100%;
-            min-width: 0;
             display: block;
             overflow-x: auto;
             overflow-y: hidden;
@@ -135,6 +155,10 @@
             -webkit-overflow-scrolling: touch;
             scrollbar-width: auto;
             scrollbar-color: var(--buyers-scroll-thumb) var(--buyers-scroll-track);
+            border: 1px solid var(--buyers-border);
+            border-radius: 16px;
+            background: var(--buyers-wrap-bg);
+            backdrop-filter: blur(8px);
         }
 
         .buyers-sheet-table-wrap::-webkit-scrollbar {
@@ -153,66 +177,9 @@
 
         .buyers-sheet-table {
             width: max-content;
-            min-width: 1280px;
+            min-width: 1460px;
             max-width: none;
             border-collapse: collapse;
-        }
-
-        @media (max-width: 1200px) {
-            .buyers-sheet-table {
-                min-width: 1280px;
-            }
-        }
-
-        @media (max-width: 900px) {
-            .buyers-sheet-table {
-                min-width: 1280px;
-            }
-        }
-
-        @media (max-width: 700px) {
-            .buyers-sheet-table {
-                min-width: 1280px;
-                font-size: 13px;
-            }
-
-            .buyers-sheet-table thead th,
-            .buyers-sheet-table tbody td {
-                padding: 6px;
-            }
-        }
-
-        .buyers-sheet-card {
-            padding: 18px;
-            overflow: visible;
-        }
-
-        .buyers-sheet-wrap {
-            min-width: 0;
-        }
-
-        .buyers-sheet-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-        }
-
-        .buyers-sheet-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .buyers-sheet-table-wrap {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: auto;
-            border: 1px solid var(--buyers-border);
-            border-radius: 16px;
-            background: var(--buyers-wrap-bg);
-            backdrop-filter: blur(8px);
         }
 
         .buyers-sheet-table thead th {
@@ -231,7 +198,8 @@
             white-space: nowrap;
         }
 
-        .buyers-sheet-table thead th:last-child {
+        .buyers-sheet-table thead th:last-child,
+        .buyers-sheet-table tbody td:last-child {
             border-right: 0;
         }
 
@@ -243,10 +211,7 @@
             color: var(--text-primary);
             min-height: 42px;
             vertical-align: top;
-        }
-
-        .buyers-sheet-table tbody td:last-child {
-            border-right: 0;
+            white-space: nowrap;
         }
 
         .buyers-sheet-table tbody tr:nth-child(even) td {
@@ -262,6 +227,118 @@
         .buyers-sheet-table td[contenteditable="true"]:focus {
             box-shadow: inset 0 0 0 2px var(--buyers-focus-ring);
             background: var(--buyers-focus-bg);
+        }
+
+        .buyers-sheet-table td.is-phone-cell {
+            position: relative;
+            padding-right: 42px;
+        }
+
+        .buyers-sheet-phone-copy-btn {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 7px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease, transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+        }
+
+        .buyers-sheet-table td.is-phone-cell:hover .buyers-sheet-phone-copy-btn,
+        .buyers-sheet-table td.is-phone-cell:focus-within .buyers-sheet-phone-copy-btn,
+        .buyers-sheet-phone-copy-btn.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .buyers-sheet-phone-copy-btn:hover,
+        .buyers-sheet-phone-copy-btn:focus-visible {
+            border-color: var(--buyers-focus-ring);
+            background: rgba(255, 255, 255, 0.16);
+            color: var(--text-primary);
+            transform: translateY(-50%) scale(1.03);
+            outline: none;
+        }
+
+        .buyers-sheet-phone-copy-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .buyers-sheet-copy-cell {
+            min-width: 72px;
+            width: 72px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .buyers-sheet-copy-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: 1px solid var(--buyers-border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+        }
+
+        .buyers-sheet-copy-btn:hover,
+        .buyers-sheet-copy-btn:focus-visible {
+            border-color: var(--buyers-focus-ring);
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+            outline: none;
+        }
+
+        .buyers-sheet-copy-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .buyers-sheet-copy-btn.is-copied {
+            border-color: rgba(34, 197, 94, 0.52);
+            background: rgba(34, 197, 94, 0.18);
+        }
+
+        .buyers-sheet-copy-btn.is-copied::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 13px;
+            height: 13px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.32);
+        }
+
+        .buyers-sheet-copy-btn.is-copied::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: 1px;
+            width: 4px;
+            height: 7px;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            transform: rotate(45deg);
+            z-index: 1;
+            pointer-events: none;
         }
 
         .buyers-sheet-note {
@@ -280,9 +357,10 @@
             background: var(--buyers-count-bg);
             border: 1px solid var(--buyers-count-border);
             color: var(--buyers-count-text);
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
         }
 
         [data-theme="light"] .buyers-sheet-wrap {
@@ -334,6 +412,24 @@
             --buyers-count-bg: rgba(77, 100, 41, 0.82);
             --buyers-count-border: rgba(196, 167, 111, 0.3);
             --buyers-count-text: #fff8df;
+        }
+
+        @media (max-width: 900px) {
+            .buyers-sheet-table {
+                min-width: 1320px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .buyers-sheet-table {
+                min-width: 1240px;
+                font-size: 13px;
+            }
+
+            .buyers-sheet-table thead th,
+            .buyers-sheet-table tbody td {
+                padding: 8px;
+            }
         }
     </style>
 </head>
@@ -504,7 +600,7 @@
                             <circle cx="11" cy="11" r="8"/>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                         </svg>
-                        <input type="text" class="search-input" placeholder="Search agent roster...">
+                        <input type="text" class="search-input" placeholder="Search my agents sheet...">
                     </div>
                     <button class="nav-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -521,14 +617,13 @@
                     <div class="buyers-sheet-header">
                         <div>
                             <h2 class="card-title">My Agents Spreadsheet</h2>
-                            <p class="card-subtitle">Track the agents, brokerages, markets, and follow-up notes tied to your pipeline.</p>
+                            <p class="card-subtitle">Track agents in the same format as the MLS Imports Spreadsheet: address, contact details, status, source file, and a ready-to-copy outreach template.</p>
                         </div>
                         <div class="buyers-sheet-actions">
-                            <span id="my-agents-count" class="buyers-sheet-count">0 Agents</span>
-                            <button id="my-agents-insert-vcf" class="card-btn" type="button">Insert .vcf</button>
+                            <span id="my-agents-count" class="buyers-sheet-count">0 Rows</span>
                             <button id="my-agents-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="my-agents-clear-all" class="card-btn" type="button">Clear All</button>
                             <button id="my-agents-add-row" class="card-btn active" type="button">Add Row</button>
-                            <input id="my-agents-vcf-input" type="file" accept=".vcf,text/vcard" multiple hidden>
                         </div>
                     </div>
 
@@ -536,21 +631,21 @@
                         <table class="buyers-sheet-table" id="my-agents-sheet-table">
                             <thead>
                                 <tr>
-                                    <th>Agent Name</th>
-                                    <th>Brokerage</th>
-                                    <th>Email</th>
-                                    <th>Cell Phone</th>
-                                    <th>Market</th>
-                                    <th>Specialty</th>
+                                    <th>Import Date</th>
+                                    <th>Property Address</th>
+                                    <th>LA Name</th>
+                                    <th>LO Phone</th>
+                                    <th>Offers Email</th>
+                                    <th>LA Cell</th>
                                     <th>Status</th>
-                                    <th>Notes</th>
+                                    <th>PDF File</th>
+                                    <th>Copy</th>
                                 </tr>
                             </thead>
-                            <tbody id="my-agents-sheet-body">
-                            </tbody>
+                            <tbody id="my-agents-sheet-body"></tbody>
                         </table>
                     </div>
-                    <p class="buyers-sheet-note">Tip: Click into any cell to edit. Your agent roster saves automatically in this browser.</p>
+                    <p class="buyers-sheet-note">Tip: Click any cell to edit. Phone cells can be copied directly, and the copy icon keeps a green check after you copy the outreach template for that row.</p>
                 </div>
             </section>
         </main>
@@ -558,7 +653,9 @@
 
     <button class="mobile-menu-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
         </svg>
     </button>
 
@@ -568,43 +665,8 @@
     <script>
         (function () {
             const STORAGE_KEY_BASE = 'myAgentsSheetRows';
-            const KNOWN_EMAIL_GROUPS = [
-                {
-                    canonical: 'isaac.haro@fastbridgegroupllc.com',
-                    aliases: [
-                        'isaac.haro@fastbridgegroupllc.com',
-                        'isaacs.hesed@fastbridgegroup.com',
-                        'isaacs.hesed@gmail.com'
-                    ]
-                },
-                {
-                    canonical: 'steve.medina@fastbridgegroupllc.com',
-                    aliases: [
-                        'steve.medina@fastbridgegroupllc.com',
-                        'medinafbg@gmail.com',
-                        'medinastj@gmail.com'
-                    ]
-                }
-            ];
-            const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
-            KNOWN_EMAIL_GROUPS.forEach((group) => {
-                group.aliases.forEach((alias) => {
-                    KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
-                });
-            });
-            const IMPORT_SOURCES = [
-                {
-                    matchers: ['isaac.haro@fastbridgegroupllc.com', 'isaacs.hesed@fastbridgegroup.com', 'isaacs.hesed@gmail.com', 'isaac haro', 'isaac'],
-                    paths: [
-                        'Isaac Haro (ADMIN)/Contacts/xvwss-k5487.csv',
-                        'Isaac Haro (ADMIN)/Contacts/3mta4-rqpln.csv'
-                    ]
-                },
-                {
-                    matchers: ['steve.medina@fastbridgegroupllc.com', 'medinafbg@gmail.com', 'medinastj@gmail.com', 'steve medina', 'steve'],
-                    paths: ['Steve Medina (ADMIN)/Contacts/Phone logs.csv']
-                }
-            ];
+            const COPIED_STORAGE_KEY_BASE = 'myAgentsSheetCopiedRows';
+            const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
 
             function safeReadJson(key) {
                 try {
@@ -614,104 +676,25 @@
                 }
             }
 
-            function normalizeKnownEmail(email) {
-                const normalizedEmail = String(email || '').trim().toLowerCase();
-                return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
-            }
-
-            function getScopedEmailKeys(email) {
-                const normalizedEmail = String(email || '').trim().toLowerCase();
-                if (!normalizedEmail) {
-                    return [];
-                }
-                const canonicalEmail = normalizeKnownEmail(normalizedEmail);
-                const group = KNOWN_EMAIL_GROUPS.find((item) => item.canonical === canonicalEmail);
-                return group ? group.aliases.slice() : [normalizedEmail];
-            }
-
             function getUserContext() {
                 const profile = safeReadJson('userProfile');
                 const user = safeReadJson('user');
                 const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-                const userEmail = normalizeKnownEmail(user.email || '');
-                const profileEmail = normalizeKnownEmail(profile.email || '');
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
                 const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
                 const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'default-user').trim();
-                const normalizedName = name.toLowerCase();
-                const userKey = email || normalizedName.replace(/\s+/g, '-') || 'default-user';
-
-                return {
-                    email,
-                    name,
-                    normalizedName,
-                    userKey
-                };
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                return { email, name, userKey };
             }
 
-            function getUserIdentityAliases() {
-                const userContext = getUserContext();
-                const aliases = new Set();
-
-                if (userContext.email) {
-                    getScopedEmailKeys(userContext.email).forEach((email) => aliases.add(email));
-                    const localPart = userContext.email.split('@')[0];
-                    if (localPart) {
-                        aliases.add(localPart);
-                    }
-                }
-
-                if (userContext.normalizedName) {
-                    aliases.add(userContext.normalizedName);
-                    aliases.add(userContext.normalizedName.replace(/\s+/g, '-'));
-                    userContext.normalizedName.split(/\s+/g).filter(Boolean).forEach(part => aliases.add(part));
-                }
-
-                return aliases;
-            }
-
-            function normalizeIdentityMatcher(value) {
-                const normalized = String(value || '').trim().toLowerCase();
-                if (!normalized) {
-                    return '';
-                }
-
-                if (normalized.includes('@')) {
-                    return normalized;
-                }
-
-                return normalized.replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
-            }
-
-            function getUserStorageKey() {
+            function getStorageKey() {
                 return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
-            function getUserStorageKeys() {
-                const userContext = getUserContext();
-                const emailKeys = getScopedEmailKeys(userContext.email);
-                if (emailKeys.length > 0) {
-                    return emailKeys.map(email => `${STORAGE_KEY_BASE}:${email}`);
-                }
-                return [getUserStorageKey()];
-            }
-
-            const STORAGE_KEY = getUserStorageKeys()[0];
-            const STORAGE_KEYS = getUserStorageKeys();
-            const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
-            const DEFAULT_ROWS = [
-                { agentName: '', brokerage: '', email: '', cellPhone: '', market: '', specialty: '', status: '', notes: '' }
-            ];
-            const body = document.getElementById('my-agents-sheet-body');
-            const countBadge = document.getElementById('my-agents-count');
-            const insertVcfBtn = document.getElementById('my-agents-insert-vcf');
-            const vcfInput = document.getElementById('my-agents-vcf-input');
-            const addRowBtn = document.getElementById('my-agents-add-row');
-            const exportCsvBtn = document.getElementById('my-agents-export-csv');
-            let hasLocalEdits = false;
-
-            if (!body || !countBadge || !insertVcfBtn || !vcfInput || !addRowBtn || !exportCsvBtn) {
-                return;
+            function getCopiedStorageKey() {
+                return `${COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
             function showToast(type, title, message) {
@@ -720,150 +703,1541 @@
                 }
             }
 
-            function createCell(value) {
+            function downloadCsvFile(fileName, content) {
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(url), 0);
+            }
+
+            function makeCsvFileName() {
+                const userContext = getUserContext();
+                const baseName = String(userContext.name || userContext.email || 'my-agents')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '') || 'my-agents';
+                return `${baseName}-my-agents.csv`;
+            }
+
+            function normalizeCellValue(value) {
+                return String(value || '').replace(/\s+/g, ' ').trim();
+            }
+
+            function isPhoneFieldKey(key) {
+                return key === 'loPhone' || key === 'laCell';
+            }
+
+            function getAgentFirstName(value) {
+                const normalized = normalizeCellValue(value);
+                if (!normalized) {
+                    return '';
+                }
+                return normalized.split(' ')[0] || normalized;
+            }
+
+            function normalizeStatusValue(value) {
+                return normalizeCellValue(value).toLowerCase();
+            }
+
+            const DEFAULT_ROWS = [
+                {
+                    importDate: new Date().toISOString().slice(0, 10),
+                    propertyAddress: '',
+                    laName: '',
+                    loPhone: '',
+                    offersEmail: '',
+                    laCell: '',
+                    status: '',
+                    pdfFile: ''
+                }
+            ];
+
+            const body = document.getElementById('my-agents-sheet-body');
+            const countBadge = document.getElementById('my-agents-count');
+            const addRowBtn = document.getElementById('my-agents-add-row');
+            const exportCsvBtn = document.getElementById('my-agents-export-csv');
+            const clearAllBtn = document.getElementById('my-agents-clear-all');
+
+            if (!body || !countBadge || !addRowBtn || !exportCsvBtn || !clearAllBtn) {
+                return;
+            }
+
+            async function copyTextToClipboard(value) {
+                const text = normalizeCellValue(value);
+                if (!text) {
+                    throw new Error('Nothing is available to copy from this row yet.');
+                }
+
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    await navigator.clipboard.writeText(text);
+                    return;
+                }
+
+                const fallbackInput = document.createElement('textarea');
+                fallbackInput.value = text;
+                fallbackInput.setAttribute('readonly', 'readonly');
+                fallbackInput.style.position = 'fixed';
+                fallbackInput.style.opacity = '0';
+                document.body.appendChild(fallbackInput);
+                fallbackInput.focus();
+                fallbackInput.select();
+                const copied = document.execCommand('copy');
+                fallbackInput.remove();
+
+                if (!copied) {
+                    throw new Error('Clipboard copy is not available in this browser.');
+                }
+            }
+
+            function getRowDataFromElement(rowElement) {
+                const cells = rowElement ? rowElement.querySelectorAll('td') : [];
+                return {
+                    importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                    propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                    laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                    loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                    offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                    laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                    status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                    pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                };
+            }
+
+            function createCopiedRowSignature(row) {
+                const source = row && typeof row === 'object' ? row : {};
+                return [
+                    normalizeCellValue(source.propertyAddress).toLowerCase(),
+                    normalizeCellValue(source.laName).toLowerCase(),
+                    normalizeCellValue(source.status).toLowerCase(),
+                    normalizeCellValue(source.pdfFile).toLowerCase(),
+                    normalizeCellValue(source.offersEmail).toLowerCase(),
+                    normalizeCellValue(source.laCell).toLowerCase()
+                ].join('|');
+            }
+
+            function loadCopiedRowSignatures() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getCopiedStorageKey()) || '[]');
+                    if (Array.isArray(stored)) {
+                        return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
+                    }
+                } catch (error) {
+                    // Ignore invalid stored values.
+                }
+
+                return new Set();
+            }
+
+            function persistCopiedRowSignatures(signatureSet) {
+                const values = Array.from(signatureSet || []).map((value) => String(value || '').trim()).filter(Boolean);
+                localStorage.setItem(getCopiedStorageKey(), JSON.stringify(values));
+            }
+
+            const copiedRowSignatures = loadCopiedRowSignatures();
+
+            function syncCopyButtonState(rowElement) {
+                if (!rowElement) {
+                    return;
+                }
+
+                const button = rowElement.querySelector('.buyers-sheet-copy-btn');
+                if (!button) {
+                    return;
+                }
+
+                const signature = createCopiedRowSignature(getRowDataFromElement(rowElement));
+                const isCopied = Boolean(signature) && copiedRowSignatures.has(signature);
+                button.classList.toggle('is-copied', isCopied);
+                button.setAttribute(
+                    'aria-label',
+                    isCopied
+                        ? 'Copy status-based outreach template again. This row was already copied.'
+                        : 'Copy status-based outreach template'
+                );
+                button.title = isCopied
+                    ? 'Copy again. Marked as already copied.'
+                    : 'Copy status-based outreach template';
+            }
+
+            function buildStatusTemplate(rowData) {
+                const laName = normalizeCellValue(rowData && rowData.laName);
+                const firstName = getAgentFirstName(laName) || 'there';
+                const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
+                const status = normalizeStatusValue(rowData && rowData.status);
+
+                if (!laName) {
+                    throw new Error('No listing agent name is available on this row yet.');
+                }
+
+                if (status.includes('active under contract') || status.includes('under contract') || status.includes('pending') || status.includes('contingent') || status.includes('backup')) {
+                    return `Hi ${firstName}, saw ${propertyAddress} is ${normalizeCellValue(rowData && rowData.status) || 'under contract'}. If anything changes or you want a clean backup cash option, we would love to take a look. Keep us in mind if it opens back up.`;
+                }
+
+                if (status.includes('expired') || status.includes('cancelled') || status.includes('withdrawn')) {
+                    return `Hi ${firstName}, reaching out about ${propertyAddress}. I saw the listing is ${normalizeCellValue(rowData && rowData.status) || 'off the market'}. If the seller is still open to options, we can make a clean cash offer and close fast. Happy to take a quick look if it is still available.`;
+                }
+
+                if (status.includes('closed') || status.includes('sold')) {
+                    return `Hi ${firstName}, congrats on ${propertyAddress}. If you come across another seller who needs a fast cash buyer, we would love to be a resource for you on the next one.`;
+                }
+
+                if (status.includes('coming soon')) {
+                    return `Hi ${firstName}, saw ${propertyAddress} is marked coming soon. If the seller is open to a direct cash option before it fully hits the market, we would love to take a look and see if it is a fit.`;
+                }
+
+                if (status.includes('hold') || status.includes('off market')) {
+                    return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, we can make a clean cash offer and move quickly if that would help.`;
+                }
+
+                return `Hi ${firstName}, saw your listing at ${propertyAddress}. If the seller is open to a strong cash offer, we would love to take a look and see if it is a fit. Let me know if you want us to send something over.`;
+            }
+
+            function createCell(value, key) {
                 const td = document.createElement('td');
                 td.contentEditable = 'true';
                 td.spellcheck = false;
-                td.textContent = value || '';
+                td.textContent = normalizeCellValue(value);
                 td.addEventListener('input', saveRows);
                 td.addEventListener('blur', saveRows);
+
+                if (isPhoneFieldKey(key)) {
+                    td.classList.add('is-phone-cell');
+
+                    const copyButton = document.createElement('button');
+                    copyButton.type = 'button';
+                    copyButton.className = 'buyers-sheet-phone-copy-btn';
+                    copyButton.setAttribute('contenteditable', 'false');
+                    copyButton.setAttribute('tabindex', '0');
+                    copyButton.setAttribute('aria-label', 'Copy phone number');
+                    copyButton.title = 'Copy phone number';
+                    copyButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+                    copyButton.addEventListener('mousedown', (event) => {
+                        event.preventDefault();
+                    });
+
+                    copyButton.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const phoneNumber = normalizeCellValue(td.textContent);
+                        if (!phoneNumber) {
+                            showToast('error', 'No Phone Number', 'Add a phone number to this cell before copying it.');
+                            return;
+                        }
+
+                        try {
+                            await copyTextToClipboard(phoneNumber);
+                            copyButton.classList.add('is-visible');
+                            showToast('success', 'Phone Copied', `${phoneNumber} was copied to your clipboard.`);
+                        } catch (error) {
+                            showToast('error', 'Copy Failed', error && error.message ? error.message : 'The phone number could not be copied.');
+                        }
+                    });
+
+                    td.appendChild(copyButton);
+                }
+
                 return td;
             }
 
-            function createRow(data) {
-                const tr = document.createElement('tr');
-                ['agentName', 'brokerage', 'email', 'cellPhone', 'market', 'specialty', 'status', 'notes'].forEach(key => {
-                    tr.appendChild(createCell((data && data[key]) || ''));
+            function createCopyCell() {
+                const td = document.createElement('td');
+                td.className = 'buyers-sheet-copy-cell';
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'buyers-sheet-copy-btn';
+                button.setAttribute('aria-label', 'Copy status-based outreach template');
+                button.title = 'Copy status-based outreach template';
+                button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                button.addEventListener('click', async () => {
+                    const row = button.closest('tr');
+                    const rowData = getRowDataFromElement(row);
+
+                    try {
+                        const template = buildStatusTemplate(rowData);
+                        await copyTextToClipboard(template);
+                        const signature = createCopiedRowSignature(rowData);
+                        if (signature) {
+                            copiedRowSignatures.add(signature);
+                            persistCopiedRowSignatures(copiedRowSignatures);
+                        }
+                        syncCopyButtonState(row);
+                        showToast('success', 'Template Copied', `Copied a ${rowData.status || 'default'} outreach template for ${rowData.laName}.`);
+                    } catch (error) {
+                        showToast('error', 'Copy Failed', error && error.message ? error.message : 'The outreach template could not be copied.');
+                    }
                 });
+
+                td.appendChild(button);
+                return td;
+            }
+
+            function createRow(row) {
+                const tr = document.createElement('tr');
+                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
+                    tr.appendChild(createCell(row && row[key] ? row[key] : '', key));
+                });
+                tr.appendChild(createCopyCell());
+                tr.addEventListener('input', () => syncCopyButtonState(tr));
+                tr.addEventListener('blur', () => syncCopyButtonState(tr), true);
+                syncCopyButtonState(tr);
                 return tr;
             }
 
             function getRowsFromDom() {
-                return Array.from(body.querySelectorAll('tr')).map(tr => {
+                return Array.from(body.querySelectorAll('tr')).map((tr) => {
                     const cells = tr.querySelectorAll('td');
                     return {
-                        agentName: cells[0] ? cells[0].textContent.trim() : '',
-                        brokerage: cells[1] ? cells[1].textContent.trim() : '',
-                        email: cells[2] ? cells[2].textContent.trim() : '',
-                        cellPhone: cells[3] ? cells[3].textContent.trim() : '',
-                        market: cells[4] ? cells[4].textContent.trim() : '',
-                        specialty: cells[5] ? cells[5].textContent.trim() : '',
-                        status: cells[6] ? cells[6].textContent.trim() : '',
-                        notes: cells[7] ? cells[7].textContent.trim() : ''
+                        importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                        propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                        laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                        loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                        offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                        laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                        status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                        pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
                     };
                 });
             }
 
-            function isMeaningfulValue(value) {
-                return String(value || '').trim().length > 0;
-            }
-
             function isMeaningfulRow(row) {
-                return !!row && [
-                    row.agentName,
-                    row.brokerage,
-                    row.email,
-                    row.cellPhone,
-                    row.market,
-                    row.specialty,
-                    row.status,
-                    row.notes
-                ].some(isMeaningfulValue);
+                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile']
+                    .some((key) => String(row && row[key] || '').trim().length > 0);
             }
 
-            function normalizeTextToken(value) {
-                return String(value || '')
-                    .trim()
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-            }
-
-            function normalizePhone(value) {
-                return String(value || '').replace(/\D+/g, '');
-            }
-
-            function normalizeEmail(value) {
-                return String(value || '').trim().toLowerCase();
-            }
-
-            function hasAgentLabel(value) {
-                return /\bagent\b/i.test(String(value || ''));
-            }
-
-            function buildAgentSearchText(row) {
+            function normalizeStoredRow(row) {
                 if (!row || typeof row !== 'object') {
-                    return '';
+                    return null;
                 }
 
-                return [
-                    row.agentName,
-                    row.brokerage,
-                    row.email,
-                    row.cellPhone,
-                    row.market,
-                    row.specialty,
-                    row.status,
-                    row.notes
-                ].map(value => String(value || '').trim()).filter(Boolean).join(' ');
-            }
-
-            function isLikelyImportedContactRow(row) {
-                if (!row || !isMeaningfulValue(row.agentName)) {
-                    return false;
+                if ('importDate' in row || 'propertyAddress' in row || 'laName' in row || 'offersEmail' in row) {
+                    return {
+                        importDate: normalizeCellValue(row.importDate),
+                        propertyAddress: normalizeCellValue(row.propertyAddress),
+                        laName: normalizeCellValue(row.laName),
+                        loPhone: normalizeCellValue(row.loPhone),
+                        offersEmail: normalizeCellValue(row.offersEmail),
+                        laCell: normalizeCellValue(row.laCell),
+                        status: normalizeCellValue(row.status),
+                        pdfFile: normalizeCellValue(row.pdfFile)
+                    };
                 }
 
-                return !isMeaningfulValue(row.brokerage)
-                    && !isMeaningfulValue(row.market)
-                    && !isMeaningfulValue(row.specialty)
-                    && !isMeaningfulValue(row.status)
-                    && !isMeaningfulValue(row.notes)
-                    && (isMeaningfulValue(row.cellPhone) || isMeaningfulValue(row.email));
-            }
-
-            function shouldKeepImportedAgentRow(row) {
-                const agentName = String(row && row.agentName || '').trim();
-                if (!agentName) {
-                    return false;
+                if ('agentName' in row || 'email' in row || 'cellPhone' in row || 'brokerage' in row || 'notes' in row) {
+                    return {
+                        importDate: '',
+                        propertyAddress: '',
+                        laName: normalizeCellValue(row.agentName),
+                        loPhone: '',
+                        offersEmail: normalizeCellValue(row.email),
+                        laCell: normalizeCellValue(row.cellPhone),
+                        status: normalizeCellValue(row.status),
+                        pdfFile: [row.brokerage, row.market, row.specialty, row.notes]
+                            .map(normalizeCellValue)
+                            .filter(Boolean)
+                            .join(' | ')
+                    };
                 }
 
-                if (!hasAgentLabel(buildAgentSearchText(row))) {
-                    return false;
-                }
-
-                return !/^unknown\s+agent$/i.test(agentName);
-            }
-
-            function buildRowDedupKey(row) {
-                const normalizedName = normalizeTextToken(row && row.agentName);
-                if (normalizedName) {
-                    return `name:${normalizedName}`;
-                }
-
-                const email = normalizeEmail(row && row.email);
-                if (email) {
-                    return `email:${email}`;
-                }
-
-                const phone = normalizePhone(row && row.cellPhone);
-                if (phone) {
-                    return `phone:${phone}`;
-                }
-
-                return '';
+                return null;
             }
 
             function dedupeRows(rows) {
                 const seen = new Set();
-
-                return (Array.isArray(rows) ? rows : []).filter(row => {
+                return (Array.isArray(rows) ? rows : []).filter((row) => {
                     if (!isMeaningfulRow(row)) {
                         return false;
                     }
 
-                    const key = buildRowDedupKey(row);
-                    if (!key) {
+                    const key = [
+                        normalizeCellValue(row.propertyAddress).toLowerCase(),
+                        normalizeCellValue(row.laName).toLowerCase(),
+                        normalizeCellValue(row.offersEmail).toLowerCase(),
+                        normalizeCellValue(row.laCell).toLowerCase(),
+                        normalizeCellValue(row.pdfFile).toLowerCase()
+                    ].join('|');
+
+                    if (!key.replace(/\|/g, '')) {
+                        return true;
+                    }
+
+                    if (seen.has(key)) {
+                        return false;
+                    }
+
+                    seen.add(key);
+                    return true;
+                });
+            }
+
+            function loadRows() {
+                const storageCandidates = [getStorageKey(), LEGACY_STORAGE_KEY];
+
+                for (const storageKey of storageCandidates) {
+                    try {
+                        const stored = localStorage.getItem(storageKey);
+                        if (!stored) {
+                            continue;
+                        }
+
+                        const parsed = JSON.parse(stored);
+                        if (!Array.isArray(parsed)) {
+                            continue;
+                        }
+
+                        const normalized = dedupeRows(parsed.map(normalizeStoredRow).filter(Boolean));
+                        if (normalized.length > 0) {
+                            return normalized;
+                        }
+                    } catch (error) {
+                        // Ignore invalid stored values.
+                    }
+                }
+
+                return DEFAULT_ROWS.slice();
+            }
+
+            function renderRows(rows) {
+                body.innerHTML = '';
+                rows.forEach((row) => {
+                    body.appendChild(createRow(row));
+                });
+                updateCount(rows);
+            }
+
+            function updateCount(rows) {
+                const totalRows = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
+                countBadge.textContent = `${totalRows} Row${totalRows === 1 ? '' : 's'}`;
+            }
+
+            function persistRows(rows) {
+                localStorage.setItem(getStorageKey(), JSON.stringify(rows));
+                updateCount(rows);
+            }
+
+            function saveRows() {
+                const rows = dedupeRows(getRowsFromDom());
+                persistRows(rows);
+            }
+
+            function escapeCsvValue(value) {
+                const normalized = String(value || '').replace(/\r?\n/g, ' ').trim();
+                if (/[",]/.test(normalized)) {
+                    return `"${normalized.replace(/"/g, '""')}"`;
+                }
+                return normalized;
+            }
+
+            function exportRowsToCsv() {
+                const rows = dedupeRows(getRowsFromDom());
+                if (rows.length === 0) {
+                    showToast('error', 'No Rows To Export', 'Add at least one saved row before exporting a CSV.');
+                    return;
+                }
+
+                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'Status', 'PDF File'];
+                const lines = [headers.join(',')];
+
+                rows.forEach((row) => {
+                    lines.push([
+                        row.importDate,
+                        row.propertyAddress,
+                        row.laName,
+                        row.loPhone,
+                        row.offersEmail,
+                        row.laCell,
+                        row.status,
+                        row.pdfFile
+                    ].map(escapeCsvValue).join(','));
+                });
+
+                downloadCsvFile(makeCsvFileName(), lines.join('\r\n'));
+                showToast('success', 'CSV Saved', 'Your My Agents spreadsheet was downloaded as a CSV file.');
+            }
+
+            function clearAllRows() {
+                localStorage.removeItem(getStorageKey());
+                localStorage.removeItem(getCopiedStorageKey());
+                copiedRowSignatures.clear();
+                renderRows(DEFAULT_ROWS.slice());
+                showToast('success', 'Sheet Cleared', 'My Agents was reset to a blank starter row.');
+            }
+
+            addRowBtn.addEventListener('click', () => {
+                body.appendChild(createRow(DEFAULT_ROWS[0]));
+                saveRows();
+            });
+
+            exportCsvBtn.addEventListener('click', exportRowsToCsv);
+            clearAllBtn.addEventListener('click', clearAllRows);
+
+            renderRows(loadRows());
+        })();
+    </script>
+</body>
+</html>
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    <script>
+                        (function () {
+                            const STORAGE_KEY_BASE = 'myAgentsSheetRows';
+                            const COPIED_STORAGE_KEY_BASE = 'myAgentsSheetCopiedRows';
+                            const KNOWN_EMAIL_GROUPS = [
+                                {
+                                    canonical: 'isaac.haro@fastbridgegroupllc.com',
+                                    aliases: [
+                                        'isaac.haro@fastbridgegroupllc.com',
+                                        'isaacs.hesed@fastbridgegroup.com',
+                                        'isaacs.hesed@gmail.com'
+                                    ]
+                                },
+                                {
+                                    canonical: 'steve.medina@fastbridgegroupllc.com',
+                                    aliases: [
+                                        'steve.medina@fastbridgegroupllc.com',
+                                        'medinafbg@gmail.com',
+                                        'medinastj@gmail.com'
+                                    ]
+                                }
+                            ];
+                            const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+
+                            KNOWN_EMAIL_GROUPS.forEach((group) => {
+                                group.aliases.forEach((alias) => {
+                                    KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
+                                });
+                            });
+
+                            function safeReadJson(key) {
+                                try {
+                                    return JSON.parse(localStorage.getItem(key) || '{}');
+                                } catch (error) {
+                                    return {};
+                                }
+                            }
+
+                            function normalizeKnownEmail(email) {
+                                const normalizedEmail = String(email || '').trim().toLowerCase();
+                                return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
+                            }
+
+                            function getScopedEmailKeys(email) {
+                                const normalizedEmail = String(email || '').trim().toLowerCase();
+                                if (!normalizedEmail) {
+                                    return [];
+                                }
+
+                                const canonicalEmail = normalizeKnownEmail(normalizedEmail);
+                                const group = KNOWN_EMAIL_GROUPS.find((item) => item.canonical === canonicalEmail);
+                                return group ? group.aliases.slice() : [normalizedEmail];
+                            }
+
+                            function getUserContext() {
+                                const profile = safeReadJson('userProfile');
+                                const user = safeReadJson('user');
+                                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                                const userEmail = normalizeKnownEmail(user.email || '');
+                                const profileEmail = normalizeKnownEmail(profile.email || '');
+                                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'default-user').trim();
+                                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                                return {
+                                    email,
+                                    name,
+                                    userKey
+                                };
+                            }
+
+                            function getUserStorageKey() {
+                                return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+                            }
+
+                            function getCopiedStorageKey() {
+                                return `${COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+                            }
+
+                            function getUserStorageKeys() {
+                                const emailKeys = getScopedEmailKeys(getUserContext().email);
+                                if (emailKeys.length > 0) {
+                                    return emailKeys.map((email) => `${STORAGE_KEY_BASE}:${email}`);
+                                }
+                                return [getUserStorageKey()];
+                            }
+
+                            function getUserCopiedStorageKeys() {
+                                const emailKeys = getScopedEmailKeys(getUserContext().email);
+                                if (emailKeys.length > 0) {
+                                    return emailKeys.map((email) => `${COPIED_STORAGE_KEY_BASE}:${email}`);
+                                }
+                                return [getCopiedStorageKey()];
+                            }
+
+                            const STORAGE_KEYS = getUserStorageKeys();
+                            const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
+                            const COPIED_STORAGE_KEYS = getUserCopiedStorageKeys();
+                            const DEFAULT_ROWS = [
+                                {
+                                    importDate: new Date().toISOString().slice(0, 10),
+                                    propertyAddress: '',
+                                    laName: '',
+                                    loPhone: '',
+                                    offersEmail: '',
+                                    laCell: '',
+                                    status: '',
+                                    pdfFile: ''
+                                }
+                            ];
+
+                            const body = document.getElementById('my-agents-sheet-body');
+                            const countBadge = document.getElementById('my-agents-count');
+                            const addPdfBtn = document.getElementById('my-agents-add-pdf');
+                            const pdfInput = document.getElementById('my-agents-pdf-input');
+                            const addRowBtn = document.getElementById('my-agents-add-row');
+                            const exportCsvBtn = document.getElementById('my-agents-export-csv');
+
+                            if (!body || !countBadge || !addPdfBtn || !pdfInput || !addRowBtn || !exportCsvBtn) {
+                                return;
+                            }
+
+                            function showToast(type, title, message) {
+                                if (typeof window.showDashboardToast === 'function') {
+                                    window.showDashboardToast(type, title, message);
+                                }
+                            }
+
+                            function downloadCsvFile(fileName, content) {
+                                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = fileName;
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                window.setTimeout(() => URL.revokeObjectURL(url), 0);
+                            }
+
+                            function makeCsvFileName() {
+                                const userContext = getUserContext();
+                                const baseName = String(userContext.name || userContext.email || 'my-agents')
+                                    .trim()
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9]+/g, '-')
+                                    .replace(/^-+|-+$/g, '') || 'my-agents';
+                                return `${baseName}-my-agents.csv`;
+                            }
+
+                            function getAuthToken() {
+                                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                            }
+
+                            function readFileAsBase64(file) {
+                                return new Promise((resolve, reject) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                        const result = String(reader.result || '');
+                                        const parts = result.split(',');
+                                        resolve(parts.length > 1 ? parts[1] : parts[0]);
+                                    };
+                                    reader.onerror = () => reject(new Error('The selected PDF could not be read.'));
+                                    reader.readAsDataURL(file);
+                                });
+                            }
+
+                            function normalizeCellValue(value) {
+                                return String(value || '').replace(/\s+/g, ' ').trim();
+                            }
+
+                            function isPhoneFieldKey(key) {
+                                return key === 'loPhone' || key === 'laCell';
+                            }
+
+                            function getAgentFirstName(value) {
+                                const normalized = normalizeCellValue(value);
+                                if (!normalized) {
+                                    return '';
+                                }
+                                return normalized.split(' ')[0] || normalized;
+                            }
+
+                            function normalizeStatusValue(value) {
+                                return normalizeCellValue(value).toLowerCase();
+                            }
+
+                            function getRowDataFromElement(rowElement) {
+                                const cells = rowElement ? rowElement.querySelectorAll('td') : [];
+                                return {
+                                    importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                                    propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                                    laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                                    loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                                    offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                                    laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                                    status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                                    pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                                };
+                            }
+
+                            function createCopiedRowSignature(row) {
+                                const source = row && typeof row === 'object' ? row : {};
+                                return [
+                                    normalizeCellValue(source.propertyAddress).toLowerCase(),
+                                    normalizeCellValue(source.laName).toLowerCase(),
+                                    normalizeCellValue(source.status).toLowerCase(),
+                                    normalizeCellValue(source.pdfFile).toLowerCase(),
+                                    normalizeCellValue(source.offersEmail).toLowerCase(),
+                                    normalizeCellValue(source.laCell).toLowerCase()
+                                ].join('|');
+                            }
+
+                            function loadCopiedRowSignatures() {
+                                try {
+                                    for (const storageKey of COPIED_STORAGE_KEYS) {
+                                        const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                                        if (Array.isArray(stored) && stored.length > 0) {
+                                            return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
+                                        }
+                                    }
+                                } catch (error) {
+                                    // Ignore invalid storage.
+                                }
+
+                                return new Set();
+                            }
+
+                            function persistCopiedRowSignatures(signatureSet) {
+                                const values = Array.from(signatureSet || []).map((value) => String(value || '').trim()).filter(Boolean);
+                                COPIED_STORAGE_KEYS.forEach((storageKey) => {
+                                    localStorage.setItem(storageKey, JSON.stringify(values));
+                                });
+                            }
+
+                            const copiedRowSignatures = loadCopiedRowSignatures();
+
+                            function syncCopyButtonState(rowElement) {
+                                if (!rowElement) {
+                                    return;
+                                }
+
+                                const button = rowElement.querySelector('.buyers-sheet-copy-btn');
+                                if (!button) {
+                                    return;
+                                }
+
+                                const signature = createCopiedRowSignature(getRowDataFromElement(rowElement));
+                                const isCopied = Boolean(signature) && copiedRowSignatures.has(signature);
+                                button.classList.toggle('is-copied', isCopied);
+                                button.setAttribute(
+                                    'aria-label',
+                                    isCopied
+                                        ? 'Copy status-based outreach template again. This row was already copied.'
+                                        : 'Copy status-based outreach template'
+                                );
+                                button.title = isCopied
+                                    ? 'Copy again. Marked as already copied.'
+                                    : 'Copy status-based outreach template';
+                            }
+
+                            function buildStatusTemplate(rowData) {
+                                const laName = normalizeCellValue(rowData && rowData.laName);
+                                const firstName = getAgentFirstName(laName) || 'there';
+                                const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
+                                const status = normalizeStatusValue(rowData && rowData.status);
+
+                                if (!laName) {
+                                    throw new Error('No listing agent name is available on this row yet.');
+                                }
+
+                                if (status.includes('active under contract') || status.includes('under contract') || status.includes('pending') || status.includes('contingent') || status.includes('backup')) {
+                                    return `Hi ${firstName}, saw ${propertyAddress} is ${normalizeCellValue(rowData && rowData.status) || 'under contract'}. If anything changes or you want a clean backup cash option, we would love to take a look. Keep us in mind if it opens back up.`;
+                                }
+
+                                if (status.includes('expired') || status.includes('cancelled') || status.includes('withdrawn')) {
+                                    return `Hi ${firstName}, reaching out about ${propertyAddress}. I saw the listing is ${normalizeCellValue(rowData && rowData.status) || 'off the market'}. If the seller is still open to options, we can make a clean cash offer and close fast. Happy to take a quick look if it is still available.`;
+                                }
+
+                                if (status.includes('closed') || status.includes('sold')) {
+                                    return `Hi ${firstName}, congrats on ${propertyAddress}. If you come across another seller who needs a fast cash buyer, we would love to be a resource for you on the next one.`;
+                                }
+
+                                if (status.includes('coming soon')) {
+                                    return `Hi ${firstName}, saw ${propertyAddress} is marked coming soon. If the seller is open to a direct cash option before it fully hits the market, we would love to take a look and see if it is a fit.`;
+                                }
+
+                                if (status.includes('hold') || status.includes('off market')) {
+                                    return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, we can make a clean cash offer and move quickly if that would help.`;
+                                }
+
+                                return `Hi ${firstName}, saw your listing at ${propertyAddress}. If the seller is open to a strong cash offer, we would love to take a look and see if it is a fit. Let me know if you want us to send something over.`;
+                            }
+
+                            async function copyTextToClipboard(value) {
+                                const text = normalizeCellValue(value);
+                                if (!text) {
+                                    throw new Error('Nothing is available to copy from this row yet.');
+                                }
+
+                                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                                    await navigator.clipboard.writeText(text);
+                                    return;
+                                }
+
+                                const fallbackInput = document.createElement('textarea');
+                                fallbackInput.value = text;
+                                fallbackInput.setAttribute('readonly', 'readonly');
+                                fallbackInput.style.position = 'fixed';
+                                fallbackInput.style.opacity = '0';
+                                document.body.appendChild(fallbackInput);
+                                fallbackInput.focus();
+                                fallbackInput.select();
+                                const copied = document.execCommand('copy');
+                                fallbackInput.remove();
+
+                                if (!copied) {
+                                    throw new Error('Clipboard copy is not available in this browser.');
+                                }
+                            }
+
+                            function createCell(value, key) {
+                                const td = document.createElement('td');
+                                td.contentEditable = 'true';
+                                td.spellcheck = false;
+                                td.textContent = normalizeCellValue(value);
+                                td.addEventListener('input', saveRows);
+                                td.addEventListener('blur', saveRows);
+
+                                if (isPhoneFieldKey(key)) {
+                                    td.classList.add('is-phone-cell');
+
+                                    const copyButton = document.createElement('button');
+                                    copyButton.type = 'button';
+                                    copyButton.className = 'buyers-sheet-phone-copy-btn';
+                                    copyButton.setAttribute('contenteditable', 'false');
+                                    copyButton.setAttribute('tabindex', '0');
+                                    copyButton.setAttribute('aria-label', 'Copy phone number');
+                                    copyButton.title = 'Copy phone number';
+                                    copyButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+                                    copyButton.addEventListener('mousedown', (event) => {
+                                        event.preventDefault();
+                                    });
+
+                                    copyButton.addEventListener('click', async (event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+
+                                        const phoneNumber = normalizeCellValue(td.textContent);
+                                        if (!phoneNumber) {
+                                            showToast('error', 'No Phone Number', 'Add a phone number to this cell before copying it.');
+                                            return;
+                                        }
+
+                                        try {
+                                            await copyTextToClipboard(phoneNumber);
+                                            copyButton.classList.add('is-visible');
+                                            showToast('success', 'Phone Copied', `${phoneNumber} was copied to your clipboard.`);
+                                        } catch (error) {
+                                            showToast('error', 'Copy Failed', error && error.message ? error.message : 'The phone number could not be copied.');
+                                        }
+                                    });
+
+                                    td.appendChild(copyButton);
+                                }
+
+                                return td;
+                            }
+
+                            function createCopyCell() {
+                                const td = document.createElement('td');
+                                td.className = 'buyers-sheet-copy-cell';
+
+                                const button = document.createElement('button');
+                                button.type = 'button';
+                                button.className = 'buyers-sheet-copy-btn';
+                                button.setAttribute('aria-label', 'Copy status-based outreach template');
+                                button.title = 'Copy status-based outreach template';
+                                button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                                button.addEventListener('click', async () => {
+                                    const row = button.closest('tr');
+                                    const rowData = getRowDataFromElement(row);
+
+                                    try {
+                                        const template = buildStatusTemplate(rowData);
+                                        await copyTextToClipboard(template);
+                                        const signature = createCopiedRowSignature(rowData);
+                                        if (signature) {
+                                            copiedRowSignatures.add(signature);
+                                            persistCopiedRowSignatures(copiedRowSignatures);
+                                        }
+                                        syncCopyButtonState(row);
+                                        showToast('success', 'Template Copied', `Copied a ${rowData.status || 'default'} outreach template for ${rowData.laName}.`);
+                                    } catch (error) {
+                                        showToast('error', 'Copy Failed', error && error.message ? error.message : 'The outreach template could not be copied.');
+                                    }
+                                });
+
+                                td.appendChild(button);
+                                return td;
+                            }
+
+                            function createRow(data) {
+                                const tr = document.createElement('tr');
+                                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
+                                    tr.appendChild(createCell((data && data[key]) || '', key));
+                                });
+                                tr.appendChild(createCopyCell());
+                                tr.addEventListener('input', () => syncCopyButtonState(tr));
+                                tr.addEventListener('blur', () => syncCopyButtonState(tr), true);
+                                syncCopyButtonState(tr);
+                                return tr;
+                            }
+
+                            function getRowsFromDom() {
+                                return Array.from(body.querySelectorAll('tr')).map((tr) => {
+                                    const cells = tr.querySelectorAll('td');
+                                    return {
+                                        importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                                        propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                                        laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                                        loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                                        offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                                        laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                                        status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                                        pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                                    };
+                                });
+                            }
+
+                            function isMeaningfulRow(row) {
+                                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile']
+                                    .some((key) => String(row && row[key] || '').trim().length > 0);
+                            }
+
+                            function renderRows(rows) {
+                                body.innerHTML = '';
+                                rows.forEach((row) => {
+                                    body.appendChild(createRow(row));
+                                });
+                                updateCount(rows);
+                            }
+
+                            function updateCount(rows) {
+                                const totalRows = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
+                                countBadge.textContent = `${totalRows} Row${totalRows === 1 ? '' : 's'}`;
+                            }
+
+                            function persistRows(rows) {
+                                STORAGE_KEYS.forEach((storageKey) => {
+                                    localStorage.setItem(storageKey, JSON.stringify(rows));
+                                });
+                                updateCount(rows);
+                            }
+
+                            function saveRows() {
+                                persistRows(getRowsFromDom().filter(isMeaningfulRow));
+                            }
+
+                            function escapeCsvValue(value) {
+                                const normalized = String(value || '').replace(/\r?\n/g, ' ').trim();
+                                if (/[",]/.test(normalized)) {
+                                    return `"${normalized.replace(/"/g, '""')}"`;
+                                }
+                                return normalized;
+                            }
+
+                            function exportRowsToCsv() {
+                                const rows = getRowsFromDom().filter(isMeaningfulRow);
+                                if (rows.length === 0) {
+                                    showToast('error', 'No Rows To Export', 'Add at least one saved row before exporting a CSV.');
+                                    return;
+                                }
+
+                                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'Status', 'PDF File'];
+                                const lines = [headers.join(',')];
+
+                                rows.forEach((row) => {
+                                    lines.push([
+                                        row.importDate,
+                                        row.propertyAddress,
+                                        row.laName,
+                                        row.loPhone,
+                                        row.offersEmail,
+                                        row.laCell,
+                                        row.status,
+                                        row.pdfFile
+                                    ].map(escapeCsvValue).join(','));
+                                });
+
+                                downloadCsvFile(makeCsvFileName(), lines.join('\r\n'));
+                                showToast('success', 'CSV Saved', 'Your My Agents spreadsheet was downloaded as a CSV file.');
+                            }
+
+                            function normalizeImportMatchValue(value) {
+                                return String(value || '').trim().toLowerCase();
+                            }
+
+                            function findMatchingImportedRowIndex(rows, row) {
+                                const targetPdfFile = normalizeImportMatchValue(row && row.pdfFile);
+                                const targetAddress = normalizeImportMatchValue(row && row.propertyAddress);
+                                const targetEmail = normalizeImportMatchValue(row && row.offersEmail);
+                                const targetCell = normalizeImportMatchValue(row && row.laCell);
+
+                                return (Array.isArray(rows) ? rows : []).findIndex((candidate) => {
+                                    const candidatePdfFile = normalizeImportMatchValue(candidate && candidate.pdfFile);
+                                    const candidateAddress = normalizeImportMatchValue(candidate && candidate.propertyAddress);
+                                    const candidateEmail = normalizeImportMatchValue(candidate && candidate.offersEmail);
+                                    const candidateCell = normalizeImportMatchValue(candidate && candidate.laCell);
+
+                                    if (targetPdfFile && candidatePdfFile && targetPdfFile === candidatePdfFile && targetAddress && candidateAddress && targetAddress === candidateAddress) {
+                                        return true;
+                                    }
+
+                                    if (targetAddress && candidateAddress && targetAddress === candidateAddress) {
+                                        return true;
+                                    }
+
+                                    if (targetAddress && targetEmail && candidateAddress === targetAddress && candidateEmail === targetEmail) {
+                                        return true;
+                                    }
+
+                                    if (targetAddress && targetCell && candidateAddress === targetAddress && candidateCell === targetCell) {
+                                        return true;
+                                    }
+
+                                    return false;
+                                });
+                            }
+
+                            function upsertImportedRow(nextRow) {
+                                const existingRows = getRowsFromDom().filter(isMeaningfulRow);
+                                const matchIndex = findMatchingImportedRowIndex(existingRows, nextRow);
+
+                                if (matchIndex >= 0) {
+                                    existingRows[matchIndex] = {
+                                        ...existingRows[matchIndex],
+                                        ...nextRow
+                                    };
+                                    renderRows(existingRows);
+                                    persistRows(existingRows);
+                                    return 'updated';
+                                }
+
+                                const nextRows = [...existingRows, nextRow];
+                                renderRows(nextRows);
+                                persistRows(nextRows);
+                                return 'created';
+                            }
+
+                            function upsertImportedRows(nextRows) {
+                                const rows = Array.isArray(nextRows) ? nextRows : [];
+                                let createdCount = 0;
+                                let updatedCount = 0;
+
+                                rows.forEach((row) => {
+                                    const result = upsertImportedRow(row);
+                                    if (result === 'updated') {
+                                        updatedCount += 1;
+                                    } else if (result === 'created') {
+                                        createdCount += 1;
+                                    }
+                                });
+
+                                return {
+                                    createdCount,
+                                    updatedCount
+                                };
+                            }
+
+                            function normalizeStoredRow(row) {
+                                if (!row || typeof row !== 'object') {
+                                    return null;
+                                }
+
+                                if ('importDate' in row || 'propertyAddress' in row || 'laName' in row || 'offersEmail' in row) {
+                                    return {
+                                        importDate: normalizeCellValue(row.importDate),
+                                        propertyAddress: normalizeCellValue(row.propertyAddress),
+                                        laName: normalizeCellValue(row.laName),
+                                        loPhone: normalizeCellValue(row.loPhone),
+                                        offersEmail: normalizeCellValue(row.offersEmail),
+                                        laCell: normalizeCellValue(row.laCell),
+                                        status: normalizeCellValue(row.status),
+                                        pdfFile: normalizeCellValue(row.pdfFile)
+                                    };
+                                }
+
+                                if ('agentName' in row || 'email' in row || 'cellPhone' in row || 'brokerage' in row || 'notes' in row) {
+                                    return {
+                                        importDate: '',
+                                        propertyAddress: '',
+                                        laName: normalizeCellValue(row.agentName),
+                                        loPhone: '',
+                                        offersEmail: normalizeCellValue(row.email),
+                                        laCell: normalizeCellValue(row.cellPhone),
+                                        status: normalizeCellValue(row.status),
+                                        pdfFile: [row.brokerage, row.market, row.specialty, row.notes]
+                                            .map(normalizeCellValue)
+                                            .filter(Boolean)
+                                            .join(' | ')
+                                    };
+                                }
+
+                                return null;
+                            }
+
+                            function loadRows() {
+                                let rows = [];
+
+                                try {
+                                    for (const storageKey of STORAGE_KEYS) {
+                                        const stored = localStorage.getItem(storageKey);
+                                        if (stored) {
+                                            rows = JSON.parse(stored);
+                                            break;
+                                        }
+                                    }
+
+                                    if (!Array.isArray(rows) || rows.length === 0) {
+                                        const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
+                                        rows = legacyStored ? JSON.parse(legacyStored) : [];
+                                    }
+                                } catch (error) {
+                                    rows = [];
+                                }
+
+                                rows = Array.isArray(rows) ? rows.map(normalizeStoredRow).filter(isMeaningfulRow) : [];
+                                if (rows.length === 0) {
+                                    rows = DEFAULT_ROWS.slice();
+                                }
+
+                                renderRows(rows);
+                                persistRows(rows.filter(isMeaningfulRow));
+                            }
+
+                            addRowBtn.addEventListener('click', function () {
+                                body.appendChild(createRow({
+                                    importDate: new Date().toISOString().slice(0, 10),
+                                    propertyAddress: '',
+                                    laName: '',
+                                    loPhone: '',
+                                    offersEmail: '',
+                                    laCell: '',
+                                    status: '',
+                                    pdfFile: ''
+                                }));
+                                saveRows();
+
+                                const firstCell = body.querySelector('tr:last-child td:first-child');
+                                if (firstCell) {
+                                    firstCell.focus();
+                                }
+                            });
+
+                            addPdfBtn.addEventListener('click', function () {
+                                if (typeof pdfInput.showPicker === 'function') {
+                                    pdfInput.showPicker();
+                                    return;
+                                }
+                                pdfInput.click();
+                            });
+
+                            pdfInput.addEventListener('change', async function () {
+                                const file = Array.from(pdfInput.files || [])[0] || null;
+                                pdfInput.value = '';
+                                if (!file) {
+                                    return;
+                                }
+
+                                if (!/\.pdf$/i.test(file.name)) {
+                                    showToast('error', 'PDF Required', 'Select a PDF file for MLS field extraction.');
+                                    return;
+                                }
+
+                                const authToken = getAuthToken();
+                                if (!authToken) {
+                                    showToast('error', 'Sign In Required', 'Sign in again before uploading PDFs.');
+                                    return;
+                                }
+
+                                addPdfBtn.disabled = true;
+                                addPdfBtn.textContent = 'Extracting...';
+
+                                try {
+                                    const contentBase64 = await readFileAsBase64(file);
+                                    const response = await fetch('/api/admin/mls-imports/extract-pdf', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: `Bearer ${authToken}`
+                                        },
+                                        body: JSON.stringify({
+                                            fileName: file.name,
+                                            contentBase64
+                                        })
+                                    });
+
+                                    const payload = await response.json().catch(() => ({}));
+                                    if (!response.ok) {
+                                        throw new Error(payload && payload.error ? payload.error : 'The PDF could not be processed.');
+                                    }
+
+                                    const extracted = payload && payload.extracted && typeof payload.extracted === 'object' ? payload.extracted : {};
+                                    const extractedRows = Array.isArray(extracted.rows) && extracted.rows.length > 0 ? extracted.rows : [extracted];
+                                    const extractedPageCount = Number(extracted.pageCount) || 0;
+                                    const normalizedRows = extractedRows
+                                        .map((row) => ({
+                                            importDate: new Date().toISOString().slice(0, 10),
+                                            propertyAddress: normalizeCellValue(row && row.propertyAddress),
+                                            laName: normalizeCellValue(row && row.laName),
+                                            loPhone: normalizeCellValue(row && row.loPhone),
+                                            offersEmail: normalizeCellValue(row && row.offersEmail),
+                                            laCell: normalizeCellValue(row && row.laCell),
+                                            status: normalizeCellValue(row && row.status),
+                                            pdfFile: normalizeCellValue(payload.fileName || file.name || '')
+                                        }))
+                                        .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell].some((value) => String(value || '').trim()));
+
+                                    if (normalizedRows.length === 0) {
+                                        throw new Error('The PDF was read, but no MLS contact rows could be extracted from it.');
+                                    }
+
+                                    const upsertResult = upsertImportedRows(normalizedRows);
+                                    const pageCountMessage = extractedPageCount > 1
+                                        ? ` Parsed all ${extractedPageCount} pages.`
+                                        : extractedPageCount === 1
+                                            ? ' Parsed 1 page.'
+                                            : '';
+                                    showToast(
+                                        'success',
+                                        upsertResult.updatedCount > 0 && upsertResult.createdCount === 0 ? 'PDF Updated' : 'PDF Extracted',
+                                        upsertResult.updatedCount > 0
+                                            ? `${upsertResult.createdCount} new row${upsertResult.createdCount === 1 ? '' : 's'} added and ${upsertResult.updatedCount} existing row${upsertResult.updatedCount === 1 ? '' : 's'} updated.${pageCountMessage}`
+                                            : `${upsertResult.createdCount} row${upsertResult.createdCount === 1 ? '' : 's'} were added to the sheet.${pageCountMessage}`
+                                    );
+                                } catch (error) {
+                                    showToast('error', 'PDF Extraction Failed', error && error.message ? error.message : 'The PDF could not be processed.');
+                                } finally {
+                                    addPdfBtn.disabled = false;
+                                    addPdfBtn.textContent = 'Add PDF';
+                                }
+                            });
+
+                            exportCsvBtn.addEventListener('click', exportRowsToCsv);
+
+                            window.addEventListener('beforeunload', saveRows);
+                            window.addEventListener('pagehide', saveRows);
+                            document.addEventListener('visibilitychange', () => {
+                                if (document.visibilityState === 'hidden') {
+                                    saveRows();
+                                }
+                            });
+
+                            loadRows();
+                        })();
+                    </script>
+                        return [
+                            normalizeCellValue(source.propertyAddress).toLowerCase(),
+                            normalizeCellValue(source.laName).toLowerCase(),
+                            normalizeCellValue(source.status).toLowerCase(),
+                            normalizeCellValue(source.pdfFile).toLowerCase(),
+                            normalizeCellValue(source.offersEmail).toLowerCase(),
+                            normalizeCellValue(source.laCell).toLowerCase()
+                        ].join('|');
+                    }
+
+                    function loadCopiedRowSignatures() {
+                        try {
+                            for (const storageKey of COPIED_STORAGE_KEYS) {
+                                const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                                if (Array.isArray(stored) && stored.length > 0) {
+                                    return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
+                                }
+                            }
+                        } catch (error) {
+                            // Ignore invalid stored values and fall back to empty state.
+                        }
+
+                        return new Set();
+                    }
+
+                    function persistCopiedRowSignatures(signatureSet) {
+                        const values = Array.from(signatureSet || []).map((value) => String(value || '').trim()).filter(Boolean);
+                        COPIED_STORAGE_KEYS.forEach((storageKey) => {
+                            localStorage.setItem(storageKey, JSON.stringify(values));
+                        });
+                    }
+
+                    const copiedRowSignatures = loadCopiedRowSignatures();
+
+                    function syncCopyButtonState(rowElement) {
+                        if (!rowElement) {
+                            return;
+                        }
+
+                        const button = rowElement.querySelector('.buyers-sheet-copy-btn');
+                        if (!button) {
+                            return;
+                        }
+
+                        const signature = createCopiedRowSignature(getRowDataFromElement(rowElement));
+                        const isCopied = Boolean(signature) && copiedRowSignatures.has(signature);
+                        button.classList.toggle('is-copied', isCopied);
+                        button.setAttribute(
+                            'aria-label',
+                            isCopied
+                                ? 'Copy status-based outreach template again. This row was already copied.'
+                                : 'Copy status-based outreach template'
+                        );
+                        button.title = isCopied
+                            ? 'Copy again. Marked as already copied.'
+                            : 'Copy status-based outreach template';
+                    }
+
+                    function buildStatusTemplate(rowData) {
+                        const laName = normalizeCellValue(rowData && rowData.laName);
+                        const firstName = getAgentFirstName(laName) || 'there';
+                        const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
+                        const status = normalizeStatusValue(rowData && rowData.status);
+
+                        if (!laName) {
+                            throw new Error('No listing agent name is available on this row yet.');
+                        }
+
+                        if (status.includes('active under contract') || status.includes('under contract') || status.includes('pending') || status.includes('contingent') || status.includes('backup')) {
+                            return `Hi ${firstName}, saw ${propertyAddress} is ${normalizeCellValue(rowData && rowData.status) || 'under contract'}. If anything changes or you want a clean backup cash option, we would love to take a look. Keep us in mind if it opens back up.`;
+                        }
+
+                        if (status.includes('expired') || status.includes('cancelled') || status.includes('withdrawn')) {
+                            return `Hi ${firstName}, reaching out about ${propertyAddress}. I saw the listing is ${normalizeCellValue(rowData && rowData.status) || 'off the market'}. If the seller is still open to options, we can make a clean cash offer and close fast. Happy to take a quick look if it is still available.`;
+                        }
+
+                        if (status.includes('closed') || status.includes('sold')) {
+                            return `Hi ${firstName}, congrats on ${propertyAddress}. If you come across another seller who needs a fast cash buyer, we would love to be a resource for you on the next one.`;
+                        }
+
+                        if (status.includes('coming soon')) {
+                            return `Hi ${firstName}, saw ${propertyAddress} is marked coming soon. If the seller is open to a direct cash option before it fully hits the market, we would love to take a look and see if it is a fit.`;
+                        }
+
+                        if (status.includes('hold') || status.includes('off market')) {
+                            return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, we can make a clean cash offer and move quickly if that would help.`;
+                        }
+
+                        return `Hi ${firstName}, saw your listing at ${propertyAddress}. If the seller is open to a strong cash offer, we would love to take a look and see if it is a fit. Let me know if you want us to send something over.`;
+                    }
+
+                    async function copyTextToClipboard(value) {
+                        const text = normalizeCellValue(value);
+                        if (!text) {
+                            throw new Error('Nothing is available to copy from this row yet.');
+                        }
+
+                        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                            await navigator.clipboard.writeText(text);
+                            return;
+                        }
+
+                        const fallbackInput = document.createElement('textarea');
+                        fallbackInput.value = text;
+                        fallbackInput.setAttribute('readonly', 'readonly');
+                        fallbackInput.style.position = 'fixed';
+                        fallbackInput.style.opacity = '0';
+                        document.body.appendChild(fallbackInput);
+                        fallbackInput.focus();
+                        fallbackInput.select();
+                        const copied = document.execCommand('copy');
+                        fallbackInput.remove();
+
+                        if (!copied) {
+                            throw new Error('Clipboard copy is not available in this browser.');
+                        }
+                    }
+
+                    function createCell(value, key) {
+
+            function getUserStorageKey() {
+                return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+                        td.textContent = normalizeCellValue(value);
+
+            function getUserStorageKeys() {
+
+                        if (isPhoneFieldKey(key)) {
+                            td.classList.add('is-phone-cell');
+
+                            const copyButton = document.createElement('button');
+                            copyButton.type = 'button';
+                            copyButton.className = 'buyers-sheet-phone-copy-btn';
+                            copyButton.setAttribute('contenteditable', 'false');
+                            copyButton.setAttribute('tabindex', '0');
+                            copyButton.setAttribute('aria-label', 'Copy phone number');
+                            copyButton.title = 'Copy phone number';
+                            copyButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+                            copyButton.addEventListener('mousedown', (event) => {
+                                event.preventDefault();
+                            });
+
+                            copyButton.addEventListener('click', async (event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                const phoneNumber = normalizeCellValue(td.textContent);
+                                if (!phoneNumber) {
+                                    showToast('error', 'No Phone Number', 'Add a phone number to this cell before copying it.');
+                                    return;
+                                }
+
+                                try {
+                                    await copyTextToClipboard(phoneNumber);
+                                    copyButton.classList.add('is-visible');
+                                    showToast('success', 'Phone Copied', `${phoneNumber} was copied to your clipboard.`);
+                                } catch (error) {
+                                    showToast('error', 'Copy Failed', error && error.message ? error.message : 'The phone number could not be copied.');
+                                }
+                            });
+
+                            td.appendChild(copyButton);
+                        }
+
+                const userContext = getUserContext();
+                const emailKeys = getScopedEmailKeys(userContext.email);
+                if (emailKeys.length > 0) {
+                    function createCopyCell() {
+                        const td = document.createElement('td');
+                        td.className = 'buyers-sheet-copy-cell';
+
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'buyers-sheet-copy-btn';
+                        button.setAttribute('aria-label', 'Copy status-based outreach template');
+                        button.title = 'Copy status-based outreach template';
+                        button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                        button.addEventListener('click', async () => {
+                            const row = button.closest('tr');
+                            const rowData = getRowDataFromElement(row);
+
+                            try {
+                                const template = buildStatusTemplate(rowData);
+                                await copyTextToClipboard(template);
+                                const signature = createCopiedRowSignature(rowData);
+                                if (signature) {
+                                    copiedRowSignatures.add(signature);
+                                    persistCopiedRowSignatures(copiedRowSignatures);
+                                }
+                                syncCopyButtonState(row);
+                                showToast('success', 'Template Copied', `Copied a ${rowData.status || 'default'} outreach template for ${rowData.laName}.`);
+                            } catch (error) {
+                                showToast('error', 'Copy Failed', error && error.message ? error.message : 'The outreach template could not be copied.');
+                            }
+                        });
+
+                        td.appendChild(button);
+                        return td;
+                    }
+
+                    return emailKeys.map(email => `${STORAGE_KEY_BASE}:${email}`);
+                }
+                        ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach(key => {
+            }
+
+                        tr.appendChild(createCopyCell());
+                        tr.addEventListener('input', () => syncCopyButtonState(tr));
+                        tr.addEventListener('blur', () => syncCopyButtonState(tr), true);
+                        syncCopyButtonState(tr);
+            const STORAGE_KEY = getUserStorageKeys()[0];
+            const STORAGE_KEYS = getUserStorageKeys();
+            const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
+            const DEFAULT_ROWS = [
+                { agentName: '', brokerage: '', email: '', cellPhone: '', market: '', specialty: '', status: '', notes: '' }
+            ];
+            const body = document.getElementById('my-agents-sheet-body');
+                                importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                                propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                                laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                                loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                                offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                                laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                                status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                                pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                return;
+            }
+
+            function showToast(type, title, message) {
+
+                        return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile']
+                            .some((key) => String(row && row[key] || '').trim().length > 0);
                         return true;
                     }
 
@@ -914,8 +2288,8 @@
             }
 
             function updateAgentCount(rows) {
-                const totalAgents = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
-                countBadge.textContent = `${totalAgents} Agent${totalAgents === 1 ? '' : 's'}`;
+                const totalRows = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
+                countBadge.textContent = `${totalRows} Row${totalRows === 1 ? '' : 's'}`;
             }
 
             function persistRows(rows) {
@@ -926,7 +2300,7 @@
             }
 
             function saveRows() {
-                const normalizedRows = normalizeRows(getRowsFromDom(), []);
+                const normalizedRows = getRowsFromDom().filter(isMeaningfulRow);
                 hasLocalEdits = true;
                 persistRows(normalizedRows);
             }
@@ -942,48 +2316,26 @@
                 return normalized;
             }
 
-            function downloadCsvFile(fileName, content) {
-                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = fileName;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                window.setTimeout(() => URL.revokeObjectURL(url), 0);
-            }
-
-            function makeCsvFileName() {
-                const userContext = getUserContext();
-                const baseName = String(userContext.name || userContext.email || 'my-agents')
-                    .trim()
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-+|-+$/g, '') || 'my-agents';
-                return `${baseName}-my-agents.csv`;
-            }
-
             function exportRowsToCsv() {
-                const rows = normalizeRows(getRowsFromDom(), []);
+                const rows = getRowsFromDom().filter(isMeaningfulRow);
                 if (rows.length === 0) {
-                    showToast('error', 'No Agents To Export', 'Add at least one saved agent row before exporting a CSV.');
+                    showToast('error', 'No Rows To Export', 'Add at least one saved row before exporting a CSV.');
                     return;
                 }
 
-                const headers = ['Agent Name', 'Brokerage', 'Email', 'Cell Phone', 'Market', 'Specialty', 'Status', 'Notes'];
+                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'Status', 'PDF File'];
                 const lines = [headers.join(',')];
 
                 rows.forEach((row) => {
                     lines.push([
-                        row.agentName,
-                        row.brokerage,
-                        row.email,
-                        row.cellPhone,
-                        row.market,
-                        row.specialty,
+                        row.importDate,
+                        row.propertyAddress,
+                        row.laName,
+                        row.loPhone,
+                        row.offersEmail,
+                        row.laCell,
                         row.status,
-                        row.notes
+                        row.pdfFile
                     ].map(escapeCsvValue).join(','));
                 });
 
@@ -991,339 +2343,122 @@
                 showToast('success', 'CSV Saved', 'Your My Agents spreadsheet was downloaded as a CSV file.');
             }
 
-            function parseVcfText(text) {
-                const normalizedText = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                const unfolded = normalizedText.replace(/\n[ \t]/g, '');
-                const cards = unfolded.match(/BEGIN:VCARD[\s\S]*?END:VCARD/gim) || [];
+            function normalizeImportMatchValue(value) {
+                return String(value || '').trim().toLowerCase();
+            }
 
-                return cards.map((cardText) => {
-                    const card = {
-                        fullName: '',
-                        title: '',
-                        organization: '',
-                        emails: [],
-                        phones: [],
-                        categories: [],
-                        notes: [],
-                        cities: []
+            function findMatchingImportedRowIndex(rows, row) {
+                const targetPdfFile = normalizeImportMatchValue(row && row.pdfFile);
+                const targetAddress = normalizeImportMatchValue(row && row.propertyAddress);
+                const targetEmail = normalizeImportMatchValue(row && row.offersEmail);
+                const targetCell = normalizeImportMatchValue(row && row.laCell);
+
+                return (Array.isArray(rows) ? rows : []).findIndex((candidate) => {
+                    const candidatePdfFile = normalizeImportMatchValue(candidate && candidate.pdfFile);
+                    const candidateAddress = normalizeImportMatchValue(candidate && candidate.propertyAddress);
+                    const candidateEmail = normalizeImportMatchValue(candidate && candidate.offersEmail);
+                    const candidateCell = normalizeImportMatchValue(candidate && candidate.laCell);
+
+                    if (targetPdfFile && candidatePdfFile && targetPdfFile === candidatePdfFile && targetAddress && candidateAddress && targetAddress === candidateAddress) {
+                        return true;
+                    }
+
+                    if (targetAddress && candidateAddress && targetAddress === candidateAddress) {
+                        return true;
+                    }
+
+                    if (targetAddress && targetEmail && candidateAddress === targetAddress && candidateEmail === targetEmail) {
+                        return true;
+                    }
+
+                    if (targetAddress && targetCell && candidateAddress === targetAddress && candidateCell === targetCell) {
+                        return true;
+                    }
+
+                    return false;
+                });
+            }
+
+            function upsertImportedRow(nextRow) {
+                const existingRows = getRowsFromDom().filter(isMeaningfulRow);
+                const matchIndex = findMatchingImportedRowIndex(existingRows, nextRow);
+
+                if (matchIndex >= 0) {
+                    existingRows[matchIndex] = {
+                        ...existingRows[matchIndex],
+                        ...nextRow
                     };
+                    renderRows(existingRows);
+                    persistRows(existingRows);
+                    return 'updated';
+                }
 
-                    const lines = cardText.split('\n').map(line => line.trim()).filter(Boolean);
-                    lines.forEach((line) => {
-                        if (!line || /^BEGIN:VCARD$/i.test(line) || /^END:VCARD$/i.test(line) || /^VERSION:/i.test(line)) {
-                            return;
-                        }
+                const nextRows = [...existingRows, nextRow];
+                renderRows(nextRows);
+                persistRows(nextRows);
+                return 'created';
+            }
 
-                        const separatorIndex = line.indexOf(':');
-                        if (separatorIndex === -1) {
-                            return;
-                        }
+            function upsertImportedRows(nextRows) {
+                const rows = Array.isArray(nextRows) ? nextRows : [];
+                let createdCount = 0;
+                let updatedCount = 0;
 
-                        const rawKey = line.slice(0, separatorIndex);
-                        const rawValue = line.slice(separatorIndex + 1)
-                            .replace(/\\n/gi, ' ')
-                            .replace(/\\,/g, ',')
-                            .replace(/\\;/g, ';')
-                            .trim();
-                        const baseKey = rawKey.split(';')[0].toUpperCase();
-
-                        if (!rawValue) {
-                            return;
-                        }
-
-                        if (baseKey === 'FN') {
-                            card.fullName = rawValue;
-                            return;
-                        }
-
-                        if (baseKey === 'N' && !card.fullName) {
-                            const nameParts = rawValue.split(';').map(part => part.trim()).filter(Boolean);
-                            card.fullName = [nameParts[1], nameParts[0]].filter(Boolean).join(' ').trim();
-                            return;
-                        }
-
-                        if (baseKey === 'TITLE') {
-                            card.title = rawValue;
-                            return;
-                        }
-
-                        if (baseKey === 'ORG') {
-                            card.organization = rawValue.split(';').filter(Boolean).join(' ').trim();
-                            return;
-                        }
-
-                        if (baseKey === 'EMAIL') {
-                            card.emails.push(rawValue);
-                            return;
-                        }
-
-                        if (baseKey === 'TEL') {
-                            card.phones.push(rawValue);
-                            return;
-                        }
-
-                        if (baseKey === 'CATEGORIES') {
-                            rawValue.split(',').map(value => value.trim()).filter(Boolean).forEach(value => card.categories.push(value));
-                            return;
-                        }
-
-                        if (baseKey === 'NOTE') {
-                            card.notes.push(rawValue);
-                            return;
-                        }
-
-                        if (baseKey === 'ADR') {
-                            const segments = rawValue.split(';').map(value => value.trim());
-                            const city = segments[3] || '';
-                            if (city) {
-                                card.cities.push(city);
-                            }
-                        }
-                    });
-
-                    return card;
+                rows.forEach((row) => {
+                    const result = upsertImportedRow(row);
+                    if (result === 'updated') {
+                        updatedCount += 1;
+                    } else if (result === 'created') {
+                        createdCount += 1;
+                    }
                 });
+
+                return {
+                    createdCount,
+                    updatedCount,
+                    totalCount: createdCount + updatedCount
+                };
             }
 
-            function isAgentVcfCard(card) {
-                const searchable = [
-                    card.fullName,
-                    card.title,
-                    card.organization,
-                    ...(Array.isArray(card.categories) ? card.categories : []),
-                    ...(Array.isArray(card.notes) ? card.notes : [])
-                ].join(' ');
-
-                return /\bagent\b/i.test(searchable);
-            }
-
-            function mapVcfCardsToRows(cards) {
-                return dedupeRows((Array.isArray(cards) ? cards : []).map((card) => ({
-                    agentName: String(card.fullName || '').trim(),
-                    brokerage: String(card.organization || '').trim(),
-                    email: String((card.emails && card.emails[0]) || '').trim(),
-                    cellPhone: String((card.phones && card.phones[0]) || '').trim(),
-                    market: String((card.cities && card.cities[0]) || '').trim(),
-                    specialty: String(card.title || '').trim(),
-                    status: Array.isArray(card.categories) ? card.categories.join(', ').trim() : '',
-                    notes: Array.isArray(card.notes) ? card.notes.join(' | ').trim() : ''
-                })).filter((row) => isMeaningfulRow(row) && shouldKeepImportedAgentRow(row)));
-            }
-
-            async function readFileAsText(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(String(reader.result || ''));
-                    reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
-                    reader.readAsText(file);
-                });
-            }
-
-            async function importVcfFiles(files) {
-                const selectedFiles = Array.from(files || []).filter(file => /\.vcf$/i.test(String(file.name || '')) || String(file.type || '').toLowerCase().includes('vcard'));
-                if (selectedFiles.length === 0) {
-                    showToast('error', 'No .vcf Selected', 'Choose at least one .vcf contact file to import.');
-                    return;
+            function normalizeStoredRow(row) {
+                if (!row || typeof row !== 'object') {
+                    return null;
                 }
 
-                try {
-                    const existingRows = normalizeRows(getRowsFromDom(), []);
-                    const importedCards = [];
-
-                    for (const file of selectedFiles) {
-                        const text = await readFileAsText(file);
-                        importedCards.push(...parseVcfText(text).filter(isAgentVcfCard));
-                    }
-
-                    const importedRows = mapVcfCardsToRows(importedCards);
-                    if (importedRows.length === 0) {
-                        showToast('error', 'No Agent Contacts Found', 'Only contacts with "Agent" in their vCard details are imported.');
-                        return;
-                    }
-
-                    const mergedRows = normalizeRows(mergeRows(existingRows, importedRows), DEFAULT_ROWS);
-                    const addedCount = Math.max(mergedRows.filter(isMeaningfulRow).length - existingRows.filter(isMeaningfulRow).length, 0);
-
-                    hasLocalEdits = true;
-                    renderRows(mergedRows);
-                    persistRows(mergedRows.filter(isMeaningfulRow));
-
-                    if (addedCount === 0) {
-                        showToast('success', 'No New Agents Added', 'The .vcf file was read, but every matching agent was already in your spreadsheet.');
-                        return;
-                    }
-
-                    showToast('success', 'VCF Imported', `${addedCount} new agent contact${addedCount === 1 ? '' : 's'} were converted into spreadsheet rows without duplicates.`);
-                } catch (error) {
-                    showToast('error', 'VCF Import Failed', 'The selected .vcf file could not be processed.');
-                } finally {
-                    vcfInput.value = '';
-                }
-            }
-
-            function getImportSource() {
-                const userAliases = getUserIdentityAliases();
-                return IMPORT_SOURCES.find(source =>
-                    source.matchers.some(matcher => userAliases.has(normalizeIdentityMatcher(matcher)))
-                ) || null;
-            }
-
-            function getRestrictedSourcesForViewer() {
-                if (getImportSource()) {
-                    return [];
-                }
-
-                return IMPORT_SOURCES.slice();
-            }
-
-            function parseCsv(text) {
-                const rows = [];
-                let current = '';
-                let row = [];
-                let inQuotes = false;
-
-                for (let index = 0; index < text.length; index += 1) {
-                    const character = text[index];
-                    const nextCharacter = text[index + 1];
-
-                    if (character === '"') {
-                        if (inQuotes && nextCharacter === '"') {
-                            current += '"';
-                            index += 1;
-                        } else {
-                            inQuotes = !inQuotes;
-                        }
-                        continue;
-                    }
-
-                    if (character === ',' && !inQuotes) {
-                        row.push(current);
-                        current = '';
-                        continue;
-                    }
-
-                    if ((character === '\n' || character === '\r') && !inQuotes) {
-                        if (character === '\r' && nextCharacter === '\n') {
-                            index += 1;
-                        }
-                        row.push(current);
-                        rows.push(row);
-                        row = [];
-                        current = '';
-                        continue;
-                    }
-
-                    current += character;
-                }
-
-                if (current.length > 0 || row.length > 0) {
-                    row.push(current);
-                    rows.push(row);
-                }
-
-                return rows.filter(columns => columns.some(value => String(value || '').trim().length > 0));
-            }
-
-            function pickFirstValue(record, keys) {
-                for (const key of keys) {
-                    const value = String(record[key] || '').trim();
-                    if (value) {
-                        return value;
-                    }
-                }
-                return '';
-            }
-
-            function mapCsvRows(text) {
-                const lines = parseCsv(text);
-                if (lines.length < 2) {
-                    return [];
-                }
-
-                const headers = lines[0].map(header => String(header || '').trim());
-                return dedupeRows(lines.slice(1).map(columns => {
-                    const record = {};
-                    headers.forEach((header, index) => {
-                        record[header] = columns[index] || '';
-                    });
-
-                    const firstName = String(record['First Name'] || '').trim();
-                    const lastName = String(record['Last Name'] || '').trim();
-                    const displayName = String(record['Display Name'] || '').trim();
-                    const fullName = displayName || [firstName, lastName].filter(Boolean).join(' ').trim();
-
+                if ('importDate' in row || 'propertyAddress' in row || 'laName' in row || 'offersEmail' in row) {
                     return {
-                        agentName: fullName,
-                        brokerage: pickFirstValue(record, ['Organization', 'Business Address 2']),
-                        email: pickFirstValue(record, ['E-mail Address', 'E-mail 2 Address', 'E-mail 3 Address']),
-                        cellPhone: pickFirstValue(record, ['Mobile Phone', 'Business Phone', 'Home Phone']),
-                        market: pickFirstValue(record, ['Business City', 'Home City', 'Categories']),
-                        specialty: pickFirstValue(record, ['Job Title', 'Department', 'Related name']),
-                        status: pickFirstValue(record, ['Categories']),
-                        notes: pickFirstValue(record, ['Notes'])
+                        importDate: normalizeCellValue(row.importDate),
+                        propertyAddress: normalizeCellValue(row.propertyAddress),
+                        laName: normalizeCellValue(row.laName),
+                        loPhone: normalizeCellValue(row.loPhone),
+                        offersEmail: normalizeCellValue(row.offersEmail),
+                        laCell: normalizeCellValue(row.laCell),
+                        status: normalizeCellValue(row.status),
+                        pdfFile: normalizeCellValue(row.pdfFile)
                     };
-                }).filter(row => isMeaningfulRow(row) && shouldKeepImportedAgentRow(row)));
-            }
-
-            async function importRowsFromSources(sources) {
-                try {
-                    const collectedRows = [];
-
-                    for (const source of Array.isArray(sources) ? sources : []) {
-                        const paths = Array.isArray(source.paths) ? source.paths : [source.path].filter(Boolean);
-                        for (const path of paths) {
-                            const response = await fetch(encodeURI(path), { cache: 'no-store' });
-                            if (!response.ok) {
-                                continue;
-                            }
-
-                            const csvText = await response.text();
-                            const importedRows = mapCsvRows(csvText);
-                            if (importedRows.length > 0) {
-                                collectedRows.push(...importedRows);
-                            }
-                        }
-                    }
-
-                    return dedupeRows(collectedRows);
-                } catch (error) {
-                    return [];
-                }
-            }
-
-            async function importRowsForUser() {
-                const source = getImportSource();
-                if (!source) {
-                    return [];
                 }
 
-                return importRowsFromSources([source]);
-            }
-
-            async function getRestrictedImportKeys() {
-                const restrictedSources = getRestrictedSourcesForViewer();
-                if (restrictedSources.length === 0) {
-                    return new Set();
+                if ('agentName' in row || 'email' in row || 'cellPhone' in row || 'brokerage' in row || 'notes' in row) {
+                    return {
+                        importDate: '',
+                        propertyAddress: '',
+                        laName: normalizeCellValue(row.agentName),
+                        loPhone: '',
+                        offersEmail: normalizeCellValue(row.email),
+                        laCell: normalizeCellValue(row.cellPhone),
+                        status: normalizeCellValue(row.status),
+                        pdfFile: [row.brokerage, row.market, row.specialty, row.notes]
+                            .map(normalizeCellValue)
+                            .filter(Boolean)
+                            .join(' | ')
+                    };
                 }
 
-                const restrictedRows = await importRowsFromSources(restrictedSources);
-                return new Set(restrictedRows.map(buildRowDedupKey).filter(Boolean));
+                return null;
             }
 
-            function stripRestrictedImportedRows(rows, restrictedKeys) {
-                if (!(restrictedKeys instanceof Set) || restrictedKeys.size === 0) {
-                    return Array.isArray(rows) ? rows : [];
-                }
-
-                return (Array.isArray(rows) ? rows : []).filter(row => {
-                    const dedupeKey = buildRowDedupKey(row);
-                    return !dedupeKey || !restrictedKeys.has(dedupeKey);
-                });
-            }
-
-            async function loadRows() {
+            function loadRows() {
                 let rows = [];
-                const canUseLegacySharedRows = !!getImportSource();
                 try {
                     for (const storageKey of STORAGE_KEYS) {
                         const stored = localStorage.getItem(storageKey);
@@ -1333,10 +2468,11 @@
                         }
                     }
 
-                    if ((!Array.isArray(rows) || rows.length === 0) && canUseLegacySharedRows) {
+                    if (!Array.isArray(rows) || rows.length === 0) {
                         const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
                         rows = legacyStored ? JSON.parse(legacyStored) : [];
                         if (Array.isArray(rows) && rows.length > 0) {
+                            rows = rows.map(normalizeStoredRow).filter(isMeaningfulRow);
                             persistRows(rows);
                         }
                     }
@@ -1344,29 +2480,23 @@
                     rows = [];
                 }
 
-                rows = sanitizeStoredRows(rows);
-                rows = stripRestrictedImportedRows(rows, await getRestrictedImportKeys());
-                rows = normalizeRows(rows, DEFAULT_ROWS);
+                rows = Array.isArray(rows) ? rows.map(normalizeStoredRow).filter(isMeaningfulRow) : [];
+                rows = rows.length > 0 ? rows : DEFAULT_ROWS.slice();
                 renderRows(rows);
                 persistRows(rows.filter(isMeaningfulRow));
-
-                const importedRows = await importRowsForUser();
-                if (importedRows.length > 0) {
-                    if (hasLocalEdits) {
-                        return;
-                    }
-
-                    const mergedRows = normalizeRows(mergeRows(rows, importedRows), DEFAULT_ROWS);
-                    if (JSON.stringify(mergedRows) !== JSON.stringify(rows)) {
-                        rows = mergedRows;
-                        persistRows(rows.filter(isMeaningfulRow));
-                        renderRows(rows);
-                    }
-                }
             }
 
             addRowBtn.addEventListener('click', function () {
-                body.appendChild(createRow({}));
+                body.appendChild(createRow({
+                    importDate: new Date().toISOString().slice(0, 10),
+                    propertyAddress: '',
+                    laName: '',
+                    loPhone: '',
+                    offersEmail: '',
+                    laCell: '',
+                    status: '',
+                    pdfFile: ''
+                }));
                 saveRows();
                 const lastRowFirstCell = body.querySelector('tr:last-child td:first-child');
                 if (lastRowFirstCell) {
@@ -1374,12 +2504,95 @@
                 }
             });
 
-            insertVcfBtn.addEventListener('click', function () {
-                vcfInput.click();
+            addPdfBtn.addEventListener('click', function () {
+                if (typeof pdfInput.showPicker === 'function') {
+                    pdfInput.showPicker();
+                    return;
+                }
+                pdfInput.click();
             });
 
-            vcfInput.addEventListener('change', async function (event) {
-                await importVcfFiles(event.target.files);
+            pdfInput.addEventListener('change', async function () {
+                const file = Array.from(pdfInput.files || [])[0] || null;
+                pdfInput.value = '';
+                if (!file) {
+                    return;
+                }
+
+                if (!/\.pdf$/i.test(file.name)) {
+                    showToast('error', 'PDF Required', 'Select a PDF file for MLS field extraction.');
+                    return;
+                }
+
+                const authToken = getAuthToken();
+                if (!authToken) {
+                    showToast('error', 'Sign In Required', 'Sign in again before uploading PDFs.');
+                    return;
+                }
+
+                addPdfBtn.disabled = true;
+                addPdfBtn.textContent = 'Extracting...';
+
+                try {
+                    const contentBase64 = await readFileAsBase64(file);
+                    const response = await fetch('/api/admin/mls-imports/extract-pdf', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            contentBase64
+                        })
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload && payload.error ? payload.error : 'The PDF could not be processed.');
+                    }
+
+                    const extracted = payload && payload.extracted && typeof payload.extracted === 'object' ? payload.extracted : {};
+                    const extractedRows = Array.isArray(extracted.rows) && extracted.rows.length > 0
+                        ? extracted.rows
+                        : [extracted];
+                    const extractedPageCount = Number(extracted.pageCount) || 0;
+                    const normalizedRows = extractedRows
+                        .map((row) => ({
+                            importDate: new Date().toISOString().slice(0, 10),
+                            propertyAddress: normalizeCellValue(row && row.propertyAddress),
+                            laName: normalizeCellValue(row && row.laName),
+                            loPhone: normalizeCellValue(row && row.loPhone),
+                            offersEmail: normalizeCellValue(row && row.offersEmail),
+                            laCell: normalizeCellValue(row && row.laCell),
+                            status: normalizeCellValue(row && row.status),
+                            pdfFile: normalizeCellValue(payload.fileName || file.name || '')
+                        }))
+                        .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell].some((value) => String(value || '').trim()));
+
+                    if (normalizedRows.length === 0) {
+                        throw new Error('The PDF was read, but no MLS contact rows could be extracted from it.');
+                    }
+
+                    const upsertResult = upsertImportedRows(normalizedRows);
+                    const pageCountMessage = extractedPageCount > 1
+                        ? ` Parsed all ${extractedPageCount} pages.`
+                        : extractedPageCount === 1
+                            ? ' Parsed 1 page.'
+                            : '';
+                    showToast(
+                        'success',
+                        upsertResult.updatedCount > 0 && upsertResult.createdCount === 0 ? 'PDF Updated' : 'PDF Extracted',
+                        upsertResult.updatedCount > 0
+                            ? `${upsertResult.createdCount} new row${upsertResult.createdCount === 1 ? '' : 's'} added and ${upsertResult.updatedCount} existing row${upsertResult.updatedCount === 1 ? '' : 's'} updated.${pageCountMessage}`
+                            : `${upsertResult.createdCount} row${upsertResult.createdCount === 1 ? '' : 's'} were added to the sheet.${pageCountMessage}`
+                    );
+                } catch (error) {
+                    showToast('error', 'PDF Extraction Failed', error && error.message ? error.message : 'The PDF could not be processed.');
+                } finally {
+                    addPdfBtn.disabled = false;
+                    addPdfBtn.textContent = 'Add PDF';
+                }
             });
 
             exportCsvBtn.addEventListener('click', exportRowsToCsv);

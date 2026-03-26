@@ -224,9 +224,55 @@
             cursor: text;
         }
 
+        .buyers-sheet-table td.is-phone-cell {
+            position: relative;
+            padding-right: 42px;
+        }
+
         .buyers-sheet-table td[contenteditable="true"]:focus {
             box-shadow: inset 0 0 0 2px var(--buyers-focus-ring);
             background: var(--buyers-focus-bg);
+        }
+
+        .buyers-sheet-phone-copy-btn {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 7px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease, transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+        }
+
+        .buyers-sheet-table td.is-phone-cell:hover .buyers-sheet-phone-copy-btn,
+        .buyers-sheet-table td.is-phone-cell:focus-within .buyers-sheet-phone-copy-btn,
+        .buyers-sheet-phone-copy-btn.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .buyers-sheet-phone-copy-btn:hover,
+        .buyers-sheet-phone-copy-btn:focus-visible {
+            border-color: var(--buyers-focus-ring);
+            background: rgba(255, 255, 255, 0.16);
+            color: var(--text-primary);
+            transform: translateY(-50%) scale(1.03);
+            outline: none;
+        }
+
+        .buyers-sheet-phone-copy-btn svg {
+            width: 12px;
+            height: 12px;
         }
 
         .buyers-sheet-copy-cell {
@@ -237,6 +283,7 @@
         }
 
         .buyers-sheet-copy-btn {
+            position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -261,6 +308,37 @@
         .buyers-sheet-copy-btn svg {
             width: 16px;
             height: 16px;
+        }
+
+        .buyers-sheet-copy-btn.is-copied {
+            border-color: rgba(34, 197, 94, 0.52);
+            background: rgba(34, 197, 94, 0.18);
+        }
+
+        .buyers-sheet-copy-btn.is-copied::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 13px;
+            height: 13px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.32);
+        }
+
+        .buyers-sheet-copy-btn.is-copied::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: 1px;
+            width: 4px;
+            height: 7px;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            transform: rotate(45deg);
+            z-index: 1;
+            pointer-events: none;
         }
 
         .buyers-sheet-note {
@@ -376,6 +454,7 @@
                             <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
                             <button id="mls-imports-add-pdf" class="card-btn" type="button">Add PDF</button>
                             <button id="mls-imports-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="mls-imports-add-to-my-agents" class="card-btn" type="button">Add To My Agents</button>
                             <button id="mls-imports-clear-all" class="card-btn" type="button">Clear All</button>
                             <button id="mls-imports-add-row" class="card-btn active" type="button">Add Row</button>
                             <input id="mls-imports-pdf-input" type="file" accept=".pdf,application/pdf" hidden>
@@ -418,6 +497,8 @@
     <script>
         (function () {
             const STORAGE_KEY_BASE = 'mlsImportsSpreadsheetRows';
+            const COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetCopiedRows';
+            const MY_AGENTS_STORAGE_KEY_BASE = 'myAgentsSheetRows';
 
             function safeReadJson(key) {
                 try {
@@ -442,6 +523,14 @@
 
             function getStorageKey() {
                 return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function getCopiedStorageKey() {
+                return `${COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function getMyAgentsStorageKey() {
+                return `${MY_AGENTS_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
             function showToast(type, title, message) {
@@ -499,9 +588,10 @@
             const addPdfButton = document.getElementById('mls-imports-add-pdf');
             const pdfInput = document.getElementById('mls-imports-pdf-input');
             const exportCsvButton = document.getElementById('mls-imports-export-csv');
+            const addToMyAgentsButton = document.getElementById('mls-imports-add-to-my-agents');
             const clearAllButton = document.getElementById('mls-imports-clear-all');
 
-            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !clearAllButton) {
+            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !addToMyAgentsButton || !clearAllButton) {
                 return;
             }
 
@@ -526,6 +616,10 @@
                 return String(value || '').replace(/\s+/g, ' ').trim();
             }
 
+            function isPhoneFieldKey(key) {
+                return key === 'loPhone' || key === 'laCell';
+            }
+
             function getAgentFirstName(value) {
                 const normalized = normalizeCellValue(value);
                 if (!normalized) {
@@ -537,6 +631,76 @@
 
             function normalizeStatusValue(value) {
                 return normalizeCellValue(value).toLowerCase();
+            }
+
+            function getRowDataFromElement(rowElement) {
+                const cells = rowElement ? rowElement.querySelectorAll('td') : [];
+                return {
+                    importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
+                    propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
+                    laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
+                    loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
+                    offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
+                    laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                    status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                    pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                };
+            }
+
+            function createCopiedRowSignature(row) {
+                const source = row && typeof row === 'object' ? row : {};
+                return [
+                    normalizeCellValue(source.propertyAddress).toLowerCase(),
+                    normalizeCellValue(source.laName).toLowerCase(),
+                    normalizeCellValue(source.status).toLowerCase(),
+                    normalizeCellValue(source.pdfFile).toLowerCase(),
+                    normalizeCellValue(source.offersEmail).toLowerCase(),
+                    normalizeCellValue(source.laCell).toLowerCase()
+                ].join('|');
+            }
+
+            function loadCopiedRowSignatures() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getCopiedStorageKey()) || '[]');
+                    if (Array.isArray(stored)) {
+                        return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
+                    }
+                } catch (error) {
+                    // Ignore invalid stored values and fall back to empty state.
+                }
+
+                return new Set();
+            }
+
+            function persistCopiedRowSignatures(signatureSet) {
+                const values = Array.from(signatureSet || []).map((value) => String(value || '').trim()).filter(Boolean);
+                localStorage.setItem(getCopiedStorageKey(), JSON.stringify(values));
+            }
+
+            const copiedRowSignatures = loadCopiedRowSignatures();
+
+            function syncCopyButtonState(rowElement) {
+                if (!rowElement) {
+                    return;
+                }
+
+                const button = rowElement.querySelector('.buyers-sheet-copy-btn');
+                if (!button) {
+                    return;
+                }
+
+                const signature = createCopiedRowSignature(getRowDataFromElement(rowElement));
+                const isCopied = Boolean(signature) && copiedRowSignatures.has(signature);
+                button.classList.toggle('is-copied', isCopied);
+                button.setAttribute(
+                    'aria-label',
+                    isCopied
+                        ? 'Copy status-based outreach template again. This row was already copied.'
+                        : 'Copy status-based outreach template'
+                );
+                button.title = isCopied
+                    ? 'Copy again. Marked as already copied.'
+                    : 'Copy status-based outreach template';
             }
 
             function buildStatusTemplate(rowData) {
@@ -572,13 +736,52 @@
                 return `Hi ${firstName}, saw your listing at ${propertyAddress}. If the seller is open to a strong cash offer, we would love to take a look and see if it is a fit. Let me know if you want us to send something over.`;
             }
 
-            function createCell(value) {
+            function createCell(value, key) {
                 const td = document.createElement('td');
                 td.contentEditable = 'true';
                 td.spellcheck = false;
                 td.textContent = normalizeCellValue(value);
                 td.addEventListener('input', saveRows);
                 td.addEventListener('blur', saveRows);
+
+                if (isPhoneFieldKey(key)) {
+                    td.classList.add('is-phone-cell');
+
+                    const copyButton = document.createElement('button');
+                    copyButton.type = 'button';
+                    copyButton.className = 'buyers-sheet-phone-copy-btn';
+                    copyButton.setAttribute('contenteditable', 'false');
+                    copyButton.setAttribute('tabindex', '0');
+                    copyButton.setAttribute('aria-label', 'Copy phone number');
+                    copyButton.title = 'Copy phone number';
+                    copyButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+                    copyButton.addEventListener('mousedown', (event) => {
+                        event.preventDefault();
+                    });
+
+                    copyButton.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const phoneNumber = normalizeCellValue(td.textContent);
+                        if (!phoneNumber) {
+                            showToast('error', 'No Phone Number', 'Add a phone number to this cell before copying it.');
+                            return;
+                        }
+
+                        try {
+                            await copyTextToClipboard(phoneNumber);
+                            copyButton.classList.add('is-visible');
+                            showToast('success', 'Phone Copied', `${phoneNumber} was copied to your clipboard.`);
+                        } catch (error) {
+                            showToast('error', 'Copy Failed', error && error.message ? error.message : 'The phone number could not be copied.');
+                        }
+                    });
+
+                    td.appendChild(copyButton);
+                }
+
                 return td;
             }
 
@@ -621,21 +824,17 @@
                 button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
                 button.addEventListener('click', async () => {
                     const row = button.closest('tr');
-                    const cells = row ? row.querySelectorAll('td') : [];
-                    const rowData = {
-                        importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
-                        propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
-                        laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
-                        loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
-                        offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
-                        laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                        status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
-                        pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
-                    };
+                    const rowData = getRowDataFromElement(row);
 
                     try {
                         const template = buildStatusTemplate(rowData);
                         await copyTextToClipboard(template);
+                        const signature = createCopiedRowSignature(rowData);
+                        if (signature) {
+                            copiedRowSignatures.add(signature);
+                            persistCopiedRowSignatures(copiedRowSignatures);
+                        }
+                        syncCopyButtonState(row);
                         showToast('success', 'Template Copied', `Copied a ${rowData.status || 'default'} outreach template for ${rowData.laName}.`);
                     } catch (error) {
                         showToast('error', 'Copy Failed', error && error.message ? error.message : 'The outreach template could not be copied.');
@@ -649,9 +848,12 @@
             function createRow(row) {
                 const tr = document.createElement('tr');
                 ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
-                    tr.appendChild(createCell(row && row[key] ? row[key] : ''));
+                    tr.appendChild(createCell(row && row[key] ? row[key] : '', key));
                 });
                 tr.appendChild(createCopyCell());
+                tr.addEventListener('input', () => syncCopyButtonState(tr));
+                tr.addEventListener('blur', () => syncCopyButtonState(tr), true);
+                syncCopyButtonState(tr);
                 return tr;
             }
 
@@ -765,6 +967,8 @@
 
             function clearAllRows() {
                 localStorage.removeItem(getStorageKey());
+                localStorage.removeItem(getCopiedStorageKey());
+                copiedRowSignatures.clear();
                 renderRows([]);
             }
 
@@ -800,6 +1004,69 @@
                     // Ignore invalid stored values and fall back to defaults.
                 }
                 return DEFAULT_ROWS.slice();
+            }
+
+            function normalizeMyAgentsRow(row) {
+                return {
+                    importDate: normalizeCellValue(row && row.importDate),
+                    propertyAddress: normalizeCellValue(row && row.propertyAddress),
+                    laName: normalizeCellValue(row && row.laName),
+                    loPhone: normalizeCellValue(row && row.loPhone),
+                    offersEmail: normalizeCellValue(row && row.offersEmail),
+                    laCell: normalizeCellValue(row && row.laCell),
+                    status: normalizeCellValue(row && row.status),
+                    pdfFile: normalizeCellValue(row && row.pdfFile)
+                };
+            }
+
+            function createMyAgentsDedupKey(row) {
+                return [
+                    normalizeCellValue(row && row.propertyAddress).toLowerCase(),
+                    normalizeCellValue(row && row.laName).toLowerCase(),
+                    normalizeCellValue(row && row.offersEmail).toLowerCase(),
+                    normalizeCellValue(row && row.laCell).toLowerCase(),
+                    normalizeCellValue(row && row.pdfFile).toLowerCase()
+                ].join('|');
+            }
+
+            function loadMyAgentsRows() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getMyAgentsStorageKey()) || '[]');
+                    if (Array.isArray(stored)) {
+                        return stored.map(normalizeMyAgentsRow).filter(isMeaningfulRow);
+                    }
+                } catch (error) {
+                    // Ignore invalid stored values and rebuild from current imports only.
+                }
+
+                return [];
+            }
+
+            function mergeIntoMyAgents(rowsToAdd) {
+                const existingRows = loadMyAgentsRows();
+                const mergedRows = [];
+                const seen = new Set();
+
+                [...existingRows, ...(Array.isArray(rowsToAdd) ? rowsToAdd : [])]
+                    .map(normalizeMyAgentsRow)
+                    .filter(isMeaningfulRow)
+                    .forEach((row) => {
+                        const key = createMyAgentsDedupKey(row);
+                        if (key.replace(/\|/g, '') && seen.has(key)) {
+                            return;
+                        }
+                        if (key.replace(/\|/g, '')) {
+                            seen.add(key);
+                        }
+                        mergedRows.push(row);
+                    });
+
+                localStorage.setItem(getMyAgentsStorageKey(), JSON.stringify(mergedRows));
+                return {
+                    existingCount: existingRows.length,
+                    totalCount: mergedRows.length,
+                    addedCount: Math.max(mergedRows.length - existingRows.length, 0)
+                };
             }
 
             function exportRowsToCsv() {
@@ -941,6 +1208,25 @@
             });
 
             exportCsvButton.addEventListener('click', exportRowsToCsv);
+
+            addToMyAgentsButton.addEventListener('click', () => {
+                const rows = getRowsFromDom().filter(isMeaningfulRow).map(normalizeMyAgentsRow);
+                if (rows.length === 0) {
+                    showToast('error', 'No Agents To Add', 'Add at least one MLS import row before sending agents to My Agents.');
+                    return;
+                }
+
+                const transferResult = mergeIntoMyAgents(rows);
+                if (transferResult.addedCount === 0) {
+                    showToast('success', 'Already In My Agents', 'Every current MLS import row is already in My Agents. Opening My Agents now.');
+                } else {
+                    showToast('success', 'Added To My Agents', `${transferResult.addedCount} new agent row${transferResult.addedCount === 1 ? '' : 's'} were added to My Agents. Opening it now.`);
+                }
+
+                window.setTimeout(() => {
+                    window.location.href = 'my-agents.html';
+                }, 180);
+            });
 
             clearAllButton.addEventListener('click', () => {
                 const existingRows = getRowsFromDom().filter(isMeaningfulRow);
