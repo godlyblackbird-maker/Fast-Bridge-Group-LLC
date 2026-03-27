@@ -636,27 +636,96 @@
                             </details>
                         </section>
 
-                        <section class="comps-results-shell">
-                            <div class="comps-results-head">
-                                <h4>Nearby Comps (Top 5)</h4>
-                                <p id="comps-results-meta">Type: 6 selected · Closed: Last 180 days</p>
+                        <section class="comps-map-explorer" id="comps-map-explorer" data-view-mode="split">
+                            <div class="comps-map-head">
+                                <div>
+                                    <h4>Comps Map Workspace</h4>
+                                    <p id="comps-results-meta">Type: 6 selected · Closed: Last 180 days</p>
+                                </div>
+                                <div class="comps-map-head-actions">
+                                    <div class="comps-map-toggle-group" role="tablist" aria-label="Comps workspace views">
+                                        <button type="button" class="card-btn active" data-comps-view="split">Split</button>
+                                        <button type="button" class="card-btn" data-comps-view="map">Map</button>
+                                        <button type="button" class="card-btn" data-comps-view="matrix">Matrix</button>
+                                    </div>
+                                    <div class="comps-map-toggle-group" role="tablist" aria-label="Map layer options">
+                                        <button type="button" class="card-btn active" data-comps-map-layer="street">Street</button>
+                                        <button type="button" class="card-btn" data-comps-map-layer="aerial">Aerial</button>
+                                        <button type="button" class="card-btn" data-comps-map-layer="hybrid">Hybrid</button>
+                                    </div>
+                                    <div class="comps-map-toolbar">
+                                        <a id="comps-map-open-link" class="card-btn" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer">Open In Google Maps</a>
+                                        <button id="comps-map-street-view-btn" class="card-btn" type="button">Street View</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div id="comps-nearby-list" class="comps-nearby-list"></div>
-                        </section>
 
-                        <div class="comps-map-toolbar">
-                            <a id="comps-map-open-link" class="card-btn" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer">Open In Google Maps</a>
-                            <button id="comps-map-street-view-btn" class="card-btn" type="button">Street View</button>
-                        </div>
-                        <div class="comps-map-wrap">
-                            <iframe
-                                id="comps-map-frame"
-                                title="Local comps map"
-                                loading="lazy"
-                                allowfullscreen
-                                referrerpolicy="no-referrer-when-downgrade"
-                                src="https://www.google.com/maps?q=california&output=embed"></iframe>
-                        </div>
+                            <div class="comps-map-layout">
+                                <section class="comps-map-stage">
+                                    <div class="comps-subject-strip">
+                                        <article class="comps-subject-card comps-subject-card-primary">
+                                            <span class="comps-subject-label">Subject</span>
+                                            <strong id="comps-map-subject-address">Property Address</strong>
+                                            <p id="comps-map-subject-details">Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 ft² / 170,320 ft² / Pool: None</p>
+                                        </article>
+                                        <article class="comps-subject-card">
+                                            <span class="comps-subject-label">Ask</span>
+                                            <strong id="comps-map-subject-price">$0</strong>
+                                            <p id="comps-map-subject-status">Status</p>
+                                        </article>
+                                        <article class="comps-subject-card">
+                                            <span class="comps-subject-label">ARV</span>
+                                            <strong id="comps-map-subject-arv">$0</strong>
+                                            <p id="comps-map-subject-band">Market Band</p>
+                                        </article>
+                                    </div>
+
+                                    <div class="comps-map-wrap">
+                                        <div class="comps-map-stage-grid">
+                                            <div id="comps-map-canvas" class="comps-map-canvas" aria-label="Interactive comps map"></div>
+                                            <div id="comps-map-pano" class="comps-map-pano" aria-label="Street View panorama"></div>
+                                        </div>
+                                        <div id="comps-map-empty" class="comps-map-empty" hidden>
+                                            <strong>Map unavailable</strong>
+                                            <p>FAST can still show the nearby comps list and open the search in Google Maps while the Google map or Street View pane loads.</p>
+                                        </div>
+                                        <div class="comps-map-legend">
+                                            <span><i class="comps-map-legend-dot is-subject"></i> Subject</span>
+                                            <span><i class="comps-map-legend-dot is-closed"></i> Closed</span>
+                                            <span><i class="comps-map-legend-dot is-active"></i> Active selection</span>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <aside class="comps-map-sidebar">
+                                    <section class="comps-map-focus-card">
+                                        <div class="comps-map-focus-head">
+                                            <h5>Focused Comp</h5>
+                                            <span id="comps-map-focus-pill" class="comps-map-focus-pill">Top Match</span>
+                                        </div>
+                                        <strong id="comps-map-active-title">Select a comp</strong>
+                                        <p id="comps-map-active-meta">The best nearby match will appear here.</p>
+                                        <p id="comps-map-active-note">Use the list or map pins to inspect closed comps, then switch to Matrix for side-by-side numbers.</p>
+                                    </section>
+
+                                    <section class="comps-results-shell comps-results-shell-map">
+                                        <div class="comps-results-head">
+                                            <h4>Nearby Comps (Top 5)</h4>
+                                            <p id="comps-results-count">5 shown</p>
+                                        </div>
+                                        <div id="comps-nearby-list" class="comps-nearby-list"></div>
+                                    </section>
+                                </aside>
+                            </div>
+
+                            <section class="comps-matrix-shell" id="comps-matrix-shell">
+                                <div class="comps-results-head">
+                                    <h4>Comp Matrix</h4>
+                                    <p id="comps-matrix-meta">Compare the best comps side by side.</p>
+                                </div>
+                                <div id="comps-matrix-list" class="comps-matrix-list"></div>
+                            </section>
+                        </section>
                     </div>
                 </article>
                 <article class="property-tab-panel" data-panel="ia">

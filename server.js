@@ -45,6 +45,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
 const DEFAULT_STRIPE_PUBLISHABLE_KEY = 'pk_test_51TDU29Q3MV5dyF2TauLp1mMkQukSL6PbAlgHN9zzm5fH9lzZsQIHN4iOTjh1Vu1eAsyOKGZ6bXSIANej5zS9XA2p00cn6NJsZL';
 const STRIPE_PUBLISHABLE_KEY = String(process.env.STRIPE_PUBLISHABLE_KEY || DEFAULT_STRIPE_PUBLISHABLE_KEY).trim();
+const GOOGLE_MAPS_API_KEY = getFirstConfiguredEnvValue('GOOGLE_MAPS_API_KEY', 'GOOGLE_BROWSER_MAPS_API_KEY');
+const GOOGLE_MAPS_MAP_ID = getFirstConfiguredEnvValue('GOOGLE_MAPS_MAP_ID', 'GOOGLE_MAP_ID');
 const PREMIUM_USER_ROLE = 'premium user';
 const TEST_USER_ROLE = 'test user';
 const PREMIUM_PLAN_KEY = 'premium';
@@ -3269,6 +3271,16 @@ app.get('/api/subscription/stripe-config', (req, res) => {
     success: true,
     enabled: Boolean(STRIPE_PUBLISHABLE_KEY),
     publishableKey: STRIPE_PUBLISHABLE_KEY
+  });
+});
+
+app.get('/api/maps/google-config', (_req, res) => {
+  return res.json({
+    success: true,
+    enabled: Boolean(GOOGLE_MAPS_API_KEY),
+    apiKey: GOOGLE_MAPS_API_KEY,
+    mapId: GOOGLE_MAPS_MAP_ID,
+    stylePath: '/Themes/google-maps-mls-light.json'
   });
 });
 

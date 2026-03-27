@@ -15384,14 +15384,11 @@ function initNavbarDateTime() {
             });
         }
 
-        const compsMapFrame = document.getElementById('comps-map-frame');
         const compsMapOpenLink = document.getElementById('comps-map-open-link');
         const compsMapStreetViewButton = document.getElementById('comps-map-street-view-btn');
-
-        function buildGoogleMapsEmbedUrl(query) {
-            const encodedQuery = encodeURIComponent(String(query || '').trim() || 'California');
-            return `https://www.google.com/maps?q=${encodedQuery}&output=embed`;
-        }
+        let googleMapsBrowserConfigPromise = null;
+        let googleMapsScriptPromise = null;
+        let googleMapsStylesPromise = null;
 
         function buildGoogleMapsSearchUrl(query) {
             const encodedQuery = encodeURIComponent(String(query || '').trim() || 'California');
@@ -15406,12 +15403,72 @@ function initNavbarDateTime() {
             return String(detailData.address || fallbackAddress || 'California').trim() || 'California';
         }
 
-        function setCompsStreetViewButtonState(isLoading) {
-            if (!compsMapStreetViewButton) {
-                return;
+        function getGoogleMapsBrowserConfig() {
+            if (googleMapsBrowserConfigPromise) {
+                return googleMapsBrowserConfigPromise;
             }
-            compsMapStreetViewButton.disabled = Boolean(isLoading);
-            compsMapStreetViewButton.textContent = isLoading ? 'Locating...' : 'Street View';
+
+            googleMapsBrowserConfigPromise = fetch('/api/maps/google-config')
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Google Maps config could not be loaded.');
+                    }
+                    return response.json();
+                })
+                .then((payload) => payload && typeof payload === 'object' ? payload : {});
+
+            return googleMapsBrowserConfigPromise;
+        }
+
+        function loadGoogleMapsScript(apiKey) {
+            if (window.google && window.google.maps) {
+                return Promise.resolve(window.google.maps);
+            }
+
+            if (googleMapsScriptPromise) {
+                return googleMapsScriptPromise;
+            }
+
+            googleMapsScriptPromise = new Promise((resolve, reject) => {
+                const existing = document.getElementById('fast-google-maps-script');
+                if (existing) {
+                    existing.addEventListener('load', () => resolve(window.google.maps));
+                    existing.addEventListener('error', () => reject(new Error('Google Maps failed to load.')));
+                    return;
+                }
+
+                const callbackName = '__fastGoogleMapsLoaded';
+                window[callbackName] = () => {
+                    resolve(window.google.maps);
+                    try {
+                        delete window[callbackName];
+                    } catch (error) {
+                        window[callbackName] = undefined;
+                    }
+                };
+
+                const script = document.createElement('script');
+                script.id = 'fast-google-maps-script';
+                script.async = true;
+                script.defer = true;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=marker&callback=${callbackName}`;
+                script.onerror = () => reject(new Error('Google Maps failed to load.'));
+                document.body.appendChild(script);
+            });
+
+            return googleMapsScriptPromise;
+        }
+
+        function loadGoogleMapsStyles(stylePath) {
+            if (googleMapsStylesPromise) {
+                return googleMapsStylesPromise;
+            }
+
+            googleMapsStylesPromise = fetch(String(stylePath || '/Themes/google-maps-mls-light.json'))
+                .then((response) => response.ok ? response.json() : null)
+                .catch(() => null);
+
+            return googleMapsStylesPromise;
         }
 
         async function resolveStreetViewUrlForAddress(address) {
@@ -15453,20 +15510,35 @@ function initNavbarDateTime() {
         }
 
         function initCompsExplorer() {
+            const compsExplorer = document.getElementById('comps-map-explorer');
+            const compsMapCanvas = document.getElementById('comps-map-canvas');
+            const compsMapPano = document.getElementById('comps-map-pano');
+            const compsMapEmpty = document.getElementById('comps-map-empty');
             const nearbyList = document.getElementById('comps-nearby-list');
             const summaryRow = document.getElementById('comps-applied-summary');
             const resultsMeta = document.getElementById('comps-results-meta');
+            const resultsCount = document.getElementById('comps-results-count');
             const applyBtn = document.getElementById('comps-apply-filters');
             const resetBtn = document.getElementById('comps-reset-filters');
+            const matrixList = document.getElementById('comps-matrix-list');
+            const matrixMeta = document.getElementById('comps-matrix-meta');
+            const subjectAddressEl = document.getElementById('comps-map-subject-address');
+            const subjectDetailsEl = document.getElementById('comps-map-subject-details');
+            const subjectPriceEl = document.getElementById('comps-map-subject-price');
+            const subjectStatusEl = document.getElementById('comps-map-subject-status');
+            const subjectArvEl = document.getElementById('comps-map-subject-arv');
+            const subjectBandEl = document.getElementById('comps-map-subject-band');
+            const activeTitleEl = document.getElementById('comps-map-active-title');
+            const activeMetaEl = document.getElementById('comps-map-active-meta');
+            const activeNoteEl = document.getElementById('comps-map-active-note');
+            const activePillEl = document.getElementById('comps-map-focus-pill');
+            const viewButtons = Array.from(document.querySelectorAll('[data-comps-view]'));
+            const layerButtons = Array.from(document.querySelectorAll('[data-comps-map-layer]'));
 
-            if (!nearbyList || !summaryRow || !resultsMeta || !applyBtn || !resetBtn) {
-                if (compsMapFrame || compsMapOpenLink) {
+            if (!nearbyList || !summaryRow || !resultsMeta || !applyBtn || !resetBtn || !compsExplorer) {
+                if (compsMapOpenLink) {
                     const locationQuery = `real estate comps near ${detailData.address || 'California'}`;
-                    const mapsEmbedUrl = buildGoogleMapsEmbedUrl(locationQuery);
-                    const mapsSearchUrl = buildGoogleMapsSearchUrl(locationQuery);
-
-                    if (compsMapFrame) compsMapFrame.src = mapsEmbedUrl;
-                    if (compsMapOpenLink) compsMapOpenLink.href = mapsSearchUrl;
+                    compsMapOpenLink.href = buildGoogleMapsSearchUrl(locationQuery);
                 }
                 return;
             }
@@ -15479,19 +15551,519 @@ function initNavbarDateTime() {
                 radius: 1,
                 closedWithin: 180,
                 zipcode: '93060',
-                city: 'Santa Paula'
+                city: 'Santa Paula',
+                subjectLat: 34.3554,
+                subjectLng: -119.0622
             };
 
             const compsPool = [
-                { address: '935 Prospect St, Santa Paula, CA 93060', sqft: 1825, built: 1978, distance: 0.3, price: 640000, beds: 3, baths: 2, lot: 6100, garage: 2, dom: 19, closedDays: 42, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula' },
-                { address: '1112 Glenwood Ave, Santa Paula, CA 93060', sqft: 1690, built: 1981, distance: 0.4, price: 615000, beds: 3, baths: 2, lot: 5900, garage: 2, dom: 22, closedDays: 78, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula' },
-                { address: '1246 Olive Rd, Santa Paula, CA 93060', sqft: 1960, built: 1985, distance: 0.6, price: 679000, beds: 4, baths: 2.5, lot: 7200, garage: 2, dom: 27, closedDays: 95, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula' },
-                { address: '802 Oakleaf Dr, Santa Paula, CA 93060', sqft: 1550, built: 1976, distance: 0.7, price: 589000, beds: 3, baths: 2, lot: 5400, garage: 2, dom: 17, closedDays: 54, slcType: 'STD', propertyType: 'Condo', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula' },
-                { address: '1419 River Park Ct, Santa Paula, CA 93060', sqft: 2035, built: 1988, distance: 0.8, price: 705000, beds: 4, baths: 3, lot: 7600, garage: 2, dom: 31, closedDays: 120, slcType: 'STD', propertyType: 'Townhouse', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula' },
-                { address: '718 Magnolia St, Santa Paula, CA 93060', sqft: 1460, built: 1975, distance: 0.95, price: 572000, beds: 3, baths: 2, lot: 5000, garage: 1, dom: 14, closedDays: 88, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'As-Is', zip: '93060', area: '-', city: 'Santa Paula' },
-                { address: '983 Meadow Ln, Santa Paula, CA 93060', sqft: 2140, built: 1991, distance: 1.2, price: 739000, beds: 4, baths: 3, lot: 8200, garage: 3, dom: 40, closedDays: 175, slcType: 'REO', propertyType: 'Single Family', status: 'Closed', condition: 'Fixer', zip: '93060', area: '-', city: 'Santa Paula' },
-                { address: '670 Citrus View Dr, Santa Paula, CA 93060', sqft: 1745, built: 1980, distance: 0.85, price: 624000, beds: 3, baths: 2, lot: 5800, garage: 2, dom: 20, closedDays: 28, slcType: 'STD', propertyType: 'Multi Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula' }
+                { address: '935 Prospect St, Santa Paula, CA 93060', sqft: 1825, built: 1978, distance: 0.3, price: 640000, beds: 3, baths: 2, lot: 6100, garage: 2, dom: 19, closedDays: 42, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3578, lng: -119.0644, color: 'orange' },
+                { address: '1112 Glenwood Ave, Santa Paula, CA 93060', sqft: 1690, built: 1981, distance: 0.4, price: 615000, beds: 3, baths: 2, lot: 5900, garage: 2, dom: 22, closedDays: 78, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3542, lng: -119.0583, color: 'green' },
+                { address: '1246 Olive Rd, Santa Paula, CA 93060', sqft: 1960, built: 1985, distance: 0.6, price: 679000, beds: 4, baths: 2.5, lot: 7200, garage: 2, dom: 27, closedDays: 95, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3526, lng: -119.0691, color: 'red' },
+                { address: '802 Oakleaf Dr, Santa Paula, CA 93060', sqft: 1550, built: 1976, distance: 0.7, price: 589000, beds: 3, baths: 2, lot: 5400, garage: 2, dom: 17, closedDays: 54, slcType: 'STD', propertyType: 'Condo', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3514, lng: -119.0552, color: 'green' },
+                { address: '1419 River Park Ct, Santa Paula, CA 93060', sqft: 2035, built: 1988, distance: 0.8, price: 705000, beds: 4, baths: 3, lot: 7600, garage: 2, dom: 31, closedDays: 120, slcType: 'STD', propertyType: 'Townhouse', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3594, lng: -119.0539, color: 'red' },
+                { address: '718 Magnolia St, Santa Paula, CA 93060', sqft: 1460, built: 1975, distance: 0.95, price: 572000, beds: 3, baths: 2, lot: 5000, garage: 1, dom: 14, closedDays: 88, slcType: 'STD', propertyType: 'Single Family', status: 'Closed', condition: 'As-Is', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3603, lng: -119.0668, color: 'green' },
+                { address: '983 Meadow Ln, Santa Paula, CA 93060', sqft: 2140, built: 1991, distance: 1.2, price: 739000, beds: 4, baths: 3, lot: 8200, garage: 3, dom: 40, closedDays: 175, slcType: 'REO', propertyType: 'Single Family', status: 'Closed', condition: 'Fixer', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3478, lng: -119.0714, color: 'red' },
+                { address: '670 Citrus View Dr, Santa Paula, CA 93060', sqft: 1745, built: 1980, distance: 0.85, price: 624000, beds: 3, baths: 2, lot: 5800, garage: 2, dom: 20, closedDays: 28, slcType: 'STD', propertyType: 'Multi Family', status: 'Closed', condition: 'Standard', zip: '93060', area: '-', city: 'Santa Paula', lat: 34.3588, lng: -119.0571, color: 'orange' }
             ];
+
+            let currentViewMode = 'split';
+            let currentMapLayer = 'street';
+            let activeCompKey = '';
+            let streetViewEnabled = false;
+            let streetViewLoading = false;
+            let mapInstance = null;
+            let panoramaInstance = null;
+            let infoWindowInstance = null;
+            let subjectMarker = null;
+            let radiusCircle = null;
+            let markerCtor = null;
+            let mapReadyPromise = null;
+            const markerRegistry = new Map();
+            let lastFilteredPool = [];
+            let lastTopResults = [];
+
+            function parseCurrencyAmount(value) {
+                const numericValue = Number(String(value || '').replace(/[^0-9.\-]/g, ''));
+                return Number.isFinite(numericValue) ? numericValue : 0;
+            }
+
+            function formatCompactCurrency(value) {
+                const safeValue = Number(value) || 0;
+                if (Math.abs(safeValue) >= 1000000) {
+                    return `$${(safeValue / 1000000).toFixed(safeValue >= 10000000 ? 0 : 2).replace(/\.00$/, '')}M`;
+                }
+                if (Math.abs(safeValue) >= 1000) {
+                    return `$${(safeValue / 1000).toFixed(safeValue >= 100000 ? 0 : 1).replace(/\.0$/, '')}K`;
+                }
+                return formatCurrency(safeValue);
+            }
+
+            function getCompKey(comp) {
+                return String(comp && comp.address || '').trim().toLowerCase();
+            }
+
+            function getSubjectLocation() {
+                const lat = Number(detailData.streetViewLat);
+                const lng = Number(detailData.streetViewLng);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    return { lat, lng };
+                }
+                return {
+                    lat: defaults.subjectLat,
+                    lng: defaults.subjectLng
+                };
+            }
+
+            function setMapEmptyState(isVisible, message) {
+                if (!compsMapEmpty) {
+                    return;
+                }
+                compsMapEmpty.hidden = !isVisible;
+                if (message) {
+                    const paragraph = compsMapEmpty.querySelector('p');
+                    if (paragraph) {
+                        paragraph.textContent = message;
+                    }
+                }
+            }
+
+            function syncStreetViewButtonState() {
+                if (!compsMapStreetViewButton) {
+                    return;
+                }
+                compsMapStreetViewButton.disabled = streetViewLoading;
+                compsMapStreetViewButton.classList.toggle('active', streetViewEnabled && !streetViewLoading);
+                compsMapStreetViewButton.setAttribute('aria-pressed', streetViewEnabled ? 'true' : 'false');
+                compsMapStreetViewButton.textContent = streetViewLoading
+                    ? 'Locating...'
+                    : (streetViewEnabled ? 'Hide Street View' : 'Street View');
+            }
+
+            function requestMapResize() {
+                if (!window.google || !window.google.maps) {
+                    return;
+                }
+
+                window.setTimeout(() => {
+                    if (mapInstance) {
+                        const center = mapInstance.getCenter();
+                        window.google.maps.event.trigger(mapInstance, 'resize');
+                        if (center) {
+                            mapInstance.setCenter(center);
+                        }
+                    }
+                    if (panoramaInstance) {
+                        window.google.maps.event.trigger(panoramaInstance, 'resize');
+                    }
+                }, 40);
+            }
+
+            async function ensureSubjectCoordinates() {
+                const currentLat = Number(detailData.streetViewLat);
+                const currentLng = Number(detailData.streetViewLng);
+                if (Number.isFinite(currentLat) && Number.isFinite(currentLng)) {
+                    return { lat: currentLat, lng: currentLng };
+                }
+
+                const address = getStreetViewAddressQuery();
+                if (address) {
+                    try {
+                        await resolveStreetViewUrlForAddress(address);
+                    } catch (error) {
+                        return getSubjectLocation();
+                    }
+                }
+
+                return getSubjectLocation();
+            }
+
+            async function ensureMapReady() {
+                if (!compsMapCanvas) {
+                    return null;
+                }
+                if (mapInstance) {
+                    return mapInstance;
+                }
+                if (mapReadyPromise) {
+                    return mapReadyPromise;
+                }
+
+                mapReadyPromise = (async () => {
+                    const config = await getGoogleMapsBrowserConfig();
+                    if (!config.enabled || !config.apiKey) {
+                        throw new Error('Google Maps API key is not configured in the server environment.');
+                    }
+
+                    await ensureSubjectCoordinates();
+                    await loadGoogleMapsScript(config.apiKey);
+
+                    if (window.google && window.google.maps && window.google.maps.importLibrary) {
+                        await window.google.maps.importLibrary('maps');
+                        const markerLibrary = await window.google.maps.importLibrary('marker');
+                        markerCtor = markerLibrary.AdvancedMarkerElement;
+                    }
+
+                    const styles = config.mapId ? null : await loadGoogleMapsStyles(config.stylePath);
+                    const subjectLocation = getSubjectLocation();
+                    const mapOptions = {
+                        center: subjectLocation,
+                        zoom: 14,
+                        mapTypeControl: false,
+                        streetViewControl: false,
+                        fullscreenControl: false,
+                        clickableIcons: false,
+                        gestureHandling: 'greedy'
+                    };
+
+                    if (config.mapId) {
+                        mapOptions.mapId = config.mapId;
+                    } else if (Array.isArray(styles) && styles.length > 0) {
+                        mapOptions.styles = styles;
+                    }
+
+                    mapInstance = new window.google.maps.Map(compsMapCanvas, mapOptions);
+                    panoramaInstance = new window.google.maps.StreetViewPanorama(compsMapPano, {
+                        position: subjectLocation,
+                        pov: {
+                            heading: 34,
+                            pitch: 10
+                        },
+                        addressControl: false,
+                        fullscreenControl: false,
+                        motionTracking: false,
+                        visible: false
+                    });
+                    mapInstance.setStreetView(panoramaInstance);
+                    infoWindowInstance = new window.google.maps.InfoWindow();
+                    setMapEmptyState(false);
+                    syncStreetViewButtonState();
+                    return mapInstance;
+                })().catch((error) => {
+                    setMapEmptyState(true, 'FAST can still show nearby comps and open the search in Google Maps while the Google map or Street View pane loads.');
+                    return null;
+                });
+
+                return mapReadyPromise;
+            }
+
+            function setViewMode(nextMode) {
+                currentViewMode = ['split', 'map', 'matrix'].includes(nextMode) ? nextMode : 'split';
+                compsExplorer.dataset.viewMode = currentViewMode;
+                viewButtons.forEach((button) => {
+                    button.classList.toggle('active', button.dataset.compsView === currentViewMode);
+                });
+                requestMapResize();
+            }
+
+            function setMapLayerMode(nextLayer) {
+                if (!['street', 'aerial', 'hybrid'].includes(nextLayer)) {
+                    return;
+                }
+                currentMapLayer = nextLayer;
+                layerButtons.forEach((button) => {
+                    button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
+                });
+                if (!mapInstance) {
+                    return;
+                }
+
+                const nextMapTypeId = currentMapLayer === 'aerial'
+                    ? 'satellite'
+                    : (currentMapLayer === 'hybrid' ? 'hybrid' : 'roadmap');
+                mapInstance.setMapTypeId(nextMapTypeId);
+            }
+
+            function setStreetViewMode(isEnabled) {
+                streetViewEnabled = Boolean(isEnabled);
+                compsExplorer.dataset.streetView = streetViewEnabled ? 'on' : 'off';
+
+                if (panoramaInstance) {
+                    const subjectLocation = getSubjectLocation();
+                    panoramaInstance.setPosition(subjectLocation);
+                    panoramaInstance.setPov({ heading: 34, pitch: 10 });
+                    panoramaInstance.setVisible(streetViewEnabled);
+                }
+
+                syncStreetViewButtonState();
+                requestMapResize();
+            }
+
+            function syncFocusCard(comp, matchIndex, filteredPool) {
+                const safeComp = comp && typeof comp === 'object' ? comp : null;
+                if (!safeComp) {
+                    if (activeTitleEl) activeTitleEl.textContent = 'Select a comp';
+                    if (activeMetaEl) activeMetaEl.textContent = 'The best nearby match will appear here.';
+                    if (activeNoteEl) activeNoteEl.textContent = 'Use the list or map pins to inspect closed comps, then switch to Matrix for side-by-side numbers.';
+                    if (activePillEl) activePillEl.textContent = 'Top Match';
+                    return;
+                }
+
+                const compPpsf = Math.round(safeComp.price / Math.max(safeComp.sqft, 1));
+                const subjectPrice = parseCurrencyAmount(detailData.listPrice);
+                const priceSpread = safeComp.price - subjectPrice;
+                const poolMedian = median((Array.isArray(filteredPool) ? filteredPool : []).map((item) => item.price));
+                if (activeTitleEl) activeTitleEl.textContent = safeComp.address;
+                if (activeMetaEl) activeMetaEl.textContent = `${safeComp.propertyType} · ${safeComp.condition} · ${safeComp.distance.toFixed(2)} mi · ${formatCurrency(compPpsf)}/sqft`;
+                if (activeNoteEl) {
+                    activeNoteEl.textContent = `Closed ${safeComp.closedDays} days ago with ${safeComp.beds} bd / ${safeComp.baths} ba on ${safeComp.lot.toLocaleString()} sqft. ${priceSpread >= 0 ? 'Above' : 'Below'} subject ask by ${formatCurrency(Math.abs(priceSpread))}. Median closed comp price is ${formatCurrency(Math.round(poolMedian || 0))}.`;
+                }
+                if (activePillEl) {
+                    activePillEl.textContent = matchIndex === 0 ? 'Top Match' : `Rank ${matchIndex + 1}`;
+                }
+            }
+
+            function renderMatrixCards(filtered) {
+                if (!matrixList || !matrixMeta) {
+                    return;
+                }
+
+                const subjectPrice = parseCurrencyAmount(detailData.listPrice);
+                const subjectSqftMatch = String(detailData.propertyDetails || '').match(/([\d,]+)\s*ft²/i);
+                const subjectSqft = subjectSqftMatch ? Number(String(subjectSqftMatch[1]).replace(/,/g, '')) : 0;
+                const subjectPpsf = subjectSqft > 0 ? Math.round(subjectPrice / subjectSqft) : 0;
+
+                const cards = [
+                    {
+                        address: detailData.address || 'Subject Property',
+                        propertyType: detailData.propertyType || 'Subject',
+                        condition: detailData.propertyCondition || 'Subject',
+                        price: subjectPrice,
+                        beds: detailData.beds || '-',
+                        baths: detailData.baths || '-',
+                        sqft: subjectSqft,
+                        lot: parseCurrencyAmount(detailData.lotSize),
+                        dom: detailData.dom || '-',
+                        pricePerSqft: subjectPpsf,
+                        isSubject: true
+                    },
+                    ...filtered.slice(0, 5).map((comp) => ({
+                        ...comp,
+                        pricePerSqft: Math.round(comp.price / Math.max(comp.sqft, 1)),
+                        isSubject: false
+                    }))
+                ];
+
+                matrixList.innerHTML = cards.map((card) => `
+                    <article class="comps-matrix-card${card.isSubject ? ' is-subject' : ''}">
+                        <div class="comps-matrix-card-head">
+                            <strong>${escapeHtml(card.address)}</strong>
+                            <span>${escapeHtml(card.propertyType)}${card.condition ? ` · ${escapeHtml(card.condition)}` : ''}</span>
+                        </div>
+                        <div class="comps-matrix-row"><span>Price</span><strong>${formatCurrency(card.price)}</strong></div>
+                        <div class="comps-matrix-row"><span>$/sqft</span><strong>${card.pricePerSqft ? formatCurrency(card.pricePerSqft) : 'N/A'}</strong></div>
+                        <div class="comps-matrix-row"><span>Beds / Baths</span><strong>${escapeHtml(String(card.beds))} / ${escapeHtml(String(card.baths))}</strong></div>
+                        <div class="comps-matrix-row"><span>Sqft</span><strong>${card.sqft ? Number(card.sqft).toLocaleString() : 'N/A'}</strong></div>
+                        <div class="comps-matrix-row"><span>Lot</span><strong>${card.lot ? Number(card.lot).toLocaleString() : 'N/A'}</strong></div>
+                        <div class="comps-matrix-row"><span>DOM</span><strong>${escapeHtml(String(card.dom))}</strong></div>
+                    </article>
+                `).join('');
+
+                matrixMeta.textContent = filtered.length
+                    ? `Subject plus ${Math.min(filtered.length, 5)} filtered comps. Compare price, pace, and density before finalizing ARV.`
+                    : 'No comps matched the current filters.';
+            }
+
+            function buildMarkerContent(label, variant, isActive) {
+                const element = document.createElement('span');
+                const classes = ['comps-map-pin'];
+                if (variant === 'subject') {
+                    classes.push('is-subject');
+                } else {
+                    classes.push(`is-${variant || 'red'}`);
+                }
+                if (isActive) {
+                    classes.push('is-active');
+                }
+                element.className = classes.join(' ');
+                element.textContent = label;
+                return element;
+            }
+
+            function clearMapArtifacts() {
+                if (subjectMarker) {
+                    subjectMarker.map = null;
+                    subjectMarker = null;
+                }
+                markerRegistry.forEach((marker) => {
+                    marker.map = null;
+                });
+                markerRegistry.clear();
+                if (radiusCircle) {
+                    radiusCircle.setMap(null);
+                    radiusCircle = null;
+                }
+            }
+
+            function openMarkerInfoWindow(marker, item, isSubject) {
+                if (!infoWindowInstance || !marker) {
+                    return;
+                }
+
+                const content = `
+                    <div class="info-card">
+                        <h4>${escapeHtml(item.address || item.title || 'Property')}</h4>
+                        <p>${escapeHtml(item.propertyType || item.title || (isSubject ? 'Subject Property' : 'Comparable'))}</p>
+                        <p><strong>${isSubject ? 'Subject Property' : formatCurrency(item.price)}</strong></p>
+                    </div>
+                `;
+                infoWindowInstance.setContent(content);
+                infoWindowInstance.open({
+                    anchor: marker,
+                    map: mapInstance
+                });
+            }
+
+            function renderMapMarkers(filtered) {
+                if (!mapInstance || !markerCtor || !window.google || !window.google.maps) {
+                    return;
+                }
+
+                clearMapArtifacts();
+                const subjectLocation = getSubjectLocation();
+                const activeKey = activeCompKey;
+                const bounds = new window.google.maps.LatLngBounds();
+
+                subjectMarker = new markerCtor({
+                    map: mapInstance,
+                    position: subjectLocation,
+                    content: buildMarkerContent('S', 'subject', false),
+                    title: detailData.address || 'Subject property'
+                });
+                subjectMarker.addListener('click', () => {
+                    openMarkerInfoWindow(subjectMarker, {
+                        address: detailData.address || 'Subject Property',
+                        propertyType: detailData.propertyDetails || 'Subject Property'
+                    }, true);
+                });
+                bounds.extend(subjectLocation);
+
+                const radiusMiles = inputNumber('comps-radius') || defaults.radius;
+                radiusCircle = new window.google.maps.Circle({
+                    strokeColor: '#3b82f6',
+                    strokeOpacity: 0.7,
+                    strokeWeight: 2,
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.08,
+                    map: mapInstance,
+                    center: subjectLocation,
+                    radius: radiusMiles * 1609.34
+                });
+
+                filtered.forEach((comp, index) => {
+                    const compKey = getCompKey(comp);
+                    const marker = new markerCtor({
+                        map: mapInstance,
+                        position: { lat: comp.lat, lng: comp.lng },
+                        content: buildMarkerContent(formatCompactCurrency(comp.price), comp.color, compKey === activeKey),
+                        title: comp.address,
+                        zIndex: compKey === activeKey ? 200 : 100
+                    });
+                    marker.addListener('click', () => {
+                        activeCompKey = compKey;
+                        syncFocusCard(comp, index, lastFilteredPool);
+                        renderNearbyCards(lastTopResults, lastFilteredPool);
+                        renderMapMarkers(lastTopResults);
+                        openMarkerInfoWindow(marker, comp, false);
+                    });
+                    markerRegistry.set(compKey, marker);
+                    bounds.extend({ lat: comp.lat, lng: comp.lng });
+                });
+
+                if (!bounds.isEmpty()) {
+                    mapInstance.fitBounds(bounds, 80);
+                } else {
+                    mapInstance.setCenter(subjectLocation);
+                    mapInstance.setZoom(14);
+                }
+
+                if (streetViewEnabled) {
+                    const panoPosition = getSubjectLocation();
+                    panoramaInstance && panoramaInstance.setPosition(panoPosition);
+                }
+            }
+
+            function renderNearbyCards(filtered, filteredPool) {
+                nearbyList.innerHTML = '';
+                if (!filtered.length) {
+                    nearbyList.innerHTML = '<p class="outreach-empty">No nearby comps match your filters.</p>';
+                    syncFocusCard(null, 0, filteredPool);
+                    return;
+                }
+
+                filtered.forEach((comp, index) => {
+                    const compPpsf = Math.round(comp.price / Math.max(comp.sqft, 1));
+                    const item = document.createElement('article');
+                    const compKey = getCompKey(comp);
+                    item.className = `comp-near-card${compKey === activeCompKey ? ' is-active' : ''}`;
+                    item.innerHTML = `
+                        <h5>${escapeHtml(comp.address)}</h5>
+                        <p class="comp-near-meta">${escapeHtml(comp.propertyType)} · ${escapeHtml(comp.condition)} · ${escapeHtml(comp.slcType)}</p>
+                        <p>${comp.beds} Bd / ${comp.baths} Ba / ${comp.sqft.toLocaleString()} sqft / Lot ${comp.lot.toLocaleString()} / Garage ${comp.garage}</p>
+                        <p>${formatCurrency(comp.price)} · ${formatCurrency(compPpsf)}/sqft · ${comp.distance.toFixed(2)} mi</p>
+                        <p>DOM ${comp.dom} · Closed ${comp.closedDays} days ago · ${escapeHtml(comp.status)}</p>
+                    `;
+                    item.addEventListener('click', () => {
+                        activeCompKey = compKey;
+                        syncFocusCard(comp, index, filteredPool);
+                        renderNearbyCards(lastTopResults, lastFilteredPool);
+                        renderMapMarkers(lastTopResults);
+                        const marker = markerRegistry.get(compKey);
+                        if (marker && mapInstance) {
+                            mapInstance.panTo(marker.position);
+                            openMarkerInfoWindow(marker, comp, false);
+                        }
+                    });
+                    nearbyList.appendChild(item);
+                });
+
+                const focusedComp = filtered.find((comp) => getCompKey(comp) === activeCompKey) || filtered[0];
+                activeCompKey = getCompKey(focusedComp);
+                syncFocusCard(focusedComp, filtered.findIndex((comp) => getCompKey(comp) === activeCompKey), filteredPool);
+            }
+
+            function updateSubjectCards(filteredPool) {
+                const subjectPrice = parseCurrencyAmount(detailData.listPrice);
+                const medianPrice = median(filteredPool.map((comp) => comp.price));
+                const askDelta = subjectPrice - medianPrice;
+                if (subjectAddressEl) subjectAddressEl.textContent = detailData.address || 'Property Address';
+                if (subjectDetailsEl) subjectDetailsEl.textContent = detailData.propertyDetails || 'Property details unavailable';
+                if (subjectPriceEl) subjectPriceEl.textContent = detailData.listPrice || '$0';
+                if (subjectStatusEl) subjectStatusEl.textContent = detailData.marketInfo || detailData.statusLabel || 'Status unavailable';
+                if (subjectArvEl) subjectArvEl.textContent = detailData.arv || '$0';
+                if (subjectBandEl) {
+                    if (!filteredPool.length) {
+                        subjectBandEl.textContent = 'No filtered comp band yet';
+                    } else if (askDelta > 0) {
+                        subjectBandEl.textContent = `Ask is ${formatCurrency(Math.round(Math.abs(askDelta)))} above median comp close`;
+                    } else if (askDelta < 0) {
+                        subjectBandEl.textContent = `Ask is ${formatCurrency(Math.round(Math.abs(askDelta)))} below median comp close`;
+                    } else {
+                        subjectBandEl.textContent = 'Ask is aligned with median comp close';
+                    }
+                }
+            }
+
+            async function refreshMap(filtered) {
+                const queryBase = filtered.length > 0
+                    ? filtered.map((comp) => comp.address).join(' OR ')
+                    : `real estate comps near ${detailData.address || 'California'}`;
+                const mapQuery = `${queryBase} near ${detailData.address || 'Santa Paula, CA'}`;
+                if (compsMapOpenLink) {
+                    compsMapOpenLink.href = buildGoogleMapsSearchUrl(mapQuery);
+                }
+
+                await ensureSubjectCoordinates();
+                const map = await ensureMapReady();
+                if (!map) {
+                    return;
+                }
+                setMapLayerMode(currentMapLayer);
+                renderMapMarkers(filtered);
+                if (streetViewEnabled) {
+                    setStreetViewMode(true);
+                }
+            }
 
             function inputValue(id) {
                 const el = document.getElementById(id);
@@ -15576,7 +16148,7 @@ function initNavbarDateTime() {
                 return sorted[middleIndex];
             }
 
-            function renderResults() {
+            async function renderResults() {
                 const filters = {
                     sqftMin: inputNumber('comps-sqft-min'),
                     sqftMax: inputNumber('comps-sqft-max'),
@@ -15625,25 +16197,16 @@ function initNavbarDateTime() {
                     .filter(comp => filters.conditions.length === 0 || filters.conditions.includes(comp.condition))
                     .sort((a, b) => a.distance - b.distance);
                 const filtered = filteredPool.slice(0, 5);
+                lastFilteredPool = filteredPool;
+                lastTopResults = filtered;
 
-                nearbyList.innerHTML = '';
-                if (filtered.length === 0) {
-                    nearbyList.innerHTML = '<p class="outreach-empty">No nearby comps match your filters.</p>';
-                } else {
-                    filtered.forEach(comp => {
-                        const compPpsf = Math.round(comp.price / Math.max(comp.sqft, 1));
-                        const item = document.createElement('article');
-                        item.className = 'comp-near-card';
-                        item.innerHTML = `
-                            <h5>${comp.address}</h5>
-                            <p class="comp-near-meta">${comp.propertyType} · ${comp.condition} · ${comp.slcType}</p>
-                            <p>${comp.beds} Bd / ${comp.baths} Ba / ${comp.sqft.toLocaleString()} sqft / Lot ${comp.lot.toLocaleString()} / Garage ${comp.garage}</p>
-                            <p>${formatCurrency(comp.price)} · ${formatCurrency(compPpsf)}/sqft · ${comp.distance.toFixed(2)} mi</p>
-                            <p>DOM ${comp.dom} · Closed ${comp.closedDays} days ago · ${comp.status}</p>
-                        `;
-                        nearbyList.appendChild(item);
-                    });
+                if (!filtered.some((comp) => getCompKey(comp) === activeCompKey)) {
+                    activeCompKey = filtered[0] ? getCompKey(filtered[0]) : '';
                 }
+
+                renderNearbyCards(filtered, filteredPool);
+                renderMatrixCards(filteredPool);
+                updateSubjectCards(filteredPool);
 
                 summaryRow.innerHTML = [
                     `<span class="comps-chip">${filters.sqftMin || 0}-${filters.sqftMax || 99999} sqft</span>`,
@@ -15664,46 +16227,71 @@ function initNavbarDateTime() {
                 } else {
                     resultsMeta.textContent = `Type: ${filters.propertyTypes.length} selected · Closed: Last ${filters.closedWithin} days · More Filters: ${advancedCount}`;
                 }
-
-                if (compsMapFrame || compsMapOpenLink) {
-                    const mapQueryCore = filtered.length > 0
-                        ? filtered.map(comp => comp.address).join(' OR ')
-                        : `real estate comps near ${detailData.address || 'California'}`;
-                    const mapQuery = `${mapQueryCore} near ${detailData.address || 'Santa Paula, CA'}`;
-                    const mapsEmbedUrl = buildGoogleMapsEmbedUrl(mapQuery);
-                    const mapsSearchUrl = buildGoogleMapsSearchUrl(mapQuery);
-
-                    if (compsMapFrame) compsMapFrame.src = mapsEmbedUrl;
-                    if (compsMapOpenLink) compsMapOpenLink.href = mapsSearchUrl;
+                if (resultsCount) {
+                    resultsCount.textContent = `${filtered.length} shown`;
                 }
+
+                await refreshMap(filtered);
             }
 
             if (compsMapStreetViewButton && compsMapStreetViewButton.dataset.bound !== 'true') {
                 compsMapStreetViewButton.dataset.bound = 'true';
                 compsMapStreetViewButton.addEventListener('click', async () => {
-                    const streetViewAddress = getStreetViewAddressQuery();
-                    setCompsStreetViewButtonState(true);
+                    streetViewLoading = true;
+                    syncStreetViewButtonState();
+
                     try {
-                        const streetViewUrl = await resolveStreetViewUrlForAddress(streetViewAddress);
-                        window.open(streetViewUrl, '_blank', 'noopener,noreferrer');
+                        await ensureSubjectCoordinates();
+                        const map = await ensureMapReady();
+                        if (!map || !panoramaInstance) {
+                            throw new Error('Street View pane could not be initialized.');
+                        }
+                        setStreetViewMode(!streetViewEnabled);
                     } catch (error) {
-                        const fallbackUrl = buildGoogleMapsSearchUrl(streetViewAddress);
+                        const streetViewAddress = getStreetViewAddressQuery();
+                        const fallbackUrl = Number.isFinite(Number(detailData.streetViewLat)) && Number.isFinite(Number(detailData.streetViewLng))
+                            ? buildGoogleStreetViewUrl(Number(detailData.streetViewLat), Number(detailData.streetViewLng))
+                            : buildGoogleMapsSearchUrl(streetViewAddress);
                         window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-                        showDashboardToast('error', 'Street View Fallback', String(error && error.message || 'Street View could not be loaded, so Google Maps was opened instead.'));
+                        showDashboardToast('error', 'Street View Fallback', String(error && error.message || 'Street View could not be loaded inside FAST, so Google Maps was opened instead.'));
                     } finally {
-                        setCompsStreetViewButtonState(false);
+                        streetViewLoading = false;
+                        syncStreetViewButtonState();
                     }
                 });
             }
 
-            applyBtn.addEventListener('click', renderResults);
+            viewButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    setViewMode(button.dataset.compsView || 'split');
+                });
+            });
+
+            layerButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    setMapLayerMode(button.dataset.compsMapLayer || 'street');
+                });
+            });
+
+            applyBtn.addEventListener('click', () => {
+                renderResults().catch(() => {
+                    setMapEmptyState(true, 'FAST could not refresh the interactive map, but the filtered comps list is still available.');
+                });
+            });
             resetBtn.addEventListener('click', () => {
                 setDefaults();
-                renderResults();
+                renderResults().catch(() => {
+                    setMapEmptyState(true, 'FAST could not refresh the Google map, but the filtered comps list is still available.');
+                });
             });
 
             setDefaults();
-            renderResults();
+            setViewMode(currentViewMode);
+            setMapLayerMode(currentMapLayer);
+            setStreetViewMode(false);
+            renderResults().catch(() => {
+                setMapEmptyState(true, 'FAST could not load the Google map, but the comps workspace is still available.');
+            });
         }
 
         initCompsExplorer();
