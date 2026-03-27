@@ -23,6 +23,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
     const USER_THEME_KEY = 'dashboardThemeByUser';
     const SIDEBAR_STATE_KEY = 'dashboardSidebarStateByUser';
+    const DEFAULT_THEME_LOGO_PATH = 'png photos/FAST LOGO 777.png';
+    const THEME_LOGO_PATHS = {
+        christmas: 'png photos/Christmas Theme Mode Logo.png',
+        holloween: 'png photos/Holloween Theme Mode Logo.png',
+        japan: 'png photos/Japan Theme Mode Logo.png'
+    };
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
@@ -2014,6 +2020,41 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return 'beach';
     }
 
+    function getThemeLogoAssetPath(theme) {
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+        return THEME_LOGO_PATHS[resolvedTheme] || DEFAULT_THEME_LOGO_PATH;
+    }
+
+    function syncThemeLogoImages(theme) {
+        const nextLogoPath = getThemeLogoAssetPath(theme);
+        document.querySelectorAll('img.logo-img, img.ecard-logo-image, img.flyer-logo-image').forEach((image) => {
+            if (!(image instanceof HTMLImageElement)) {
+                return;
+            }
+
+            if (image.getAttribute('src') !== nextLogoPath) {
+                image.setAttribute('src', nextLogoPath);
+            }
+        });
+    }
+
+    function notifyThemeUpdated(theme) {
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+        window.dispatchEvent(new CustomEvent('dashboard-theme-updated', {
+            detail: {
+                theme: resolvedTheme,
+                logoPath: getThemeLogoAssetPath(resolvedTheme)
+            }
+        }));
+    }
+
+    function initThemeAwareLogos() {
+        syncThemeLogoImages(document.documentElement.getAttribute('data-theme') || getThemePreference());
+        window.addEventListener('dashboard-theme-updated', (event) => {
+            syncThemeLogoImages(event && event.detail ? event.detail.theme : document.documentElement.getAttribute('data-theme'));
+        });
+    }
+
     function getAccentPalettes() {
         return {
             emerald: {
@@ -3107,6 +3148,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const offerTermsChangeEl = document.getElementById('kpi-offer-terms-change');
         const offersChangeEl = document.getElementById('kpi-offers-change');
         const profitWindowTrackEl = document.getElementById('kpi-profit-window-track');
+        let activeProfitWindowPointerButton = null;
         const PROFIT_WINDOW_CONFIG = {
             week: { label: 'last 7 days', days: 7 },
             month: { label: 'last 30 days', days: 30 },
@@ -3174,6 +3216,21 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         function getClosedDealEarnedAmount(item) {
             return Math.max(parseMoneyValue(item && (item.earnedAmount ?? item.amountEarned ?? item.earned)), 0);
+        }
+
+        function renderProfitGoalDisplay(profitGoal, yearlyProfitTotal) {
+            if (!profitGoalDisplayEl) {
+                return;
+            }
+
+            if (profitGoal > 0) {
+                const remaining = Math.max(profitGoal - yearlyProfitTotal, 0);
+                const percentToGoal = Math.min((yearlyProfitTotal / profitGoal) * 100, 999);
+                profitGoalDisplayEl.textContent = `Yearly goal: ${formatMoney(profitGoal)} • ${formatMoney(remaining)} left • ${percentToGoal.toFixed(1)}% reached`;
+                return;
+            }
+
+            profitGoalDisplayEl.textContent = 'Set your target for this year.';
         }
 
         function syncProfitWindowUi(activeWindow) {
@@ -3333,17 +3390,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     profitGoalInputEl.value = formattedGoal;
                 }
             }
-            if (profitGoalDisplayEl) {
-                if (profitGoal > 0) {
-                    const yearlyClosedDealEarnings = yearlyClosedDeals.reduce((sum, deal) => sum + getClosedDealEarnedAmount(deal), 0);
-                    const yearlyProfitTotal = yearlyIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + yearlyClosedDealEarnings;
-                    const remaining = Math.max(profitGoal - yearlyProfitTotal, 0);
-                    const percentToGoal = Math.min((yearlyProfitTotal / profitGoal) * 100, 999);
-                    profitGoalDisplayEl.textContent = `Goal: ${formatMoney(profitGoal)} • ${formatMoney(remaining)} left • ${percentToGoal.toFixed(1)}% reached`;
-                } else {
-                    profitGoalDisplayEl.textContent = 'Set your target for this year.';
-                }
-            }
+            const yearlyClosedDealEarnings = yearlyClosedDeals.reduce((sum, deal) => sum + getClosedDealEarnedAmount(deal), 0);
+            const yearlyProfitTotal = yearlyIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + yearlyClosedDealEarnings;
+            renderProfitGoalDisplay(profitGoal, yearlyProfitTotal);
             if (profitGoalMetaEl) {
                 profitGoalMetaEl.textContent = 'Your yearly target updates as you type. Press Enter or click the arrow to confirm.';
             }
@@ -3428,10 +3477,48 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     commitProfitGoal();
                 });
             }
+
+            if (profitGoalDisplayEl) {
+                profitGoalDisplayEl.addEventListener('click', () => {
+                    profitGoalInputEl.focus();
+                    profitGoalInputEl.select();
+                });
+            }
         }
 
         profitWindowButtons.forEach((button) => {
-            button.addEventListener('click', () => {
+            button.addEventListener('pointerdown', (event) => {
+                activeProfitWindowPointerButton = button;
+                button.classList.add('is-pressed');
+                event.stopPropagation();
+            });
+
+            button.addEventListener('pointerup', (event) => {
+                button.classList.remove('is-pressed');
+                if (activeProfitWindowPointerButton === button) {
+                    activeProfitWindowPointerButton = null;
+                }
+                event.stopPropagation();
+            });
+
+            button.addEventListener('pointercancel', () => {
+                button.classList.remove('is-pressed');
+                if (activeProfitWindowPointerButton === button) {
+                    activeProfitWindowPointerButton = null;
+                }
+            });
+
+            button.addEventListener('mouseleave', () => {
+                button.classList.remove('is-pressed');
+                if (activeProfitWindowPointerButton === button) {
+                    activeProfitWindowPointerButton = null;
+                }
+            });
+
+            button.addEventListener('click', (event) => {
+                button.classList.remove('is-pressed');
+                activeProfitWindowPointerButton = null;
+                event.stopPropagation();
                 setSelectedProfitWindow(button.dataset.profitWindow);
                 refreshKpis();
             });
@@ -3498,6 +3585,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         const workspaceUser = getWorkspaceUserContext();
+        const isTestRole = String(workspaceUser && workspaceUser.role || '').trim().toLowerCase() === 'test';
         let pendingUploads = [];
 
         function getManualClosedDeals() {
@@ -4192,6 +4280,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return;
             }
 
+            if (isTestRole) {
+                showDashboardToast('error', 'Uploads Disabled', 'Attach Documents is disabled for the test role.');
+                return;
+            }
+
             try {
                 if (typeof dealDocumentUploadInput.showPicker === 'function') {
                     dealDocumentUploadInput.showPicker();
@@ -4204,6 +4297,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         if (dealDocumentUploadButton && dealDocumentUploadInput) {
+            dealDocumentUploadInput.disabled = isTestRole;
+            dealDocumentUploadButton.disabled = isTestRole;
+            dealDocumentUploadButton.setAttribute('aria-disabled', isTestRole ? 'true' : 'false');
+
+            if (isTestRole) {
+                dealDocumentUploadButton.title = 'Attach Documents is disabled for the test role';
+            }
+
             dealDocumentUploadButton.addEventListener('click', () => {
                 openClosedDealDocumentPicker();
             });
@@ -4217,6 +4318,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
 
             dealDocumentUploadInput.addEventListener('change', async () => {
+                if (isTestRole) {
+                    dealDocumentUploadInput.value = '';
+                    return;
+                }
+
                 const files = Array.from(dealDocumentUploadInput.files || []);
                 if (!files.length) {
                     dealDocumentUploadInput.value = '';
@@ -4446,6 +4552,8 @@ function initNavbarDateTime() {
             saveThemePreference(theme === 'system' ? 'system' : effectiveTheme);
 
             updateThemeToggleIcons(themeToggle, effectiveTheme);
+            syncThemeLogoImages(effectiveTheme);
+            notifyThemeUpdated(effectiveTheme);
 
             if (themeToggle) {
                 const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
@@ -4618,6 +4726,7 @@ function initNavbarDateTime() {
     function initTiltEffect() {
         const variableTiltSelector = '.subscription-plan-card';
         const standardTiltSelector = '.glass-card-3d, .legal-hover-card';
+        const noTiltTargetSelector = 'button, a, input, select, textarea, [role="button"], [role="tab"], [data-no-tilt]';
 
         document.querySelectorAll(`${standardTiltSelector}, ${variableTiltSelector}`).forEach(card => {
             if (card.dataset.tiltInitialized === 'true') {
@@ -4641,6 +4750,11 @@ function initNavbarDateTime() {
 
             card.addEventListener('pointermove', (event) => {
                 if (event.pointerType && event.pointerType !== 'mouse') {
+                    return;
+                }
+
+                if (event.target instanceof Element && event.target.closest(noTiltTargetSelector)) {
+                    resetTilt();
                     return;
                 }
 
@@ -5097,6 +5211,8 @@ function initNavbarDateTime() {
 
                 const themeToggle = document.getElementById('theme-toggle');
                 updateThemeToggleIcons(themeToggle, effectiveTheme);
+                syncThemeLogoImages(effectiveTheme);
+                notifyThemeUpdated(effectiveTheme);
                 if (themeToggle) {
                     const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
                     themeToggle.title = `Theme: ${modeLabel} Mode`;
@@ -11860,6 +11976,7 @@ function initNavbarDateTime() {
         let html2CanvasLoaderPromise = null;
         let jsPdfLoaderPromise = null;
         let agreementLogoDataUrlPromise = null;
+        let agreementLogoDataUrlPath = '';
         let flyerContacts = [];
         const FLYER_TEMPLATES = {
             'we-want-your-home-fixer': {
@@ -12116,11 +12233,13 @@ function initNavbarDateTime() {
         }
 
         function loadAgreementLogoDataUrl() {
-            if (agreementLogoDataUrlPromise) {
+            const logoPath = getThemeLogoAssetPath(document.documentElement.getAttribute('data-theme'));
+            if (agreementLogoDataUrlPromise && agreementLogoDataUrlPath === logoPath) {
                 return agreementLogoDataUrlPromise;
             }
 
-            agreementLogoDataUrlPromise = fetch('png photos/FAST LOGO 777.png')
+            agreementLogoDataUrlPath = logoPath;
+            agreementLogoDataUrlPromise = fetch(logoPath)
                 .then((response) => {
                     if (!response.ok) {
                         throw new Error('Logo file could not be loaded.');
@@ -12292,6 +12411,7 @@ function initNavbarDateTime() {
 
         let jsPdfLoaderPromise = null;
     let agreementLogoDataUrlPromise = null;
+    let agreementLogoDataUrlPath = '';
 
         const fieldReaders = {
             effectiveDate: () => document.getElementById('contract-effective-date')?.value || '',
@@ -12472,11 +12592,13 @@ function initNavbarDateTime() {
         }
 
         function loadAgreementLogoDataUrl() {
-            if (agreementLogoDataUrlPromise) {
+            const logoPath = getThemeLogoAssetPath(document.documentElement.getAttribute('data-theme'));
+            if (agreementLogoDataUrlPromise && agreementLogoDataUrlPath === logoPath) {
                 return agreementLogoDataUrlPromise;
             }
 
-            agreementLogoDataUrlPromise = fetch('png photos/FAST LOGO 777.png')
+            agreementLogoDataUrlPath = logoPath;
+            agreementLogoDataUrlPromise = fetch(logoPath)
                 .then((response) => {
                     if (!response.ok) {
                         throw new Error('Failed to load agreement logo.');
@@ -20109,6 +20231,7 @@ function initNavbarDateTime() {
             ['initLegalPageAccessLinks', initLegalPageAccessLinks],
             ['initAccentPreference', initAccentPreference],
             ['initMyAgentsAccessRules', initMyAgentsAccessRules],
+            ['initThemeAwareLogos', initThemeAwareLogos],
             ['initThemeToggle', initThemeToggle],
             ['initBuildVersionLabel', initBuildVersionLabel],
             ['initNavbarDateTime', initNavbarDateTime],

@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics - 3D Glassmorphism Dashboard</title>
-    <link rel="icon" type="image/x-icon" href="favicon_io%20(1)/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="png%20photos/favicon_io%20(1)/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="png%20photos/favicon_io%20(1)/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="png%20photos/favicon_io%20(1)/favicon-16x16.png">
     <meta name="description" content="3D Glassmorphism Dashboard Template by TemplateMo">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -302,13 +304,13 @@ https://templatemo.com/tm-607-glass-admin
                     <div class="stat-card-inner">
                         <div class="stat-info">
                             <h3>My Profits</h3>
-                            <div class="profit-window-scroll" aria-label="Profit time range selector">
-                                <div class="profit-window-track" id="kpi-profit-window-track" role="tablist" aria-label="Profit time range">
-                                    <button type="button" class="profit-window-pill active" id="kpi-profit-window-week" data-profit-window="week">Week</button>
-                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-month" data-profit-window="month">Mo</button>
-                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-quarter" data-profit-window="quarter">Quarter</button>
-                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-six-month" data-profit-window="six-month">6 Mo</button>
-                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-year" data-profit-window="year">Yr</button>
+                            <div class="profit-window-scroll" aria-label="Profit time range selector" data-no-tilt>
+                                <div class="profit-window-track" id="kpi-profit-window-track" role="tablist" aria-label="Profit time range" data-no-tilt>
+                                    <button type="button" class="profit-window-pill active" id="kpi-profit-window-week" data-profit-window="week" aria-pressed="true">Week</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-month" data-profit-window="month" aria-pressed="false">Mo</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-quarter" data-profit-window="quarter" aria-pressed="false">Quarter</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-six-month" data-profit-window="six-month" aria-pressed="false">6 Mo</button>
+                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-year" data-profit-window="year" aria-pressed="false">Yr</button>
                                 </div>
                             </div>
                             <div class="stat-value" id="kpi-my-profits">$0</div>
@@ -316,20 +318,20 @@ https://templatemo.com/tm-607-glass-admin
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
                                 <span id="kpi-my-profits-change">0 saved IA deals</span>
                             </span>
-                            <div class="profit-goal-display" id="kpi-profit-goal-display">Set your target for this year.</div>
-                            <div class="profit-goal-box">
+                            <div class="profit-goal-display" id="kpi-profit-goal-display" data-no-tilt>Set your target for this year.</div>
+                            <div class="profit-goal-box" data-no-tilt>
                                 <label class="profit-goal-label" for="kpi-profit-goal-input">Yearly profit goal</label>
-                                <div class="profit-goal-row">
-                                    <div class="profit-goal-input-wrap">
-                                        <input id="kpi-profit-goal-input" class="profit-goal-input" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 500000">
-                                        <button type="button" class="profit-goal-submit-btn" id="kpi-profit-goal-submit" aria-label="Save yearly profit goal" title="Save yearly profit goal">
+                                <div class="profit-goal-row" data-no-tilt>
+                                    <div class="profit-goal-input-wrap" data-no-tilt>
+                                        <input id="kpi-profit-goal-input" class="profit-goal-input" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 500000" data-no-tilt>
+                                        <button type="button" class="profit-goal-submit-btn" id="kpi-profit-goal-submit" aria-label="Save yearly profit goal" title="Save yearly profit goal" data-no-tilt>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                                                 <polyline points="12 5 19 12 12 19"></polyline>
                                             </svg>
                                         </button>
                                     </div>
-                                    <div class="profit-goal-meta" id="kpi-profit-goal-meta">Your yearly target updates as you type. Press Enter or click the arrow to confirm.</div>
+                                    <div class="profit-goal-meta" id="kpi-profit-goal-meta" data-no-tilt>Your yearly target updates as you type. Press Enter or click the arrow to confirm.</div>
                                 </div>
                             </div>
                         </div>
@@ -397,9 +399,9 @@ https://templatemo.com/tm-607-glass-admin
                                     <input id="closed-deal-earned" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Amount earned">
                                     <textarea id="closed-deal-note" class="closed-deals-input closed-deals-textarea" placeholder="Optional note about this close"></textarea>
                                 </div>
-                                <input id="closed-deal-document-upload" class="closed-deal-document-upload-input" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" tabindex="-1" aria-hidden="true">
-                                <div class="closed-deals-actions">
-                                    <label for="closed-deal-document-upload" class="card-btn closed-deal-upload-trigger" id="closed-deal-upload-btn" role="button" tabindex="0">Attach Documents</label>
+                                <input id="closed-deal-document-upload" class="closed-deal-document-upload-input" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" tabindex="-1" aria-hidden="true" data-no-tilt>
+                                <div class="closed-deals-actions" data-no-tilt>
+                                    <button type="button" class="card-btn closed-deal-upload-trigger" id="closed-deal-upload-btn" data-no-tilt>Attach Documents</button>
                                     <button type="button" class="card-btn active" id="closed-deal-save-btn">Save Closed Deal</button>
                                 </div>
                                 <div class="closed-deals-pending-docs" id="closed-deal-pending-docs">
