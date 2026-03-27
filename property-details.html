@@ -653,7 +653,14 @@
                                         <button type="button" class="card-btn" data-comps-map-layer="aerial">Aerial</button>
                                         <button type="button" class="card-btn" data-comps-map-layer="hybrid">Hybrid</button>
                                     </div>
+                                    <div class="comps-map-toggle-group" role="tablist" aria-label="Map drawing tools">
+                                        <button type="button" class="card-btn active" data-comps-draw-mode="none">Browse</button>
+                                        <button type="button" class="card-btn" data-comps-draw-mode="draw-area">Draw Area</button>
+                                        <button type="button" class="card-btn" data-comps-draw-mode="freehand">Freehand</button>
+                                        <button type="button" class="card-btn" id="comps-map-clear-area-btn">Clear Area</button>
+                                    </div>
                                     <div class="comps-map-toolbar">
+                                        <span id="comps-map-style-source" class="comps-map-style-source">JSON Style</span>
                                         <a id="comps-map-open-link" class="card-btn" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer">Open In Google Maps</a>
                                         <button id="comps-map-street-view-btn" class="card-btn" type="button">Street View</button>
                                     </div>

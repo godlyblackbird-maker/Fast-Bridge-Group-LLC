@@ -121,12 +121,13 @@
             overflow: hidden;
             padding: 28px;
             border-radius: 28px;
-            border: 1px solid rgba(var(--accent-light-rgb), 0.22);
+            border: 1px solid var(--glass-border);
             background:
-                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.22), transparent 34%),
-                radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.14), transparent 32%),
-                linear-gradient(145deg, rgba(8, 15, 24, 0.9), rgba(12, 24, 21, 0.7));
-            box-shadow: 0 30px 80px rgba(2, 6, 23, 0.34);
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.2), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(var(--accent-rgb), 0.14), transparent 32%),
+                linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
+            backdrop-filter: blur(22px);
             isolation: isolate;
         }
 
@@ -203,20 +204,20 @@
 
         .admin-command-title {
             margin: 0;
-            max-width: 11ch;
+            max-width: 13ch;
             font-size: clamp(2.35rem, 4vw, 4.45rem);
             line-height: 0.94;
             letter-spacing: -0.05em;
-            color: #f8fafc;
+            color: var(--text-primary);
             text-wrap: balance;
         }
 
         .admin-command-body {
             max-width: 760px;
             margin: 0;
-            color: rgba(226, 232, 240, 0.82);
+            color: var(--text-secondary);
             font-size: 15px;
-            line-height: 1.72;
+            line-height: 1.6;
         }
 
         .admin-command-tags,
@@ -233,21 +234,21 @@
             overflow: hidden;
             padding: 12px 14px;
             border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
-            color: #f8fafc;
+            color: var(--text-primary);
         }
 
         .admin-command-tag {
             font-size: 12px;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: rgba(226, 232, 240, 0.82);
+            color: var(--text-secondary);
         }
 
         .admin-command-tag strong {
-            color: #ffffff;
+            color: var(--text-primary);
         }
 
         .admin-command-action {
@@ -259,8 +260,8 @@
             padding: 14px 18px;
             border-radius: 18px;
             border: 1px solid rgba(var(--accent-light-rgb), 0.26);
-            background: rgba(255, 255, 255, 0.08);
-            color: #f8fafc;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
             text-decoration: none;
             font-weight: 600;
             transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
@@ -306,8 +307,8 @@
             gap: 16px;
             padding: 22px;
             border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.3));
+            border: 1px solid var(--glass-border);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
             backdrop-filter: blur(18px);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
@@ -321,7 +322,7 @@
 
         .admin-sidecar-title {
             margin: 0;
-            color: #f8fafc;
+            color: var(--text-primary);
             font-size: 1.05rem;
         }
 
@@ -330,7 +331,7 @@
             border-radius: 999px;
             background: rgba(var(--accent-light-rgb), 0.14);
             border: 1px solid rgba(var(--accent-light-rgb), 0.24);
-            color: #d1fae5;
+            color: var(--text-primary);
             font-size: 11px;
             letter-spacing: 0.12em;
             text-transform: uppercase;
@@ -348,17 +349,17 @@
             font-size: 11px;
             letter-spacing: 0.14em;
             text-transform: uppercase;
-            color: rgba(226, 232, 240, 0.64);
+            color: var(--text-secondary);
         }
 
         .admin-command-metric strong {
             font-size: 1.35rem;
-            color: #ffffff;
+            color: var(--text-primary);
             line-height: 1;
         }
 
         .admin-command-metric small {
-            color: rgba(226, 232, 240, 0.72);
+            color: var(--text-secondary);
             font-size: 12px;
         }
 
@@ -366,9 +367,9 @@
             margin: 0;
             padding: 18px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(2, 6, 23, 0.32);
-            color: #bfdbfe;
+            border: 1px solid var(--glass-border);
+            background: rgba(var(--accent-rgb), 0.1);
+            color: var(--text-secondary);
             font-size: 12px;
             line-height: 1.65;
             white-space: pre-wrap;
@@ -697,23 +698,18 @@
                     <div class="admin-command-grid">
                         <div class="admin-command-copy">
                             <span class="admin-command-kicker">FAST Internal Operations</span>
-                            <h2 class="admin-command-title">Admin control, but with actual presence.</h2>
-                            <p class="admin-command-body">This page now reads like a real command center instead of a pile of widgets. Fast navigation up top, heavy visual hierarchy, motion on hover, polished glass depth, and direct routes into approvals, submissions, spreadsheets, contracts, and creative tools.</p>
+                            <h2 class="admin-command-title">Admin Operations</h2>
+                            <p class="admin-command-body">Review access, manage submissions, run MLS imports, and handle account setup from one control room.</p>
                             <div class="admin-command-tags">
-                                <div class="admin-command-tag"><strong>Queue Control</strong> Access, SMTP, submissions</div>
-                                <div class="admin-command-tag"><strong>Ops Studio</strong> E-card, flyer, contracts</div>
-                                <div class="admin-command-tag"><strong>Investor Flow</strong> MLS imports and account setup</div>
+                                <div class="admin-command-tag"><strong>Approvals</strong> Access, SMTP, submissions</div>
+                                <div class="admin-command-tag"><strong>Build Tools</strong> E-card, flyer, contracts</div>
+                                <div class="admin-command-tag"><strong>Accounts</strong> MLS imports, setup</div>
                             </div>
                             <div class="admin-command-actions">
                                 <a class="admin-command-action active" href="#requested-access-card">Review Access</a>
                                 <a class="admin-command-action" href="#mls-imports-card">Open MLS Lane</a>
                                 <a class="admin-command-action" href="#admin-account-manager-card">Manage Accounts</a>
                                 <a class="admin-command-action" href="#contracts-card">Build Contracts</a>
-                            </div>
-                            <div class="admin-command-footer">
-                                <span>Animated glass depth</span>
-                                <span>Faster scan paths</span>
-                                <span>Sticky jump rail</span>
                             </div>
                         </div>
                         <aside class="admin-command-sidecar">
@@ -756,7 +752,7 @@
     "contracts-agreements",
     "flyer-maker"
   ],
-  "goal": "Make admin feel premium, navigable, and dangerous in a good way."
+    "goal": "Keep approvals, build tools, and account work in one lane."
 }</pre>
                         </aside>
                     </div>

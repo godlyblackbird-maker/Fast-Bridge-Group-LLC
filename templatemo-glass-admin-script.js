@@ -15451,7 +15451,7 @@ function initNavbarDateTime() {
                 script.id = 'fast-google-maps-script';
                 script.async = true;
                 script.defer = true;
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=marker&callback=${callbackName}`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=marker,drawing,geometry&callback=${callbackName}`;
                 script.onerror = () => reject(new Error('Google Maps failed to load.'));
                 document.body.appendChild(script);
             });
@@ -15514,6 +15514,8 @@ function initNavbarDateTime() {
             const compsMapCanvas = document.getElementById('comps-map-canvas');
             const compsMapPano = document.getElementById('comps-map-pano');
             const compsMapEmpty = document.getElementById('comps-map-empty');
+            const compsMapStyleSource = document.getElementById('comps-map-style-source');
+            const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
             const nearbyList = document.getElementById('comps-nearby-list');
             const summaryRow = document.getElementById('comps-applied-summary');
             const resultsMeta = document.getElementById('comps-results-meta');
@@ -15534,6 +15536,7 @@ function initNavbarDateTime() {
             const activePillEl = document.getElementById('comps-map-focus-pill');
             const viewButtons = Array.from(document.querySelectorAll('[data-comps-view]'));
             const layerButtons = Array.from(document.querySelectorAll('[data-comps-map-layer]'));
+            const drawButtons = Array.from(document.querySelectorAll('[data-comps-draw-mode]'));
 
             if (!nearbyList || !summaryRow || !resultsMeta || !applyBtn || !resetBtn || !compsExplorer) {
                 if (compsMapOpenLink) {
@@ -15569,6 +15572,7 @@ function initNavbarDateTime() {
 
             let currentViewMode = 'split';
             let currentMapLayer = 'street';
+            let currentDrawMode = 'none';
             let activeCompKey = '';
             let streetViewEnabled = false;
             let streetViewLoading = false;
@@ -15578,7 +15582,17 @@ function initNavbarDateTime() {
             let subjectMarker = null;
             let radiusCircle = null;
             let markerCtor = null;
+            let drawingManager = null;
+            let drawnPolygon = null;
             let mapReadyPromise = null;
+            let polygonPathListeners = [];
+            let freehandPolyline = null;
+            let freehandMapListeners = [];
+            let freehandMouseUpHandler = null;
+            let freehandState = {
+                drawing: false,
+                path: []
+            };
             const markerRegistry = new Map();
             let lastFilteredPool = [];
             let lastTopResults = [];
@@ -15628,6 +15642,19 @@ function initNavbarDateTime() {
                 }
             }
 
+            function updateMapStyleSource(config) {
+                if (!compsMapStyleSource) {
+                    return;
+                }
+
+                const usingMapId = Boolean(config && config.mapId);
+                compsMapStyleSource.textContent = usingMapId ? 'Cloud Map ID' : 'JSON Style';
+                compsMapStyleSource.classList.toggle('is-map-id', usingMapId);
+                compsMapStyleSource.title = usingMapId
+                    ? 'Google Cloud custom map styling is active through GOOGLE_MAPS_MAP_ID.'
+                    : 'Fallback JSON styling is active because no GOOGLE_MAPS_MAP_ID is configured.';
+            }
+
             function syncStreetViewButtonState() {
                 if (!compsMapStreetViewButton) {
                     return;
@@ -15638,6 +15665,210 @@ function initNavbarDateTime() {
                 compsMapStreetViewButton.textContent = streetViewLoading
                     ? 'Locating...'
                     : (streetViewEnabled ? 'Hide Street View' : 'Street View');
+            }
+
+            function syncDrawButtons() {
+                drawButtons.forEach((button) => {
+                    button.classList.toggle('active', String(button.dataset.compsDrawMode || 'none') === currentDrawMode);
+                });
+                if (clearAreaButton) {
+                    clearAreaButton.disabled = !drawnPolygon;
+                }
+                if (mapInstance) {
+                    mapInstance.setOptions({
+                        draggableCursor: currentDrawMode === 'freehand' ? 'crosshair' : null
+                    });
+                }
+            }
+
+            function getPolygonOptions() {
+                return {
+                    strokeColor: '#2563eb',
+                    strokeOpacity: 0.95,
+                    strokeWeight: 2,
+                    fillColor: '#60a5fa',
+                    fillOpacity: 0.12,
+                    editable: true,
+                    draggable: false,
+                    clickable: true,
+                    zIndex: 30
+                };
+            }
+
+            function detachPolygonPathListeners() {
+                polygonPathListeners.forEach((listener) => {
+                    if (listener && typeof listener.remove === 'function') {
+                        listener.remove();
+                    }
+                });
+                polygonPathListeners = [];
+            }
+
+            function attachPolygonPathListeners(polygon) {
+                detachPolygonPathListeners();
+                if (!polygon || !polygon.getPath) {
+                    return;
+                }
+
+                const path = polygon.getPath();
+                ['insert_at', 'remove_at', 'set_at'].forEach((eventName) => {
+                    polygonPathListeners.push(path.addListener(eventName, () => {
+                        renderResults().catch(() => {
+                            setMapEmptyState(true, 'FAST could not refresh the filtered comps after the drawn area changed.');
+                        });
+                    }));
+                });
+            }
+
+            function clearFreehandArtifacts() {
+                freehandState = {
+                    drawing: false,
+                    path: []
+                };
+                if (freehandPolyline) {
+                    freehandPolyline.setMap(null);
+                    freehandPolyline = null;
+                }
+            }
+
+            function clearDrawnArea(options = {}) {
+                const settings = options && typeof options === 'object' ? options : {};
+                detachPolygonPathListeners();
+                if (drawnPolygon) {
+                    drawnPolygon.setMap(null);
+                    drawnPolygon = null;
+                }
+                clearFreehandArtifacts();
+                syncDrawButtons();
+
+                if (!settings.silent) {
+                    renderResults().catch(() => {
+                        setMapEmptyState(true, 'FAST could not refresh the filtered comps after clearing the drawn area.');
+                    });
+                }
+            }
+
+            function disableFreehandMode() {
+                freehandMapListeners.forEach((listener) => {
+                    if (listener && typeof listener.remove === 'function') {
+                        listener.remove();
+                    }
+                });
+                freehandMapListeners = [];
+                if (freehandMouseUpHandler) {
+                    window.removeEventListener('mouseup', freehandMouseUpHandler);
+                    freehandMouseUpHandler = null;
+                }
+                if (mapInstance) {
+                    mapInstance.setOptions({ draggable: true, draggableCursor: null });
+                }
+                clearFreehandArtifacts();
+            }
+
+            function finalizeFreehandPolygon() {
+                if (!mapInstance || !window.google || !window.google.maps || !freehandState.drawing) {
+                    return;
+                }
+
+                freehandState.drawing = false;
+                mapInstance.setOptions({ draggable: true });
+                const path = Array.isArray(freehandState.path) ? freehandState.path.slice() : [];
+                if (path.length < 3) {
+                    clearFreehandArtifacts();
+                    syncDrawButtons();
+                    return;
+                }
+
+                if (drawnPolygon) {
+                    drawnPolygon.setMap(null);
+                }
+                drawnPolygon = new window.google.maps.Polygon({
+                    ...getPolygonOptions(),
+                    paths: path,
+                    map: mapInstance
+                });
+                attachPolygonPathListeners(drawnPolygon);
+                clearFreehandArtifacts();
+                currentDrawMode = 'none';
+                syncDrawButtons();
+                renderResults().catch(() => {
+                    setMapEmptyState(true, 'FAST could not refresh the filtered comps after finishing the freehand area.');
+                });
+            }
+
+            function enableFreehandMode() {
+                if (!mapInstance || !window.google || !window.google.maps) {
+                    return;
+                }
+                disableFreehandMode();
+
+                freehandMapListeners.push(mapInstance.addListener('mousedown', (event) => {
+                    if (currentDrawMode !== 'freehand' || !event || !event.latLng) {
+                        return;
+                    }
+
+                    clearDrawnArea({ silent: true });
+                    freehandState = {
+                        drawing: true,
+                        path: [event.latLng.toJSON()]
+                    };
+                    freehandPolyline = new window.google.maps.Polyline({
+                        map: mapInstance,
+                        path: [event.latLng],
+                        strokeColor: '#2563eb',
+                        strokeOpacity: 0.95,
+                        strokeWeight: 2,
+                        clickable: false,
+                        zIndex: 31
+                    });
+                    mapInstance.setOptions({ draggable: false, draggableCursor: 'crosshair' });
+                }));
+
+                freehandMapListeners.push(mapInstance.addListener('mousemove', (event) => {
+                    if (!freehandState.drawing || !freehandPolyline || !event || !event.latLng) {
+                        return;
+                    }
+
+                    freehandState.path.push(event.latLng.toJSON());
+                    freehandPolyline.getPath().push(event.latLng);
+                }));
+
+                freehandMapListeners.push(mapInstance.addListener('mouseup', () => {
+                    finalizeFreehandPolygon();
+                }));
+
+                freehandMouseUpHandler = () => {
+                    finalizeFreehandPolygon();
+                };
+                window.addEventListener('mouseup', freehandMouseUpHandler);
+            }
+
+            function setDrawMode(nextMode) {
+                const normalizedMode = ['none', 'draw-area', 'freehand'].includes(String(nextMode || '').trim())
+                    ? String(nextMode || '').trim()
+                    : 'none';
+                currentDrawMode = normalizedMode;
+                syncDrawButtons();
+
+                if (drawingManager) {
+                    drawingManager.setDrawingMode(normalizedMode === 'draw-area' ? window.google.maps.drawing.OverlayType.POLYGON : null);
+                }
+
+                if (normalizedMode === 'freehand') {
+                    enableFreehandMode();
+                    return;
+                }
+
+                disableFreehandMode();
+            }
+
+            function polygonContainsComp(comp) {
+                if (!drawnPolygon || !window.google || !window.google.maps || !window.google.maps.geometry || !window.google.maps.geometry.poly) {
+                    return true;
+                }
+
+                const point = new window.google.maps.LatLng(comp.lat, comp.lng);
+                return window.google.maps.geometry.poly.containsLocation(point, drawnPolygon);
             }
 
             function requestMapResize() {
@@ -15694,6 +15925,7 @@ function initNavbarDateTime() {
                     if (!config.enabled || !config.apiKey) {
                         throw new Error('Google Maps API key is not configured in the server environment.');
                     }
+                    updateMapStyleSource(config);
 
                     await ensureSubjectCoordinates();
                     await loadGoogleMapsScript(config.apiKey);
@@ -15736,8 +15968,35 @@ function initNavbarDateTime() {
                     });
                     mapInstance.setStreetView(panoramaInstance);
                     infoWindowInstance = new window.google.maps.InfoWindow();
+
+                    if (window.google.maps.drawing && window.google.maps.drawing.DrawingManager) {
+                        drawingManager = new window.google.maps.drawing.DrawingManager({
+                            drawingMode: null,
+                            drawingControl: false,
+                            polygonOptions: getPolygonOptions()
+                        });
+                        drawingManager.setMap(mapInstance);
+                        drawingManager.addListener('overlaycomplete', (event) => {
+                            if (!event || event.type !== window.google.maps.drawing.OverlayType.POLYGON) {
+                                return;
+                            }
+
+                            clearDrawnArea({ silent: true });
+                            drawnPolygon = event.overlay;
+                            drawnPolygon.setEditable(true);
+                            attachPolygonPathListeners(drawnPolygon);
+                            currentDrawMode = 'none';
+                            syncDrawButtons();
+                            drawingManager.setDrawingMode(null);
+                            renderResults().catch(() => {
+                                setMapEmptyState(true, 'FAST could not refresh the filtered comps after drawing an area.');
+                            });
+                        });
+                    }
+
                     setMapEmptyState(false);
                     syncStreetViewButtonState();
+                    syncDrawButtons();
                     return mapInstance;
                 })().catch((error) => {
                     setMapEmptyState(true, 'FAST can still show nearby comps and open the search in Google Maps while the Google map or Street View pane loads.');
@@ -16195,6 +16454,7 @@ function initNavbarDateTime() {
                     .filter(comp => filters.propertyTypes.length === 0 || filters.propertyTypes.includes(comp.propertyType))
                     .filter(comp => filters.statuses.length === 0 || filters.statuses.includes(comp.status))
                     .filter(comp => filters.conditions.length === 0 || filters.conditions.includes(comp.condition))
+                    .filter(comp => polygonContainsComp(comp))
                     .sort((a, b) => a.distance - b.distance);
                 const filtered = filteredPool.slice(0, 5);
                 lastFilteredPool = filteredPool;
@@ -16214,18 +16474,20 @@ function initNavbarDateTime() {
                     `<span class="comps-chip">${filters.radius} mile radius</span>`,
                     `<span class="comps-chip">Closed: Last ${filters.closedWithin} days</span>`,
                     `<span class="comps-chip">Type: ${filters.propertyTypes.length} selected</span>`,
+                    drawnPolygon ? `<span class="comps-chip">Area filter active</span>` : '',
                     `<span class="comps-chip">${filteredPool.length} comp(s) matched</span>`,
                     filteredPool.length > 0 ? `<span class="comps-chip">Avg DOM ${average(filteredPool.map(comp => comp.dom)).toFixed(1)}</span>` : '',
                     filteredPool.length > 0 ? `<span class="comps-chip">Median ${formatCurrency(Math.round(median(filteredPool.map(comp => comp.price))))}</span>` : ''
                 ].join('');
 
                 const advancedCount = [filters.bedMin, filters.bedMax, filters.bathMin, filters.bathMax, filters.priceMin, filters.priceMax, filters.lotMin, filters.lotMax, filters.garageMin, filters.garageMax, filters.domMin, filters.domMax, filters.area].filter(v => v !== null && v !== '').length;
+                const areaFilterLabel = drawnPolygon ? ' · Area Filter On' : '';
                 if (filteredPool.length > 0) {
                     const averagePpsf = average(filteredPool.map(comp => comp.price / Math.max(comp.sqft, 1)));
                     const medianPrice = median(filteredPool.map(comp => comp.price));
-                    resultsMeta.textContent = `${filteredPool.length} comps · Avg ${formatCurrency(Math.round(averagePpsf))}/sqft · Median ${formatCurrency(Math.round(medianPrice))} · More Filters: ${advancedCount}`;
+                    resultsMeta.textContent = `${filteredPool.length} comps · Avg ${formatCurrency(Math.round(averagePpsf))}/sqft · Median ${formatCurrency(Math.round(medianPrice))} · More Filters: ${advancedCount}${areaFilterLabel}`;
                 } else {
-                    resultsMeta.textContent = `Type: ${filters.propertyTypes.length} selected · Closed: Last ${filters.closedWithin} days · More Filters: ${advancedCount}`;
+                    resultsMeta.textContent = `Type: ${filters.propertyTypes.length} selected · Closed: Last ${filters.closedWithin} days · More Filters: ${advancedCount}${areaFilterLabel}`;
                 }
                 if (resultsCount) {
                     resultsCount.textContent = `${filtered.length} shown`;
@@ -16273,6 +16535,19 @@ function initNavbarDateTime() {
                 });
             });
 
+            drawButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    setDrawMode(button.dataset.compsDrawMode || 'none');
+                });
+            });
+
+            if (clearAreaButton) {
+                clearAreaButton.addEventListener('click', () => {
+                    clearDrawnArea();
+                    setDrawMode('none');
+                });
+            }
+
             applyBtn.addEventListener('click', () => {
                 renderResults().catch(() => {
                     setMapEmptyState(true, 'FAST could not refresh the interactive map, but the filtered comps list is still available.');
@@ -16288,6 +16563,7 @@ function initNavbarDateTime() {
             setDefaults();
             setViewMode(currentViewMode);
             setMapLayerMode(currentMapLayer);
+            setDrawMode('none');
             setStreetViewMode(false);
             renderResults().catch(() => {
                 setMapEmptyState(true, 'FAST could not load the Google map, but the comps workspace is still available.');

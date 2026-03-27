@@ -13721,6 +13721,27 @@ body.sidebar-collapsed .main-content {
     gap: 6px;
 }
 
+.comps-map-style-source {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+    background: rgba(var(--accent-light-rgb), 0.12);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.comps-map-style-source.is-map-id {
+    border-color: rgba(16, 185, 129, 0.32);
+    background: rgba(16, 185, 129, 0.14);
+    color: #d1fae5;
+}
+
 .comps-map-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
