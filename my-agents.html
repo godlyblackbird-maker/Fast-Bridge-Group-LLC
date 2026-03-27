@@ -968,6 +968,17 @@
                 });
             }
 
+            function getTimeOfDayGreeting() {
+                const hour = new Date().getHours();
+                if (hour < 12) {
+                    return 'morning';
+                }
+                if (hour < 17) {
+                    return 'afternoon';
+                }
+                return 'evening';
+            }
+
             function buildStatusTemplate(rowData) {
                 const laName = normalizeCellValue(rowData && rowData.laName);
                 const firstName = getAgentFirstName(laName) || 'there';
@@ -998,7 +1009,7 @@
                     return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, we can make a clean cash offer and move quickly if that would help.`;
                 }
 
-                return `Hey ${firstName} hope you're having a great afternoon! I am Isaac Haro, an investor. I see you have a property in ${propertyAddress}, I do flipping around that area, close quick and would let you represent me. Are you open to cash offers?`;
+                return `Hey ${firstName} hope you're having a great ${getTimeOfDayGreeting()}! I am Isaac Haro, an investor. I see you have a property in ${propertyAddress}, I do flipping around that area, close quick and would let you represent me. Are you open to cash offers?`;
             }
 
             function createCell(value, key) {
