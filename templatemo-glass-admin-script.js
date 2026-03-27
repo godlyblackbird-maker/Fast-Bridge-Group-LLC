@@ -13459,7 +13459,6 @@ function initNavbarDateTime() {
 
         async function autoCollectDealsImportFromAddress() {
             const addressInput = document.getElementById('deals-import-address');
-            const imageInput = document.getElementById('deals-import-image');
             const trimmedAddress = String(addressInput && addressInput.value || '').trim();
             if (!trimmedAddress) {
                 showDashboardToast('error', 'Address Required', 'Enter the property address first, then click Auto collect.');
@@ -13490,16 +13489,15 @@ function initNavbarDateTime() {
                 }
 
                 const redfinUrl = String(payload.primaryUrl || (payload.links && payload.links.redfin) || '').trim();
-                const primaryImageUrl = String(payload.listing && payload.listing.imageUrl || '').trim();
+                const listing = payload.listing && typeof payload.listing === 'object'
+                    ? { ...payload.listing, imageUrl: '' }
+                    : {};
                 if (importSourceUrlInput && redfinUrl) {
                     importSourceUrlInput.value = redfinUrl;
                 }
-                if (imageInput && primaryImageUrl) {
-                    imageInput.value = primaryImageUrl;
-                }
 
-                populateDealsImportForm(payload.listing || {});
-                showDashboardToast('success', 'Auto Collected', 'FAST found the Redfin listing, added the image, and autofilled the import form.');
+                populateDealsImportForm(listing);
+                showDashboardToast('success', 'Auto Collected', 'FAST found the Redfin listing and autofilled the import form without using the listing photo.');
             } catch (error) {
                 showDashboardToast('error', 'Auto Collect Failed', error && error.message ? error.message : 'FAST could not auto collect the Redfin listing for this address.');
             } finally {
@@ -15300,12 +15298,145 @@ function initNavbarDateTime() {
             }
         }
 
+        let propertyImageFallbackPromise = null;
+
         function getPropertyImages() {
-            return Array.from(new Set(
+            const storedImages = Array.from(new Set(
                 (Array.isArray(detailData.propertyImages) ? detailData.propertyImages : [])
                     .map(url => String(url || '').trim())
                     .filter(url => url.length > 0)
             ));
+
+            if (storedImages.length > 0) {
+                return storedImages;
+            }
+
+            const currentAddress = String(detailData.address || '').trim().toLowerCase();
+            const cachedAddress = String(detailData.streetViewImageAddress || '').trim().toLowerCase();
+            const dismissedAddress = String(detailData.streetViewImageDismissedAddress || '').trim().toLowerCase();
+            const cachedImageUrl = String(detailData.streetViewImageUrl || '').trim();
+
+            if (cachedImageUrl && currentAddress && cachedAddress === currentAddress && dismissedAddress !== currentAddress) {
+                return [cachedImageUrl];
+            }
+
+            return [];
+        }
+
+        function buildGoogleStreetViewStaticImageUrl(address, apiKey) {
+            const encodedAddress = encodeURIComponent(String(address || '').trim());
+            const encodedKey = encodeURIComponent(String(apiKey || '').trim());
+            return `https://maps.googleapis.com/maps/api/streetview?size=1200x700&location=${encodedAddress}&source=outdoor&fov=80&pitch=0&key=${encodedKey}`;
+        }
+
+        async function resolvePropertyStreetViewImageUrl(address) {
+            const trimmedAddress = String(address || '').trim();
+            if (!trimmedAddress) {
+                return '';
+            }
+
+            const normalizedAddress = trimmedAddress.toLowerCase();
+            const cachedImageUrl = String(detailData.streetViewImageUrl || '').trim();
+            const cachedAddress = String(detailData.streetViewImageAddress || '').trim().toLowerCase();
+            if (cachedImageUrl && cachedAddress === normalizedAddress) {
+                return cachedImageUrl;
+            }
+
+            const config = await getGoogleMapsBrowserConfig().catch(() => null);
+            const apiKey = String(config && config.apiKey || '').trim();
+            if (!config || !config.enabled || !apiKey) {
+                return '';
+            }
+
+            const cachedLat = Number(detailData.streetViewLat);
+            const cachedLng = Number(detailData.streetViewLng);
+            const cachedStreetViewAddress = String(detailData.streetViewAddress || '').trim().toLowerCase();
+
+            let lat = Number.isFinite(cachedLat) && cachedStreetViewAddress === normalizedAddress ? cachedLat : NaN;
+            let lng = Number.isFinite(cachedLng) && cachedStreetViewAddress === normalizedAddress ? cachedLng : NaN;
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                if (window.google && window.google.maps) {
+                    const googleMatch = await geocodeAddressWithGoogle(trimmedAddress).catch(() => null);
+                    if (googleMatch && Number.isFinite(googleMatch.lat) && Number.isFinite(googleMatch.lng)) {
+                        lat = googleMatch.lat;
+                        lng = googleMatch.lng;
+                        detailData.streetViewLat = lat;
+                        detailData.streetViewLng = lng;
+                        detailData.streetViewAddress = googleMatch.formattedAddress || trimmedAddress;
+                    }
+                }
+
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(trimmedAddress)}`, {
+                        headers: {
+                            Accept: 'application/json'
+                        }
+                    }).catch(() => null);
+
+                    if (!response || !response.ok) {
+                        return '';
+                    }
+
+                    const results = await response.json().catch(() => []);
+                    const match = Array.isArray(results) ? results[0] : null;
+                    lat = Number(match && match.lat);
+                    lng = Number(match && match.lon);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        return '';
+                    }
+
+                    detailData.streetViewLat = lat;
+                    detailData.streetViewLng = lng;
+                    detailData.streetViewAddress = trimmedAddress;
+                }
+            }
+
+            const imageUrl = buildGoogleStreetViewStaticImageUrl(`${lat},${lng}`, apiKey);
+            detailData.streetViewImageUrl = imageUrl;
+            detailData.streetViewImageAddress = trimmedAddress;
+            if (!String(detailData.imageUrl || '').trim()) {
+                detailData.imageUrl = imageUrl;
+            }
+            if (String(detailData.streetViewImageDismissedAddress || '').trim().toLowerCase() === normalizedAddress) {
+                detailData.streetViewImageDismissedAddress = '';
+            }
+            persistCurrentPropertyDetail();
+            return imageUrl;
+        }
+
+        function ensurePropertyImageFallback() {
+            const currentAddress = String(detailData.address || '').trim();
+            const normalizedAddress = currentAddress.toLowerCase();
+            const dismissedAddress = String(detailData.streetViewImageDismissedAddress || '').trim().toLowerCase();
+            const storedImages = Array.from(new Set(
+                (Array.isArray(detailData.propertyImages) ? detailData.propertyImages : [])
+                    .map(url => String(url || '').trim())
+                    .filter(url => url.length > 0)
+            ));
+
+            if (!currentAddress || storedImages.length > 0 || dismissedAddress === normalizedAddress || propertyImageFallbackPromise) {
+                return;
+            }
+
+            propertyImageFallbackPromise = resolvePropertyStreetViewImageUrl(currentAddress)
+                .then((imageUrl) => {
+                    if (!imageUrl) {
+                        return;
+                    }
+
+                    const hasManualImages = Array.isArray(detailData.propertyImages)
+                        && detailData.propertyImages.some((url) => String(url || '').trim().length > 0);
+                    if (hasManualImages) {
+                        return;
+                    }
+
+                    renderPropertyImages();
+                })
+                .catch(() => {})
+                .finally(() => {
+                    propertyImageFallbackPromise = null;
+                });
         }
 
         function promptForPropertyImageUrl() {
@@ -15377,6 +15508,15 @@ function initNavbarDateTime() {
                             return;
                         }
 
+                        const fallbackUrl = String(detailData.streetViewImageUrl || '').trim();
+                        if (!Array.isArray(detailData.propertyImages) || detailData.propertyImages.length === 0) {
+                            if (fallbackUrl && fallbackUrl === url) {
+                                detailData.streetViewImageDismissedAddress = String(detailData.address || '').trim();
+                                detailData.streetViewImageUrl = '';
+                                detailData.streetViewImageAddress = '';
+                            }
+                        }
+
                         const remainingImages = getPropertyImages().filter((imageUrl) => imageUrl !== url);
                         detailData.propertyImages = remainingImages;
                         detailData.imageUrl = remainingImages[0] || '';
@@ -15394,6 +15534,7 @@ function initNavbarDateTime() {
             if (previewGallery) {
                 previewGallery.innerHTML = '';
                 if (images.length === 0) {
+                    ensurePropertyImageFallback();
                     if (imageEditMode) {
                         const emptyButton = document.createElement('button');
                         emptyButton.type = 'button';
@@ -15416,6 +15557,7 @@ function initNavbarDateTime() {
             if (imageGallery) {
                 imageGallery.innerHTML = '';
                 if (images.length === 0) {
+                    ensurePropertyImageFallback();
                     imageGallery.innerHTML = '<p class="outreach-empty">No property images available.</p>';
                 } else {
                     images.forEach((url, index) => {
@@ -15942,7 +16084,6 @@ function initNavbarDateTime() {
             const compsExplorer = document.getElementById('comps-map-explorer');
             const compsMapCanvas = document.getElementById('comps-map-canvas');
             const compsMapPano = document.getElementById('comps-map-pano');
-            const compsMapEmpty = document.getElementById('comps-map-empty');
             const compsMapStyleSource = document.getElementById('comps-map-style-source');
             const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
             const nearbyList = document.getElementById('comps-nearby-list');
@@ -16059,12 +16200,7 @@ function initNavbarDateTime() {
             }
 
             function setMapEmptyState(isVisible, message) {
-                if (!compsMapEmpty) {
-                    return;
-                }
-
-                compsMapEmpty.hidden = true;
-                compsMapEmpty.setAttribute('aria-hidden', 'true');
+                return;
             }
 
             function updateMapStyleSource(config) {
