@@ -73,6 +73,9 @@ const mlsImportPdfJobs = new Map();
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
+const CANONICAL_TEST_EMAIL = 'test@fastbridgegroupllc.com';
+const CANONICAL_TEST_PASSWORD = 'subzero';
+const CANONICAL_TEST_NAME = 'Test';
 const ADMIN_CANONICAL_EMAILS = new Set([
   CANONICAL_ISAAC_EMAIL,
   CANONICAL_STEVE_EMAIL
@@ -1273,6 +1276,7 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN phone TEXT`, () => {});
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
+      syncPublicTestAccount();
     }
   });
 
@@ -1979,6 +1983,52 @@ async function syncSteveAdminAccount() {
     console.log('Steve admin account synced');
   } catch (error) {
     console.error('Failed to sync Steve admin account:', error);
+  }
+}
+
+async function syncPublicTestAccount() {
+  const canonicalEmail = CANONICAL_TEST_EMAIL;
+  const canonicalName = CANONICAL_TEST_NAME;
+  const canonicalPassword = CANONICAL_TEST_PASSWORD;
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) = ?
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
+      [canonicalEmail, canonicalName, canonicalEmail]
+    );
+
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+    let userId = null;
+
+    if (!account) {
+      const insertResult = await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, TEST_USER_ROLE, '', '', '']
+      );
+      userId = insertResult.lastID;
+      console.log('Public test account created/synced');
+    } else {
+      userId = account.id;
+      await dbRun(
+        'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+        [canonicalName, canonicalEmail, hash, TEST_USER_ROLE, '', '', '', account.id]
+      );
+      console.log('Public test account synced');
+    }
+
+    if (userId) {
+      await saveUserSecuritySettings(userId, {
+        enabled: false,
+        appEnabled: false,
+        totpSecret: '',
+        appVerifiedAt: null
+      });
+    }
+  } catch (error) {
+    console.error('Failed to sync public test account:', error);
   }
 }
 

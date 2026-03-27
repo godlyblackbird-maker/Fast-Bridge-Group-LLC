@@ -3706,7 +3706,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         const workspaceUser = getWorkspaceUserContext();
-        const isTestRole = String(workspaceUser && workspaceUser.role || '').trim().toLowerCase() === 'test';
+        const isTestRole = String(workspaceUser && workspaceUser.role || '').trim().toLowerCase() === 'test user';
         let pendingUploads = [];
 
         function getManualClosedDeals() {
