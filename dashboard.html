@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FAST BRIDGE GROUP Dashboard - 3D Glassmorphism Dashboard</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327f">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327f">
-    <link rel="shortcut icon" href="/favicon.ico?v=20260327f">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327f">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327f">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327f">
-    <link rel="manifest" href="/site.webmanifest?v=20260327f">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
     <meta name="description" content="3D Glassmorphism Dashboard Template by TemplateMo">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -619,14 +619,6 @@
             min-height: 0;
         }
 
-        .notes-editor-marker {
-            width: 4px;
-            min-height: 74px;
-            border-radius: 999px;
-            background: rgba(242, 195, 0, 0.72);
-            margin-left: 12px;
-        }
-
         .notes-title-editor,
         .notes-body-editor {
             border: 0;
@@ -669,6 +661,13 @@
         .notes-pin-toggle-btn.is-active {
             background: rgba(250, 204, 21, 0.26);
             color: #7c5d00;
+        }
+
+        .notes-editor-footer-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
         }
 
         .notes-body-input-wrap {
@@ -1280,12 +1279,7 @@ https://templatemo.com/tm-607-glass-admin
                                     </div>
                                 </div>
                                 <div class="notes-editor-page">
-                                    <div class="notes-editor-marker" aria-hidden="true"></div>
                                     <div id="notes-title-input" class="notes-title-editor" contenteditable="true" role="textbox" aria-label="Note title" data-placeholder="Title"></div>
-                                    <div class="notes-editor-meta-row">
-                                        <select id="notes-folder-select" class="form-input notes-folder-select" aria-label="Move note to folder"></select>
-                                        <button id="notes-pin-toggle-btn" type="button" class="notes-pin-toggle-btn" aria-pressed="false">Pin Note</button>
-                                    </div>
                                     <div id="notes-body-input" class="notes-body-editor" contenteditable="true" role="textbox" aria-label="Note body" data-placeholder="Start typing your note here..."></div>
                                 </div>
                                 <div class="notes-editor-toolbar" aria-label="Note tools">
@@ -1309,7 +1303,11 @@ https://templatemo.com/tm-607-glass-admin
                                 </div>
                                 <div class="notes-editor-footer">
                                     <p class="notes-editor-meta" id="notes-meta-label">Last updated just now</p>
-                                    <button id="notes-delete-note-btn" type="button" class="card-btn">Delete Note</button>
+                                    <div class="notes-editor-footer-actions">
+                                        <select id="notes-folder-select" class="form-input notes-folder-select" aria-label="Move note to folder" hidden></select>
+                                        <button id="notes-pin-toggle-btn" type="button" class="notes-pin-toggle-btn" aria-pressed="false">Pin Note</button>
+                                        <button id="notes-delete-note-btn" type="button" class="card-btn">Delete Note</button>
+                                    </div>
                                 </div>
                             </div>
                         </section>
