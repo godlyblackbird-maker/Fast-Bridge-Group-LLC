@@ -2965,7 +2965,21 @@ a {
 .nav-icon {
     width: 22px;
     height: 22px;
+    display: inline-block;
+    flex-shrink: 0;
     opacity: 0.8;
+}
+
+.nav-icon-fire {
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/FIRE%20SYMBOL.svg");
+    mask-image: url("Symbols/FIRE%20SYMBOL.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
 }
 
 .nav-link.active .nav-icon,
