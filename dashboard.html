@@ -171,6 +171,168 @@
             opacity: 1;
         }
 
+        .dashboard-notes-launcher {
+            display: grid;
+            gap: 18px;
+            min-height: 430px;
+            padding: 24px;
+        }
+
+        .dashboard-notes-launcher-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .dashboard-notes-launcher-copy {
+            display: grid;
+            gap: 8px;
+        }
+
+        .dashboard-notes-eyebrow {
+            margin: 0;
+            color: rgba(17, 24, 39, 0.5);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .dashboard-notes-title {
+            margin: 0;
+            color: #111827;
+            font-size: clamp(1.9rem, 3vw, 2.6rem);
+            font-weight: 800;
+            letter-spacing: -0.06em;
+            line-height: 0.96;
+        }
+
+        .dashboard-notes-subtitle,
+        .dashboard-notes-summary,
+        .dashboard-notes-folder-meta,
+        .dashboard-notes-folder-count,
+        .dashboard-notes-footer-copy,
+        .dashboard-notes-empty {
+            margin: 0;
+            color: rgba(17, 24, 39, 0.62);
+        }
+
+        .dashboard-notes-launcher-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .dashboard-notes-action-btn,
+        .dashboard-notes-footer-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 999px;
+            border: 0;
+            background: rgba(255, 255, 255, 0.88);
+            color: #111827;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 12px 24px rgba(148, 163, 184, 0.15);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .dashboard-notes-action-btn:hover,
+        .dashboard-notes-action-btn:focus-visible,
+        .dashboard-notes-footer-link:hover,
+        .dashboard-notes-footer-link:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 30px rgba(148, 163, 184, 0.2);
+            outline: none;
+        }
+
+        .dashboard-notes-action-btn-primary {
+            background: linear-gradient(135deg, #facc15, #f59e0b);
+            color: #fffdf6;
+        }
+
+        .dashboard-notes-folder-list {
+            display: grid;
+            gap: 12px;
+            align-content: start;
+        }
+
+        .dashboard-notes-folder-btn {
+            width: 100%;
+            border: 0;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.82);
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            text-align: left;
+            cursor: pointer;
+            box-shadow: 0 14px 28px rgba(148, 163, 184, 0.12);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .dashboard-notes-folder-btn:hover,
+        .dashboard-notes-folder-btn:focus-visible {
+            transform: translateY(-1px);
+            background: rgba(255, 249, 219, 0.95);
+            box-shadow: 0 18px 34px rgba(245, 158, 11, 0.18);
+            outline: none;
+        }
+
+        .dashboard-notes-folder-copy {
+            min-width: 0;
+            display: grid;
+            gap: 4px;
+        }
+
+        .dashboard-notes-folder-name {
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .dashboard-notes-folder-meta {
+            font-size: 12px;
+        }
+
+        .dashboard-notes-folder-count {
+            flex: 0 0 auto;
+            font-size: 22px;
+            font-weight: 800;
+            color: #d97706;
+        }
+
+        .dashboard-notes-footer {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-notes-launcher-head,
+            .dashboard-notes-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .dashboard-notes-launcher-actions {
+                justify-content: flex-start;
+            }
+        }
+
         .notes-dashboard-widget .card-header,
         .notes-dashboard-widget .card-title,
         .notes-dashboard-widget .card-subtitle {
@@ -932,7 +1094,8 @@ https://templatemo.com/tm-607-glass-admin
                         <li class="nav-item">
                             <a href="mls.html" class="nav-link">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M13 2L3 14h7l-1 8 10-12h-7z"/>
+                                    <path d="M12 2s3 3.5 3 6.5c0 1.6-.8 2.8-1.8 3.8-.8.8-1.2 1.8-1.2 2.7 0 1.7 1.3 3 3 3 2.8 0 5-2.3 5-5.2 0-4.7-3.8-7-8-10.8Z"/>
+                                    <path d="M9.5 13.5c-1.6 1.2-2.5 2.8-2.5 4.5A5 5 0 0 0 17 18c0-1.3-.5-2.5-1.4-3.5"/>
                                 </svg>
                                 MLS Hot Deals
                             </a>
@@ -1105,24 +1268,49 @@ https://templatemo.com/tm-607-glass-admin
                                     <div>
                                         <span class="calendar-agenda-label">Selected date</span>
                                         <h3 id="calendar-selected-date">No date selected</h3>
-                                        <p class="calendar-detail-subtitle" id="calendar-detail-summary">Add notes and reminders for this day.</p>
+                                        <p class="calendar-detail-subtitle" id="calendar-detail-summary">Use your planner for this date.</p>
                                     </div>
                                 </div>
-                                <form class="calendar-inline-form" id="calendar-note-form-inline">
-                                    <div>
-                                        <label for="calendar-note-text-inline">Note</label>
-                                        <textarea id="calendar-note-text-inline" placeholder="Add a note, task, or follow-up"></textarea>
+                                <p class="outreach-owner" id="todo-goal-owner-label">Workspace owner: You</p>
+                                <p class="planner-reminder-note" id="planner-reminder-note">Top-right reminders will alert you when planner tasks are coming up, due, or overdue.</p>
+                                <div class="planner-input-grid">
+                                    <div class="form-group planner-full-width">
+                                        <label for="planner-task-input">Task / Goal</label>
+                                        <input id="planner-task-input" class="form-input" type="text" placeholder="Add task, follow-up, or weekly goal...">
                                     </div>
-                                    <div>
-                                        <label for="calendar-note-reminder-inline">Reminder</label>
-                                        <input id="calendar-note-reminder-inline" type="datetime-local">
+                                    <div class="form-group">
+                                        <label for="planner-task-date">Due Date</label>
+                                        <input id="planner-task-date" class="form-input" type="date">
                                     </div>
-                                    <div class="calendar-inline-actions">
-                                        <button class="card-btn active" id="calendar-add-note-btn" type="submit">Save Note</button>
+                                    <div class="form-group">
+                                        <label for="planner-task-priority">Priority</label>
+                                        <select id="planner-task-priority" class="form-input">
+                                            <option value="p2">Medium</option>
+                                            <option value="p1">High</option>
+                                            <option value="p3">Low</option>
+                                            <option value="p4">Someday</option>
+                                        </select>
                                     </div>
-                                </form>
-                                <div class="calendar-events-list" id="calendar-events-list">
-                                    <p class="calendar-empty-state">No notes or reminders yet.</p>
+                                    <div class="form-group">
+                                        <label for="planner-task-reminder">Reminder</label>
+                                        <select id="planner-task-reminder" class="form-input">
+                                            <option value="day-of">On due date</option>
+                                            <option value="1-day">1 day before</option>
+                                            <option value="3-day">3 days before</option>
+                                            <option value="none">No reminder</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="calendar-inline-actions">
+                                    <button id="planner-add-btn" type="button" class="card-btn active">Add To Planner</button>
+                                </div>
+                                <div class="planner-filters" role="tablist" aria-label="Planner filters">
+                                    <button type="button" class="planner-filter-btn active" data-filter="selected-date">Selected Date <span id="planner-count-today" class="planner-count">0</span></button>
+                                    <button type="button" class="planner-filter-btn" data-filter="upcoming">Upcoming <span id="planner-count-upcoming" class="planner-count">0</span></button>
+                                    <button type="button" class="planner-filter-btn" data-filter="done">Done <span id="planner-count-done" class="planner-count">0</span></button>
+                                </div>
+                                <div id="planner-task-list" class="outreach-list planner-task-list">
+                                    <p class="outreach-empty">No planner items yet.</p>
                                 </div>
                             </div>
                         </div>
@@ -1148,199 +1336,25 @@ https://templatemo.com/tm-607-glass-admin
             </section>
 
             <section class="outreach-workspace-grid">
-                <div class="glass-card widget-card outreach-card" data-widget-id="todo-goals" data-widget-title="To-Do & Goals">
-                    <div class="card-header">
-                        <div>
-                            <h2 class="card-title">My Planner</h2>
-                            <p class="card-subtitle">Plan tasks with dates and priorities</p>
+                <div class="glass-card widget-card outreach-card notes-dashboard-widget dashboard-notes-launcher" data-widget-id="notes-organizer" data-widget-title="Notes">
+                    <div class="dashboard-notes-launcher-head">
+                        <div class="dashboard-notes-launcher-copy">
+                            <p class="dashboard-notes-eyebrow">Investor Workspace</p>
+                            <h2 class="dashboard-notes-title">Notes Folders</h2>
+                            <p class="dashboard-notes-subtitle" id="dashboard-notes-total-count">Loading notes...</p>
+                        </div>
+                        <div class="dashboard-notes-launcher-actions">
+                            <button id="dashboard-notes-open-btn" type="button" class="dashboard-notes-action-btn">Open Workspace</button>
+                            <button id="dashboard-notes-new-note-btn" type="button" class="dashboard-notes-action-btn dashboard-notes-action-btn-primary">New Note</button>
                         </div>
                     </div>
-                    <p class="outreach-owner" id="todo-goal-owner-label">Workspace owner: You</p>
-                    <p class="planner-reminder-note" id="planner-reminder-note">Top-right reminders will alert you when planner tasks are coming up, due, or overdue.</p>
-                    <div class="planner-input-grid">
-                        <div class="form-group planner-full-width">
-                            <label for="planner-task-input">Task / Goal</label>
-                            <input id="planner-task-input" class="form-input" type="text" placeholder="Add task, follow-up, or weekly goal...">
-                        </div>
-                        <div class="form-group">
-                            <label for="planner-task-date">Due Date</label>
-                            <input id="planner-task-date" class="form-input" type="date">
-                        </div>
-                        <div class="form-group">
-                            <label for="planner-task-priority">Priority</label>
-                            <select id="planner-task-priority" class="form-input">
-                                <option value="p2">Medium</option>
-                                <option value="p1">High</option>
-                                <option value="p3">Low</option>
-                                <option value="p4">Someday</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="planner-task-reminder">Reminder</label>
-                            <select id="planner-task-reminder" class="form-input">
-                                <option value="day-of">On due date</option>
-                                <option value="1-day">1 day before</option>
-                                <option value="3-day">3 days before</option>
-                                <option value="none">No reminder</option>
-                            </select>
-                        </div>
+                    <p class="dashboard-notes-summary" id="dashboard-notes-activity">Open the notes workspace to organize folder-based notes and drag them where they belong.</p>
+                    <div id="dashboard-notes-folder-list" class="dashboard-notes-folder-list">
+                        <p class="outreach-empty">Loading folders...</p>
                     </div>
-                    <div class="outreach-actions">
-                        <button id="planner-add-btn" type="button" class="card-btn active">Add To Planner</button>
-                    </div>
-                    <div class="planner-filters" role="tablist" aria-label="Planner filters">
-                        <button type="button" class="planner-filter-btn active" data-filter="today">Today <span id="planner-count-today" class="planner-count">0</span></button>
-                        <button type="button" class="planner-filter-btn" data-filter="upcoming">Upcoming <span id="planner-count-upcoming" class="planner-count">0</span></button>
-                        <button type="button" class="planner-filter-btn" data-filter="done">Done <span id="planner-count-done" class="planner-count">0</span></button>
-                    </div>
-                    <div id="planner-task-list" class="outreach-list planner-task-list">
-                        <p class="outreach-empty">No planner items yet.</p>
-                    </div>
-                </div>
-
-                <div class="glass-card widget-card outreach-card notes-dashboard-widget" data-widget-id="notes-organizer" data-widget-title="Notes">
-                    <div class="card-header notes-widget-header">
-                        <div>
-                            <h2 class="card-title">Notes</h2>
-                            <p class="card-subtitle">0 notes</p>
-                        </div>
-                    </div>
-                    <div class="notes-widget-shell">
-                        <section class="notes-library-panel" aria-label="Notes library">
-                            <div class="notes-mobile-topbar">
-                                <span class="notes-mobile-status">iCloud Workspace</span>
-                                <div class="notes-mobile-actions">
-                                    <button id="notes-add-folder-btn" type="button" class="notes-ios-icon-btn" aria-label="Add folder">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"></path><path d="M12 10v6"></path><path d="M9 13h6"></path></svg>
-                                    </button>
-                                    <button id="notes-edit-folders-btn" type="button" class="notes-ios-edit-btn">Edit</button>
-                                </div>
-                            </div>
-                            <div class="notes-library-head">
-                                <h3 class="notes-library-title">Folders</h3>
-                                <p class="notes-library-caption" id="notes-widget-subtitle">0 notes</p>
-                            </div>
-                            <div class="notes-view-tabs notes-view-tabs-hidden" aria-label="Notes views">
-                                    <button id="notes-view-all-btn" type="button" class="notes-view-tab is-active">Notes</button>
-                                    <button id="notes-view-trash-btn" type="button" class="notes-view-tab">Recently Deleted</button>
-                            </div>
-                            <div id="notes-folder-tree" class="notes-folder-tree">
-                                <p class="outreach-empty">Loading folders...</p>
-                            </div>
-                            <section class="notes-note-list-shell">
-                                <div class="notes-panel-head">
-                                    <div class="notes-panel-head-copy">
-                                        <span id="notes-active-folder-label">All Notes</span>
-                                        <span class="notes-panel-meta" id="notes-count-summary">0 notes</span>
-                                    </div>
-                                    <div class="notes-panel-actions">
-                                        <span class="notes-widget-folder-meta" id="notes-folder-summary">0 notes total</span>
-                                        <button id="notes-add-note-btn" type="button" class="notes-new-note-btn">New Note</button>
-                                    </div>
-                                </div>
-                                <div id="notes-note-list" class="notes-note-list">
-                                    <p class="outreach-empty">No notes yet.</p>
-                                </div>
-                            </section>
-                            <div class="notes-search-dock">
-                                <label class="notes-search-shell" for="notes-search-input">
-                                    <svg class="notes-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line></svg>
-                                    <input id="notes-search-input" class="notes-search-input" type="search" placeholder="Search notes or quick thoughts...">
-                                </label>
-                                <button id="notes-quick-note-btn" type="button" class="notes-quick-note-btn" aria-label="Create quick note">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-                                </button>
-                            </div>
-                        </section>
-
-                        <section class="notes-editor-panel" aria-label="Note editor">
-                            <div id="notes-editor-empty" class="notes-editor-empty">
-                                <strong>No note selected</strong>
-                                <p>Create a note or pick one from the list to start writing.</p>
-                                <button id="notes-empty-create-btn" type="button" class="notes-empty-create-btn">Create New Note</button>
-                            </div>
-                            <div id="notes-editor" class="notes-editor" hidden>
-                                <div class="notes-editor-topbar">
-                                    <button id="notes-back-to-list-btn" type="button" class="notes-editor-nav-btn" aria-label="Back to notes list">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                                    </button>
-                                    <div class="notes-editor-topbar-actions">
-                                        <div class="notes-editor-action-pill">
-                                            <button id="notes-share-note-btn" type="button" class="notes-editor-icon-btn" aria-label="Share note">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 20h14a2 2 0 0 0 2-2v-4"></path><path d="M3 14v4a2 2 0 0 0 2 2"></path></svg>
-                                            </button>
-                                            <button id="notes-more-note-btn" type="button" class="notes-editor-icon-btn" aria-label="More note actions">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-                                            </button>
-                                        </div>
-                                        <button id="notes-close-editor-btn" type="button" class="notes-editor-done-btn" aria-label="Done editing">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="notes-editor-page">
-                                    <div id="notes-title-input" class="notes-title-editor" contenteditable="true" role="textbox" aria-label="Note title" data-placeholder="Title"></div>
-                                    <div id="notes-body-input" class="notes-body-editor" contenteditable="true" role="textbox" aria-label="Note body" data-placeholder="Start typing your note here..."></div>
-                                </div>
-                                <div class="notes-editor-toolbar" aria-label="Note tools">
-                                    <button id="notes-tool-font-btn" type="button" class="notes-tool-btn" aria-label="Font tool">Aa</button>
-                                    <button id="notes-tool-checklist-btn" type="button" class="notes-tool-btn" aria-label="Checklist tool">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M2 20h1"></path><path d="M7 20h13"></path><path d="M2 12h1"></path><path d="M7 12h8"></path><path d="M2 4h1"></path><path d="M7 4h8"></path></svg>
-                                    </button>
-                                    <button id="notes-tool-grid-btn" type="button" class="notes-tool-btn" aria-label="Grid tool">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
-                                    </button>
-                                    <button id="notes-tool-attach-btn" type="button" class="notes-tool-btn" aria-label="Attachment tool">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.82-2.83l8.48-8.48"></path></svg>
-                                    </button>
-                                    <button id="notes-tool-draw-btn" type="button" class="notes-tool-btn" aria-label="Drawing tool">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 19 7-7 3 3-7 7-3.5 1z"></path><path d="m18 13-7-7-8 8"></path><path d="M2 22h20"></path></svg>
-                                    </button>
-                                    <button id="notes-tool-bold-btn" type="button" class="notes-tool-btn" aria-label="Bold tool"><strong>B</strong></button>
-                                    <button id="notes-complete-toggle-btn" type="button" class="notes-complete-toggle-btn" aria-pressed="false" aria-label="Mark note complete">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
-                                    </button>
-                                </div>
-                                <div class="notes-editor-footer">
-                                    <p class="notes-editor-meta" id="notes-meta-label">Last updated just now</p>
-                                    <div class="notes-editor-footer-actions">
-                                        <select id="notes-folder-select" class="form-input notes-folder-select" aria-label="Move note to folder" hidden></select>
-                                        <button id="notes-pin-toggle-btn" type="button" class="notes-pin-toggle-btn" aria-pressed="false">Pin Note</button>
-                                        <button id="notes-delete-note-btn" type="button" class="card-btn">Delete Note</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-
-                <div id="notes-folder-modal" class="notes-folder-modal" hidden aria-hidden="true">
-                    <div class="notes-folder-modal-backdrop" data-notes-folder-close="true"></div>
-                    <div class="notes-folder-modal-card" role="dialog" aria-modal="true" aria-labelledby="notes-folder-modal-title">
-                        <div class="notes-folder-modal-header">
-                            <button type="button" class="notes-folder-modal-circle-btn" data-notes-folder-close="true" aria-label="Close new folder dialog">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </button>
-                            <h3 id="notes-folder-modal-title" class="notes-folder-modal-title">New Folder</h3>
-                            <button id="notes-folder-save-btn" type="button" class="notes-folder-modal-done-btn" aria-label="Create folder">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
-                            </button>
-                        </div>
-                        <div class="notes-folder-modal-input-wrap">
-                            <span class="notes-folder-modal-marker" aria-hidden="true"></span>
-                            <input id="notes-folder-name-input" class="notes-folder-modal-input" type="text" placeholder="New Folder" maxlength="80">
-                            <button id="notes-folder-clear-btn" type="button" class="notes-folder-modal-clear" aria-label="Clear folder name">×</button>
-                        </div>
-                        <button id="notes-folder-smart-btn" type="button" class="notes-folder-modal-smart">
-                            <span class="notes-folder-modal-smart-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                            </span>
-                            <span class="notes-folder-modal-smart-copy">
-                                <strong>Make Into Smart Folder</strong>
-                                <span>Organize using tags and other filters</span>
-                            </span>
-                            <span class="notes-folder-modal-smart-arrow">›</span>
-                        </button>
+                    <div class="dashboard-notes-footer">
+                        <span class="dashboard-notes-footer-copy">Click any folder to open its dedicated notes page.</span>
+                        <a class="dashboard-notes-footer-link" href="notes.html">Go to Notes Page</a>
                     </div>
                 </div>
 

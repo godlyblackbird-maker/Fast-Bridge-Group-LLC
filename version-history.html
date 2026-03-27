@@ -684,16 +684,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.3.1</span>
-                    <span>Large PDF extraction scaling</span>
-                    <span>Live MLS parsing progress</span>
-                    <span>Status recognition upgrades</span>
+                    <span>Newest build: 1.3.2</span>
+                    <span>Sticky admin controls rail</span>
+                    <span>Planner inside calendar</span>
+                    <span>MLS workflow polish</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>14</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.1, including the full 1.2.3 to 1.3.1 release sequence.</span>
+                    <strong>15</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.2, including the full 1.2.3 to 1.3.2 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -705,25 +705,25 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.3.1</h2>
-                <p>This release hardens MLS Imports for much larger PDFs by raising the upload ceiling, parsing long files in page batches, recognizing more explicit MLS statuses, and showing live page-range progress with a spinning indicator while extraction runs.</p>
+                <h2>Version 1.3.2</h2>
+                <p>This release sharpens admin workflow visibility, folds planner work into the calendar experience, improves MLS-related UI consistency, and keeps manual MLS imports from disappearing when user identity buckets change.</p>
                 <div class="version-history-meta">
-                    <span>March 26, 2026</span>
-                    <span>Large PDF support</span>
-                    <span>Live extraction progress</span>
-                    <span>Version 1.3.1</span>
+                    <span>March 27, 2026</span>
+                    <span>Workflow polish</span>
+                    <span>Persistence fixes</span>
+                    <span>Version 1.3.2</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Promoted the version history page to 1.3.1 and moved version 1.3.0 into the previous release stack directly underneath it.</li>
-                    <li>Raised the MLS import PDF upload ceiling so much larger files can be processed without being rejected early.</li>
-                    <li>Changed MLS PDF extraction to parse large files in page batches instead of relying on a single all-pages pass.</li>
-                    <li>Added live MLS extraction progress updates that report page ranges like pages 1-40, 41-80, and beyond while parsing runs.</li>
-                    <li>Added a spinning circle-dot progress indicator on the MLS Imports Spreadsheet so long extractions feel active instead of stalled.</li>
-                    <li>Expanded MLS status recognition so explicit values like Active, Under Contract, Pending, Off Market, and On Hold are filled more reliably.</li>
-                    <li>Sanitized saved Property Details email body content so stray page markup, images, and script-like junk no longer render inside the editor.</li>
+                    <li>Promoted the version history page to 1.3.2 and moved version 1.3.1 into the previous release stack directly underneath it.</li>
+                    <li>Moved the My Planner workflow into the calendar date-detail view so clicking a date opens the planner instead of duplicating that tool in a separate widget.</li>
+                    <li>Reworked Admin Controls so the sticky quick-access section sits ahead of notifications in a cleaner pinned toolbar.</li>
+                    <li>Redesigned the MLS Imports admin card into a wider featured intake panel with better hierarchy, stronger CTA treatment, and clearer workflow copy.</li>
+                    <li>Changed the MLS Hot Deals nav symbol from lightning to fire across every tab and page that renders that entry.</li>
+                    <li>Updated Analytics My Profits filters to use First, 2nd, 3rd, and 4th Quarter ranges instead of week and rolling month windows.</li>
+                    <li>Added migration coverage so manually imported MLS properties stay with the correct logged-in user instead of getting stranded in a default storage bucket.</li>
                 </ul>
             </div>
         </section>
@@ -735,6 +735,25 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.3.1</h2>
+                            <span class="version-date">March 26, 2026</span>
+                        </div>
+                        <span class="version-chip">1.3.1</span>
+                    </div>
+                    <ul>
+                        <li>Promoted the version history page to 1.3.1 and moved version 1.3.0 into the previous release stack directly underneath it.</li>
+                        <li>Raised the MLS import PDF upload ceiling so much larger files can be processed without being rejected early.</li>
+                        <li>Changed MLS PDF extraction to parse large files in page batches instead of relying on a single all-pages pass.</li>
+                        <li>Added live MLS extraction progress updates that report page ranges like pages 1-40, 41-80, and beyond while parsing runs.</li>
+                        <li>Added a spinning circle-dot progress indicator on the MLS Imports Spreadsheet so long extractions feel active instead of stalled.</li>
+                        <li>Expanded MLS status recognition so explicit values like Active, Under Contract, Pending, Off Market, and On Hold are filled more reliably.</li>
+                        <li>Sanitized saved Property Details email body content so stray page markup, images, and script-like junk no longer render inside the editor.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>

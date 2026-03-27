@@ -660,7 +660,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.2.9';
+                versionLabel.textContent = 'v1.3.2';
             });
     }
 
@@ -3256,24 +3256,23 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const profitWindowTrackEl = document.getElementById('kpi-profit-window-track');
         let activeProfitWindowPointerButton = null;
         const PROFIT_WINDOW_CONFIG = {
-            week: { label: 'last 7 days', days: 7 },
-            month: { label: 'last 30 days', days: 30 },
-            quarter: { label: 'last 90 days', days: 90 },
-            'six-month': { label: 'last 6 months', days: 183 },
-            year: { label: 'last 12 months', days: 365 }
+            q1: { label: 'in first quarter', quarter: 0 },
+            q2: { label: 'in 2nd quarter', quarter: 1 },
+            q3: { label: 'in 3rd quarter', quarter: 2 },
+            q4: { label: 'in 4th quarter', quarter: 3 }
         };
         let activeProfitWindowState = getSelectedProfitWindow();
 
         function getSelectedProfitWindow() {
             const workspaceUser = getWorkspaceUserContext();
-            const storedWindow = String(getUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, 'year') || 'year').trim().toLowerCase();
-            return PROFIT_WINDOW_CONFIG[storedWindow] ? storedWindow : 'year';
+            const storedWindow = String(getUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, 'q1') || 'q1').trim().toLowerCase();
+            return PROFIT_WINDOW_CONFIG[storedWindow] ? storedWindow : 'q1';
         }
 
         function setSelectedProfitWindow(windowKey) {
             const workspaceUser = getWorkspaceUserContext();
-            const normalizedWindow = String(windowKey || 'year').trim().toLowerCase();
-            const nextWindow = PROFIT_WINDOW_CONFIG[normalizedWindow] ? normalizedWindow : 'year';
+            const normalizedWindow = String(windowKey || 'q1').trim().toLowerCase();
+            const nextWindow = PROFIT_WINDOW_CONFIG[normalizedWindow] ? normalizedWindow : 'q1';
             activeProfitWindowState = nextWindow;
             setUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, nextWindow);
         }
@@ -3308,8 +3307,21 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         function getProfitWindowRange(windowKey, now) {
-            const config = PROFIT_WINDOW_CONFIG[windowKey] || PROFIT_WINDOW_CONFIG.year;
-            return now - (config.days * 24 * 60 * 60 * 1000);
+            const config = PROFIT_WINDOW_CONFIG[windowKey] || PROFIT_WINDOW_CONFIG.q1;
+            const currentDate = now instanceof Date ? now : new Date(now);
+            const currentYear = currentDate.getFullYear();
+            const quarterIndex = Number(config.quarter);
+            const quarterStartMonth = Number.isFinite(quarterIndex) ? quarterIndex * 3 : 0;
+            const rangeStart = new Date(currentYear, quarterStartMonth, 1).getTime();
+            const rangeEnd = new Date(currentYear, quarterStartMonth + 3, 1).getTime();
+            return {
+                start: rangeStart,
+                end: rangeEnd
+            };
+        }
+
+        function isTimestampInProfitWindow(timestamp, range) {
+            return Number.isFinite(timestamp) && timestamp >= range.start && timestamp < range.end;
         }
 
         function getClosedDealTimestamp(item) {
@@ -3435,13 +3447,16 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const profitGoal = Math.max(parseMoneyValue(rawProfitGoal), 0);
             activeProfitWindowState = getSelectedProfitWindow();
             const activeProfitWindow = activeProfitWindowState;
-            const now = Date.now();
+            const now = new Date();
             const profitWindowStart = getProfitWindowRange(activeProfitWindow, now);
-            const windowedIaStates = iaStates.filter((state) => getStateTimestamp(state) >= profitWindowStart);
-            const windowedClosedDeals = manualClosedDeals.filter((deal) => getClosedDealTimestamp(deal) >= profitWindowStart);
-            const yearlyProfitStart = getProfitWindowRange('year', now);
-            const yearlyIaStates = iaStates.filter((state) => getStateTimestamp(state) >= yearlyProfitStart);
-            const yearlyClosedDeals = manualClosedDeals.filter((deal) => getClosedDealTimestamp(deal) >= yearlyProfitStart);
+            const windowedIaStates = iaStates.filter((state) => isTimestampInProfitWindow(getStateTimestamp(state), profitWindowStart));
+            const windowedClosedDeals = manualClosedDeals.filter((deal) => isTimestampInProfitWindow(getClosedDealTimestamp(deal), profitWindowStart));
+            const yearlyRange = {
+                start: new Date(now.getFullYear(), 0, 1).getTime(),
+                end: new Date(now.getFullYear() + 1, 0, 1).getTime()
+            };
+            const yearlyIaStates = iaStates.filter((state) => isTimestampInProfitWindow(getStateTimestamp(state), yearlyRange));
+            const yearlyClosedDeals = manualClosedDeals.filter((deal) => isTimestampInProfitWindow(getClosedDealTimestamp(deal), yearlyRange));
 
             const latestByProperty = new Map();
             const offerLeadSet = new Set();
@@ -3478,7 +3493,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const myProfitsTotal = windowedIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + windowedClosedDealEarnings;
             const offerTermsSentCount = offerTermsSentSet.size;
             const offersSubmitted = offerLeadSet.size;
-            const activeProfitWindowLabel = (PROFIT_WINDOW_CONFIG[activeProfitWindow] || PROFIT_WINDOW_CONFIG.year).label;
+            const activeProfitWindowLabel = (PROFIT_WINDOW_CONFIG[activeProfitWindow] || PROFIT_WINDOW_CONFIG.q1).label;
 
             myProfitsValueEl.textContent = formatMoney(myProfitsTotal);
             offerTermsSentEl.textContent = String(offerTermsSentCount);
@@ -3642,9 +3657,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
                 if (event.key === 'Home') {
                     event.preventDefault();
-                    setSelectedProfitWindow('week');
+                    setSelectedProfitWindow('q1');
                     refreshKpis();
-                    const firstButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'week');
+                    const firstButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'q1');
                     if (firstButton) {
                         firstButton.focus();
                     }
@@ -3652,9 +3667,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
                 if (event.key === 'End') {
                     event.preventDefault();
-                    setSelectedProfitWindow('year');
+                    setSelectedProfitWindow('q4');
                     refreshKpis();
-                    const lastButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'year');
+                    const lastButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'q4');
                     if (lastButton) {
                         lastButton.focus();
                     }
@@ -6526,34 +6541,18 @@ function initNavbarDateTime() {
         const selectedDateLabel = document.getElementById('calendar-selected-date');
         const selectedSummary = document.getElementById('calendar-selected-summary');
         const detailSummary = document.getElementById('calendar-detail-summary');
-        const eventsList = document.getElementById('calendar-events-list');
-        const noteForm = document.getElementById('calendar-note-form-inline');
-        const noteText = document.getElementById('calendar-note-text-inline');
-        const noteReminder = document.getElementById('calendar-note-reminder-inline');
-        const addNoteButton = document.getElementById('calendar-add-note-btn');
         const backButton = document.getElementById('calendar-back-btn');
         const prevMonthButton = document.getElementById('calendar-prev-month');
         const nextMonthButton = document.getElementById('calendar-next-month');
 
-        if (!calendarStage || !calendarGrid || !monthLabel || !selectedDateLabel || !eventsList || !noteForm || !noteText || !noteReminder) return;
+        if (!calendarStage || !calendarGrid || !monthLabel || !selectedDateLabel) return;
 
+        const workspaceUser = getWorkspaceUserContext();
         const today = new Date();
         const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         let currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         let selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         let detailOpen = false;
-
-        function getEvents() {
-            try {
-                return JSON.parse(localStorage.getItem(CALENDAR_EVENTS_KEY) || '{}');
-            } catch (error) {
-                return {};
-            }
-        }
-
-        function saveEvents(events) {
-            localStorage.setItem(CALENDAR_EVENTS_KEY, JSON.stringify(events));
-        }
 
         function formatDateKey(date) {
             const year = date.getFullYear();
@@ -6577,146 +6576,115 @@ function initNavbarDateTime() {
                 left.getDate() === right.getDate();
         }
 
-        function toReminderLabel(value) {
-            if (!value) {
-                return '';
+        function migrateLegacyCalendarEventsIntoPlanner() {
+            let legacyEvents;
+            try {
+                legacyEvents = JSON.parse(localStorage.getItem(CALENDAR_EVENTS_KEY) || '{}');
+            } catch (error) {
+                legacyEvents = {};
             }
 
-            const date = new Date(value);
-            if (Number.isNaN(date.getTime())) {
-                return '';
+            if (!legacyEvents || typeof legacyEvents !== 'object' || Array.isArray(legacyEvents) || Object.keys(legacyEvents).length === 0) {
+                return;
             }
 
-            return new Intl.DateTimeFormat('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit'
-            }).format(date);
-        }
+            const plannerItems = getPlannerItems(workspaceUser);
+            const existingLegacyIds = new Set(
+                plannerItems
+                    .map((item) => String(item && item.legacyCalendarId || '').trim())
+                    .filter(Boolean)
+            );
+            let didMigrate = false;
 
-        function generateEventId() {
-            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-                return window.crypto.randomUUID();
-            }
-            return 'event-' + Date.now() + '-' + Math.random().toString(16).slice(2);
-        }
+            Object.entries(legacyEvents).forEach(([dateKey, entries]) => {
+                const normalizedDateKey = getPlannerDateKey(dateKey);
+                if (!normalizedDateKey || !Array.isArray(entries)) {
+                    return;
+                }
 
-        function getEventsForDate(date) {
-            const events = getEvents();
-            const key = formatDateKey(date);
-            return (events[key] || []).slice().sort((left, right) => {
-                if (!left.reminder && !right.reminder) return 0;
-                if (!left.reminder) return 1;
-                if (!right.reminder) return -1;
-                return new Date(left.reminder) - new Date(right.reminder);
+                entries.forEach((entry) => {
+                    const legacyId = String(entry && entry.id || '').trim();
+                    const title = String(entry && entry.note || '').trim();
+                    if (!title || !legacyId || existingLegacyIds.has(legacyId)) {
+                        return;
+                    }
+
+                    plannerItems.push({
+                        id: `planner-calendar-${legacyId}`,
+                        title,
+                        dueDate: normalizedDateKey,
+                        priority: 'p2',
+                        completed: false,
+                        updatedAt: Date.now(),
+                        reminderLead: entry && entry.reminder ? 'day-of' : 'none',
+                        notifications: {},
+                        legacyCalendarId: legacyId
+                    });
+                    existingLegacyIds.add(legacyId);
+                    didMigrate = true;
+                });
             });
+
+            if (didMigrate) {
+                setPlannerItems(plannerItems, workspaceUser);
+            }
+        }
+
+        function getPlannerItemsForDate(date) {
+            const dateKey = formatDateKey(date);
+            return getPlannerItems(workspaceUser)
+                .filter((item) => getPlannerDateKey(item && item.dueDate) === dateKey)
+                .slice()
+                .sort((left, right) => {
+                    if (Boolean(left.completed) !== Boolean(right.completed)) {
+                        return left.completed ? 1 : -1;
+                    }
+                    return (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0);
+                });
+        }
+
+        function syncPlannerDateSelection() {
+            window.dispatchEvent(new CustomEvent('calendar-planner-date-change', {
+                detail: {
+                    date: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()),
+                    dateKey: formatDateKey(selectedDate)
+                }
+            }));
         }
 
         function openDetailView() {
             detailOpen = true;
             calendarStage.classList.add('detail-open');
             renderDetailView();
-            window.setTimeout(() => noteText.focus(), 120);
+            syncPlannerDateSelection();
+            const plannerInput = document.getElementById('planner-task-input');
+            window.setTimeout(() => {
+                if (plannerInput) {
+                    plannerInput.focus();
+                }
+            }, 120);
         }
 
         function closeDetailView() {
             detailOpen = false;
             calendarStage.classList.remove('detail-open');
-            noteForm.reset();
+            syncPlannerDateSelection();
         }
 
-        noteForm.addEventListener('submit', event => {
-            event.preventDefault();
-            const note = noteText.value.trim();
-            const reminder = noteReminder.value;
-
-            if (!note) {
-                showDashboardToast('error', 'Note required', 'Add a note before saving this calendar item.');
-                noteText.focus();
-                return;
-            }
-
-            const events = getEvents();
-            const key = formatDateKey(selectedDate);
-            const existingItems = events[key] || [];
-
-            existingItems.push({
-                id: generateEventId(),
-                note,
-                reminder: reminder || '',
-                notifiedAt: '',
-                createdAt: new Date().toISOString()
-            });
-
-            events[key] = existingItems;
-            saveEvents(events);
-            renderCalendar();
-            renderDetailView();
-            noteForm.reset();
-            showDashboardToast('success', 'Calendar updated', 'Your note was added to the selected date.');
-
-            if (reminder && 'Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission().catch(() => {});
-            }
-        });
-
         function renderDetailView() {
-            const items = getEventsForDate(selectedDate);
+            const items = getPlannerItemsForDate(selectedDate);
             selectedDateLabel.textContent = formatDateHeading(selectedDate);
             const total = items.length;
+            const openCount = items.filter((item) => !item.completed).length;
+            const doneCount = total - openCount;
             selectedSummary.textContent = total === 0
-                ? 'No notes or reminders scheduled for this date'
-                : `${total} item${total === 1 ? '' : 's'} scheduled for this date`;
+                ? 'No planner items scheduled for this date'
+                : `${openCount} open and ${doneCount} done for this date`;
             if (detailSummary) {
                 detailSummary.textContent = total === 0
-                    ? 'Add notes and reminders for this day.'
-                    : `${total} saved item${total === 1 ? '' : 's'} for this day.`;
+                    ? 'Add planner tasks for this day.'
+                    : `${total} planner item${total === 1 ? '' : 's'} tied to this date.`;
             }
-
-            if (total === 0) {
-                eventsList.innerHTML = '<p class="calendar-empty-state">No notes or reminders yet.</p>';
-                return;
-            }
-
-            eventsList.innerHTML = '';
-            items.forEach(item => {
-                const card = document.createElement('article');
-                card.className = 'calendar-event-item';
-
-                const meta = document.createElement('div');
-                meta.className = 'calendar-event-meta';
-                if (item.reminder) {
-                    meta.innerHTML = `<span class="calendar-event-reminder">Reminder ${toReminderLabel(item.reminder)}</span>`;
-                } else {
-                    meta.innerHTML = '<span class="calendar-event-reminder">Note only</span>';
-                }
-
-                const note = document.createElement('p');
-                note.className = 'calendar-event-note';
-                note.textContent = item.note;
-
-                const removeButton = document.createElement('button');
-                removeButton.type = 'button';
-                removeButton.className = 'calendar-event-remove';
-                removeButton.textContent = 'Remove';
-                removeButton.addEventListener('click', () => {
-                    const events = getEvents();
-                    const key = formatDateKey(selectedDate);
-                    events[key] = (events[key] || []).filter(entry => entry.id !== item.id);
-                    if (events[key].length === 0) {
-                        delete events[key];
-                    }
-                    saveEvents(events);
-                    renderCalendar();
-                    renderDetailView();
-                });
-
-                card.appendChild(meta);
-                card.appendChild(note);
-                card.appendChild(removeButton);
-                eventsList.appendChild(card);
-            });
         }
 
         function createDayButton(date, inCurrentMonth) {
@@ -6736,13 +6704,12 @@ function initNavbarDateTime() {
                 button.classList.add('selected');
             }
 
-            const dateKey = formatDateKey(date);
-            const events = getEvents()[dateKey] || [];
-            if (events.length > 0) {
+            const plannerItems = getPlannerItemsForDate(date);
+            if (plannerItems.length > 0) {
                 button.classList.add('has-event');
             }
 
-            button.innerHTML = `<span class="calendar-day-number">${date.getDate()}</span>${events.length > 0 ? `<span class="calendar-event-count">${events.length}</span>` : ''}`;
+            button.innerHTML = `<span class="calendar-day-number">${date.getDate()}</span>${plannerItems.length > 0 ? `<span class="calendar-event-count">${plannerItems.length}</span>` : ''}`;
             button.addEventListener('click', () => {
                 if (!inCurrentMonth) {
                     currentMonth = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -6794,48 +6761,6 @@ function initNavbarDateTime() {
             }
         }
 
-        function checkReminders() {
-            const events = getEvents();
-            let dirty = false;
-            const now = new Date();
-
-            Object.keys(events).forEach(key => {
-                events[key].forEach(item => {
-                    if (!item.reminder || item.notifiedAt) {
-                        return;
-                    }
-
-                    const reminderDate = new Date(item.reminder);
-                    if (Number.isNaN(reminderDate.getTime())) {
-                        return;
-                    }
-
-                    if (reminderDate <= now) {
-                        item.notifiedAt = new Date().toISOString();
-                        dirty = true;
-                        showDashboardToast('reminder', 'Reminder due', item.note, {
-                            playSound: false
-                        });
-                        playPlannerNotificationSound();
-
-                        if ('Notification' in window && Notification.permission === 'granted') {
-                            new Notification('FAST BRIDGE GROUP reminder', {
-                                body: item.note
-                            });
-                        }
-                    }
-                });
-            });
-
-            if (dirty) {
-                saveEvents(events);
-                renderCalendar();
-                if (detailOpen) {
-                    renderDetailView();
-                }
-            }
-        }
-
         if (backButton) {
             backButton.addEventListener('click', closeDetailView);
         }
@@ -6860,10 +6785,17 @@ function initNavbarDateTime() {
             }
         });
 
+        window.addEventListener('dashboard-planner-updated', () => {
+            renderCalendar();
+            if (detailOpen) {
+                renderDetailView();
+            }
+        });
+
+        migrateLegacyCalendarEventsIntoPlanner();
         renderCalendar();
         renderDetailView();
-        checkReminders();
-        window.setInterval(checkReminders, 60000);
+        syncPlannerDateSelection();
     }
 
     function initDashboardChatGptWidget() {
@@ -7814,6 +7746,301 @@ function initNavbarDateTime() {
         renderScripts();
     }
 
+    function isNotesWorkspacePage() {
+        const pagePath = String(window.location.pathname || window.location.href.split(/[?#]/)[0] || '').trim().toLowerCase();
+        return pagePath.endsWith('/notes.html') || pagePath.endsWith('notes.html');
+    }
+
+    function buildNotesWorkspaceHref(options) {
+        const config = options && typeof options === 'object' ? options : {};
+        const url = new URL('notes.html', window.location.href);
+        const folderId = String(config.folderId || '').trim();
+        if (folderId) {
+            url.searchParams.set('folder', folderId);
+        }
+        if (config.compose === true) {
+            url.searchParams.set('compose', '1');
+        }
+        return url.toString();
+    }
+
+    function initDashboardNotesLauncher() {
+        const widget = document.querySelector('.dashboard-notes-launcher');
+        const folderList = document.getElementById('dashboard-notes-folder-list');
+        const totalCountLabel = document.getElementById('dashboard-notes-total-count');
+        const activityLabel = document.getElementById('dashboard-notes-activity');
+        const openWorkspaceButton = document.getElementById('dashboard-notes-open-btn');
+        const newNoteButton = document.getElementById('dashboard-notes-new-note-btn');
+
+        if (!widget || !folderList || !totalCountLabel || !activityLabel || !openWorkspaceButton || !newNoteButton) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+        const DEFAULT_FOLDER_ID = 'folder-default';
+        const DEFAULT_FOLDER_NAME = 'Notes';
+        const ALL_NOTES_FOLDER_ID = '__all_notes__';
+        const PINNED_NOTES_FOLDER_ID = '__pinned_notes__';
+        const NOTES_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+        function normalizeNotesData(rawValue) {
+            const value = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) ? rawValue : {};
+            const rawFolders = Array.isArray(value.folders) ? value.folders : [];
+            const rawNotes = Array.isArray(value.notes) ? value.notes : [];
+            const now = Date.now();
+            const folders = rawFolders
+                .map((folder, index) => {
+                    const id = String(folder && folder.id || `folder-${index + 1}`).trim();
+                    const name = String(folder && (folder.name || folder.title) || '').trim();
+                    if (!id || !name) {
+                        return null;
+                    }
+                    return {
+                        id,
+                        name,
+                        parentId: String(folder && folder.parentId || '').trim(),
+                        createdAt: Number(folder && folder.createdAt) || Date.now()
+                    };
+                })
+                .filter(Boolean);
+
+            if (!folders.some((folder) => folder.id === DEFAULT_FOLDER_ID)) {
+                folders.unshift({
+                    id: DEFAULT_FOLDER_ID,
+                    name: DEFAULT_FOLDER_NAME,
+                    parentId: '',
+                    createdAt: Date.now()
+                });
+            }
+
+            folders.forEach((folder) => {
+                if (!folder.parentId || folder.id === DEFAULT_FOLDER_ID) {
+                    folder.parentId = '';
+                    return;
+                }
+                if (!folders.some((candidate) => candidate.id === folder.parentId && candidate.id !== folder.id)) {
+                    folder.parentId = '';
+                }
+            });
+
+            const knownFolderIds = new Set(folders.map((folder) => folder.id));
+            const notes = rawNotes
+                .map((note, index) => {
+                    const id = String(note && note.id || `note-${index + 1}`).trim();
+                    if (!id) {
+                        return null;
+                    }
+                    const folderId = knownFolderIds.has(String(note && note.folderId || '').trim())
+                        ? String(note.folderId).trim()
+                        : DEFAULT_FOLDER_ID;
+                    return {
+                        id,
+                        title: String(note && note.title || '').trim(),
+                        body: String(note && note.body || '').trim(),
+                        folderId,
+                        pinned: Boolean(note && note.pinned),
+                        deletedAt: Number(note && note.deletedAt) || 0,
+                        updatedAt: Number(note && note.updatedAt) || Date.now()
+                    };
+                })
+                .filter((note) => note && (!note.deletedAt || (now - note.deletedAt) < NOTES_TRASH_RETENTION_MS));
+
+            return { folders, notes };
+        }
+
+        function getNotesData() {
+            return normalizeNotesData(getUserScopedObject(DASHBOARD_NOTES_KEY, workspaceUser.key));
+        }
+
+        function getActiveNotes(data) {
+            return data.notes.filter((note) => !note.deletedAt);
+        }
+
+        function getDeletedNotes(data) {
+            return data.notes.filter((note) => note.deletedAt);
+        }
+
+        function getFolderChildren(folders, parentId) {
+            return folders
+                .filter((folder) => String(folder.parentId || '') === String(parentId || ''))
+                .sort((left, right) => left.name.localeCompare(right.name));
+        }
+
+        function getDescendantFolderIds(data, folderId) {
+            const collected = new Set([folderId]);
+            const queue = [folderId];
+            while (queue.length) {
+                const currentId = queue.shift();
+                data.folders.forEach((folder) => {
+                    if (folder.parentId === currentId && !collected.has(folder.id)) {
+                        collected.add(folder.id);
+                        queue.push(folder.id);
+                    }
+                });
+            }
+            return collected;
+        }
+
+        function getFolderNoteCount(data, folderId) {
+            const descendantIds = getDescendantFolderIds(data, folderId);
+            return getActiveNotes(data).filter((note) => descendantIds.has(note.folderId)).length;
+        }
+
+        function getFolderName(folderId, folders) {
+            const matched = folders.find((folder) => folder.id === folderId);
+            return matched ? matched.name : DEFAULT_FOLDER_NAME;
+        }
+
+        function getNoteDisplayTitle(note) {
+            const explicitTitle = String(note && note.title || '').trim();
+            if (explicitTitle) {
+                return explicitTitle;
+            }
+            return String(note && note.body || '')
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .find(Boolean) || 'Untitled note';
+        }
+
+        function formatNoteTimestamp(value) {
+            const timestamp = Number(value) || Date.now();
+            return new Date(timestamp).toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function navigateToWorkspace(folderId, options) {
+            window.location.href = buildNotesWorkspaceHref({
+                folderId,
+                compose: options && options.compose === true
+            });
+        }
+
+        function buildLaunchRow(config) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'dashboard-notes-folder-btn';
+
+            const copy = document.createElement('span');
+            copy.className = 'dashboard-notes-folder-copy';
+
+            const name = document.createElement('span');
+            name.className = 'dashboard-notes-folder-name';
+            name.textContent = String(config.label || 'Folder');
+
+            const meta = document.createElement('span');
+            meta.className = 'dashboard-notes-folder-meta';
+            meta.textContent = String(config.meta || 'Open folder');
+
+            const count = document.createElement('span');
+            count.className = 'dashboard-notes-folder-count';
+            count.textContent = String(config.count || '0');
+
+            copy.appendChild(name);
+            copy.appendChild(meta);
+            button.appendChild(copy);
+            button.appendChild(count);
+            button.addEventListener('click', () => {
+                navigateToWorkspace(config.folderId, { compose: false });
+            });
+            return button;
+        }
+
+        function render() {
+            const data = getNotesData();
+            const activeNotes = getActiveNotes(data);
+            const deletedNotes = getDeletedNotes(data);
+            const pinnedNotes = activeNotes.filter((note) => note.pinned);
+            const quickNotes = activeNotes.filter((note) => note.folderId === DEFAULT_FOLDER_ID);
+            const customFolders = data.folders
+                .filter((folder) => folder.id !== DEFAULT_FOLDER_ID)
+                .map((folder) => ({
+                    ...folder,
+                    noteCount: getFolderNoteCount(data, folder.id)
+                }))
+                .sort((left, right) => {
+                    if (left.noteCount !== right.noteCount) {
+                        return right.noteCount - left.noteCount;
+                    }
+                    return left.name.localeCompare(right.name);
+                })
+                .slice(0, 4);
+
+            const recentNote = activeNotes
+                .slice()
+                .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0))[0] || null;
+
+            totalCountLabel.textContent = `${activeNotes.length} active note${activeNotes.length === 1 ? '' : 's'} across ${Math.max(data.folders.length - 1, 0)} folder${data.folders.length - 1 === 1 ? '' : 's'}`;
+            activityLabel.textContent = recentNote
+                ? `${getNoteDisplayTitle(recentNote)} updated ${formatNoteTimestamp(recentNote.updatedAt)} in ${getFolderName(recentNote.folderId, data.folders)}.`
+                : 'Open the notes workspace to track seller follow-up, dispo reminders, and deal-level notes by folder.';
+
+            folderList.innerHTML = '';
+
+            [
+                {
+                    label: 'All Notes',
+                    meta: 'Everything in your workspace',
+                    count: String(activeNotes.length),
+                    folderId: ALL_NOTES_FOLDER_ID
+                },
+                {
+                    label: 'Quick Notes',
+                    meta: 'Fast capture and scratch notes',
+                    count: String(quickNotes.length),
+                    folderId: DEFAULT_FOLDER_ID
+                },
+                {
+                    label: 'Pinned',
+                    meta: 'High-priority notes kept at the top',
+                    count: String(pinnedNotes.length),
+                    folderId: PINNED_NOTES_FOLDER_ID
+                }
+            ].forEach((row) => {
+                folderList.appendChild(buildLaunchRow(row));
+            });
+
+            if (customFolders.length) {
+                customFolders.forEach((folder) => {
+                    const childCount = getFolderChildren(data.folders, folder.id).length;
+                    folderList.appendChild(buildLaunchRow({
+                        label: folder.name,
+                        meta: childCount ? `${childCount} nested folder${childCount === 1 ? '' : 's'}` : 'Custom folder',
+                        count: String(folder.noteCount),
+                        folderId: folder.id
+                    }));
+                });
+            } else {
+                const empty = document.createElement('p');
+                empty.className = 'dashboard-notes-empty';
+                empty.textContent = deletedNotes.length
+                    ? 'No custom folders yet. Open the workspace to create one and drag notes into place.'
+                    : 'No folders yet. Open the workspace to create folders and organize your notes.';
+                folderList.appendChild(empty);
+            }
+        }
+
+        openWorkspaceButton.addEventListener('click', () => {
+            navigateToWorkspace('', { compose: false });
+        });
+
+        newNoteButton.addEventListener('click', () => {
+            navigateToWorkspace(DEFAULT_FOLDER_ID, { compose: true });
+        });
+
+        window.addEventListener('dashboard-data-updated', render);
+        window.addEventListener('storage', (event) => {
+            if (!event.key || event.key === DASHBOARD_NOTES_KEY) {
+                render();
+            }
+        });
+
+        render();
+    }
+
     function initNotesWidget() {
         const notesWidgetShell = document.querySelector('.notes-widget-shell');
         const notesWidgetHeaderActions = document.querySelector('.notes-widget-header-actions');
@@ -7867,6 +8094,7 @@ function initNavbarDateTime() {
         const ALL_NOTES_FOLDER_ID = '__all_notes__';
         const PINNED_NOTES_FOLDER_ID = '__pinned_notes__';
         const NOTES_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+        const initialRouteParams = new URLSearchParams(window.location.search);
         let selectedNoteId = '';
         let activeFolderId = ALL_NOTES_FOLDER_ID;
         let activeView = 'all';
@@ -7875,6 +8103,9 @@ function initNavbarDateTime() {
         let pinnedCollapsed = false;
         let draggedItem = null;
         let folderEditMode = false;
+        let routeApplied = false;
+        let composeOnLoad = initialRouteParams.get('compose') === '1';
+        let lastSyncedWorkspaceHref = '';
         const expandedFolderIds = new Set([DEFAULT_FOLDER_ID]);
 
         function normalizeNotesData(rawValue) {
@@ -7976,6 +8207,53 @@ function initNavbarDateTime() {
 
         function isRealFolderSelection(folderId) {
             return Boolean(folderId) && folderId !== ALL_NOTES_FOLDER_ID && folderId !== PINNED_NOTES_FOLDER_ID;
+        }
+
+        function syncWorkspaceUrl() {
+            if (!isNotesWorkspacePage() || searchQuery) {
+                return;
+            }
+
+            const folderId = isTrashView()
+                ? 'trash'
+                : (activeFolderId === ALL_NOTES_FOLDER_ID ? '' : activeFolderId);
+            const nextHref = buildNotesWorkspaceHref({ folderId });
+            if (nextHref === lastSyncedWorkspaceHref) {
+                return;
+            }
+
+            window.history.replaceState({}, '', nextHref);
+            lastSyncedWorkspaceHref = nextHref;
+        }
+
+        function applyInitialWorkspaceRoute(data) {
+            if (routeApplied || !isNotesWorkspacePage()) {
+                return;
+            }
+
+            routeApplied = true;
+            const requestedFolderId = String(initialRouteParams.get('folder') || '').trim();
+            if (!requestedFolderId) {
+                return;
+            }
+
+            if (requestedFolderId === 'trash') {
+                activeView = 'trash';
+                activeFolderId = ALL_NOTES_FOLDER_ID;
+                selectedNoteId = '';
+                return;
+            }
+
+            activeView = 'all';
+            if (requestedFolderId === PINNED_NOTES_FOLDER_ID || requestedFolderId === ALL_NOTES_FOLDER_ID || requestedFolderId === DEFAULT_FOLDER_ID) {
+                activeFolderId = requestedFolderId;
+                return;
+            }
+
+            if (data.folders.some((folder) => folder.id === requestedFolderId)) {
+                activeFolderId = requestedFolderId;
+                expandedFolderIds.add(requestedFolderId);
+            }
         }
 
         function openFolderModal() {
@@ -8901,11 +9179,17 @@ function initNavbarDateTime() {
 
         function render() {
             const data = getNotesData();
+            applyInitialWorkspaceRoute(data);
             if (isRealFolderSelection(activeFolderId) && !data.folders.some((folder) => folder.id === activeFolderId)) {
                 activeFolderId = ALL_NOTES_FOLDER_ID;
             }
             if (isTrashView()) {
                 selectedNoteId = '';
+            }
+            if (composeOnLoad && !isTrashView()) {
+                composeOnLoad = false;
+                createNote({ toast: false });
+                return;
             }
             ensureSelection(data);
             syncNotesWidgetMode(data);
@@ -8913,6 +9197,7 @@ function initNavbarDateTime() {
             renderFolderTree(data);
             renderNoteList(data);
             renderEditor(data);
+            syncWorkspaceUrl();
         }
 
         function persistSelectedNote(mutator, options = {}) {
@@ -10762,6 +11047,7 @@ function initNavbarDateTime() {
         const countUpcoming = document.getElementById('planner-count-upcoming');
         const countDone = document.getElementById('planner-count-done');
         const reminderNote = document.getElementById('planner-reminder-note');
+        const plannerInCalendar = Boolean(input && input.closest('#calendar-detail-view'));
 
         if (!input || !dateInput || !prioritySelect || !reminderSelect || !addButton || !list || filterButtons.length === 0) {
             return;
@@ -10823,6 +11109,11 @@ function initNavbarDateTime() {
 
         function setItems(items) {
             setPlannerItems(items, workspaceUser);
+            window.dispatchEvent(new CustomEvent('dashboard-planner-updated', {
+                detail: {
+                    userKey: workspaceUser.key
+                }
+            }));
         }
 
         function getDraft() {
@@ -10857,7 +11148,8 @@ function initNavbarDateTime() {
             setUserScopedValue(PLANNER_DRAFT_KEY, workspaceUser.key, null);
         }
 
-        let activeFilter = 'today';
+        let activeFilter = (filterButtons.find((button) => button.classList.contains('active')) || {}).dataset?.filter || (plannerInCalendar ? 'selected-date' : 'today');
+        let selectedCalendarDateKey = getPlannerDateKey(dateInput.value) || getPlannerTodayKey();
 
         applyDraft();
 
@@ -10869,6 +11161,15 @@ function initNavbarDateTime() {
                 return 'today';
             }
             return 'upcoming';
+        }
+
+        function setSelectedCalendarDate(dateKey) {
+            const normalized = getPlannerDateKey(dateKey) || getPlannerTodayKey();
+            selectedCalendarDateKey = normalized;
+            if (plannerInCalendar) {
+                dateInput.value = normalized;
+            }
+            saveDraft();
         }
 
         function renderItems() {
@@ -10902,6 +11203,19 @@ function initNavbarDateTime() {
 
             const visible = items.filter(item => {
                 const bucket = classifyItem(item, todayKey);
+                const dueDateKey = getPlannerDateKey(item && item.dueDate);
+                const isSelectedDateItem = !item.completed && dueDateKey === selectedCalendarDateKey;
+                if (plannerInCalendar) {
+                    if (isSelectedDateItem) todayCount += 1;
+                    if (bucket === 'upcoming') upcomingCount += 1;
+                    if (bucket === 'done') doneCount += 1;
+
+                    if (activeFilter === 'selected-date') {
+                        return isSelectedDateItem;
+                    }
+                    return bucket === activeFilter;
+                }
+
                 if (bucket === 'today') todayCount += 1;
                 if (bucket === 'upcoming') upcomingCount += 1;
                 if (bucket === 'done') doneCount += 1;
@@ -11051,7 +11365,11 @@ function initNavbarDateTime() {
 
             setItems(items);
             input.value = '';
-            dateInput.value = '';
+            if (plannerInCalendar) {
+                dateInput.value = selectedCalendarDateKey;
+            } else {
+                dateInput.value = '';
+            }
             prioritySelect.value = 'p2';
             reminderSelect.value = 'day-of';
             clearDraft();
@@ -11080,13 +11398,30 @@ function initNavbarDateTime() {
 
         filterButtons.forEach(button => {
             button.addEventListener('click', () => {
-                activeFilter = button.dataset.filter || 'today';
+                activeFilter = button.dataset.filter || (plannerInCalendar ? 'selected-date' : 'today');
                 filterButtons.forEach(btn => btn.classList.toggle('active', btn === button));
                 renderItems();
             });
         });
 
+        window.addEventListener('calendar-planner-date-change', (event) => {
+            if (!plannerInCalendar) {
+                return;
+            }
+
+            const nextDateKey = getPlannerDateKey(event && event.detail && event.detail.dateKey);
+            if (!nextDateKey) {
+                return;
+            }
+
+            setSelectedCalendarDate(nextDateKey);
+            renderItems();
+        });
+
         reminderSelect.value = 'day-of';
+        if (plannerInCalendar) {
+            setSelectedCalendarDate(selectedCalendarDateKey);
+        }
         renderItems();
     }
 
@@ -13805,6 +14140,61 @@ function initNavbarDateTime() {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
+        function migrateLegacyImportedPropertiesForWorkspaceUser() {
+            const normalizedWorkspaceKey = String(workspaceUser.key || '').trim();
+            if (!normalizedWorkspaceKey || normalizedWorkspaceKey === 'default-user') {
+                return;
+            }
+
+            let store = {};
+            try {
+                store = JSON.parse(localStorage.getItem(DEALS_CLICKED_KEY) || '{}');
+            } catch (error) {
+                store = {};
+            }
+
+            if (!store || typeof store !== 'object' || Array.isArray(store)) {
+                return;
+            }
+
+            const legacyDefaultItems = Array.isArray(store['default-user']) ? store['default-user'] : [];
+            if (!legacyDefaultItems.length) {
+                return;
+            }
+
+            const importedLegacyItems = legacyDefaultItems.filter((item) => {
+                const itemId = String(item && item.id || '').trim().toLowerCase();
+                return item && typeof item === 'object' && itemId.startsWith('manual:');
+            });
+
+            if (!importedLegacyItems.length) {
+                return;
+            }
+
+            const existingItems = getUserScopedItems(DEALS_CLICKED_KEY, normalizedWorkspaceKey);
+            const mergedItems = [...importedLegacyItems, ...existingItems]
+                .filter((item, index, collection) => {
+                    const signature = getScopedItemSignature(item);
+                    return collection.findIndex((entry) => getScopedItemSignature(entry) === signature) === index;
+                })
+                .slice(0, 120);
+
+            const remainingDefaultItems = legacyDefaultItems.filter((item) => {
+                const itemId = String(item && item.id || '').trim().toLowerCase();
+                return !itemId.startsWith('manual:');
+            });
+
+            store[normalizedWorkspaceKey] = mergedItems;
+            if (remainingDefaultItems.length) {
+                store['default-user'] = remainingDefaultItems;
+            } else {
+                delete store['default-user'];
+            }
+
+            localStorage.setItem(DEALS_CLICKED_KEY, JSON.stringify(store));
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+
         function deleteClickedProperty(item) {
             if (!item || typeof item !== 'object') {
                 return;
@@ -14018,7 +14408,7 @@ function initNavbarDateTime() {
 
                 row.addEventListener('click', () => {
                     if (snapshot && typeof snapshot === 'object') {
-                        localStorage.setItem('selectedPropertyDetail', JSON.stringify(snapshot));
+                        persistSelectedPropertyDetail(snapshot);
                     }
                     window.location.href = 'property-details.html';
                 });
@@ -14092,7 +14482,7 @@ function initNavbarDateTime() {
 
                 const openClickedProperty = () => {
                     if (item.propertySnapshot && typeof item.propertySnapshot === 'object') {
-                        localStorage.setItem('selectedPropertyDetail', JSON.stringify(item.propertySnapshot));
+                        persistSelectedPropertyDetail(item.propertySnapshot);
                     }
                     window.location.href = 'property-details.html';
                 };
@@ -14134,6 +14524,7 @@ function initNavbarDateTime() {
             renderAssigned();
         }
 
+        migrateLegacyImportedPropertiesForWorkspaceUser();
         render();
         window.addEventListener('storage', render);
         window.addEventListener('dashboard-data-updated', render);
@@ -14157,7 +14548,7 @@ function initNavbarDateTime() {
                 const payload = new FormData(importForm);
                 const record = createImportedPropertyRecord(payload);
                 saveImportedProperty(record);
-                localStorage.setItem('selectedPropertyDetail', JSON.stringify(record.propertySnapshot));
+                persistSelectedPropertyDetail(record.propertySnapshot);
                 importForm.reset();
                 closeImportWidget();
                 const defaultStatus = document.getElementById('deals-import-status');
@@ -20694,6 +21085,7 @@ function initNavbarDateTime() {
             ['initDailyBibleVerseWidget', initDailyBibleVerseWidget],
             ['initPersonalOutreachWorkspace', initPersonalOutreachWorkspace],
             ['initOffersAcceptedWidget', initOffersAcceptedWidget],
+            ['initDashboardNotesLauncher', initDashboardNotesLauncher],
             ['initNotesWidget', initNotesWidget],
             ['initAgentWorkspaceEmailPrep', initAgentWorkspaceEmailPrep],
             ['initAdminOnlineUsersWidget', initAdminOnlineUsersWidget],

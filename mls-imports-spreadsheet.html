@@ -528,6 +528,165 @@
             text-transform: uppercase;
         }
 
+        .buyers-sheet-template-modal[hidden] {
+            display: none;
+        }
+
+        .buyers-sheet-template-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .buyers-sheet-template-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.58);
+            backdrop-filter: blur(6px);
+        }
+
+        .buyers-sheet-template-card {
+            position: relative;
+            width: min(100%, 860px);
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.92));
+            box-shadow: 0 28px 70px rgba(15, 23, 42, 0.36);
+            padding: 22px;
+            display: grid;
+            gap: 18px;
+            color: #e5eef8;
+        }
+
+        .buyers-sheet-template-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .buyers-sheet-template-title {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: -0.04em;
+        }
+
+        .buyers-sheet-template-subtitle,
+        .buyers-sheet-template-help,
+        .buyers-sheet-template-preview-label {
+            margin: 0;
+            color: rgba(226, 232, 240, 0.74);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .buyers-sheet-template-close {
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .buyers-sheet-template-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(180px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .buyers-sheet-template-field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .buyers-sheet-template-field-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.72);
+        }
+
+        .buyers-sheet-template-select,
+        .buyers-sheet-template-textarea {
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(15, 23, 42, 0.72);
+            color: #f8fafc;
+            font: inherit;
+        }
+
+        .buyers-sheet-template-select {
+            min-height: 48px;
+            padding: 0 14px;
+        }
+
+        .buyers-sheet-template-toggle {
+            min-height: 48px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(15, 23, 42, 0.72);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 14px;
+            color: #f8fafc;
+            cursor: pointer;
+        }
+
+        .buyers-sheet-template-toggle input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--emerald, #10b981);
+        }
+
+        .buyers-sheet-template-textarea {
+            min-height: 180px;
+            padding: 14px;
+            resize: vertical;
+            line-height: 1.65;
+        }
+
+        .buyers-sheet-template-preview {
+            min-height: 100px;
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8fafc;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .buyers-sheet-template-actions {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        @media (max-width: 760px) {
+            .buyers-sheet-template-controls {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .buyers-sheet-template-actions {
+                justify-content: stretch;
+            }
+
+            .buyers-sheet-template-actions .card-btn {
+                flex: 1 1 100%;
+            }
+        }
+
         @media (max-width: 900px) {
             .buyers-sheet-table {
                 min-width: 1320px;
@@ -566,7 +725,7 @@
                     <ul>
                         <li class="nav-item"><a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
                         <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics</a></li>
-                        <li class="nav-item"><a href="mls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>MLS Hot Deals</a></li>
+                        <li class="nav-item"><a href="mls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s3 3.5 3 6.5c0 1.6-.8 2.8-1.8 3.8-.8.8-1.2 1.8-1.2 2.7 0 1.7 1.3 3 3 3 2.8 0 5-2.3 5-5.2 0-4.7-3.8-7-8-10.8Z"/><path d="M9.5 13.5c-1.6 1.2-2.5 2.8-2.5 4.5A5 5 0 0 0 17 18c0-1.3-.5-2.5-1.4-3.5"/></svg>MLS Hot Deals</a></li>
                         <li class="nav-item"><a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>MLS Search</a></li>
                         <li class="nav-item"><a href="deals.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>My Deals</a></li>
                         <li class="nav-item"><a href="campaigns.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16" /><path d="M4 4h13l-2 5 2 5H4" /></svg>Campaigns</a></li>
@@ -619,6 +778,7 @@
                             <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
                             <button id="mls-imports-add-pdf" class="card-btn" type="button">Add PDF</button>
                             <button id="mls-imports-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="mls-imports-copy-templates" class="card-btn" type="button">Copy Templates</button>
                             <button id="mls-imports-add-to-my-agents" class="card-btn" type="button">Add To My Agents</button>
                             <button id="mls-imports-clear-all" class="card-btn" type="button">Clear All</button>
                             <button id="mls-imports-add-row" class="card-btn active" type="button">Add Row</button>
@@ -653,6 +813,52 @@
                     <p class="buyers-sheet-note">Tip: Click any cell to edit. This spreadsheet saves automatically in this browser for the current admin user.</p>
                 </div>
             </section>
+
+            <div id="mls-imports-template-modal" class="buyers-sheet-template-modal" hidden aria-hidden="true">
+                <div class="buyers-sheet-template-backdrop" data-template-close="true"></div>
+                <div class="buyers-sheet-template-card" role="dialog" aria-modal="true" aria-labelledby="mls-imports-template-title">
+                    <div class="buyers-sheet-template-header">
+                        <div>
+                            <h3 id="mls-imports-template-title" class="buyers-sheet-template-title">Copy Templates</h3>
+                            <p class="buyers-sheet-template-subtitle">Pick a status, edit the message body, and decide whether the generator should add your name and the automatic good morning/afternoon/evening/night close.</p>
+                        </div>
+                        <button type="button" class="buyers-sheet-template-close" data-template-close="true" aria-label="Close template manager">×</button>
+                    </div>
+                    <div class="buyers-sheet-template-controls">
+                        <label class="buyers-sheet-template-field">
+                            <span class="buyers-sheet-template-field-label">Status Template</span>
+                            <select id="mls-imports-template-status" class="buyers-sheet-template-select">
+                                <option value="active">Active</option>
+                                <option value="pending">Pending</option>
+                                <option value="active-under-contract">Active Under Contract</option>
+                                <option value="hold">Hold</option>
+                                <option value="off-market">Off Market</option>
+                            </select>
+                        </label>
+                        <label class="buyers-sheet-template-toggle">
+                            <input id="mls-imports-template-include-name" type="checkbox">
+                            <span>Include My Name</span>
+                        </label>
+                        <label class="buyers-sheet-template-toggle">
+                            <input id="mls-imports-template-include-time" type="checkbox">
+                            <span>Add Good Time Of Day</span>
+                        </label>
+                    </div>
+                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}. The copy generator always adds the opening salutation.</p>
+                    <label class="buyers-sheet-template-field">
+                        <span class="buyers-sheet-template-field-label">Template Body</span>
+                        <textarea id="mls-imports-template-body" class="buyers-sheet-template-textarea" spellcheck="true"></textarea>
+                    </label>
+                    <div class="buyers-sheet-template-field">
+                        <span class="buyers-sheet-template-preview-label">Preview</span>
+                        <div id="mls-imports-template-preview" class="buyers-sheet-template-preview"></div>
+                    </div>
+                    <div class="buyers-sheet-template-actions">
+                        <button id="mls-imports-template-reset" type="button" class="card-btn">Use Default For Status</button>
+                        <button id="mls-imports-template-save" type="button" class="card-btn active">Save Templates</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -762,14 +968,40 @@
             const addPdfButton = document.getElementById('mls-imports-add-pdf');
             const pdfInput = document.getElementById('mls-imports-pdf-input');
             const exportCsvButton = document.getElementById('mls-imports-export-csv');
+            const copyTemplatesButton = document.getElementById('mls-imports-copy-templates');
             const addToMyAgentsButton = document.getElementById('mls-imports-add-to-my-agents');
             const clearAllButton = document.getElementById('mls-imports-clear-all');
             const progressBox = document.getElementById('mls-imports-progress');
             const progressText = document.getElementById('mls-imports-progress-text');
+            const templateModal = document.getElementById('mls-imports-template-modal');
+            const templateStatusSelect = document.getElementById('mls-imports-template-status');
+            const templateIncludeNameToggle = document.getElementById('mls-imports-template-include-name');
+            const templateIncludeTimeToggle = document.getElementById('mls-imports-template-include-time');
+            const templateBodyInput = document.getElementById('mls-imports-template-body');
+            const templatePreview = document.getElementById('mls-imports-template-preview');
+            const templateSaveButton = document.getElementById('mls-imports-template-save');
+            const templateResetButton = document.getElementById('mls-imports-template-reset');
+            const templateCloseButtons = templateModal ? Array.from(templateModal.querySelectorAll('[data-template-close="true"]')) : [];
 
             if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !addToMyAgentsButton || !clearAllButton) {
                 return;
             }
+
+            const TEMPLATE_SETTINGS_KEY_BASE = 'mlsImportsSpreadsheetTemplates';
+            const TEMPLATE_STATUS_OPTIONS = [
+                { key: 'active', label: 'Active' },
+                { key: 'pending', label: 'Pending' },
+                { key: 'active-under-contract', label: 'Active Under Contract' },
+                { key: 'hold', label: 'Hold' },
+                { key: 'off-market', label: 'Off Market' }
+            ];
+            const TEMPLATE_DEFAULT_BODIES = {
+                active: 'saw {propertyAddress} and wanted to reach out directly. I am actively buying in that area, can close quickly, and I am happy to let you represent me. If the seller is open to a cash offer, I would love to take a look.',
+                pending: 'saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list.',
+                'active-under-contract': 'saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list.',
+                hold: 'checking in on {propertyAddress}. If the seller is still weighing options, I can make a clean cash offer and move quickly if that helps get the deal done.',
+                'off-market': 'checking in on {propertyAddress}. If it is still off market and the seller is open to a direct cash option, I would love to take a look and move quickly.'
+            };
 
             function getAuthToken() {
                 return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
@@ -866,6 +1098,69 @@
             function normalizeStatusValue(value) {
                 return normalizeCellValue(value).toLowerCase();
             }
+
+            function normalizeTemplateStatusKey(value) {
+                const normalized = String(value || '').trim().toLowerCase();
+                return TEMPLATE_STATUS_OPTIONS.some((option) => option.key === normalized) ? normalized : 'active';
+            }
+
+            function getTemplateSettingsStorageKey() {
+                return `${TEMPLATE_SETTINGS_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function buildDefaultTemplateSettings() {
+                return {
+                    selectedStatus: 'active',
+                    includeUserName: true,
+                    includeTimeOfDay: true,
+                    templates: { ...TEMPLATE_DEFAULT_BODIES }
+                };
+            }
+
+            function normalizeTemplateSettings(value) {
+                const defaults = buildDefaultTemplateSettings();
+                const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+                const templateSource = source.templates && typeof source.templates === 'object' && !Array.isArray(source.templates)
+                    ? source.templates
+                    : {};
+                const templates = {};
+
+                TEMPLATE_STATUS_OPTIONS.forEach((option) => {
+                    templates[option.key] = normalizeCellValue(templateSource[option.key]) || defaults.templates[option.key];
+                });
+
+                return {
+                    selectedStatus: normalizeTemplateStatusKey(source.selectedStatus),
+                    includeUserName: source.includeUserName !== false,
+                    includeTimeOfDay: source.includeTimeOfDay !== false,
+                    templates
+                };
+            }
+
+            function cloneTemplateSettings(value) {
+                const normalized = normalizeTemplateSettings(value);
+                return {
+                    selectedStatus: normalized.selectedStatus,
+                    includeUserName: normalized.includeUserName,
+                    includeTimeOfDay: normalized.includeTimeOfDay,
+                    templates: { ...normalized.templates }
+                };
+            }
+
+            function loadTemplateSettings() {
+                try {
+                    return normalizeTemplateSettings(JSON.parse(localStorage.getItem(getTemplateSettingsStorageKey()) || '{}'));
+                } catch (error) {
+                    return buildDefaultTemplateSettings();
+                }
+            }
+
+            function persistTemplateSettings(value) {
+                localStorage.setItem(getTemplateSettingsStorageKey(), JSON.stringify(normalizeTemplateSettings(value)));
+            }
+
+            let templateSettings = loadTemplateSettings();
+            let draftTemplateSettings = null;
 
             function getRowDataFromElement(rowElement) {
                 const cells = rowElement ? rowElement.querySelectorAll('td') : [];
@@ -1001,13 +1296,132 @@
 
             function getTimeOfDayGreeting() {
                 const hour = new Date().getHours();
+                if (hour < 5) {
+                    return 'night';
+                }
                 if (hour < 12) {
                     return 'morning';
                 }
                 if (hour < 17) {
                     return 'afternoon';
                 }
-                return 'evening';
+                if (hour < 21) {
+                    return 'evening';
+                }
+                return 'night';
+            }
+
+            function getCurrentUserFullName() {
+                const userContext = getUserContext();
+                return normalizeCellValue(userContext && userContext.name) || 'Isaac Haro';
+            }
+
+            function getManagedTemplateStatusKey(statusValue) {
+                const normalized = normalizeStatusValue(statusValue);
+                if (normalized.includes('active under contract') || normalized.includes('under contract')) {
+                    return 'active-under-contract';
+                }
+                if (normalized.includes('pending') || normalized.includes('contingent') || normalized.includes('backup')) {
+                    return 'pending';
+                }
+                if (normalized.includes('off market')) {
+                    return 'off-market';
+                }
+                if (normalized.includes('hold')) {
+                    return 'hold';
+                }
+                if (!normalized || normalized.includes('active')) {
+                    return 'active';
+                }
+                return '';
+            }
+
+            function replaceTemplateTokens(value, replacements) {
+                return String(value || '').replace(/\{(propertyAddress|status|agentFirstName|agentName)\}/g, (match, key) => {
+                    return Object.prototype.hasOwnProperty.call(replacements, key) ? replacements[key] : match;
+                });
+            }
+
+            function buildManagedTemplate(rowData, templateStatusKey, settingsLike) {
+                const settings = normalizeTemplateSettings(settingsLike || templateSettings);
+                const laName = normalizeCellValue(rowData && rowData.laName);
+                const agentFirstName = getAgentFirstName(laName) || 'there';
+                const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
+                const rawStatus = normalizeCellValue(rowData && rowData.status)
+                    || TEMPLATE_STATUS_OPTIONS.find((option) => option.key === templateStatusKey)?.label
+                    || 'Active';
+                const bodyTemplate = normalizeCellValue(settings.templates[templateStatusKey]) || TEMPLATE_DEFAULT_BODIES[templateStatusKey];
+                const body = replaceTemplateTokens(bodyTemplate, {
+                    propertyAddress,
+                    status: rawStatus,
+                    agentFirstName,
+                    agentName: laName || agentFirstName
+                }).replace(/\s+([,!.?])/g, '$1').trim();
+                const parts = [`Hi ${agentFirstName},`];
+
+                if (settings.includeUserName) {
+                    parts.push(`I am ${getCurrentUserFullName()}, an investor/cash buyer.`);
+                }
+                if (body) {
+                    parts.push(body);
+                }
+                if (settings.includeTimeOfDay) {
+                    parts.push(`Hope you have a good ${getTimeOfDayGreeting()}!`);
+                }
+
+                return parts.join(' ').replace(/\s+([,!.?])/g, '$1').trim();
+            }
+
+            function getTemplatePreviewRowData() {
+                const firstMeaningfulRow = getRowsFromDom().find((row) => isMeaningfulRow(row));
+                return firstMeaningfulRow || {
+                    propertyAddress: '2443 Wilshire, Riverside 92501',
+                    laName: 'Nelson Garcia',
+                    status: 'Pending'
+                };
+            }
+
+            function renderTemplateManager() {
+                if (!templateModal || !templateStatusSelect || !templateIncludeNameToggle || !templateIncludeTimeToggle || !templateBodyInput || !templatePreview) {
+                    return;
+                }
+
+                const settings = normalizeTemplateSettings(draftTemplateSettings || templateSettings);
+                const activeStatusKey = normalizeTemplateStatusKey(settings.selectedStatus);
+                const previewRow = getTemplatePreviewRowData();
+
+                templateStatusSelect.value = activeStatusKey;
+                templateIncludeNameToggle.checked = settings.includeUserName;
+                templateIncludeTimeToggle.checked = settings.includeTimeOfDay;
+                templateBodyInput.value = settings.templates[activeStatusKey] || TEMPLATE_DEFAULT_BODIES[activeStatusKey];
+                templatePreview.textContent = buildManagedTemplate({
+                    ...previewRow,
+                    status: previewRow.status || TEMPLATE_STATUS_OPTIONS.find((option) => option.key === activeStatusKey)?.label || 'Active'
+                }, activeStatusKey, settings);
+            }
+
+            function openTemplateManager() {
+                if (!templateModal) {
+                    return;
+                }
+                draftTemplateSettings = cloneTemplateSettings(templateSettings);
+                templateModal.hidden = false;
+                templateModal.setAttribute('aria-hidden', 'false');
+                renderTemplateManager();
+                window.setTimeout(() => {
+                    if (templateStatusSelect) {
+                        templateStatusSelect.focus();
+                    }
+                }, 20);
+            }
+
+            function closeTemplateManager() {
+                if (!templateModal) {
+                    return;
+                }
+                draftTemplateSettings = null;
+                templateModal.hidden = true;
+                templateModal.setAttribute('aria-hidden', 'true');
             }
 
             function buildStatusTemplate(rowData) {
@@ -1021,8 +1435,9 @@
                     throw new Error('No listing agent name is available on this row yet.');
                 }
 
-                if (status.includes('active under contract') || status.includes('under contract') || status.includes('pending') || status.includes('contingent') || status.includes('backup')) {
-                    return `Hi ${firstName}, saw ${propertyAddress} is ${rawStatus}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quickly and would be happy to let you represent me if it fits.`;
+                const managedStatusKey = getManagedTemplateStatusKey(status);
+                if (managedStatusKey) {
+                    return buildManagedTemplate(rowData, managedStatusKey, templateSettings);
                 }
 
                 if (status.includes('expired') || status.includes('cancelled') || status.includes('withdrawn')) {
@@ -1035,10 +1450,6 @@
 
                 if (status.includes('coming soon')) {
                     return `Hi ${firstName}, saw ${propertyAddress} is marked coming soon. If the seller is open to a pre-market cash option, I would love to take a quick look before it goes fully live.`;
-                }
-
-                if (status.includes('hold') || status.includes('off market')) {
-                    return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, I can make a clean cash offer and move quickly if that helps get the deal done.`;
                 }
 
                 return `Hi ${firstName}, this is Isaac Haro. I saw your listing at ${propertyAddress} and wanted to reach out directly. I am actively buying in that area, can close quickly, and I am happy to let you represent me. If the seller is open to a cash offer, I would love to take a look.`;
@@ -1676,6 +2087,59 @@
                 clearAllRows();
                 showToast('success', 'Spreadsheet Cleared', 'All MLS Imports spreadsheet rows were removed.');
             });
+
+            if (copyTemplatesButton && templateModal && templateStatusSelect && templateIncludeNameToggle && templateIncludeTimeToggle && templateBodyInput && templatePreview && templateSaveButton && templateResetButton) {
+                copyTemplatesButton.addEventListener('click', openTemplateManager);
+
+                templateCloseButtons.forEach((button) => {
+                    button.addEventListener('click', closeTemplateManager);
+                });
+
+                templateStatusSelect.addEventListener('change', () => {
+                    draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
+                    draftTemplateSettings.selectedStatus = normalizeTemplateStatusKey(templateStatusSelect.value);
+                    renderTemplateManager();
+                });
+
+                templateIncludeNameToggle.addEventListener('change', () => {
+                    draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
+                    draftTemplateSettings.includeUserName = Boolean(templateIncludeNameToggle.checked);
+                    renderTemplateManager();
+                });
+
+                templateIncludeTimeToggle.addEventListener('change', () => {
+                    draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
+                    draftTemplateSettings.includeTimeOfDay = Boolean(templateIncludeTimeToggle.checked);
+                    renderTemplateManager();
+                });
+
+                templateBodyInput.addEventListener('input', () => {
+                    draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
+                    const activeStatusKey = normalizeTemplateStatusKey((draftTemplateSettings && draftTemplateSettings.selectedStatus) || templateStatusSelect.value);
+                    draftTemplateSettings.templates[activeStatusKey] = String(templateBodyInput.value || '').replace(/\r/g, '').trim() || TEMPLATE_DEFAULT_BODIES[activeStatusKey];
+                    renderTemplateManager();
+                });
+
+                templateResetButton.addEventListener('click', () => {
+                    draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
+                    const activeStatusKey = normalizeTemplateStatusKey((draftTemplateSettings && draftTemplateSettings.selectedStatus) || templateStatusSelect.value);
+                    draftTemplateSettings.templates[activeStatusKey] = TEMPLATE_DEFAULT_BODIES[activeStatusKey];
+                    renderTemplateManager();
+                });
+
+                templateSaveButton.addEventListener('click', () => {
+                    templateSettings = normalizeTemplateSettings(draftTemplateSettings || templateSettings);
+                    persistTemplateSettings(templateSettings);
+                    closeTemplateManager();
+                    showToast('success', 'Templates Saved', 'Your copy templates and toggles were saved for this user.');
+                });
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && !templateModal.hidden) {
+                        closeTemplateManager();
+                    }
+                });
+            }
 
             renderRows(loadRows());
         })();

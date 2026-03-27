@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAST BRIDGE GROUP Notes Workspace</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        body.notes-workspace-page {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(250, 204, 21, 0.18), transparent 24%),
+                radial-gradient(circle at bottom right, rgba(5, 150, 105, 0.2), transparent 28%),
+                linear-gradient(180deg, #08111d 0%, #101b2b 52%, #162235 100%);
+            color: #f8fafc;
+        }
+
+        .notes-page-main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 36px 24px 56px;
+            display: grid;
+            gap: 24px;
+        }
+
+        .notes-page-hero {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .notes-page-hero-copy {
+            display: grid;
+            gap: 8px;
+        }
+
+        .notes-page-eyebrow {
+            margin: 0;
+            color: rgba(248, 250, 252, 0.64);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .notes-page-title {
+            margin: 0;
+            font-size: clamp(2.4rem, 5vw, 4.2rem);
+            font-weight: 800;
+            letter-spacing: -0.07em;
+            line-height: 0.94;
+        }
+
+        .notes-page-subtitle {
+            margin: 0;
+            max-width: 720px;
+            color: rgba(226, 232, 240, 0.72);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .notes-page-back-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 0 18px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+            transition: transform 0.18s ease, background 0.18s ease;
+        }
+
+        .notes-page-back-link:hover,
+        .notes-page-back-link:focus-visible {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.14);
+            outline: none;
+        }
+
+        .notes-page-widget {
+            min-height: 78vh;
+        }
+
+        .notes-page-widget .notes-widget-shell {
+            min-height: 74vh;
+        }
+
+        .notes-page-widget .notes-widget-header-actions {
+            gap: 10px;
+        }
+
+        .notes-page-widget .notes-widget-header-actions a {
+            text-decoration: none;
+        }
+
+        @media (min-width: 1101px) {
+            .notes-page-widget .notes-widget-shell {
+                grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+                align-items: stretch;
+            }
+
+            .notes-page-widget .notes-widget-shell.is-library-mode .notes-editor-panel,
+            .notes-page-widget .notes-widget-shell.is-editor-mode .notes-library-panel {
+                display: flex;
+            }
+
+            .notes-page-widget #notes-back-to-list-btn {
+                display: none;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .notes-page-widget {
+                min-height: auto;
+            }
+
+            .notes-page-widget .notes-widget-shell {
+                min-height: auto;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .notes-page-main {
+                padding: 24px 16px 44px;
+            }
+
+            .notes-page-hero {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body class="notes-workspace-page">
+    <main class="main-content notes-page-main">
+        <section class="notes-page-hero" aria-label="Notes workspace header">
+            <div class="notes-page-hero-copy">
+                <p class="notes-page-eyebrow">FAST Bridge Workspace</p>
+                <h1 class="notes-page-title">Folder-Based Notes</h1>
+                <p class="notes-page-subtitle">Open a folder, add notes inside it, and drag notes across folders without leaving the workspace.</p>
+            </div>
+            <a class="notes-page-back-link" href="dashboard.html">Back to Dashboard</a>
+        </section>
+
+        <section class="glass-card widget-card outreach-card notes-dashboard-widget notes-page-widget" data-widget-id="notes-organizer" data-widget-title="Notes Workspace">
+            <div class="card-header notes-widget-header">
+                <div>
+                    <h2 class="card-title">Notes Workspace</h2>
+                    <p class="card-subtitle" id="notes-widget-subtitle">0 notes</p>
+                </div>
+                <div class="notes-widget-header-actions">
+                    <a href="dashboard.html" class="card-btn">Dashboard</a>
+                    <a href="notes.html?compose=1" class="card-btn active">Quick Note</a>
+                </div>
+            </div>
+            <div class="notes-widget-shell">
+                <section class="notes-library-panel" aria-label="Notes library">
+                    <div class="notes-mobile-topbar">
+                        <span class="notes-mobile-status">FAST Notes Workspace</span>
+                        <div class="notes-mobile-actions">
+                            <button id="notes-add-folder-btn" type="button" class="notes-ios-icon-btn" aria-label="Add folder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"></path><path d="M12 10v6"></path><path d="M9 13h6"></path></svg>
+                            </button>
+                            <button id="notes-edit-folders-btn" type="button" class="notes-ios-edit-btn">Edit</button>
+                        </div>
+                    </div>
+                    <div class="notes-library-head">
+                        <h3 class="notes-library-title">Folders</h3>
+                        <p class="notes-library-caption">Drag notes onto any folder row to move them.</p>
+                    </div>
+                    <div class="notes-view-tabs" aria-label="Notes views">
+                        <button id="notes-view-all-btn" type="button" class="notes-view-tab is-active">Notes</button>
+                        <button id="notes-view-trash-btn" type="button" class="notes-view-tab">Recently Deleted</button>
+                    </div>
+                    <div id="notes-folder-tree" class="notes-folder-tree">
+                        <p class="outreach-empty">Loading folders...</p>
+                    </div>
+                    <section class="notes-note-list-shell">
+                        <div class="notes-panel-head">
+                            <div class="notes-panel-head-copy">
+                                <span id="notes-active-folder-label">All Notes</span>
+                                <span class="notes-panel-meta" id="notes-count-summary">0 notes</span>
+                            </div>
+                            <div class="notes-panel-actions">
+                                <span class="notes-widget-folder-meta" id="notes-folder-summary">0 notes total</span>
+                                <button id="notes-add-note-btn" type="button" class="notes-new-note-btn">New Note</button>
+                            </div>
+                        </div>
+                        <div id="notes-note-list" class="notes-note-list">
+                            <p class="outreach-empty">No notes yet.</p>
+                        </div>
+                    </section>
+                    <div class="notes-search-dock">
+                        <label class="notes-search-shell" for="notes-search-input">
+                            <svg class="notes-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line></svg>
+                            <input id="notes-search-input" class="notes-search-input" type="search" placeholder="Search notes or quick thoughts...">
+                        </label>
+                        <button id="notes-quick-note-btn" type="button" class="notes-quick-note-btn" aria-label="Create quick note">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="notes-editor-panel" aria-label="Note editor">
+                    <div id="notes-editor-empty" class="notes-editor-empty">
+                        <strong>No note selected</strong>
+                        <p>Create a note or pick one from the list to start writing.</p>
+                        <button id="notes-empty-create-btn" type="button" class="notes-empty-create-btn">Create New Note</button>
+                    </div>
+                    <div id="notes-editor" class="notes-editor" hidden>
+                        <div class="notes-editor-topbar">
+                            <button id="notes-back-to-list-btn" type="button" class="notes-editor-nav-btn" aria-label="Back to notes list">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </button>
+                            <div class="notes-editor-topbar-actions">
+                                <div class="notes-editor-action-pill">
+                                    <button id="notes-share-note-btn" type="button" class="notes-editor-icon-btn" aria-label="Share note">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 20h14a2 2 0 0 0 2-2v-4"></path><path d="M3 14v4a2 2 0 0 0 2 2"></path></svg>
+                                    </button>
+                                    <button id="notes-more-note-btn" type="button" class="notes-editor-icon-btn" aria-label="More note actions">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                                    </button>
+                                </div>
+                                <button id="notes-close-editor-btn" type="button" class="notes-editor-done-btn" aria-label="Done editing">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="notes-editor-page">
+                            <div id="notes-title-input" class="notes-title-editor" contenteditable="true" role="textbox" aria-label="Note title" data-placeholder="Title"></div>
+                            <div id="notes-body-input" class="notes-body-editor" contenteditable="true" role="textbox" aria-label="Note body" data-placeholder="Start typing your note here..."></div>
+                        </div>
+                        <div class="notes-editor-toolbar" aria-label="Note tools">
+                            <button id="notes-tool-font-btn" type="button" class="notes-tool-btn" aria-label="Font tool">Aa</button>
+                            <button id="notes-tool-checklist-btn" type="button" class="notes-tool-btn" aria-label="Checklist tool">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M2 20h1"></path><path d="M7 20h13"></path><path d="M2 12h1"></path><path d="M7 12h8"></path><path d="M2 4h1"></path><path d="M7 4h8"></path></svg>
+                            </button>
+                            <button id="notes-tool-grid-btn" type="button" class="notes-tool-btn" aria-label="Grid tool">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
+                            </button>
+                            <button id="notes-tool-attach-btn" type="button" class="notes-tool-btn" aria-label="Attachment tool">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.82-2.83l8.48-8.48"></path></svg>
+                            </button>
+                            <button id="notes-tool-draw-btn" type="button" class="notes-tool-btn" aria-label="Drawing tool">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 19 7-7 3 3-7 7-3.5 1z"></path><path d="m18 13-7-7-8 8"></path><path d="M2 22h20"></path></svg>
+                            </button>
+                            <button id="notes-tool-bold-btn" type="button" class="notes-tool-btn" aria-label="Bold tool"><strong>B</strong></button>
+                            <button id="notes-complete-toggle-btn" type="button" class="notes-complete-toggle-btn" aria-pressed="false" aria-label="Mark note complete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                            </button>
+                        </div>
+                        <div class="notes-editor-footer">
+                            <p class="notes-editor-meta" id="notes-meta-label">Last updated just now</p>
+                            <div class="notes-editor-footer-actions">
+                                <select id="notes-folder-select" class="form-input notes-folder-select" aria-label="Move note to folder" hidden></select>
+                                <button id="notes-pin-toggle-btn" type="button" class="notes-pin-toggle-btn" aria-pressed="false">Pin Note</button>
+                                <button id="notes-delete-note-btn" type="button" class="card-btn">Delete Note</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <div id="notes-folder-modal" class="notes-folder-modal" hidden aria-hidden="true">
+            <div class="notes-folder-modal-backdrop" data-notes-folder-close="true"></div>
+            <div class="notes-folder-modal-card" role="dialog" aria-modal="true" aria-labelledby="notes-folder-modal-title">
+                <div class="notes-folder-modal-header">
+                    <button type="button" class="notes-folder-modal-circle-btn" data-notes-folder-close="true" aria-label="Close new folder dialog">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                    <h3 id="notes-folder-modal-title" class="notes-folder-modal-title">New Folder</h3>
+                    <button id="notes-folder-save-btn" type="button" class="notes-folder-modal-done-btn" aria-label="Create folder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </button>
+                </div>
+                <div class="notes-folder-modal-input-wrap">
+                    <span class="notes-folder-modal-marker" aria-hidden="true"></span>
+                    <input id="notes-folder-name-input" class="notes-folder-modal-input" type="text" placeholder="New Folder" maxlength="80">
+                    <button id="notes-folder-clear-btn" type="button" class="notes-folder-modal-clear" aria-label="Clear folder name">×</button>
+                </div>
+                <button id="notes-folder-smart-btn" type="button" class="notes-folder-modal-smart">
+                    <span class="notes-folder-modal-smart-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </span>
+                    <span class="notes-folder-modal-smart-copy">
+                        <strong>Make Into Smart Folder</strong>
+                        <span>Organize using tags and other filters</span>
+                    </span>
+                    <span class="notes-folder-modal-smart-arrow">›</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>
