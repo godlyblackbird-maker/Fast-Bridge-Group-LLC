@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Controls - FAST Ops Command Center</title>
-    <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
+    <link rel="icon" type="image/png" href="png%20photos/FAST%20LOGO%20777.png">
     <meta name="description" content="FAST BRIDGE GROUP admin command center for approvals, submissions, MLS imports, contracts, and internal asset tools.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -110,164 +110,6 @@
             scroll-behavior: smooth;
         }
 
-        .admin-controls-shell {
-            position: relative;
-            display: grid;
-            gap: 22px;
-        }
-
-        .admin-command-stage {
-            position: relative;
-            overflow: hidden;
-            padding: 28px;
-            border-radius: 28px;
-            border: 1px solid var(--glass-border);
-            background:
-                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.2), transparent 34%),
-                radial-gradient(circle at bottom left, rgba(var(--accent-rgb), 0.14), transparent 32%),
-                linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
-            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
-            backdrop-filter: blur(22px);
-            isolation: isolate;
-        }
-
-        .admin-command-stage::before,
-        .admin-command-stage::after {
-            content: '';
-            position: absolute;
-            inset: auto;
-            border-radius: 999px;
-            pointer-events: none;
-            filter: blur(6px);
-            opacity: 0.72;
-            z-index: 0;
-            animation: adminOrbFloat 12s ease-in-out infinite;
-        }
-
-        .admin-command-stage::before {
-            top: -60px;
-            right: -20px;
-            width: 220px;
-            height: 220px;
-            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.34), transparent 68%);
-        }
-
-        .admin-command-stage::after {
-            bottom: -70px;
-            left: -10px;
-            width: 240px;
-            height: 240px;
-            background: radial-gradient(circle, rgba(251, 191, 36, 0.18), transparent 70%);
-            animation-delay: -4s;
-        }
-
-        .admin-command-grid {
-            position: relative;
-            z-index: 1;
-            display: grid;
-            grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
-            gap: 22px;
-            align-items: stretch;
-        }
-
-        .admin-command-copy {
-            display: grid;
-            gap: 18px;
-        }
-
-        .admin-command-kicker {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            width: fit-content;
-            padding: 8px 14px;
-            border-radius: 999px;
-            border: 1px solid rgba(var(--accent-light-rgb), 0.22);
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-primary);
-            font-size: 11px;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            font-weight: 700;
-            backdrop-filter: blur(14px);
-        }
-
-        .admin-command-kicker::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 999px;
-            background: linear-gradient(135deg, rgba(var(--accent-light-rgb), 1), rgba(255, 255, 255, 0.9));
-            box-shadow: 0 0 16px rgba(var(--accent-light-rgb), 0.6);
-            animation: adminPulseDot 2.2s ease-in-out infinite;
-        }
-
-        .admin-command-title {
-            margin: 0;
-            max-width: 13ch;
-            font-size: clamp(2.35rem, 4vw, 4.45rem);
-            line-height: 0.94;
-            letter-spacing: -0.05em;
-            color: var(--text-primary);
-            text-wrap: balance;
-        }
-
-        .admin-command-body {
-            max-width: 760px;
-            margin: 0;
-            color: var(--text-secondary);
-            font-size: 15px;
-            line-height: 1.6;
-        }
-
-        .admin-command-tags,
-        .admin-command-actions,
-        .admin-command-metrics {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .admin-command-tag,
-        .admin-command-metric {
-            position: relative;
-            overflow: hidden;
-            padding: 12px 14px;
-            border-radius: 18px;
-            border: 1px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-            color: var(--text-primary);
-        }
-
-        .admin-command-tag {
-            font-size: 12px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
-
-        .admin-command-tag strong {
-            color: var(--text-primary);
-        }
-
-        .admin-command-action {
-            position: relative;
-            overflow: hidden;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 18px;
-            border-radius: 18px;
-            border: 1px solid rgba(var(--accent-light-rgb), 0.26);
-            background: rgba(255, 255, 255, 0.12);
-            color: var(--text-primary);
-            text-decoration: none;
-            font-weight: 600;
-            transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
-        }
-
-        .admin-command-action::after,
         .admin-control-panel::after {
             content: '';
             position: absolute;
@@ -280,101 +122,9 @@
             pointer-events: none;
         }
 
-        .admin-command-action:hover,
-        .admin-command-action:focus-visible {
-            transform: translateY(-2px);
-            border-color: rgba(var(--accent-light-rgb), 0.5);
-            background: rgba(var(--accent-rgb), 0.22);
-            box-shadow: 0 18px 34px rgba(2, 6, 23, 0.24);
-            outline: none;
-        }
-
-        .admin-command-action:hover::after,
-        .admin-command-action:focus-visible::after,
         .admin-control-panel:hover::after {
             opacity: 1;
             animation: adminSheen 1.15s ease;
-        }
-
-        .admin-command-action.active {
-            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.4), rgba(var(--accent-light-rgb), 0.24));
-            border-color: rgba(var(--accent-light-rgb), 0.52);
-        }
-
-        .admin-command-sidecar {
-            position: relative;
-            display: grid;
-            gap: 16px;
-            padding: 22px;
-            border-radius: 24px;
-            border: 1px solid var(--glass-border);
-            background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
-            backdrop-filter: blur(18px);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        }
-
-        .admin-sidecar-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .admin-sidecar-title {
-            margin: 0;
-            color: var(--text-primary);
-            font-size: 1.05rem;
-        }
-
-        .admin-sidecar-chip {
-            padding: 7px 11px;
-            border-radius: 999px;
-            background: rgba(var(--accent-light-rgb), 0.14);
-            border: 1px solid rgba(var(--accent-light-rgb), 0.24);
-            color: var(--text-primary);
-            font-size: 11px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .admin-command-metric {
-            min-width: 136px;
-            flex: 1 1 140px;
-            display: grid;
-            gap: 4px;
-        }
-
-        .admin-command-metric span {
-            font-size: 11px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
-
-        .admin-command-metric strong {
-            font-size: 1.35rem;
-            color: var(--text-primary);
-            line-height: 1;
-        }
-
-        .admin-command-metric small {
-            color: var(--text-secondary);
-            font-size: 12px;
-        }
-
-        .admin-command-manifest {
-            margin: 0;
-            padding: 18px;
-            border-radius: 20px;
-            border: 1px solid var(--glass-border);
-            background: rgba(var(--accent-rgb), 0.1);
-            color: var(--text-secondary);
-            font-size: 12px;
-            line-height: 1.65;
-            white-space: pre-wrap;
-            overflow: auto;
-            font-family: "Space Mono", monospace;
         }
 
         .admin-quick-rail {
@@ -385,11 +135,13 @@
             flex-wrap: wrap;
             gap: 10px;
             padding: 14px;
-            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
+            border: 1px solid var(--glass-border);
             border-radius: 22px;
-            background: rgba(7, 12, 20, 0.68);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+                var(--glass-bg);
             backdrop-filter: blur(18px);
-            box-shadow: 0 20px 45px rgba(2, 6, 23, 0.18);
+            box-shadow: 0 20px 45px var(--glass-shadow);
         }
 
         .admin-quick-link {
@@ -398,8 +150,8 @@
             gap: 10px;
             padding: 11px 14px;
             border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            background: var(--glass-hover);
             color: var(--text-primary);
             text-decoration: none;
             font-size: 12px;
@@ -421,8 +173,9 @@
         .admin-quick-link:hover,
         .admin-quick-link:focus-visible {
             transform: translateY(-1px);
-            border-color: rgba(var(--accent-light-rgb), 0.35);
-            background: rgba(var(--accent-rgb), 0.16);
+            border-color: rgba(var(--accent-rgb), 0.34);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-light-rgb), 0.2));
+            box-shadow: 0 12px 24px -18px rgba(var(--accent-rgb), 0.55);
             outline: none;
         }
 
@@ -554,22 +307,6 @@
             font-size: 13px;
         }
 
-        .admin-command-footer {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 6px;
-        }
-
-        .admin-command-footer span {
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: rgba(226, 232, 240, 0.74);
-            font-size: 12px;
-        }
-
         @keyframes adminSheen {
             0% { transform: translateX(-10%) rotate(18deg); }
             100% { transform: translateX(320%) rotate(18deg); }
@@ -586,21 +323,7 @@
             }
         }
 
-        @keyframes adminOrbFloat {
-            0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(0, 16px, 0) scale(1.05); }
-        }
-
-        @keyframes adminPulseDot {
-            0%, 100% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.35); opacity: 1; }
-        }
-
         @media (max-width: 1180px) {
-            .admin-command-grid {
-                grid-template-columns: 1fr;
-            }
-
             .admin-control-panel[data-span="4"],
             .admin-control-panel[data-span="6"],
             .admin-control-panel[data-span="8"] {
@@ -609,16 +332,6 @@
         }
 
         @media (max-width: 780px) {
-            .admin-command-stage {
-                padding: 20px;
-                border-radius: 24px;
-            }
-
-            .admin-command-title {
-                max-width: none;
-                font-size: 2.4rem;
-            }
-
             .admin-quick-rail {
                 top: 72px;
             }
@@ -692,72 +405,6 @@
                     <button class="nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notification-dot"></span></button>
                 </div>
             </nav>
-
-            <div class="admin-controls-shell">
-                <section class="admin-command-stage">
-                    <div class="admin-command-grid">
-                        <div class="admin-command-copy">
-                            <span class="admin-command-kicker">FAST Internal Operations</span>
-                            <h2 class="admin-command-title">Admin Operations</h2>
-                            <p class="admin-command-body">Review access, manage submissions, run MLS imports, and handle account setup from one control room.</p>
-                            <div class="admin-command-tags">
-                                <div class="admin-command-tag"><strong>Approvals</strong> Access, SMTP, submissions</div>
-                                <div class="admin-command-tag"><strong>Build Tools</strong> E-card, flyer, contracts</div>
-                                <div class="admin-command-tag"><strong>Accounts</strong> MLS imports, setup</div>
-                            </div>
-                            <div class="admin-command-actions">
-                                <a class="admin-command-action active" href="#requested-access-card">Review Access</a>
-                                <a class="admin-command-action" href="#mls-imports-card">Open MLS Lane</a>
-                                <a class="admin-command-action" href="#admin-account-manager-card">Manage Accounts</a>
-                                <a class="admin-command-action" href="#contracts-card">Build Contracts</a>
-                            </div>
-                        </div>
-                        <aside class="admin-command-sidecar">
-                            <div class="admin-sidecar-header">
-                                <h3 class="admin-sidecar-title">Ops Snapshot</h3>
-                                <span class="admin-sidecar-chip">Live Layout</span>
-                            </div>
-                            <div class="admin-command-metrics">
-                                <div class="admin-command-metric">
-                                    <span>Approval Lanes</span>
-                                    <strong>03</strong>
-                                    <small>Access, SMTP, submissions</small>
-                                </div>
-                                <div class="admin-command-metric">
-                                    <span>Build Tools</span>
-                                    <strong>04</strong>
-                                    <small>MLS, E-card, contracts, flyer</small>
-                                </div>
-                                <div class="admin-command-metric">
-                                    <span>User Ops</span>
-                                    <strong>01</strong>
-                                    <small>Account manager core lane</small>
-                                </div>
-                                <div class="admin-command-metric">
-                                    <span>Navigation</span>
-                                    <strong>Fast</strong>
-                                    <small>Jump rail anchored to each zone</small>
-                                </div>
-                            </div>
-                            <pre class="admin-command-manifest">{
-  "ops": [
-    "online-users",
-    "requested-access",
-    "property-submissions",
-    "smtp-approval-queue"
-  ],
-  "build": [
-    "mls-imports-spreadsheet",
-    "digital-ecard",
-    "contracts-agreements",
-    "flyer-maker"
-  ],
-    "goal": "Keep approvals, build tools, and account work in one lane."
-}</pre>
-                        </aside>
-                    </div>
-                </section>
-
                 <nav class="admin-quick-rail" aria-label="Admin quick navigation">
                     <a class="admin-quick-link" href="#online-users-card">Online Users</a>
                     <a class="admin-quick-link" href="#requested-access-card">Access Queue</a>
@@ -769,7 +416,6 @@
                     <a class="admin-quick-link" href="#contracts-card">Contracts</a>
                     <a class="admin-quick-link" href="#flyer-maker-card">Flyer Maker</a>
                 </nav>
-
             <section class="outreach-workspace-grid admin-controls-grid">
                 <div id="online-users-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="4" data-widget-id="online-users" data-widget-title="Online Users" style="--panel-index:0;">
                     <span class="admin-panel-accent" aria-hidden="true"></span>

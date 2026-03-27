@@ -3130,8 +3130,33 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             setUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, nextWindow);
         }
 
+        function parseAnalyticsTimestamp(...values) {
+            for (const value of values) {
+                if (value === null || value === undefined || value === '') {
+                    continue;
+                }
+
+                const numericValue = Number(value);
+                if (Number.isFinite(numericValue) && numericValue > 0) {
+                    return numericValue;
+                }
+
+                const parsedValue = Date.parse(String(value));
+                if (Number.isFinite(parsedValue) && parsedValue > 0) {
+                    return parsedValue;
+                }
+            }
+
+            return 0;
+        }
+
         function getStateTimestamp(state) {
-            return Number(state && (state.updatedAt || state.createdAt)) || 0;
+            return parseAnalyticsTimestamp(
+                state && state.updatedAt,
+                state && state.createdAt,
+                state && state.savedAt,
+                state && state.timestamp
+            );
         }
 
         function getProfitWindowRange(windowKey, now) {
@@ -3140,13 +3165,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         function getClosedDealTimestamp(item) {
-            const rawTimestamp = Number(item && (item.closeDate || item.updatedAt || item.createdAt));
-            if (Number.isFinite(rawTimestamp) && rawTimestamp > 0) {
-                return rawTimestamp;
-            }
-
-            const parsedTimestamp = Date.parse(String(item && (item.closeDate || item.updatedAt || item.createdAt) || ''));
-            return Number.isFinite(parsedTimestamp) ? parsedTimestamp : 0;
+            return parseAnalyticsTimestamp(
+                item && item.closeDate,
+                item && item.updatedAt,
+                item && item.createdAt
+            );
         }
 
         function getClosedDealEarnedAmount(item) {
@@ -3322,7 +3345,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             }
             if (profitGoalMetaEl) {
-                profitGoalMetaEl.textContent = 'Press Enter or click the arrow to save your yearly target.';
+                profitGoalMetaEl.textContent = 'Your yearly target updates as you type. Press Enter or click the arrow to confirm.';
             }
             if (offerTermsChangeEl) {
                 offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} at offer terms sent`;
@@ -3369,6 +3392,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
                 profitGoalInputEl.value = digitsOnly ? Number(digitsOnly).toLocaleString('en-US') : '';
                 persistProfitGoal();
+                refreshKpis();
             });
 
             profitGoalInputEl.addEventListener('change', () => {
@@ -3925,14 +3949,36 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return documentCard;
         }
 
+        async function removeFiledClosedDeal(deal) {
+            try {
+                await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
+            } catch (error) {
+                showDashboardToast('error', 'Delete Failed', 'The saved closed-deal files could not be removed from browser storage.');
+                return;
+            }
+
+            const nextItems = getManualClosedDeals().filter((item) => {
+                const itemId = String(item && item.id || '');
+                const itemKey = makePropertyStorageKey(item && (item.title || item.propertyAddress || item.id));
+                return itemId !== String(deal.id || '') && itemKey !== String(deal.key || '');
+            });
+
+            setManualClosedDeals(nextItems);
+            renderClosedDeals();
+            showDashboardToast('success', 'File Removed', 'The saved deal file was removed from My File.');
+        }
+
         function createClosedDealCard(deal, options = {}) {
-            const { allowRemove = true } = options;
+            const { allowRemove = true, allowArchiveDelete = false } = options;
 
             const card = document.createElement('article');
             card.className = 'closed-deal-item';
 
             const head = document.createElement('div');
             head.className = 'closed-deal-item-head';
+
+            const headMain = document.createElement('div');
+            headMain.className = 'closed-deal-item-head-main';
 
             const title = document.createElement('div');
             title.className = 'closed-deal-item-title';
@@ -3946,12 +3992,27 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     ? 'Manual'
                     : 'Auto';
 
+            headMain.appendChild(title);
+            headMain.appendChild(source);
+            head.appendChild(headMain);
+
+            if (allowArchiveDelete) {
+                const archiveDeleteButton = document.createElement('button');
+                archiveDeleteButton.type = 'button';
+                archiveDeleteButton.className = 'closed-deal-archive-delete-btn';
+                archiveDeleteButton.setAttribute('aria-label', `Delete ${deal.title} from My File`);
+                archiveDeleteButton.title = 'Delete from My File';
+                archiveDeleteButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                archiveDeleteButton.addEventListener('click', async () => {
+                    await removeFiledClosedDeal(deal);
+                });
+                head.appendChild(archiveDeleteButton);
+            }
+
             const meta = document.createElement('p');
             meta.className = 'closed-deal-item-meta';
             meta.textContent = `Closed: ${formatClosedDealDate(deal.closeDate)}`;
 
-            head.appendChild(title);
-            head.appendChild(source);
             card.appendChild(head);
             card.appendChild(meta);
 
@@ -4009,7 +4070,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         function renderClosedDealList(container, deals, options = {}) {
-            const { emptyMessage, allowRemove = true } = options;
+            const { emptyMessage, allowRemove = true, allowArchiveDelete = false } = options;
 
             if (!container) {
                 return;
@@ -4022,7 +4083,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             deals.forEach((deal) => {
-                container.appendChild(createClosedDealCard(deal, { allowRemove }));
+                container.appendChild(createClosedDealCard(deal, { allowRemove, allowArchiveDelete }));
             });
         }
 
@@ -4103,7 +4164,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
             renderClosedDealList(myFileListEl, filedDeals, {
                 emptyMessage: 'No saved closed deals yet. Record a close here and its details and attachments will appear in My File.',
-                allowRemove: false
+                allowRemove: false,
+                allowArchiveDelete: true
             });
         }
 

@@ -4850,6 +4850,14 @@ body.sidebar-collapsed .main-content {
     margin-bottom: 4px;
 }
 
+.closed-deal-item-head-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .closed-deal-item-title {
     font-size: 13px;
     font-weight: 700;
@@ -4934,6 +4942,35 @@ body.sidebar-collapsed .main-content {
 
 .closed-deal-remove-btn:hover {
     color: #ff6b6b;
+}
+
+.closed-deal-archive-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    background: rgba(239, 68, 68, 0.08);
+    color: #f87171;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.closed-deal-archive-delete-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.closed-deal-archive-delete-btn:hover,
+.closed-deal-archive-delete-btn:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(239, 68, 68, 0.38);
+    background: rgba(239, 68, 68, 0.14);
+    color: #ef4444;
+    outline: none;
 }
 
 .analytics-my-file-grid {
