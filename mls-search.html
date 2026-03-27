@@ -268,6 +268,43 @@
             line-height: 1.45;
         }
 
+        [data-theme="light"] .mls-search-hero,
+        [data-theme="beach"] .mls-search-hero {
+            border-color: rgba(15, 23, 42, 0.08);
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.18), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(var(--accent-rgb), 0.08), transparent 36%),
+                linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(241, 248, 245, 0.92));
+            box-shadow: 0 26px 50px -34px rgba(15, 23, 42, 0.18);
+        }
+
+        [data-theme="light"] .mls-search-hero::after,
+        [data-theme="beach"] .mls-search-hero::after {
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.14), transparent 68%);
+        }
+
+        [data-theme="light"] .mls-search-hero h2,
+        [data-theme="beach"] .mls-search-hero h2 {
+            color: #0f172a;
+        }
+
+        [data-theme="light"] .mls-search-hero-copy,
+        [data-theme="beach"] .mls-search-hero-copy {
+            color: rgba(15, 23, 42, 0.72);
+        }
+
+        [data-theme="light"] .mls-search-kicker,
+        [data-theme="beach"] .mls-search-kicker {
+            border-color: rgba(var(--accent-rgb), 0.14);
+            background: rgba(var(--accent-rgb), 0.07);
+            color: rgba(15, 23, 42, 0.72);
+        }
+
+        [data-theme="light"] .mls-search-hero-aside,
+        [data-theme="beach"] .mls-search-hero-aside {
+            border-color: rgba(15, 23, 42, 0.08);
+            background: rgba(255, 255, 255, 0.72);
+        }
         .mls-search-grid {
             grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
             gap: 18px;

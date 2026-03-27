@@ -270,6 +270,38 @@
             outline: none;
         }
 
+        .buyers-sheet-phone-copy-btn.is-copied {
+            border-color: rgba(34, 197, 94, 0.52);
+            background: rgba(34, 197, 94, 0.18);
+            color: #dcfce7;
+        }
+
+        .buyers-sheet-phone-copy-btn.is-copied::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 13px;
+            height: 13px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.32);
+        }
+
+        .buyers-sheet-phone-copy-btn.is-copied::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: 1px;
+            width: 4px;
+            height: 7px;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            transform: rotate(45deg);
+            z-index: 1;
+            pointer-events: none;
+        }
+
         .buyers-sheet-phone-copy-btn svg {
             width: 12px;
             height: 12px;
@@ -668,6 +700,7 @@
         (function () {
             const STORAGE_KEY_BASE = 'myAgentsSheetRows';
             const COPIED_STORAGE_KEY_BASE = 'myAgentsSheetCopiedRows';
+            const PHONE_COPIED_STORAGE_KEY_BASE = 'myAgentsSheetPhoneCopiedRows';
             const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
 
             function safeReadJson(key) {
@@ -697,6 +730,10 @@
 
             function getCopiedStorageKey() {
                 return `${COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function getPhoneCopiedStorageKey() {
+                return `${PHONE_COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
             function showToast(type, title, message) {
@@ -845,6 +882,39 @@
 
             const copiedRowSignatures = loadCopiedRowSignatures();
 
+            function createPhoneCopiedSignature(row, key) {
+                const source = row && typeof row === 'object' ? row : {};
+                const normalizedKey = String(key || '').trim();
+                return [
+                    normalizeCellValue(source.propertyAddress).toLowerCase(),
+                    normalizeCellValue(source.laName).toLowerCase(),
+                    normalizeCellValue(source.offersEmail).toLowerCase(),
+                    normalizeCellValue(source.pdfFile).toLowerCase(),
+                    normalizedKey.toLowerCase(),
+                    normalizeCellValue(source[normalizedKey]).toLowerCase()
+                ].join('|');
+            }
+
+            function loadPhoneCopiedSignatures() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getPhoneCopiedStorageKey()) || '[]');
+                    if (Array.isArray(stored)) {
+                        return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
+                    }
+                } catch (error) {
+                    // Ignore invalid stored values.
+                }
+
+                return new Set();
+            }
+
+            function persistPhoneCopiedSignatures(signatureSet) {
+                const values = Array.from(signatureSet || []).map((value) => String(value || '').trim()).filter(Boolean);
+                localStorage.setItem(getPhoneCopiedStorageKey(), JSON.stringify(values));
+            }
+
+            const phoneCopiedSignatures = loadPhoneCopiedSignatures();
+
             function syncCopyButtonState(rowElement) {
                 if (!rowElement) {
                     return;
@@ -867,6 +937,35 @@
                 button.title = isCopied
                     ? 'Copy again. Marked as already copied.'
                     : 'Copy status-based outreach template';
+            }
+
+            function syncPhoneCopyButtonState(cellElement, key) {
+                if (!cellElement || !key) {
+                    return;
+                }
+
+                const button = cellElement.querySelector('.buyers-sheet-phone-copy-btn');
+                if (!button) {
+                    return;
+                }
+
+                const rowElement = cellElement.closest('tr');
+                const signature = createPhoneCopiedSignature(getRowDataFromElement(rowElement), key);
+                const isCopied = Boolean(signature) && phoneCopiedSignatures.has(signature);
+                button.classList.toggle('is-copied', isCopied);
+                button.classList.toggle('is-visible', isCopied);
+                button.setAttribute('aria-label', isCopied ? 'Copy phone number again. This phone number was already copied.' : 'Copy phone number');
+                button.title = isCopied ? 'Copy again. Marked as already copied.' : 'Copy phone number';
+            }
+
+            function syncPhoneCopyButtonStates(rowElement) {
+                if (!rowElement) {
+                    return;
+                }
+
+                rowElement.querySelectorAll('td.is-phone-cell').forEach((cellElement) => {
+                    syncPhoneCopyButtonState(cellElement, cellElement.dataset.phoneFieldKey || '');
+                });
             }
 
             function buildStatusTemplate(rowData) {
@@ -907,11 +1006,18 @@
                 td.contentEditable = 'true';
                 td.spellcheck = false;
                 td.textContent = normalizeCellValue(value);
-                td.addEventListener('input', saveRows);
-                td.addEventListener('blur', saveRows);
+                td.addEventListener('input', () => {
+                    saveRows();
+                    syncPhoneCopyButtonState(td, td.dataset.phoneFieldKey || '');
+                });
+                td.addEventListener('blur', () => {
+                    saveRows();
+                    syncPhoneCopyButtonState(td, td.dataset.phoneFieldKey || '');
+                });
 
                 if (isPhoneFieldKey(key)) {
                     td.classList.add('is-phone-cell');
+                    td.dataset.phoneFieldKey = key;
 
                     const copyButton = document.createElement('button');
                     copyButton.type = 'button';
@@ -938,7 +1044,12 @@
 
                         try {
                             await copyTextToClipboard(phoneNumber);
-                            copyButton.classList.add('is-visible');
+                            const signature = createPhoneCopiedSignature(getRowDataFromElement(td.closest('tr')), key);
+                            if (signature) {
+                                phoneCopiedSignatures.add(signature);
+                                persistPhoneCopiedSignatures(phoneCopiedSignatures);
+                            }
+                            syncPhoneCopyButtonState(td, key);
                             showToast('success', 'Phone Copied', `${phoneNumber} was copied to your clipboard.`);
                         } catch (error) {
                             showToast('error', 'Copy Failed', error && error.message ? error.message : 'The phone number could not be copied.');
@@ -946,6 +1057,7 @@
                     });
 
                     td.appendChild(copyButton);
+                    syncPhoneCopyButtonState(td, key);
                 }
 
                 return td;
@@ -990,9 +1102,16 @@
                     tr.appendChild(createCell(row && row[key] ? row[key] : '', key));
                 });
                 tr.appendChild(createCopyCell());
-                tr.addEventListener('input', () => syncCopyButtonState(tr));
-                tr.addEventListener('blur', () => syncCopyButtonState(tr), true);
+                tr.addEventListener('input', () => {
+                    syncCopyButtonState(tr);
+                    syncPhoneCopyButtonStates(tr);
+                });
+                tr.addEventListener('blur', () => {
+                    syncCopyButtonState(tr);
+                    syncPhoneCopyButtonStates(tr);
+                }, true);
                 syncCopyButtonState(tr);
+                syncPhoneCopyButtonStates(tr);
                 return tr;
             }
 

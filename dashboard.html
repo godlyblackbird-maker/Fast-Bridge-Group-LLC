@@ -105,6 +105,732 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .notes-dashboard-widget {
+            grid-column: span 1;
+            min-height: 980px;
+            padding-bottom: 14px;
+            background: linear-gradient(180deg, rgba(249, 250, 251, 0.86), rgba(243, 244, 246, 0.72));
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            box-shadow: 0 28px 70px rgba(148, 163, 184, 0.22);
+            overflow: hidden;
+        }
+
+        .notes-dashboard-widget::before {
+            background: radial-gradient(circle at top right, rgba(250, 204, 21, 0.18), transparent 26%);
+            opacity: 1;
+        }
+
+        .notes-dashboard-widget .card-header,
+        .notes-dashboard-widget .card-title,
+        .notes-dashboard-widget .card-subtitle {
+            display: none;
+        }
+
+        .notes-widget-shell {
+            min-height: 940px;
+        }
+
+        .notes-library-panel,
+        .notes-editor-panel {
+            min-height: 940px;
+            border: 0;
+            border-radius: 26px;
+            background: linear-gradient(180deg, rgba(245, 245, 244, 0.98), rgba(255, 255, 255, 0.96));
+            padding: 22px 18px 18px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        }
+
+        .notes-mobile-topbar,
+        .notes-editor-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .notes-mobile-status {
+            color: rgba(17, 24, 39, 0.46);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .notes-mobile-actions,
+        .notes-editor-topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+        }
+
+        .notes-ios-icon-btn,
+        .notes-ios-edit-btn,
+        .notes-editor-nav-btn,
+        .notes-editor-icon-btn,
+        .notes-folder-modal-circle-btn,
+        .notes-folder-modal-done-btn,
+        .notes-editor-done-btn {
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.88);
+            color: #111111;
+            box-shadow: 0 10px 24px rgba(148, 163, 184, 0.14);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+        }
+
+        .notes-ios-icon-btn:hover,
+        .notes-ios-edit-btn:hover,
+        .notes-editor-nav-btn:hover,
+        .notes-editor-icon-btn:hover,
+        .notes-folder-modal-circle-btn:hover,
+        .notes-folder-modal-done-btn:hover,
+        .notes-editor-done-btn:hover,
+        .notes-ios-icon-btn:focus-visible,
+        .notes-ios-edit-btn:focus-visible,
+        .notes-editor-nav-btn:focus-visible,
+        .notes-editor-icon-btn:focus-visible,
+        .notes-folder-modal-circle-btn:focus-visible,
+        .notes-folder-modal-done-btn:focus-visible,
+        .notes-editor-done-btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 28px rgba(148, 163, 184, 0.2);
+            outline: none;
+        }
+
+        .notes-ios-icon-btn,
+        .notes-editor-nav-btn,
+        .notes-folder-modal-circle-btn {
+            width: 54px;
+            height: 54px;
+        }
+
+        .notes-ios-icon-btn svg,
+        .notes-editor-nav-btn svg,
+        .notes-editor-icon-btn svg,
+        .notes-folder-modal-circle-btn svg,
+        .notes-folder-modal-done-btn svg,
+        .notes-editor-done-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .notes-ios-edit-btn {
+            min-width: 96px;
+            height: 54px;
+            padding: 0 24px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .notes-library-head {
+            margin-bottom: 18px;
+        }
+
+        .notes-library-title {
+            margin: 0;
+            color: #050505;
+            font-size: clamp(2.4rem, 4vw, 3.6rem);
+            line-height: 1;
+            letter-spacing: -0.06em;
+            font-weight: 800;
+        }
+
+        .notes-library-caption {
+            margin: 10px 0 0;
+            color: #8f8f95;
+            font-size: 14px;
+        }
+
+        .notes-view-tabs-hidden {
+            display: none;
+        }
+
+        .notes-folder-tree {
+            max-height: none;
+            border: 0;
+            padding: 0;
+            gap: 16px;
+            overflow: visible;
+        }
+
+        .notes-folder-section {
+            display: grid;
+            gap: 10px;
+        }
+
+        .notes-folder-section-title {
+            margin: 0 2px;
+            color: #1f2937;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .notes-folder-section-card {
+            display: grid;
+            gap: 0;
+            padding: 8px 0;
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 14px 38px rgba(148, 163, 184, 0.14);
+            overflow: hidden;
+        }
+
+        .notes-folder-node,
+        .notes-folder-row {
+            display: block;
+        }
+
+        .notes-folder-row + .notes-folder-row,
+        .notes-folder-node + .notes-folder-node {
+            border-top: 1px solid rgba(17, 24, 39, 0.08);
+        }
+
+        .notes-folder-item {
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            padding: 14px 18px;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .notes-folder-item:hover,
+        .notes-folder-item.is-drop-target,
+        .notes-folder-item.is-active {
+            background: rgba(250, 204, 21, 0.08);
+            border-color: transparent;
+            box-shadow: none;
+        }
+
+        .notes-folder-item.is-active .notes-folder-name,
+        .notes-folder-item.is-active .notes-folder-count,
+        .notes-folder-item.is-active .notes-folder-arrow {
+            color: #d4a500;
+        }
+
+        .notes-folder-item.is-root {
+            font-weight: 600;
+        }
+
+        .notes-folder-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notes-folder-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            color: #e4ac00;
+            background: rgba(250, 204, 21, 0.12);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .notes-folder-icon svg {
+            width: 21px;
+            height: 21px;
+        }
+
+        .notes-folder-copy {
+            min-width: 0;
+            display: grid;
+            gap: 4px;
+            flex: 1 1 auto;
+        }
+
+        .notes-folder-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #111111;
+        }
+
+        .notes-folder-count {
+            font-size: 13px;
+            color: #8f8f95;
+        }
+
+        .notes-folder-item .notes-folder-count {
+            margin-left: auto;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .notes-folder-arrow {
+            color: #c4c4c7;
+            font-size: 24px;
+            line-height: 1;
+            flex: 0 0 auto;
+        }
+
+        .notes-folder-indent,
+        .notes-folder-chevron,
+        .notes-folder-main .notes-folder-main,
+        .notes-folder-delete svg {
+            display: none;
+        }
+
+        .notes-folder-delete {
+            width: 40px;
+            height: 40px;
+            background: rgba(239, 68, 68, 0.08);
+            color: #ef4444;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.92);
+        }
+
+        .notes-folder-delete::before {
+            content: '×';
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .notes-library-panel.is-editing .notes-folder-delete {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        .notes-note-list-shell {
+            display: grid;
+            gap: 12px;
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.78);
+            box-shadow: 0 14px 38px rgba(148, 163, 184, 0.12);
+        }
+
+        .notes-panel-head {
+            align-items: center;
+        }
+
+        .notes-panel-head-copy {
+            gap: 2px;
+        }
+
+        #notes-active-folder-label {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111111;
+        }
+
+        .notes-panel-meta,
+        .notes-widget-folder-meta,
+        .notes-note-card-time,
+        .notes-note-card-folder,
+        .notes-note-card-trash-meta,
+        .notes-note-group-count,
+        .notes-editor-meta {
+            color: #8f8f95;
+        }
+
+        .notes-new-note-btn {
+            border: 0;
+            border-radius: 999px;
+            padding: 10px 18px;
+            background: rgba(250, 204, 21, 0.16);
+            color: #9a7600;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .notes-note-list {
+            gap: 14px;
+            padding-right: 0;
+        }
+
+        .notes-note-group {
+            gap: 10px;
+        }
+
+        .notes-note-card {
+            padding: 14px 16px;
+            border: 0;
+            border-radius: 22px;
+            background: rgba(249, 250, 251, 0.96);
+            box-shadow: 0 10px 24px rgba(148, 163, 184, 0.08);
+        }
+
+        .notes-note-card:hover,
+        .notes-note-card.is-active {
+            background: rgba(255, 249, 219, 0.98);
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(250, 204, 21, 0.12);
+        }
+
+        .notes-note-card-title,
+        .notes-note-group-title {
+            color: #111111;
+        }
+
+        .notes-note-card-preview {
+            color: #52525b;
+            font-size: 12.5px;
+        }
+
+        .notes-search-dock {
+            grid-template-columns: minmax(0, 1fr) 58px;
+            gap: 12px;
+            margin-top: auto;
+            padding-top: 14px;
+        }
+
+        .notes-search-shell {
+            min-height: 58px;
+            border: 0;
+            background: rgba(255, 255, 255, 0.88);
+            box-shadow: 0 14px 28px rgba(148, 163, 184, 0.12);
+        }
+
+        .notes-search-input,
+        .notes-search-input::placeholder {
+            font-size: 18px;
+        }
+
+        .notes-quick-note-btn {
+            width: 58px;
+            height: 58px;
+            border: 0;
+            background: #facc15;
+            color: #ffffff;
+            box-shadow: 0 16px 34px rgba(250, 204, 21, 0.24);
+        }
+
+        .notes-editor-panel {
+            background: linear-gradient(180deg, rgba(250, 250, 249, 0.98), rgba(255, 255, 255, 0.98));
+        }
+
+        .notes-editor-empty {
+            border: 0;
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.74);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+
+        .notes-empty-create-btn {
+            margin-top: 14px;
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 18px;
+            background: #facc15;
+            color: #ffffff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .notes-editor-action-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 4px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 24px rgba(148, 163, 184, 0.14);
+        }
+
+        .notes-editor-icon-btn {
+            width: 48px;
+            height: 48px;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .notes-editor-done-btn,
+        .notes-folder-modal-done-btn {
+            width: 68px;
+            height: 68px;
+            background: #f2c300;
+            color: #fffef8;
+            box-shadow: 0 18px 36px rgba(242, 195, 0, 0.28);
+        }
+
+        .notes-editor {
+            gap: 14px;
+        }
+
+        .notes-editor-page {
+            display: grid;
+            gap: 14px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+
+        .notes-editor-marker {
+            width: 4px;
+            min-height: 74px;
+            border-radius: 999px;
+            background: rgba(242, 195, 0, 0.72);
+            margin-left: 12px;
+        }
+
+        .notes-title-editor,
+        .notes-body-editor {
+            border: 0;
+            background: transparent;
+            color: #111111;
+            box-shadow: none;
+        }
+
+        .notes-title-editor {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .notes-editor-meta-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .notes-folder-select,
+        .notes-pin-toggle-btn {
+            min-height: 48px;
+            border-radius: 18px;
+            border: 0;
+            background: rgba(249, 250, 251, 0.98);
+            box-shadow: 0 10px 24px rgba(148, 163, 184, 0.1);
+            color: #111111;
+        }
+
+        .notes-pin-toggle-btn {
+            padding: 0 16px;
+            color: #9a7600;
+            background: rgba(250, 204, 21, 0.16);
+        }
+
+        .notes-pin-toggle-btn.is-active {
+            background: rgba(250, 204, 21, 0.26);
+            color: #7c5d00;
+        }
+
+        .notes-body-input-wrap {
+            display: contents;
+        }
+
+        .notes-body-editor {
+            min-height: 360px;
+            padding: 0 14px 14px;
+            border-radius: 0;
+            line-height: 1.72;
+            font-size: 18px;
+        }
+
+        .notes-title-editor:empty::before,
+        .notes-body-editor:empty::before {
+            color: rgba(17, 24, 39, 0.24);
+        }
+
+        .notes-editor-toolbar {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 4px;
+            padding: 8px;
+            border: 0;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 16px 30px rgba(148, 163, 184, 0.16);
+        }
+
+        .notes-tool-btn,
+        .notes-complete-toggle-btn {
+            min-height: 44px;
+            border-radius: 16px;
+            background: transparent;
+            color: #111111;
+        }
+
+        .notes-complete-toggle-btn {
+            width: auto;
+            min-width: 44px;
+            background: rgba(250, 204, 21, 0.16);
+            color: #9a7600;
+            box-shadow: none;
+        }
+
+        .notes-complete-toggle-btn.is-active {
+            background: rgba(34, 197, 94, 0.18);
+            color: #15803d;
+            box-shadow: none;
+        }
+
+        .notes-folder-modal[hidden] {
+            display: none;
+        }
+
+        .notes-folder-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .notes-folder-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.26);
+            backdrop-filter: blur(3px);
+        }
+
+        .notes-folder-modal-card {
+            position: relative;
+            width: min(100%, 760px);
+            padding: 22px;
+            border-radius: 34px;
+            background: linear-gradient(180deg, rgba(245, 245, 244, 0.98), rgba(255, 255, 255, 0.98));
+            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+            display: grid;
+            gap: 18px;
+        }
+
+        .notes-folder-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .notes-folder-modal-title {
+            margin: 0;
+            color: #111111;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+        }
+
+        .notes-folder-modal-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 96px;
+            padding: 0 18px;
+            border-radius: 26px;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06), 0 10px 28px rgba(148, 163, 184, 0.12);
+        }
+
+        .notes-folder-modal-marker {
+            width: 4px;
+            height: 44px;
+            border-radius: 999px;
+            background: rgba(242, 195, 0, 0.72);
+        }
+
+        .notes-folder-modal-input {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            color: #111111;
+            font-size: 22px;
+            font-weight: 500;
+        }
+
+        .notes-folder-modal-input:focus {
+            outline: none;
+        }
+
+        .notes-folder-modal-clear {
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(17, 24, 39, 0.16);
+            color: white;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .notes-folder-modal-smart {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 18px;
+            border: 0;
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 12px 28px rgba(148, 163, 184, 0.12);
+            color: #111111;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .notes-folder-modal-smart-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: rgba(250, 204, 21, 0.16);
+            color: #e4ac00;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .notes-folder-modal-smart-copy {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .notes-folder-modal-smart-copy strong {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .notes-folder-modal-smart-copy span {
+            color: #8f8f95;
+            font-size: 13px;
+        }
+
+        .notes-folder-modal-smart-arrow {
+            margin-left: auto;
+            color: #c4c4c7;
+            font-size: 34px;
+            line-height: 1;
+        }
+
+        @media (max-width: 1200px) {
+            .notes-dashboard-widget {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .notes-dashboard-widget {
+                grid-column: span 1;
+                min-height: 880px;
+            }
+
+            .notes-library-panel,
+            .notes-editor-panel,
+            .notes-widget-shell {
+                min-height: 840px;
+            }
+
+            .notes-editor-meta-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
     <!--
 
 TemplateMo 607 Glass Admin
@@ -427,32 +1153,46 @@ https://templatemo.com/tm-607-glass-admin
                     <div class="card-header notes-widget-header">
                         <div>
                             <h2 class="card-title">Notes</h2>
-                            <p class="card-subtitle" id="notes-widget-subtitle">0 notes</p>
-                        </div>
-                        <div class="notes-widget-header-actions">
-                            <span class="notes-widget-folder-meta" id="notes-folder-summary">0 notes total</span>
-                            <button id="notes-add-folder-btn" type="button" class="card-btn">New Folder</button>
-                            <button id="notes-add-note-btn" type="button" class="card-btn active">New Note</button>
+                            <p class="card-subtitle">0 notes</p>
                         </div>
                     </div>
                     <div class="notes-widget-shell">
                         <section class="notes-library-panel" aria-label="Notes library">
-                            <div class="notes-panel-head">
-                                <div class="notes-panel-head-copy">
-                                    <span id="notes-active-folder-label">All Notes</span>
-                                    <span class="notes-panel-meta" id="notes-count-summary">0 notes</span>
+                            <div class="notes-mobile-topbar">
+                                <span class="notes-mobile-status">iCloud Workspace</span>
+                                <div class="notes-mobile-actions">
+                                    <button id="notes-add-folder-btn" type="button" class="notes-ios-icon-btn" aria-label="Add folder">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"></path><path d="M12 10v6"></path><path d="M9 13h6"></path></svg>
+                                    </button>
+                                    <button id="notes-edit-folders-btn" type="button" class="notes-ios-edit-btn">Edit</button>
                                 </div>
-                                <div class="notes-view-tabs" aria-label="Notes views">
+                            </div>
+                            <div class="notes-library-head">
+                                <h3 class="notes-library-title">Folders</h3>
+                                <p class="notes-library-caption" id="notes-widget-subtitle">0 notes</p>
+                            </div>
+                            <div class="notes-view-tabs notes-view-tabs-hidden" aria-label="Notes views">
                                     <button id="notes-view-all-btn" type="button" class="notes-view-tab is-active">Notes</button>
                                     <button id="notes-view-trash-btn" type="button" class="notes-view-tab">Recently Deleted</button>
-                                </div>
                             </div>
                             <div id="notes-folder-tree" class="notes-folder-tree">
                                 <p class="outreach-empty">Loading folders...</p>
                             </div>
-                            <div id="notes-note-list" class="notes-note-list">
-                                <p class="outreach-empty">No notes yet.</p>
-                            </div>
+                            <section class="notes-note-list-shell">
+                                <div class="notes-panel-head">
+                                    <div class="notes-panel-head-copy">
+                                        <span id="notes-active-folder-label">All Notes</span>
+                                        <span class="notes-panel-meta" id="notes-count-summary">0 notes</span>
+                                    </div>
+                                    <div class="notes-panel-actions">
+                                        <span class="notes-widget-folder-meta" id="notes-folder-summary">0 notes total</span>
+                                        <button id="notes-add-note-btn" type="button" class="notes-new-note-btn">New Note</button>
+                                    </div>
+                                </div>
+                                <div id="notes-note-list" class="notes-note-list">
+                                    <p class="outreach-empty">No notes yet.</p>
+                                </div>
+                            </section>
                             <div class="notes-search-dock">
                                 <label class="notes-search-shell" for="notes-search-input">
                                     <svg class="notes-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.65" y2="16.65"></line></svg>
@@ -468,22 +1208,36 @@ https://templatemo.com/tm-607-glass-admin
                             <div id="notes-editor-empty" class="notes-editor-empty">
                                 <strong>No note selected</strong>
                                 <p>Create a note or pick one from the list to start writing.</p>
+                                <button id="notes-empty-create-btn" type="button" class="notes-empty-create-btn">Create New Note</button>
                             </div>
                             <div id="notes-editor" class="notes-editor" hidden>
                                 <div class="notes-editor-topbar">
-                                    <button id="notes-back-to-list-btn" type="button" class="notes-editor-back-btn" aria-label="Back to notes list">&lsaquo;</button>
-                                    <div id="notes-title-input" class="notes-title-editor" contenteditable="true" role="textbox" aria-label="Note title" data-placeholder="Title"></div>
-                                    <div class="notes-editor-actions">
-                                        <button id="notes-pin-toggle-btn" type="button" class="notes-pin-toggle-btn" aria-pressed="false">Pin Note</button>
-                                        <div class="notes-editor-action-stack">
-                                            <select id="notes-folder-select" class="form-input notes-folder-select" aria-label="Move note to folder"></select>
-                                            <button id="notes-complete-toggle-btn" type="button" class="notes-complete-toggle-btn" aria-pressed="false" aria-label="Mark note complete">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                                    <button id="notes-back-to-list-btn" type="button" class="notes-editor-nav-btn" aria-label="Back to notes list">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                    </button>
+                                    <div class="notes-editor-topbar-actions">
+                                        <div class="notes-editor-action-pill">
+                                            <button id="notes-share-note-btn" type="button" class="notes-editor-icon-btn" aria-label="Share note">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 20h14a2 2 0 0 0 2-2v-4"></path><path d="M3 14v4a2 2 0 0 0 2 2"></path></svg>
+                                            </button>
+                                            <button id="notes-more-note-btn" type="button" class="notes-editor-icon-btn" aria-label="More note actions">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                                             </button>
                                         </div>
+                                        <button id="notes-close-editor-btn" type="button" class="notes-editor-done-btn" aria-label="Done editing">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                                        </button>
                                     </div>
                                 </div>
-                                <div id="notes-body-input" class="notes-body-editor" contenteditable="true" role="textbox" aria-label="Note body" data-placeholder="Start typing your note here..."></div>
+                                <div class="notes-editor-page">
+                                    <div class="notes-editor-marker" aria-hidden="true"></div>
+                                    <div id="notes-title-input" class="notes-title-editor" contenteditable="true" role="textbox" aria-label="Note title" data-placeholder="Title"></div>
+                                    <div class="notes-editor-meta-row">
+                                        <select id="notes-folder-select" class="form-input notes-folder-select" aria-label="Move note to folder"></select>
+                                        <button id="notes-pin-toggle-btn" type="button" class="notes-pin-toggle-btn" aria-pressed="false">Pin Note</button>
+                                    </div>
+                                    <div id="notes-body-input" class="notes-body-editor" contenteditable="true" role="textbox" aria-label="Note body" data-placeholder="Start typing your note here..."></div>
+                                </div>
                                 <div class="notes-editor-toolbar" aria-label="Note tools">
                                     <button id="notes-tool-font-btn" type="button" class="notes-tool-btn" aria-label="Font tool">Aa</button>
                                     <button id="notes-tool-checklist-btn" type="button" class="notes-tool-btn" aria-label="Checklist tool">
@@ -499,6 +1253,9 @@ https://templatemo.com/tm-607-glass-admin
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 19 7-7 3 3-7 7-3.5 1z"></path><path d="m18 13-7-7-8 8"></path><path d="M2 22h20"></path></svg>
                                     </button>
                                     <button id="notes-tool-bold-btn" type="button" class="notes-tool-btn" aria-label="Bold tool"><strong>B</strong></button>
+                                    <button id="notes-complete-toggle-btn" type="button" class="notes-complete-toggle-btn" aria-pressed="false" aria-label="Mark note complete">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                                    </button>
                                 </div>
                                 <div class="notes-editor-footer">
                                     <p class="notes-editor-meta" id="notes-meta-label">Last updated just now</p>
@@ -506,6 +1263,36 @@ https://templatemo.com/tm-607-glass-admin
                                 </div>
                             </div>
                         </section>
+                    </div>
+                </div>
+
+                <div id="notes-folder-modal" class="notes-folder-modal" hidden aria-hidden="true">
+                    <div class="notes-folder-modal-backdrop" data-notes-folder-close="true"></div>
+                    <div class="notes-folder-modal-card" role="dialog" aria-modal="true" aria-labelledby="notes-folder-modal-title">
+                        <div class="notes-folder-modal-header">
+                            <button type="button" class="notes-folder-modal-circle-btn" data-notes-folder-close="true" aria-label="Close new folder dialog">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                            <h3 id="notes-folder-modal-title" class="notes-folder-modal-title">New Folder</h3>
+                            <button id="notes-folder-save-btn" type="button" class="notes-folder-modal-done-btn" aria-label="Create folder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                            </button>
+                        </div>
+                        <div class="notes-folder-modal-input-wrap">
+                            <span class="notes-folder-modal-marker" aria-hidden="true"></span>
+                            <input id="notes-folder-name-input" class="notes-folder-modal-input" type="text" placeholder="New Folder" maxlength="80">
+                            <button id="notes-folder-clear-btn" type="button" class="notes-folder-modal-clear" aria-label="Clear folder name">×</button>
+                        </div>
+                        <button id="notes-folder-smart-btn" type="button" class="notes-folder-modal-smart">
+                            <span class="notes-folder-modal-smart-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            </span>
+                            <span class="notes-folder-modal-smart-copy">
+                                <strong>Make Into Smart Folder</strong>
+                                <span>Organize using tags and other filters</span>
+                            </span>
+                            <span class="notes-folder-modal-smart-arrow">›</span>
+                        </button>
                     </div>
                 </div>
 

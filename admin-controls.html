@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Controls - 3D Glassmorphism Dashboard</title>
+    <title>Admin Controls - FAST Ops Command Center</title>
     <link rel="icon" type="image/svg+xml" href="fbg-favicon.svg">
-    <meta name="description" content="3D Glassmorphism Dashboard Template by TemplateMo">
+    <meta name="description" content="FAST BRIDGE GROUP admin command center for approvals, submissions, MLS imports, contracts, and internal asset tools.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -105,6 +105,524 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .admin-controls-shell {
+            position: relative;
+            display: grid;
+            gap: 22px;
+        }
+
+        .admin-command-stage {
+            position: relative;
+            overflow: hidden;
+            padding: 28px;
+            border-radius: 28px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.22);
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.22), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.14), transparent 32%),
+                linear-gradient(145deg, rgba(8, 15, 24, 0.9), rgba(12, 24, 21, 0.7));
+            box-shadow: 0 30px 80px rgba(2, 6, 23, 0.34);
+            isolation: isolate;
+        }
+
+        .admin-command-stage::before,
+        .admin-command-stage::after {
+            content: '';
+            position: absolute;
+            inset: auto;
+            border-radius: 999px;
+            pointer-events: none;
+            filter: blur(6px);
+            opacity: 0.72;
+            z-index: 0;
+            animation: adminOrbFloat 12s ease-in-out infinite;
+        }
+
+        .admin-command-stage::before {
+            top: -60px;
+            right: -20px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.34), transparent 68%);
+        }
+
+        .admin-command-stage::after {
+            bottom: -70px;
+            left: -10px;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.18), transparent 70%);
+            animation-delay: -4s;
+        }
+
+        .admin-command-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+            gap: 22px;
+            align-items: stretch;
+        }
+
+        .admin-command-copy {
+            display: grid;
+            gap: 18px;
+        }
+
+        .admin-command-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            width: fit-content;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.22);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 700;
+            backdrop-filter: blur(14px);
+        }
+
+        .admin-command-kicker::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(var(--accent-light-rgb), 1), rgba(255, 255, 255, 0.9));
+            box-shadow: 0 0 16px rgba(var(--accent-light-rgb), 0.6);
+            animation: adminPulseDot 2.2s ease-in-out infinite;
+        }
+
+        .admin-command-title {
+            margin: 0;
+            max-width: 11ch;
+            font-size: clamp(2.35rem, 4vw, 4.45rem);
+            line-height: 0.94;
+            letter-spacing: -0.05em;
+            color: #f8fafc;
+            text-wrap: balance;
+        }
+
+        .admin-command-body {
+            max-width: 760px;
+            margin: 0;
+            color: rgba(226, 232, 240, 0.82);
+            font-size: 15px;
+            line-height: 1.72;
+        }
+
+        .admin-command-tags,
+        .admin-command-actions,
+        .admin-command-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .admin-command-tag,
+        .admin-command-metric {
+            position: relative;
+            overflow: hidden;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.055);
+            backdrop-filter: blur(12px);
+            color: #f8fafc;
+        }
+
+        .admin-command-tag {
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.82);
+        }
+
+        .admin-command-tag strong {
+            color: #ffffff;
+        }
+
+        .admin-command-action {
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.26);
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .admin-command-action::after,
+        .admin-control-panel::after {
+            content: '';
+            position: absolute;
+            inset: -120% auto auto -35%;
+            width: 42%;
+            height: 280%;
+            transform: rotate(18deg);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .admin-command-action:hover,
+        .admin-command-action:focus-visible {
+            transform: translateY(-2px);
+            border-color: rgba(var(--accent-light-rgb), 0.5);
+            background: rgba(var(--accent-rgb), 0.22);
+            box-shadow: 0 18px 34px rgba(2, 6, 23, 0.24);
+            outline: none;
+        }
+
+        .admin-command-action:hover::after,
+        .admin-command-action:focus-visible::after,
+        .admin-control-panel:hover::after {
+            opacity: 1;
+            animation: adminSheen 1.15s ease;
+        }
+
+        .admin-command-action.active {
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.4), rgba(var(--accent-light-rgb), 0.24));
+            border-color: rgba(var(--accent-light-rgb), 0.52);
+        }
+
+        .admin-command-sidecar {
+            position: relative;
+            display: grid;
+            gap: 16px;
+            padding: 22px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.3));
+            backdrop-filter: blur(18px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .admin-sidecar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .admin-sidecar-title {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 1.05rem;
+        }
+
+        .admin-sidecar-chip {
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: rgba(var(--accent-light-rgb), 0.14);
+            border: 1px solid rgba(var(--accent-light-rgb), 0.24);
+            color: #d1fae5;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .admin-command-metric {
+            min-width: 136px;
+            flex: 1 1 140px;
+            display: grid;
+            gap: 4px;
+        }
+
+        .admin-command-metric span {
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.64);
+        }
+
+        .admin-command-metric strong {
+            font-size: 1.35rem;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .admin-command-metric small {
+            color: rgba(226, 232, 240, 0.72);
+            font-size: 12px;
+        }
+
+        .admin-command-manifest {
+            margin: 0;
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(2, 6, 23, 0.32);
+            color: #bfdbfe;
+            font-size: 12px;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            overflow: auto;
+            font-family: "Space Mono", monospace;
+        }
+
+        .admin-quick-rail {
+            position: sticky;
+            top: 82px;
+            z-index: 8;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 14px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
+            border-radius: 22px;
+            background: rgba(7, 12, 20, 0.68);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 20px 45px rgba(2, 6, 23, 0.18);
+        }
+
+        .admin-quick-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .admin-quick-link::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(var(--accent-light-rgb), 0.95);
+            box-shadow: 0 0 12px rgba(var(--accent-light-rgb), 0.42);
+        }
+
+        .admin-quick-link:hover,
+        .admin-quick-link:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-light-rgb), 0.35);
+            background: rgba(var(--accent-rgb), 0.16);
+            outline: none;
+        }
+
+        .admin-controls-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 18px;
+            align-items: start;
+        }
+
+        .admin-control-panel {
+            position: relative;
+            overflow: hidden;
+            min-height: 100%;
+            border-radius: 24px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.12);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03)),
+                var(--glass-bg);
+            box-shadow: 0 22px 38px rgba(2, 6, 23, 0.14);
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+            animation: adminPanelRise 0.7s ease both;
+        }
+
+        .admin-control-panel:hover {
+            transform: translateY(-4px);
+            border-color: rgba(var(--accent-light-rgb), 0.28);
+            box-shadow: 0 28px 50px rgba(2, 6, 23, 0.2);
+        }
+
+        .admin-control-panel:nth-child(1),
+        .admin-control-panel:nth-child(2),
+        .admin-control-panel:nth-child(3),
+        .admin-control-panel:nth-child(4),
+        .admin-control-panel:nth-child(5),
+        .admin-control-panel:nth-child(6),
+        .admin-control-panel:nth-child(7),
+        .admin-control-panel:nth-child(8),
+        .admin-control-panel:nth-child(9) {
+            animation-delay: calc(var(--panel-index, 0) * 0.06s);
+        }
+
+        .admin-control-panel[data-span="4"] {
+            grid-column: span 4;
+        }
+
+        .admin-control-panel[data-span="6"] {
+            grid-column: span 6;
+        }
+
+        .admin-control-panel[data-span="8"] {
+            grid-column: span 8;
+        }
+
+        .admin-control-panel[data-span="12"] {
+            grid-column: span 12;
+        }
+
+        .admin-control-panel .card-header {
+            position: relative;
+            gap: 16px;
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+        }
+
+        .admin-control-panel .card-header::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(var(--accent-light-rgb), 0.42), rgba(255, 255, 255, 0));
+        }
+
+        .admin-panel-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: rgba(226, 232, 240, 0.74);
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .admin-panel-eyebrow::before {
+            content: '';
+            width: 18px;
+            height: 1px;
+            background: rgba(var(--accent-light-rgb), 0.56);
+        }
+
+        .admin-panel-accent {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 68px;
+            height: 68px;
+            border-radius: 20px;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.34), rgba(var(--accent-rgb), 0.04) 68%, transparent 72%);
+            filter: blur(1px);
+            opacity: 0.82;
+            pointer-events: none;
+        }
+
+        .admin-control-panel .outreach-list,
+        .admin-control-panel #admin-account-panel,
+        .admin-control-panel .settings-section,
+        .admin-control-panel .contracts-document-stage,
+        .admin-control-panel .flyer-builder-grid {
+            position: relative;
+            z-index: 1;
+        }
+
+        .admin-control-panel .card-title {
+            font-size: 1.2rem;
+        }
+
+        .admin-control-panel .card-subtitle {
+            max-width: 62ch;
+            color: rgba(226, 232, 240, 0.76);
+        }
+
+        .admin-section-note {
+            margin: 0;
+            color: rgba(226, 232, 240, 0.68);
+            font-size: 13px;
+        }
+
+        .admin-command-footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .admin-command-footer span {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(226, 232, 240, 0.74);
+            font-size: 12px;
+        }
+
+        @keyframes adminSheen {
+            0% { transform: translateX(-10%) rotate(18deg); }
+            100% { transform: translateX(320%) rotate(18deg); }
+        }
+
+        @keyframes adminPanelRise {
+            from {
+                opacity: 0;
+                transform: translateY(18px) scale(0.985);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes adminOrbFloat {
+            0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+            50% { transform: translate3d(0, 16px, 0) scale(1.05); }
+        }
+
+        @keyframes adminPulseDot {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.35); opacity: 1; }
+        }
+
+        @media (max-width: 1180px) {
+            .admin-command-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-control-panel[data-span="4"],
+            .admin-control-panel[data-span="6"],
+            .admin-control-panel[data-span="8"] {
+                grid-column: span 12;
+            }
+        }
+
+        @media (max-width: 780px) {
+            .admin-command-stage {
+                padding: 20px;
+                border-radius: 24px;
+            }
+
+            .admin-command-title {
+                max-width: none;
+                font-size: 2.4rem;
+            }
+
+            .admin-quick-rail {
+                top: 72px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="background"></div>
@@ -161,7 +679,7 @@
                 <div class="page-title-group">
                     <h1 class="page-title" style="display:flex;align-items:center;gap:16px;">
                         Admin Controls
-                        <a id="build-version-label" href="version-history.html" style="font-size:13px;font-weight:500;margin-left:16px;color:inherit;text-decoration:underline;text-underline-offset:3px;">v1.2.9</a>
+                        <a id="build-version-label" href="version-history.html" style="font-size:13px;font-weight:500;margin-left:16px;color:inherit;text-decoration:underline;text-underline-offset:3px;">v1.3.1</a>
                     </h1>
                     <p class="navbar-datetime" id="navbar-datetime" aria-live="polite"></p>
                 </div>
@@ -174,10 +692,94 @@
                 </div>
             </nav>
 
-            <section class="outreach-workspace-grid">
-                <div class="glass-card widget-card outreach-card" data-widget-id="online-users" data-widget-title="Online Users">
+            <div class="admin-controls-shell">
+                <section class="admin-command-stage">
+                    <div class="admin-command-grid">
+                        <div class="admin-command-copy">
+                            <span class="admin-command-kicker">FAST Internal Operations</span>
+                            <h2 class="admin-command-title">Admin control, but with actual presence.</h2>
+                            <p class="admin-command-body">This page now reads like a real command center instead of a pile of widgets. Fast navigation up top, heavy visual hierarchy, motion on hover, polished glass depth, and direct routes into approvals, submissions, spreadsheets, contracts, and creative tools.</p>
+                            <div class="admin-command-tags">
+                                <div class="admin-command-tag"><strong>Queue Control</strong> Access, SMTP, submissions</div>
+                                <div class="admin-command-tag"><strong>Ops Studio</strong> E-card, flyer, contracts</div>
+                                <div class="admin-command-tag"><strong>Investor Flow</strong> MLS imports and account setup</div>
+                            </div>
+                            <div class="admin-command-actions">
+                                <a class="admin-command-action active" href="#requested-access-card">Review Access</a>
+                                <a class="admin-command-action" href="#mls-imports-card">Open MLS Lane</a>
+                                <a class="admin-command-action" href="#admin-account-manager-card">Manage Accounts</a>
+                                <a class="admin-command-action" href="#contracts-card">Build Contracts</a>
+                            </div>
+                            <div class="admin-command-footer">
+                                <span>Animated glass depth</span>
+                                <span>Faster scan paths</span>
+                                <span>Sticky jump rail</span>
+                            </div>
+                        </div>
+                        <aside class="admin-command-sidecar">
+                            <div class="admin-sidecar-header">
+                                <h3 class="admin-sidecar-title">Ops Snapshot</h3>
+                                <span class="admin-sidecar-chip">Live Layout</span>
+                            </div>
+                            <div class="admin-command-metrics">
+                                <div class="admin-command-metric">
+                                    <span>Approval Lanes</span>
+                                    <strong>03</strong>
+                                    <small>Access, SMTP, submissions</small>
+                                </div>
+                                <div class="admin-command-metric">
+                                    <span>Build Tools</span>
+                                    <strong>04</strong>
+                                    <small>MLS, E-card, contracts, flyer</small>
+                                </div>
+                                <div class="admin-command-metric">
+                                    <span>User Ops</span>
+                                    <strong>01</strong>
+                                    <small>Account manager core lane</small>
+                                </div>
+                                <div class="admin-command-metric">
+                                    <span>Navigation</span>
+                                    <strong>Fast</strong>
+                                    <small>Jump rail anchored to each zone</small>
+                                </div>
+                            </div>
+                            <pre class="admin-command-manifest">{
+  "ops": [
+    "online-users",
+    "requested-access",
+    "property-submissions",
+    "smtp-approval-queue"
+  ],
+  "build": [
+    "mls-imports-spreadsheet",
+    "digital-ecard",
+    "contracts-agreements",
+    "flyer-maker"
+  ],
+  "goal": "Make admin feel premium, navigable, and dangerous in a good way."
+}</pre>
+                        </aside>
+                    </div>
+                </section>
+
+                <nav class="admin-quick-rail" aria-label="Admin quick navigation">
+                    <a class="admin-quick-link" href="#online-users-card">Online Users</a>
+                    <a class="admin-quick-link" href="#requested-access-card">Access Queue</a>
+                    <a class="admin-quick-link" href="#property-submissions-card">Seller Leads</a>
+                    <a class="admin-quick-link" href="#smtp-approval-card">Gmail Approvals</a>
+                    <a class="admin-quick-link" href="#mls-imports-card">MLS Imports</a>
+                    <a class="admin-quick-link" href="#admin-account-manager-card">Account Manager</a>
+                    <a class="admin-quick-link" href="#digital-ecard-card">E Card</a>
+                    <a class="admin-quick-link" href="#contracts-card">Contracts</a>
+                    <a class="admin-quick-link" href="#flyer-maker-card">Flyer Maker</a>
+                </nav>
+
+            <section class="outreach-workspace-grid admin-controls-grid">
+                <div id="online-users-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="4" data-widget-id="online-users" data-widget-title="Online Users" style="--panel-index:0;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Live Presence</div>
                             <h2 class="card-title">Online Users</h2>
                             <p class="card-subtitle" id="admin-online-users-subtitle">Tracking who has been active in the last few minutes.</p>
                         </div>
@@ -188,9 +790,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card" data-widget-id="requested-access" data-widget-title="Requested Access">
+                <div id="requested-access-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="4" data-widget-id="requested-access" data-widget-title="Requested Access" style="--panel-index:1;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Approval Queue</div>
                             <h2 class="card-title">Requested Access</h2>
                             <p class="card-subtitle" id="access-requests-subtitle">Admin-only review queue for new FAST access requests</p>
                         </div>
@@ -200,9 +804,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card" data-widget-id="property-submissions" data-widget-title="Property Submissions">
+                <div id="property-submissions-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="4" data-widget-id="property-submissions" data-widget-title="Property Submissions" style="--panel-index:2;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Seller Intake</div>
                             <h2 class="card-title">Property Submissions</h2>
                             <p class="card-subtitle" id="property-submissions-subtitle">Seller inquiries submitted from the public homepage form</p>
                         </div>
@@ -212,9 +818,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card" data-widget-id="smtp-approval-queue" data-widget-title="Gmail Outbox Approvals">
+                <div id="smtp-approval-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="6" data-widget-id="smtp-approval-queue" data-widget-title="Gmail Outbox Approvals" style="--panel-index:3;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Outbound Mail</div>
                             <h2 class="card-title">Gmail Outbox Approvals</h2>
                             <p class="card-subtitle" id="smtp-approval-subtitle">Approve submitted Gmail emails and app passwords for outgoing mail</p>
                         </div>
@@ -224,9 +832,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card" data-widget-id="mls-imports-spreadsheet" data-widget-title="MLS Imports Spreadsheet">
+                <div id="mls-imports-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="6" data-widget-id="mls-imports-spreadsheet" data-widget-title="MLS Imports Spreadsheet" style="--panel-index:4;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Investor Intake</div>
                             <h2 class="card-title">MLS Imports Spreadsheet</h2>
                             <p class="card-subtitle">Open a dedicated spreadsheet page to track imported MLS records, sources, and follow-up notes.</p>
                         </div>
@@ -237,9 +847,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card" data-widget-id="admin-account-manager" data-widget-title="Account Manager">
+                <div id="admin-account-manager-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="8" data-widget-id="admin-account-manager" data-widget-title="Account Manager" style="--panel-index:5;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">User Ops</div>
                             <h2 class="card-title">Account Manager</h2>
                             <p class="card-subtitle" id="account-manager-subtitle">Admin-only account creation and user access control</p>
                         </div>
@@ -280,9 +892,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card" data-widget-id="digital-ecard" data-widget-title="Digital E Card">
+                <div id="digital-ecard-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="4" data-widget-id="digital-ecard" data-widget-title="Digital E Card" style="--panel-index:6;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Asset Studio</div>
                             <h2 class="card-title">Digital E Card</h2>
                             <p class="card-subtitle">Your personal card is generated from your profile and branded as FAST BRIDGE GROUP, LLC.</p>
                         </div>
@@ -347,9 +961,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card contracts-widget" data-widget-id="contracts-agreements" data-widget-title="Contracts">
+                <div id="contracts-card" class="glass-card glass-card-3d widget-card outreach-card contracts-widget admin-control-panel" data-span="12" data-widget-id="contracts-agreements" data-widget-title="Contracts" style="--panel-index:7;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Legal Buildout</div>
                             <h2 class="card-title">Contracts</h2>
                             <p class="card-subtitle">License Agreement / Data Use Agreement draft for MLS-only brokerage access with FAST BRIDGE ownership retained and broker authority limited to compliance matters.</p>
                         </div>
@@ -602,9 +1218,11 @@
                     </div>
                 </div>
 
-                <div class="glass-card widget-card outreach-card" data-widget-id="flyer-maker" data-widget-title="Flyer Maker">
+                <div id="flyer-maker-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="12" data-widget-id="flyer-maker" data-widget-title="Flyer Maker" style="--panel-index:8;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
+                            <div class="admin-panel-eyebrow">Creative Output</div>
                             <h2 class="card-title">Flyer Maker</h2>
                             <p class="card-subtitle">Create branded flyers with a large FAST logo, red title, and custom text.</p>
                         </div>
@@ -649,6 +1267,7 @@
                     </div>
                 </div>
             </section>
+            </div>
         </main>
     </div>
 

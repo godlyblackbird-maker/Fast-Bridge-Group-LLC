@@ -7536,6 +7536,7 @@ function initNavbarDateTime() {
         const folderTree = document.getElementById('notes-folder-tree');
         const noteList = document.getElementById('notes-note-list');
         const addFolderButton = document.getElementById('notes-add-folder-btn');
+        const editFoldersButton = document.getElementById('notes-edit-folders-btn');
         const addNoteButton = document.getElementById('notes-add-note-btn');
         const quickNoteButton = document.getElementById('notes-quick-note-btn');
         const searchInput = document.getElementById('notes-search-input');
@@ -7546,8 +7547,12 @@ function initNavbarDateTime() {
         const viewAllButton = document.getElementById('notes-view-all-btn');
         const viewTrashButton = document.getElementById('notes-view-trash-btn');
         const editorEmpty = document.getElementById('notes-editor-empty');
+        const emptyCreateButton = document.getElementById('notes-empty-create-btn');
         const editor = document.getElementById('notes-editor');
         const backToListButton = document.getElementById('notes-back-to-list-btn');
+        const closeEditorButton = document.getElementById('notes-close-editor-btn');
+        const shareNoteButton = document.getElementById('notes-share-note-btn');
+        const moreNoteButton = document.getElementById('notes-more-note-btn');
         const titleInput = document.getElementById('notes-title-input');
         const folderSelect = document.getElementById('notes-folder-select');
         const pinToggleButton = document.getElementById('notes-pin-toggle-btn');
@@ -7561,8 +7566,14 @@ function initNavbarDateTime() {
         const boldToolButton = document.getElementById('notes-tool-bold-btn');
         const metaLabel = document.getElementById('notes-meta-label');
         const deleteButton = document.getElementById('notes-delete-note-btn');
+        const folderModal = document.getElementById('notes-folder-modal');
+        const folderModalNameInput = document.getElementById('notes-folder-name-input');
+        const folderModalSaveButton = document.getElementById('notes-folder-save-btn');
+        const folderModalClearButton = document.getElementById('notes-folder-clear-btn');
+        const folderModalSmartButton = document.getElementById('notes-folder-smart-btn');
+        const folderModalCloseButtons = folderModal ? Array.from(folderModal.querySelectorAll('[data-notes-folder-close="true"]')) : [];
 
-        if (!notesWidgetShell || !folderTree || !noteList || !addFolderButton || !addNoteButton || !quickNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !notesSubtitle || !viewAllButton || !viewTrashButton || !editorEmpty || !editor || !backToListButton || !titleInput || !folderSelect || !pinToggleButton || !completeToggleButton || !bodyInput || !fontToolButton || !checklistToolButton || !gridToolButton || !attachToolButton || !drawToolButton || !boldToolButton || !metaLabel || !deleteButton) {
+        if (!notesWidgetShell || !folderTree || !noteList || !addFolderButton || !editFoldersButton || !addNoteButton || !quickNoteButton || !searchInput || !activeFolderLabel || !countSummary || !folderSummary || !notesSubtitle || !viewAllButton || !viewTrashButton || !editorEmpty || !emptyCreateButton || !editor || !backToListButton || !closeEditorButton || !shareNoteButton || !moreNoteButton || !titleInput || !folderSelect || !pinToggleButton || !completeToggleButton || !bodyInput || !fontToolButton || !checklistToolButton || !gridToolButton || !attachToolButton || !drawToolButton || !boldToolButton || !metaLabel || !deleteButton || !folderModal || !folderModalNameInput || !folderModalSaveButton || !folderModalClearButton || !folderModalSmartButton) {
             return;
         }
 
@@ -7570,6 +7581,7 @@ function initNavbarDateTime() {
         const DEFAULT_FOLDER_ID = 'folder-default';
         const DEFAULT_FOLDER_NAME = 'Notes';
         const ALL_NOTES_FOLDER_ID = '__all_notes__';
+        const PINNED_NOTES_FOLDER_ID = '__pinned_notes__';
         const NOTES_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
         let selectedNoteId = '';
         let activeFolderId = ALL_NOTES_FOLDER_ID;
@@ -7578,6 +7590,7 @@ function initNavbarDateTime() {
         let persistTimer = null;
         let pinnedCollapsed = false;
         let draggedItem = null;
+        let folderEditMode = false;
         const expandedFolderIds = new Set([DEFAULT_FOLDER_ID]);
 
         function normalizeNotesData(rawValue) {
@@ -7659,6 +7672,67 @@ function initNavbarDateTime() {
         function getFolderName(folderId, folders) {
             const matched = folders.find((folder) => folder.id === folderId);
             return matched ? matched.name : DEFAULT_FOLDER_NAME;
+        }
+
+        function getSelectedFolderDisplayName(data) {
+            if (isTrashView()) {
+                return 'Recently Deleted';
+            }
+            if (activeFolderId === ALL_NOTES_FOLDER_ID) {
+                return 'All Notes';
+            }
+            if (activeFolderId === PINNED_NOTES_FOLDER_ID) {
+                return 'Pinned';
+            }
+            if (activeFolderId === DEFAULT_FOLDER_ID) {
+                return 'Quick Notes';
+            }
+            return getFolderName(activeFolderId, data.folders);
+        }
+
+        function isRealFolderSelection(folderId) {
+            return Boolean(folderId) && folderId !== ALL_NOTES_FOLDER_ID && folderId !== PINNED_NOTES_FOLDER_ID;
+        }
+
+        function openFolderModal() {
+            folderModal.hidden = false;
+            folderModal.setAttribute('aria-hidden', 'false');
+            folderModalNameInput.value = '';
+            window.setTimeout(() => folderModalNameInput.focus(), 20);
+        }
+
+        function closeFolderModal() {
+            folderModal.hidden = true;
+            folderModal.setAttribute('aria-hidden', 'true');
+            folderModalNameInput.value = '';
+        }
+
+        function submitFolderModal() {
+            const name = String(folderModalNameInput.value || '').trim();
+            if (!name) {
+                folderModalNameInput.focus();
+                return;
+            }
+
+            const data = getNotesData();
+            const duplicate = data.folders.some((folder) => folder.name.toLowerCase() === name.toLowerCase());
+            if (duplicate) {
+                showDashboardToast('error', 'Folder Exists', 'Choose a different folder name.');
+                folderModalNameInput.focus();
+                return;
+            }
+
+            const parentId = isRealFolderSelection(activeFolderId) ? activeFolderId : '';
+            data.folders.push({
+                id: `folder-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                name,
+                parentId,
+                createdAt: Date.now()
+            });
+            saveNotesData(data);
+            closeFolderModal();
+            render();
+            showDashboardToast('success', 'Folder Added', `${name} is ready for notes.`);
         }
 
         function isTrashView() {
@@ -7800,11 +7874,19 @@ function initNavbarDateTime() {
         function getFilteredNotes(data) {
             const normalizedQuery = searchQuery.trim().toLowerCase();
             const sourceNotes = isTrashView() ? getDeletedNotes(data) : getActiveNotes(data);
-            const allowedFolderIds = activeFolderId === ALL_NOTES_FOLDER_ID
+            const allowedFolderIds = (activeFolderId === ALL_NOTES_FOLDER_ID || activeFolderId === PINNED_NOTES_FOLDER_ID)
                 ? null
                 : getDescendantFolderIds(data, activeFolderId);
             return sourceNotes
-                .filter((note) => isTrashView() || !allowedFolderIds || allowedFolderIds.has(note.folderId))
+                .filter((note) => {
+                    if (isTrashView()) {
+                        return true;
+                    }
+                    if (activeFolderId === PINNED_NOTES_FOLDER_ID) {
+                        return Boolean(note.pinned);
+                    }
+                    return !allowedFolderIds || allowedFolderIds.has(note.folderId);
+                })
                 .filter((note) => {
                     if (!normalizedQuery) {
                         return true;
@@ -7965,128 +8047,170 @@ function initNavbarDateTime() {
         }
 
         function renderFolderTree(data) {
-            folderTree.hidden = isTrashView();
-            if (isTrashView()) {
-                folderTree.innerHTML = '';
-                return;
-            }
-
             folderTree.innerHTML = '';
-            const activeNotes = getActiveNotes(data);
-
-            const allNotesButton = document.createElement('button');
-            allNotesButton.type = 'button';
-            allNotesButton.className = 'notes-folder-item is-root';
-            if (activeFolderId === ALL_NOTES_FOLDER_ID) {
-                allNotesButton.classList.add('is-active');
+            const libraryPanel = folderTree.closest('.notes-library-panel');
+            if (libraryPanel) {
+                libraryPanel.classList.toggle('is-editing', folderEditMode);
             }
-            allNotesButton.innerHTML = `<span class="notes-folder-main"><span class="notes-folder-name">All Notes</span><span class="notes-folder-count">${activeNotes.length} note${activeNotes.length === 1 ? '' : 's'}</span></span>`;
-            allNotesButton.addEventListener('click', () => {
-                activeFolderId = ALL_NOTES_FOLDER_ID;
-                render();
-            });
-            allNotesButton.draggable = true;
-            allNotesButton.addEventListener('dragstart', (event) => {
-                event.preventDefault();
-            });
-            attachFolderDropHandlers(allNotesButton, '');
-            folderTree.appendChild(allNotesButton);
 
-            const renderNodes = (parentId, depth) => {
-                const nodes = [];
-                const children = getFolderChildren(data.folders, parentId);
-                children.forEach((folder) => {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'notes-folder-node';
+            const activeNotes = getActiveNotes(data);
+            const deletedNotes = getDeletedNotes(data);
+            const pinnedNotes = activeNotes.filter((note) => note.pinned);
+            const quickNotes = activeNotes.filter((note) => note.folderId === DEFAULT_FOLDER_ID);
 
-                    const row = document.createElement('div');
-                    row.className = 'notes-folder-row';
+            function folderIconMarkup(mode) {
+                if (mode === 'smart') {
+                    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+                }
+                if (mode === 'trash') {
+                    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                }
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"></path></svg>';
+            }
 
-                    const item = document.createElement('button');
-                    item.type = 'button';
-                    item.className = 'notes-folder-item';
-                    if (folder.id === activeFolderId) {
-                        item.classList.add('is-active');
-                    }
-                    item.draggable = folder.id !== DEFAULT_FOLDER_ID;
+            function createSection(title) {
+                const section = document.createElement('section');
+                section.className = 'notes-folder-section';
+                const heading = document.createElement('h3');
+                heading.className = 'notes-folder-section-title';
+                heading.textContent = title;
+                const card = document.createElement('div');
+                card.className = 'notes-folder-section-card';
+                section.appendChild(heading);
+                section.appendChild(card);
+                folderTree.appendChild(section);
+                return card;
+            }
 
-                    for (let index = 0; index < depth; index += 1) {
-                        const indent = document.createElement('span');
-                        indent.className = 'notes-folder-indent';
-                        item.appendChild(indent);
-                    }
+            function createFolderRow(options) {
+                const row = document.createElement('div');
+                row.className = 'notes-folder-row';
 
-                    const hasChildren = getFolderChildren(data.folders, folder.id).length > 0;
-                    const chevron = document.createElement('span');
-                    chevron.className = 'notes-folder-chevron';
-                    chevron.innerHTML = hasChildren ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>' : '';
-                    if (hasChildren && !expandedFolderIds.has(folder.id)) {
-                        chevron.classList.add('is-collapsed');
-                    }
-                    item.appendChild(chevron);
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = `notes-folder-item${options.isActive ? ' is-active' : ''}${options.isRoot ? ' is-root' : ''}`;
+                item.innerHTML = `<span class="notes-folder-main"><span class="notes-folder-icon">${folderIconMarkup(options.iconMode)}</span><span class="notes-folder-copy"><span class="notes-folder-name">${options.label}</span></span><span class="notes-folder-count">${options.count}</span><span class="notes-folder-arrow">›</span></span>`;
+                item.addEventListener('click', options.onClick);
 
-                    const main = document.createElement('span');
-                    main.className = 'notes-folder-main';
-                    main.innerHTML = `<span class="notes-folder-name">${folder.name}</span><span class="notes-folder-count">${getFolderNoteCount(data, folder.id)} note${getFolderNoteCount(data, folder.id) === 1 ? '' : 's'}</span>`;
-                    item.appendChild(main);
-
-                    item.addEventListener('click', (event) => {
-                        const clickedChevron = event.target instanceof Element && event.target.closest('.notes-folder-chevron');
-                        if (clickedChevron && hasChildren) {
-                            if (expandedFolderIds.has(folder.id)) {
-                                expandedFolderIds.delete(folder.id);
-                            } else {
-                                expandedFolderIds.add(folder.id);
-                            }
-                            render();
-                            return;
-                        }
-
-                        activeFolderId = folder.id;
-                        if (hasChildren) {
-                            expandedFolderIds.add(folder.id);
-                        }
-                        render();
-                    });
-
+                if (options.draggable) {
+                    item.draggable = true;
                     item.addEventListener('dragstart', () => {
-                        if (folder.id === DEFAULT_FOLDER_ID) {
-                            return;
-                        }
-                        draggedItem = { type: 'folder', id: folder.id };
+                        draggedItem = { type: options.dragType || 'folder', id: options.dragId };
                     });
                     item.addEventListener('dragend', () => {
                         draggedItem = null;
                         item.classList.remove('is-drop-target');
                     });
+                    attachFolderDropHandlers(item, options.dropTargetId);
+                }
 
-                    attachFolderDropHandlers(item, folder.id);
-                    row.appendChild(item);
+                row.appendChild(item);
 
-                    if (folder.id !== DEFAULT_FOLDER_ID) {
-                        const deleteFolderButton = document.createElement('button');
-                        deleteFolderButton.type = 'button';
-                        deleteFolderButton.className = 'notes-folder-delete';
-                        deleteFolderButton.setAttribute('aria-label', `Delete folder ${folder.name}`);
-                        deleteFolderButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
-                        deleteFolderButton.addEventListener('click', (event) => {
-                            event.stopPropagation();
-                            const confirmed = window.confirm(`Delete folder "${folder.name}" and move its notes back to ${DEFAULT_FOLDER_NAME}?`);
-                            if (!confirmed) {
-                                return;
-                            }
-                            deleteFolder(folder.id);
-                        });
-                        row.appendChild(deleteFolderButton);
+                if (options.deletable) {
+                    const deleteFolderButton = document.createElement('button');
+                    deleteFolderButton.type = 'button';
+                    deleteFolderButton.className = 'notes-folder-delete';
+                    deleteFolderButton.setAttribute('aria-label', `Delete folder ${options.label}`);
+                    deleteFolderButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        const confirmed = window.confirm(`Delete folder "${options.label}" and move its notes back to ${DEFAULT_FOLDER_NAME}?`);
+                        if (!confirmed) {
+                            return;
+                        }
+                        deleteFolder(options.dragId);
+                    });
+                    row.appendChild(deleteFolderButton);
+                }
+
+                return row;
+            }
+
+            const smartCard = createSection('Workspace');
+            smartCard.appendChild(createFolderRow({
+                label: 'All Notes',
+                count: String(activeNotes.length),
+                iconMode: 'folder',
+                isRoot: true,
+                isActive: !isTrashView() && activeFolderId === ALL_NOTES_FOLDER_ID,
+                onClick: () => {
+                    activeView = 'all';
+                    activeFolderId = ALL_NOTES_FOLDER_ID;
+                    folderEditMode = false;
+                    render();
+                }
+            }));
+            smartCard.appendChild(createFolderRow({
+                label: 'Quick Notes',
+                count: String(quickNotes.length),
+                iconMode: 'folder',
+                isActive: !isTrashView() && activeFolderId === DEFAULT_FOLDER_ID,
+                onClick: () => {
+                    activeView = 'all';
+                    activeFolderId = DEFAULT_FOLDER_ID;
+                    folderEditMode = false;
+                    render();
+                },
+                draggable: true,
+                dragType: 'folder',
+                dragId: DEFAULT_FOLDER_ID,
+                dropTargetId: DEFAULT_FOLDER_ID
+            }));
+            smartCard.appendChild(createFolderRow({
+                label: 'Pinned',
+                count: String(pinnedNotes.length),
+                iconMode: 'smart',
+                isActive: !isTrashView() && activeFolderId === PINNED_NOTES_FOLDER_ID,
+                onClick: () => {
+                    activeView = 'all';
+                    activeFolderId = PINNED_NOTES_FOLDER_ID;
+                    folderEditMode = false;
+                    render();
+                }
+            }));
+            smartCard.appendChild(createFolderRow({
+                label: 'Recently Deleted',
+                count: String(deletedNotes.length),
+                iconMode: 'trash',
+                isActive: isTrashView(),
+                onClick: () => {
+                    activeView = 'trash';
+                    folderEditMode = false;
+                    render();
+                }
+            }));
+
+            const renderNodes = (parentId, depth) => {
+                const nodes = [];
+                const children = getFolderChildren(data.folders, parentId);
+                children.forEach((folder) => {
+                    if (folder.id === DEFAULT_FOLDER_ID) {
+                        return;
                     }
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'notes-folder-node';
+                    const labelPrefix = depth > 0 ? `${'· '.repeat(depth)}` : '';
+                    wrapper.appendChild(createFolderRow({
+                        label: `${labelPrefix}${folder.name}`,
+                        count: String(getFolderNoteCount(data, folder.id)),
+                        iconMode: 'folder',
+                        isActive: !isTrashView() && activeFolderId === folder.id,
+                        onClick: () => {
+                            activeView = 'all';
+                            activeFolderId = folder.id;
+                            folderEditMode = false;
+                            expandedFolderIds.add(folder.id);
+                            render();
+                        },
+                        draggable: true,
+                        dragType: 'folder',
+                        dragId: folder.id,
+                        dropTargetId: folder.id,
+                        deletable: true
+                    }));
 
-                    wrapper.appendChild(row);
-
+                    const hasChildren = getFolderChildren(data.folders, folder.id).length > 0;
                     if (hasChildren && expandedFolderIds.has(folder.id)) {
-                        const childWrap = document.createElement('div');
-                        childWrap.className = 'notes-folder-children';
-                        renderNodes(folder.id, depth + 1).forEach((childNode) => childWrap.appendChild(childNode));
-                        wrapper.appendChild(childWrap);
+                        renderNodes(folder.id, depth + 1).forEach((childNode) => wrapper.appendChild(childNode));
                     }
 
                     nodes.push(wrapper);
@@ -8095,14 +8219,17 @@ function initNavbarDateTime() {
                 return nodes;
             };
 
-            renderNodes('', 0).forEach((node) => folderTree.appendChild(node));
-
-            if (folderTree.childElementCount === 1) {
+            const folderCard = createSection('Folders');
+            const nodes = renderNodes('', 0);
+            if (nodes.length === 0) {
                 const empty = document.createElement('p');
                 empty.className = 'notes-folder-tree-empty';
                 empty.textContent = 'Create folders, then drag notes into them.';
-                folderTree.appendChild(empty);
+                folderCard.appendChild(empty);
+                return;
             }
+
+            nodes.forEach((node) => folderCard.appendChild(node));
         }
 
         function getRelativeGroupKey(note) {
@@ -8362,16 +8489,9 @@ function initNavbarDateTime() {
         function renderSummary(data, visibleNotes) {
             const activeNotes = getActiveNotes(data);
             const deletedNotes = getDeletedNotes(data);
-            const pinnedCount = activeNotes.filter((note) => note.pinned).length;
             notesSubtitle.textContent = `${activeNotes.length} note${activeNotes.length === 1 ? '' : 's'}`;
             folderSummary.textContent = `${activeNotes.length} active • ${deletedNotes.length} in trash`;
-            activeFolderLabel.textContent = isTrashView()
-                ? 'Recently Deleted'
-                : searchQuery
-                ? 'Search Results'
-                : activeFolderId === ALL_NOTES_FOLDER_ID
-                    ? 'All Notes'
-                    : getFolderName(activeFolderId, data.folders);
+            activeFolderLabel.textContent = searchQuery ? 'Search Results' : getSelectedFolderDisplayName(data);
             countSummary.textContent = isTrashView()
                 ? `${visibleNotes.length} deleted note${visibleNotes.length === 1 ? '' : 's'}`
                 : `${visibleNotes.length} result${visibleNotes.length === 1 ? '' : 's'}`;
@@ -8497,7 +8617,7 @@ function initNavbarDateTime() {
 
         function render() {
             const data = getNotesData();
-            if (activeFolderId !== ALL_NOTES_FOLDER_ID && !data.folders.some((folder) => folder.id === activeFolderId)) {
+            if (isRealFolderSelection(activeFolderId) && !data.folders.some((folder) => folder.id === activeFolderId)) {
                 activeFolderId = ALL_NOTES_FOLDER_ID;
             }
             if (isTrashView()) {
@@ -8505,6 +8625,7 @@ function initNavbarDateTime() {
             }
             ensureSelection(data);
             syncNotesWidgetMode(data);
+            editFoldersButton.textContent = folderEditMode ? 'Done' : 'Edit';
             renderFolderTree(data);
             renderNoteList(data);
             renderEditor(data);
@@ -8549,7 +8670,7 @@ function initNavbarDateTime() {
             const data = getNotesData();
             const selectedNote = data.notes.find((note) => note.id === selectedNoteId) || null;
             const noteId = `note-${Date.now()}-${Math.round(Math.random() * 10000)}`;
-            const targetFolderId = activeFolderId !== ALL_NOTES_FOLDER_ID
+            const targetFolderId = isRealFolderSelection(activeFolderId)
                 ? activeFolderId
                 : selectedNote
                     ? selectedNote.folderId
@@ -8576,28 +8697,12 @@ function initNavbarDateTime() {
         }
 
         addFolderButton.addEventListener('click', () => {
-            const proposedName = window.prompt('Folder name');
-            const name = String(proposedName || '').trim();
-            if (!name) {
-                return;
-            }
+            openFolderModal();
+        });
 
-            const data = getNotesData();
-            const duplicate = data.folders.some((folder) => folder.name.toLowerCase() === name.toLowerCase());
-            if (duplicate) {
-                showDashboardToast('error', 'Folder Exists', 'Choose a different folder name.');
-                return;
-            }
-
-            data.folders.push({
-                id: `folder-${Date.now()}-${Math.round(Math.random() * 10000)}`,
-                name,
-                parentId: activeFolderId !== ALL_NOTES_FOLDER_ID ? activeFolderId : '',
-                createdAt: Date.now()
-            });
-            saveNotesData(data);
+        editFoldersButton.addEventListener('click', () => {
+            folderEditMode = !folderEditMode;
             render();
-            showDashboardToast('success', 'Folder Added', `${name} is ready for notes.`);
         });
 
         addNoteButton.addEventListener('click', () => {
@@ -8607,6 +8712,50 @@ function initNavbarDateTime() {
         quickNoteButton.addEventListener('click', () => {
             createNote({ toast: false });
             focusEditableAtEnd(bodyInput);
+        });
+
+        emptyCreateButton.addEventListener('click', () => {
+            createNote({ toast: false });
+        });
+
+        closeEditorButton.addEventListener('click', () => {
+            selectedNoteId = '';
+            render();
+        });
+
+        shareNoteButton.addEventListener('click', () => {
+            showDashboardToast('info', 'Share Notes Coming Soon', 'Share actions are not connected yet, but the layout is ready for it.');
+        });
+
+        moreNoteButton.addEventListener('click', () => {
+            showDashboardToast('info', 'More Actions Coming Soon', 'Extra note actions are staged for the next pass.');
+        });
+
+        folderModalCloseButtons.forEach((button) => {
+            button.addEventListener('click', closeFolderModal);
+        });
+
+        folderModalSaveButton.addEventListener('click', submitFolderModal);
+
+        folderModalClearButton.addEventListener('click', () => {
+            folderModalNameInput.value = '';
+            folderModalNameInput.focus();
+        });
+
+        folderModalSmartButton.addEventListener('click', () => {
+            showDashboardToast('info', 'Smart Folders Coming Soon', 'Smart folders are staged next. This first pass gives you the new Notes layout and real folder creation flow.');
+        });
+
+        folderModalNameInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitFolderModal();
+                return;
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeFolderModal();
+            }
         });
 
         searchInput.addEventListener('input', () => {

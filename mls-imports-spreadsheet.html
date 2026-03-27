@@ -108,21 +108,48 @@
     <style>
         .buyers-sheet-wrap {
             margin-top: 24px;
-            --buyers-border: rgba(var(--accent-light-rgb), 0.22);
-            --buyers-wrap-bg: linear-gradient(145deg, rgba(13, 26, 20, 0.46), rgba(19, 36, 25, 0.32));
-            --buyers-head-bg: linear-gradient(135deg, rgba(var(--accent-rgb), 0.72), rgba(10, 20, 16, 0.9));
+            --buyers-border: color-mix(in srgb, var(--glass-border) 72%, rgb(var(--accent-light-rgb) / 0.22) 28%);
+            --buyers-wrap-bg: linear-gradient(145deg, color-mix(in srgb, var(--glass-bg) 90%, rgb(var(--accent-rgb) / 0.14) 10%), color-mix(in srgb, var(--glass-bg) 96%, rgb(255 255 255 / 0.04) 4%));
+            --buyers-head-bg: linear-gradient(135deg, color-mix(in srgb, rgb(var(--accent-rgb) / 0.84) 58%, var(--bg-gradient-2) 42%), color-mix(in srgb, rgb(var(--accent-light-rgb) / 0.42) 20%, var(--bg-gradient-3) 80%));
             --buyers-head-text: #f8fafc;
-            --buyers-row-bg: rgba(255, 255, 255, 0.04);
-            --buyers-row-bg-alt: rgba(255, 255, 255, 0.08);
-            --buyers-focus-bg: rgba(var(--accent-light-rgb), 0.2);
+            --buyers-row-bg: color-mix(in srgb, var(--glass-bg) 94%, rgb(255 255 255 / 0.04) 6%);
+            --buyers-row-bg-alt: color-mix(in srgb, var(--glass-bg) 82%, rgb(255 255 255 / 0.08) 18%);
+            --buyers-focus-bg: color-mix(in srgb, var(--glass-hover) 78%, rgb(var(--accent-light-rgb) / 0.18) 22%);
             --buyers-focus-ring: rgba(var(--accent-light-rgb), 0.52);
             --buyers-note: var(--text-secondary);
-            --buyers-scroll-thumb: rgba(var(--accent-light-rgb), 0.58);
-            --buyers-scroll-track: rgba(255, 255, 255, 0.08);
-            --buyers-count-bg: rgba(15, 23, 42, 0.72);
-            --buyers-count-border: rgba(148, 163, 184, 0.24);
-            --buyers-count-text: #f8fafc;
+            --buyers-scroll-thumb: color-mix(in srgb, rgb(var(--accent-light-rgb) / 0.58) 64%, var(--text-secondary) 36%);
+            --buyers-scroll-track: color-mix(in srgb, var(--glass-bg) 88%, rgb(255 255 255 / 0.06) 12%);
+            --buyers-count-bg: color-mix(in srgb, var(--glass-bg) 70%, rgb(var(--accent-rgb) / 0.22) 30%);
+            --buyers-count-border: color-mix(in srgb, var(--glass-border) 62%, rgb(var(--accent-light-rgb) / 0.24) 38%);
+            --buyers-count-text: var(--text-primary);
+            --buyers-icon-btn-bg: color-mix(in srgb, var(--glass-bg) 78%, rgb(255 255 255 / 0.12) 22%);
+            --buyers-icon-btn-hover-bg: color-mix(in srgb, var(--glass-hover) 74%, rgb(255 255 255 / 0.16) 26%);
+            --buyers-icon-btn-border: color-mix(in srgb, var(--glass-border) 74%, rgb(255 255 255 / 0.12) 26%);
+            --buyers-success-bg: rgb(34 197 94 / 0.18);
+            --buyers-success-border: rgb(34 197 94 / 0.52);
+            --buyers-success-text: #dcfce7;
+            --buyers-success-dot-shadow: rgb(15 23 42 / 0.32);
             min-width: 0;
+        }
+
+        [data-theme="light"] .buyers-sheet-wrap,
+        [data-theme="beach"] .buyers-sheet-wrap,
+        [data-theme="japan"] .buyers-sheet-wrap {
+            --buyers-border: color-mix(in srgb, var(--glass-border) 78%, rgb(var(--accent-rgb) / 0.16) 22%);
+            --buyers-wrap-bg: linear-gradient(145deg, color-mix(in srgb, var(--glass-bg) 92%, rgb(255 255 255 / 0.18) 8%), color-mix(in srgb, var(--glass-bg) 82%, rgb(var(--accent-light-rgb) / 0.08) 18%));
+            --buyers-head-bg: linear-gradient(135deg, color-mix(in srgb, rgb(var(--accent-rgb) / 0.8) 34%, rgb(255 255 255 / 0.9) 66%), color-mix(in srgb, rgb(var(--accent-light-rgb) / 0.34) 18%, rgb(255 255 255 / 0.96) 82%));
+            --buyers-head-text: #0f172a;
+            --buyers-row-bg: color-mix(in srgb, var(--glass-bg) 96%, rgb(255 255 255 / 0.18) 4%);
+            --buyers-row-bg-alt: color-mix(in srgb, var(--glass-bg) 88%, rgb(var(--accent-light-rgb) / 0.08) 12%);
+            --buyers-focus-bg: color-mix(in srgb, var(--glass-hover) 76%, rgb(var(--accent-light-rgb) / 0.18) 24%);
+            --buyers-scroll-track: color-mix(in srgb, var(--glass-bg) 94%, rgb(255 255 255 / 0.26) 6%);
+            --buyers-count-bg: color-mix(in srgb, var(--glass-bg) 84%, rgb(var(--accent-light-rgb) / 0.16) 16%);
+            --buyers-count-border: color-mix(in srgb, var(--glass-border) 82%, rgb(var(--accent-rgb) / 0.18) 18%);
+            --buyers-count-text: var(--text-primary);
+            --buyers-icon-btn-bg: color-mix(in srgb, var(--glass-bg) 90%, rgb(255 255 255 / 0.22) 10%);
+            --buyers-icon-btn-hover-bg: color-mix(in srgb, var(--glass-hover) 82%, rgb(255 255 255 / 0.26) 18%);
+            --buyers-icon-btn-border: color-mix(in srgb, var(--glass-border) 82%, rgb(var(--accent-rgb) / 0.14) 18%);
+            --buyers-success-dot-shadow: rgb(255 255 255 / 0.68);
         }
 
         .buyers-sheet-card {
@@ -244,9 +271,9 @@
             justify-content: center;
             width: 24px;
             height: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
+            border: 1px solid var(--buyers-icon-btn-border);
             border-radius: 7px;
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--buyers-icon-btn-bg);
             color: var(--text-secondary);
             cursor: pointer;
             opacity: 0;
@@ -264,10 +291,42 @@
         .buyers-sheet-phone-copy-btn:hover,
         .buyers-sheet-phone-copy-btn:focus-visible {
             border-color: var(--buyers-focus-ring);
-            background: rgba(255, 255, 255, 0.16);
+            background: var(--buyers-icon-btn-hover-bg);
             color: var(--text-primary);
             transform: translateY(-50%) scale(1.03);
             outline: none;
+        }
+
+        .buyers-sheet-phone-copy-btn.is-copied {
+            border-color: var(--buyers-success-border);
+            background: var(--buyers-success-bg);
+            color: var(--buyers-success-text);
+        }
+
+        .buyers-sheet-phone-copy-btn.is-copied::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 13px;
+            height: 13px;
+            border-radius: 999px;
+            background: var(--success);
+            box-shadow: 0 0 0 2px var(--buyers-success-dot-shadow);
+        }
+
+        .buyers-sheet-phone-copy-btn.is-copied::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: 1px;
+            width: 4px;
+            height: 7px;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            transform: rotate(45deg);
+            z-index: 1;
+            pointer-events: none;
         }
 
         .buyers-sheet-phone-copy-btn svg {
@@ -289,9 +348,9 @@
             justify-content: center;
             width: 34px;
             height: 34px;
-            border: 1px solid var(--buyers-border);
+            border: 1px solid var(--buyers-icon-btn-border);
             border-radius: 10px;
-            background: rgba(255, 255, 255, 0.12);
+            background: var(--buyers-icon-btn-bg);
             color: var(--text-primary);
             cursor: pointer;
             transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
@@ -300,7 +359,7 @@
         .buyers-sheet-copy-btn:hover,
         .buyers-sheet-copy-btn:focus-visible {
             border-color: var(--buyers-focus-ring);
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--buyers-icon-btn-hover-bg);
             transform: translateY(-1px);
             outline: none;
         }
@@ -311,8 +370,8 @@
         }
 
         .buyers-sheet-copy-btn.is-copied {
-            border-color: rgba(34, 197, 94, 0.52);
-            background: rgba(34, 197, 94, 0.18);
+            border-color: var(--buyers-success-border);
+            background: var(--buyers-success-bg);
         }
 
         .buyers-sheet-copy-btn.is-copied::after {
@@ -323,8 +382,8 @@
             width: 13px;
             height: 13px;
             border-radius: 999px;
-            background: #22c55e;
-            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.32);
+            background: var(--success);
+            box-shadow: 0 0 0 2px var(--buyers-success-dot-shadow);
         }
 
         .buyers-sheet-copy-btn.is-copied::before {
@@ -558,6 +617,7 @@
         (function () {
             const STORAGE_KEY_BASE = 'mlsImportsSpreadsheetRows';
             const COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetCopiedRows';
+            const PHONE_COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetPhoneCopiedRows';
             const MY_AGENTS_STORAGE_KEY_BASE = 'myAgentsSheetRows';
 
             function safeReadJson(key) {
@@ -587,6 +647,10 @@
 
             function getCopiedStorageKey() {
                 return `${COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function getPhoneCopiedStorageKey() {
+                return `${PHONE_COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
             function getMyAgentsStorageKey() {
@@ -799,6 +863,39 @@
 
             const copiedRowSignatures = loadCopiedRowSignatures();
 
+            function createPhoneCopiedSignature(row, key) {
+                const source = row && typeof row === 'object' ? row : {};
+                const normalizedKey = String(key || '').trim();
+                return [
+                    normalizeCellValue(source.propertyAddress).toLowerCase(),
+                    normalizeCellValue(source.laName).toLowerCase(),
+                    normalizeCellValue(source.offersEmail).toLowerCase(),
+                    normalizeCellValue(source.pdfFile).toLowerCase(),
+                    normalizedKey.toLowerCase(),
+                    normalizeCellValue(source[normalizedKey]).toLowerCase()
+                ].join('|');
+            }
+
+            function loadPhoneCopiedSignatures() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getPhoneCopiedStorageKey()) || '[]');
+                    if (Array.isArray(stored)) {
+                        return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
+                    }
+                } catch (error) {
+                    // Ignore invalid stored values and fall back to empty state.
+                }
+
+                return new Set();
+            }
+
+            function persistPhoneCopiedSignatures(signatureSet) {
+                const values = Array.from(signatureSet || []).map((value) => String(value || '').trim()).filter(Boolean);
+                localStorage.setItem(getPhoneCopiedStorageKey(), JSON.stringify(values));
+            }
+
+            const phoneCopiedSignatures = loadPhoneCopiedSignatures();
+
             function syncCopyButtonState(rowElement) {
                 if (!rowElement) {
                     return;
@@ -821,6 +918,35 @@
                 button.title = isCopied
                     ? 'Copy again. Marked as already copied.'
                     : 'Copy status-based outreach template';
+            }
+
+            function syncPhoneCopyButtonState(cellElement, key) {
+                if (!cellElement || !key) {
+                    return;
+                }
+
+                const button = cellElement.querySelector('.buyers-sheet-phone-copy-btn');
+                if (!button) {
+                    return;
+                }
+
+                const rowElement = cellElement.closest('tr');
+                const signature = createPhoneCopiedSignature(getRowDataFromElement(rowElement), key);
+                const isCopied = Boolean(signature) && phoneCopiedSignatures.has(signature);
+                button.classList.toggle('is-copied', isCopied);
+                button.classList.toggle('is-visible', isCopied);
+                button.setAttribute('aria-label', isCopied ? 'Copy phone number again. This phone number was already copied.' : 'Copy phone number');
+                button.title = isCopied ? 'Copy again. Marked as already copied.' : 'Copy phone number';
+            }
+
+            function syncPhoneCopyButtonStates(rowElement) {
+                if (!rowElement) {
+                    return;
+                }
+
+                rowElement.querySelectorAll('td.is-phone-cell').forEach((cellElement) => {
+                    syncPhoneCopyButtonState(cellElement, cellElement.dataset.phoneFieldKey || '');
+                });
             }
 
             function buildStatusTemplate(rowData) {
@@ -861,11 +987,18 @@
                 td.contentEditable = 'true';
                 td.spellcheck = false;
                 td.textContent = normalizeCellValue(value);
-                td.addEventListener('input', saveRows);
-                td.addEventListener('blur', saveRows);
+                td.addEventListener('input', () => {
+                    saveRows();
+                    syncPhoneCopyButtonState(td, td.dataset.phoneFieldKey || '');
+                });
+                td.addEventListener('blur', () => {
+                    saveRows();
+                    syncPhoneCopyButtonState(td, td.dataset.phoneFieldKey || '');
+                });
 
                 if (isPhoneFieldKey(key)) {
                     td.classList.add('is-phone-cell');
+                    td.dataset.phoneFieldKey = key;
 
                     const copyButton = document.createElement('button');
                     copyButton.type = 'button';
@@ -892,7 +1025,12 @@
 
                         try {
                             await copyTextToClipboard(phoneNumber);
-                            copyButton.classList.add('is-visible');
+                            const signature = createPhoneCopiedSignature(getRowDataFromElement(td.closest('tr')), key);
+                            if (signature) {
+                                phoneCopiedSignatures.add(signature);
+                                persistPhoneCopiedSignatures(phoneCopiedSignatures);
+                            }
+                            syncPhoneCopyButtonState(td, key);
                             showToast('success', 'Phone Copied', `${phoneNumber} was copied to your clipboard.`);
                         } catch (error) {
                             showToast('error', 'Copy Failed', error && error.message ? error.message : 'The phone number could not be copied.');
@@ -900,6 +1038,7 @@
                     });
 
                     td.appendChild(copyButton);
+                    syncPhoneCopyButtonState(td, key);
                 }
 
                 return td;
@@ -971,9 +1110,16 @@
                     tr.appendChild(createCell(row && row[key] ? row[key] : '', key));
                 });
                 tr.appendChild(createCopyCell());
-                tr.addEventListener('input', () => syncCopyButtonState(tr));
-                tr.addEventListener('blur', () => syncCopyButtonState(tr), true);
+                tr.addEventListener('input', () => {
+                    syncCopyButtonState(tr);
+                    syncPhoneCopyButtonStates(tr);
+                });
+                tr.addEventListener('blur', () => {
+                    syncCopyButtonState(tr);
+                    syncPhoneCopyButtonStates(tr);
+                }, true);
                 syncCopyButtonState(tr);
+                syncPhoneCopyButtonStates(tr);
                 return tr;
             }
 

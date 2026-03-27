@@ -507,6 +507,7 @@
                         </div>
                         <div class="buyers-sheet-actions">
                             <button id="buyers-add-row" class="card-btn active" type="button">Add Row</button>
+                            <button id="buyers-save-csv" class="card-btn" type="button">Save CSV</button>
                             <button id="buyers-send-sms-btn" class="card-btn" type="button">Quick SMS Campaign</button>
                             <button id="buyers-send-email-btn" class="card-btn" type="button">Send Email to All Buyers</button>
                         </div>
@@ -935,10 +936,22 @@
             const SEEDED_ROWS = DEFAULT_ROWS.concat(LA_ROWS);
             const body = document.getElementById('buyers-sheet-body');
             const addRowBtn = document.getElementById('buyers-add-row');
+            const saveCsvBtn = document.getElementById('buyers-save-csv');
 
-            if (!body || !addRowBtn) {
+            if (!body || !addRowBtn || !saveCsvBtn) {
                 return;
             }
+
+            const CSV_HEADERS = [
+                'Active Buyer?',
+                'First Last Name',
+                'Email Categories',
+                'Cell Phone',
+                'Company Name',
+                'Contact',
+                'Comments',
+                'NOTES'
+            ];
 
             function createRow(data) {
                 const tr = document.createElement('tr');
@@ -998,6 +1011,49 @@
             function saveRows() {
                 const rows = getRowsFromDom();
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+            }
+
+            function escapeCsvValue(value) {
+                const normalized = String(value || '').replace(/\r?\n/g, '\n');
+                if (!/[",\n]/.test(normalized)) {
+                    return normalized;
+                }
+                return `"${normalized.replace(/"/g, '""')}"`;
+            }
+
+            function buildCsvFromRows(rows) {
+                const lines = [CSV_HEADERS.map(escapeCsvValue).join(',')];
+                rows.forEach((row) => {
+                    lines.push([
+                        row.activeBuyer,
+                        row.name,
+                        row.emailCategories,
+                        row.cellPhone,
+                        row.companyName,
+                        row.contact,
+                        row.comments,
+                        row.notes
+                    ].map(escapeCsvValue).join(','));
+                });
+                return lines.join('\r\n');
+            }
+
+            function downloadCsvFile(csvText) {
+                const now = new Date();
+                const stamp = [
+                    now.getFullYear(),
+                    String(now.getMonth() + 1).padStart(2, '0'),
+                    String(now.getDate()).padStart(2, '0')
+                ].join('-');
+                const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `active-buyers-${stamp}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.setTimeout(() => URL.revokeObjectURL(url), 0);
             }
 
             function getRowKey(row) {
@@ -1069,6 +1125,16 @@
             addRowBtn.addEventListener('click', function () {
                 body.appendChild(createRow({ activeBuyer: '' }));
                 saveRows();
+            });
+
+            saveCsvBtn.addEventListener('click', function () {
+                saveRows();
+                const rows = getRowsFromDom();
+                const csvText = buildCsvFromRows(rows);
+                downloadCsvFile(csvText);
+                if (typeof window.showDashboardToast === 'function') {
+                    window.showDashboardToast('success', 'CSV Saved', `${rows.length} buyer row${rows.length === 1 ? '' : 's'} exported.`);
+                }
             });
 
             window.addEventListener('beforeunload', saveRows);
