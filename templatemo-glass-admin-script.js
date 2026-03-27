@@ -29,6 +29,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         holloween: 'png photos/Holloween Theme Mode Logo.png',
         japan: 'png photos/Japan Theme Mode Logo.png'
     };
+    const THEME_LOGO_SELECTOR = 'img.logo-img, img.ecard-logo-image, img.flyer-logo-image';
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
     const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
     const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
@@ -133,6 +134,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         { reference: 'Galatians 6:7', text: 'Do not be deceived: God is not mocked, for whatever one sows, that will he also reap.' },
         { reference: 'Psalm 1:6', text: 'The Lord knows the way of the righteous, but the way of the wicked will perish.' }
     ];
+    const themeLogoPreloadPromises = new Map();
+    let themeAwareLogosInitialized = false;
+    let themeLogoObserver = null;
 
     function getSoundSettings() {
         const defaults = {
@@ -2025,16 +2029,81 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return THEME_LOGO_PATHS[resolvedTheme] || DEFAULT_THEME_LOGO_PATH;
     }
 
+    function preloadThemeLogoAsset(path) {
+        const normalizedPath = String(path || '').trim();
+        if (!normalizedPath) {
+            return Promise.resolve('');
+        }
+
+        if (!themeLogoPreloadPromises.has(normalizedPath)) {
+            themeLogoPreloadPromises.set(normalizedPath, new Promise((resolve) => {
+                const image = new Image();
+
+                const finalize = () => resolve(normalizedPath);
+                image.addEventListener('load', finalize, { once: true });
+                image.addEventListener('error', finalize, { once: true });
+                image.src = normalizedPath;
+
+                if (image.complete) {
+                    finalize();
+                } else if (typeof image.decode === 'function') {
+                    image.decode().then(finalize).catch(() => {});
+                }
+            }));
+        }
+
+        return themeLogoPreloadPromises.get(normalizedPath);
+    }
+
+    function applyThemeLogoToImage(image, nextLogoPath, theme) {
+        if (!(image instanceof HTMLImageElement) || !nextLogoPath) {
+            return;
+        }
+
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+        if (image.dataset.themeLogoPath === nextLogoPath && image.dataset.themeLogoTheme === resolvedTheme) {
+            return;
+        }
+
+        image.dataset.themeLogoPath = nextLogoPath;
+        image.dataset.themeLogoTheme = resolvedTheme;
+
+        if (image.getAttribute('src') !== nextLogoPath) {
+            image.setAttribute('src', nextLogoPath);
+        }
+    }
+
+    function syncThemeLogoNode(root, theme, logoPath) {
+        if (!(root instanceof Element)) {
+            return;
+        }
+
+        const nextLogoPath = logoPath || getThemeLogoAssetPath(theme);
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+
+        if (root.matches(THEME_LOGO_SELECTOR)) {
+            applyThemeLogoToImage(root, nextLogoPath, resolvedTheme);
+        }
+
+        root.querySelectorAll(THEME_LOGO_SELECTOR).forEach((image) => {
+            applyThemeLogoToImage(image, nextLogoPath, resolvedTheme);
+        });
+    }
+
     function syncThemeLogoImages(theme) {
-        const nextLogoPath = getThemeLogoAssetPath(theme);
-        document.querySelectorAll('img.logo-img, img.ecard-logo-image, img.flyer-logo-image').forEach((image) => {
-            if (!(image instanceof HTMLImageElement)) {
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+        const nextLogoPath = getThemeLogoAssetPath(resolvedTheme);
+
+        document.documentElement.dataset.themeLogoPath = nextLogoPath;
+        document.documentElement.dataset.themeLogoTheme = resolvedTheme;
+
+        return preloadThemeLogoAsset(nextLogoPath).finally(() => {
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => syncThemeLogoNode(document.body, resolvedTheme, nextLogoPath));
                 return;
             }
 
-            if (image.getAttribute('src') !== nextLogoPath) {
-                image.setAttribute('src', nextLogoPath);
-            }
+            syncThemeLogoNode(document.body, resolvedTheme, nextLogoPath);
         });
     }
 
@@ -2049,7 +2118,44 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     }
 
     function initThemeAwareLogos() {
+        if (themeAwareLogosInitialized) {
+            syncThemeLogoImages(document.documentElement.getAttribute('data-theme') || getThemePreference());
+            return;
+        }
+
+        themeAwareLogosInitialized = true;
+
+        const preloadPaths = Array.from(new Set([DEFAULT_THEME_LOGO_PATH, ...Object.values(THEME_LOGO_PATHS)]));
+        preloadPaths.forEach((path) => {
+            preloadThemeLogoAsset(path);
+        });
+
         syncThemeLogoImages(document.documentElement.getAttribute('data-theme') || getThemePreference());
+
+        if (document.body && !themeLogoObserver) {
+            themeLogoObserver = new MutationObserver((mutations) => {
+                const activeTheme = document.documentElement.dataset.themeLogoTheme
+                    || document.documentElement.getAttribute('data-theme')
+                    || getThemePreference();
+                const activeLogoPath = document.documentElement.dataset.themeLogoPath
+                    || getThemeLogoAssetPath(activeTheme);
+
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (!(node instanceof Element)) {
+                            return;
+                        }
+                        syncThemeLogoNode(node, activeTheme, activeLogoPath);
+                    });
+                });
+            });
+
+            themeLogoObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
         window.addEventListener('dashboard-theme-updated', (event) => {
             syncThemeLogoImages(event && event.detail ? event.detail.theme : document.documentElement.getAttribute('data-theme'));
         });
