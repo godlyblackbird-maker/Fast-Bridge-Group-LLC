@@ -639,6 +639,80 @@
     return true;
   }
 
+  function isMlsSpreadsheetPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/mls-imports-spreadsheet.html' || normalizedPath.endsWith('/mls-imports-spreadsheet.html');
+  }
+
+  function createMlsSpreadsheetNavItem(isActive) {
+    const listItem = document.createElement('li');
+    listItem.className = 'nav-item';
+
+    const link = document.createElement('a');
+    link.href = 'mls-imports-spreadsheet.html';
+    link.className = isActive ? 'nav-link active' : 'nav-link';
+    link.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/><path d="M9 3v6h6"/><path d="M9 3l6 6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>MLS Spreadsheet';
+    listItem.appendChild(link);
+    return listItem;
+  }
+
+  function applyMlsSpreadsheetAccess(userLike) {
+    const hasKnownRole = !!String(userLike && userLike.role || '').trim();
+    const isTest = isTestUser(userLike);
+    const normalizedPath = String(window.location.pathname || '').trim().toLowerCase();
+    const isSpreadsheetPage = isMlsSpreadsheetPath(normalizedPath);
+    const existingLinks = document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
+
+    if (hasKnownRole && isTest) {
+      existingLinks.forEach((link) => {
+        const listItem = link.closest('.nav-item');
+        if (listItem) {
+          listItem.remove();
+        } else {
+          link.remove();
+        }
+      });
+
+      if (isSpreadsheetPage) {
+        window.location.href = '/dashboard.html';
+        return false;
+      }
+
+      return true;
+    }
+
+    const navMenus = document.querySelectorAll('.nav-section > ul');
+    navMenus.forEach((menu) => {
+      if (!menu || menu.querySelector('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]')) {
+        return;
+      }
+
+      const mlsSearchItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="mls-search.html"], .nav-link[href="/mls-search.html"]');
+        return Boolean(link);
+      });
+
+      if (!mlsSearchItem) {
+        return;
+      }
+
+      const spreadsheetItem = createMlsSpreadsheetNavItem(isSpreadsheetPage);
+      mlsSearchItem.insertAdjacentElement('afterend', spreadsheetItem);
+    });
+
+    existingLinks.forEach((link) => {
+      link.classList.toggle('active', isSpreadsheetPage);
+    });
+
+    const backLink = document.getElementById('mls-spreadsheet-back-link');
+    if (backLink && !isAdminUser(userLike)) {
+      backLink.href = 'dashboard.html';
+      backLink.textContent = 'Back To Dashboard';
+    }
+
+    return true;
+  }
+
   function isActiveBuyersPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/active-buyers.html' || normalizedPath.endsWith('/active-buyers.html');
@@ -853,6 +927,31 @@
     });
   }
 
+  function applyLockedMlsSpreadsheetLink(link) {
+    if (!link || link.dataset.lockedMlsSpreadsheet === 'true') {
+      return;
+    }
+
+    link.dataset.lockedMlsSpreadsheet = 'true';
+    link.classList.remove('active');
+    link.classList.add('nav-link-locked');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', 'upgrade to premium');
+    attachPremiumUpgradeTooltip(link);
+
+    if (!link.querySelector('.nav-lock-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-lock-badge';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
+      link.appendChild(badge);
+    }
+
+    link.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
   async function syncAuthenticatedUser() {
     const token = getStoredAuthToken();
     if (!token) {
@@ -972,6 +1071,12 @@
         return;
       }
     }
+    if (isMlsSpreadsheetPath(normalizedPath)) {
+      if (isTestUser(activeUser) || isRegularUser(activeUser)) {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+    }
     if (normalizedPath.endsWith('/admin-controls.html') || normalizedPath === '/admin-controls.html') {
       if (!isAdminUser(activeUser)) {
         window.location.href = '/dashboard.html';
@@ -992,6 +1097,9 @@
       if (applyAdminControlsAccess(storedUser) === false) {
         return;
       }
+      if (applyMlsSpreadsheetAccess(storedUser) === false) {
+        return;
+      }
 
       const syncedUser = await syncAuthenticatedUser();
       checkAuthentication();
@@ -999,6 +1107,9 @@
       const activeUser = syncedUser || getCurrentUser();
       const isAdmin = isAdminUser(activeUser);
       if (applyAdminControlsAccess(activeUser) === false) {
+        return;
+      }
+      if (applyMlsSpreadsheetAccess(activeUser) === false) {
         return;
       }
 
@@ -1032,6 +1143,13 @@
       campaignLinks.forEach(link => {
         if (isRegularUser(activeUser)) {
           applyLockedCampaignsLink(link);
+        }
+      });
+
+      const mlsSpreadsheetLinks = document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
+      mlsSpreadsheetLinks.forEach(link => {
+        if (isRegularUser(activeUser)) {
+          applyLockedMlsSpreadsheetLink(link);
         }
       });
 

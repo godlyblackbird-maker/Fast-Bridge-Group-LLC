@@ -160,23 +160,6 @@
             scroll-behavior: smooth;
         }
 
-        .admin-control-panel::after {
-            content: '';
-            position: absolute;
-            inset: -120% auto auto -35%;
-            width: 42%;
-            height: 280%;
-            transform: rotate(18deg);
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .admin-control-panel:hover::after {
-            opacity: 1;
-            animation: adminSheen 1.15s ease;
-        }
-
         .admin-sticky-toolbar {
             position: sticky;
             top: 20px;
@@ -502,11 +485,6 @@
             font-size: 13px;
         }
 
-        @keyframes adminSheen {
-            0% { transform: translateX(-10%) rotate(18deg); }
-            100% { transform: translateX(320%) rotate(18deg); }
-        }
-
         @keyframes adminPanelRise {
             from {
                 opacity: 0;
@@ -624,7 +602,7 @@
                     <a class="admin-quick-link" href="#requested-access-card">Access Queue</a>
                     <a class="admin-quick-link" href="#property-submissions-card">Seller Leads</a>
                     <a class="admin-quick-link" href="#smtp-approval-card">Gmail Approvals</a>
-                    <a class="admin-quick-link" href="#mls-imports-card">MLS Imports</a>
+                    <a class="admin-quick-link" href="mls-imports-spreadsheet.html">MLS Spreadsheet</a>
                     <a class="admin-quick-link" href="#admin-account-manager-card">Account Manager</a>
                     <a class="admin-quick-link" href="#digital-ecard-card">E Card</a>
                     <a class="admin-quick-link" href="#contracts-card">Contracts</a>
@@ -690,15 +668,15 @@
                     </div>
                 </div>
 
-                <div id="mls-imports-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel admin-mls-import-card" data-span="12" data-widget-id="mls-imports-spreadsheet" data-widget-title="MLS Imports Spreadsheet" style="--panel-index:4;">
+                <div id="mls-imports-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel admin-mls-import-card" data-span="12" data-widget-id="mls-imports-spreadsheet" data-widget-title="MLS Spreadsheet" style="--panel-index:4;">
                     <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div class="admin-mls-import-copy">
                             <div class="admin-panel-eyebrow">Investor Intake</div>
-                            <h2 class="card-title">MLS Imports Spreadsheet</h2>
+                            <h2 class="card-title">MLS Spreadsheet</h2>
                             <p class="card-subtitle">Open the dedicated MLS intake board to track imported properties, ownership, follow-up status, and deal notes without losing the thread between admins and agents.</p>
                         </div>
-                        <a href="mls-imports-spreadsheet.html" class="card-btn active admin-mls-import-cta">Open MLS Sheet</a>
+                        <a href="mls-imports-spreadsheet.html" class="card-btn active admin-mls-import-cta">Open MLS Spreadsheet</a>
                     </div>
                     <div class="admin-mls-import-layout">
                         <section class="admin-mls-import-panel" aria-label="MLS import workflow overview">
