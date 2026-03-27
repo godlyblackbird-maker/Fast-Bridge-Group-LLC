@@ -1331,9 +1331,20 @@
                 return 'night';
             }
 
+            function getPreferredTemplateUserName() {
+                const profile = safeReadJson('userProfile');
+                const user = safeReadJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user && user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile && profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const profileName = normalizeCellValue(canUseProfileIdentity ? profile && profile.name : '');
+                const userName = normalizeCellValue(user && user.name);
+                return profileName || userName || 'Isaac Haro';
+            }
+
             function getCurrentUserFullName() {
-                const userContext = getUserContext();
-                return normalizeCellValue(userContext && userContext.name) || 'Isaac Haro';
+                return getPreferredTemplateUserName();
             }
 
             function getManagedTemplateStatusKey(statusValue) {
