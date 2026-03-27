@@ -13459,6 +13459,7 @@ function initNavbarDateTime() {
 
         async function autoCollectDealsImportFromAddress() {
             const addressInput = document.getElementById('deals-import-address');
+            const imageInput = document.getElementById('deals-import-image');
             const trimmedAddress = String(addressInput && addressInput.value || '').trim();
             if (!trimmedAddress) {
                 showDashboardToast('error', 'Address Required', 'Enter the property address first, then click Auto collect.');
@@ -13489,8 +13490,12 @@ function initNavbarDateTime() {
                 }
 
                 const redfinUrl = String(payload.primaryUrl || (payload.links && payload.links.redfin) || '').trim();
+                const primaryImageUrl = String(payload.listing && payload.listing.imageUrl || '').trim();
                 if (importSourceUrlInput && redfinUrl) {
                     importSourceUrlInput.value = redfinUrl;
+                }
+                if (imageInput && primaryImageUrl) {
+                    imageInput.value = primaryImageUrl;
                 }
 
                 populateDealsImportForm(payload.listing || {});
@@ -18669,13 +18674,29 @@ function initNavbarDateTime() {
                 saveDraft();
             }
 
-            function getSelectedInvestorAttachmentPaths() {
+            function isProofOfFundsFileName(value) {
+                return /(?:^|[^a-z0-9])(pof|proof\s*of\s*funds)(?:[^a-z0-9]|$)/i.test(String(value || '').trim());
+            }
+
+            function getPreparedInvestorAttachmentFiles() {
                 const selectedPackage = getSelectedInvestorAttachmentPackage();
                 if (!selectedPackage || !Array.isArray(selectedPackage.files)) {
                     return [];
                 }
 
-                return selectedPackage.files
+                const files = selectedPackage.files.filter((fileEntry) => fileEntry && fileEntry.relativePath);
+                const shouldPreferFbgPof = Boolean(fbgOfferTermsToggle.checked)
+                    && fbgOfferTermsFiles.some((fileEntry) => isProofOfFundsFileName(fileEntry?.name));
+
+                if (!shouldPreferFbgPof) {
+                    return files;
+                }
+
+                return files.filter((fileEntry) => !isProofOfFundsFileName(fileEntry?.name || fileEntry?.relativePath));
+            }
+
+            function getSelectedInvestorAttachmentPaths() {
+                return getPreparedInvestorAttachmentFiles()
                     .map((fileEntry) => String(fileEntry?.relativePath || '').trim())
                     .filter(Boolean);
             }
@@ -18739,9 +18760,7 @@ function initNavbarDateTime() {
             function renderDocumentSummary() {
                 const { documents, linked, uploads } = getDocumentSummaryParts();
                 const selectedInvestorPackage = getSelectedInvestorAttachmentPackage();
-                const investorFiles = selectedInvestorPackage && Array.isArray(selectedInvestorPackage.files)
-                    ? selectedInvestorPackage.files
-                    : [];
+                const investorFiles = getPreparedInvestorAttachmentFiles();
                 const selectedFbgFiles = fbgOfferTermsToggle.checked ? fbgOfferTermsFiles : [];
                 const totalPreparedDocuments = documents.length + investorFiles.length + selectedFbgFiles.length;
 

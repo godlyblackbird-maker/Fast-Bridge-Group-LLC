@@ -478,6 +478,7 @@ function extractListingImportData(html, requestUrl, source) {
   const rawAddress = structuredAddress || normalizeListingText(ogTitle.split('|')[0].split(' - ')[0]);
   const rawLocation = locationLabel || findFirstPatternMatch(rawAddress, [/^[^,]+,\s*(.+)$/]);
   const description = ogDescription || normalizeListingText(structuredListing && structuredListing.description);
+  const normalizedImageUrl = normalizeImportedImageUrl(structuredImage || ogImage, requestUrl);
 
   return {
     source,
@@ -491,10 +492,23 @@ function extractListingImportData(html, requestUrl, source) {
     area: structuredArea || textFacts.area,
     lotSize: textFacts.lotSize,
     yearBuilt: structuredYearBuilt || textFacts.yearBuilt,
-    imageUrl: normalizeListingText(structuredImage || ogImage),
+    imageUrl: normalizedImageUrl,
     notes: description,
     status: mapListingStatus(textFacts.status)
   };
+}
+
+function normalizeImportedImageUrl(value, requestUrl = '') {
+  const rawValue = normalizeListingText(value);
+  if (!rawValue) {
+    return '';
+  }
+
+  try {
+    return new URL(rawValue, requestUrl || undefined).href;
+  } catch (error) {
+    return rawValue;
+  }
 }
 
 function normalizeAddressMatchText(value) {
@@ -2158,6 +2172,10 @@ const AGENT_WORKSPACE_DOCUMENT_CATEGORIES = Object.freeze({
 
 function isAllowedInvestorAttachmentExtension(extension) {
   return ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.png', '.jpg', '.jpeg', '.txt'].includes(String(extension || '').toLowerCase());
+}
+
+function isProofOfFundsFileName(value) {
+  return /(?:^|[^a-z0-9])(pof|proof\s*of\s*funds)(?:[^a-z0-9]|$)/i.test(String(value || '').trim());
 }
 
 function isAllowedAgentWorkspaceDocumentExtension(extension) {
@@ -5490,8 +5508,15 @@ app.post('/api/send-agent-email', async (req, res) => {
     });
   }
 
+  const availableFbgOfferTermsFiles = includeFbgOfferTerms ? listFbgOfferTermsFiles() : [];
+  const shouldPreferFbgPof = availableFbgOfferTermsFiles.some((item) => isProofOfFundsFileName(item?.name));
+
   for (const item of investorAttachmentPaths) {
     const relativePath = String(item || '').trim();
+    if (shouldPreferFbgPof && isProofOfFundsFileName(relativePath)) {
+      continue;
+    }
+
     const resolvedAttachmentPath = resolveInvestorAttachmentPath(relativePath);
     if (!resolvedAttachmentPath) {
       continue;
@@ -5504,7 +5529,7 @@ app.post('/api/send-agent-email', async (req, res) => {
   }
 
   if (includeFbgOfferTerms) {
-    for (const item of listFbgOfferTermsFiles()) {
+    for (const item of availableFbgOfferTermsFiles) {
       normalizedAttachments.push({
         filename: item.name,
         path: item.path
