@@ -16004,13 +16004,9 @@ function initNavbarDateTime() {
                 if (!compsMapEmpty) {
                     return;
                 }
-                compsMapEmpty.hidden = !isVisible;
-                if (message) {
-                    const paragraph = compsMapEmpty.querySelector('p');
-                    if (paragraph) {
-                        paragraph.textContent = message;
-                    }
-                }
+
+                compsMapEmpty.hidden = true;
+                compsMapEmpty.setAttribute('aria-hidden', 'true');
             }
 
             function updateMapStyleSource(config) {
