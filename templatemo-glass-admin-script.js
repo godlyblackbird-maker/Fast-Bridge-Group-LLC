@@ -15761,6 +15761,76 @@ function initNavbarDateTime() {
             return googleMapsStylesPromise;
         }
 
+        function geocodeAddressWithGoogle(address) {
+            const trimmedAddress = String(address || '').trim();
+            if (!trimmedAddress || !window.google || !window.google.maps || typeof window.google.maps.Geocoder !== 'function') {
+                return Promise.resolve(null);
+            }
+
+            return new Promise((resolve, reject) => {
+                const geocoder = new window.google.maps.Geocoder();
+                geocoder.geocode({ address: trimmedAddress }, (results, status) => {
+                    if (status !== 'OK' || !Array.isArray(results) || results.length === 0) {
+                        reject(new Error('Google Maps could not locate this property address.'));
+                        return;
+                    }
+
+                    const topResult = results[0];
+                    const location = topResult && topResult.geometry && topResult.geometry.location;
+                    if (!location || typeof location.lat !== 'function' || typeof location.lng !== 'function') {
+                        reject(new Error('Google Maps returned an invalid location for this property.'));
+                        return;
+                    }
+
+                    resolve({
+                        lat: Number(location.lat()),
+                        lng: Number(location.lng()),
+                        formattedAddress: String(topResult.formatted_address || trimmedAddress).trim() || trimmedAddress
+                    });
+                });
+            });
+        }
+
+        function findStreetViewPanorama(locationLike) {
+            const lat = Number(locationLike && locationLike.lat);
+            const lng = Number(locationLike && locationLike.lng);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng) || !window.google || !window.google.maps || typeof window.google.maps.StreetViewService !== 'function') {
+                return Promise.resolve(null);
+            }
+
+            const radiusSteps = [50, 120, 250, 500];
+            const streetViewService = new window.google.maps.StreetViewService();
+
+            return radiusSteps.reduce((promise, radius) => {
+                return promise.then((match) => {
+                    if (match) {
+                        return match;
+                    }
+
+                    return new Promise((resolve) => {
+                        streetViewService.getPanorama({
+                            location: { lat, lng },
+                            radius,
+                            source: window.google.maps.StreetViewSource.OUTDOOR,
+                            preference: window.google.maps.StreetViewPreference.NEAREST
+                        }, (data, status) => {
+                            if (status !== 'OK' || !data || !data.location || !data.location.latLng) {
+                                resolve(null);
+                                return;
+                            }
+
+                            const panoLatLng = data.location.latLng;
+                            resolve({
+                                lat: Number(panoLatLng.lat()),
+                                lng: Number(panoLatLng.lng()),
+                                description: String(data.location.description || '').trim()
+                            });
+                        });
+                    });
+                });
+            }, Promise.resolve(null));
+        }
+
         async function resolveStreetViewUrlForAddress(address) {
             const trimmedAddress = String(address || '').trim();
             if (!trimmedAddress) {
@@ -15772,6 +15842,17 @@ function initNavbarDateTime() {
             const cachedAddress = String(detailData.streetViewAddress || '').trim().toLowerCase();
             if (Number.isFinite(cachedLat) && Number.isFinite(cachedLng) && cachedAddress === trimmedAddress.toLowerCase()) {
                 return buildGoogleStreetViewUrl(cachedLat, cachedLng);
+            }
+
+            if (window.google && window.google.maps) {
+                const googleMatch = await geocodeAddressWithGoogle(trimmedAddress).catch(() => null);
+                if (googleMatch && Number.isFinite(googleMatch.lat) && Number.isFinite(googleMatch.lng)) {
+                    detailData.streetViewLat = googleMatch.lat;
+                    detailData.streetViewLng = googleMatch.lng;
+                    detailData.streetViewAddress = googleMatch.formattedAddress || trimmedAddress;
+                    persistCurrentPropertyDetail();
+                    return buildGoogleStreetViewUrl(googleMatch.lat, googleMatch.lng);
+                }
             }
 
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(trimmedAddress)}`, {
@@ -16190,13 +16271,59 @@ function initNavbarDateTime() {
                 const address = getStreetViewAddressQuery();
                 if (address) {
                     try {
+                        if (window.google && window.google.maps) {
+                            const googleMatch = await geocodeAddressWithGoogle(address).catch(() => null);
+                            if (googleMatch && Number.isFinite(googleMatch.lat) && Number.isFinite(googleMatch.lng)) {
+                                detailData.streetViewLat = googleMatch.lat;
+                                detailData.streetViewLng = googleMatch.lng;
+                                detailData.streetViewAddress = googleMatch.formattedAddress || address;
+                                persistCurrentPropertyDetail();
+                                return { lat: googleMatch.lat, lng: googleMatch.lng };
+                            }
+                        }
+
                         await resolveStreetViewUrlForAddress(address);
+                        return getSubjectLocation();
                     } catch (error) {
                         return getSubjectLocation();
                     }
                 }
 
                 return getSubjectLocation();
+            }
+
+            async function showStreetViewForSubject() {
+                await ensureSubjectCoordinates();
+                const map = await ensureMapReady();
+                if (!map || !panoramaInstance) {
+                    throw new Error('Street View pane could not be initialized.');
+                }
+
+                const subjectLocation = getSubjectLocation();
+                const panoMatch = await findStreetViewPanorama(subjectLocation);
+                if (!panoMatch) {
+                    throw new Error('Google Street View is not available close enough to this property.');
+                }
+
+                detailData.streetViewPanoLat = panoMatch.lat;
+                detailData.streetViewPanoLng = panoMatch.lng;
+                persistCurrentPropertyDetail();
+
+                const heading = window.google.maps.geometry && typeof window.google.maps.geometry.spherical?.computeHeading === 'function'
+                    ? window.google.maps.geometry.spherical.computeHeading(
+                        new window.google.maps.LatLng(panoMatch.lat, panoMatch.lng),
+                        new window.google.maps.LatLng(subjectLocation.lat, subjectLocation.lng)
+                    )
+                    : 34;
+
+                panoramaInstance.setPosition({ lat: panoMatch.lat, lng: panoMatch.lng });
+                panoramaInstance.setPov({
+                    heading: Number.isFinite(heading) ? heading : 34,
+                    pitch: 8
+                });
+                panoramaInstance.setVisible(true);
+                map.panTo(subjectLocation);
+                setStreetViewMode(true);
             }
 
             async function ensureMapReady() {
@@ -16328,10 +16455,12 @@ function initNavbarDateTime() {
                 compsExplorer.dataset.streetView = streetViewEnabled ? 'on' : 'off';
 
                 if (panoramaInstance) {
-                    const subjectLocation = getSubjectLocation();
-                    panoramaInstance.setPosition(subjectLocation);
-                    panoramaInstance.setPov({ heading: 34, pitch: 10 });
                     panoramaInstance.setVisible(streetViewEnabled);
+                    if (!streetViewEnabled) {
+                        const subjectLocation = getSubjectLocation();
+                        panoramaInstance.setPosition(subjectLocation);
+                        panoramaInstance.setPov({ heading: 34, pitch: 10 });
+                    }
                 }
 
                 syncStreetViewButtonState();
@@ -16793,12 +16922,11 @@ function initNavbarDateTime() {
                     syncStreetViewButtonState();
 
                     try {
-                        await ensureSubjectCoordinates();
-                        const map = await ensureMapReady();
-                        if (!map || !panoramaInstance) {
-                            throw new Error('Street View pane could not be initialized.');
+                        if (streetViewEnabled) {
+                            setStreetViewMode(false);
+                        } else {
+                            await showStreetViewForSubject();
                         }
-                        setStreetViewMode(!streetViewEnabled);
                     } catch (error) {
                         const streetViewAddress = getStreetViewAddressQuery();
                         const fallbackUrl = Number.isFinite(Number(detailData.streetViewLat)) && Number.isFinite(Number(detailData.streetViewLng))
