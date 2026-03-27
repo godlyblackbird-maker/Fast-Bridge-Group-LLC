@@ -962,12 +962,12 @@
                 button.setAttribute(
                     'aria-label',
                     isCopied
-                        ? 'Copy status-based outreach template again. This row was already copied.'
-                        : 'Copy status-based outreach template'
+                        ? 'Copy MLS outreach template again. This row was already copied.'
+                        : 'Copy MLS outreach template'
                 );
                 button.title = isCopied
                     ? 'Copy again. Marked as already copied.'
-                    : 'Copy status-based outreach template';
+                    : 'Copy MLS outreach template';
             }
 
             function syncPhoneCopyButtonState(cellElement, key) {
@@ -1015,32 +1015,33 @@
                 const firstName = getAgentFirstName(laName) || 'there';
                 const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
                 const status = normalizeStatusValue(rowData && rowData.status);
+                const rawStatus = normalizeCellValue(rowData && rowData.status) || 'active';
 
                 if (!laName) {
                     throw new Error('No listing agent name is available on this row yet.');
                 }
 
                 if (status.includes('active under contract') || status.includes('under contract') || status.includes('pending') || status.includes('contingent') || status.includes('backup')) {
-                    return `Hi ${firstName}, saw ${propertyAddress} is ${normalizeCellValue(rowData && rowData.status) || 'under contract'}. If anything changes or you want a clean backup cash option, we would love to take a look. Keep us in mind if it opens back up.`;
+                    return `Hi ${firstName}, saw ${propertyAddress} is ${rawStatus}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quickly and would be happy to let you represent me if it fits.`;
                 }
 
                 if (status.includes('expired') || status.includes('cancelled') || status.includes('withdrawn')) {
-                    return `Hi ${firstName}, reaching out about ${propertyAddress}. I saw the listing is ${normalizeCellValue(rowData && rowData.status) || 'off the market'}. If the seller is still open to options, we can make a clean cash offer and close fast. Happy to take a quick look if it is still available.`;
+                    return `Hi ${firstName}, reaching out on ${propertyAddress}. I saw it came off market as ${rawStatus}. If the seller is still open to a cash option, I can take a quick look, make it easy, and close fast.`;
                 }
 
                 if (status.includes('closed') || status.includes('sold')) {
-                    return `Hi ${firstName}, congrats on ${propertyAddress}. If you come across another seller who needs a fast cash buyer, we would love to be a resource for you on the next one.`;
+                    return `Hi ${firstName}, congrats on closing ${propertyAddress}. If you get another seller who wants a clean cash offer or fast close, keep me in mind. I would love to be a reliable buyer resource for your next one.`;
                 }
 
                 if (status.includes('coming soon')) {
-                    return `Hi ${firstName}, saw ${propertyAddress} is marked coming soon. If the seller is open to a direct cash option before it fully hits the market, we would love to take a look and see if it is a fit.`;
+                    return `Hi ${firstName}, saw ${propertyAddress} is marked coming soon. If the seller is open to a pre-market cash option, I would love to take a quick look before it goes fully live.`;
                 }
 
                 if (status.includes('hold') || status.includes('off market')) {
-                    return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, we can make a clean cash offer and move quickly if that would help.`;
+                    return `Hi ${firstName}, checking in on ${propertyAddress}. If the seller is still weighing options, I can make a clean cash offer and move quickly if that helps get the deal done.`;
                 }
 
-                return `Hey ${firstName} hope you're having a great ${getTimeOfDayGreeting()}! I am Isaac Haro, an investor. I see you have a property in ${propertyAddress}, I do flipping around that area, close quick and would let you represent me. Are you open to cash offers?`;
+                return `Hi ${firstName}, this is Isaac Haro. I saw your listing at ${propertyAddress} and wanted to reach out directly. I am actively buying in that area, can close quickly, and I am happy to let you represent me. If the seller is open to a cash offer, I would love to take a look.`;
             }
 
             function createCell(value, key) {
@@ -1108,7 +1109,7 @@
             async function copyTextToClipboard(value) {
                 const text = normalizeCellValue(value);
                 if (!text) {
-                    throw new Error('No listing agent name is available on this row yet.');
+                    throw new Error('Nothing is available to copy from this row yet.');
                 }
 
                 if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
@@ -1139,8 +1140,8 @@
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'buyers-sheet-copy-btn';
-                button.setAttribute('aria-label', 'Copy status-based outreach template');
-                button.title = 'Copy status-based outreach template';
+                button.setAttribute('aria-label', 'Copy MLS outreach template');
+                button.title = 'Copy MLS outreach template';
                 button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
                 button.addEventListener('click', async () => {
                     const row = button.closest('tr');
@@ -1155,7 +1156,7 @@
                             persistCopiedRowSignatures(copiedRowSignatures);
                         }
                         syncCopyButtonState(row);
-                        showToast('success', 'Template Copied', `Copied a ${rowData.status || 'default'} outreach template for ${rowData.laName}.`);
+                        showToast('success', 'Template Copied', `Copied an MLS outreach template for ${rowData.laName || 'this agent'}.`);
                     } catch (error) {
                         showToast('error', 'Copy Failed', error && error.message ? error.message : 'The outreach template could not be copied.');
                     }
