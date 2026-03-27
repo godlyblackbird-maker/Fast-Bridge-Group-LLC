@@ -921,7 +921,7 @@
                             <span>Add Good Time Of Day</span>
                         </label>
                     </div>
-                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}. The copy generator always adds the opening salutation.</p>
+                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {timeGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. If you leave it out, the generator adds it at the end.</p>
                     <label class="buyers-sheet-template-field">
                         <span class="buyers-sheet-template-field-label">Template Body</span>
                         <textarea id="my-agents-template-body" class="buyers-sheet-template-textarea" spellcheck="true"></textarea>
@@ -1328,6 +1328,10 @@
                 return 'night';
             }
 
+            function getTimeGreetingSentence() {
+                return `Hope you're having a good ${getTimeOfDayGreeting()}!`;
+            }
+
             function getPreferredTemplateUserName() {
                 const profile = safeReadJson('userProfile');
                 const user = safeReadJson('user');
@@ -1365,7 +1369,7 @@
             }
 
             function replaceTemplateTokens(value, replacements) {
-                return String(value || '').replace(/\{(propertyAddress|status|agentFirstName|agentName)\}/g, (match, key) => {
+                return String(value || '').replace(/\{(propertyAddress|status|agentFirstName|agentName|timeGreeting)\}/g, (match, key) => {
                     return Object.prototype.hasOwnProperty.call(replacements, key) ? replacements[key] : match;
                 });
             }
@@ -1379,11 +1383,14 @@
                     || TEMPLATE_STATUS_OPTIONS.find((option) => option.key === templateStatusKey)?.label
                     || 'Active';
                 const bodyTemplate = normalizeCellValue(settings.templates[templateStatusKey]) || TEMPLATE_DEFAULT_BODIES[templateStatusKey];
+                const includesTimeGreetingToken = /\{timeGreeting\}/.test(String(bodyTemplate || ''));
+                const timeGreeting = settings.includeTimeOfDay ? getTimeGreetingSentence() : '';
                 const body = replaceTemplateTokens(bodyTemplate, {
                     propertyAddress,
                     status: rawStatus,
                     agentFirstName,
-                    agentName: laName || agentFirstName
+                    agentName: laName || agentFirstName,
+                    timeGreeting
                 }).replace(/\s+([,!.?])/g, '$1').trim();
                 const parts = [`Hi ${agentFirstName},`];
 
@@ -1393,8 +1400,8 @@
                 if (body) {
                     parts.push(body);
                 }
-                if (settings.includeTimeOfDay) {
-                    parts.push(`Hope you have a good ${getTimeOfDayGreeting()}!`);
+                if (settings.includeTimeOfDay && !includesTimeGreetingToken) {
+                    parts.push(timeGreeting);
                 }
 
                 return parts.join(' ').replace(/\s+([,!.?])/g, '$1').trim();
