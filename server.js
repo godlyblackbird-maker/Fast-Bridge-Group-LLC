@@ -1101,12 +1101,16 @@ app.use(express.static(path.join(__dirname)));
 
 app.post('/api/import-listing-by-address', async (req, res) => {
   const rawAddress = String(req.body?.address || '').trim();
+  const requestedSource = String(req.body?.source || '').trim().toLowerCase();
+  const requestedSources = requestedSource === 'redfin'
+    ? ['redfin']
+    : ['zillow', 'redfin'];
 
   if (!rawAddress) {
-    return res.status(400).json({ error: 'Add a property address before searching Zillow and Redfin.' });
+    return res.status(400).json({ error: requestedSource === 'redfin' ? 'Add a property address before searching Redfin.' : 'Add a property address before searching Zillow and Redfin.' });
   }
 
-  const sourceResults = await Promise.allSettled(['zillow', 'redfin'].map(async (source) => {
+  const sourceResults = await Promise.allSettled(requestedSources.map(async (source) => {
     const url = await searchListingUrlByAddress(rawAddress, source);
     if (!url) {
       return {
@@ -1168,7 +1172,7 @@ app.post('/api/import-listing-by-address', async (req, res) => {
       const label = Array.from(new Set(blockedSources)).map((source) => source === 'redfin' ? 'Redfin' : 'Zillow').join(' and ');
       return res.status(502).json({ error: `${label} blocked automated address lookup right now. Paste a direct listing link to keep importing this property.` });
     }
-    return res.status(404).json({ error: 'FAST could not find a matching Zillow or Redfin listing for this address.' });
+    return res.status(404).json({ error: requestedSource === 'redfin' ? 'FAST could not find a matching Redfin listing for this address.' : 'FAST could not find a matching Zillow or Redfin listing for this address.' });
   }
 
   const merged = mergeImportedListingsByQuality(importedListings, rawAddress);

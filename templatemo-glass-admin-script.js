@@ -13288,6 +13288,7 @@ function initNavbarDateTime() {
         const importForm = document.getElementById('deals-import-form');
         const importResetButton = document.getElementById('deals-import-reset');
         const importSourceUrlInput = document.getElementById('deals-import-source-url');
+        const importSourceCollectButton = document.getElementById('deals-import-source-collect');
         const importSourceFetchButton = document.getElementById('deals-import-source-fetch');
         const importSourceButtons = Array.from(document.querySelectorAll('[data-import-source]'));
         const importCloseButton = importOverlay
@@ -13302,7 +13303,7 @@ function initNavbarDateTime() {
             clicked: 1
         };
         let importBackdropPointerDown = false;
-        let importSource = 'zillow';
+        let importSource = 'redfin';
 
         if (!list || !count || !assignedList || !assignedCount || !listPagination || !assignedPagination) {
             return;
@@ -13344,7 +13345,7 @@ function initNavbarDateTime() {
         }
 
         function setDealsImportSource(nextSource) {
-            importSource = nextSource === 'redfin' ? 'redfin' : 'zillow';
+            importSource = 'redfin';
             importSourceButtons.forEach((button) => {
                 const isActive = button.getAttribute('data-import-source') === importSource;
                 button.classList.toggle('is-active', isActive);
@@ -13352,9 +13353,7 @@ function initNavbarDateTime() {
             });
 
             if (importSourceUrlInput) {
-                importSourceUrlInput.placeholder = importSource === 'redfin'
-                    ? 'Paste the Redfin property link here'
-                    : 'Paste the Zillow property link here';
+                importSourceUrlInput.placeholder = 'Paste the Redfin property link here';
             }
         }
 
@@ -13362,9 +13361,6 @@ function initNavbarDateTime() {
             const raw = String(value || '').trim().toLowerCase();
             if (raw.includes('redfin.com')) {
                 return 'redfin';
-            }
-            if (raw.includes('zillow.com')) {
-                return 'zillow';
             }
             return '';
         }
@@ -13403,6 +13399,17 @@ function initNavbarDateTime() {
             }
         }
 
+        function setDealsImportLookupBusy(isBusy, activeButton = null) {
+            if (importSourceCollectButton) {
+                importSourceCollectButton.disabled = isBusy;
+                importSourceCollectButton.textContent = isBusy && activeButton === 'collect' ? 'Collecting...' : 'Auto collect';
+            }
+            if (importSourceFetchButton) {
+                importSourceFetchButton.disabled = isBusy;
+                importSourceFetchButton.textContent = isBusy && activeButton === 'fetch' ? 'Loading...' : 'Autofill';
+            }
+        }
+
         async function fetchListingPreviewFromSource() {
             if (!importSourceUrlInput) {
                 return;
@@ -13410,19 +13417,19 @@ function initNavbarDateTime() {
 
             const sourceUrl = String(importSourceUrlInput.value || '').trim();
             if (!sourceUrl) {
-                showDashboardToast('error', 'Link Required', 'Paste a Zillow or Redfin property link first.');
+                showDashboardToast('error', 'Link Required', 'Paste a Redfin property link first.');
                 return;
             }
 
             const inferredSource = inferDealsImportSourceFromUrl(sourceUrl);
-            if (inferredSource) {
-                setDealsImportSource(inferredSource);
+            if (inferredSource !== 'redfin') {
+                showDashboardToast('error', 'Invalid Link', 'Only Redfin property links are supported in Import Property.');
+                return;
             }
 
-            if (importSourceFetchButton) {
-                importSourceFetchButton.disabled = true;
-                importSourceFetchButton.textContent = 'Loading...';
-            }
+            setDealsImportSource('redfin');
+
+            setDealsImportLookupBusy(true, 'fetch');
 
             try {
                 const response = await fetch('/api/import-listing-preview', {
@@ -13442,14 +13449,56 @@ function initNavbarDateTime() {
                 }
 
                 populateDealsImportForm(payload.listing || {});
-                showDashboardToast('success', 'Property Autofilled', `${importSource === 'redfin' ? 'Redfin' : 'Zillow'} public listing details were added to the import form.`);
+                showDashboardToast('success', 'Property Autofilled', 'Redfin public listing details were added to the import form.');
             } catch (error) {
                 showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not pull the listing details from that link.');
             } finally {
-                if (importSourceFetchButton) {
-                    importSourceFetchButton.disabled = false;
-                    importSourceFetchButton.textContent = 'Add Link';
+                setDealsImportLookupBusy(false);
+            }
+        }
+
+        async function autoCollectDealsImportFromAddress() {
+            const addressInput = document.getElementById('deals-import-address');
+            const trimmedAddress = String(addressInput && addressInput.value || '').trim();
+            if (!trimmedAddress) {
+                showDashboardToast('error', 'Address Required', 'Enter the property address first, then click Auto collect.');
+                if (addressInput) {
+                    addressInput.focus();
                 }
+                return;
+            }
+
+            setDealsImportSource('redfin');
+            setDealsImportLookupBusy(true, 'collect');
+
+            try {
+                const response = await fetch('/api/import-listing-by-address', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        address: trimmedAddress,
+                        source: 'redfin'
+                    })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'FAST could not find a matching Redfin listing for this address.');
+                }
+
+                const redfinUrl = String(payload.primaryUrl || (payload.links && payload.links.redfin) || '').trim();
+                if (importSourceUrlInput && redfinUrl) {
+                    importSourceUrlInput.value = redfinUrl;
+                }
+
+                populateDealsImportForm(payload.listing || {});
+                showDashboardToast('success', 'Auto Collected', 'FAST found the Redfin listing, added the image, and autofilled the import form.');
+            } catch (error) {
+                showDashboardToast('error', 'Auto Collect Failed', error && error.message ? error.message : 'FAST could not auto collect the Redfin listing for this address.');
+            } finally {
+                setDealsImportLookupBusy(false);
             }
         }
 
@@ -13459,7 +13508,7 @@ function initNavbarDateTime() {
 
         importSourceButtons.forEach((button) => {
             button.addEventListener('click', () => {
-                setDealsImportSource(button.getAttribute('data-import-source') || 'zillow');
+                setDealsImportSource(button.getAttribute('data-import-source') || 'redfin');
             });
         });
 
@@ -13474,6 +13523,10 @@ function initNavbarDateTime() {
 
         if (importSourceFetchButton) {
             importSourceFetchButton.addEventListener('click', fetchListingPreviewFromSource);
+        }
+
+        if (importSourceCollectButton) {
+            importSourceCollectButton.addEventListener('click', autoCollectDealsImportFromAddress);
         }
 
         if (importCloseButton) {
@@ -14121,7 +14174,7 @@ function initNavbarDateTime() {
                 if (defaultStatus) {
                     defaultStatus.value = 'active';
                 }
-                setDealsImportSource('zillow');
+                setDealsImportSource('redfin');
             });
         }
     }
@@ -15115,14 +15168,14 @@ function initNavbarDateTime() {
         }
 
         async function promptAndImportPropertyListing(existingUrl = '') {
-            const rawLink = window.prompt('Paste the Zillow or Redfin property link.', String(existingUrl || detailData.sourceListingUrl || '').trim());
+            const rawLink = window.prompt('Paste the Redfin property link.', String(existingUrl || detailData.sourceListingUrl || '').trim());
             if (rawLink === null) {
                 return false;
             }
 
             const trimmedLink = String(rawLink || '').trim();
             if (!trimmedLink) {
-                showDashboardToast('error', 'Link Required', 'Paste a Zillow or Redfin property link to import public details.');
+                showDashboardToast('error', 'Link Required', 'Paste a Redfin property link to import public details.');
                 return false;
             }
 
@@ -15130,13 +15183,13 @@ function initNavbarDateTime() {
             try {
                 normalizedUrl = new URL(trimmedLink, window.location.href).href;
             } catch (error) {
-                showDashboardToast('error', 'Invalid Link', 'Enter a valid Zillow or Redfin property URL.');
+                showDashboardToast('error', 'Invalid Link', 'Enter a valid Redfin property URL.');
                 return false;
             }
 
             const source = inferListingSourceFromPropertyUrl(normalizedUrl);
-            if (!source) {
-                showDashboardToast('error', 'Unsupported Link', 'Only Zillow and Redfin property links are supported here.');
+            if (source !== 'redfin') {
+                showDashboardToast('error', 'Unsupported Link', 'Only Redfin property links are supported here.');
                 return false;
             }
 
@@ -15163,13 +15216,13 @@ function initNavbarDateTime() {
                 }
 
                 applyImportedListingToPropertyDetail(payload.listing || {}, normalizedUrl, source, { [source]: normalizedUrl });
-                showDashboardToast('success', 'Property Updated', `${source === 'redfin' ? 'Redfin' : 'Zillow'} public listing details were added to this property.`);
+                showDashboardToast('success', 'Property Updated', 'Redfin public listing details were added to this property.');
                 return true;
             } catch (error) {
                 const message = error && error.message ? error.message : 'FAST could not pull the listing details from that link.';
                 if (/blocking automated access|could not be loaded/i.test(message)) {
                     persistListingSourceLink(normalizedUrl, source, { [source]: normalizedUrl });
-                    showDashboardToast('success', 'Link Saved', `${source === 'redfin' ? 'Redfin' : 'Zillow'} blocked automated import right now, but the listing link was saved to this property.`);
+                    showDashboardToast('success', 'Link Saved', 'Redfin blocked automated import right now, but the listing link was saved to this property.');
                     return false;
                 }
                 showDashboardToast('error', 'Import Failed', message);
@@ -18792,7 +18845,7 @@ function initNavbarDateTime() {
                 const senderName = senderNameInput.value.trim();
                 const recipientName = recipientNameInput.value.trim();
                 const recipientEmail = recipientEmailInput.value.trim();
-                const signerName = String(investorProfile?.signerName || getOfferSignerName() || 'Steve Medina').trim();
+                const signerName = 'Steve Medina';
                 const entityText = String(investorProfile?.entityLabel || getOfferSelectText('offer-entity') || 'Selected Entity').trim();
                 const categoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.label || 'Offer Terms';
                 const subcategoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.subcategories[getEffectiveSubcategory()]?.label || 'General';
