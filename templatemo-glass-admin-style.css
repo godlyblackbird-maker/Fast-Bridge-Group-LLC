@@ -2984,8 +2984,8 @@ a {
 
 .nav-icon-mls-spreadsheet {
     background-color: currentColor;
-    -webkit-mask-image: url("Symbols/MLS%20SPREAD%20SHEET.svg");
-    mask-image: url("Symbols/MLS%20SPREAD%20SHEET.svg");
+    -webkit-mask-image: url("Symbols/MLS%20Spreadsheet.svg");
+    mask-image: url("Symbols/MLS%20Spreadsheet.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -14033,7 +14033,7 @@ body.sidebar-collapsed .main-content {
 
 .comps-map-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
 }
 
@@ -14314,6 +14314,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .comps-map-pin {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -14330,8 +14331,24 @@ body.sidebar-collapsed .main-content {
 }
 
 .comps-map-pin.is-subject {
+    min-width: 88px;
+    padding: 8px 12px;
     background: #111827;
     color: #fef3c7;
+    border-color: rgba(254, 243, 199, 0.95);
+    box-shadow:
+        0 0 0 5px rgba(245, 158, 11, 0.18),
+        0 14px 28px rgba(15, 23, 42, 0.34);
+}
+
+.comps-map-pin.is-subject::before {
+    content: '';
+    position: absolute;
+    inset: -7px;
+    border-radius: 999px;
+    border: 2px solid rgba(245, 158, 11, 0.55);
+    animation: comps-map-subject-pulse 1.9s ease-out infinite;
+    pointer-events: none;
 }
 
 .comps-map-pin.is-red {
@@ -14352,6 +14369,21 @@ body.sidebar-collapsed .main-content {
 .comps-map-pin.is-active {
     background: #f59e0b;
     color: #111827;
+}
+
+@keyframes comps-map-subject-pulse {
+    0% {
+        opacity: 0.95;
+        transform: scale(0.94);
+    }
+    70% {
+        opacity: 0;
+        transform: scale(1.18);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.24);
+    }
 }
 
 .comps-map-wrap .gm-style,

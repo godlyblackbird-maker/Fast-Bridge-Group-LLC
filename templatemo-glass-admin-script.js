@@ -1552,6 +1552,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
             ? workspaceUserLike
             : getWorkspaceUserContext();
+        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
 
         ensurePropertyWorkspaceSnapshot(detail, workspaceUser);
 
@@ -1565,6 +1566,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         if (detailPropertyKey) {
             setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, workspaceUser, detailPropertyKey, normalizedStatus, { silent: true });
+
+            if (!usersMatch(activeSessionUser, workspaceUser)) {
+                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, activeSessionUser, detailPropertyKey, normalizedStatus, { silent: true });
+            }
 
             if (assignedUser) {
                 setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, assignedUser, detailPropertyKey, normalizedStatus, { silent: true });
@@ -1594,6 +1599,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         if (assignedUser && !usersMatch(assignedUser, workspaceUser)) {
             ensurePropertyWorkspaceSnapshot(detail, assignedUser);
+        }
+
+        if (!usersMatch(activeSessionUser, workspaceUser) && !usersMatch(activeSessionUser, assignedUser || {})) {
+            ensurePropertyWorkspaceSnapshot(detail, activeSessionUser);
         }
     }
 
@@ -3013,7 +3022,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             : getWorkspaceUserContext();
         const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
         const acceptedByPropertyKey = new Map();
-        const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+        const scopedStatuses = {
+            ...getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key),
+            ...(!usersMatch(activeSessionUser, workspaceUser)
+                ? getUserScopedObject(PIQ_AGENT_STATUS_KEY, activeSessionUser.key)
+                : {})
+        };
         const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
 
         Object.entries(scopedStatuses || {}).forEach(([propertyKey, statusValue]) => {
@@ -14849,7 +14863,12 @@ function initNavbarDateTime() {
             }
             const normalizedStatus = String(statusValue || 'none').trim().toLowerCase() || 'none';
             const currentAssignment = getPropertyAssignmentRecord(propertyKey);
+            const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
             setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, workspaceUser, propertyKey, normalizedStatus, { silent: true });
+
+            if (!usersMatch(activeSessionUser, workspaceUser)) {
+                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, activeSessionUser, propertyKey, normalizedStatus, { silent: true });
+            }
 
             if (currentAssignment?.assignedTo && !usersMatch(currentAssignment.assignedTo, workspaceUser)) {
                 setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, currentAssignment.assignedTo, propertyKey, normalizedStatus, { silent: true });
@@ -17015,7 +17034,7 @@ function initNavbarDateTime() {
                         center: subjectLocation,
                         zoom: 14,
                         mapTypeControl: false,
-                        streetViewControl: false,
+                        streetViewControl: true,
                         fullscreenControl: false,
                         clickableIcons: false,
                         gestureHandling: 'greedy'
@@ -17261,8 +17280,9 @@ function initNavbarDateTime() {
                 subjectMarker = new markerCtor({
                     map: mapInstance,
                     position: subjectLocation,
-                    content: buildMarkerContent('S', 'subject', false),
-                    title: detailData.address || 'Subject property'
+                    content: buildMarkerContent('SUBJECT', 'subject', false),
+                    title: detailData.address || 'Subject property',
+                    zIndex: 300
                 });
                 subjectMarker.addListener('click', () => {
                     openMarkerInfoWindow(subjectMarker, {
