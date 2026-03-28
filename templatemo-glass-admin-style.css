@@ -8084,23 +8084,26 @@ body.sidebar-collapsed .main-content {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 7px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    position: relative;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: currentColor;
 }
 
 .planner-priority::before {
     content: '';
     position: absolute;
-    left: 3px;
+    left: 50%;
     top: 50%;
-    width: 13px;
-    height: 13px;
+    width: 24px;
+    height: 24px;
     background: currentColor;
-    transform: translateY(-50%) scaleX(-1) rotate(-15deg);
-    opacity: 0.9;
+    transform: translate(-50%, -50%) scaleX(-1) rotate(-15deg);
+    opacity: 1;
     -webkit-mask-image: url('Symbols/Flag.svg');
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -8113,50 +8116,34 @@ body.sidebar-collapsed .main-content {
 
 .planner-priority-p1 {
     color: #fecaca;
-    border: 1px solid rgba(248, 113, 113, 0.45);
-    background: rgba(248, 113, 113, 0.12);
-    position: relative;
-    padding-left: 20px;
 }
 
 .planner-priority-p1::before {
-    opacity: 0.9;
+    opacity: 1;
 }
 
 .planner-priority-p2 {
     color: #fde68a;
-    border: 1px solid rgba(234, 179, 8, 0.4);
-    background: rgba(234, 179, 8, 0.12);
-    position: relative;
-    padding-left: 20px;
 }
 
 .planner-priority-p2::before {
-    opacity: 0.9;
+    opacity: 0.98;
 }
 
 .planner-priority-p3 {
     color: #bfdbfe;
-    border: 1px solid rgba(96, 165, 250, 0.4);
-    background: rgba(96, 165, 250, 0.12);
-    position: relative;
-    padding-left: 20px;
 }
 
 .planner-priority-p3::before {
-    opacity: 0.9;
+    opacity: 0.96;
 }
 
 .planner-priority-p4 {
     color: #d1d5db;
-    border: 1px solid rgba(156, 163, 175, 0.35);
-    background: rgba(156, 163, 175, 0.12);
-    position: relative;
-    padding-left: 20px;
 }
 
 .planner-priority-p4::before {
-    opacity: 0.6;
+    opacity: 0.88;
 }
 
 .planner-task-time {
@@ -9040,6 +9027,7 @@ body.sidebar-collapsed .main-content {
     transition: all var(--transition-fast);
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 18px 8px 8px;
     min-height: 56px;
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(14px);
@@ -9058,12 +9046,14 @@ body.sidebar-collapsed .main-content {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
+
 .mls-search-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
 }
+
 .mls-search-summary {
     min-height: 88px;
     padding: 12px 14px;
@@ -9109,18 +9099,54 @@ body.sidebar-collapsed .main-content {
     box-shadow: inset 0 0 0 1px rgba(212, 165, 116, 0.25), 0 10px 24px rgba(212, 165, 116, 0.12);
 }
 
+.calendar-day[class*="calendar-day-priority-"] {
+    border-color: var(--calendar-day-outline, rgba(255, 255, 255, 0.16));
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 48%, transparent),
+        0 10px 24px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 20%, transparent);
+}
+
+.calendar-day[class*="calendar-day-priority-"]:hover {
+    border-color: color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 88%, white 12%);
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 58%, transparent),
+        0 12px 28px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 28%, transparent);
+}
+
+[data-accent-glow="on"] .calendar-day[class*="calendar-day-priority-"] {
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 58%, transparent),
+        0 0 14px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 45%, transparent),
+        0 0 30px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 24%, transparent),
+        0 12px 28px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 26%, transparent);
+}
+
+[data-accent-glow="on"] .calendar-day[class*="calendar-day-priority-"]:hover {
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 70%, transparent),
+        0 0 18px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 55%, transparent),
+        0 0 38px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 32%, transparent),
+        0 14px 30px color-mix(in srgb, var(--calendar-day-outline, rgba(255, 255, 255, 0.16)) 32%, transparent);
+}
+
 .calendar-day-number {
+    position: absolute;
+    top: 6px;
+    left: 7px;
     line-height: 1;
+    font-size: 11px;
+    font-weight: 700;
+    z-index: 2;
 }
 
 .calendar-day.has-event::after {
     content: '';
     position: absolute;
-    bottom: 6px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    width: 14px;
-    height: 14px;
+    transform: translate(-50%, -40%) scaleX(-1) rotate(-15deg);
+    width: 34px;
+    height: 34px;
     background: var(--calendar-day-flag-color, var(--gold));
     opacity: var(--calendar-day-flag-opacity, 0.95);
     -webkit-mask-image: url('Symbols/Flag.svg');
@@ -9131,27 +9157,31 @@ body.sidebar-collapsed .main-content {
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
-    box-shadow: 0 0 10px color-mix(in srgb, var(--calendar-day-flag-color, var(--gold)) 55%, transparent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--calendar-day-flag-color, var(--gold)) 60%, transparent);
 }
 
 .calendar-day.calendar-day-priority-p1 {
-    --calendar-day-flag-color: #f87171;
+    --calendar-day-flag-color: #ff4d5d;
     --calendar-day-flag-opacity: 1;
+    --calendar-day-outline: #ff5f6d;
 }
 
 .calendar-day.calendar-day-priority-p2 {
-    --calendar-day-flag-color: #fbbf24;
+    --calendar-day-flag-color: #ffcc33;
     --calendar-day-flag-opacity: 0.98;
+    --calendar-day-outline: #ffd84d;
 }
 
 .calendar-day.calendar-day-priority-p3 {
-    --calendar-day-flag-color: #60a5fa;
+    --calendar-day-flag-color: #39a0ff;
     --calendar-day-flag-opacity: 0.96;
+    --calendar-day-outline: #62b6ff;
 }
 
 .calendar-day.calendar-day-priority-p4 {
-    --calendar-day-flag-color: #9ca3af;
+    --calendar-day-flag-color: #c2ccd8;
     --calendar-day-flag-opacity: 0.88;
+    --calendar-day-outline: #d5dee8;
 }
 
 .calendar-event-count {
@@ -9169,6 +9199,7 @@ body.sidebar-collapsed .main-content {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    z-index: 2;
 }
 
 .calendar-detail-topbar {
@@ -13092,6 +13123,18 @@ body.sidebar-collapsed .main-content {
     .calendar-day {
         min-height: 42px;
         font-size: 11px;
+        padding: 16px 6px 6px;
+    }
+
+    .calendar-day-number {
+        top: 5px;
+        left: 6px;
+        font-size: 10px;
+    }
+
+    .calendar-day.has-event::after {
+        width: 24px;
+        height: 24px;
     }
 
     .calendar-event-count {

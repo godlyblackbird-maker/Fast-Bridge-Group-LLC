@@ -11040,7 +11040,8 @@ function initNavbarDateTime() {
 
                 const priority = document.createElement('span');
                 priority.className = `planner-priority planner-priority-${item.priority}`;
-                priority.textContent = item.priority.toUpperCase();
+                priority.setAttribute('aria-label', `Priority ${String(item.priority || '').toUpperCase()}`);
+                priority.title = `Priority ${String(item.priority || '').toUpperCase()}`;
 
                 const time = document.createElement('span');
                 time.className = 'planner-task-time';
