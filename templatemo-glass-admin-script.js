@@ -15969,10 +15969,11 @@ function initNavbarDateTime() {
         function renderAgentWorkspaceAcceptedOffer() {
             const normalizedStatus = String(detailData.piqAgentStatus || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
             const isOfferAccepted = normalizedStatus === 'offer-accepted';
+            const normalizedPropertyKey = makePropertyStorageKey(propertyKey || detailData.address || detailData.propertyAddress);
 
             if (offerAcceptedToggleButton) {
-                offerAcceptedToggleButton.classList.toggle('is-active', isOfferAccepted);
-                offerAcceptedToggleButton.setAttribute('aria-pressed', isOfferAccepted ? 'true' : 'false');
+                offerAcceptedToggleButton.checked = isOfferAccepted;
+                offerAcceptedToggleButton.setAttribute('aria-checked', isOfferAccepted ? 'true' : 'false');
 
                 if (!isOfferAccepted) {
                     offerAcceptedToggleButton.dataset.restoreStatus = normalizedStatus;
@@ -15994,8 +15995,9 @@ function initNavbarDateTime() {
                 return;
             }
 
+            const sharedAcceptedItem = getAcceptedOfferItemsForWorkspace(workspaceUser).find((item) => item.propertyKey === normalizedPropertyKey) || null;
             const currentAssignment = getPropertyAssignmentRecord(propertyKey);
-            const snapshot = {
+            const fallbackSnapshot = {
                 ...detailData,
                 propertyAssignment: currentAssignment?.assignedTo
                     ? {
@@ -16005,17 +16007,22 @@ function initNavbarDateTime() {
                     }
                     : detailData.propertyAssignment
             };
-            const propertyAddress = String(snapshot.address || snapshot.propertyAddress || 'Property').trim() || 'Property';
-            const acceptedAt = currentAssignment?.assignedAt
-                ? new Date(currentAssignment.assignedAt).toLocaleDateString()
-                : 'Recently updated';
+            const snapshot = sharedAcceptedItem?.snapshot && typeof sharedAcceptedItem.snapshot === 'object'
+                ? sharedAcceptedItem.snapshot
+                : fallbackSnapshot;
+            const assignmentRecord = sharedAcceptedItem?.assignmentRecord || currentAssignment || null;
+            const propertyAddress = String(sharedAcceptedItem?.propertyAddress || snapshot.address || snapshot.propertyAddress || 'Property').trim() || 'Property';
+            const acceptedAt = sharedAcceptedItem?.acceptedAt > 0
+                ? new Date(sharedAcceptedItem.acceptedAt).toLocaleDateString()
+                : (assignmentRecord?.assignedAt ? new Date(assignmentRecord.assignedAt).toLocaleDateString() : 'Recently updated');
             const locationLabel = String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '-').trim() || '-';
             const priceLabel = String(snapshot.listPrice || '$0').trim() || '$0';
-            const assignedLabel = currentAssignment
-                ? buildAssignedByLabel(currentAssignment)
+            const assignedLabel = assignmentRecord
+                ? buildAssignedByLabel(assignmentRecord)
                 : 'Assigned user pending';
 
-            const entry = document.createElement('div');
+            const entry = document.createElement('button');
+            entry.type = 'button';
             entry.className = 'agent-note-link property-offer-accepted-entry';
 
             const head = document.createElement('div');
@@ -16047,11 +16054,22 @@ function initNavbarDateTime() {
             entry.appendChild(addressText);
             entry.appendChild(statusText);
             entry.appendChild(bodyText);
+            entry.addEventListener('click', () => {
+                persistSelectedPropertyDetail(buildDashboardPropertyDetailFallback(propertyAddress, normalizedStatus, snapshot));
+                activatePropertyTab('agent');
+            });
             agentOffersAcceptedList.appendChild(entry);
         }
 
         renderOfferNegotiator(persistedAssignment);
         renderAgentWorkspaceAcceptedOffer();
+        window.addEventListener('dashboard-data-updated', renderAgentWorkspaceAcceptedOffer);
+        window.addEventListener('property-assignment-updated', (event) => {
+            const changedPropertyKey = makePropertyStorageKey(event && event.detail && event.detail.propertyKey || '');
+            if (!changedPropertyKey || changedPropertyKey === '*' || changedPropertyKey === makePropertyStorageKey(propertyKey)) {
+                renderAgentWorkspaceAcceptedOffer();
+            }
+        });
 
         function initAgentWorkspaceEditor() {
             const editButton = document.getElementById('agent-workspace-edit-btn');
@@ -16157,10 +16175,10 @@ function initNavbarDateTime() {
         initAgentWorkspaceEditor();
 
         if (offerAcceptedToggleButton && piqAgentStatusSelect) {
-            offerAcceptedToggleButton.addEventListener('click', () => {
+            offerAcceptedToggleButton.addEventListener('change', () => {
                 const currentStatus = String(piqAgentStatusSelect.value || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
 
-                if (currentStatus === 'offer-accepted') {
+                if (!offerAcceptedToggleButton.checked || currentStatus === 'offer-accepted') {
                     const restoreStatus = String(offerAcceptedToggleButton.dataset.restoreStatus || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
                     piqAgentStatusSelect.value = Array.from(piqAgentStatusSelect.options).some((option) => option.value === restoreStatus)
                         ? restoreStatus
@@ -16215,6 +16233,7 @@ function initNavbarDateTime() {
                 persistSelectedPropertyDetail(detailData);
                 if (detailData.piqAgentStatus === 'offer-accepted') {
                     syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
+                    activatePropertyTab('agent');
                 }
                 syncCurrentAssignmentSnapshot();
                 renderAgentWorkspaceAcceptedOffer();

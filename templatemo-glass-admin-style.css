@@ -13615,38 +13615,93 @@ body.sidebar-collapsed .main-content {
 }
 
 .property-status-toggle-wrap {
-    display: flex;
+    display: inline-flex;
     align-items: flex-end;
-}
-
-.property-offer-toggle-btn {
+    gap: 10px;
     min-height: 46px;
-    padding: 0 18px;
+    padding: 0 10px 0 4px;
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.2));
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
 }
 
-.property-offer-toggle-btn:hover,
-.property-offer-toggle-btn:focus-visible {
+.property-status-toggle-wrap:hover,
+.property-status-toggle-wrap:focus-within {
     transform: translateY(-1px);
     border-color: rgba(255, 95, 109, 0.45);
-    color: var(--text-primary);
     background: linear-gradient(135deg, rgba(255, 95, 109, 0.16), rgba(255, 204, 51, 0.14));
     box-shadow: 0 12px 24px -18px rgba(255, 95, 109, 0.6);
 }
 
-.property-offer-toggle-btn.is-active {
+.property-offer-toggle-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.property-offer-toggle-track {
+    position: relative;
+    flex: 0 0 54px;
+    width: 54px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(15, 23, 42, 0.42);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.38);
+    transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.property-offer-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(226, 232, 240, 0.96));
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.3);
+    transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.property-offer-toggle-text {
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    transition: color var(--transition-fast);
+}
+
+.property-offer-toggle-input:focus-visible + .property-offer-toggle-track {
+    outline: 2px solid rgba(255, 204, 51, 0.55);
+    outline-offset: 2px;
+}
+
+.property-offer-toggle-input:checked + .property-offer-toggle-track {
     border-color: rgba(255, 95, 109, 0.55);
-    background: linear-gradient(135deg, rgba(255, 77, 93, 0.28), rgba(255, 204, 51, 0.2));
+    background: linear-gradient(135deg, rgba(255, 77, 93, 0.8), rgba(255, 204, 51, 0.74));
+    box-shadow: 0 10px 24px -16px rgba(255, 77, 93, 0.55);
+}
+
+.property-offer-toggle-input:checked + .property-offer-toggle-track::after {
+    transform: translateX(24px);
+    background: linear-gradient(180deg, #fff7ed, #ffffff);
+    box-shadow: 0 8px 18px rgba(255, 95, 109, 0.28);
+}
+
+.property-offer-toggle-input:checked ~ .property-offer-toggle-text {
     color: #fff7ed;
-    box-shadow: 0 16px 30px -18px rgba(255, 77, 93, 0.55);
+}
+
+@media (max-width: 768px) {
+    .property-status-toggle-wrap {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 10px 12px;
+    }
 }
 
 .property-status-label span {

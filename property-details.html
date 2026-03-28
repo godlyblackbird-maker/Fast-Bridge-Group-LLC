@@ -423,9 +423,11 @@
                     <option value="">Unassigned</option>
                 </select>
             </label>
-            <div class="property-status-toggle-wrap">
-                <button id="property-offer-accepted-toggle" type="button" class="property-offer-toggle-btn" aria-pressed="false">80% - Offer Accepted</button>
-            </div>
+            <label class="property-status-toggle-wrap" for="property-offer-accepted-toggle">
+                <input id="property-offer-accepted-toggle" class="property-offer-toggle-input" type="checkbox" role="switch" aria-label="80% - Offer Accepted toggle">
+                <span class="property-offer-toggle-track" aria-hidden="true"></span>
+                <span class="property-offer-toggle-text">80% - Offer Accepted</span>
+            </label>
         </section>
 
         <section class="glass-card property-tabs-card">
