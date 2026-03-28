@@ -13614,6 +13614,41 @@ body.sidebar-collapsed .main-content {
     width: min(360px, 100%);
 }
 
+.property-status-toggle-wrap {
+    display: flex;
+    align-items: flex-end;
+}
+
+.property-offer-toggle-btn {
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.2));
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.property-offer-toggle-btn:hover,
+.property-offer-toggle-btn:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(255, 95, 109, 0.45);
+    color: var(--text-primary);
+    background: linear-gradient(135deg, rgba(255, 95, 109, 0.16), rgba(255, 204, 51, 0.14));
+    box-shadow: 0 12px 24px -18px rgba(255, 95, 109, 0.6);
+}
+
+.property-offer-toggle-btn.is-active {
+    border-color: rgba(255, 95, 109, 0.55);
+    background: linear-gradient(135deg, rgba(255, 77, 93, 0.28), rgba(255, 204, 51, 0.2));
+    color: #fff7ed;
+    box-shadow: 0 16px 30px -18px rgba(255, 77, 93, 0.55);
+}
+
 .property-status-label span {
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -14808,6 +14843,15 @@ body.sidebar-collapsed .main-content {
 .agent-record-section strong {
     color: var(--text-primary);
     font-weight: 600;
+}
+
+#agent-workspace-offers-accepted-list {
+    margin-top: 10px;
+}
+
+.property-offer-accepted-entry {
+    width: 100%;
+    text-align: left;
 }
 
 .piq-image-block {

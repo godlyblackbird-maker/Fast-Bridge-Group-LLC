@@ -15943,6 +15943,10 @@ function initNavbarDateTime() {
         const propertyAssigneeSelect = document.getElementById('property-assignee-select');
         const agentCurrentStatusEl = document.getElementById('agent-current-status');
         const offerNegotiatorEl = document.getElementById('offer-negotiator-name');
+        const offerAcceptedToggleButton = document.getElementById('property-offer-accepted-toggle');
+        const agentOffersAcceptedSection = document.getElementById('agent-offers-accepted-section');
+        const agentOffersAcceptedList = document.getElementById('agent-workspace-offers-accepted-list');
+        const defaultAgentStatus = 'none';
 
         function getOfferNegotiatorName(assignmentLike) {
             const assignment = assignmentLike && typeof assignmentLike === 'object' ? assignmentLike : {};
@@ -15962,7 +15966,92 @@ function initNavbarDateTime() {
             offerNegotiatorEl.textContent = getOfferNegotiatorName(assignmentLike);
         }
 
+        function renderAgentWorkspaceAcceptedOffer() {
+            const normalizedStatus = String(detailData.piqAgentStatus || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
+            const isOfferAccepted = normalizedStatus === 'offer-accepted';
+
+            if (offerAcceptedToggleButton) {
+                offerAcceptedToggleButton.classList.toggle('is-active', isOfferAccepted);
+                offerAcceptedToggleButton.setAttribute('aria-pressed', isOfferAccepted ? 'true' : 'false');
+
+                if (!isOfferAccepted) {
+                    offerAcceptedToggleButton.dataset.restoreStatus = normalizedStatus;
+                }
+            }
+
+            if (agentOffersAcceptedSection) {
+                agentOffersAcceptedSection.hidden = !isOfferAccepted;
+            }
+
+            if (!agentOffersAcceptedList) {
+                return;
+            }
+
+            agentOffersAcceptedList.innerHTML = '';
+
+            if (!isOfferAccepted) {
+                agentOffersAcceptedList.innerHTML = '<p class="outreach-empty">No accepted offers in this tab yet.</p>';
+                return;
+            }
+
+            const currentAssignment = getPropertyAssignmentRecord(propertyKey);
+            const snapshot = {
+                ...detailData,
+                propertyAssignment: currentAssignment?.assignedTo
+                    ? {
+                        assignedTo: currentAssignment.assignedTo,
+                        assignedBy: currentAssignment.assignedBy,
+                        assignedAt: currentAssignment.assignedAt
+                    }
+                    : detailData.propertyAssignment
+            };
+            const propertyAddress = String(snapshot.address || snapshot.propertyAddress || 'Property').trim() || 'Property';
+            const acceptedAt = currentAssignment?.assignedAt
+                ? new Date(currentAssignment.assignedAt).toLocaleDateString()
+                : 'Recently updated';
+            const locationLabel = String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '-').trim() || '-';
+            const priceLabel = String(snapshot.listPrice || '$0').trim() || '$0';
+            const assignedLabel = currentAssignment
+                ? buildAssignedByLabel(currentAssignment)
+                : 'Assigned user pending';
+
+            const entry = document.createElement('div');
+            entry.className = 'agent-note-link property-offer-accepted-entry';
+
+            const head = document.createElement('div');
+            head.className = 'agent-note-link-head';
+
+            const acceptedLabel = document.createElement('span');
+            acceptedLabel.className = 'agent-note-link-agent';
+            acceptedLabel.textContent = 'Accepted Offer';
+
+            const timeText = document.createElement('span');
+            timeText.className = 'agent-note-link-time';
+            timeText.textContent = acceptedAt;
+
+            const addressText = document.createElement('p');
+            addressText.className = 'agent-note-link-address';
+            addressText.textContent = propertyAddress;
+
+            const statusText = document.createElement('p');
+            statusText.className = 'agent-note-link-status';
+            statusText.textContent = `Agent Status: ${formatAgentStatusLabel(normalizedStatus)}`;
+
+            const bodyText = document.createElement('p');
+            bodyText.className = 'agent-note-link-body';
+            bodyText.textContent = `${locationLabel} • ${priceLabel} • ${assignedLabel}`;
+
+            head.appendChild(acceptedLabel);
+            head.appendChild(timeText);
+            entry.appendChild(head);
+            entry.appendChild(addressText);
+            entry.appendChild(statusText);
+            entry.appendChild(bodyText);
+            agentOffersAcceptedList.appendChild(entry);
+        }
+
         renderOfferNegotiator(persistedAssignment);
+        renderAgentWorkspaceAcceptedOffer();
 
         function initAgentWorkspaceEditor() {
             const editButton = document.getElementById('agent-workspace-edit-btn');
@@ -16067,14 +16156,35 @@ function initNavbarDateTime() {
         initAgentWorkspaceControls();
         initAgentWorkspaceEditor();
 
-        if (piqAgentStatusSelect) {
-            const defaultStatus = 'none';
-            const persistedStatus = getPersistedPiqStatus();
-            const savedStatus = String(persistedStatus || detailData.piqAgentStatus || defaultStatus);
-            const hasSavedOption = Array.from(piqAgentStatusSelect.options).some(option => option.value === savedStatus);
-            piqAgentStatusSelect.value = hasSavedOption ? savedStatus : defaultStatus;
+        if (offerAcceptedToggleButton && piqAgentStatusSelect) {
+            offerAcceptedToggleButton.addEventListener('click', () => {
+                const currentStatus = String(piqAgentStatusSelect.value || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
 
-            detailData.piqAgentStatus = piqAgentStatusSelect.value || defaultStatus;
+                if (currentStatus === 'offer-accepted') {
+                    const restoreStatus = String(offerAcceptedToggleButton.dataset.restoreStatus || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
+                    piqAgentStatusSelect.value = Array.from(piqAgentStatusSelect.options).some((option) => option.value === restoreStatus)
+                        ? restoreStatus
+                        : defaultAgentStatus;
+                } else {
+                    offerAcceptedToggleButton.dataset.restoreStatus = currentStatus;
+                    piqAgentStatusSelect.value = 'offer-accepted';
+                }
+
+                piqAgentStatusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+                if (String(piqAgentStatusSelect.value || '').trim().toLowerCase() === 'offer-accepted') {
+                    activatePropertyTab('agent');
+                }
+            });
+        }
+
+        if (piqAgentStatusSelect) {
+            const persistedStatus = getPersistedPiqStatus();
+            const savedStatus = String(persistedStatus || detailData.piqAgentStatus || defaultAgentStatus);
+            const hasSavedOption = Array.from(piqAgentStatusSelect.options).some(option => option.value === savedStatus);
+            piqAgentStatusSelect.value = hasSavedOption ? savedStatus : defaultAgentStatus;
+
+            detailData.piqAgentStatus = piqAgentStatusSelect.value || defaultAgentStatus;
             detailData.agentRecord = {
                 ...(detailData.agentRecord || {}),
                 agentStatus: formatAgentStatusLabel(detailData.piqAgentStatus)
@@ -16085,13 +16195,14 @@ function initNavbarDateTime() {
             if (detailData.piqAgentStatus === 'offer-accepted') {
                 syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
             }
+            renderAgentWorkspaceAcceptedOffer();
 
             if (agentCurrentStatusEl) {
-                agentCurrentStatusEl.textContent = formatAgentStatusLabel(piqAgentStatusSelect.value || defaultStatus);
+                agentCurrentStatusEl.textContent = formatAgentStatusLabel(piqAgentStatusSelect.value || defaultAgentStatus);
             }
 
             piqAgentStatusSelect.addEventListener('change', () => {
-                detailData.piqAgentStatus = piqAgentStatusSelect.value || defaultStatus;
+                detailData.piqAgentStatus = piqAgentStatusSelect.value || defaultAgentStatus;
                 detailData.agentRecord = {
                     ...(detailData.agentRecord || {}),
                     agentStatus: formatAgentStatusLabel(detailData.piqAgentStatus)
@@ -16106,6 +16217,7 @@ function initNavbarDateTime() {
                     syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
                 }
                 syncCurrentAssignmentSnapshot();
+                renderAgentWorkspaceAcceptedOffer();
             });
         }
 
@@ -16147,6 +16259,7 @@ function initNavbarDateTime() {
                             }
                             syncAssignmentIntoLocalDealCache(propertyKey, null, workspaceUser);
                             renderOfferNegotiator(null);
+                            renderAgentWorkspaceAcceptedOffer();
                             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
                             showDashboardToast('success', 'Property Unassigned', 'This property is no longer assigned to a user.');
                             return;
@@ -16181,6 +16294,7 @@ function initNavbarDateTime() {
                         }
                         syncAssignmentIntoLocalDealCache(propertyKey, persistedRecord || assignmentRecord, workspaceUser);
                         renderOfferNegotiator(persistedRecord);
+                        renderAgentWorkspaceAcceptedOffer();
                         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
                         showDashboardToast('success', 'Property Assigned', `${assignmentRecord.propertyAddress} was assigned to ${selectedUser.name}.`);
                     } catch (error) {
@@ -16198,6 +16312,7 @@ function initNavbarDateTime() {
                         syncAssignmentIntoLocalDealCache(propertyKey, previousAssignment || null, workspaceUser);
                         propertyAssigneeSelect.value = previousAssignedKey;
                         renderOfferNegotiator(previousAssignment);
+                        renderAgentWorkspaceAcceptedOffer();
                         showDashboardToast('error', 'Assignment Failed', String(error && error.message || 'Unable to save the property assignment.'));
                     } finally {
                         propertyAssigneeSelect.disabled = false;

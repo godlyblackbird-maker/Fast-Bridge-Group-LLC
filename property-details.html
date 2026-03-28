@@ -423,6 +423,9 @@
                     <option value="">Unassigned</option>
                 </select>
             </label>
+            <div class="property-status-toggle-wrap">
+                <button id="property-offer-accepted-toggle" type="button" class="property-offer-toggle-btn" aria-pressed="false">80% - Offer Accepted</button>
+            </div>
         </section>
 
         <section class="glass-card property-tabs-card">
@@ -1024,6 +1027,14 @@
                             <p>Average Deals Per Year: <strong id="agent-average-deals-per-year">3</strong></p>
                             <p>Double Ended: <strong id="agent-double-ended">0</strong></p>
                             <p>Investor Source: <strong id="agent-investor-source">0</strong></p>
+                        </div>
+
+                        <div id="agent-offers-accepted-section" class="agent-record-section" hidden>
+                            <h4>Offers Accepted</h4>
+                            <p class="agent-note-help">This property appears here when the Offer Accepted toggle is on.</p>
+                            <div id="agent-workspace-offers-accepted-list" class="agent-notes-dashboard-list">
+                                <p class="outreach-empty">No accepted offers in this tab yet.</p>
+                            </div>
                         </div>
 
                         <div class="agent-record-section">
