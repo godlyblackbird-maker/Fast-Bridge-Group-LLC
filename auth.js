@@ -651,7 +651,7 @@
     const link = document.createElement('a');
     link.href = 'mls-imports-spreadsheet.html';
     link.className = isActive ? 'nav-link active' : 'nav-link';
-    link.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/><path d="M9 3v6h6"/><path d="M9 3l6 6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>MLS Spreadsheet';
+    link.innerHTML = '<span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>MLS Spreadsheet';
     listItem.appendChild(link);
     return listItem;
   }
@@ -683,21 +683,32 @@
 
     const navMenus = document.querySelectorAll('.nav-section > ul');
     navMenus.forEach((menu) => {
-      if (!menu || menu.querySelector('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]')) {
+      if (!menu) {
         return;
       }
 
-      const mlsSearchItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
-        const link = item.querySelector('.nav-link[href="mls-search.html"], .nav-link[href="/mls-search.html"]');
+      const settingsItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="settings.html"], .nav-link[href="/settings.html"]');
         return Boolean(link);
       });
 
-      if (!mlsSearchItem) {
+      let spreadsheetItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
+        return Boolean(link);
+      });
+
+      if (!spreadsheetItem) {
+        spreadsheetItem = createMlsSpreadsheetNavItem(isSpreadsheetPage);
+      }
+
+      if (settingsItem && spreadsheetItem !== settingsItem) {
+        menu.insertBefore(spreadsheetItem, settingsItem);
         return;
       }
 
-      const spreadsheetItem = createMlsSpreadsheetNavItem(isSpreadsheetPage);
-      mlsSearchItem.insertAdjacentElement('afterend', spreadsheetItem);
+      if (!menu.contains(spreadsheetItem)) {
+        menu.appendChild(spreadsheetItem);
+      }
     });
 
     existingLinks.forEach((link) => {

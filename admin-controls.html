@@ -347,137 +347,6 @@
             max-width: 62ch;
             color: rgba(226, 232, 240, 0.76);
         }
-        
-        .admin-mls-import-card {
-            grid-column: span 12;
-            padding: 28px;
-            background:
-                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.2), transparent 26%),
-                radial-gradient(circle at bottom left, rgba(var(--accent-rgb), 0.14), transparent 30%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
-                var(--glass-bg);
-        }
-        
-        .admin-mls-import-card .card-header {
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 22px;
-            margin-bottom: 20px;
-        }
-        
-        .admin-mls-import-copy {
-            display: grid;
-            gap: 12px;
-            max-width: 720px;
-        }
-        
-        .admin-mls-import-card .card-title {
-            font-size: clamp(1.5rem, 2.2vw, 2.15rem);
-            letter-spacing: -0.04em;
-        }
-        
-        .admin-mls-import-card .card-subtitle {
-            font-size: 15px;
-            line-height: 1.7;
-            max-width: 68ch;
-        }
-        
-        .admin-mls-import-cta {
-            min-width: 180px;
-            min-height: 52px;
-            padding: 0 22px;
-            border-radius: 16px;
-            align-self: center;
-            box-shadow: 0 20px 34px -24px rgba(var(--accent-rgb), 0.72);
-        }
-        
-        .admin-mls-import-layout {
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
-            gap: 20px;
-            align-items: stretch;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .admin-mls-import-panel,
-        .admin-mls-import-notes {
-            border: 1px solid rgba(var(--accent-light-rgb), 0.14);
-            border-radius: 22px;
-            background: rgba(255, 255, 255, 0.05);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-        }
-        
-        .admin-mls-import-panel {
-            padding: 22px;
-            display: grid;
-            gap: 18px;
-        }
-        
-        .admin-mls-import-kicker {
-            margin: 0;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: rgba(226, 232, 240, 0.68);
-        }
-        
-        .admin-mls-import-feature-list {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-        
-        .admin-mls-import-feature {
-            padding: 14px 16px;
-            border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(2, 6, 23, 0.22);
-        }
-        
-        .admin-mls-import-feature strong {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 13px;
-            color: rgba(248, 250, 252, 0.96);
-        }
-        
-        .admin-mls-import-feature span,
-        .admin-mls-import-notes p {
-            color: rgba(226, 232, 240, 0.72);
-            font-size: 13px;
-            line-height: 1.65;
-        }
-        
-        .admin-mls-import-notes {
-            padding: 22px;
-            display: grid;
-            gap: 14px;
-            align-content: start;
-        }
-        
-        .admin-mls-import-chip-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .admin-mls-import-chip {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 34px;
-            padding: 0 12px;
-            border-radius: 999px;
-            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
-            background: rgba(var(--accent-rgb), 0.12);
-            color: rgba(248, 250, 252, 0.9);
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
 
         .admin-section-note {
             margin: 0;
@@ -501,14 +370,6 @@
             .admin-control-panel[data-span="6"],
             .admin-control-panel[data-span="8"] {
                 grid-column: span 12;
-            }
-            
-            .admin-mls-import-layout {
-                grid-template-columns: minmax(0, 1fr);
-            }
-            
-            .admin-mls-import-feature-list {
-                grid-template-columns: minmax(0, 1fr);
             }
         }
 
@@ -665,53 +526,6 @@
                     </div>
                     <div id="admin-smtp-requests-list" class="outreach-list">
                         <p class="outreach-empty">No Gmail outbox requests loaded yet.</p>
-                    </div>
-                </div>
-
-                <div id="mls-imports-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel admin-mls-import-card" data-span="12" data-widget-id="mls-imports-spreadsheet" data-widget-title="MLS Spreadsheet" style="--panel-index:4;">
-                    <span class="admin-panel-accent" aria-hidden="true"></span>
-                    <div class="card-header">
-                        <div class="admin-mls-import-copy">
-                            <div class="admin-panel-eyebrow">Investor Intake</div>
-                            <h2 class="card-title">MLS Spreadsheet</h2>
-                            <p class="card-subtitle">Open the dedicated MLS intake board to track imported properties, ownership, follow-up status, and deal notes without losing the thread between admins and agents.</p>
-                        </div>
-                        <a href="mls-imports-spreadsheet.html" class="card-btn active admin-mls-import-cta">Open MLS Spreadsheet</a>
-                    </div>
-                    <div class="admin-mls-import-layout">
-                        <section class="admin-mls-import-panel" aria-label="MLS import workflow overview">
-                            <p class="admin-mls-import-kicker">What Lives In The Sheet</p>
-                            <div class="admin-mls-import-feature-list">
-                                <div class="admin-mls-import-feature">
-                                    <strong>Property Identity</strong>
-                                    <span>MLS number, address, import source, and market details stay tied together for each row.</span>
-                                </div>
-                                <div class="admin-mls-import-feature">
-                                    <strong>Assignment Control</strong>
-                                    <span>Track which user owns the follow-up so imported inventory does not get stranded between teammates.</span>
-                                </div>
-                                <div class="admin-mls-import-feature">
-                                    <strong>Status Tracking</strong>
-                                    <span>Keep the current stage visible with status and notes instead of bouncing between pages.</span>
-                                </div>
-                                <div class="admin-mls-import-feature">
-                                    <strong>Admin Follow-Through</strong>
-                                    <span>Centralize intake notes so imports, outreach, and next actions stay readable in one workflow.</span>
-                                </div>
-                            </div>
-                        </section>
-                        <aside class="admin-mls-import-notes" aria-label="MLS import sheet summary">
-                            <p class="admin-mls-import-kicker">Use This Sheet To Log</p>
-                            <div class="admin-mls-import-chip-row">
-                                <span class="admin-mls-import-chip">MLS Number</span>
-                                <span class="admin-mls-import-chip">Address</span>
-                                <span class="admin-mls-import-chip">Import Source</span>
-                                <span class="admin-mls-import-chip">Assigned User</span>
-                                <span class="admin-mls-import-chip">Status</span>
-                                <span class="admin-mls-import-chip">Notes</span>
-                            </div>
-                            <p>Use this sheet to log MLS number, address, import source, assigned user, status, and notes in one place. It is built to be the intake handoff layer before properties move deeper into outreach or underwriting.</p>
-                        </aside>
                     </div>
                 </div>
 
