@@ -820,7 +820,7 @@
                     <div class="buyers-sheet-template-header">
                         <div>
                             <h3 id="mls-imports-template-title" class="buyers-sheet-template-title">Copy Templates</h3>
-                            <p class="buyers-sheet-template-subtitle">Pick a status, edit the message body, and decide whether the generator should add your name and the automatic good morning/afternoon/evening/night close.</p>
+                            <p class="buyers-sheet-template-subtitle">Pick a status and edit the full message, including the opening line and the automatic good morning/afternoon/evening/night close.</p>
                         </div>
                         <button type="button" class="buyers-sheet-template-close" data-template-close="true" aria-label="Close template manager">×</button>
                     </div>
@@ -836,15 +836,11 @@
                             </select>
                         </label>
                         <label class="buyers-sheet-template-toggle">
-                            <input id="mls-imports-template-include-name" type="checkbox">
-                            <span>Include My Name</span>
-                        </label>
-                        <label class="buyers-sheet-template-toggle">
                             <input id="mls-imports-template-include-time" type="checkbox">
                             <span>Add Good Time Of Day</span>
                         </label>
                     </div>
-                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {timeGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. If you leave it out, the generator adds it at the end.</p>
+                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. If you leave it out, the generator adds it at the end.</p>
                     <label class="buyers-sheet-template-field">
                         <span class="buyers-sheet-template-field-label">Template Body</span>
                         <textarea id="mls-imports-template-body" class="buyers-sheet-template-textarea" spellcheck="true"></textarea>
@@ -975,7 +971,6 @@
             const progressText = document.getElementById('mls-imports-progress-text');
             const templateModal = document.getElementById('mls-imports-template-modal');
             const templateStatusSelect = document.getElementById('mls-imports-template-status');
-            const templateIncludeNameToggle = document.getElementById('mls-imports-template-include-name');
             const templateIncludeTimeToggle = document.getElementById('mls-imports-template-include-time');
             const templateBodyInput = document.getElementById('mls-imports-template-body');
             const templatePreview = document.getElementById('mls-imports-template-preview');
@@ -995,12 +990,19 @@
                 { key: 'hold', label: 'Hold' },
                 { key: 'off-market', label: 'Off Market' }
             ];
-            const TEMPLATE_DEFAULT_BODIES = {
+            const TEMPLATE_LEGACY_DEFAULT_BODIES = {
                 active: 'saw {propertyAddress} and wanted to reach out directly. I am actively buying in that area, can close quickly, and I am happy to let you represent me. If the seller is open to a cash offer, I would love to take a look.',
                 pending: 'saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list.',
                 'active-under-contract': 'saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list.',
                 hold: 'checking in on {propertyAddress}. If the seller is still weighing options, I can make a clean cash offer and move quickly if that helps get the deal done.',
                 'off-market': 'checking in on {propertyAddress}. If it is still off market and the seller is open to a direct cash option, I would love to take a look and move quickly.'
+            };
+            const TEMPLATE_DEFAULT_BODIES = {
+                active: 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} and wanted to reach out directly. I am actively buying in that area, can close quickly, and I am happy to let you represent me. If the seller is open to a cash offer, I would love to take a look. {timeGreeting}',
+                pending: 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list. {timeGreeting}',
+                'active-under-contract': 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list. {timeGreeting}',
+                hold: 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. Checking in on {propertyAddress}. If the seller is still weighing options, I can make a clean cash offer and move quickly if that helps get the deal done. {timeGreeting}',
+                'off-market': 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. Checking in on {propertyAddress}. If it is still off market and the seller is open to a direct cash option, I would love to take a look and move quickly. {timeGreeting}'
             };
 
             function getAuthToken() {
@@ -1111,10 +1113,28 @@
             function buildDefaultTemplateSettings() {
                 return {
                     selectedStatus: 'active',
-                    includeUserName: true,
                     includeTimeOfDay: true,
                     templates: { ...TEMPLATE_DEFAULT_BODIES }
                 };
+            }
+
+            function upgradeManagedTemplateBody(value, templateStatusKey) {
+                const normalized = normalizeCellValue(value);
+                const fallback = TEMPLATE_DEFAULT_BODIES[templateStatusKey] || TEMPLATE_DEFAULT_BODIES.active;
+
+                if (!normalized) {
+                    return fallback;
+                }
+
+                if (normalized === (TEMPLATE_LEGACY_DEFAULT_BODIES[templateStatusKey] || '')) {
+                    return fallback;
+                }
+
+                if (/^(hi|hey)\b/i.test(normalized) || /\{senderName\}/.test(normalized)) {
+                    return normalized;
+                }
+
+                return `Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. ${normalized}`;
             }
 
             function normalizeTemplateSettings(value) {
@@ -1126,12 +1146,11 @@
                 const templates = {};
 
                 TEMPLATE_STATUS_OPTIONS.forEach((option) => {
-                    templates[option.key] = normalizeCellValue(templateSource[option.key]) || defaults.templates[option.key];
+                    templates[option.key] = upgradeManagedTemplateBody(templateSource[option.key] || defaults.templates[option.key], option.key);
                 });
 
                 return {
                     selectedStatus: normalizeTemplateStatusKey(source.selectedStatus),
-                    includeUserName: source.includeUserName !== false,
                     includeTimeOfDay: source.includeTimeOfDay !== false,
                     templates
                 };
@@ -1141,7 +1160,6 @@
                 const normalized = normalizeTemplateSettings(value);
                 return {
                     selectedStatus: normalized.selectedStatus,
-                    includeUserName: normalized.includeUserName,
                     includeTimeOfDay: normalized.includeTimeOfDay,
                     templates: { ...normalized.templates }
                 };
@@ -1352,7 +1370,7 @@
             }
 
             function replaceTemplateTokens(value, replacements) {
-                return String(value || '').replace(/\{(propertyAddress|status|agentFirstName|agentName|timeGreeting)\}/g, (match, key) => {
+                return String(value || '').replace(/\{(propertyAddress|status|agentFirstName|agentName|senderName|timeGreeting)\}/g, (match, key) => {
                     return Object.prototype.hasOwnProperty.call(replacements, key) ? replacements[key] : match;
                 });
             }
@@ -1365,7 +1383,7 @@
                 const rawStatus = normalizeCellValue(rowData && rowData.status)
                     || TEMPLATE_STATUS_OPTIONS.find((option) => option.key === templateStatusKey)?.label
                     || 'Active';
-                const bodyTemplate = normalizeCellValue(settings.templates[templateStatusKey]) || TEMPLATE_DEFAULT_BODIES[templateStatusKey];
+                const bodyTemplate = upgradeManagedTemplateBody(settings.templates[templateStatusKey] || TEMPLATE_DEFAULT_BODIES[templateStatusKey], templateStatusKey);
                 const includesTimeGreetingToken = /\{timeGreeting\}/.test(String(bodyTemplate || ''));
                 const timeGreeting = settings.includeTimeOfDay ? getTimeGreetingSentence() : '';
                 const body = replaceTemplateTokens(bodyTemplate, {
@@ -1373,21 +1391,15 @@
                     status: rawStatus,
                     agentFirstName,
                     agentName: laName || agentFirstName,
+                    senderName: getCurrentUserFullName(),
                     timeGreeting
                 }).replace(/\s+([,!.?])/g, '$1').trim();
-                const parts = [`Hi ${agentFirstName},`];
 
-                if (settings.includeUserName) {
-                    parts.push(`I am ${getCurrentUserFullName()}, an investor/cash buyer.`);
-                }
-                if (body) {
-                    parts.push(body);
-                }
-                if (settings.includeTimeOfDay && !includesTimeGreetingToken) {
-                    parts.push(timeGreeting);
+                if (settings.includeTimeOfDay && !includesTimeGreetingToken && timeGreeting) {
+                    return `${body} ${timeGreeting}`.replace(/\s+([,!.?])/g, '$1').trim();
                 }
 
-                return parts.join(' ').replace(/\s+([,!.?])/g, '$1').trim();
+                return body;
             }
 
             function getTemplatePreviewRowData() {
@@ -1400,7 +1412,7 @@
             }
 
             function renderTemplateManager() {
-                if (!templateModal || !templateStatusSelect || !templateIncludeNameToggle || !templateIncludeTimeToggle || !templateBodyInput || !templatePreview) {
+                if (!templateModal || !templateStatusSelect || !templateIncludeTimeToggle || !templateBodyInput || !templatePreview) {
                     return;
                 }
 
@@ -1409,7 +1421,6 @@
                 const previewRow = getTemplatePreviewRowData();
 
                 templateStatusSelect.value = activeStatusKey;
-                templateIncludeNameToggle.checked = settings.includeUserName;
                 templateIncludeTimeToggle.checked = settings.includeTimeOfDay;
                 templateBodyInput.value = settings.templates[activeStatusKey] || TEMPLATE_DEFAULT_BODIES[activeStatusKey];
                 templatePreview.textContent = buildManagedTemplate({
@@ -2106,7 +2117,7 @@
                 showToast('success', 'Spreadsheet Cleared', 'All MLS Imports spreadsheet rows were removed.');
             });
 
-            if (copyTemplatesButton && templateModal && templateStatusSelect && templateIncludeNameToggle && templateIncludeTimeToggle && templateBodyInput && templatePreview && templateSaveButton && templateResetButton) {
+            if (copyTemplatesButton && templateModal && templateStatusSelect && templateIncludeTimeToggle && templateBodyInput && templatePreview && templateSaveButton && templateResetButton) {
                 copyTemplatesButton.addEventListener('click', openTemplateManager);
 
                 templateCloseButtons.forEach((button) => {
@@ -2116,12 +2127,6 @@
                 templateStatusSelect.addEventListener('change', () => {
                     draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
                     draftTemplateSettings.selectedStatus = normalizeTemplateStatusKey(templateStatusSelect.value);
-                    renderTemplateManager();
-                });
-
-                templateIncludeNameToggle.addEventListener('change', () => {
-                    draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
-                    draftTemplateSettings.includeUserName = Boolean(templateIncludeNameToggle.checked);
                     renderTemplateManager();
                 });
 
