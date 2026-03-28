@@ -26,7 +26,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const DEFAULT_THEME_LOGO_PATH = 'png photos/FAST LOGO 777.png';
     const THEME_LOGO_PATHS = {
         christmas: 'png photos/Christmas Theme Mode Logo.png',
-        holloween: 'png photos/Holloween Theme Mode Logo.png',
+        holloween: 'png photos/New Holloween Logo.png',
         japan: 'png photos/Japan Theme Mode Logo.png'
     };
     const THEME_LOGO_SELECTOR = 'img.logo-img, img.ecard-logo-image, img.flyer-logo-image';

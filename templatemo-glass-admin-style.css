@@ -2982,18 +2982,6 @@ a {
     mask-size: contain;
 }
 
-.nav-icon-mls-spreadsheet {
-    background-color: currentColor;
-    -webkit-mask-image: url("Symbols/MLS%20SPREAD%20SHEET.svg");
-    mask-image: url("Symbols/MLS%20SPREAD%20SHEET.svg");
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    mask-position: center;
-    -webkit-mask-size: contain;
-    mask-size: contain;
-}
-
 .nav-link.active .nav-icon,
 .nav-link:hover .nav-icon {
     opacity: 1;
