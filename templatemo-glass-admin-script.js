@@ -6745,6 +6745,26 @@ function initNavbarDateTime() {
                 .sort((left, right) => getPlannerPriorityRank(left.priority) - getPlannerPriorityRank(right.priority))[0]?.priority || 'p2';
         }
 
+        function getCalendarPreviewLabel(plannerItems) {
+            const items = Array.isArray(plannerItems) ? plannerItems : [];
+            if (items.length === 0) {
+                return '';
+            }
+
+            const previewItems = items.slice(0, 3).map((item) => {
+                const stateLabel = item && item.completed ? 'Done' : 'Open';
+                const title = String(item && item.title || 'Task').trim() || 'Task';
+                return `${stateLabel}: ${title}`;
+            });
+            const remainder = items.length - previewItems.length;
+
+            if (remainder > 0) {
+                previewItems.push(`+${remainder} more`);
+            }
+
+            return previewItems.join(' | ');
+        }
+
         function syncPlannerDateSelection() {
             window.dispatchEvent(new CustomEvent('calendar-planner-date-change', {
                 detail: {
@@ -6813,9 +6833,49 @@ function initNavbarDateTime() {
                 if (dayPriority) {
                     button.classList.add(`calendar-day-priority-${dayPriority}`);
                 }
+
+                const preview = document.createElement('div');
+                preview.className = 'calendar-day-preview';
+
+                const previewTitle = document.createElement('p');
+                previewTitle.className = 'calendar-day-preview-title';
+                previewTitle.textContent = `${plannerItems.length} task${plannerItems.length === 1 ? '' : 's'}`;
+                preview.appendChild(previewTitle);
+
+                const previewList = document.createElement('div');
+                previewList.className = 'calendar-day-preview-list';
+
+                plannerItems.slice(0, 3).forEach((item) => {
+                    const previewItem = document.createElement('p');
+                    previewItem.className = `calendar-day-preview-item${item && item.completed ? ' is-complete' : ''}`;
+                    previewItem.textContent = String(item && item.title || 'Task').trim() || 'Task';
+                    previewList.appendChild(previewItem);
+                });
+
+                if (plannerItems.length > 3) {
+                    const previewMore = document.createElement('p');
+                    previewMore.className = 'calendar-day-preview-more';
+                    previewMore.textContent = `+${plannerItems.length - 3} more`;
+                    previewList.appendChild(previewMore);
+                }
+
+                preview.appendChild(previewList);
+                button.appendChild(preview);
+                button.setAttribute('title', getCalendarPreviewLabel(plannerItems));
             }
 
-            button.innerHTML = `<span class="calendar-day-number">${date.getDate()}</span>${plannerItems.length > 0 ? `<span class="calendar-event-count">${plannerItems.length}</span>` : ''}`;
+            const dayNumber = document.createElement('span');
+            dayNumber.className = 'calendar-day-number';
+            dayNumber.textContent = String(date.getDate());
+            button.appendChild(dayNumber);
+
+            if (plannerItems.length > 0) {
+                const count = document.createElement('span');
+                count.className = 'calendar-event-count';
+                count.textContent = String(plannerItems.length);
+                button.appendChild(count);
+            }
+
             button.addEventListener('click', () => {
                 if (!inCurrentMonth) {
                     currentMonth = new Date(date.getFullYear(), date.getMonth(), 1);
