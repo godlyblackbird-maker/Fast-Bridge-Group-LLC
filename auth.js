@@ -644,6 +644,18 @@
     return normalizedPath === '/mls-imports-spreadsheet.html' || normalizedPath.endsWith('/mls-imports-spreadsheet.html');
   }
 
+  function createMlsSpreadsheetNavItem(isActive) {
+    const listItem = document.createElement('li');
+    listItem.className = 'nav-item';
+
+    const link = document.createElement('a');
+    link.href = 'mls-imports-spreadsheet.html';
+    link.className = isActive ? 'nav-link active' : 'nav-link';
+    link.innerHTML = '<span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>MLS Spreadsheet';
+    listItem.appendChild(link);
+    return listItem;
+  }
+
   function applyMlsSpreadsheetAccess(userLike) {
     const hasKnownRole = !!String(userLike && userLike.role || '').trim();
     const isTest = isTestUser(userLike);
@@ -668,6 +680,42 @@
 
       return true;
     }
+
+    const navMenus = document.querySelectorAll('.nav-section > ul');
+    navMenus.forEach((menu) => {
+      if (!menu) {
+        return;
+      }
+
+      const navSection = menu.closest('.nav-section');
+      const sectionTitle = navSection ? String(navSection.querySelector('.nav-section-title')?.textContent || '').trim().toLowerCase() : '';
+      if (sectionTitle !== 'main menu') {
+        return;
+      }
+
+      const settingsItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="settings.html"], .nav-link[href="/settings.html"]');
+        return Boolean(link);
+      });
+
+      let spreadsheetItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
+        return Boolean(link);
+      });
+
+      if (!spreadsheetItem) {
+        spreadsheetItem = createMlsSpreadsheetNavItem(isSpreadsheetPage);
+      }
+
+      if (settingsItem && spreadsheetItem !== settingsItem) {
+        menu.insertBefore(spreadsheetItem, settingsItem);
+        return;
+      }
+    });
+
+    document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]').forEach((link) => {
+      link.classList.toggle('active', isSpreadsheetPage);
+    });
 
     const backLink = document.getElementById('mls-spreadsheet-back-link');
     if (backLink && !isAdminUser(userLike)) {
