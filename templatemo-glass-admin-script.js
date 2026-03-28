@@ -134,6 +134,30 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         { reference: 'Galatians 6:7', text: 'Do not be deceived: God is not mocked, for whatever one sows, that will he also reap.' },
         { reference: 'Psalm 1:6', text: 'The Lord knows the way of the righteous, but the way of the wicked will perish.' }
     ];
+    const BIBLE_VERSE_API_KEY = String(window.FAST_BIBLE_API_KEY || localStorage.getItem('fastBibleApiKey') || '').trim();
+    const BIBLE_VERSE_API_BIBLE_ID = '61fd76eafa1577c2-02';
+    const BIBLE_VERSE_IDS = [
+        'JER.29.11',
+        'PSA.23',
+        '1COR.4.4-8',
+        'PHP.4.13',
+        'JHN.3.16',
+        'ROM.8.28',
+        'ISA.41.10',
+        'PSA.46.1',
+        'GAL.5.22-23',
+        'HEB.11.1',
+        '2TI.1.7',
+        '1COR.10.13',
+        'PRO.22.6',
+        'ISA.40.31',
+        'JOS.1.9',
+        'HEB.12.2',
+        'MAT.11.28',
+        'ROM.10.9-10',
+        'PHP.2.3-4',
+        'MAT.5.43-44'
+    ];
     const themeLogoPreloadPromises = new Map();
     let themeAwareLogosInitialized = false;
     let themeLogoObserver = null;
@@ -7574,12 +7598,60 @@ function initNavbarDateTime() {
         const startOfYear = new Date(now.getFullYear(), 0, 0);
         const oneDayMs = 24 * 60 * 60 * 1000;
         const dayOfYear = Math.floor((now - startOfYear) / oneDayMs);
-        const dailyIndex = (now.getFullYear() * 366 + dayOfYear) % BIBLE_MEMORY_VERSES.length;
-        const dailyVerse = BIBLE_MEMORY_VERSES[dailyIndex];
-
-        verseTextEl.textContent = dailyVerse.text;
-        verseReferenceEl.textContent = dailyVerse.reference;
         dateLabelEl.textContent = `Verse for ${now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}`;
+
+        const fallbackIndex = (now.getFullYear() * 366 + dayOfYear) % BIBLE_MEMORY_VERSES.length;
+        const fallbackVerse = BIBLE_MEMORY_VERSES[fallbackIndex];
+        const apiVerseIndex = (now.getFullYear() * 366 + dayOfYear) % BIBLE_VERSE_IDS.length;
+        const apiVerseId = BIBLE_VERSE_IDS[apiVerseIndex];
+
+        function applyVerse(reference, text) {
+            verseTextEl.textContent = String(text || fallbackVerse.text).trim() || fallbackVerse.text;
+            verseReferenceEl.textContent = String(reference || fallbackVerse.reference).trim() || fallbackVerse.reference;
+        }
+
+        function stripHtml(value) {
+            const helper = document.createElement('div');
+            helper.innerHTML = String(value || '');
+            return String(helper.textContent || helper.innerText || '').replace(/\s+/g, ' ').trim();
+        }
+
+        async function loadApiVerse() {
+            if (!BIBLE_VERSE_API_KEY || !apiVerseId) {
+                applyVerse(fallbackVerse.reference, fallbackVerse.text);
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `https://api.scripture.api.bible/v1/bibles/${encodeURIComponent(BIBLE_VERSE_API_BIBLE_ID)}/verses/${encodeURIComponent(apiVerseId)}?content-type=html&include-notes=false&include-titles=false&include-chapter-numbers=false&include-verse-numbers=false&include-verse-spans=false`,
+                    {
+                        headers: {
+                            'api-key': BIBLE_VERSE_API_KEY
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Bible API request failed with status ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const verseData = payload && payload.data && typeof payload.data === 'object' ? payload.data : {};
+                const nextReference = String(verseData.reference || apiVerseId).trim() || apiVerseId;
+                const nextText = stripHtml(verseData.content);
+
+                if (!nextText) {
+                    throw new Error('Bible API returned an empty verse.');
+                }
+
+                applyVerse(nextReference, nextText);
+            } catch (error) {
+                applyVerse(fallbackVerse.reference, fallbackVerse.text);
+            }
+        }
+
+        loadApiVerse();
     }
 
     // ============================================
