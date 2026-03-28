@@ -684,16 +684,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.3.2</span>
-                    <span>Sticky admin controls rail</span>
-                    <span>Planner inside calendar</span>
-                    <span>MLS workflow polish</span>
+                    <span>Newest build: 1.3.3</span>
+                    <span>Calendar hover task preview</span>
+                    <span>Agent workspace accepted-offer sync</span>
+                    <span>Planner and dashboard polish</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>15</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.2, including the full 1.2.3 to 1.3.2 release sequence.</span>
+                    <strong>17</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.3, including the full 1.2.3 to 1.3.3 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -705,25 +705,24 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.3.2</h2>
-                <p>This release sharpens admin workflow visibility, folds planner work into the calendar experience, improves MLS-related UI consistency, and keeps manual MLS imports from disappearing when user identity buckets change.</p>
+                <h2>Version 1.3.3</h2>
+                <p>This release adds instant calendar task previews on hover, keeps accepted-offer properties synced into Agent Workspace where they belong, and continues the recent planner, dashboard, and property workflow refinements.</p>
                 <div class="version-history-meta">
-                    <span>March 27, 2026</span>
+                    <span>March 28, 2026</span>
                     <span>Workflow polish</span>
-                    <span>Persistence fixes</span>
-                    <span>Version 1.3.2</span>
+                    <span>Calendar usability</span>
+                    <span>Version 1.3.3</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Promoted the version history page to 1.3.2 and moved version 1.3.1 into the previous release stack directly underneath it.</li>
-                    <li>Moved the My Planner workflow into the calendar date-detail view so clicking a date opens the planner instead of duplicating that tool in a separate widget.</li>
-                    <li>Reworked Admin Controls so the sticky quick-access section sits ahead of notifications in a cleaner pinned toolbar.</li>
-                    <li>Redesigned the MLS Imports admin card into a wider featured intake panel with better hierarchy, stronger CTA treatment, and clearer workflow copy.</li>
-                    <li>Changed the MLS Hot Deals nav symbol from lightning to fire across every tab and page that renders that entry.</li>
-                    <li>Updated Analytics My Profits filters to use First, 2nd, 3rd, and 4th Quarter ranges instead of week and rolling month windows.</li>
-                    <li>Added migration coverage so manually imported MLS properties stay with the correct logged-in user instead of getting stranded in a default storage bucket.</li>
+                    <li>Promoted the version history page to 1.3.3 and moved version 1.3.2 into the previous release stack directly underneath it.</li>
+                    <li>Added hover previews on calendar days so users can read saved planner tasks without clicking into the date detail view.</li>
+                    <li>Fixed accepted-offer syncing so properties marked 80% - Offer Accepted appear in the Agent Workspace Offers Accepted widget with Property Details click-through intact.</li>
+                    <li>Refined planner and calendar priority flags so the symbols read larger, cleaner, and more clearly inside the dashboard calendar workflow.</li>
+                    <li>Added API-backed Daily Bible Verse loading with a local fallback so the dashboard can pull curated verses automatically.</li>
+                    <li>Renamed the Property Details Agent tab label from Agent workspace to Agent for a cleaner, tighter tab row.</li>
                 </ul>
             </div>
         </section>
@@ -735,6 +734,25 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.3.2</h2>
+                            <span class="version-date">March 27, 2026</span>
+                        </div>
+                        <span class="version-chip">1.3.2</span>
+                    </div>
+                    <ul>
+                        <li>Promoted the version history page to 1.3.2 and moved version 1.3.1 into the previous release stack directly underneath it.</li>
+                        <li>Moved the My Planner workflow into the calendar date-detail view so clicking a date opens the planner instead of duplicating that tool in a separate widget.</li>
+                        <li>Reworked Admin Controls so the sticky quick-access section sits ahead of notifications in a cleaner pinned toolbar.</li>
+                        <li>Redesigned the MLS Imports admin card into a wider featured intake panel with better hierarchy, stronger CTA treatment, and clearer workflow copy.</li>
+                        <li>Changed the MLS Hot Deals nav symbol from lightning to fire across every tab and page that renders that entry.</li>
+                        <li>Updated Analytics My Profits filters to use First, 2nd, 3rd, and 4th Quarter ranges instead of week and rolling month windows.</li>
+                        <li>Added migration coverage so manually imported MLS properties stay with the correct logged-in user instead of getting stranded in a default storage bucket.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>
@@ -770,6 +788,25 @@
                         <li>Kept MLS Imports row copy tracking persistent so users can still see which outreach templates they already copied.</li>
                         <li>Added direct phone-number copy controls on MLS Imports rows for LO Phone and LA Cell.</li>
                         <li>Updated the floating calculator button styling so it follows the selected theme and uses a slightly smaller footprint on desktop and mobile.</li>
+                    </ul>
+                </article>
+
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.2.9</h2>
+                            <span class="version-date">March 25, 2026</span>
+                        </div>
+                        <span class="version-chip">1.2.9</span>
+                    </div>
+                    <ul>
+                        <li>Bumped the website build version to 1.2.9 across package metadata, lockfile metadata, fallback labels, and visible login and admin version badges.</li>
+                        <li>Tightened MLS Imports Spreadsheet address extraction so lot-size lines, phone-like fragments, and other numeric junk are no longer treated as property addresses.</li>
+                        <li>Changed MLS status extraction so the importer now reads directly from the explicit Status field in the PDF block instead of guessing from other text.</li>
+                        <li>Improved listing-agent extraction under AGENT / OFFICE so parenthesized codes like `(CV44544)` are stripped and only the actual LA name is saved.</li>
+                        <li>Added a clipboard action on every MLS Imports Spreadsheet row that copies a status-based outreach template for the listing agent.</li>
+                        <li>Added a save-arrow action to the Analytics My Profits yearly goal input so the target can be committed without pressing Enter.</li>
+                        <li>Updated the version history page so 1.2.9 now sits at the top and 1.2.8 moves into the previous release stack.</li>
                     </ul>
                 </article>
 
