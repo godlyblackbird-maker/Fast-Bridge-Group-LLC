@@ -1563,6 +1563,35 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 ? detail.propertyAssignment.assignedTo
                 : null);
 
+        if (detailPropertyKey) {
+            setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, workspaceUser, detailPropertyKey, normalizedStatus, { silent: true });
+
+            if (assignedUser) {
+                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, assignedUser, detailPropertyKey, normalizedStatus, { silent: true });
+            }
+        }
+
+        if (detailPropertyKey && assignmentRecord && typeof assignmentRecord === 'object') {
+            const snapshotBase = { ...detail };
+            delete snapshotBase.propertyAssignment;
+
+            const nextAssignmentRecord = {
+                ...assignmentRecord,
+                propertySnapshot: {
+                    ...snapshotBase,
+                    propertyAssignment: {
+                        assignedTo: assignmentRecord.assignedTo,
+                        assignedBy: assignmentRecord.assignedBy,
+                        assignedAt: assignmentRecord.assignedAt
+                    }
+                }
+            };
+
+            setPropertyAssignmentRecord(detailPropertyKey, nextAssignmentRecord).catch(() => {
+                // Preserve the existing local state if the remote snapshot sync fails.
+            });
+        }
+
         if (assignedUser && !usersMatch(assignedUser, workspaceUser)) {
             ensurePropertyWorkspaceSnapshot(detail, assignedUser);
         }
