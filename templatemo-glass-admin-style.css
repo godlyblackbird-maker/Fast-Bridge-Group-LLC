@@ -6915,33 +6915,6 @@ body.sidebar-collapsed .main-content {
     }
 }
 
-.notes-dashboard-widget {
-    grid-column: span 1;
-    position: relative;
-    overflow: hidden;
-    border-radius: 28px;
-    background:
-        radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.18), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.34), transparent 34%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-}
-
-.notes-dashboard-widget::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent 42%),
-        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 18px);
-    pointer-events: none;
-    opacity: 0.7;
-}
-
-.notes-dashboard-widget > * {
-    position: relative;
-    z-index: 1;
-}
-
 .notes-widget-header {
     align-items: flex-start;
     gap: 14px;
@@ -8118,6 +8091,26 @@ body.sidebar-collapsed .main-content {
     letter-spacing: 0.04em;
 }
 
+.planner-priority::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    width: 13px;
+    height: 13px;
+    background: currentColor;
+    transform: translateY(-50%) scaleX(-1) rotate(-15deg);
+    opacity: 0.9;
+    -webkit-mask-image: url('Symbols/Flag.svg');
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    mask-image: url('Symbols/Flag.svg');
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+}
+
 .planner-priority-p1 {
     color: #fecaca;
     border: 1px solid rgba(248, 113, 113, 0.45);
@@ -8127,14 +8120,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .planner-priority-p1::before {
-    content: '🚩';
-    position: absolute;
-    left: 3px;
-    top: 50%;
-    transform: translateY(-50%) scaleX(-1) rotate(-15deg);
-    font-size: 12px;
     opacity: 0.9;
-    filter: hue-rotate(353deg) saturate(1.2);
 }
 
 .planner-priority-p2 {
@@ -8146,14 +8132,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .planner-priority-p2::before {
-    content: '🚩';
-    position: absolute;
-    left: 3px;
-    top: 50%;
-    transform: translateY(-50%) scaleX(-1) rotate(-15deg);
-    font-size: 12px;
     opacity: 0.9;
-    filter: hue-rotate(25deg) saturate(1.2);
 }
 
 .planner-priority-p3 {
@@ -8165,14 +8144,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .planner-priority-p3::before {
-    content: '🚩';
-    position: absolute;
-    left: 3px;
-    top: 50%;
-    transform: translateY(-50%) scaleX(-1) rotate(-15deg);
-    font-size: 12px;
     opacity: 0.9;
-    filter: hue-rotate(220deg) saturate(1.2);
 }
 
 .planner-priority-p4 {
@@ -8184,14 +8156,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .planner-priority-p4::before {
-    content: '🚩';
-    position: absolute;
-    left: 3px;
-    top: 50%;
-    transform: translateY(-50%) scaleX(-1) rotate(-15deg);
-    font-size: 12px;
     opacity: 0.6;
-    filter: grayscale(1) brightness(1.1);
 }
 
 .planner-task-time {
@@ -9154,11 +9119,39 @@ body.sidebar-collapsed .main-content {
     bottom: 6px;
     left: 50%;
     transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    background: var(--gold);
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba(212, 165, 116, 0.55);
+    width: 14px;
+    height: 14px;
+    background: var(--calendar-day-flag-color, var(--gold));
+    opacity: var(--calendar-day-flag-opacity, 0.95);
+    -webkit-mask-image: url('Symbols/Flag.svg');
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    mask-image: url('Symbols/Flag.svg');
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--calendar-day-flag-color, var(--gold)) 55%, transparent);
+}
+
+.calendar-day.calendar-day-priority-p1 {
+    --calendar-day-flag-color: #f87171;
+    --calendar-day-flag-opacity: 1;
+}
+
+.calendar-day.calendar-day-priority-p2 {
+    --calendar-day-flag-color: #fbbf24;
+    --calendar-day-flag-opacity: 0.98;
+}
+
+.calendar-day.calendar-day-priority-p3 {
+    --calendar-day-flag-color: #60a5fa;
+    --calendar-day-flag-opacity: 0.96;
+}
+
+.calendar-day.calendar-day-priority-p4 {
+    --calendar-day-flag-color: #9ca3af;
+    --calendar-day-flag-opacity: 0.88;
 }
 
 .calendar-event-count {

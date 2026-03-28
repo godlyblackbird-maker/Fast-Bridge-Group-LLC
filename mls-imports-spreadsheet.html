@@ -1119,7 +1119,8 @@
             }
 
             function upgradeManagedTemplateBody(value, templateStatusKey) {
-                const normalized = normalizeCellValue(value);
+                const raw = String(value || '').replace(/\r/g, '');
+                const normalized = raw.trim();
                 const fallback = TEMPLATE_DEFAULT_BODIES[templateStatusKey] || TEMPLATE_DEFAULT_BODIES.active;
 
                 if (!normalized) {
@@ -1130,8 +1131,8 @@
                     return fallback;
                 }
 
-                if (/^(hi|hey)\b/i.test(normalized) || /\{senderName\}/.test(normalized)) {
-                    return normalized;
+                if (/^(hi|hey)\b/i.test(normalized) || /\{senderName\}/.test(raw)) {
+                    return raw;
                 }
 
                 return `Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. ${normalized}`;
@@ -1423,6 +1424,17 @@
                 templateStatusSelect.value = activeStatusKey;
                 templateIncludeTimeToggle.checked = settings.includeTimeOfDay;
                 templateBodyInput.value = settings.templates[activeStatusKey] || TEMPLATE_DEFAULT_BODIES[activeStatusKey];
+                renderTemplatePreview(settings, activeStatusKey, previewRow);
+            }
+
+            function renderTemplatePreview(settingsLike, activeStatusKeyLike, previewRowLike) {
+                if (!templatePreview) {
+                    return;
+                }
+
+                const settings = normalizeTemplateSettings(settingsLike || draftTemplateSettings || templateSettings);
+                const activeStatusKey = normalizeTemplateStatusKey(activeStatusKeyLike || settings.selectedStatus);
+                const previewRow = previewRowLike || getTemplatePreviewRowData();
                 templatePreview.textContent = buildManagedTemplate({
                     ...previewRow,
                     status: previewRow.status || TEMPLATE_STATUS_OPTIONS.find((option) => option.key === activeStatusKey)?.label || 'Active'
@@ -2139,8 +2151,8 @@
                 templateBodyInput.addEventListener('input', () => {
                     draftTemplateSettings = cloneTemplateSettings(draftTemplateSettings || templateSettings);
                     const activeStatusKey = normalizeTemplateStatusKey((draftTemplateSettings && draftTemplateSettings.selectedStatus) || templateStatusSelect.value);
-                    draftTemplateSettings.templates[activeStatusKey] = String(templateBodyInput.value || '').replace(/\r/g, '').trim() || TEMPLATE_DEFAULT_BODIES[activeStatusKey];
-                    renderTemplateManager();
+                    draftTemplateSettings.templates[activeStatusKey] = String(templateBodyInput.value || '').replace(/\r/g, '') || TEMPLATE_DEFAULT_BODIES[activeStatusKey];
+                    renderTemplatePreview(draftTemplateSettings, activeStatusKey);
                 });
 
                 templateResetButton.addEventListener('click', () => {

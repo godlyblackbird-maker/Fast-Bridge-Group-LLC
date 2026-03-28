@@ -1514,6 +1514,36 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
     }
 
+    function syncAcceptedOfferWorkspaceTargets(detailLike, workspaceUserLike) {
+        const detail = detailLike && typeof detailLike === 'object' ? detailLike : null;
+        if (!detail) {
+            return;
+        }
+
+        const normalizedStatus = String(detail.piqAgentStatus || 'none').trim().toLowerCase() || 'none';
+        if (normalizedStatus !== 'offer-accepted') {
+            return;
+        }
+
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+
+        ensurePropertyWorkspaceSnapshot(detail, workspaceUser);
+
+        const detailPropertyKey = makePropertyStorageKey(detail.address || detail.propertyAddress);
+        const assignmentRecord = detailPropertyKey ? getPropertyAssignmentRecord(detailPropertyKey) : null;
+        const assignedUser = assignmentRecord && assignmentRecord.assignedTo && typeof assignmentRecord.assignedTo === 'object'
+            ? assignmentRecord.assignedTo
+            : (detail.propertyAssignment && detail.propertyAssignment.assignedTo && typeof detail.propertyAssignment.assignedTo === 'object'
+                ? detail.propertyAssignment.assignedTo
+                : null);
+
+        if (assignedUser && !usersMatch(assignedUser, workspaceUser)) {
+            ensurePropertyWorkspaceSnapshot(detail, assignedUser);
+        }
+    }
+
     function getPersistedSelectedPropertyDetail() {
         const storageReaders = [
             () => localStorage.getItem('selectedPropertyDetail'),
@@ -6643,6 +6673,25 @@ function initNavbarDateTime() {
                 });
         }
 
+        function getPlannerPriorityRank(priority) {
+            const priorityRank = { p1: 1, p2: 2, p3: 3, p4: 4 };
+            return priorityRank[priority] || 5;
+        }
+
+        function getCalendarDayPriority(plannerItems) {
+            const items = Array.isArray(plannerItems) ? plannerItems : [];
+            const activeItems = items.filter((item) => !item.completed);
+            const sourceItems = activeItems.length > 0 ? activeItems : items;
+
+            if (sourceItems.length === 0) {
+                return '';
+            }
+
+            return sourceItems
+                .slice()
+                .sort((left, right) => getPlannerPriorityRank(left.priority) - getPlannerPriorityRank(right.priority))[0]?.priority || 'p2';
+        }
+
         function syncPlannerDateSelection() {
             window.dispatchEvent(new CustomEvent('calendar-planner-date-change', {
                 detail: {
@@ -6707,6 +6756,10 @@ function initNavbarDateTime() {
             const plannerItems = getPlannerItemsForDate(date);
             if (plannerItems.length > 0) {
                 button.classList.add('has-event');
+                const dayPriority = getCalendarDayPriority(plannerItems);
+                if (dayPriority) {
+                    button.classList.add(`calendar-day-priority-${dayPriority}`);
+                }
             }
 
             button.innerHTML = `<span class="calendar-day-number">${date.getDate()}</span>${plannerItems.length > 0 ? `<span class="calendar-event-count">${plannerItems.length}</span>` : ''}`;
@@ -7762,283 +7815,6 @@ function initNavbarDateTime() {
             url.searchParams.set('compose', '1');
         }
         return url.toString();
-    }
-
-    function initDashboardNotesLauncher() {
-        const widget = document.querySelector('.dashboard-notes-launcher');
-        const folderList = document.getElementById('dashboard-notes-folder-list');
-        const totalCountLabel = document.getElementById('dashboard-notes-total-count');
-        const activityLabel = document.getElementById('dashboard-notes-activity');
-        const openWorkspaceButton = document.getElementById('dashboard-notes-open-btn');
-        const newNoteButton = document.getElementById('dashboard-notes-new-note-btn');
-
-        if (!widget || !folderList || !totalCountLabel || !activityLabel || !openWorkspaceButton || !newNoteButton) {
-            return;
-        }
-
-        const workspaceUser = getWorkspaceUserContext();
-        const DEFAULT_FOLDER_ID = 'folder-default';
-        const DEFAULT_FOLDER_NAME = 'Notes';
-        const ALL_NOTES_FOLDER_ID = '__all_notes__';
-        const PINNED_NOTES_FOLDER_ID = '__pinned_notes__';
-        const NOTES_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-
-        function normalizeNotesData(rawValue) {
-            const value = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) ? rawValue : {};
-            const rawFolders = Array.isArray(value.folders) ? value.folders : [];
-            const rawNotes = Array.isArray(value.notes) ? value.notes : [];
-            const now = Date.now();
-            const folders = rawFolders
-                .map((folder, index) => {
-                    const id = String(folder && folder.id || `folder-${index + 1}`).trim();
-                    const name = String(folder && (folder.name || folder.title) || '').trim();
-                    if (!id || !name) {
-                        return null;
-                    }
-                    return {
-                        id,
-                        name,
-                        parentId: String(folder && folder.parentId || '').trim(),
-                        createdAt: Number(folder && folder.createdAt) || Date.now()
-                    };
-                })
-                .filter(Boolean);
-
-            if (!folders.some((folder) => folder.id === DEFAULT_FOLDER_ID)) {
-                folders.unshift({
-                    id: DEFAULT_FOLDER_ID,
-                    name: DEFAULT_FOLDER_NAME,
-                    parentId: '',
-                    createdAt: Date.now()
-                });
-            }
-
-            folders.forEach((folder) => {
-                if (!folder.parentId || folder.id === DEFAULT_FOLDER_ID) {
-                    folder.parentId = '';
-                    return;
-                }
-                if (!folders.some((candidate) => candidate.id === folder.parentId && candidate.id !== folder.id)) {
-                    folder.parentId = '';
-                }
-            });
-
-            const knownFolderIds = new Set(folders.map((folder) => folder.id));
-            const notes = rawNotes
-                .map((note, index) => {
-                    const id = String(note && note.id || `note-${index + 1}`).trim();
-                    if (!id) {
-                        return null;
-                    }
-                    const folderId = knownFolderIds.has(String(note && note.folderId || '').trim())
-                        ? String(note.folderId).trim()
-                        : DEFAULT_FOLDER_ID;
-                    return {
-                        id,
-                        title: String(note && note.title || '').trim(),
-                        body: String(note && note.body || '').trim(),
-                        folderId,
-                        pinned: Boolean(note && note.pinned),
-                        deletedAt: Number(note && note.deletedAt) || 0,
-                        updatedAt: Number(note && note.updatedAt) || Date.now()
-                    };
-                })
-                .filter((note) => note && (!note.deletedAt || (now - note.deletedAt) < NOTES_TRASH_RETENTION_MS));
-
-            return { folders, notes };
-        }
-
-        function getNotesData() {
-            return normalizeNotesData(getUserScopedObject(DASHBOARD_NOTES_KEY, workspaceUser.key));
-        }
-
-        function getActiveNotes(data) {
-            return data.notes.filter((note) => !note.deletedAt);
-        }
-
-        function getDeletedNotes(data) {
-            return data.notes.filter((note) => note.deletedAt);
-        }
-
-        function getFolderChildren(folders, parentId) {
-            return folders
-                .filter((folder) => String(folder.parentId || '') === String(parentId || ''))
-                .sort((left, right) => left.name.localeCompare(right.name));
-        }
-
-        function getDescendantFolderIds(data, folderId) {
-            const collected = new Set([folderId]);
-            const queue = [folderId];
-            while (queue.length) {
-                const currentId = queue.shift();
-                data.folders.forEach((folder) => {
-                    if (folder.parentId === currentId && !collected.has(folder.id)) {
-                        collected.add(folder.id);
-                        queue.push(folder.id);
-                    }
-                });
-            }
-            return collected;
-        }
-
-        function getFolderNoteCount(data, folderId) {
-            const descendantIds = getDescendantFolderIds(data, folderId);
-            return getActiveNotes(data).filter((note) => descendantIds.has(note.folderId)).length;
-        }
-
-        function getFolderName(folderId, folders) {
-            const matched = folders.find((folder) => folder.id === folderId);
-            return matched ? matched.name : DEFAULT_FOLDER_NAME;
-        }
-
-        function getNoteDisplayTitle(note) {
-            const explicitTitle = String(note && note.title || '').trim();
-            if (explicitTitle) {
-                return explicitTitle;
-            }
-            return String(note && note.body || '')
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .find(Boolean) || 'Untitled note';
-        }
-
-        function formatNoteTimestamp(value) {
-            const timestamp = Number(value) || Date.now();
-            return new Date(timestamp).toLocaleString(undefined, {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit'
-            });
-        }
-
-        function navigateToWorkspace(folderId, options) {
-            window.location.href = buildNotesWorkspaceHref({
-                folderId,
-                compose: options && options.compose === true
-            });
-        }
-
-        function buildLaunchRow(config) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'dashboard-notes-folder-btn';
-
-            const copy = document.createElement('span');
-            copy.className = 'dashboard-notes-folder-copy';
-
-            const name = document.createElement('span');
-            name.className = 'dashboard-notes-folder-name';
-            name.textContent = String(config.label || 'Folder');
-
-            const meta = document.createElement('span');
-            meta.className = 'dashboard-notes-folder-meta';
-            meta.textContent = String(config.meta || 'Open folder');
-
-            const count = document.createElement('span');
-            count.className = 'dashboard-notes-folder-count';
-            count.textContent = String(config.count || '0');
-
-            copy.appendChild(name);
-            copy.appendChild(meta);
-            button.appendChild(copy);
-            button.appendChild(count);
-            button.addEventListener('click', () => {
-                navigateToWorkspace(config.folderId, { compose: false });
-            });
-            return button;
-        }
-
-        function render() {
-            const data = getNotesData();
-            const activeNotes = getActiveNotes(data);
-            const deletedNotes = getDeletedNotes(data);
-            const pinnedNotes = activeNotes.filter((note) => note.pinned);
-            const quickNotes = activeNotes.filter((note) => note.folderId === DEFAULT_FOLDER_ID);
-            const customFolders = data.folders
-                .filter((folder) => folder.id !== DEFAULT_FOLDER_ID)
-                .map((folder) => ({
-                    ...folder,
-                    noteCount: getFolderNoteCount(data, folder.id)
-                }))
-                .sort((left, right) => {
-                    if (left.noteCount !== right.noteCount) {
-                        return right.noteCount - left.noteCount;
-                    }
-                    return left.name.localeCompare(right.name);
-                })
-                .slice(0, 4);
-
-            const recentNote = activeNotes
-                .slice()
-                .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0))[0] || null;
-
-            totalCountLabel.textContent = `${activeNotes.length} active note${activeNotes.length === 1 ? '' : 's'} across ${Math.max(data.folders.length - 1, 0)} folder${data.folders.length - 1 === 1 ? '' : 's'}`;
-            activityLabel.textContent = recentNote
-                ? `${getNoteDisplayTitle(recentNote)} updated ${formatNoteTimestamp(recentNote.updatedAt)} in ${getFolderName(recentNote.folderId, data.folders)}.`
-                : 'Open the notes workspace to track seller follow-up, dispo reminders, and deal-level notes by folder.';
-
-            folderList.innerHTML = '';
-
-            [
-                {
-                    label: 'All Notes',
-                    meta: 'Everything in your workspace',
-                    count: String(activeNotes.length),
-                    folderId: ALL_NOTES_FOLDER_ID
-                },
-                {
-                    label: 'Quick Notes',
-                    meta: 'Fast capture and scratch notes',
-                    count: String(quickNotes.length),
-                    folderId: DEFAULT_FOLDER_ID
-                },
-                {
-                    label: 'Pinned',
-                    meta: 'High-priority notes kept at the top',
-                    count: String(pinnedNotes.length),
-                    folderId: PINNED_NOTES_FOLDER_ID
-                }
-            ].forEach((row) => {
-                folderList.appendChild(buildLaunchRow(row));
-            });
-
-            if (customFolders.length) {
-                customFolders.forEach((folder) => {
-                    const childCount = getFolderChildren(data.folders, folder.id).length;
-                    folderList.appendChild(buildLaunchRow({
-                        label: folder.name,
-                        meta: childCount ? `${childCount} nested folder${childCount === 1 ? '' : 's'}` : 'Custom folder',
-                        count: String(folder.noteCount),
-                        folderId: folder.id
-                    }));
-                });
-            } else {
-                const empty = document.createElement('p');
-                empty.className = 'dashboard-notes-empty';
-                empty.textContent = deletedNotes.length
-                    ? 'No custom folders yet. Open the workspace to create one and drag notes into place.'
-                    : 'No folders yet. Open the workspace to create folders and organize your notes.';
-                folderList.appendChild(empty);
-            }
-        }
-
-        openWorkspaceButton.addEventListener('click', () => {
-            navigateToWorkspace('', { compose: false });
-        });
-
-        newNoteButton.addEventListener('click', () => {
-            navigateToWorkspace(DEFAULT_FOLDER_ID, { compose: true });
-        });
-
-        window.addEventListener('dashboard-data-updated', render);
-        window.addEventListener('storage', (event) => {
-            if (!event.key || event.key === DASHBOARD_NOTES_KEY) {
-                render();
-            }
-        });
-
-        render();
     }
 
     function initNotesWidget() {
@@ -10139,7 +9915,7 @@ function initNavbarDateTime() {
                 showDashboardToast('error', 'Send Failed', error.message || 'Could not send the Agent Workspace email.');
             } finally {
                 sendButton.disabled = false;
-                sendButton.querySelector('span:last-child').textContent = 'Send Through Website';
+                sendButton.querySelector('span:last-child').textContent = 'Send';
             }
         });
 
@@ -16145,7 +15921,7 @@ function initNavbarDateTime() {
             syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
             persistSelectedPropertyDetail(detailData);
             if (detailData.piqAgentStatus === 'offer-accepted') {
-                ensurePropertyWorkspaceSnapshot(detailData);
+                syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
             }
 
             if (agentCurrentStatusEl) {
@@ -16165,7 +15941,7 @@ function initNavbarDateTime() {
                 syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
                 persistSelectedPropertyDetail(detailData);
                 if (detailData.piqAgentStatus === 'offer-accepted') {
-                    ensurePropertyWorkspaceSnapshot(detailData);
+                    syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
                 }
                 syncCurrentAssignmentSnapshot();
             });
@@ -16238,6 +16014,9 @@ function initNavbarDateTime() {
                             detailData.piqAgentStatus,
                             { silent: true }
                         );
+                        if (detailData.piqAgentStatus === 'offer-accepted') {
+                            syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
+                        }
                         syncAssignmentIntoLocalDealCache(propertyKey, persistedRecord || assignmentRecord, workspaceUser);
                         renderOfferNegotiator(persistedRecord);
                         window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
@@ -17694,7 +17473,7 @@ function initNavbarDateTime() {
                 setNotes(notes);
                 noteInput.value = '';
                 renderNotes();
-                showDashboardToast('success', 'Agent Note Saved', 'Saved and available in the dashboard Agent Notes widget.');
+                showDashboardToast('success', 'Agent Note Saved', 'Saved to this property for future follow-up.');
             });
 
             renderNotes();
@@ -21085,7 +20864,6 @@ function initNavbarDateTime() {
             ['initDailyBibleVerseWidget', initDailyBibleVerseWidget],
             ['initPersonalOutreachWorkspace', initPersonalOutreachWorkspace],
             ['initOffersAcceptedWidget', initOffersAcceptedWidget],
-            ['initDashboardNotesLauncher', initDashboardNotesLauncher],
             ['initNotesWidget', initNotesWidget],
             ['initAgentWorkspaceEmailPrep', initAgentWorkspaceEmailPrep],
             ['initAdminOnlineUsersWidget', initAdminOnlineUsersWidget],
