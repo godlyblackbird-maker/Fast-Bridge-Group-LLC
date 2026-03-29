@@ -54,6 +54,7 @@ const PREMIUM_PRICE_CENTS = 9900;
 const PREMIUM_CURRENCY = 'USD';
 const AUTH_SESSION_TTL = '24h';
 const TWO_FACTOR_CHALLENGE_TTL = '10m';
+const DIRECT_MESSAGE_HISTORY_LIMIT = 100;
 const ONLINE_USER_ACTIVITY_WINDOW_MINUTES = 5;
 const TOTP_WINDOW = 1;
 const TOTP_PERIOD_SECONDS = 30;
@@ -3618,6 +3619,28 @@ function serializeMessageNotification(row, currentUserId) {
   };
 }
 
+async function trimDirectMessageConversationHistory(userIdA, userIdB) {
+  const firstUserId = Number(userIdA);
+  const secondUserId = Number(userIdB);
+
+  if (!Number.isInteger(firstUserId) || firstUserId <= 0 || !Number.isInteger(secondUserId) || secondUserId <= 0) {
+    return;
+  }
+
+  await dbRun(
+    `DELETE FROM user_messages
+     WHERE id IN (
+       SELECT id
+       FROM user_messages
+       WHERE (sender_user_id = ? AND recipient_user_id = ?)
+          OR (sender_user_id = ? AND recipient_user_id = ?)
+       ORDER BY datetime(created_at) DESC, id DESC
+       LIMIT -1 OFFSET ?
+     )`,
+    [firstUserId, secondUserId, secondUserId, firstUserId, DIRECT_MESSAGE_HISTORY_LIMIT]
+  );
+}
+
 function normalizePdfExtractText(value) {
   return String(value || '')
     .replace(/\u00a0/g, ' ')
@@ -5896,6 +5919,8 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
       return res.status(404).json({ error: 'Selected user was not found.' });
     }
 
+    await trimDirectMessageConversationHistory(currentUserId, otherUserId);
+
     await dbRun(
       `UPDATE user_messages
        SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
@@ -5965,6 +5990,8 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
        VALUES (?, ?, ?)`,
       [currentUserId, otherUserId, body]
     );
+
+    await trimDirectMessageConversationHistory(currentUserId, otherUserId);
 
     const inserted = await dbGet(
       `SELECT id, sender_user_id, recipient_user_id, body, created_at, read_at
