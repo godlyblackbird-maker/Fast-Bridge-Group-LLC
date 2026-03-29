@@ -1373,6 +1373,27 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS user_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_user_id INTEGER NOT NULL,
+      recipient_user_id INTEGER NOT NULL,
+      body TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      read_at DATETIME,
+      FOREIGN KEY(sender_user_id) REFERENCES users(id),
+      FOREIGN KEY(recipient_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating user_messages table:', err);
+    } else {
+      console.log('User messages table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_pair_created ON user_messages(sender_user_id, recipient_user_id, created_at)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_recipient_read ON user_messages(recipient_user_id, read_at)', () => {});
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS subscription_profiles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL UNIQUE,
@@ -1501,6 +1522,18 @@ function dbRun(sql, params) {
         return;
       }
       resolve(this);
+    });
+  });
+}
+
+function dbAll(sql, params) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (error, rows) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(Array.isArray(rows) ? rows : []);
     });
   });
 }
@@ -3546,6 +3579,26 @@ function requireAdmin(req, res) {
   }
 
   return decoded;
+}
+
+function serializeUserMessage(row, currentUserId) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  const senderUserId = Number(row.sender_user_id);
+  const recipientUserId = Number(row.recipient_user_id);
+  const activeUserId = Number(currentUserId);
+
+  return {
+    id: Number(row.id),
+    senderUserId,
+    recipientUserId,
+    body: String(row.body || '').trim(),
+    createdAt: row.created_at || '',
+    readAt: row.read_at || null,
+    direction: senderUserId === activeUserId ? 'outgoing' : 'incoming'
+  };
 }
 
 function normalizePdfExtractText(value) {
@@ -5733,6 +5786,183 @@ app.get('/api/users', (req, res) => {
     });
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+app.get('/api/messages/users', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentUserId = Number(decoded.id);
+  if (!Number.isInteger(currentUserId) || currentUserId <= 0) {
+    return res.status(400).json({ error: 'Authenticated user id is required.' });
+  }
+
+  try {
+    const users = await dbAll(
+      `SELECT
+          u.id,
+          u.name,
+          u.email,
+          u.role,
+          u.last_login,
+          (
+            SELECT m.body
+            FROM user_messages m
+            WHERE (m.sender_user_id = ? AND m.recipient_user_id = u.id)
+               OR (m.sender_user_id = u.id AND m.recipient_user_id = ?)
+            ORDER BY datetime(m.created_at) DESC, m.id DESC
+            LIMIT 1
+          ) AS last_message,
+          (
+            SELECT m.created_at
+            FROM user_messages m
+            WHERE (m.sender_user_id = ? AND m.recipient_user_id = u.id)
+               OR (m.sender_user_id = u.id AND m.recipient_user_id = ?)
+            ORDER BY datetime(m.created_at) DESC, m.id DESC
+            LIMIT 1
+          ) AS last_message_at,
+          (
+            SELECT COUNT(*)
+            FROM user_messages m
+            WHERE m.sender_user_id = u.id
+              AND m.recipient_user_id = ?
+              AND m.read_at IS NULL
+          ) AS unread_count
+       FROM users u
+       WHERE u.id != ?
+       ORDER BY
+         CASE WHEN last_message_at IS NULL THEN 1 ELSE 0 END,
+         datetime(last_message_at) DESC,
+         LOWER(u.name) ASC`,
+      [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId]
+    );
+
+    return res.json({
+      success: true,
+      users: users.map((row) => ({
+        ...serializeUser(row),
+        lastLogin: row.last_login || null,
+        lastMessage: String(row.last_message || '').trim(),
+        lastMessageAt: row.last_message_at || null,
+        unreadCount: Number(row.unread_count) || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Load message users error:', error);
+    return res.status(500).json({ error: 'Unable to load message users.' });
+  }
+});
+
+app.get('/api/messages/conversations/:userId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentUserId = Number(decoded.id);
+  const otherUserId = Number.parseInt(String(req.params?.userId || ''), 10);
+
+  if (!Number.isInteger(currentUserId) || currentUserId <= 0 || !Number.isInteger(otherUserId) || otherUserId <= 0) {
+    return res.status(400).json({ error: 'Valid user ids are required.' });
+  }
+
+  if (currentUserId === otherUserId) {
+    return res.status(400).json({ error: 'Choose another user to view a conversation.' });
+  }
+
+  try {
+    const otherUser = await dbGet('SELECT id, name, email, role, last_login FROM users WHERE id = ?', [otherUserId]);
+    if (!otherUser) {
+      return res.status(404).json({ error: 'Selected user was not found.' });
+    }
+
+    await dbRun(
+      `UPDATE user_messages
+       SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+       WHERE sender_user_id = ?
+         AND recipient_user_id = ?
+         AND read_at IS NULL`,
+      [otherUserId, currentUserId]
+    );
+
+    const rows = await dbAll(
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, read_at
+       FROM user_messages
+       WHERE (sender_user_id = ? AND recipient_user_id = ?)
+          OR (sender_user_id = ? AND recipient_user_id = ?)
+       ORDER BY datetime(created_at) ASC, id ASC`,
+      [currentUserId, otherUserId, otherUserId, currentUserId]
+    );
+
+    return res.json({
+      success: true,
+      otherUser: {
+        ...serializeUser(otherUser),
+        lastLogin: otherUser.last_login || null
+      },
+      messages: rows.map((row) => serializeUserMessage(row, currentUserId)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error('Load conversation error:', error);
+    return res.status(500).json({ error: 'Unable to load the conversation.' });
+  }
+});
+
+app.post('/api/messages/conversations/:userId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentUserId = Number(decoded.id);
+  const otherUserId = Number.parseInt(String(req.params?.userId || ''), 10);
+  const body = String(req.body?.body || '').trim();
+
+  if (!Number.isInteger(currentUserId) || currentUserId <= 0 || !Number.isInteger(otherUserId) || otherUserId <= 0) {
+    return res.status(400).json({ error: 'Valid user ids are required.' });
+  }
+
+  if (currentUserId === otherUserId) {
+    return res.status(400).json({ error: 'You cannot message yourself here.' });
+  }
+
+  if (!body) {
+    return res.status(400).json({ error: 'Message text is required.' });
+  }
+
+  if (body.length > 4000) {
+    return res.status(400).json({ error: 'Keep messages under 4000 characters.' });
+  }
+
+  try {
+    const otherUser = await dbGet('SELECT id FROM users WHERE id = ?', [otherUserId]);
+    if (!otherUser) {
+      return res.status(404).json({ error: 'Selected user was not found.' });
+    }
+
+    const result = await dbRun(
+      `INSERT INTO user_messages (sender_user_id, recipient_user_id, body)
+       VALUES (?, ?, ?)`,
+      [currentUserId, otherUserId, body]
+    );
+
+    const inserted = await dbGet(
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, read_at
+       FROM user_messages
+       WHERE id = ?`,
+      [result.lastID]
+    );
+
+    return res.json({
+      success: true,
+      message: serializeUserMessage(inserted, currentUserId)
+    });
+  } catch (error) {
+    console.error('Send conversation message error:', error);
+    return res.status(500).json({ error: 'Unable to send the message.' });
   }
 });
 

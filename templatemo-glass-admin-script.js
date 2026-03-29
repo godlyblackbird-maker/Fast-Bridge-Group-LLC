@@ -5433,6 +5433,66 @@ function initNavbarDateTime() {
         }
     }
 
+    function initSharedSidebarLinks() {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) {
+            return;
+        }
+
+        const currentPath = String(window.location.pathname || '').toLowerCase();
+        const mainMenuSections = Array.from(sidebar.querySelectorAll('.nav-section'));
+        const mainMenuSection = mainMenuSections.find((section) => {
+            const title = section.querySelector('.nav-section-title');
+            return /main menu/i.test(String(title && title.textContent || ''));
+        });
+        const menuList = mainMenuSection ? mainMenuSection.querySelector('ul') : null;
+
+        if (!menuList) {
+            return;
+        }
+
+        const existingLink = menuList.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
+        const fbgMessagesMarkup = `
+            <a href="fbg-messages.html" class="nav-link">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <path d="M8 9h8"></path>
+                    <path d="M8 13h5"></path>
+                </svg>
+                FBG Messages
+            </a>
+        `;
+
+        let link = existingLink;
+        if (!link) {
+            const listItem = document.createElement('li');
+            listItem.className = 'nav-item';
+            listItem.innerHTML = fbgMessagesMarkup;
+
+            const campaignsItem = Array.from(menuList.querySelectorAll('.nav-item')).find((item) => {
+                const itemLink = item.querySelector('.nav-link');
+                return itemLink && /campaigns\.html$/i.test(String(itemLink.getAttribute('href') || ''));
+            });
+
+            if (campaignsItem && campaignsItem.nextSibling) {
+                menuList.insertBefore(listItem, campaignsItem.nextSibling);
+            } else if (campaignsItem) {
+                menuList.appendChild(listItem);
+            } else {
+                menuList.appendChild(listItem);
+            }
+
+            link = listItem.querySelector('.nav-link');
+        }
+
+        if (!link) {
+            return;
+        }
+
+        const isActive = /\/fbg-messages\.html$/.test(currentPath) || currentPath === 'fbg-messages.html';
+        link.classList.toggle('active', isActive);
+    }
+
     function initSidebarCollapse() {
         const sidebar = document.getElementById('sidebar');
         if (!sidebar) {
@@ -21651,6 +21711,7 @@ function initNavbarDateTime() {
             ['initTiltEffect', initTiltEffect],
             ['initCounters', initCounters],
             ['initMobileMenu', initMobileMenu],
+            ['initSharedSidebarLinks', initSharedSidebarLinks],
             ['initSidebarCollapse', initSidebarCollapse],
             ['initMenuSoundEffects', initMenuSoundEffects],
             ['initSoundSettingsTab', initSoundSettingsTab],

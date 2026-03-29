@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FBG Messages - FAST BRIDGE GROUP Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="FBG message templates, call scripts, and copy-ready outreach blocks for FAST BRIDGE GROUP.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
+                const themeLogoPaths = {
+                    christmas: 'png photos/Christmas Theme Logo.png',
+                    holloween: 'png photos/New Holloween Logo.png',
+                    swamp: 'png photos/Swamp Theme Logo.png',
+                    cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    japan: 'png photos/Japan Theme Mode Logo.png'
+                };
+                const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
+                root.setAttribute('data-theme-logo-path', themeLogoPath);
+
+                const preloadThemeLogo = new Image();
+                preloadThemeLogo.src = themeLogoPath;
+
+                const applyThemeLogos = (scope) => {
+                    if (!scope || typeof scope.querySelectorAll !== 'function') {
+                        return;
+                    }
+
+                    if (scope.matches && scope.matches('img.logo-img, img.ecard-logo-image, img.flyer-logo-image') && scope.getAttribute('src') !== themeLogoPath) {
+                        scope.setAttribute('src', themeLogoPath);
+                    }
+
+                    scope.querySelectorAll('img.logo-img, img.ecard-logo-image, img.flyer-logo-image').forEach((image) => {
+                        if (image.getAttribute('src') !== themeLogoPath) {
+                            image.setAttribute('src', themeLogoPath);
+                        }
+                    });
+                };
+
+                const themeLogoObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node && node.nodeType === 1) {
+                                applyThemeLogos(node);
+                            }
+                        });
+                    });
+                });
+
+                themeLogoObserver.observe(document.documentElement, { childList: true, subtree: true });
+                document.addEventListener('DOMContentLoaded', () => {
+                    applyThemeLogos(document);
+                    themeLogoObserver.disconnect();
+                }, { once: true });
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .messages-shell {
+            display: grid;
+            gap: 24px;
+        }
+
+        .messages-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .messages-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--gold-light);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .messages-title {
+            margin: 14px 0 10px;
+            font-size: clamp(2rem, 3vw, 3rem);
+            line-height: 1.06;
+        }
+
+        .messages-copy {
+            max-width: 62ch;
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+
+        .messages-chip-row,
+        .messages-metric-list,
+        .messages-library-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .messages-chip-row {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            margin-top: 18px;
+        }
+
+        .messages-chip,
+        .messages-metric {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            padding: 14px 16px;
+            background: rgba(8, 12, 24, 0.3);
+        }
+
+        .messages-chip strong,
+        .messages-metric strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .messages-chip span,
+        .messages-metric span {
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .messages-metric-list {
+            height: 100%;
+        }
+
+        .messages-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .messages-chat-shell {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 0;
+            overflow: hidden;
+            min-height: 620px;
+        }
+
+        .messages-chat-users,
+        .messages-chat-panel {
+            min-width: 0;
+        }
+
+        .messages-chat-users {
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(5, 10, 22, 0.22);
+        }
+
+        .messages-chat-users-head,
+        .messages-chat-panel-head {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .messages-chat-users-head p,
+        .messages-chat-panel-head p {
+            margin: 6px 0 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .messages-chat-users-list {
+            display: grid;
+            gap: 8px;
+            padding: 14px;
+            max-height: 540px;
+            overflow-y: auto;
+        }
+
+        .messages-chat-user-btn {
+            width: 100%;
+            display: grid;
+            gap: 8px;
+            text-align: left;
+            padding: 14px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .messages-chat-user-btn:hover,
+        .messages-chat-user-btn:focus-visible,
+        .messages-chat-user-btn.active {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-rgb), 0.52);
+            background: rgba(var(--accent-rgb), 0.14);
+            outline: none;
+        }
+
+        .messages-chat-user-top,
+        .messages-chat-user-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .messages-chat-user-name {
+            font-weight: 600;
+        }
+
+        .messages-chat-user-email,
+        .messages-chat-user-preview,
+        .messages-chat-time,
+        .messages-chat-role,
+        .messages-chat-empty,
+        .messages-chat-placeholder {
+            color: var(--text-secondary);
+        }
+
+        .messages-chat-user-email,
+        .messages-chat-user-preview,
+        .messages-chat-time,
+        .messages-chat-role {
+            font-size: 13px;
+        }
+
+        .messages-chat-user-preview {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.45;
+        }
+
+        .messages-chat-unread {
+            min-width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.9);
+            color: #07111f;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .messages-chat-panel {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            min-height: 620px;
+        }
+
+        .messages-chat-thread {
+            display: grid;
+            gap: 12px;
+            padding: 18px 20px;
+            overflow-y: auto;
+            max-height: 420px;
+        }
+
+        .messages-chat-bubble {
+            max-width: min(78%, 620px);
+            padding: 12px 14px;
+            border-radius: 18px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .messages-chat-bubble.outgoing {
+            margin-left: auto;
+            background: rgba(var(--accent-rgb), 0.18);
+            border-color: rgba(var(--accent-rgb), 0.3);
+        }
+
+        .messages-chat-bubble-meta {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .messages-chat-form {
+            display: grid;
+            gap: 10px;
+            padding: 18px 20px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .messages-chat-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .messages-chat-status {
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-height: 20px;
+        }
+
+        .messages-library-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .messages-library-item {
+            display: grid;
+            gap: 12px;
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(7, 12, 26, 0.38);
+        }
+
+        .messages-library-label {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.18);
+            color: var(--emerald-light);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .messages-library-item p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .messages-quick-notes {
+            display: grid;
+            gap: 12px;
+            margin: 0;
+            padding-left: 20px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        @media (max-width: 1100px) {
+            .messages-chat-shell,
+            .messages-hero,
+            .messages-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .messages-chat-users {
+                border-right: 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item"><a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
+                        <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics<span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span></a></li>
+                        <li class="nav-item"><a href="mls.html" class="nav-link"><span class="nav-icon nav-icon-fire" aria-hidden="true"></span>MLS Hot Deals</a></li>
+                        <li class="nav-item"><a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>MLS Search</a></li>
+                        <li class="nav-item"><a href="deals.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>My Deals</a></li>
+                        <li class="nav-item"><a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Campaigns</a></li>
+                        <li class="nav-item"><a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent workspace</a></li>
+                        <li class="nav-item"><a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
+                    </ul>
+                </li>
+
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item"><a href="admin-controls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>Admin Controls</a></li>
+                        <li class="nav-item"><a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My agents</a></li>
+                        <li class="nav-item"><a href="active-buyers.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"/><path d="M3 12h18"/><path d="M3 19h18"/></svg>Active Buyers</a></li>
+                        <li class="nav-item"><a href="login.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-header">
+                    <h1 class="page-title">FBG Messages</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Dashboard</a>
+                        <span>/</span>
+                        <span>FBG Messages</span>
+                    </div>
+                </div>
+                <div class="navbar-right">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" class="search-input" placeholder="Search anything...">
+                    </div>
+                    <button class="nav-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="notification-dot"></span>
+                    </button>
+                </div>
+            </nav>
+
+            <div class="messages-shell">
+                <section class="messages-hero">
+                    <article class="glass-card">
+                        <span class="messages-kicker">FAST Outreach Library</span>
+                        <h2 class="messages-title">Keep FBG message templates, call scripts, and investor outreach copy in one place.</h2>
+                        <p class="messages-copy">This tab is for the exact messages FAST BRIDGE GROUP reuses every week: first-touch texts, agent follow-ups, voicemail scripts, and clean email copy that sounds like an investor operator, not a spam tool.</p>
+                        <div class="messages-chip-row">
+                            <div class="messages-chip">
+                                <strong>Agent Follow-Up</strong>
+                                <span>Save message blocks you reuse after a showing, stale listing, or price drop.</span>
+                            </div>
+                            <div class="messages-chip">
+                                <strong>Investor Tone</strong>
+                                <span>Keep copy tight, direct, and useful so agents know FAST is a real buyer.</span>
+                            </div>
+                            <div class="messages-chip">
+                                <strong>One Workspace</strong>
+                                <span>Copy what you need fast without jumping between Campaigns, Notes, and property detail screens.</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="glass-card messages-metric-list">
+                        <div class="messages-metric">
+                            <strong>Best Use</strong>
+                            <span>Save polished FBG-approved copy that reps can grab fast during live outreach.</span>
+                        </div>
+                        <div class="messages-metric">
+                            <strong>Primary Inputs</strong>
+                            <span>Templates for email, SMS, call scripts, and quick investor intros.</span>
+                        </div>
+                        <div class="messages-metric">
+                            <strong>Workflow Fit</strong>
+                            <span>Works alongside MLS imports, My Agents, Active Buyers, and the Agent Workspace email prep flow.</span>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="glass-card messages-chat-shell">
+                    <aside class="messages-chat-users">
+                        <div class="messages-chat-users-head">
+                            <h3 class="card-title">All Users</h3>
+                            <p>Click any FAST user to open your conversation with them.</p>
+                        </div>
+                        <div id="messages-chat-users-list" class="messages-chat-users-list">
+                            <p class="messages-chat-empty">Loading users...</p>
+                        </div>
+                    </aside>
+
+                    <section class="messages-chat-panel">
+                        <div class="messages-chat-panel-head">
+                            <h3 id="messages-chat-panel-title" class="card-title">Choose a user</h3>
+                            <p id="messages-chat-panel-subtitle">Open a user from the left to see the conversation.</p>
+                        </div>
+                        <div id="messages-chat-thread" class="messages-chat-thread">
+                            <p class="messages-chat-placeholder">No conversation selected yet.</p>
+                        </div>
+                        <form id="messages-chat-form" class="messages-chat-form">
+                            <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
+                            <div class="messages-chat-actions">
+                                <div id="messages-chat-status" class="messages-chat-status"></div>
+                                <button id="messages-chat-send" type="submit" class="card-btn active" disabled>Send Message</button>
+                            </div>
+                        </form>
+                    </section>
+                </section>
+
+                <section class="messages-grid">
+                    <section class="glass-card campaign-tools-section">
+                        <div class="campaign-tools-head">
+                            <div>
+                                <h3 class="card-title">FBG Message Workspace</h3>
+                                <p class="card-subtitle">Store your reusable FAST copy below. Everything here is user-scoped and ready to copy or publish later.</p>
+                            </div>
+                        </div>
+
+                        <div class="outreach-workspace-grid campaign-tools-grid">
+                            <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="FBG Templates">
+                                <div class="card-header">
+                                    <div>
+                                        <h2 class="card-title">FBG Message Templates</h2>
+                                        <p class="card-subtitle">Save message copy for agents, buyers, and follow-ups</p>
+                                    </div>
+                                </div>
+                                <p class="outreach-owner" id="template-owner-label">Workspace owner: You</p>
+                                <div class="outreach-input-grid">
+                                    <div class="form-group">
+                                        <label for="template-title-input">Template Title</label>
+                                        <input id="template-title-input" class="form-input" type="text" placeholder="Initial outreach, stale listing follow-up, quick intro...">
+                                    </div>
+                                    <div class="form-group outreach-full-width">
+                                        <label for="template-body-input">Template Message</label>
+                                        <textarea id="template-body-input" class="form-input outreach-textarea" placeholder="Hi [Agent Name], this is [Your Name] with FAST BRIDGE GROUP. We are reviewing [Property Address] and wanted to ask..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="outreach-actions">
+                                    <button id="save-template-btn" type="button" class="card-btn active">Save Template</button>
+                                </div>
+
+                                <div id="template-list" class="outreach-list">
+                                    <p class="outreach-empty">No templates yet.</p>
+                                </div>
+                            </div>
+
+                            <div class="glass-card widget-card outreach-card" data-widget-id="call-scripts" data-widget-title="FBG Call Scripts">
+                                <div class="card-header">
+                                    <div>
+                                        <h2 class="card-title">FBG Call Scripts</h2>
+                                        <p class="card-subtitle">Keep your rep-ready openers and objection handling together</p>
+                                    </div>
+                                </div>
+                                <p class="outreach-owner" id="script-owner-label">Workspace owner: You</p>
+                                <div class="outreach-input-grid">
+                                    <div class="form-group">
+                                        <label for="script-title-input">Script Title</label>
+                                        <input id="script-title-input" class="form-input" type="text" placeholder="Warm opener, voicemail, second touch...">
+                                    </div>
+                                    <div class="form-group outreach-full-width">
+                                        <label for="script-body-input">Call Script</label>
+                                        <textarea id="script-body-input" class="form-input outreach-textarea" placeholder="Hey [Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in your area and wanted to ask..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="outreach-actions">
+                                    <button id="save-script-btn" type="button" class="card-btn active">Save Script</button>
+                                </div>
+                                <div id="script-list" class="outreach-list">
+                                    <p class="outreach-empty">No scripts yet.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="glass-card">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">FBG Quick Library</h3>
+                                <p class="card-subtitle">Copy-ready blocks for the stuff you send constantly.</p>
+                            </div>
+                        </div>
+                        <div class="messages-library-grid">
+                            <article class="messages-library-item">
+                                <span class="messages-library-label">Agent Intro</span>
+                                <p id="fbg-message-block-1">Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer, probate, and off-market opportunities in [Area]. If you have anything coming up that needs a quick, clean close, send it my way.</p>
+                                <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-1">Copy</button>
+                            </article>
+                            <article class="messages-library-item">
+                                <span class="messages-library-label">Stale Listing</span>
+                                <p id="fbg-message-block-2">Wanted to follow up on [Property Address]. If the seller is open to a serious cash option, FAST BRIDGE GROUP can review it quickly and let you stay on both sides if that works for the situation.</p>
+                                <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-2">Copy</button>
+                            </article>
+                            <article class="messages-library-item">
+                                <span class="messages-library-label">Voicemail</span>
+                                <p id="fbg-message-block-3">Hey [Agent Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area] right now and wanted to connect on anything off-market, stale, or fixer-heavy. Call or text me back when you get a chance.</p>
+                                <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-3">Copy</button>
+                            </article>
+                        </div>
+                        <ol class="messages-quick-notes">
+                            <li>Keep the first sentence useful. Agents decide fast whether this is real deal flow or list spam.</li>
+                            <li>Ask for one concrete thing: stale listing, failed escrow, pocket opportunity, probate, or fixer inventory.</li>
+                            <li>State FAST BRIDGE GROUP clearly so the message feels traceable and professional.</li>
+                        </ol>
+                    </aside>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <button class="mobile-menu-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    </button>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+    <script>
+        (function () {
+            const usersList = document.getElementById('messages-chat-users-list');
+            const panelTitle = document.getElementById('messages-chat-panel-title');
+            const panelSubtitle = document.getElementById('messages-chat-panel-subtitle');
+            const thread = document.getElementById('messages-chat-thread');
+            const form = document.getElementById('messages-chat-form');
+            const input = document.getElementById('messages-chat-input');
+            const sendButton = document.getElementById('messages-chat-send');
+            const status = document.getElementById('messages-chat-status');
+            const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            let selectedUserId = null;
+            let selectedUserRecord = null;
+            let usersCache = [];
+            let pollTimer = null;
+
+            async function copyText(text) {
+                const value = String(text || '').trim();
+                if (!value) {
+                    throw new Error('Nothing is available to copy yet.');
+                }
+
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    await navigator.clipboard.writeText(value);
+                    return;
+                }
+
+                const helper = document.createElement('textarea');
+                helper.value = value;
+                helper.setAttribute('readonly', 'readonly');
+                helper.style.position = 'fixed';
+                helper.style.opacity = '0';
+                document.body.appendChild(helper);
+                helper.focus();
+                helper.select();
+                const copied = document.execCommand('copy');
+                helper.remove();
+
+                if (!copied) {
+                    throw new Error('Clipboard copy is not available in this browser.');
+                }
+            }
+
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function formatDateTime(value) {
+                const date = value ? new Date(value) : null;
+                if (!date || Number.isNaN(date.getTime())) {
+                    return '';
+                }
+
+                return date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            }
+
+            function setChatStatus(message, isError) {
+                if (!status) {
+                    return;
+                }
+                status.textContent = String(message || '').trim();
+                status.style.color = isError ? 'var(--danger)' : 'var(--text-secondary)';
+            }
+
+            function setComposerEnabled(enabled) {
+                const nextEnabled = Boolean(enabled);
+                if (input) {
+                    input.disabled = !nextEnabled;
+                }
+                if (sendButton) {
+                    sendButton.disabled = !nextEnabled;
+                }
+            }
+
+            async function apiRequest(url, options) {
+                if (!authToken) {
+                    throw new Error('Sign in again before using FBG Messages.');
+                }
+
+                const response = await fetch(url, {
+                    ...(options || {}),
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                        ...((options && options.headers) || {})
+                    }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Request failed.');
+                }
+                return payload;
+            }
+
+            function renderUsers(users) {
+                if (!usersList) {
+                    return;
+                }
+
+                usersCache = Array.isArray(users) ? users.slice() : [];
+                usersList.innerHTML = '';
+
+                if (usersCache.length === 0) {
+                    usersList.innerHTML = '<p class="messages-chat-empty">No other users are available yet.</p>';
+                    return;
+                }
+
+                usersCache.forEach((user) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'messages-chat-user-btn';
+                    if (Number(user.id) === Number(selectedUserId)) {
+                        button.classList.add('active');
+                    }
+                    button.dataset.userId = String(user.id || '');
+                    button.innerHTML = `
+                        <div class="messages-chat-user-top">
+                            <span class="messages-chat-user-name">${escapeHtml(user.name || user.email || 'User')}</span>
+                            ${user.unreadCount > 0 ? `<span class="messages-chat-unread">${Math.min(Number(user.unreadCount) || 0, 99)}</span>` : `<span class="messages-chat-time">${escapeHtml(formatDateTime(user.lastMessageAt || user.lastLogin || ''))}</span>`}
+                        </div>
+                        <div class="messages-chat-user-email">${escapeHtml(user.email || '')}</div>
+                        <div class="messages-chat-user-meta">
+                            <span class="messages-chat-role">${escapeHtml(user.role || 'user')}</span>
+                            <span class="messages-chat-time">${escapeHtml(formatDateTime(user.lastMessageAt || user.lastLogin || ''))}</span>
+                        </div>
+                        <div class="messages-chat-user-preview">${escapeHtml(user.lastMessage || 'No messages yet. Start the conversation.')}</div>
+                    `;
+                    button.addEventListener('click', () => {
+                        openConversation(user.id, { focusInput: true });
+                    });
+                    usersList.appendChild(button);
+                });
+            }
+
+            function renderConversation(messages) {
+                if (!thread) {
+                    return;
+                }
+
+                const items = Array.isArray(messages) ? messages : [];
+                thread.innerHTML = '';
+
+                if (items.length === 0) {
+                    thread.innerHTML = '<p class="messages-chat-placeholder">No messages yet. Start the conversation here.</p>';
+                    return;
+                }
+
+                items.forEach((message) => {
+                    const article = document.createElement('article');
+                    article.className = `messages-chat-bubble ${message.direction === 'outgoing' ? 'outgoing' : 'incoming'}`;
+                    article.innerHTML = `${escapeHtml(message.body || '')}<div class="messages-chat-bubble-meta">${escapeHtml(formatDateTime(message.createdAt || ''))}</div>`;
+                    thread.appendChild(article);
+                });
+
+                thread.scrollTop = thread.scrollHeight;
+            }
+
+            async function loadUsers(options) {
+                const config = options && typeof options === 'object' ? options : {};
+                const payload = await apiRequest('/api/messages/users');
+                renderUsers(payload.users || []);
+
+                if (!selectedUserId && usersCache.length > 0) {
+                    await openConversation(usersCache[0].id, { focusInput: false, suppressUserReload: true });
+                    return;
+                }
+
+                if (!config.preserveSelection && selectedUserId && !usersCache.some((item) => Number(item.id) === Number(selectedUserId))) {
+                    selectedUserId = null;
+                    selectedUserRecord = null;
+                    setComposerEnabled(false);
+                }
+            }
+
+            async function openConversation(userId, options) {
+                const config = options && typeof options === 'object' ? options : {};
+                const normalizedUserId = Number.parseInt(String(userId || ''), 10);
+                if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+                    return;
+                }
+
+                selectedUserId = normalizedUserId;
+                if (!config.suppressUserReload) {
+                    renderUsers(usersCache);
+                }
+
+                setChatStatus('Loading conversation...', false);
+                const payload = await apiRequest(`/api/messages/conversations/${normalizedUserId}`);
+                selectedUserRecord = payload.otherUser || null;
+
+                if (panelTitle) {
+                    panelTitle.textContent = selectedUserRecord && selectedUserRecord.name ? selectedUserRecord.name : 'Conversation';
+                }
+                if (panelSubtitle) {
+                    panelSubtitle.textContent = selectedUserRecord && selectedUserRecord.email
+                        ? `${selectedUserRecord.email} • ${selectedUserRecord.role || 'user'}`
+                        : 'Direct messages inside FAST.';
+                }
+
+                setComposerEnabled(true);
+                renderConversation(payload.messages || []);
+                setChatStatus('', false);
+                await loadUsers({ preserveSelection: true });
+
+                if (config.focusInput && input) {
+                    input.focus();
+                }
+            }
+
+            async function sendMessage() {
+                if (!selectedUserId || !input) {
+                    return;
+                }
+
+                const body = String(input.value || '').trim();
+                if (!body) {
+                    setChatStatus('Type a message before sending.', true);
+                    return;
+                }
+
+                setChatStatus('Sending message...', false);
+                if (sendButton) {
+                    sendButton.disabled = true;
+                }
+
+                try {
+                    await apiRequest(`/api/messages/conversations/${selectedUserId}`, {
+                        method: 'POST',
+                        body: JSON.stringify({ body })
+                    });
+                    input.value = '';
+                    await openConversation(selectedUserId, { focusInput: true });
+                    setChatStatus('Message sent.', false);
+                } finally {
+                    if (sendButton) {
+                        sendButton.disabled = false;
+                    }
+                }
+            }
+
+            function startPolling() {
+                if (pollTimer) {
+                    window.clearInterval(pollTimer);
+                }
+
+                pollTimer = window.setInterval(async () => {
+                    if (document.hidden) {
+                        return;
+                    }
+
+                    try {
+                        if (selectedUserId) {
+                            await openConversation(selectedUserId, { suppressUserReload: true });
+                        } else {
+                            await loadUsers({ preserveSelection: true });
+                        }
+                    } catch (error) {
+                        // Ignore background poll failures to avoid noisy UI.
+                    }
+                }, 8000);
+            }
+
+            if (form) {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    try {
+                        await sendMessage();
+                    } catch (error) {
+                        setChatStatus(String(error && error.message || 'Unable to send the message.'), true);
+                    }
+                });
+            }
+
+            if (input) {
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        form && form.requestSubmit();
+                    }
+                });
+            }
+
+            if (authToken) {
+                loadUsers()
+                    .then(startPolling)
+                    .catch((error) => {
+                        if (usersList) {
+                            usersList.innerHTML = `<p class="messages-chat-empty">${escapeHtml(String(error && error.message || 'Unable to load users.'))}</p>`;
+                        }
+                        setChatStatus(String(error && error.message || 'Unable to load conversations.'), true);
+                    });
+            } else {
+                if (usersList) {
+                    usersList.innerHTML = '<p class="messages-chat-empty">Sign in again to use direct messages.</p>';
+                }
+                setChatStatus('Sign in again to use direct messages.', true);
+            }
+
+            document.querySelectorAll('[data-copy-message-target]').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const targetId = button.getAttribute('data-copy-message-target');
+                    const target = targetId ? document.getElementById(targetId) : null;
+                    try {
+                        await copyText(target ? target.textContent : '');
+                        if (typeof window.showDashboardToast === 'function') {
+                            window.showDashboardToast('success', 'Copied', 'FBG message copied to your clipboard.');
+                        }
+                    } catch (error) {
+                        if (typeof window.showDashboardToast === 'function') {
+                            window.showDashboardToast('error', 'Copy Failed', String(error && error.message || 'The message could not be copied.'));
+                        }
+                    }
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
