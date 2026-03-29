@@ -76,6 +76,56 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     ];
     const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
     const ADMIN_CANONICAL_EMAILS = new Set();
+    const AGENT_STATUS_ALIASES = {
+        acquired: 'acquired',
+        '100-closed-deal': 'acquired',
+        'closed-deal': 'acquired',
+        'offer-accepted': 'offer-accepted',
+        '80-offer-accepted': 'offer-accepted',
+        'offer-terms-accepted': 'offer-accepted',
+        '80-offer-terms-accepted': 'offer-accepted',
+        'in-negotiations': 'in-negotiations',
+        '60-in-negotiations': 'in-negotiations',
+        'contract-submitted': 'contract-submitted',
+        '50-contract-submitted': 'contract-submitted',
+        'back-up': 'back-up',
+        '30-back-up': 'back-up',
+        'offer-terms-sent': 'offer-terms-sent',
+        '30-offer-terms-sent': 'offer-terms-sent',
+        'continue-to-follow': 'continue-to-follow',
+        '20-continue-to-follow': 'continue-to-follow',
+        'initial-contact-started': 'initial-contact-started',
+        '10-initial-contact-started': 'initial-contact-started',
+        'cancelled-fec': 'cancelled-fec',
+        '0-cancelled-fec': 'cancelled-fec',
+        'do-not-use': 'do-not-use',
+        '0-do-not-use': 'do-not-use',
+        none: 'none',
+        '0-none': 'none',
+        pass: 'pass',
+        '0-pass': 'pass',
+        'sold-others-close': 'sold-others-close',
+        '0-sold-others-close': 'sold-others-close'
+    };
+
+    function normalizeAgentStatusValue(value) {
+        const rawValue = String(value || '').trim().toLowerCase();
+        if (!rawValue) {
+            return 'none';
+        }
+
+        const normalizedKey = rawValue
+            .replace(/[%]/g, '')
+            .replace(/[|/()]+/g, ' ')
+            .replace(/_/g, '-')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\s*-\s*/g, '-')
+            .replace(/\s+/g, '-');
+
+        return AGENT_STATUS_ALIASES[normalizedKey] || AGENT_STATUS_ALIASES[rawValue] || normalizedKey || 'none';
+    }
+
     KNOWN_EMAIL_GROUPS.forEach((group) => {
         if (group.forceRole === 'admin') {
             ADMIN_CANONICAL_EMAILS.add(group.canonical);
@@ -1546,7 +1596,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return;
         }
 
-        const normalizedStatus = String(detail.piqAgentStatus || 'none').trim().toLowerCase() || 'none';
+        const normalizedStatus = normalizeAgentStatusValue(detail.piqAgentStatus || 'none');
         if (normalizedStatus !== 'offer-accepted') {
             return;
         }
@@ -2965,7 +3015,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function formatAgentStatusLabel(value) {
         const labels = {
             acquired: '100% - Closed Deal',
-            'offer-accepted': '80% - Offer Accepted',
+            'offer-accepted': '80% - Offer Terms Accepted',
             'in-negotiations': '60% - In Negotiations',
             'contract-submitted': '50% - Contract Submitted',
             'back-up': '30% - Back Up',
@@ -2979,13 +3029,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             'sold-others-close': '0% - Sold Others/Close'
         };
 
-        const normalized = String(value || 'none').trim().toLowerCase();
+        const normalized = normalizeAgentStatusValue(value);
         return labels[normalized] || labels.none;
     }
 
     const AGENT_STATUS_OPTIONS = [
         { value: 'acquired', label: '100% - Closed Deal' },
-        { value: 'offer-accepted', label: '80% - Offer Accepted' },
+        { value: 'offer-accepted', label: '80% - Offer Terms Accepted' },
         { value: 'in-negotiations', label: '60% - In Negotiations' },
         { value: 'contract-submitted', label: '50% - Contract Submitted' },
         { value: 'back-up', label: '30% - Back Up' },
@@ -3001,7 +3051,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function buildDashboardPropertyDetailFallback(propertyAddress, statusValue, snapshotLike) {
         const snapshot = snapshotLike && typeof snapshotLike === 'object' ? snapshotLike : {};
-        const normalizedStatus = String(statusValue || snapshot.piqAgentStatus || 'none').trim().toLowerCase() || 'none';
+        const normalizedStatus = normalizeAgentStatusValue(statusValue || snapshot.piqAgentStatus || 'none');
         const address = String(snapshot.address || propertyAddress || 'Property').trim() || 'Property';
         const propertyImages = Array.isArray(snapshot.propertyImages)
             ? snapshot.propertyImages.filter(Boolean)
@@ -3050,7 +3100,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         Object.entries(scopedStatuses || {}).forEach(([propertyKey, statusValue]) => {
             const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
-            const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
+            const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
             if (!normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
                 return;
             }
@@ -3081,7 +3131,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 || assignmentRecord.propertyAddress
                 || snapshot?.address
             );
-            const normalizedStatus = String(snapshot?.piqAgentStatus || 'none').trim().toLowerCase();
+            const normalizedStatus = normalizeAgentStatusValue(snapshot?.piqAgentStatus || 'none');
 
             if (!normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
                 return;
@@ -3201,7 +3251,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         async function updateAcceptedItemStatus(item, nextStatusValue) {
             const workspaceUser = getWorkspaceUserContext();
-            const normalizedStatus = String(nextStatusValue || 'none').trim().toLowerCase() || 'none';
+            const normalizedStatus = normalizeAgentStatusValue(nextStatusValue || 'none');
             const propertyKey = makePropertyStorageKey(item && (item.propertyKey || item.propertyAddress));
 
             if (!propertyKey) {
@@ -3375,7 +3425,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     option.textContent = optionConfig.label;
                     statusSelect.appendChild(option);
                 });
-                statusSelect.value = String(item.statusValue || 'offer-accepted').trim().toLowerCase() || 'offer-accepted';
+                statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'offer-accepted');
 
                 const statusSaveButton = document.createElement('button');
                 statusSaveButton.type = 'button';
@@ -3464,7 +3514,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 statusCancelButton.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    statusSelect.value = String(item.statusValue || 'offer-accepted').trim().toLowerCase() || 'offer-accepted';
+                    statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'offer-accepted');
                     toggleStatusEditor(false);
                 });
 
@@ -3472,8 +3522,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     event.preventDefault();
                     event.stopPropagation();
 
-                    const nextStatus = String(statusSelect.value || 'none').trim().toLowerCase() || 'none';
-                    if (nextStatus === String(item.statusValue || 'offer-accepted').trim().toLowerCase()) {
+                    const nextStatus = normalizeAgentStatusValue(statusSelect.value || 'none');
+                    if (nextStatus === normalizeAgentStatusValue(item.statusValue || 'offer-accepted')) {
                         toggleStatusEditor(false);
                         return;
                     }
@@ -14415,6 +14465,48 @@ function initNavbarDateTime() {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
+        async function deleteAssignedProperty(item) {
+            if (!item || typeof item !== 'object') {
+                return;
+            }
+
+            const propertyKey = makePropertyStorageKey(item.propertyKey || item.propertyAddress || item.propertySnapshot?.address);
+            if (!propertyKey) {
+                showDashboardToast('error', 'Delete Failed', 'This assigned property is missing its saved key.');
+                return;
+            }
+
+            const propertyLabel = String(item.propertyAddress || item.propertySnapshot?.address || 'this property').trim() || 'this property';
+            if (!window.confirm(`Move ${propertyLabel} out of Assigned Properties?`)) {
+                return;
+            }
+
+            const previousAssignment = getPropertyAssignmentRecord(propertyKey) || item;
+            const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+
+            try {
+                await setPropertyAssignmentRecord(propertyKey, null);
+
+                if (previousAssignment?.assignedTo) {
+                    setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, previousAssignment.assignedTo, propertyKey, 'none', { silent: true });
+                }
+
+                if (!usersMatch(activeSessionUser, previousAssignment?.assignedTo || {})) {
+                    setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, activeSessionUser, propertyKey, 'none', { silent: true });
+                }
+
+                syncAssignmentIntoLocalDealCache(propertyKey, null, workspaceUser);
+                if (!usersMatch(activeSessionUser, workspaceUser)) {
+                    syncAssignmentIntoLocalDealCache(propertyKey, null, activeSessionUser);
+                }
+
+                showDashboardToast('success', 'Assigned Property Removed', `${propertyLabel} was removed from your Assigned Properties list.`);
+                window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+            } catch (error) {
+                showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The assigned property could not be removed.');
+            }
+        }
+
         function getAssignedItemsForWorkspaceUser() {
             const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
             const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
@@ -14581,14 +14673,25 @@ function initNavbarDateTime() {
                 const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
                     ? item.propertySnapshot
                     : {};
-                const statusValue = String(snapshot.piqAgentStatus || 'none').trim().toLowerCase() || 'none';
+                const statusValue = normalizeAgentStatusValue(snapshot.piqAgentStatus || 'none');
                 const statusLabel = formatAgentStatusLabel(statusValue);
                 const roiText = Number(snapshot.roi || item.roi || 0).toFixed(1);
 
-                const row = document.createElement('button');
-                row.type = 'button';
+                const row = document.createElement('div');
                 row.className = 'deals-compact-row';
+                row.tabIndex = 0;
+                row.setAttribute('role', 'button');
+                row.setAttribute('aria-label', `Open ${String(item.propertyAddress || snapshot.address || 'property').trim() || 'property'}`);
                 row.innerHTML = `
+                    <button type="button" class="deals-compact-delete-btn" aria-label="Delete ${String(item.propertyAddress || snapshot.address || 'property').trim() || 'property'} from Assigned Properties">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6"></path>
+                            <path d="M18 6l-.8 11.2A2 2 0 0 1 15.2 19H8.8a2 2 0 0 1-1.99-1.8L6 6"></path>
+                            <path d="M10 10.25v5.5"></path>
+                            <path d="M14 10.25v5.5"></path>
+                        </svg>
+                    </button>
                     <div class="deals-compact-thumb-wrap">
                         <img class="deals-compact-thumb" src="${String(snapshot.propertyImages?.[0] || item.imageUrl || '').trim()}" alt="Assigned property preview">
                     </div>
@@ -14604,12 +14707,33 @@ function initNavbarDateTime() {
                     </div>
                 `;
 
-                row.addEventListener('click', () => {
+                const openAssignedProperty = () => {
                     if (snapshot && typeof snapshot === 'object') {
                         persistSelectedPropertyDetail(snapshot);
                     }
                     window.location.href = 'property-details.html';
+                };
+
+                row.addEventListener('click', () => {
+                    openAssignedProperty();
                 });
+
+                row.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+                    event.preventDefault();
+                    openAssignedProperty();
+                });
+
+                const deleteButton = row.querySelector('.deals-compact-delete-btn');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        await deleteAssignedProperty(item);
+                    });
+                }
 
                 assignedList.appendChild(row);
             });
@@ -14904,7 +15028,7 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const normalizedStatus = String(statusValue || 'none').trim().toLowerCase() || 'none';
+            const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
             const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
             let changed = false;
 
@@ -14942,7 +15066,7 @@ function initNavbarDateTime() {
                 return '';
             }
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
-            return String(scopedStatuses[propertyKey] || '').trim().toLowerCase();
+            return normalizeAgentStatusValue(scopedStatuses[propertyKey] || '');
         }
 
         function getLocalAssignableUsers() {
@@ -15107,7 +15231,7 @@ function initNavbarDateTime() {
             if (!propertyKey) {
                 return;
             }
-            const normalizedStatus = String(statusValue || 'none').trim().toLowerCase() || 'none';
+            const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
             const currentAssignment = getPropertyAssignmentRecord(propertyKey);
             const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
             setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, workspaceUser, propertyKey, normalizedStatus, { silent: true });
@@ -15141,7 +15265,7 @@ function initNavbarDateTime() {
             }));
         }
 
-        const currentStatusValue = String(getPersistedPiqStatus() || detailData.piqAgentStatus || 'none');
+        const currentStatusValue = normalizeAgentStatusValue(getPersistedPiqStatus() || detailData.piqAgentStatus || 'none');
         detailData.piqAgentStatus = currentStatusValue;
         detailData.agentRecord = {
             ...(detailData.agentRecord || {}),
@@ -16261,7 +16385,7 @@ function initNavbarDateTime() {
         }
 
         function renderAgentWorkspaceAcceptedOffer() {
-            const normalizedStatus = String(detailData.piqAgentStatus || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
+            const normalizedStatus = normalizeAgentStatusValue(detailData.piqAgentStatus || defaultAgentStatus);
             const isOfferAccepted = normalizedStatus === 'offer-accepted';
             const normalizedPropertyKey = makePropertyStorageKey(propertyKey || detailData.address || detailData.propertyAddress);
 
@@ -16470,10 +16594,10 @@ function initNavbarDateTime() {
 
         if (offerAcceptedToggleButton && piqAgentStatusSelect) {
             offerAcceptedToggleButton.addEventListener('change', () => {
-                const currentStatus = String(piqAgentStatusSelect.value || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
+                const currentStatus = normalizeAgentStatusValue(piqAgentStatusSelect.value || defaultAgentStatus);
 
                 if (!offerAcceptedToggleButton.checked || currentStatus === 'offer-accepted') {
-                    const restoreStatus = String(offerAcceptedToggleButton.dataset.restoreStatus || defaultAgentStatus).trim().toLowerCase() || defaultAgentStatus;
+                    const restoreStatus = normalizeAgentStatusValue(offerAcceptedToggleButton.dataset.restoreStatus || defaultAgentStatus);
                     piqAgentStatusSelect.value = Array.from(piqAgentStatusSelect.options).some((option) => option.value === restoreStatus)
                         ? restoreStatus
                         : defaultAgentStatus;
@@ -16484,7 +16608,7 @@ function initNavbarDateTime() {
 
                 piqAgentStatusSelect.dispatchEvent(new Event('change', { bubbles: true }));
 
-                if (String(piqAgentStatusSelect.value || '').trim().toLowerCase() === 'offer-accepted') {
+                if (normalizeAgentStatusValue(piqAgentStatusSelect.value || '') === 'offer-accepted') {
                     activatePropertyTab('agent');
                 }
             });
@@ -16492,11 +16616,11 @@ function initNavbarDateTime() {
 
         if (piqAgentStatusSelect) {
             const persistedStatus = getPersistedPiqStatus();
-            const savedStatus = String(persistedStatus || detailData.piqAgentStatus || defaultAgentStatus);
+            const savedStatus = normalizeAgentStatusValue(persistedStatus || detailData.piqAgentStatus || defaultAgentStatus);
             const hasSavedOption = Array.from(piqAgentStatusSelect.options).some(option => option.value === savedStatus);
             piqAgentStatusSelect.value = hasSavedOption ? savedStatus : defaultAgentStatus;
 
-            detailData.piqAgentStatus = piqAgentStatusSelect.value || defaultAgentStatus;
+            detailData.piqAgentStatus = normalizeAgentStatusValue(piqAgentStatusSelect.value || defaultAgentStatus);
             detailData.agentRecord = {
                 ...(detailData.agentRecord || {}),
                 agentStatus: formatAgentStatusLabel(detailData.piqAgentStatus)
@@ -16514,7 +16638,7 @@ function initNavbarDateTime() {
             }
 
             piqAgentStatusSelect.addEventListener('change', () => {
-                detailData.piqAgentStatus = piqAgentStatusSelect.value || defaultAgentStatus;
+                detailData.piqAgentStatus = normalizeAgentStatusValue(piqAgentStatusSelect.value || defaultAgentStatus);
                 detailData.agentRecord = {
                     ...(detailData.agentRecord || {}),
                     agentStatus: formatAgentStatusLabel(detailData.piqAgentStatus)
@@ -17963,7 +18087,7 @@ function initNavbarDateTime() {
             }
 
             function renderNotes() {
-                const canonicalStatus = String(getPersistedPiqStatus() || detailData.piqAgentStatus || 'none');
+                const canonicalStatus = normalizeAgentStatusValue(getPersistedPiqStatus() || detailData.piqAgentStatus || 'none');
                 const currentAgentRecord = getCurrentAgentRecordState();
                 const currentAgentName = String(currentAgentRecord.name || '').trim();
                 const currentAgentKey = currentAgentName.toLowerCase();
@@ -18018,7 +18142,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const currentStatus = String(
+                const currentStatus = normalizeAgentStatusValue(
                     (statusSelect && statusSelect.value) ||
                     detailData.piqAgentStatus ||
                     'none'
@@ -20359,7 +20483,7 @@ function initNavbarDateTime() {
                 invCashForKeys: '0'
             };
 
-            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput || !customCostCapInput || !customArvMaxInput) {
+            if (!arvInput || !renovationInput || !sellSidePercentInput || !offerPriceInput || !targetPercentInput || !targetDollarInput || !holdMonthsInput || !loanToArvInput || !interestRateInput || !originationPointsInput || !lenderFeesInput || !otherCostList || !financingModeInput) {
                 return;
             }
 
@@ -20681,10 +20805,25 @@ function initNavbarDateTime() {
                     originationPointsInput,
                     lenderFeesInput,
                     otherCostAmountInput
-                ].forEach(formatNumericInputValue);
+                ].filter(Boolean).forEach(formatNumericInputValue);
 
                 formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
                 formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
+            }
+
+            function bindFormattedNumericInput(input, options = {}) {
+                if (!input) {
+                    return;
+                }
+
+                const handleUpdate = () => {
+                    formatNumericInputValue(input, options);
+                    recalculate();
+                };
+
+                input.addEventListener('input', handleUpdate);
+                input.addEventListener('blur', handleUpdate);
+                input.addEventListener('change', handleUpdate);
             }
 
             function syncInvestorDefaultsFromInputs() {
@@ -20785,8 +20924,8 @@ function initNavbarDateTime() {
 
                 if (mode === 'custom') {
                     return {
-                        costAdvanceRate: Math.max(asNumber(customCostCapInput, 0), 0) / 100,
-                        arvAdvanceRate: Math.max(asNumber(customArvMaxInput, 0), 0) / 100
+                        costAdvanceRate: Math.max(asNumber(customCostCapInput, 100), 0) / 100,
+                        arvAdvanceRate: Math.max(asNumber(customArvMaxInput, 80), 0) / 100
                     };
                 }
 
@@ -20804,8 +20943,12 @@ function initNavbarDateTime() {
                     customArvMaxLabel.hidden = !isCustom;
                 }
 
-                customCostCapInput.disabled = !isCustom || isCash;
-                customArvMaxInput.disabled = !isCustom || isCash;
+                if (customCostCapInput) {
+                    customCostCapInput.disabled = !isCustom || isCash;
+                }
+                if (customArvMaxInput) {
+                    customArvMaxInput.disabled = !isCustom || isCash;
+                }
             }
 
             function applyFinancingModeDefaults(mode, options = {}) {
@@ -21181,24 +21324,30 @@ function initNavbarDateTime() {
                 setPersistedIaCalculatorState(buildIaCalculatorState());
             }
 
-            addOtherCostButton.addEventListener('click', () => {
-                const name = (otherCostNameInput.value || '').trim() || 'Other Cost';
-                const amount = Math.max(asNumber(otherCostAmountInput, 0), 0);
-                if (amount <= 0) {
-                    return;
-                }
-                otherCosts.push({ name, amount });
-                otherCostNameInput.value = '';
-                otherCostAmountInput.value = '0';
-                renderOtherCosts();
-                recalculate();
-            });
+            if (addOtherCostButton && otherCostNameInput && otherCostAmountInput) {
+                addOtherCostButton.addEventListener('click', () => {
+                    const name = (otherCostNameInput.value || '').trim() || 'Other Cost';
+                    const amount = Math.max(asNumber(otherCostAmountInput, 0), 0);
+                    if (amount <= 0) {
+                        return;
+                    }
+                    otherCosts.push({ name, amount });
+                    otherCostNameInput.value = '';
+                    otherCostAmountInput.value = '0';
+                    renderOtherCosts();
+                    recalculate();
+                });
+            }
 
             targetPercentInput.addEventListener('input', () => {
                 targetMode = 'percent';
                 offerPriceMode = 'target';
                 formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
                 placePercentSuffixCaret(targetPercentInput);
+                recalculate();
+            });
+            targetPercentInput.addEventListener('blur', () => {
+                formatPercentSuffixInputValue(targetPercentInput, { allowNegative: true });
                 recalculate();
             });
             targetPercentInput.addEventListener('focus', () => {
@@ -21226,6 +21375,10 @@ function initNavbarDateTime() {
                 placeCurrencyPrefixCaret(targetDollarInput);
                 recalculate();
             });
+            targetDollarInput.addEventListener('blur', () => {
+                formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
+                recalculate();
+            });
             targetDollarInput.addEventListener('focus', () => {
                 formatCurrencyPrefixInputValue(targetDollarInput, { allowNegative: true });
                 placeCurrencyPrefixCaret(targetDollarInput);
@@ -21246,6 +21399,10 @@ function initNavbarDateTime() {
             });
             offerPriceInput.addEventListener('input', () => {
                 offerPriceMode = 'manual';
+                formatNumericInputValue(offerPriceInput);
+                recalculate();
+            });
+            offerPriceInput.addEventListener('blur', () => {
                 formatNumericInputValue(offerPriceInput);
                 recalculate();
             });
@@ -21274,11 +21431,8 @@ function initNavbarDateTime() {
                 interestRateInput,
                 originationPointsInput,
                 lenderFeesInput
-            ].forEach(input => {
-                input.addEventListener('input', () => {
-                    formatNumericInputValue(input);
-                    recalculate();
-                });
+            ].forEach((input) => {
+                bindFormattedNumericInput(input);
             });
 
             [
@@ -21296,14 +21450,14 @@ function initNavbarDateTime() {
                 if (!input) {
                     return;
                 }
-                input.addEventListener('input', () => {
-                    formatNumericInputValue(input);
-                    recalculate();
-                });
+                bindFormattedNumericInput(input);
             });
 
             if (otherCostAmountInput) {
                 otherCostAmountInput.addEventListener('input', () => {
+                    formatNumericInputValue(otherCostAmountInput);
+                });
+                otherCostAmountInput.addEventListener('blur', () => {
                     formatNumericInputValue(otherCostAmountInput);
                 });
             }
