@@ -3313,8 +3313,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             acceptedItems.forEach((item) => {
                 const card = document.createElement('article');
                 card.className = 'agent-note-link agent-note-link-card';
-                card.tabIndex = 0;
-                card.setAttribute('role', 'button');
 
                 const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
                 const acceptedTime = item.acceptedAt > 0
@@ -3325,7 +3323,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 const priceLabel = String(snapshot.listPrice || '$0').trim() || '$0';
                 const assignedLabel = item.assignmentRecord
                     ? buildAssignedByLabel(item.assignmentRecord)
-                    : 'Click to open property details';
+                    : 'Use house icon for property details';
 
                 const head = document.createElement('div');
                 head.className = 'agent-note-link-head';
@@ -3353,6 +3351,46 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 const actions = document.createElement('div');
                 actions.className = 'agent-note-link-actions';
 
+                const statusEditButton = document.createElement('button');
+                statusEditButton.type = 'button';
+                statusEditButton.className = 'agent-note-share-btn agent-note-status-btn';
+                statusEditButton.setAttribute('aria-label', `Change agent status for ${item.propertyAddress}`);
+                statusEditButton.title = 'Change agent status';
+                statusEditButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                    </svg>
+                `;
+
+                const statusEditor = document.createElement('div');
+                statusEditor.className = 'agent-note-status-editor';
+                statusEditor.hidden = true;
+
+                const statusSelect = document.createElement('select');
+                statusSelect.className = 'form-input agent-note-status-select';
+                AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
+                    const option = document.createElement('option');
+                    option.value = optionConfig.value;
+                    option.textContent = optionConfig.label;
+                    statusSelect.appendChild(option);
+                });
+                statusSelect.value = String(item.statusValue || 'offer-accepted').trim().toLowerCase() || 'offer-accepted';
+
+                const statusSaveButton = document.createElement('button');
+                statusSaveButton.type = 'button';
+                statusSaveButton.className = 'card-btn active';
+                statusSaveButton.textContent = 'Save';
+
+                const statusCancelButton = document.createElement('button');
+                statusCancelButton.type = 'button';
+                statusCancelButton.className = 'card-btn';
+                statusCancelButton.textContent = 'Cancel';
+
+                statusEditor.appendChild(statusSelect);
+                statusEditor.appendChild(statusSaveButton);
+                statusEditor.appendChild(statusCancelButton);
+
                 const propertyButton = document.createElement('button');
                 propertyButton.type = 'button';
                 propertyButton.className = 'agent-note-share-btn agent-note-property-btn';
@@ -3373,14 +3411,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     const shareButton = document.createElement('button');
                     shareButton.type = 'button';
                     shareButton.className = 'agent-note-share-btn';
-                    shareButton.setAttribute('aria-label', `Share ${item.propertyAddress} agent to Email Prep`);
+                    shareButton.setAttribute('aria-label', `Load ${item.propertyAddress} agent into Email Prep`);
+                    shareButton.title = 'Load agent into Email Prep';
                     shareButton.innerHTML = `
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="18" cy="5" r="3"></circle>
-                            <circle cx="6" cy="12" r="3"></circle>
-                            <circle cx="18" cy="19" r="3"></circle>
-                            <path d="M8.59 13.51 15.42 17.49"></path>
-                            <path d="M15.41 6.51 8.59 10.49"></path>
+                            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                            <path d="m4 7 8 6 8-6"></path>
                         </svg>
                     `;
 
@@ -3411,36 +3447,70 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     head.appendChild(shareButton);
                 }
 
+                const toggleStatusEditor = (isOpen) => {
+                    statusEditor.hidden = !isOpen;
+                    statusEditButton.classList.toggle('is-active', isOpen);
+                    if (isOpen) {
+                        statusSelect.focus();
+                    }
+                };
+
+                statusEditButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleStatusEditor(statusEditor.hidden);
+                });
+
+                statusCancelButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    statusSelect.value = String(item.statusValue || 'offer-accepted').trim().toLowerCase() || 'offer-accepted';
+                    toggleStatusEditor(false);
+                });
+
+                statusSaveButton.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const nextStatus = String(statusSelect.value || 'none').trim().toLowerCase() || 'none';
+                    if (nextStatus === String(item.statusValue || 'offer-accepted').trim().toLowerCase()) {
+                        toggleStatusEditor(false);
+                        return;
+                    }
+
+                    statusSaveButton.disabled = true;
+                    statusCancelButton.disabled = true;
+                    statusSelect.disabled = true;
+
+                    try {
+                        const result = await updateAcceptedItemStatus(item, nextStatus);
+                        showDashboardToast('success', 'Agent Status Updated', result.normalizedStatus === 'offer-accepted'
+                            ? `${result.propertyAddress} stayed in the accepted-offer workspace.`
+                            : `${result.propertyAddress} moved to ${formatAgentStatusLabel(result.normalizedStatus)}.`);
+                    } catch (error) {
+                        showDashboardToast('error', 'Status Update Failed', error && error.message ? error.message : 'The agent status could not be updated from Agent Workspace.');
+                    } finally {
+                        statusSaveButton.disabled = false;
+                        statusCancelButton.disabled = false;
+                        statusSelect.disabled = false;
+                    }
+                });
+
                 propertyButton.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
                     openAcceptedProperty(snapshot, item.propertyAddress, item.statusValue);
                 });
 
+                actions.appendChild(statusEditButton);
                 actions.appendChild(propertyButton);
+                actions.appendChild(statusEditor);
 
                 card.appendChild(head);
                 card.appendChild(addressText);
                 card.appendChild(statusText);
                 card.appendChild(bodyText);
                 card.appendChild(actions);
-
-                card.addEventListener('click', () => {
-                    openAcceptedProperty(snapshot, item.propertyAddress, item.statusValue);
-                });
-
-                card.addEventListener('keydown', (event) => {
-                    if (event.key !== 'Enter' && event.key !== ' ') {
-                        return;
-                    }
-
-                    if (event.target instanceof HTMLElement && event.target.closest('.agent-note-link-actions, .agent-note-link-head button')) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                    openAcceptedProperty(snapshot, item.propertyAddress, item.statusValue);
-                });
 
                 offersAcceptedList.appendChild(card);
             });
