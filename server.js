@@ -3601,6 +3601,23 @@ function serializeUserMessage(row, currentUserId) {
   };
 }
 
+function serializeMessageNotification(row, currentUserId) {
+  const message = serializeUserMessage(row, currentUserId);
+  if (!message) {
+    return null;
+  }
+
+  return {
+    ...message,
+    sender: {
+      id: Number(row.sender_id) || Number(row.sender_user_id) || 0,
+      name: String(row.sender_name || '').trim() || 'User',
+      email: String(row.sender_email || '').trim().toLowerCase(),
+      role: String(row.sender_role || '').trim().toLowerCase()
+    }
+  };
+}
+
 function normalizePdfExtractText(value) {
   return String(value || '')
     .replace(/\u00a0/g, ' ')
@@ -5963,6 +5980,74 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
   } catch (error) {
     console.error('Send conversation message error:', error);
     return res.status(500).json({ error: 'Unable to send the message.' });
+  }
+});
+
+app.get('/api/messages/notifications', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentUserId = Number(decoded.id);
+  const afterId = Number.parseInt(String(req.query?.afterId || ''), 10);
+  const seeded = String(req.query?.seeded || '').trim() === '1';
+  const safeAfterId = Number.isInteger(afterId) && afterId > 0 ? afterId : 0;
+
+  if (!Number.isInteger(currentUserId) || currentUserId <= 0) {
+    return res.status(400).json({ error: 'Authenticated user id is required.' });
+  }
+
+  try {
+    const highestRow = await dbGet(
+      `SELECT MAX(id) AS latest_incoming_message_id
+       FROM user_messages
+       WHERE recipient_user_id = ?`,
+      [currentUserId]
+    );
+    const latestIncomingMessageId = Number(highestRow?.latest_incoming_message_id) || 0;
+
+    if (!seeded) {
+      return res.json({
+        success: true,
+        seeded: true,
+        latestIncomingMessageId,
+        notifications: []
+      });
+    }
+
+    const rows = await dbAll(
+      `SELECT
+          m.id,
+          m.sender_user_id,
+          m.recipient_user_id,
+          m.body,
+          m.created_at,
+          m.read_at,
+          sender.id AS sender_id,
+          sender.name AS sender_name,
+          sender.email AS sender_email,
+          sender.role AS sender_role
+       FROM user_messages m
+       INNER JOIN users sender ON sender.id = m.sender_user_id
+       WHERE m.recipient_user_id = ?
+         AND m.read_at IS NULL
+         AND m.id > ?
+       ORDER BY m.id ASC`,
+      [currentUserId, safeAfterId]
+    );
+
+    return res.json({
+      success: true,
+      seeded: true,
+      latestIncomingMessageId,
+      notifications: rows
+        .map((row) => serializeMessageNotification(row, currentUserId))
+        .filter(Boolean)
+    });
+  } catch (error) {
+    console.error('Load message notifications error:', error);
+    return res.status(500).json({ error: 'Unable to load message notifications.' });
   }
 });
 

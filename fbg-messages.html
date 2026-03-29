@@ -369,12 +369,34 @@
             background: #e9e9eb;
             color: #111827;
             box-shadow: 0 1px 1px rgba(17, 24, 39, 0.06);
+            position: relative;
+            margin-left: 14px;
         }
 
         .messages-chat-bubble.outgoing {
             margin-left: auto;
+            margin-right: 14px;
             background: #007aff;
             color: #ffffff;
+        }
+
+        .messages-chat-bubble::after {
+            content: '';
+            position: absolute;
+            left: -6px;
+            bottom: 2px;
+            width: 18px;
+            height: 18px;
+            background: #e9e9eb;
+            border-bottom-right-radius: 15px;
+            clip-path: path('M18 0C10 3 4 10 0 18C8 17 13 15 18 9V0Z');
+        }
+
+        .messages-chat-bubble.outgoing::after {
+            left: auto;
+            right: -6px;
+            background: #007aff;
+            transform: scaleX(-1);
         }
 
         .messages-chat-bubble-meta {

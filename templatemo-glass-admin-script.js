@@ -15,8 +15,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const CLOSED_DEALS_KEY = 'closedDealsByUser';
     const NOTIFICATION_HISTORY_KEY = 'dashboardNotificationHistoryByUser';
     const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
+    const MESSAGE_NOTIFICATION_STATE_KEY = 'dashboardMessageNotificationStateByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
     const MAX_NOTIFICATION_HISTORY_ITEMS = 20;
+    const MESSAGE_NOTIFICATION_POLL_MS = 15000;
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
     const DASHBOARD_NOTIFICATION_SOUND_PATH = 'Sound FX/Notification sound effect.wav';
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
@@ -1152,6 +1154,158 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             desktop: shared.desktop,
             sound: shared.sound
         };
+    }
+
+    function getMessageNotificationSettings() {
+        const shared = getPlannerNotificationSettings();
+
+        return {
+            inApp: shared.inApp,
+            desktop: shared.desktop,
+            sound: shared.sound
+        };
+    }
+
+    function getMessageNotificationState(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const stored = getUserScopedObject(MESSAGE_NOTIFICATION_STATE_KEY, workspaceUser.key);
+
+        return {
+            seeded: Boolean(stored.seeded),
+            lastIncomingMessageId: Number(stored.lastIncomingMessageId) || 0
+        };
+    }
+
+    function setMessageNotificationState(nextState, workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+
+        setUserScopedObject(MESSAGE_NOTIFICATION_STATE_KEY, workspaceUser.key, {
+            seeded: Boolean(nextState && nextState.seeded),
+            lastIncomingMessageId: Number(nextState && nextState.lastIncomingMessageId) || 0,
+            updatedAt: Date.now()
+        });
+    }
+
+    function shouldRunMessageNotifications() {
+        const pathname = String(window.location.pathname || '').trim().toLowerCase();
+        return !pathname.endsWith('/fbg-messages.html') && !pathname.endsWith('fbg-messages.html');
+    }
+
+    function requestDesktopNotificationPermission() {
+        if (!('Notification' in window) || Notification.permission !== 'default') {
+            return;
+        }
+
+        Notification.requestPermission().catch(() => {});
+    }
+
+    function showIncomingMessageNotifications(entries) {
+        if (!Array.isArray(entries) || !entries.length) {
+            return;
+        }
+
+        const settings = getMessageNotificationSettings();
+        if (settings.sound) {
+            playPlannerNotificationSound();
+        }
+
+        entries.forEach((entry) => {
+            const senderName = String(entry && entry.sender && entry.sender.name || '').trim() || 'User';
+            const body = String(entry && entry.body || '').trim();
+            const preview = body.length > 140 ? `${body.slice(0, 137)}...` : body;
+
+            if (settings.inApp) {
+                showDashboardToast('info', `New message from ${senderName}`, preview || 'You received a new message.', {
+                    eyebrow: 'FBG Messages',
+                    meta: 'Open FBG Messages to reply.',
+                    duration: 9000,
+                    playSound: false
+                });
+            }
+
+            if (settings.desktop && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification(`FAST BRIDGE GROUP: ${senderName}`, {
+                    body: preview || 'Sent you a new message.'
+                });
+            }
+        });
+
+        if (settings.desktop) {
+            requestDesktopNotificationPermission();
+        }
+    }
+
+    function initMessageNotifications() {
+        if (!shouldRunMessageNotifications()) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+        const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        if (!token || !(workspaceUser && workspaceUser.key)) {
+            return;
+        }
+
+        let pollTimer = 0;
+        let isPolling = false;
+
+        async function pollMessageNotifications() {
+            if (isPolling || !shouldRunMessageNotifications()) {
+                return;
+            }
+
+            isPolling = true;
+            try {
+                const state = getMessageNotificationState(workspaceUser);
+                const searchParams = new URLSearchParams();
+                searchParams.set('afterId', String(Math.max(0, Number(state.lastIncomingMessageId) || 0)));
+                searchParams.set('seeded', state.seeded ? '1' : '0');
+
+                const response = await fetch(`/api/messages/notifications?${searchParams.toString()}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json().catch(() => ({}));
+                const notifications = Array.isArray(payload && payload.notifications) ? payload.notifications : [];
+                const latestIncomingMessageId = Number(payload && payload.latestIncomingMessageId) || 0;
+                const highestNotificationId = notifications.reduce((highest, entry) => {
+                    const entryId = Number(entry && entry.id) || 0;
+                    return entryId > highest ? entryId : highest;
+                }, 0);
+
+                if (notifications.length > 0) {
+                    showIncomingMessageNotifications(notifications);
+                }
+
+                setMessageNotificationState({
+                    seeded: true,
+                    lastIncomingMessageId: Math.max(Number(state.lastIncomingMessageId) || 0, latestIncomingMessageId, highestNotificationId)
+                }, workspaceUser);
+            } catch (error) {
+                // Ignore temporary polling failures and retry on the next interval.
+            } finally {
+                isPolling = false;
+            }
+        }
+
+        pollMessageNotifications();
+        pollTimer = window.setInterval(pollMessageNotifications, MESSAGE_NOTIFICATION_POLL_MS);
+
+        window.addEventListener('beforeunload', () => {
+            if (pollTimer) {
+                window.clearInterval(pollTimer);
+            }
+        }, { once: true });
     }
 
     function playPlannerNotificationSound() {
@@ -21708,6 +21862,7 @@ function initNavbarDateTime() {
             ['initNavbarDateTime', initNavbarDateTime],
             ['initNavbarSearch', initNavbarSearch],
             ['initNotificationCenter', initNotificationCenter],
+            ['initMessageNotifications', initMessageNotifications],
             ['initTiltEffect', initTiltEffect],
             ['initCounters', initCounters],
             ['initMobileMenu', initMobileMenu],
