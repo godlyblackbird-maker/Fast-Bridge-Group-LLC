@@ -1464,30 +1464,32 @@
 
 /* Cyberpunk Mode */
 [data-theme="cyberpunk"] {
-    --glass-bg: rgba(18, 10, 38, 0.42);
-    --glass-border: rgba(66, 243, 255, 0.24);
-    --glass-shadow: rgba(4, 2, 16, 0.56);
-    --glass-hover: rgba(255, 59, 189, 0.14);
+    --glass-bg: rgba(12, 7, 28, 0.7);
+    --glass-border: rgba(54, 243, 255, 0.42);
+    --glass-shadow: rgba(2, 1, 12, 0.82);
+    --glass-hover: rgba(255, 47, 189, 0.22);
 
-    --bg-dark: #070211;
-    --bg-gradient-1: #120620;
-    --bg-gradient-2: #1f0b34;
-    --bg-gradient-3: #320d3e;
+    --bg-dark: #04010c;
+    --bg-gradient-1: #120022;
+    --bg-gradient-2: #1a0738;
+    --bg-gradient-3: #2d005a;
 
-    --text-primary: #f7eeff;
-    --text-secondary: rgba(247, 238, 255, 0.8);
-    --text-muted: rgba(247, 238, 255, 0.56);
+    --text-primary: #fcf5ff;
+    --text-secondary: rgba(252, 245, 255, 0.88);
+    --text-muted: rgba(252, 245, 255, 0.68);
+    --accent-rgb: 54, 243, 255;
+    --accent-light-rgb: 255, 47, 189;
 
     --mobile-toggle-bg: linear-gradient(135deg, rgba(66, 243, 255, 0.94), rgba(255, 59, 189, 0.9));
-    --mobile-toggle-border: rgba(66, 243, 255, 0.26);
-    --mobile-toggle-shadow: 0 14px 30px -14px rgba(4, 2, 16, 0.58), 0 10px 24px rgba(255, 59, 189, 0.22);
+    --mobile-toggle-border: rgba(66, 243, 255, 0.42);
+    --mobile-toggle-shadow: 0 16px 36px -14px rgba(4, 2, 16, 0.72), 0 0 24px rgba(66, 243, 255, 0.24), 0 0 44px rgba(255, 59, 189, 0.2);
     --mobile-toggle-icon: #fdf4ff;
 
-    --toast-surface: rgba(13, 7, 28, 0.96);
-    --toast-border: rgba(66, 243, 255, 0.18);
-    --toast-title: #f7eeff;
-    --toast-body: rgba(247, 238, 255, 0.88);
-    --toast-shadow: 0 18px 44px rgba(4, 2, 16, 0.44);
+    --toast-surface: rgba(10, 4, 24, 0.98);
+    --toast-border: rgba(66, 243, 255, 0.34);
+    --toast-title: #fcf5ff;
+    --toast-body: rgba(252, 245, 255, 0.92);
+    --toast-shadow: 0 18px 44px rgba(4, 2, 16, 0.62), 0 0 24px rgba(255, 59, 189, 0.18);
 }
 
 [data-theme="cyberpunk"] .orb {
@@ -1530,22 +1532,31 @@
 }
 
 [data-theme="cyberpunk"] .glass-card {
-    border-color: rgba(66, 243, 255, 0.22);
+    background:
+        linear-gradient(160deg, rgba(13, 7, 30, 0.92), rgba(34, 9, 60, 0.8)),
+        linear-gradient(135deg, rgba(66, 243, 255, 0.08), rgba(255, 59, 189, 0.08));
+    border-color: rgba(66, 243, 255, 0.34);
     box-shadow:
-        0 24px 48px -24px rgba(4, 2, 16, 0.62),
-        0 10px 24px rgba(255, 59, 189, 0.12);
+        0 24px 48px -24px rgba(4, 2, 16, 0.7),
+        0 0 0 1px rgba(66, 243, 255, 0.08),
+        0 0 22px rgba(66, 243, 255, 0.16),
+        0 0 34px rgba(255, 59, 189, 0.12);
 }
 
 [data-theme="cyberpunk"] .glass-card:hover {
-    border-color: rgba(255, 59, 189, 0.32);
+    border-color: rgba(255, 59, 189, 0.48);
     box-shadow:
-        0 26px 52px -24px rgba(4, 2, 16, 0.66),
-        0 0 26px rgba(66, 243, 255, 0.18);
+        0 26px 52px -24px rgba(4, 2, 16, 0.74),
+        0 0 26px rgba(66, 243, 255, 0.26),
+        0 0 44px rgba(255, 59, 189, 0.18);
 }
 
 [data-theme="cyberpunk"] .sidebar,
 [data-theme="cyberpunk"] .navbar {
-    border-color: rgba(66, 243, 255, 0.16);
+    background:
+        linear-gradient(180deg, rgba(8, 4, 20, 0.92), rgba(16, 7, 34, 0.88));
+    border-color: rgba(66, 243, 255, 0.22);
+    box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.08), 0 0 30px rgba(255, 59, 189, 0.1);
 }
 
 [data-theme="cyberpunk"] body::before {
@@ -1574,11 +1585,123 @@
     position: fixed;
     inset: 0;
     background:
-        radial-gradient(38% 32% at 14% 18%, rgba(66, 243, 255, 0.18) 0%, rgba(66, 243, 255, 0) 72%),
-        radial-gradient(34% 30% at 86% 18%, rgba(255, 59, 189, 0.22) 0%, rgba(255, 59, 189, 0) 72%),
-        linear-gradient(180deg, rgba(12, 4, 28, 0.08), rgba(6, 2, 16, 0.4));
+        radial-gradient(38% 32% at 14% 18%, rgba(66, 243, 255, 0.24) 0%, rgba(66, 243, 255, 0) 72%),
+        radial-gradient(34% 30% at 86% 18%, rgba(255, 59, 189, 0.28) 0%, rgba(255, 59, 189, 0) 72%),
+        repeating-linear-gradient(90deg, rgba(66, 243, 255, 0.04) 0 1px, transparent 1px 96px),
+        linear-gradient(180deg, rgba(12, 4, 28, 0.12), rgba(6, 2, 16, 0.46));
     pointer-events: none;
     z-index: -1;
+}
+
+[data-theme="cyberpunk"] .nav-link,
+[data-theme="cyberpunk"] .sidebar-collapse-button,
+[data-theme="cyberpunk"] .card-btn,
+[data-theme="cyberpunk"] .agent-note-share-btn,
+[data-theme="cyberpunk"] .notes-widget-header-actions .card-btn,
+[data-theme="cyberpunk"] .outreach-item-actions .card-btn,
+[data-theme="cyberpunk"] .mls-property-card .card-btn,
+[data-theme="cyberpunk"] .chatgpt-form .card-btn,
+[data-theme="cyberpunk"] .calendar-inline-actions .card-btn {
+    border-color: rgba(66, 243, 255, 0.34);
+    background: linear-gradient(135deg, rgba(14, 7, 28, 0.9), rgba(34, 7, 58, 0.82));
+    color: #fcf5ff;
+    box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.05), 0 0 18px rgba(66, 243, 255, 0.08);
+}
+
+[data-theme="cyberpunk"] .nav-link:hover,
+[data-theme="cyberpunk"] .nav-link.active,
+[data-theme="cyberpunk"] .sidebar-collapse-button:hover,
+[data-theme="cyberpunk"] .sidebar-collapse-button:focus-visible,
+[data-theme="cyberpunk"] .card-btn:hover,
+[data-theme="cyberpunk"] .card-btn.active,
+[data-theme="cyberpunk"] .agent-note-share-btn:hover,
+[data-theme="cyberpunk"] .agent-note-share-btn:focus-visible,
+[data-theme="cyberpunk"] .mls-property-card .card-btn:hover,
+[data-theme="cyberpunk"] .mls-property-card .card-btn.active,
+[data-theme="cyberpunk"] .chatgpt-form .card-btn.active,
+[data-theme="cyberpunk"] .calendar-inline-actions .card-btn.active {
+    background: linear-gradient(135deg, rgba(66, 243, 255, 0.22), rgba(255, 59, 189, 0.26));
+    border-color: rgba(255, 59, 189, 0.7);
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(66, 243, 255, 0.3);
+    box-shadow: 0 0 18px rgba(66, 243, 255, 0.22), 0 0 34px rgba(255, 59, 189, 0.18);
+}
+
+[data-theme="cyberpunk"] .nav-link.active .nav-icon,
+[data-theme="cyberpunk"] .nav-link:hover .nav-icon,
+[data-theme="cyberpunk"] .nav-link.active .nav-badge,
+[data-theme="cyberpunk"] .nav-link:hover .nav-badge,
+[data-theme="cyberpunk"] .card-title,
+[data-theme="cyberpunk"] .logo-text,
+[data-theme="cyberpunk"] .user-name,
+[data-theme="cyberpunk"] .agent-note-link-address,
+[data-theme="cyberpunk"] .mls-property-card h3,
+[data-theme="cyberpunk"] .property-tabs .tab-btn.active,
+[data-theme="cyberpunk"] .calendar-day.today .calendar-day-number,
+[data-theme="cyberpunk"] .calendar-day.selected .calendar-day-number {
+    color: #54f6ff;
+    text-shadow: 0 0 12px rgba(84, 246, 255, 0.42), 0 0 22px rgba(255, 59, 189, 0.18);
+}
+
+[data-theme="cyberpunk"] .nav-badge,
+[data-theme="cyberpunk"] .status-pill,
+[data-theme="cyberpunk"] .chip,
+[data-theme="cyberpunk"] .badge,
+[data-theme="cyberpunk"] .calendar-tag,
+[data-theme="cyberpunk"] .calendar-event-pill {
+    background: linear-gradient(135deg, rgba(66, 243, 255, 0.24), rgba(255, 59, 189, 0.3));
+    border: 1px solid rgba(255, 59, 189, 0.42);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 59, 189, 0.18);
+}
+
+[data-theme="cyberpunk"] .mls-property-card,
+[data-theme="cyberpunk"] .property-tab-panel,
+[data-theme="cyberpunk"] .table-wrapper,
+[data-theme="cyberpunk"] .calendar-detail-card,
+[data-theme="cyberpunk"] .calendar-ai-panel,
+[data-theme="cyberpunk"] .agent-note-link-card,
+[data-theme="cyberpunk"] .notes-widget,
+[data-theme="cyberpunk"] .premium-upgrade-tooltip {
+    border-color: rgba(66, 243, 255, 0.28);
+    background:
+        linear-gradient(155deg, rgba(12, 6, 28, 0.94), rgba(31, 8, 56, 0.82)),
+        linear-gradient(135deg, rgba(66, 243, 255, 0.08), rgba(255, 59, 189, 0.08));
+    box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.06), 0 0 22px rgba(66, 243, 255, 0.12), 0 0 34px rgba(255, 59, 189, 0.1);
+}
+
+[data-theme="cyberpunk"] .calendar-day,
+[data-theme="cyberpunk"] .calendar-day.other-month,
+[data-theme="cyberpunk"] .table-wrapper table tbody tr,
+[data-theme="cyberpunk"] .table-wrapper table thead th {
+    border-color: rgba(66, 243, 255, 0.16);
+}
+
+[data-theme="cyberpunk"] .calendar-day.today,
+[data-theme="cyberpunk"] .calendar-day.selected {
+    background: linear-gradient(135deg, rgba(66, 243, 255, 0.18), rgba(255, 59, 189, 0.26));
+    border-color: rgba(255, 59, 189, 0.56);
+    box-shadow: inset 0 0 0 1px rgba(66, 243, 255, 0.16), 0 0 16px rgba(255, 59, 189, 0.16);
+}
+
+[data-theme="cyberpunk"] .table-wrapper::-webkit-scrollbar-thumb,
+[data-theme="cyberpunk"] .sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(66, 243, 255, 0.76), rgba(255, 59, 189, 0.76));
+}
+
+[data-theme="cyberpunk"] .table-wrapper::-webkit-scrollbar-track,
+[data-theme="cyberpunk"] .sidebar::-webkit-scrollbar-track {
+    background: rgba(12, 6, 24, 0.68);
+}
+
+[data-theme="cyberpunk"] .section-title,
+[data-theme="cyberpunk"] .card-subtitle,
+[data-theme="cyberpunk"] .nav-section-title,
+[data-theme="cyberpunk"] .user-role,
+[data-theme="cyberpunk"] .agent-note-link-status,
+[data-theme="cyberpunk"] .agent-note-link-body,
+[data-theme="cyberpunk"] .premium-upgrade-tooltip-label {
+    color: rgba(252, 245, 255, 0.82);
 }
 
 [data-theme="cyberpunk"] .calendar-day.past-day {
@@ -7178,45 +7301,21 @@ body.sidebar-collapsed .main-content {
     margin-top: 10px;
 }
 
-.agent-note-status-btn {
+.agent-note-property-btn {
     border-color: rgba(var(--accent-rgb), 0.28);
     color: var(--text-primary);
 }
 
-.agent-note-status-btn:hover,
-.agent-note-status-btn:focus-visible,
-.agent-note-status-btn.is-active {
+.agent-note-property-btn:hover,
+.agent-note-property-btn:focus-visible {
     border-color: rgba(var(--accent-rgb), 0.48);
     background: rgba(var(--accent-light-rgb), 0.16);
     color: var(--text-primary);
 }
 
-.agent-note-status-editor {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
-    align-items: center;
-}
-
-.agent-note-status-select {
-    min-width: 240px;
-    max-width: 100%;
-}
-
 @media (max-width: 700px) {
     .agent-note-link-actions {
-        justify-content: stretch;
-    }
-
-    .agent-note-status-editor {
-        justify-content: stretch;
-    }
-
-    .agent-note-status-select,
-    .agent-note-status-editor .card-btn {
-        width: 100%;
+        justify-content: flex-end;
     }
 }
 
@@ -8451,11 +8550,11 @@ body.sidebar-collapsed .main-content {
     background: currentColor;
     transform: translate(-50%, -50%) scaleX(-1) rotate(-15deg);
     opacity: 1;
-    -webkit-mask-image: url('Symbols/Flag.svg');
+    -webkit-mask-image: url('Symbols/Flag (for calander).svg');
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
     -webkit-mask-size: contain;
-    mask-image: url('Symbols/Flag.svg');
+    mask-image: url('Symbols/Flag (for calander).svg');
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
@@ -9497,11 +9596,11 @@ body.sidebar-collapsed .main-content {
     height: 34px;
     background: var(--calendar-day-flag-color, var(--gold));
     opacity: var(--calendar-day-flag-opacity, 0.95);
-    -webkit-mask-image: url('Symbols/Flag.svg');
+    -webkit-mask-image: url('Symbols/Flag (for calander).svg');
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
     -webkit-mask-size: contain;
-    mask-image: url('Symbols/Flag.svg');
+    mask-image: url('Symbols/Flag (for calander).svg');
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;

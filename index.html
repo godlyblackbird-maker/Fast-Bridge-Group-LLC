@@ -366,41 +366,41 @@
 
         html[data-theme='cyberpunk'] {
             color-scheme: dark;
-            --bg: #090312;
-            --panel: rgba(20, 10, 39, 0.62);
-            --border: rgba(66, 243, 255, 0.24);
-            --text: #f6ecff;
-            --muted: rgba(246, 236, 255, 0.76);
-            --accent: #42f3ff;
-            --accent-soft: #ff3bbd;
+            --bg: #05010c;
+            --panel: rgba(14, 7, 28, 0.78);
+            --border: rgba(66, 243, 255, 0.42);
+            --text: #fcf5ff;
+            --muted: rgba(252, 245, 255, 0.84);
+            --accent: #36f3ff;
+            --accent-soft: #ff2fbd;
             --sand: #ffd166;
-            --shadow: 0 30px 80px rgba(3, 2, 12, 0.48);
-            --surface-top: rgba(255, 255, 255, 0.09);
-            --surface-bottom: rgba(255, 255, 255, 0.03);
-            --hero-orb: radial-gradient(circle, rgba(255, 59, 189, 0.3), transparent 70%);
-            --body-glow-a: rgba(66, 243, 255, 0.16);
-            --body-glow-b: rgba(255, 59, 189, 0.16);
-            --body-glow-c: #120620;
-            --body-glow-d: #1b0930;
-            --body-glow-e: #2c0d39;
-            --orb-a: rgba(66, 243, 255, 0.18);
-            --orb-b: rgba(255, 59, 189, 0.18);
-            --login-border: rgba(66, 243, 255, 0.32);
-            --login-shadow: 0 16px 34px rgba(5, 3, 18, 0.38);
-            --login-hover-border: rgba(255, 59, 189, 0.48);
-            --login-hover-shadow: 0 20px 38px rgba(8, 4, 25, 0.46);
-            --eyebrow-border: rgba(66, 243, 255, 0.2);
-            --eyebrow-bg: rgba(15, 8, 28, 0.72);
-            --secondary-border: rgba(66, 243, 255, 0.18);
-            --secondary-bg: rgba(255, 255, 255, 0.06);
-            --metric-bg: rgba(255, 255, 255, 0.08);
-            --metric-border: rgba(255, 59, 189, 0.14);
-            --ops-bg: rgba(255, 255, 255, 0.05);
-            --ops-border: rgba(66, 243, 255, 0.14);
-            --footer-text: rgba(246, 236, 255, 0.64);
+            --shadow: 0 30px 80px rgba(3, 2, 12, 0.6), 0 0 42px rgba(255, 47, 189, 0.16);
+            --surface-top: rgba(255, 255, 255, 0.12);
+            --surface-bottom: rgba(255, 255, 255, 0.04);
+            --hero-orb: radial-gradient(circle, rgba(255, 47, 189, 0.4), transparent 70%);
+            --body-glow-a: rgba(66, 243, 255, 0.24);
+            --body-glow-b: rgba(255, 47, 189, 0.24);
+            --body-glow-c: #10001f;
+            --body-glow-d: #190534;
+            --body-glow-e: #2d005a;
+            --orb-a: rgba(66, 243, 255, 0.26);
+            --orb-b: rgba(255, 47, 189, 0.24);
+            --login-border: rgba(66, 243, 255, 0.44);
+            --login-shadow: 0 16px 34px rgba(5, 3, 18, 0.44), 0 0 24px rgba(66, 243, 255, 0.14);
+            --login-hover-border: rgba(255, 47, 189, 0.62);
+            --login-hover-shadow: 0 20px 38px rgba(8, 4, 25, 0.54), 0 0 34px rgba(255, 47, 189, 0.18);
+            --eyebrow-border: rgba(66, 243, 255, 0.28);
+            --eyebrow-bg: rgba(10, 4, 24, 0.82);
+            --secondary-border: rgba(66, 243, 255, 0.24);
+            --secondary-bg: rgba(255, 255, 255, 0.1);
+            --metric-bg: rgba(255, 255, 255, 0.1);
+            --metric-border: rgba(255, 47, 189, 0.24);
+            --ops-bg: rgba(255, 255, 255, 0.08);
+            --ops-border: rgba(66, 243, 255, 0.22);
+            --footer-text: rgba(252, 245, 255, 0.72);
             --brand-shadow: rgba(5, 3, 18, 0.32);
-            --primary-cta-start: rgba(66, 243, 255, 0.96);
-            --primary-cta-end: rgba(255, 59, 189, 0.9);
+            --primary-cta-start: rgba(66, 243, 255, 1);
+            --primary-cta-end: rgba(255, 47, 189, 0.96);
         }
 
         html[data-theme='japan'] {
@@ -736,11 +736,83 @@
             height: 100vh;
             border-radius: 0;
             background:
-                radial-gradient(38% 32% at 14% 18%, rgba(66, 243, 255, 0.2) 0%, rgba(66, 243, 255, 0) 72%),
-                radial-gradient(34% 30% at 86% 18%, rgba(255, 59, 189, 0.22) 0%, rgba(255, 59, 189, 0) 72%),
-                linear-gradient(180deg, rgba(15, 5, 30, 0.12), rgba(6, 2, 16, 0.34));
+                radial-gradient(38% 32% at 14% 18%, rgba(66, 243, 255, 0.26) 0%, rgba(66, 243, 255, 0) 72%),
+                radial-gradient(34% 30% at 86% 18%, rgba(255, 47, 189, 0.3) 0%, rgba(255, 47, 189, 0) 72%),
+                repeating-linear-gradient(90deg, rgba(66, 243, 255, 0.045) 0 1px, transparent 1px 94px),
+                linear-gradient(180deg, rgba(15, 5, 30, 0.18), rgba(6, 2, 16, 0.4));
             filter: none;
             pointer-events: none;
+        }
+
+        html[data-theme='cyberpunk'] .hero-panel,
+        html[data-theme='cyberpunk'] .hero-side,
+        html[data-theme='cyberpunk'] .login-card,
+        html[data-theme='cyberpunk'] .metric,
+        html[data-theme='cyberpunk'] .ops-item,
+        html[data-theme='cyberpunk'] .access-request-modal {
+            background:
+                linear-gradient(160deg, rgba(12, 6, 26, 0.9), rgba(31, 8, 54, 0.8)),
+                linear-gradient(135deg, rgba(66, 243, 255, 0.08), rgba(255, 47, 189, 0.08));
+            border-color: rgba(66, 243, 255, 0.34);
+            box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.08), 0 0 24px rgba(66, 243, 255, 0.14), 0 0 38px rgba(255, 47, 189, 0.12);
+        }
+
+        html[data-theme='cyberpunk'] .hero-panel::after,
+        html[data-theme='cyberpunk'] .ops-item::after {
+            background: linear-gradient(90deg, transparent, rgba(66, 243, 255, 0.46), rgba(255, 47, 189, 0.42), transparent);
+            opacity: 0.82;
+        }
+
+        html[data-theme='cyberpunk'] .eyebrow,
+        html[data-theme='cyberpunk'] .metric span,
+        html[data-theme='cyberpunk'] .ops-item p,
+        html[data-theme='cyberpunk'] .login-meta,
+        html[data-theme='cyberpunk'] .form-note {
+            color: rgba(252, 245, 255, 0.82);
+        }
+
+        html[data-theme='cyberpunk'] .hero-panel h1,
+        html[data-theme='cyberpunk'] .hero-panel strong,
+        html[data-theme='cyberpunk'] .metric strong,
+        html[data-theme='cyberpunk'] .ops-item strong,
+        html[data-theme='cyberpunk'] .brand-wordmark,
+        html[data-theme='cyberpunk'] .login-card h2 {
+            color: #54f6ff;
+            text-shadow: 0 0 12px rgba(84, 246, 255, 0.44), 0 0 28px rgba(255, 47, 189, 0.18);
+        }
+
+        html[data-theme='cyberpunk'] .primary-cta,
+        html[data-theme='cyberpunk'] .login-btn,
+        html[data-theme='cyberpunk'] .theme-switch-btn,
+        html[data-theme='cyberpunk'] .access-request-close {
+            border-color: rgba(66, 243, 255, 0.42);
+            box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.08), 0 0 18px rgba(66, 243, 255, 0.18), 0 0 30px rgba(255, 47, 189, 0.16);
+        }
+
+        html[data-theme='cyberpunk'] .primary-cta:hover,
+        html[data-theme='cyberpunk'] .login-btn:hover,
+        html[data-theme='cyberpunk'] .theme-switch-btn:hover,
+        html[data-theme='cyberpunk'] .access-request-close:hover {
+            box-shadow: 0 0 22px rgba(66, 243, 255, 0.24), 0 0 42px rgba(255, 47, 189, 0.22);
+            transform: translateY(-2px);
+        }
+
+        html[data-theme='cyberpunk'] .login-input,
+        html[data-theme='cyberpunk'] .access-request-form input,
+        html[data-theme='cyberpunk'] .access-request-form textarea,
+        html[data-theme='cyberpunk'] .access-request-form select {
+            background: linear-gradient(135deg, rgba(13, 7, 26, 0.92), rgba(31, 8, 54, 0.82));
+            border-color: rgba(66, 243, 255, 0.34);
+            color: #fcf5ff;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 16px rgba(66, 243, 255, 0.08);
+        }
+
+        html[data-theme='cyberpunk'] .login-input:focus,
+        html[data-theme='cyberpunk'] .access-request-form input:focus,
+        html[data-theme='cyberpunk'] .access-request-form textarea:focus,
+        html[data-theme='cyberpunk'] .access-request-form select:focus {
+            border-color: rgba(255, 47, 189, 0.84);
+            box-shadow: 0 0 0 3px rgba(66, 243, 255, 0.14), 0 0 24px rgba(255, 47, 189, 0.16);
         }
 
         html[data-theme] {
