@@ -2994,6 +2994,18 @@ a {
     mask-size: contain;
 }
 
+.nav-icon-agent-workspace {
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/Agent%20Workspace.svg");
+    mask-image: url("Symbols/Agent%20Workspace.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
 .nav-link.active .nav-icon,
 .nav-link:hover .nav-icon {
     opacity: 1;
@@ -10849,7 +10861,7 @@ body.sidebar-collapsed .main-content {
     padding: 14px 18px;
     color: var(--text-secondary);
     border-radius: 12px;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .settings-nav-link:hover {
@@ -12466,7 +12478,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .contracts-document-stage {
-    width: min(100%, 980px);
+    width: min(100%, 840px);
     margin: 0 auto;
     display: grid;
     gap: 18px;
@@ -12728,22 +12740,34 @@ body.sidebar-collapsed .main-content {
 
 .settings-tab-content.active {
     display: block;
-    animation: settingsFadeIn 0.3s ease;
+}
+
+.ecard-preview-stage {
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(255, 255, 255, 0.04));
 }
 
 .ecard-preview {
     display: grid;
-    grid-template-columns: 165px 1px 1fr;
-    gap: 12px;
-    width: min(100%, 640px);
+    grid-template-columns: 152px 1px minmax(0, 1fr);
+    gap: 16px;
+    width: 560px;
+    min-width: 560px;
+    min-height: 320px;
     aspect-ratio: 3.5 / 2;
-    margin: 0 auto;
-    padding: 14px;
+    margin: 0;
+    padding: 18px;
     border-radius: 0;
     overflow: hidden;
     border: 1px solid rgba(148, 163, 184, 0.28);
     background: linear-gradient(135deg, #f5f7fb 0%, #eef2f7 100%);
     color: #0f172a;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.16);
 }
 
 .ecard-brand-column {
@@ -12751,15 +12775,16 @@ body.sidebar-collapsed .main-content {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
+    min-width: 0;
 }
 
 .ecard-mark {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 192px;
-    height: 132px;
+    width: 150px;
+    height: 104px;
     background: transparent;
     border: 0;
     box-shadow: none;
@@ -12782,7 +12807,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .ecard-company {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     color: #8a6a2f;
     text-align: center;
@@ -12799,23 +12824,25 @@ body.sidebar-collapsed .main-content {
     flex-direction: column;
     justify-content: center;
     text-align: center;
-    padding: 4px 0;
+    padding: 2px 0;
+    min-width: 0;
 }
 
 .ecard-details-column h2 {
-    margin: -4px 0 0;
-    font-size: 30px;
+    margin: 0;
+    font-size: 26px;
     line-height: 1.05;
     color: #c81e1e;
     font-weight: 800;
     text-transform: uppercase;
+    overflow-wrap: anywhere;
 }
 
 .ecard-role {
-    margin: 4px 0 12px;
+    margin: 4px 0 10px;
     color: #111827;
     letter-spacing: 0.1em;
-    font-size: 13px;
+    font-size: 12px;
     text-transform: uppercase;
 }
 
@@ -12825,12 +12852,12 @@ body.sidebar-collapsed .main-content {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .ecard-lines li {
     display: grid;
-    grid-template-columns: 104px 1fr;
+    grid-template-columns: 92px minmax(0, 1fr);
     gap: 8px;
     align-items: start;
     justify-items: start;
@@ -12839,16 +12866,17 @@ body.sidebar-collapsed .main-content {
 
 .ecard-lines span {
     color: #475569;
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
 
 .ecard-lines strong {
     color: #111827;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.2;
     font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 .flyer-builder-grid {
@@ -12947,10 +12975,13 @@ body.sidebar-collapsed .main-content {
         grid-template-columns: 1fr;
     }
 
+    .ecard-preview-stage {
+        padding: 12px;
+    }
+
     .ecard-preview {
-        grid-template-columns: 1fr;
-        width: 100%;
-        aspect-ratio: auto;
+        width: min(100%, 560px);
+        min-width: 0;
     }
 
     .ecard-divider {
@@ -13638,7 +13669,7 @@ body.sidebar-collapsed .main-content {
     padding: 10px 12px;
     cursor: pointer;
     pointer-events: auto;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .property-tab-btn:hover {
@@ -14894,7 +14925,7 @@ body.sidebar-collapsed .main-content {
     font-weight: 600;
     padding: 4px 10px;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .piq-image-tab.active {

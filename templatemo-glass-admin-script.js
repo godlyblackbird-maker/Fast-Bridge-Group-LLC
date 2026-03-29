@@ -684,7 +684,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.3.2';
+                versionLabel.textContent = 'v1.3.4';
             });
     }
 
@@ -5363,6 +5363,9 @@ function initNavbarDateTime() {
 
         if (tabLinks.length === 0) return;
 
+        const tabPanels = document.querySelectorAll('.settings-tab-content');
+        let activeSettingsTabId = '';
+
         const storedUser = getStoredCurrentUserIdentity();
         const lockedTabs = isRegularUserRole(storedUser.role)
             ? new Set(['appearance'])
@@ -5375,12 +5378,20 @@ function initNavbarDateTime() {
             const requestedTabId = String(tabId || '').trim().toLowerCase() || 'profile';
             const normalizedTabId = lockedTabs.has(requestedTabId) ? 'subscriptions' : requestedTabId;
 
-            document.querySelectorAll('.settings-nav-link').forEach(navLink => {
+            if (normalizedTabId === activeSettingsTabId) {
+                return;
+            }
+
+            activeSettingsTabId = normalizedTabId;
+
+            tabLinks.forEach(navLink => {
                 navLink.classList.toggle('active', navLink.getAttribute('data-tab') === normalizedTabId);
             });
 
-            document.querySelectorAll('.settings-tab-content').forEach(tab => {
-                tab.classList.toggle('active', tab.id === 'tab-' + normalizedTabId);
+            tabPanels.forEach(tab => {
+                const isActive = tab.id === 'tab-' + normalizedTabId;
+                tab.classList.toggle('active', isActive);
+                tab.hidden = !isActive;
             });
         }
 
@@ -5407,6 +5418,10 @@ function initNavbarDateTime() {
                 }
                 activateSettingsTab(tabId);
             });
+        });
+
+        tabPanels.forEach((tab) => {
+            tab.hidden = !tab.classList.contains('active');
         });
 
         const requestedTab = new URLSearchParams(window.location.search).get('tab');
@@ -15107,16 +15122,28 @@ function initNavbarDateTime() {
             }
         });
 
+        let activePropertyTabId = '';
+
         function activatePropertyTab(tabId) {
             const normalizedTabId = String(tabId || 'piq').trim().toLowerCase() || 'piq';
             const nextTabId = lockedTabs.has(normalizedTabId) ? 'piq' : normalizedTabId;
 
+            if (nextTabId === activePropertyTabId) {
+                return;
+            }
+
+            activePropertyTabId = nextTabId;
+
             tabButtons.forEach(button => {
-                button.classList.toggle('active', button.dataset.tab === nextTabId);
+                const isActive = button.dataset.tab === nextTabId;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
             });
 
             tabPanels.forEach(panel => {
-                panel.classList.toggle('active', panel.dataset.panel === nextTabId);
+                const isActive = panel.dataset.panel === nextTabId;
+                panel.classList.toggle('active', isActive);
+                panel.hidden = !isActive;
             });
         }
 
@@ -15932,14 +15959,31 @@ function initNavbarDateTime() {
         renderPropertyListingLink();
 
         if (imageTabButtons.length > 0 && imagePanels.length > 0) {
+            let activeImageTabId = imageTabButtons.find((button) => button.classList.contains('active'))?.dataset.piqImageTab
+                || imagePanels.find((panel) => panel.classList.contains('active'))?.dataset.piqImagePanel
+                || '';
+
+            imagePanels.forEach((panel) => {
+                panel.hidden = !panel.classList.contains('active');
+            });
+
             imageTabButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     const selectedTab = button.dataset.piqImageTab;
+                    if (!selectedTab || selectedTab === activeImageTabId) {
+                        return;
+                    }
+
+                    activeImageTabId = selectedTab;
                     imageTabButtons.forEach(tabButton => {
-                        tabButton.classList.toggle('active', tabButton === button);
+                        const isActive = tabButton === button;
+                        tabButton.classList.toggle('active', isActive);
+                        tabButton.setAttribute('aria-selected', isActive ? 'true' : 'false');
                     });
                     imagePanels.forEach(panel => {
-                        panel.classList.toggle('active', panel.dataset.piqImagePanel === selectedTab);
+                        const isActive = panel.dataset.piqImagePanel === selectedTab;
+                        panel.classList.toggle('active', isActive);
+                        panel.hidden = !isActive;
                     });
                 });
             });

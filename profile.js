@@ -1084,14 +1084,6 @@
     const sanitizedName = (name || 'ecard').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const fileName = `${sanitizedName || 'ecard'}.jpg`;
 
-    try {
-      await downloadPreviewAsExactJpg(preview, fileName);
-      showNotification('E Card downloaded as JPG.', 'success');
-      return;
-    } catch (error) {
-      // Fall back to legacy renderer if exact DOM capture fails.
-    }
-
     const width = 1050;
     const height = 600;
     const canvas = document.createElement('canvas');
