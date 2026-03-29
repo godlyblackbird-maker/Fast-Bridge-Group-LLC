@@ -3098,6 +3098,29 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
         const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
 
+        function addAcceptedSnapshotCandidate(snapshotLike, fallbackPropertyKey, fallbackPropertyAddress) {
+            const snapshot = snapshotLike && typeof snapshotLike === 'object' ? snapshotLike : null;
+            const normalizedPropertyKey = makePropertyStorageKey(
+                fallbackPropertyKey
+                || snapshot?.address
+                || snapshot?.propertyAddress
+                || fallbackPropertyAddress
+            );
+            const normalizedStatus = normalizeAgentStatusValue(snapshot?.piqAgentStatus || 'none');
+
+            if (!snapshot || !normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
+                return;
+            }
+
+            const existing = acceptedByPropertyKey.get(normalizedPropertyKey) || {};
+            acceptedByPropertyKey.set(normalizedPropertyKey, {
+                propertyKey: normalizedPropertyKey,
+                statusValue: normalizedStatus,
+                snapshot: existing.snapshot || snapshot,
+                assignmentRecord: existing.assignmentRecord || null
+            });
+        }
+
         Object.entries(scopedStatuses || {}).forEach(([propertyKey, statusValue]) => {
             const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
             const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
@@ -3118,7 +3141,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return;
             }
 
-            if (!usersMatch(assignmentRecord.assignedTo || {}, activeSessionUser)) {
+            if (!usersMatch(assignmentRecord.assignedTo || {}, activeSessionUser)
+                && !usersMatch(assignmentRecord.assignedTo || {}, workspaceUser)) {
                 return;
             }
 
@@ -3143,6 +3167,34 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 statusValue: 'offer-accepted',
                 snapshot: existing.snapshot || snapshot,
                 assignmentRecord: assignmentRecord
+            });
+        });
+
+        [workspaceUser, activeSessionUser].forEach((userIdentity) => {
+            if (!userIdentity || !userIdentity.key) {
+                return;
+            }
+
+            getUserScopedItems(DEALS_CLICKED_KEY, userIdentity.key).forEach((item) => {
+                const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                addAcceptedSnapshotCandidate(
+                    snapshot,
+                    item?.propertyKey || item?.address || item?.propertyAddress,
+                    item?.address || item?.propertyAddress
+                );
+            });
+
+            getUserScopedItems(AGENT_NOTES_KEY, userIdentity.key).forEach((item) => {
+                const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                addAcceptedSnapshotCandidate(
+                    snapshot,
+                    item?.propertyKey || item?.propertyAddress,
+                    item?.propertyAddress
+                );
             });
         });
 
@@ -15010,7 +15062,10 @@ function initNavbarDateTime() {
 
         const workspaceUser = getWorkspaceUserContext();
         const activeUser = getStoredCurrentUserIdentity();
-        let propertyAddress = String(detailData.address || '').trim();
+        let propertyAddress = String(detailData.address || detailData.propertyAddress || '').trim();
+        if (propertyAddress && !String(detailData.address || '').trim()) {
+            detailData.address = propertyAddress;
+        }
         let propertyKey = makePropertyStorageKey(propertyAddress);
         let linkedDealPropertyKey = propertyKey;
         const persistedAssignment = getPropertyAssignmentRecord(propertyKey);
@@ -15072,6 +15127,7 @@ function initNavbarDateTime() {
         function getLocalAssignableUsers() {
             const seen = new Set();
             const users = [];
+            const currentSessionUser = mergeUserIdentityRecords(workspaceUser, activeUser);
             const coreAssignableUsers = [
                 {
                     name: 'Isaac Haro',
@@ -15094,7 +15150,9 @@ function initNavbarDateTime() {
                 users.push(user);
             }
 
+            pushUser(workspaceUser);
             pushUser(activeUser);
+            pushUser(currentSessionUser);
             coreAssignableUsers.forEach(pushUser);
 
             try {
@@ -15150,7 +15208,7 @@ function initNavbarDateTime() {
 
             getLocalAssignableUsers().forEach(pushUser);
 
-            const token = localStorage.getItem('authToken') || '';
+            const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             if (token) {
                 try {
                     const response = await fetch('/api/users', {
@@ -15178,7 +15236,7 @@ function initNavbarDateTime() {
 
         function buildAssignmentRecord(assignee) {
             const normalizedAssignee = buildUserIdentity(assignee);
-            const normalizedAssigner = buildUserIdentity(activeUser);
+            const normalizedAssigner = buildUserIdentity(mergeUserIdentityRecords(workspaceUser, activeUser));
             const assignmentMeta = {
                 assignedTo: normalizedAssignee,
                 assignedBy: normalizedAssigner,

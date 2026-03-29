@@ -780,6 +780,7 @@
                             <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
                             <button id="mls-imports-add-pdf" class="card-btn" type="button">Add PDF</button>
                             <button id="mls-imports-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="mls-imports-send-email-btn" class="card-btn" type="button">Mass Email Agents</button>
                             <button id="mls-imports-copy-templates" class="card-btn" type="button">Copy Templates</button>
                             <button id="mls-imports-add-to-my-agents" class="card-btn" type="button">Add To My Agents</button>
                             <button id="mls-imports-clear-all" class="card-btn" type="button">Clear All</button>
@@ -815,6 +816,50 @@
                     <p class="buyers-sheet-note">Tip: Click any cell to edit. This spreadsheet saves automatically in this browser for the current admin user.</p>
                 </div>
             </section>
+
+            <div id="mls-imports-email-modal" class="profile-modal" style="display: none;">
+                <div class="profile-modal-overlay"></div>
+                <div class="profile-modal-content" style="max-width: 540px;">
+                    <div class="profile-modal-header">
+                        <h2>Email MLS Agents</h2>
+                        <button id="close-mls-imports-email-modal" class="profile-close-btn" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="profile-modal-body">
+                        <form id="mls-imports-email-form" class="profile-form">
+                            <div class="form-section">
+                                <div class="form-group">
+                                    <label>Subject</label>
+                                    <input type="text" id="mls-imports-email-subject" class="form-input" placeholder="Enter email subject" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Message</label>
+                                    <textarea id="mls-imports-email-body" class="form-input" placeholder="Enter your message" style="resize: vertical; min-height: 120px;" required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                                        Recipients
+                                        <span>
+                                            <button type="button" id="mls-imports-email-select-all" style="font-size:12px;padding:2px 8px;margin-right:4px;">Select All</button>
+                                            <button type="button" id="mls-imports-email-deselect-all" style="font-size:12px;padding:2px 8px;">Deselect All</button>
+                                        </span>
+                                    </label>
+                                    <div id="mls-imports-email-recipients-list" style="max-height:180px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px 6px 4px 6px;background:rgba(0,0,0,0.03);margin-bottom:4px;"></div>
+                                </div>
+                            </div>
+                            <div class="profile-modal-actions">
+                                <button type="button" id="cancel-mls-imports-email" class="btn btn-secondary">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Send Email</button>
+                            </div>
+                        </form>
+                        <div id="mls-imports-email-status" style="margin-top:10px;font-size:13px;"></div>
+                    </div>
+                </div>
+            </div>
 
             <div id="mls-imports-template-modal" class="buyers-sheet-template-modal" hidden aria-hidden="true">
                 <div class="buyers-sheet-template-backdrop" data-template-close="true"></div>
@@ -966,11 +1011,20 @@
             const addPdfButton = document.getElementById('mls-imports-add-pdf');
             const pdfInput = document.getElementById('mls-imports-pdf-input');
             const exportCsvButton = document.getElementById('mls-imports-export-csv');
+            const sendEmailButton = document.getElementById('mls-imports-send-email-btn');
             const copyTemplatesButton = document.getElementById('mls-imports-copy-templates');
             const addToMyAgentsButton = document.getElementById('mls-imports-add-to-my-agents');
             const clearAllButton = document.getElementById('mls-imports-clear-all');
             const progressBox = document.getElementById('mls-imports-progress');
             const progressText = document.getElementById('mls-imports-progress-text');
+            const emailModal = document.getElementById('mls-imports-email-modal');
+            const emailForm = document.getElementById('mls-imports-email-form');
+            const emailStatus = document.getElementById('mls-imports-email-status');
+            const emailRecipientsList = document.getElementById('mls-imports-email-recipients-list');
+            const emailSubjectInput = document.getElementById('mls-imports-email-subject');
+            const emailBodyInput = document.getElementById('mls-imports-email-body');
+            const closeEmailModalButton = document.getElementById('close-mls-imports-email-modal');
+            const cancelEmailButton = document.getElementById('cancel-mls-imports-email');
             const templateModal = document.getElementById('mls-imports-template-modal');
             const templateStatusSelect = document.getElementById('mls-imports-template-status');
             const templateIncludeTimeToggle = document.getElementById('mls-imports-template-include-time');
@@ -980,7 +1034,7 @@
             const templateResetButton = document.getElementById('mls-imports-template-reset');
             const templateCloseButtons = templateModal ? Array.from(templateModal.querySelectorAll('[data-template-close="true"]')) : [];
 
-            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !addToMyAgentsButton || !clearAllButton) {
+            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton) {
                 return;
             }
 
@@ -1009,6 +1063,80 @@
 
             function getAuthToken() {
                 return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function getEmailRecipientEntries() {
+                const seen = new Set();
+
+                return getRowsFromDom().reduce((entries, row, rowIndex) => {
+                    const rawEmail = normalizeCellValue(row && row.offersEmail);
+                    if (!rawEmail) {
+                        return entries;
+                    }
+
+                    rawEmail
+                        .split('|')
+                        .map((value) => normalizeCellValue(value))
+                        .filter((value) => /@/.test(value))
+                        .forEach((email) => {
+                            const dedupeKey = email.toLowerCase();
+                            if (seen.has(dedupeKey)) {
+                                return;
+                            }
+
+                            seen.add(dedupeKey);
+                            entries.push({
+                                id: `mls-imports-email-recipient-${rowIndex}-${entries.length}`,
+                                email,
+                                laName: normalizeCellValue(row && row.laName),
+                                propertyAddress: normalizeCellValue(row && row.propertyAddress)
+                            });
+                        });
+
+                    return entries;
+                }, []);
+            }
+
+            function setMlsEmailSelectionState(nextState) {
+                document.querySelectorAll('.mls-imports-email-recipient-toggle').forEach((checkbox) => {
+                    checkbox.checked = nextState;
+                });
+            }
+
+            function openEmailModal() {
+                if (!emailModal || !emailForm || !emailRecipientsList || !emailStatus || !emailSubjectInput || !emailBodyInput) {
+                    return;
+                }
+
+                emailModal.style.display = 'flex';
+                emailStatus.textContent = '';
+                emailForm.reset();
+                emailRecipientsList.innerHTML = '';
+
+                const recipients = getEmailRecipientEntries();
+                recipients.forEach((recipient) => {
+                    const recipientName = recipient.laName || 'Unknown Agent';
+                    const detailText = recipient.propertyAddress
+                        ? `${recipient.email} - ${recipient.propertyAddress}`
+                        : recipient.email;
+                    const item = document.createElement('div');
+                    item.style.marginBottom = '4px';
+                    item.innerHTML = `<label style="display:flex;align-items:flex-start;gap:7px;font-size:14px;cursor:pointer;"><input type="checkbox" class="mls-imports-email-recipient-toggle" id="${recipient.id}" value="${recipient.email}" checked style="margin:2px 4px 0 0;"><span><span style="display:block;">${recipientName}</span><span style="color:#666;font-size:13px;">${detailText}</span></span></label>`;
+                    emailRecipientsList.appendChild(item);
+                });
+
+                if (recipients.length === 0) {
+                    emailRecipientsList.innerHTML = '<span style="color:#b91c1c;">No offers emails found in the MLS spreadsheet.</span>';
+                }
+            }
+
+            function closeEmailModal() {
+                if (!emailModal || !emailStatus) {
+                    return;
+                }
+
+                emailModal.style.display = 'none';
+                emailStatus.textContent = '';
             }
 
             function setPdfProgressState(message) {
@@ -1967,6 +2095,75 @@
                 showToast('success', 'CSV Saved', 'Your MLS Imports spreadsheet was downloaded as a CSV file.');
             }
 
+            sendEmailButton.addEventListener('click', openEmailModal);
+
+            if (closeEmailModalButton) {
+                closeEmailModalButton.addEventListener('click', closeEmailModal);
+            }
+
+            if (cancelEmailButton) {
+                cancelEmailButton.addEventListener('click', closeEmailModal);
+            }
+
+            document.addEventListener('click', (event) => {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (target.id === 'mls-imports-email-select-all') {
+                    event.preventDefault();
+                    setMlsEmailSelectionState(true);
+                } else if (target.id === 'mls-imports-email-deselect-all') {
+                    event.preventDefault();
+                    setMlsEmailSelectionState(false);
+                }
+            });
+
+            if (emailForm) {
+                emailForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    if (!emailStatus || !emailSubjectInput || !emailBodyInput) {
+                        return;
+                    }
+
+                    emailStatus.textContent = 'Sending...';
+                    const subject = normalizeCellValue(emailSubjectInput.value);
+                    const body = String(emailBodyInput.value || '').trim();
+                    const recipients = Array.from(document.querySelectorAll('.mls-imports-email-recipient-toggle:checked'))
+                        .map((checkbox) => normalizeCellValue(checkbox.value))
+                        .filter(Boolean);
+
+                    if (recipients.length === 0) {
+                        emailStatus.textContent = 'No recipients selected.';
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/send-agent-email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                toEmail: recipients.join(','),
+                                subject,
+                                body
+                            })
+                        });
+                        const payload = await response.json().catch(() => ({}));
+                        if (response.ok && payload.success) {
+                            emailStatus.textContent = `Email sent to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}!`;
+                            return;
+                        }
+
+                        emailStatus.textContent = `Error: ${payload.error || 'Failed to send email.'}`;
+                    } catch (error) {
+                        emailStatus.textContent = `Error: ${error && error.message ? error.message : 'Failed to send email.'}`;
+                    }
+                });
+            }
+
             addRowButton.addEventListener('click', () => {
                 const nextRow = {
                     importDate: new Date().toISOString().slice(0, 10),
@@ -2172,6 +2369,11 @@
                 });
 
                 document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && emailModal && emailModal.style.display === 'flex') {
+                        closeEmailModal();
+                        return;
+                    }
+
                     if (event.key === 'Escape' && !templateModal.hidden) {
                         closeTemplateManager();
                     }
