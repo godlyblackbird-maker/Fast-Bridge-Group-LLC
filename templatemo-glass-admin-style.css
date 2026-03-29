@@ -9592,8 +9592,8 @@ body.sidebar-collapsed .main-content {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -40%) scaleX(-1) rotate(-15deg);
-    width: 34px;
-    height: 34px;
+    width: 42px;
+    height: 42px;
     background: var(--calendar-day-flag-color, var(--gold));
     opacity: var(--calendar-day-flag-opacity, 0.95);
     -webkit-mask-image: url('Symbols/Flag (for calander).svg');
@@ -13676,8 +13676,8 @@ body.sidebar-collapsed .main-content {
     }
 
     .calendar-day.has-event::after {
-        width: 24px;
-        height: 24px;
+        width: 30px;
+        height: 30px;
     }
 
     .calendar-event-count {
