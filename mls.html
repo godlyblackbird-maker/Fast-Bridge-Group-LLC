@@ -47,15 +47,17 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|swamp|sunset|space|japan|holloween|christmas)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
 
                 const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
                 const themeLogoPaths = {
-                    christmas: 'png photos/Christmas Theme Mode Logo.png',
+                    christmas: 'png photos/Christmas Theme Logo.png',
                     holloween: 'png photos/New Holloween Logo.png',
+                    swamp: 'png photos/Swamp Theme Logo.png',
+                    cyberpunk: 'png photos/CYBERPUNK LOGO.png',
                     japan: 'png photos/Japan Theme Mode Logo.png'
                 };
                 const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
@@ -217,10 +219,7 @@
                         </li>
                         <li class="nav-item">
                             <a href="campaigns.html" class="nav-link">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M4 4v16" />
-                                    <path d="M4 4h13l-2 5 2 5H4" />
-                                </svg>
+                                <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
                                 Campaigns
                             </a>
                         </li>

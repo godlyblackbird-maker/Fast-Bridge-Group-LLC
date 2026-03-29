@@ -18,6 +18,7 @@
             beach: 'Symbols/Beach Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
+            cyberpunk: 'Symbols/Dark Mode.svg',
             space: 'Symbols/Dark Mode.svg'
         };
 
@@ -63,6 +64,7 @@
             beach: 'Symbols/Beach Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
+            cyberpunk: 'Symbols/Dark Mode.svg',
             space: 'Symbols/Dark Mode.svg'
         };
         const resolvedTheme = themeSymbols[theme] ? theme : 'beach';
@@ -118,6 +120,8 @@
                             ? 'sunset'
                             : currentTheme === 'sunset'
                                 ? 'space'
+                                : currentTheme === 'space'
+                                    ? 'cyberpunk'
                     : 'dark';
             setTheme(nextTheme);
         });

@@ -25,8 +25,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const SIDEBAR_STATE_KEY = 'dashboardSidebarStateByUser';
     const DEFAULT_THEME_LOGO_PATH = 'png photos/FAST LOGO 777.png';
     const THEME_LOGO_PATHS = {
-        christmas: 'png photos/Christmas Theme Mode Logo.png',
+        christmas: 'png photos/Christmas Theme Logo.png',
         holloween: 'png photos/New Holloween Logo.png',
+        swamp: 'png photos/Swamp Theme Logo.png',
+        cyberpunk: 'png photos/CYBERPUNK LOGO.png',
         japan: 'png photos/Japan Theme Mode Logo.png'
     };
     const THEME_LOGO_SELECTOR = 'img.logo-img, img.ecard-logo-image, img.flyer-logo-image';
@@ -51,7 +53,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space', 'japan', 'holloween', 'christmas'];
+    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
     const KNOWN_EMAIL_GROUPS = [
         {
             canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -2981,6 +2983,22 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return labels[normalized] || labels.none;
     }
 
+    const AGENT_STATUS_OPTIONS = [
+        { value: 'acquired', label: '100% - Closed Deal' },
+        { value: 'offer-accepted', label: '80% - Offer Accepted' },
+        { value: 'in-negotiations', label: '60% - In Negotiations' },
+        { value: 'contract-submitted', label: '50% - Contract Submitted' },
+        { value: 'back-up', label: '30% - Back Up' },
+        { value: 'offer-terms-sent', label: '30% - Offer Terms Sent' },
+        { value: 'continue-to-follow', label: '20% - Continue to Follow' },
+        { value: 'initial-contact-started', label: '10% - Initial Contact Started' },
+        { value: 'cancelled-fec', label: '0% - Cancelled FEC' },
+        { value: 'do-not-use', label: '0% - DO NOT USE' },
+        { value: 'none', label: '0% - None' },
+        { value: 'pass', label: '0% - Pass' },
+        { value: 'sold-others-close', label: '0% - Sold Others/Close' }
+    ];
+
     function buildDashboardPropertyDetailFallback(propertyAddress, statusValue, snapshotLike) {
         const snapshot = snapshotLike && typeof snapshotLike === 'object' ? snapshotLike : {};
         const normalizedStatus = String(statusValue || snapshot.piqAgentStatus || 'none').trim().toLowerCase() || 'none';
@@ -3181,6 +3199,106 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             window.location.href = 'property-details.html';
         }
 
+        async function updateAcceptedItemStatus(item, nextStatusValue) {
+            const workspaceUser = getWorkspaceUserContext();
+            const normalizedStatus = String(nextStatusValue || 'none').trim().toLowerCase() || 'none';
+            const propertyKey = makePropertyStorageKey(item && (item.propertyKey || item.propertyAddress));
+
+            if (!propertyKey) {
+                throw new Error('This property is missing a saved address key.');
+            }
+
+            const currentAssignment = getPropertyAssignmentRecord(propertyKey);
+            const assignmentRecord = item && item.assignmentRecord && typeof item.assignmentRecord === 'object'
+                ? item.assignmentRecord
+                : currentAssignment;
+            const assignedUser = assignmentRecord && assignmentRecord.assignedTo && typeof assignmentRecord.assignedTo === 'object'
+                ? assignmentRecord.assignedTo
+                : null;
+            const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+            const snapshot = item && item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+            const propertyAddress = String(snapshot.address || snapshot.propertyAddress || item.propertyAddress || 'Property').trim() || 'Property';
+            const nextDetail = {
+                ...snapshot,
+                address: propertyAddress,
+                propertyAddress,
+                piqAgentStatus: normalizedStatus,
+                agentRecord: {
+                    ...(snapshot.agentRecord && typeof snapshot.agentRecord === 'object' ? snapshot.agentRecord : {}),
+                    agentStatus: formatAgentStatusLabel(normalizedStatus)
+                }
+            };
+
+            if (assignmentRecord) {
+                nextDetail.propertyAssignment = {
+                    assignedTo: assignmentRecord.assignedTo,
+                    assignedBy: assignmentRecord.assignedBy,
+                    assignedAt: assignmentRecord.assignedAt
+                };
+            }
+
+            setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, workspaceUser, propertyKey, normalizedStatus, { silent: true });
+
+            if (!usersMatch(activeSessionUser, workspaceUser)) {
+                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, activeSessionUser, propertyKey, normalizedStatus, { silent: true });
+            }
+
+            if (assignedUser && !usersMatch(assignedUser, workspaceUser)) {
+                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, assignedUser, propertyKey, normalizedStatus, { silent: true });
+            }
+
+            if (assignmentRecord && typeof assignmentRecord === 'object') {
+                const snapshotBase = { ...nextDetail };
+                delete snapshotBase.propertyAssignment;
+
+                const nextAssignmentRecord = {
+                    ...assignmentRecord,
+                    propertySnapshot: {
+                        ...snapshotBase,
+                        propertyAssignment: {
+                            assignedTo: assignmentRecord.assignedTo,
+                            assignedBy: assignmentRecord.assignedBy,
+                            assignedAt: assignmentRecord.assignedAt
+                        }
+                    }
+                };
+
+                try {
+                    await setPropertyAssignmentRecord(propertyKey, nextAssignmentRecord);
+                } catch (error) {
+                    // Keep local status changes even if remote assignment sync fails.
+                }
+            }
+
+            ensurePropertyWorkspaceSnapshot(nextDetail, workspaceUser);
+
+            if (assignedUser && !usersMatch(assignedUser, workspaceUser)) {
+                ensurePropertyWorkspaceSnapshot(nextDetail, assignedUser);
+            }
+
+            if (!usersMatch(activeSessionUser, workspaceUser) && !usersMatch(activeSessionUser, assignedUser || {})) {
+                ensurePropertyWorkspaceSnapshot(nextDetail, activeSessionUser);
+            }
+
+            const selectedPropertyDetail = getPersistedSelectedPropertyDetail();
+            const selectedPropertyKey = makePropertyStorageKey(selectedPropertyDetail && (selectedPropertyDetail.address || selectedPropertyDetail.propertyAddress));
+            if (selectedPropertyKey && selectedPropertyKey === propertyKey) {
+                persistSelectedPropertyDetail(buildDashboardPropertyDetailFallback(propertyAddress, normalizedStatus, nextDetail));
+            }
+
+            window.dispatchEvent(new CustomEvent('property-assignment-updated', {
+                detail: {
+                    propertyKey
+                }
+            }));
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+
+            return {
+                propertyAddress,
+                normalizedStatus
+            };
+        }
+
         function render() {
             const workspaceUser = getWorkspaceUserContext();
             const acceptedItems = getAcceptedOfferItemsForWorkspace(workspaceUser);
@@ -3193,9 +3311,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             acceptedItems.forEach((item) => {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'agent-note-link';
+                const card = document.createElement('article');
+                card.className = 'agent-note-link agent-note-link-card';
+                card.tabIndex = 0;
+                card.setAttribute('role', 'button');
 
                 const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
                 const acceptedTime = item.acceptedAt > 0
@@ -3231,8 +3350,52 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 bodyText.className = 'agent-note-link-body';
                 bodyText.textContent = `${locationLabel} • ${priceLabel} • ${assignedLabel}`;
 
+                const actions = document.createElement('div');
+                actions.className = 'agent-note-link-actions';
+
+                const statusEditButton = document.createElement('button');
+                statusEditButton.type = 'button';
+                statusEditButton.className = 'agent-note-share-btn agent-note-status-btn';
+                statusEditButton.setAttribute('aria-label', `Change agent status for ${item.propertyAddress}`);
+                statusEditButton.title = 'Change agent status';
+                statusEditButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                    </svg>
+                `;
+
+                const statusEditor = document.createElement('div');
+                statusEditor.className = 'agent-note-status-editor';
+                statusEditor.hidden = true;
+
+                const statusSelect = document.createElement('select');
+                statusSelect.className = 'form-input agent-note-status-select';
+                AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
+                    const option = document.createElement('option');
+                    option.value = optionConfig.value;
+                    option.textContent = optionConfig.label;
+                    statusSelect.appendChild(option);
+                });
+                statusSelect.value = String(item.statusValue || 'offer-accepted').trim().toLowerCase() || 'offer-accepted';
+
+                const statusSaveButton = document.createElement('button');
+                statusSaveButton.type = 'button';
+                statusSaveButton.className = 'card-btn active';
+                statusSaveButton.textContent = 'Save';
+
+                const statusCancelButton = document.createElement('button');
+                statusCancelButton.type = 'button';
+                statusCancelButton.className = 'card-btn';
+                statusCancelButton.textContent = 'Cancel';
+
+                statusEditor.appendChild(statusSelect);
+                statusEditor.appendChild(statusSaveButton);
+                statusEditor.appendChild(statusCancelButton);
+
                 head.appendChild(acceptedLabel);
                 head.appendChild(timeText);
+                head.appendChild(statusEditButton);
 
                 if (canShareToEmailPrep) {
                     const shareButton = document.createElement('button');
@@ -3276,16 +3439,81 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     head.appendChild(shareButton);
                 }
 
-                button.appendChild(head);
-                button.appendChild(addressText);
-                button.appendChild(statusText);
-                button.appendChild(bodyText);
+                const toggleStatusEditor = (isOpen) => {
+                    statusEditor.hidden = !isOpen;
+                    statusEditButton.classList.toggle('is-active', isOpen);
+                    if (isOpen) {
+                        statusSelect.focus();
+                    }
+                };
 
-                button.addEventListener('click', () => {
+                statusEditButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleStatusEditor(statusEditor.hidden);
+                });
+
+                statusCancelButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    statusSelect.value = String(item.statusValue || 'offer-accepted').trim().toLowerCase() || 'offer-accepted';
+                    toggleStatusEditor(false);
+                });
+
+                statusSaveButton.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const nextStatus = String(statusSelect.value || 'none').trim().toLowerCase() || 'none';
+                    if (nextStatus === String(item.statusValue || 'offer-accepted').trim().toLowerCase()) {
+                        toggleStatusEditor(false);
+                        return;
+                    }
+
+                    statusSaveButton.disabled = true;
+                    statusCancelButton.disabled = true;
+                    statusSelect.disabled = true;
+
+                    try {
+                        const result = await updateAcceptedItemStatus(item, nextStatus);
+                        showDashboardToast('success', 'Agent Status Updated', result.normalizedStatus === 'offer-accepted'
+                            ? `${result.propertyAddress} stayed in the accepted-offer workspace.`
+                            : `${result.propertyAddress} moved to ${formatAgentStatusLabel(result.normalizedStatus)}.`);
+                    } catch (error) {
+                        showDashboardToast('error', 'Status Update Failed', error && error.message ? error.message : 'The agent status could not be updated from Agent Workspace.');
+                    } finally {
+                        statusSaveButton.disabled = false;
+                        statusCancelButton.disabled = false;
+                        statusSelect.disabled = false;
+                    }
+                });
+
+                actions.appendChild(statusEditor);
+
+                card.appendChild(head);
+                card.appendChild(addressText);
+                card.appendChild(statusText);
+                card.appendChild(bodyText);
+                card.appendChild(actions);
+
+                card.addEventListener('click', () => {
                     openAcceptedProperty(snapshot, item.propertyAddress, item.statusValue);
                 });
 
-                offersAcceptedList.appendChild(button);
+                card.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+
+                    if (event.target instanceof HTMLElement && event.target.closest('.agent-note-link-actions, .agent-note-link-head button')) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    openAcceptedProperty(snapshot, item.propertyAddress, item.statusValue);
+                });
+
+                offersAcceptedList.appendChild(card);
             });
         }
 
@@ -4699,6 +4927,7 @@ function initNavbarDateTime() {
             beach: 'Symbols/Beach Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
+            cyberpunk: 'Symbols/Dark Mode.svg',
             space: 'Symbols/Dark Mode.svg'
         };
 
@@ -4744,6 +4973,7 @@ function initNavbarDateTime() {
             beach: 'Symbols/Beach Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
+            cyberpunk: 'Symbols/Dark Mode.svg',
             space: 'Symbols/Dark Mode.svg'
         };
         const resolvedTheme = themeSymbols[effectiveTheme] ? effectiveTheme : 'beach';
@@ -4798,6 +5028,8 @@ function initNavbarDateTime() {
                             ? 'sunset'
                             : currentTheme === 'sunset'
                                 ? 'space'
+                                : currentTheme === 'space'
+                                    ? 'cyberpunk'
                             : 'dark';
             setTheme(nextTheme);
         });

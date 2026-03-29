@@ -1462,6 +1462,277 @@
     background: rgba(20, 66, 42, 0.34);
 }
 
+/* Cyberpunk Mode */
+[data-theme="cyberpunk"] {
+    --glass-bg: rgba(18, 10, 38, 0.42);
+    --glass-border: rgba(66, 243, 255, 0.24);
+    --glass-shadow: rgba(4, 2, 16, 0.56);
+    --glass-hover: rgba(255, 59, 189, 0.14);
+
+    --bg-dark: #070211;
+    --bg-gradient-1: #120620;
+    --bg-gradient-2: #1f0b34;
+    --bg-gradient-3: #320d3e;
+
+    --text-primary: #f7eeff;
+    --text-secondary: rgba(247, 238, 255, 0.8);
+    --text-muted: rgba(247, 238, 255, 0.56);
+
+    --mobile-toggle-bg: linear-gradient(135deg, rgba(66, 243, 255, 0.94), rgba(255, 59, 189, 0.9));
+    --mobile-toggle-border: rgba(66, 243, 255, 0.26);
+    --mobile-toggle-shadow: 0 14px 30px -14px rgba(4, 2, 16, 0.58), 0 10px 24px rgba(255, 59, 189, 0.22);
+    --mobile-toggle-icon: #fdf4ff;
+
+    --toast-surface: rgba(13, 7, 28, 0.96);
+    --toast-border: rgba(66, 243, 255, 0.18);
+    --toast-title: #f7eeff;
+    --toast-body: rgba(247, 238, 255, 0.88);
+    --toast-shadow: 0 18px 44px rgba(4, 2, 16, 0.44);
+}
+
+[data-theme="cyberpunk"] .orb {
+    opacity: 0.34;
+}
+
+[data-theme="cyberpunk"] .background::before {
+    background:
+        radial-gradient(ellipse 78% 54% at 16% 20%, rgba(66, 243, 255, 0.24) 0%, transparent 56%),
+        radial-gradient(ellipse 62% 44% at 84% 18%, rgba(255, 59, 189, 0.22) 0%, transparent 54%),
+        radial-gradient(ellipse 54% 40% at 54% 84%, rgba(255, 209, 102, 0.12) 0%, transparent 58%);
+}
+
+[data-theme="cyberpunk"] .background::after {
+    content: '';
+    position: absolute;
+    left: -6%;
+    right: -6%;
+    bottom: -4%;
+    height: 42%;
+    pointer-events: none;
+    background:
+        radial-gradient(110% 82% at 14% 100%, rgba(31, 11, 52, 0.92) 0%, rgba(31, 11, 52, 0) 58%),
+        radial-gradient(88% 72% at 56% 100%, rgba(66, 243, 255, 0.14) 0%, rgba(66, 243, 255, 0) 60%),
+        radial-gradient(96% 76% at 94% 100%, rgba(255, 59, 189, 0.16) 0%, rgba(255, 59, 189, 0) 64%),
+        linear-gradient(180deg, rgba(10, 4, 24, 0), rgba(8, 3, 20, 0.6));
+    opacity: 0.98;
+}
+
+[data-theme="cyberpunk"] .orb-1 {
+    background: #42f3ff;
+}
+
+[data-theme="cyberpunk"] .orb-2 {
+    background: #ff3bbd;
+}
+
+[data-theme="cyberpunk"] .orb-3 {
+    background: #ffd166;
+}
+
+[data-theme="cyberpunk"] .glass-card {
+    border-color: rgba(66, 243, 255, 0.22);
+    box-shadow:
+        0 24px 48px -24px rgba(4, 2, 16, 0.62),
+        0 10px 24px rgba(255, 59, 189, 0.12);
+}
+
+[data-theme="cyberpunk"] .glass-card:hover {
+    border-color: rgba(255, 59, 189, 0.32);
+    box-shadow:
+        0 26px 52px -24px rgba(4, 2, 16, 0.66),
+        0 0 26px rgba(66, 243, 255, 0.18);
+}
+
+[data-theme="cyberpunk"] .sidebar,
+[data-theme="cyberpunk"] .navbar {
+    border-color: rgba(66, 243, 255, 0.16);
+}
+
+[data-theme="cyberpunk"] body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background:
+        linear-gradient(180deg, rgba(4, 2, 12, 0.42), rgba(8, 3, 20, 0.24)),
+        url("Themes/Cyberpunk Theme.jpg") no-repeat center center;
+    background-size: cover;
+    opacity: 0.42;
+    filter: blur(2px) saturate(1.1) contrast(1.08);
+    transform: scale(1.03);
+    transform-origin: center;
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="cyberpunk"] body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(38% 32% at 14% 18%, rgba(66, 243, 255, 0.18) 0%, rgba(66, 243, 255, 0) 72%),
+        radial-gradient(34% 30% at 86% 18%, rgba(255, 59, 189, 0.22) 0%, rgba(255, 59, 189, 0) 72%),
+        linear-gradient(180deg, rgba(12, 4, 28, 0.08), rgba(6, 2, 16, 0.4));
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="cyberpunk"] .calendar-day.past-day {
+    color: rgba(247, 238, 255, 0.92);
+    background: linear-gradient(135deg, rgba(29, 12, 56, 0.82), rgba(17, 8, 34, 0.84));
+    border-color: rgba(66, 243, 255, 0.2);
+}
+
+[data-theme="cyberpunk"] .calendar-day.past-day .calendar-day-number {
+    color: #fdf4ff;
+}
+
+[data-theme="cyberpunk"] .form-input,
+[data-theme="cyberpunk"] .search-input,
+[data-theme="cyberpunk"] .settings-select,
+[data-theme="cyberpunk"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+[data-theme="cyberpunk"] textarea,
+[data-theme="cyberpunk"] select,
+[data-theme="cyberpunk"] select.form-input,
+[data-theme="cyberpunk"] .ia-grid input,
+[data-theme="cyberpunk"] .ia-grid select,
+[data-theme="cyberpunk"] .offer-grid input,
+[data-theme="cyberpunk"] .offer-grid select,
+[data-theme="cyberpunk"] .calendar-inline-form textarea,
+[data-theme="cyberpunk"] .calendar-inline-form input,
+[data-theme="cyberpunk"] .agent-note-input,
+[data-theme="cyberpunk"] .outreach-textarea {
+    background: linear-gradient(135deg, rgba(16, 8, 34, 0.9), rgba(34, 10, 58, 0.82)) !important;
+    border: 1px solid rgba(66, 243, 255, 0.28) !important;
+    color: #f7eeff !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 14px rgba(4, 2, 16, 0.3);
+}
+
+[data-theme="cyberpunk"] .form-input::placeholder,
+[data-theme="cyberpunk"] .search-input::placeholder,
+[data-theme="cyberpunk"] .agent-note-input::placeholder,
+[data-theme="cyberpunk"] .outreach-textarea::placeholder,
+[data-theme="cyberpunk"] input::placeholder,
+[data-theme="cyberpunk"] textarea::placeholder {
+    color: rgba(226, 211, 255, 0.68) !important;
+}
+
+[data-theme="cyberpunk"] .form-input:focus,
+[data-theme="cyberpunk"] .search-input:focus,
+[data-theme="cyberpunk"] .settings-select:focus,
+[data-theme="cyberpunk"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="cyberpunk"] textarea:focus,
+[data-theme="cyberpunk"] select:focus,
+[data-theme="cyberpunk"] .ia-grid input:focus,
+[data-theme="cyberpunk"] .ia-grid select:focus,
+[data-theme="cyberpunk"] .offer-grid input:focus,
+[data-theme="cyberpunk"] .offer-grid select:focus,
+[data-theme="cyberpunk"] .calendar-inline-form textarea:focus,
+[data-theme="cyberpunk"] .calendar-inline-form input:focus,
+[data-theme="cyberpunk"] .agent-note-input:focus,
+[data-theme="cyberpunk"] .outreach-textarea:focus {
+    border-color: rgba(255, 59, 189, 0.88) !important;
+    box-shadow: 0 0 0 3px rgba(66, 243, 255, 0.14), 0 14px 24px -16px rgba(4, 2, 16, 0.72) !important;
+}
+
+[data-theme="cyberpunk"] .settings-select,
+[data-theme="cyberpunk"] select,
+[data-theme="cyberpunk"] select.form-input,
+[data-theme="cyberpunk"] .ia-grid select,
+[data-theme="cyberpunk"] .offer-grid select,
+[data-theme="cyberpunk"] .form-group .form-input[type="select-one"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23f7eeff' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+}
+
+[data-theme="cyberpunk"] .settings-select option,
+[data-theme="cyberpunk"] select option,
+[data-theme="cyberpunk"] select.form-input option,
+[data-theme="cyberpunk"] .ia-grid select option,
+[data-theme="cyberpunk"] .offer-grid select option,
+[data-theme="cyberpunk"] .form-group .form-input[type="select-one"] option {
+    background: #18092a !important;
+    color: #f7eeff !important;
+}
+
+[data-theme="cyberpunk"] .settings-select option:checked,
+[data-theme="cyberpunk"] select option:checked,
+[data-theme="cyberpunk"] select.form-input option:checked,
+[data-theme="cyberpunk"] .ia-grid select option:checked,
+[data-theme="cyberpunk"] .offer-grid select option:checked,
+[data-theme="cyberpunk"] .form-group .form-input[type="select-one"] option:checked {
+    background: #4c0f64 !important;
+    color: #fdf4ff !important;
+}
+
+[data-theme="cyberpunk"] input:disabled,
+[data-theme="cyberpunk"] textarea:disabled,
+[data-theme="cyberpunk"] select:disabled {
+    background: rgba(22, 10, 40, 0.58) !important;
+    border-color: rgba(66, 243, 255, 0.16) !important;
+    color: rgba(247, 238, 255, 0.48) !important;
+}
+
+[data-theme="cyberpunk"] .ia-section {
+    border-color: rgba(66, 243, 255, 0.18);
+    background:
+        linear-gradient(140deg, rgba(16, 8, 32, 0.92), rgba(8, 4, 20, 0.86)),
+        linear-gradient(20deg, rgba(255, 59, 189, 0.12), rgba(66, 243, 255, 0.08));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 28px -20px rgba(4, 2, 16, 0.52);
+}
+
+[data-theme="cyberpunk"] .ia-section h3 {
+    color: #42f3ff;
+}
+
+[data-theme="cyberpunk"] .ia-grid label,
+[data-theme="cyberpunk"] .ia-other-head,
+[data-theme="cyberpunk"] .ia-other-item {
+    color: rgba(247, 238, 255, 0.9);
+}
+
+[data-theme="cyberpunk"] .ia-readout {
+    border-color: rgba(66, 243, 255, 0.18);
+    background: linear-gradient(135deg, rgba(18, 8, 34, 0.94), rgba(42, 10, 68, 0.72));
+    color: rgba(247, 238, 255, 0.94);
+}
+
+[data-theme="cyberpunk"] .ia-readout strong {
+    color: #42f3ff;
+}
+
+[data-theme="cyberpunk"] .ia-other-costs {
+    border-color: rgba(255, 59, 189, 0.16);
+    background: linear-gradient(135deg, rgba(33, 10, 54, 0.34), rgba(66, 243, 255, 0.08));
+}
+
+[data-theme="cyberpunk"] .ia-other-item {
+    border-color: rgba(66, 243, 255, 0.14);
+    background: rgba(13, 7, 26, 0.56);
+}
+
+[data-theme="cyberpunk"] .ia-calc-btn,
+[data-theme="cyberpunk"] .ia-other-head button {
+    border-color: rgba(66, 243, 255, 0.2);
+    background: linear-gradient(135deg, rgba(66, 243, 255, 0.9), rgba(255, 59, 189, 0.8));
+    color: #14081f;
+    box-shadow: 0 10px 18px -12px rgba(4, 2, 16, 0.56);
+}
+
+[data-theme="cyberpunk"] .ia-calc-btn:hover,
+[data-theme="cyberpunk"] .ia-other-head button:hover {
+    background: linear-gradient(135deg, rgba(126, 248, 255, 0.94), rgba(255, 102, 201, 0.84));
+}
+
+[data-theme="cyberpunk"] .ia-cash-note {
+    border-color: rgba(66, 243, 255, 0.18);
+    color: #42f3ff;
+    background: rgba(30, 10, 48, 0.34);
+}
+
 /* Space Mode */
 [data-theme="space"] {
     --glass-bg: rgba(18, 24, 50, 0.34);
@@ -1557,7 +1828,7 @@
     inset: 0;
     background:
         linear-gradient(180deg, rgba(4, 8, 22, 0.26), rgba(10, 16, 36, 0.16)),
-        url("Themes/Wallpaper%20STARLIGHT.jpg") no-repeat center center;
+        url("Themes/Wallpaper%20Star.jpg") no-repeat center center;
     background-size: cover;
     opacity: 0.42;
     filter: blur(0.35px) saturate(1.04) contrast(1.06);
@@ -1568,10 +1839,10 @@
 [data-theme="space"] body::after {
     content: '';
     position: fixed;
-    right: -34px;
-    top: -42px;
-    width: 560px;
-    height: 560px;
+    right: -18px;
+    top: -20px;
+    width: 400px;
+    height: 400px;
     background:
         radial-gradient(circle at 48% 48%, rgba(170, 197, 255, 0.18), transparent 34%),
         url("png photos/GLOWING MOON.png") no-repeat center;
@@ -2996,8 +3267,20 @@ a {
 
 .nav-icon-agent-workspace {
     background-color: currentColor;
-    -webkit-mask-image: url("Symbols/Agent%20Workspace.svg");
-    mask-image: url("Symbols/Agent%20Workspace.svg");
+    -webkit-mask-image: url("Symbols/Agent%20Workspace%20Hammer.svg");
+    mask-image: url("Symbols/Agent%20Workspace%20Hammer.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.nav-icon-campaigns {
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/Flag%20for%20campaigns.svg");
+    mask-image: url("Symbols/Flag%20for%20campaigns.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -6883,6 +7166,58 @@ body.sidebar-collapsed .main-content {
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.45;
+}
+
+.agent-note-link-card {
+    display: block;
+}
+
+.agent-note-link-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.agent-note-status-btn {
+    border-color: rgba(var(--accent-rgb), 0.28);
+    color: var(--text-primary);
+}
+
+.agent-note-status-btn:hover,
+.agent-note-status-btn:focus-visible,
+.agent-note-status-btn.is-active {
+    border-color: rgba(var(--accent-rgb), 0.48);
+    background: rgba(var(--accent-light-rgb), 0.16);
+    color: var(--text-primary);
+}
+
+.agent-note-status-editor {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+}
+
+.agent-note-status-select {
+    min-width: 240px;
+    max-width: 100%;
+}
+
+@media (max-width: 700px) {
+    .agent-note-link-actions {
+        justify-content: stretch;
+    }
+
+    .agent-note-status-editor {
+        justify-content: stretch;
+    }
+
+    .agent-note-status-select,
+    .agent-note-status-editor .card-btn {
+        width: 100%;
+    }
 }
 
 .agent-email-prep-grid {
