@@ -5308,8 +5308,8 @@ function formatMlsStatusFieldValue(value) {
     .replace(/\u00a0/g, ' ')
     .replace(/\|+/g, ' ')
     .replace(/\s+/g, ' ')
-    .replace(/^(?:status|listing status|mls status|current status)\s*:\s*/i, '')
-    .replace(/\s{2,}(?:dom|cdom|listing id|mls(?:#| no\.?| number)?|beds?|baths?|price|printed by|agent full)\b.*$/i, '')
+    .replace(/^(?:status|listing status|mls status|current status|contract status|listing contract status|marketing status)\s*[:#-]?\s*/i, '')
+    .replace(/(?:\s{2,}|\s+[|/\\-]\s+)(?:dom|cdom|listing id|mls(?:#| no\.?| number)?|beds?|baths?|price|printed by|agent full|show contact|list price|original list price)\b.*$/i, '')
     .trim();
 
   if (!cleaned) {
@@ -5318,14 +5318,22 @@ function formatMlsStatusFieldValue(value) {
 
   const normalized = cleaned.toLowerCase();
   const knownStatuses = [
-    { pattern: /\bactive\b/i, value: 'Active' },
-    { pattern: /\bunder\s+contract\b/i, value: 'Under Contract' },
+    { pattern: /\bactive\s+under\s+contract\b|\bauct\b/i, value: 'Active Under Contract' },
+    { pattern: /\bunder\s+contract\b|\bu\/?c\b/i, value: 'Under Contract' },
+    { pattern: /\bpending\s+(?:continue\s+to\s+show|taking\s+backups?)\b/i, value: 'Pending' },
     { pattern: /\bpending\b/i, value: 'Pending' },
+    { pattern: /\bbackup\b/i, value: 'Backup' },
+    { pattern: /\btemporar(?:ily)?\s+off\s+market\b|\btom\b/i, value: 'Temporarily Off Market' },
     { pattern: /\boff\s+market\b/i, value: 'Off Market' },
     { pattern: /\bon\s+hold\b/i, value: 'On Hold' },
     { pattern: /\bcontingent\b/i, value: 'Contingent' },
     { pattern: /\bcoming\s+soon\b/i, value: 'Coming Soon' },
-    { pattern: /\bsold\b/i, value: 'Sold' }
+    { pattern: /\bwithdrawn\b/i, value: 'Withdrawn' },
+    { pattern: /\bcancel(?:ed|led)\b/i, value: 'Cancelled' },
+    { pattern: /\bexpired\b/i, value: 'Expired' },
+    { pattern: /\bclosed\b/i, value: 'Closed' },
+    { pattern: /\bsold\b/i, value: 'Sold' },
+    { pattern: /\bactive\b/i, value: 'Active' },
   ];
 
   const matchedStatus = knownStatuses.find((entry) => entry.pattern.test(normalized));
@@ -5347,10 +5355,11 @@ function extractMlsStatusFromPdfText(text, lines) {
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
     : [];
   const normalizedText = normalizePdfExtractText(text);
+  const statusLabelPattern = '(?:listing status|mls status|current status|status|contract status|listing contract status|marketing status)';
 
   const labeledStatusPatterns = [
-    /(?:listing status|mls status|current status|status)\s*[:#-]\s*([^\n]+)/i,
-    /(?:listing status|mls status|current status|status)\s+([^\n]{2,60})/i
+    new RegExp(`${statusLabelPattern}\\s*[:#-]\\s*([^\\n]+)`, 'i'),
+    new RegExp(`${statusLabelPattern}\\s+([^\\n]{2,80})`, 'i')
   ];
 
   for (const pattern of labeledStatusPatterns) {
@@ -5365,7 +5374,7 @@ function extractMlsStatusFromPdfText(text, lines) {
 
   for (let index = 0; index < normalizedLines.length; index += 1) {
     const line = normalizedLines[index];
-    const inlineMatch = line.match(/^(?:listing status|mls status|current status|status)\s*[:#-]?\s*(.+)$/i);
+    const inlineMatch = line.match(new RegExp(`^${statusLabelPattern}\\s*[:#-]?\\s*(.+)$`, 'i'));
     if (inlineMatch && inlineMatch[1]) {
       const inlineStatus = formatMlsStatusFieldValue(inlineMatch[1]);
       if (inlineStatus) {
@@ -5373,16 +5382,18 @@ function extractMlsStatusFromPdfText(text, lines) {
       }
     }
 
-    if (/^(?:listing status|mls status|current status|status)\s*[:#-]?$/i.test(line)) {
-      const nextLine = normalizedLines[index + 1] || '';
-      const nextStatus = formatMlsStatusFieldValue(nextLine);
-      if (nextStatus) {
-        return nextStatus;
+    if (new RegExp(`^${statusLabelPattern}\\s*[:#-]?$`, 'i').test(line)) {
+      for (let lookahead = 1; lookahead <= 2; lookahead += 1) {
+        const nextLine = normalizedLines[index + lookahead] || '';
+        const nextStatus = formatMlsStatusFieldValue(nextLine);
+        if (nextStatus) {
+          return nextStatus;
+        }
       }
     }
 
     const standaloneStatus = formatMlsStatusFieldValue(line);
-    if (standaloneStatus && /^(?:active|under contract|pending|off market|on hold|contingent|coming soon|sold)$/i.test(line)) {
+    if (standaloneStatus && /^(?:active|active under contract|under contract|pending|backup|off market|temporarily off market|on hold|contingent|coming soon|withdrawn|cancel(?:ed|led)|expired|closed|sold)$/i.test(line)) {
       return standaloneStatus;
     }
   }
