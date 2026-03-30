@@ -3670,63 +3670,87 @@ function buildFullPdfText(parsedResult) {
   };
 }
 
-function buildMlsImportExtractionTextVariants(fullText, pageTexts) {
-  const variants = [];
+function buildMlsImportExtractionSegments(fullText, pageTexts) {
+  const segments = [];
   const seenTexts = new Set();
   const normalizedPages = (Array.isArray(pageTexts) ? pageTexts : [])
     .map((pageText) => normalizePdfExtractText(pageText))
     .filter(Boolean);
 
-  const pushVariant = (value) => {
-    const normalizedValue = normalizePdfExtractText(value);
-    if (!normalizedValue || seenTexts.has(normalizedValue)) {
+  const pushSegment = (text, label) => {
+    const normalizedText = normalizePdfExtractText(text);
+    if (!normalizedText || seenTexts.has(normalizedText)) {
       return;
     }
 
-    seenTexts.add(normalizedValue);
-    variants.push(normalizedValue);
+    seenTexts.add(normalizedText);
+    segments.push({
+      text: normalizedText,
+      label: String(label || '').trim()
+    });
   };
 
-  pushVariant(fullText);
-  normalizedPages.forEach((pageText) => {
-    pushVariant(pageText);
+  normalizedPages.forEach((pageText, index) => {
+    pushSegment(pageText, `page ${index + 1}`);
   });
 
-  const windowSizes = normalizedPages.length > 120
-    ? [2, 3, 5, 8, 12, 20]
-    : normalizedPages.length > 40
-      ? [2, 3, 5, 8, 12]
-      : [2, 3, 5, 8];
-
-  windowSizes.forEach((windowSize) => {
-    if (windowSize <= 0 || normalizedPages.length === 0) {
-      return;
-    }
-
-    const step = windowSize >= 12 ? Math.max(2, Math.floor(windowSize / 3)) : 1;
-    for (let startIndex = 0; startIndex < normalizedPages.length; startIndex += step) {
-      pushVariant(
-        normalizedPages
-          .slice(startIndex, startIndex + windowSize)
-          .filter(Boolean)
-          .join('\n\n')
-      );
-    }
-  });
-
-  if (normalizedPages.length > 60) {
-    const quarterSize = Math.max(15, Math.ceil(normalizedPages.length / 4));
-    for (let startIndex = 0; startIndex < normalizedPages.length; startIndex += quarterSize) {
-      pushVariant(
-        normalizedPages
-          .slice(startIndex, startIndex + quarterSize)
-          .filter(Boolean)
-          .join('\n\n')
-      );
-    }
+  for (let index = 0; index < normalizedPages.length - 1; index += 1) {
+    pushSegment(
+      [normalizedPages[index], normalizedPages[index + 1]].filter(Boolean).join('\n\n'),
+      `pages ${index + 1}-${index + 2}`
+    );
   }
 
-  return variants;
+  const chunkSize = normalizedPages.length >= 300
+    ? 8
+    : normalizedPages.length >= 120
+      ? 6
+      : normalizedPages.length >= 40
+        ? 4
+        : 3;
+  const chunkStep = normalizedPages.length >= 300 ? 4 : Math.max(1, chunkSize - 1);
+
+  for (let startIndex = 0; startIndex < normalizedPages.length; startIndex += chunkStep) {
+    const chunkPages = normalizedPages.slice(startIndex, startIndex + chunkSize).filter(Boolean);
+    if (chunkPages.length < 3) {
+      continue;
+    }
+    pushSegment(
+      chunkPages.join('\n\n'),
+      `pages ${startIndex + 1}-${startIndex + chunkPages.length}`
+    );
+  }
+
+  pushSegment(fullText, normalizedPages.length > 0 ? `full document (${normalizedPages.length} pages)` : 'full document');
+
+  return segments;
+}
+
+function extractRowsFromMlsImportCandidateText(text) {
+  const normalizedText = normalizePdfExtractText(text);
+  if (!normalizedText) {
+    return [];
+  }
+
+  const blockTexts = splitMlsImportTextIntoBlocks(normalizedText);
+  const sourceRows = mergeMlsImportRows(
+    (blockTexts.length > 0 ? blockTexts : [normalizedText])
+      .map((blockText) => extractMlsImportRowFromText(blockText))
+      .filter(Boolean)
+  );
+
+  if (sourceRows.length > 0) {
+    return sourceRows;
+  }
+
+  const wholeTextRow = extractMlsImportRowFromText(normalizedText);
+  return wholeTextRow ? [wholeTextRow] : [];
+}
+
+function waitForMlsImportAnalysisTurn() {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
 }
 
 function cleanupExpiredMlsImportPdfJobs() {
@@ -3750,6 +3774,7 @@ function createMlsImportPdfJob({ requesterId, fileName }) {
     status: 'queued',
     message: 'Queued MLS PDF extraction...',
     pageCount: 0,
+    progressPercent: 0,
     startedAt: now,
     updatedAt: now,
     extracted: null,
@@ -3790,11 +3815,53 @@ function serializeMlsImportPdfJob(job) {
     status: job.status,
     message: job.message,
     pageCount: Number(job.pageCount) || 0,
+    progressPercent: Math.max(0, Math.min(100, Number(job.progressPercent) || 0)),
     startedAt: job.startedAt,
     updatedAt: job.updatedAt,
     extracted: job.status === 'completed' ? job.extracted : null,
     error: job.status === 'failed' ? String(job.error || '').trim() : ''
   };
+}
+
+function getMlsImportPdfProgressPercent(progress) {
+  const state = progress && typeof progress === 'object' ? progress : {};
+  const phase = String(state.phase || '').trim().toLowerCase();
+
+  if (phase === 'completed') {
+    return 100;
+  }
+
+  if (phase === 'failed') {
+    return 100;
+  }
+
+  if (phase === 'metadata') {
+    return 6;
+  }
+
+  if (phase === 'prepare') {
+    return 12;
+  }
+
+  if (phase === 'parsing-pages') {
+    const totalBatches = Math.max(1, Number(state.totalBatches) || 1);
+    const batchIndex = Math.max(1, Number(state.batchIndex) || 1);
+    const ratio = Math.min(1, batchIndex / totalBatches);
+    return Math.round(12 + (ratio * 58));
+  }
+
+  if (phase === 'analyzing') {
+    return 72;
+  }
+
+  if (phase === 'analyzing-rows') {
+    const totalSegments = Math.max(1, Number(state.totalSegments) || 1);
+    const processedSegments = Math.max(0, Number(state.processedSegments) || 0);
+    const ratio = Math.min(1, processedSegments / totalSegments);
+    return Math.round(72 + (ratio * 27));
+  }
+
+  return 4;
 }
 
 function extractPdfTextInWorker(buffer, options = {}) {
@@ -4634,21 +4701,34 @@ async function extractMlsImportPdfFields(buffer) {
     });
   }
 
-  const candidateRows = buildMlsImportExtractionTextVariants(normalizedText, pageTexts)
-    .flatMap((candidateText) => {
-      const blockTexts = splitMlsImportTextIntoBlocks(candidateText);
-      const sourceRows = mergeMlsImportRows(
-        (blockTexts.length > 0 ? blockTexts : [candidateText])
-          .map((blockText) => extractMlsImportRowFromText(blockText))
-          .filter(Boolean)
-      );
-      const wholeTextRow = extractMlsImportRowFromText(candidateText);
-      if (sourceRows.length > 0) {
-        return sourceRows;
-      }
+  const analysisSegments = buildMlsImportExtractionSegments(normalizedText, pageTexts);
+  const candidateRows = [];
 
-      return wholeTextRow ? [wholeTextRow] : [];
-    });
+  for (let index = 0; index < analysisSegments.length; index += 1) {
+    const segment = analysisSegments[index] || {};
+    const extractedSegmentRows = extractRowsFromMlsImportCandidateText(segment.text);
+    if (extractedSegmentRows.length > 0) {
+      candidateRows.push(...extractedSegmentRows);
+    }
+
+    if (onProgress && (index === 0 || (index + 1) % 20 === 0 || index === analysisSegments.length - 1)) {
+      onProgress({
+        phase: 'analyzing-rows',
+        pageCount,
+        processedSegments: index + 1,
+        totalSegments: analysisSegments.length,
+        discoveredRows: candidateRows.length,
+        message: analysisSegments.length > 1
+          ? `Analyzing MLS rows ${index + 1}/${analysisSegments.length}... found ${candidateRows.length} potential propert${candidateRows.length === 1 ? 'y' : 'ies'} so far.`
+          : 'Analyzing extracted MLS rows...'
+      });
+    }
+
+    if ((index + 1) % 15 === 0) {
+      await waitForMlsImportAnalysisTurn();
+    }
+  }
+
   const extractedRows = consolidateMlsImportRows(
     dedupeMlsImportRows(candidateRows)
   );
@@ -4698,7 +4778,8 @@ app.post('/api/admin/mls-imports/extract-pdf-job', express.json({ limit: MLS_IMP
     const job = createMlsImportPdfJob({ requesterId: decoded.id, fileName });
     updateMlsImportPdfJob(job.id, {
       status: 'running',
-      message: 'Starting MLS PDF extraction...'
+      message: 'Starting MLS PDF extraction...',
+      progressPercent: 2
     });
 
     setImmediate(async () => {
@@ -4708,7 +4789,8 @@ app.post('/api/admin/mls-imports/extract-pdf-job', express.json({ limit: MLS_IMP
             updateMlsImportPdfJob(job.id, {
               status: 'running',
               pageCount: Number(progress && progress.pageCount) || 0,
-              message: String(progress && progress.message || 'Extracting MLS PDF...').trim()
+              message: String(progress && progress.message || 'Extracting MLS PDF...').trim(),
+              progressPercent: getMlsImportPdfProgressPercent(progress)
             });
           }
         });
@@ -4716,6 +4798,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', express.json({ limit: MLS_IMP
         updateMlsImportPdfJob(job.id, {
           status: 'completed',
           pageCount: Number(extracted && extracted.pageCount) || 0,
+          progressPercent: 100,
           message: Number(extracted && extracted.pageCount) > 0
             ? `Finished parsing all ${Number(extracted.pageCount)} pages.`
             : 'Finished parsing the PDF.',
@@ -4726,6 +4809,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', express.json({ limit: MLS_IMP
         console.error('Failed to extract MLS import PDF fields:', error);
         updateMlsImportPdfJob(job.id, {
           status: 'failed',
+          progressPercent: 100,
           message: 'MLS PDF extraction failed.',
           error: error && error.message ? error.message : 'Failed to extract fields from the uploaded PDF.'
         });
