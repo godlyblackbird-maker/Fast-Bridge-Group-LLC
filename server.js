@@ -1829,17 +1829,34 @@ function normalizeMlsImportSpreadsheetRow(rowLike, defaults = {}) {
 
 function createMlsImportSpreadsheetMatchKey(rowLike) {
   const row = normalizeMlsImportSpreadsheetRow(rowLike);
-  const propertyAddressKey = normalizePropertyAddressForComparison(row.propertyAddress);
+  const propertyAddressKey = createMlsImportAddressMergeKey(row.propertyAddress);
   const offersEmailKey = row.offersEmail.toLowerCase();
   const laCellKey = row.laCell.toLowerCase();
   const loPhoneKey = row.loPhone.toLowerCase();
-  const pdfFileKey = row.pdfFile.toLowerCase();
 
   if (propertyAddressKey) {
-    return [propertyAddressKey, offersEmailKey, laCellKey, loPhoneKey, pdfFileKey].join('|');
+    return [propertyAddressKey, offersEmailKey, laCellKey, loPhoneKey].join('|');
   }
 
   return row.matchKey || `manual|${crypto.randomUUID()}`;
+}
+
+function mergeMlsImportSpreadsheetRows(previousRowLike, nextRowLike, defaults = {}) {
+  const previousRow = normalizeMlsImportSpreadsheetRow(previousRowLike, defaults);
+  const nextRow = normalizeMlsImportSpreadsheetRow(nextRowLike, defaults);
+
+  return {
+    id: nextRow.id || previousRow.id || null,
+    matchKey: nextRow.matchKey || previousRow.matchKey,
+    importDate: nextRow.importDate || previousRow.importDate,
+    propertyAddress: mergeMlsImportRowValues(previousRow.propertyAddress, nextRow.propertyAddress),
+    laName: mergeMlsImportRowValues(previousRow.laName, nextRow.laName),
+    loPhone: mergeMlsImportRowValues(previousRow.loPhone, nextRow.loPhone),
+    offersEmail: mergeMlsImportRowValues(previousRow.offersEmail, nextRow.offersEmail),
+    laCell: mergeMlsImportRowValues(previousRow.laCell, nextRow.laCell),
+    status: mergeMlsImportRowValues(previousRow.status, nextRow.status),
+    pdfFile: nextRow.pdfFile || previousRow.pdfFile
+  };
 }
 
 function mapMlsImportSpreadsheetRowRecord(rowLike) {
@@ -1894,6 +1911,38 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
   const savedRows = [];
   let createdCount = 0;
   let updatedCount = 0;
+  const existingRows = await dbAll('SELECT * FROM mls_import_rows WHERE owner_user_id = ?', [normalizedOwnerUserId]);
+  const existingRowsById = new Map();
+  const existingRowsByMatchKey = new Map();
+  const existingRowsByAddressKey = new Map();
+
+  existingRows.forEach((rowRecord) => {
+    const mappedRow = mapMlsImportSpreadsheetRowRecord(rowRecord);
+    const addressKey = createMlsImportAddressMergeKey(mappedRow.propertyAddress);
+
+    existingRowsById.set(mappedRow.id, mappedRow);
+    if (mappedRow.matchKey) {
+      existingRowsByMatchKey.set(mappedRow.matchKey, mappedRow);
+    }
+    if (addressKey && !existingRowsByAddressKey.has(addressKey)) {
+      existingRowsByAddressKey.set(addressKey, mappedRow);
+    }
+  });
+
+  const cacheSavedRow = (rowLike) => {
+    const mappedRow = mapMlsImportSpreadsheetRowRecord(rowLike);
+    const addressKey = createMlsImportAddressMergeKey(mappedRow.propertyAddress);
+
+    existingRowsById.set(mappedRow.id, mappedRow);
+    if (mappedRow.matchKey) {
+      existingRowsByMatchKey.set(mappedRow.matchKey, mappedRow);
+    }
+    if (addressKey) {
+      existingRowsByAddressKey.set(addressKey, mappedRow);
+    }
+
+    return mappedRow;
+  };
 
   for (const rowLike of sourceRows) {
     const normalizedRow = normalizeMlsImportSpreadsheetRow(rowLike, { pdfFile: defaultPdfFile });
@@ -1901,17 +1950,18 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
       continue;
     }
 
-    const matchKey = createMlsImportSpreadsheetMatchKey({ ...normalizedRow, matchKey: normalizedRow.matchKey });
-    const desiredPdfFile = normalizedRow.pdfFile || defaultPdfFile;
+    const addressKey = createMlsImportAddressMergeKey(normalizedRow.propertyAddress);
+    let matchKey = createMlsImportSpreadsheetMatchKey({ ...normalizedRow, matchKey: normalizedRow.matchKey });
+    let desiredPdfFile = normalizedRow.pdfFile || defaultPdfFile;
 
     let savedRow = null;
     if (normalizedRow.id) {
-      const existingById = await dbGet(
-        'SELECT * FROM mls_import_rows WHERE id = ? AND owner_user_id = ?',
-        [normalizedRow.id, normalizedOwnerUserId]
-      );
+      const existingById = existingRowsById.get(normalizedRow.id) || null;
 
       if (existingById) {
+        const mergedRow = mergeMlsImportSpreadsheetRows(existingById, normalizedRow, { pdfFile: defaultPdfFile });
+        matchKey = createMlsImportSpreadsheetMatchKey(mergedRow);
+        desiredPdfFile = mergedRow.pdfFile || defaultPdfFile;
         await dbRun(
           `UPDATE mls_import_rows
            SET import_run_id = COALESCE(NULLIF(?, ''), import_run_id),
@@ -1929,33 +1979,34 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
           [
             importRunId,
             matchKey,
-            normalizedRow.importDate,
-            normalizedRow.propertyAddress,
-            normalizedRow.laName,
-            normalizedRow.loPhone,
-            normalizedRow.offersEmail,
-            normalizedRow.laCell,
-            normalizedRow.status,
+            mergedRow.importDate,
+            mergedRow.propertyAddress,
+            mergedRow.laName,
+            mergedRow.loPhone,
+            mergedRow.offersEmail,
+            mergedRow.laCell,
+            mergedRow.status,
             desiredPdfFile,
             normalizedRow.id,
             normalizedOwnerUserId
           ]
         );
-        savedRow = await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [normalizedRow.id]);
+        savedRow = cacheSavedRow(await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [normalizedRow.id]));
         updatedCount += 1;
       }
     }
 
     if (!savedRow) {
-      const existingByMatchKey = await dbGet(
-        'SELECT * FROM mls_import_rows WHERE owner_user_id = ? AND match_key = ?',
-        [normalizedOwnerUserId, matchKey]
-      );
+      const existingByMatchKey = existingRowsByMatchKey.get(matchKey) || (addressKey ? existingRowsByAddressKey.get(addressKey) || null : null);
 
       if (existingByMatchKey) {
+        const mergedRow = mergeMlsImportSpreadsheetRows(existingByMatchKey, normalizedRow, { pdfFile: defaultPdfFile });
+        matchKey = createMlsImportSpreadsheetMatchKey(mergedRow);
+        desiredPdfFile = mergedRow.pdfFile || defaultPdfFile;
         await dbRun(
           `UPDATE mls_import_rows
            SET import_run_id = COALESCE(NULLIF(?, ''), import_run_id),
+               match_key = ?,
                import_date = ?,
                property_address = ?,
                la_name = ?,
@@ -1968,18 +2019,19 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
            WHERE id = ?`,
           [
             importRunId,
-            normalizedRow.importDate,
-            normalizedRow.propertyAddress,
-            normalizedRow.laName,
-            normalizedRow.loPhone,
-            normalizedRow.offersEmail,
-            normalizedRow.laCell,
-            normalizedRow.status,
+            matchKey,
+            mergedRow.importDate,
+            mergedRow.propertyAddress,
+            mergedRow.laName,
+            mergedRow.loPhone,
+            mergedRow.offersEmail,
+            mergedRow.laCell,
+            mergedRow.status,
             desiredPdfFile,
             existingByMatchKey.id
           ]
         );
-        savedRow = await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [existingByMatchKey.id]);
+        savedRow = cacheSavedRow(await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [existingByMatchKey.id]));
         updatedCount += 1;
       } else {
         const insertResult = await dbRun(
@@ -2010,7 +2062,7 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
             desiredPdfFile
           ]
         );
-        savedRow = await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [insertResult.lastID]);
+        savedRow = cacheSavedRow(await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [insertResult.lastID]));
         createdCount += 1;
       }
     }
@@ -4308,23 +4360,22 @@ function buildMlsImportExtractionSegments(fullText, pageTexts) {
   const normalizedPages = (Array.isArray(pageTexts) ? pageTexts : [])
     .map((pageText) => normalizePdfExtractText(pageText))
     .filter(Boolean);
+  const listingSegments = [];
 
   const pushSegment = (text, label) => {
     const normalizedText = normalizePdfExtractText(text);
     if (!normalizedText || seenTexts.has(normalizedText)) {
-      return;
+      return null;
     }
 
     seenTexts.add(normalizedText);
-    segments.push({
+    const segment = {
       text: normalizedText,
       label: String(label || '').trim()
-    });
+    };
+    segments.push(segment);
+    return segment;
   };
-
-  normalizedPages.forEach((pageText, index) => {
-    pushSegment(pageText, `page ${index + 1}`);
-  });
 
   if (normalizedPages.length > 1) {
     let currentPages = [];
@@ -4336,12 +4387,15 @@ function buildMlsImportExtractionSegments(fullText, pageTexts) {
       }
 
       const endPage = currentStartPage + currentPages.length - 1;
-      pushSegment(
+      const listingSegment = pushSegment(
         currentPages.join('\n\n'),
         currentStartPage === endPage
           ? `listing page ${currentStartPage}`
           : `listing pages ${currentStartPage}-${endPage}`
       );
+      if (listingSegment) {
+        listingSegments.push(listingSegment);
+      }
       currentPages = [];
     };
 
@@ -4361,6 +4415,14 @@ function buildMlsImportExtractionSegments(fullText, pageTexts) {
 
     flushListingSegment();
   }
+
+  if (normalizedPages.length >= 80 && listingSegments.length > 0) {
+    return listingSegments;
+  }
+
+  normalizedPages.forEach((pageText, index) => {
+    pushSegment(pageText, `page ${index + 1}`);
+  });
 
   for (let index = 0; index < normalizedPages.length - 1; index += 1) {
     pushSegment(
@@ -4407,6 +4469,43 @@ function buildMlsImportAiExtractionSegments(fullText, pageTexts) {
   }
 
   const segments = [];
+  if (normalizedPages.length >= 80) {
+    let currentPages = [];
+    let currentStartPage = 1;
+
+    const flushListingChunk = () => {
+      if (currentPages.length === 0) {
+        return;
+      }
+      const endPage = currentStartPage + currentPages.length - 1;
+      segments.push({
+        text: currentPages.join('\n\n'),
+        label: currentStartPage === endPage ? `listing page ${currentStartPage}` : `listing pages ${currentStartPage}-${endPage}`
+      });
+      currentPages = [];
+    };
+
+    normalizedPages.forEach((pageText, index) => {
+      const lines = pageText.split(/\n+/).map((line) => String(line || '').trim()).filter(Boolean);
+      const pageLooksLikeListingStart = lines.slice(0, 8).some((line) => Boolean(extractPropertyAddressCandidateFromLine(line)));
+
+      if (pageLooksLikeListingStart && currentPages.length > 0) {
+        flushListingChunk();
+        currentStartPage = index + 1;
+      } else if (currentPages.length === 0) {
+        currentStartPage = index + 1;
+      }
+
+      currentPages.push(pageText);
+    });
+
+    flushListingChunk();
+
+    if (segments.length > 0) {
+      return segments;
+    }
+  }
+
   const maxCharsPerSegment = normalizedPages.length >= 180 ? 12000 : 15000;
   const maxPagesPerSegment = normalizedPages.length >= 240 ? 4 : normalizedPages.length >= 120 ? 5 : 6;
 
@@ -5470,36 +5569,38 @@ function mergeMlsImportRows(rows) {
 }
 
 function dedupeMlsImportRows(rows) {
-  const seen = new Set();
-  const deduped = [];
+  const dedupedByKey = new Map();
 
   (Array.isArray(rows) ? rows : []).forEach((row) => {
     if (!row || typeof row !== 'object') {
       return;
     }
 
-    const signature = [
-      String(row.propertyAddress || '').trim().toLowerCase(),
-      String(row.laName || '').trim().toLowerCase(),
-      String(row.loPhone || '').trim().toLowerCase(),
-      String(row.offersEmail || '').trim().toLowerCase(),
-      String(row.laCell || '').trim().toLowerCase(),
-      String(row.status || '').trim().toLowerCase()
+    const normalizedRow = normalizeMlsImportRow(row);
+    const addressKey = createMlsImportAddressMergeKey(normalizedRow.propertyAddress);
+    const signature = addressKey || [
+      normalizedRow.propertyAddress.toLowerCase(),
+      normalizedRow.laName.toLowerCase(),
+      normalizedRow.loPhone.toLowerCase(),
+      normalizedRow.offersEmail.toLowerCase(),
+      normalizedRow.laCell.toLowerCase(),
+      normalizedRow.status.toLowerCase()
     ].join('|');
 
     if (!signature.replace(/\|/g, '')) {
       return;
     }
 
-    if (seen.has(signature)) {
+    const existingRow = dedupedByKey.get(signature);
+    if (existingRow) {
+      dedupedByKey.set(signature, mergeMlsImportRowObjects(existingRow, normalizedRow));
       return;
     }
 
-    seen.add(signature);
-    deduped.push(row);
+    dedupedByKey.set(signature, normalizedRow);
   });
 
-  return deduped;
+  return Array.from(dedupedByKey.values());
 }
 
 function mergeMlsImportRowObjects(previousRow, nextRow) {
@@ -5733,13 +5834,6 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
               void persistMlsImportPdfJobRecord(nextJob).catch((error) => {
                 console.error('Failed to persist MLS import job progress:', error);
               });
-            },
-            onRows: async (rows) => {
-              const result = await persistMlsImportSpreadsheetRowsForUser(decoded.id, rows, {
-                importRunId: job.id,
-                pdfFile: fileName
-              });
-              persistedRowCount = Math.max(persistedRowCount, Number(result.totalCount) || 0);
             }
           });
 
@@ -5747,7 +5841,9 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
             importRunId: job.id,
             pdfFile: fileName
           });
-          persistedRowCount = Math.max(persistedRowCount, Number(finalPersistResult.totalCount) || 0);
+          persistedRowCount = Array.isArray(finalPersistResult && finalPersistResult.rows)
+            ? finalPersistResult.rows.length
+            : 0;
 
           const completedJob = updateMlsImportPdfJob(job.id, {
             status: 'completed',
