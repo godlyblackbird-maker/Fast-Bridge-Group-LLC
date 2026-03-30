@@ -5094,6 +5094,22 @@ body.sidebar-collapsed .main-content {
     cursor: text;
 }
 
+#analytics-numbers-goal-display {
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+    color: #a6f6d0;
+    text-shadow: 0 0 18px rgba(68, 255, 176, 0.18);
+}
+
+#analytics-numbers-goal-meta {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(232, 241, 255, 0.88);
+}
+
 .profit-goal-label {
     display: block;
     margin-bottom: 6px;
