@@ -874,12 +874,27 @@
                 return payload;
             }
 
+            function publishUnreadState(users) {
+                const unreadTotal = (Array.isArray(users) ? users : []).reduce((total, user) => {
+                    return total + Math.max(0, Number(user && user.unreadCount) || 0);
+                }, 0);
+
+                window.dispatchEvent(new CustomEvent('fbgmessages:unreadchange', {
+                    detail: {
+                        hasUnread: unreadTotal > 0,
+                        unreadTotal
+                    }
+                }));
+            }
+
             function renderUsers(users) {
+                usersCache = Array.isArray(users) ? users.slice() : [];
+                publishUnreadState(usersCache);
+
                 if (!usersList) {
                     return;
                 }
 
-                usersCache = Array.isArray(users) ? users.slice() : [];
                 usersList.innerHTML = '';
 
                 if (usersCache.length === 0) {

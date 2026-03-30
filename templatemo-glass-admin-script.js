@@ -5608,11 +5608,7 @@ function initNavbarDateTime() {
         const existingLink = menuList.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
         const fbgMessagesMarkup = `
             <a href="fbg-messages.html" class="nav-link">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    <path d="M8 9h8"></path>
-                    <path d="M8 13h5"></path>
-                </svg>
+                <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
                 FBG Messages
             </a>
         `;
@@ -5645,6 +5641,107 @@ function initNavbarDateTime() {
 
         const isActive = /\/fbg-messages\.html$/.test(currentPath) || currentPath === 'fbg-messages.html';
         link.classList.toggle('active', isActive);
+    }
+
+    function initFbgMessagesNavUnreadIndicator() {
+        const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        let pollTimer = 0;
+        let isPolling = false;
+
+        function getLinks() {
+            return Array.from(document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]'));
+        }
+
+        function ensureDot(link) {
+            if (!(link instanceof HTMLElement)) {
+                return null;
+            }
+
+            let dot = link.querySelector('[data-fbg-unread-dot="true"]');
+            if (!dot) {
+                dot = document.createElement('span');
+                dot.className = 'nav-unread-dot';
+                dot.dataset.fbgUnreadDot = 'true';
+                dot.setAttribute('aria-hidden', 'true');
+                link.appendChild(dot);
+            }
+
+            return dot;
+        }
+
+        function applyUnreadState(hasUnread) {
+            getLinks().forEach((link) => {
+                ensureDot(link);
+                link.dataset.hasUnreadMessages = hasUnread ? 'true' : 'false';
+            });
+        }
+
+        async function refreshUnreadState() {
+            if (isPolling) {
+                return;
+            }
+
+            const links = getLinks();
+            if (!links.length) {
+                return;
+            }
+
+            links.forEach(ensureDot);
+
+            if (!token) {
+                applyUnreadState(false);
+                return;
+            }
+
+            isPolling = true;
+            try {
+                const response = await fetch('/api/messages/users', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json().catch(() => ({}));
+                const users = Array.isArray(payload && payload.users) ? payload.users : [];
+                const hasUnread = users.some((user) => (Number(user && user.unreadCount) || 0) > 0);
+                applyUnreadState(hasUnread);
+            } catch (error) {
+                // Ignore temporary polling failures and keep the last known indicator state.
+            } finally {
+                isPolling = false;
+            }
+        }
+
+        if (!getLinks().length) {
+            return;
+        }
+
+        applyUnreadState(false);
+
+        window.addEventListener('fbgmessages:unreadchange', (event) => {
+            const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+            applyUnreadState(Boolean(detail.hasUnread));
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                refreshUnreadState();
+            }
+        });
+        window.addEventListener('focus', refreshUnreadState);
+
+        refreshUnreadState();
+        pollTimer = window.setInterval(refreshUnreadState, MESSAGE_NOTIFICATION_POLL_MS);
+
+        window.addEventListener('beforeunload', () => {
+            if (pollTimer) {
+                window.clearInterval(pollTimer);
+            }
+        }, { once: true });
     }
 
     function initSidebarCollapse() {
@@ -21867,6 +21964,7 @@ function initNavbarDateTime() {
             ['initCounters', initCounters],
             ['initMobileMenu', initMobileMenu],
             ['initSharedSidebarLinks', initSharedSidebarLinks],
+            ['initFbgMessagesNavUnreadIndicator', initFbgMessagesNavUnreadIndicator],
             ['initSidebarCollapse', initSidebarCollapse],
             ['initMenuSoundEffects', initMenuSoundEffects],
             ['initSoundSettingsTab', initSoundSettingsTab],
