@@ -180,6 +180,87 @@ function resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature }
   };
 }
 
+async function getLatestApprovedSmtpRequest(userId, email) {
+  const normalizedEmail = normalizeKnownEmail(email);
+  const normalizedUserId = Number.isInteger(Number(userId)) ? Number(userId) : 0;
+
+  try {
+    if (normalizedUserId > 0) {
+      const row = await dbGet(
+        `SELECT id, user_id, requester_email, smtp_user, smtp_pass, reviewed_at
+         FROM smtp_requests
+         WHERE user_id = ? AND status = 'approved'
+         ORDER BY datetime(reviewed_at) DESC, datetime(created_at) DESC, id DESC
+         LIMIT 1`,
+        [normalizedUserId]
+      );
+
+      if (row) {
+        return row;
+      }
+    }
+
+    if (!normalizedEmail) {
+      return null;
+    }
+
+    return await dbGet(
+      `SELECT id, user_id, requester_email, smtp_user, smtp_pass, reviewed_at
+       FROM smtp_requests
+       WHERE status = 'approved'
+         AND (LOWER(requester_email) = ? OR LOWER(smtp_user) = ?)
+       ORDER BY datetime(reviewed_at) DESC, datetime(created_at) DESC, id DESC
+       LIMIT 1`,
+      [normalizedEmail, normalizedEmail]
+    );
+  } catch (error) {
+    if (/no such table/i.test(String(error && error.message || ''))) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function resolveEffectiveSmtpConfigForUser({ userId, email, smtpUser, smtpPass, smtpSignature }) {
+  const resolvedConfig = resolveEffectiveSmtpConfig({ email, smtpUser, smtpPass, smtpSignature });
+  if (resolvedConfig.smtpUser && resolvedConfig.smtpPass) {
+    return resolvedConfig;
+  }
+
+  const normalizedEmail = normalizeKnownEmail(email);
+  if (!normalizedEmail) {
+    return resolvedConfig;
+  }
+
+  const approvedRequest = await getLatestApprovedSmtpRequest(userId, normalizedEmail);
+  const approvedSmtpUser = String(approvedRequest && approvedRequest.smtp_user || '').trim().toLowerCase();
+  const approvedSmtpPass = String(approvedRequest && approvedRequest.smtp_pass || '').trim();
+
+  if (!approvedSmtpUser || !approvedSmtpPass || !smtpIdentityMatchesAccount(approvedSmtpUser, normalizedEmail)) {
+    return resolvedConfig;
+  }
+
+  const repairedConfig = {
+    smtpUser: resolvedConfig.smtpUser || approvedSmtpUser,
+    smtpPass: resolvedConfig.smtpPass || approvedSmtpPass,
+    smtpSignature: resolvedConfig.smtpSignature,
+    hasPassword: Boolean(resolvedConfig.smtpPass || approvedSmtpPass)
+  };
+
+  if (Number.isInteger(Number(userId)) && Number(userId) > 0 && (!String(smtpUser || '').trim() || !String(smtpPass || '').trim())) {
+    try {
+      await dbRun(
+        'UPDATE users SET smtp_user = ?, smtp_pass = ?, smtp_signature = COALESCE(NULLIF(smtp_signature, \'\'), ?) WHERE id = ?',
+        [repairedConfig.smtpUser, repairedConfig.smtpPass, repairedConfig.smtpSignature, Number(userId)]
+      );
+    } catch (error) {
+      console.error('Failed to repair approved Gmail outbox for user:', error);
+    }
+  }
+
+  return repairedConfig;
+}
+
 function getEmailFailureReason(error) {
   const rawMessage = String(error?.message || error || '').trim();
   const normalizedMessage = rawMessage.toLowerCase();
@@ -1459,6 +1540,7 @@ function initializeDatabase() {
       console.error('Error creating smtp_requests table:', err);
     } else {
       console.log('SMTP requests table ready');
+      repairApprovedSmtpUsersFromRequests();
     }
   });
 
@@ -2040,6 +2122,9 @@ async function syncIsaacAdminAccount() {
   const legacyEmails = ['isaacs.hesed@gmail.com', 'isaacs.hesed@fastbridgegroup.com'];
   const canonicalName = 'ISAAC HARO';
   const canonicalPassword = '315598';
+  const envSmtpConfig = getPerUserSmtpEnvConfig(canonicalEmail);
+  const envSmtpPass = String(envSmtpConfig.smtpPass || '').trim();
+  const envSmtpSignature = String(envSmtpConfig.smtpSignature || '').trim();
 
   try {
     const account = await dbGet(
@@ -2054,8 +2139,8 @@ async function syncIsaacAdminAccount() {
 
     if (!account) {
       await dbRun(
-        'INSERT INTO users (name, email, password_hash, role, smtp_user) VALUES (?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail]
+        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail, envSmtpPass, envSmtpSignature]
       );
       console.log('Isaac admin account created/synced');
       return;
@@ -2063,16 +2148,23 @@ async function syncIsaacAdminAccount() {
 
     const currentEmail = String(account.email || '').trim().toLowerCase();
     const currentSmtpUser = String(account.smtp_user || '').trim().toLowerCase();
+    const currentSmtpPass = String(account.smtp_pass || '').trim();
+    const currentSmtpSignature = String(account.smtp_signature || '').trim();
     const shouldUpdateSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail || legacyEmails.includes(currentSmtpUser);
+    const nextSmtpUser = shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user;
+    const nextSmtpPass = currentSmtpPass || envSmtpPass;
+    const nextSmtpSignature = currentSmtpSignature || envSmtpSignature;
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ? WHERE id = ?',
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
         hash,
         'admin',
-        shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user,
+        nextSmtpUser,
+        nextSmtpPass,
+        nextSmtpSignature,
         account.id
       ]
     );
@@ -2088,6 +2180,9 @@ async function syncSteveAdminAccount() {
   const legacyEmails = ['medinafbg@gmail.com', 'medinastj@gmail.com'];
   const canonicalName = 'Steve Medina';
   const canonicalPassword = CANONICAL_STEVE_PASSWORD;
+  const envSmtpConfig = getPerUserSmtpEnvConfig(canonicalEmail);
+  const envSmtpPass = String(envSmtpConfig.smtpPass || '').trim();
+  const envSmtpSignature = String(envSmtpConfig.smtpSignature || '').trim();
 
   try {
     const account = await dbGet(
@@ -2102,8 +2197,8 @@ async function syncSteveAdminAccount() {
 
     if (!account) {
       await dbRun(
-        'INSERT INTO users (name, email, password_hash, role, smtp_user) VALUES (?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail]
+        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail, envSmtpPass, envSmtpSignature]
       );
       console.log('Steve admin account created/synced');
       return;
@@ -2111,16 +2206,23 @@ async function syncSteveAdminAccount() {
 
     const currentEmail = String(account.email || '').trim().toLowerCase();
     const currentSmtpUser = String(account.smtp_user || '').trim().toLowerCase();
+    const currentSmtpPass = String(account.smtp_pass || '').trim();
+    const currentSmtpSignature = String(account.smtp_signature || '').trim();
     const shouldUpdateSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail || legacyEmails.includes(currentSmtpUser);
+    const nextSmtpUser = shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user;
+    const nextSmtpPass = currentSmtpPass || envSmtpPass;
+    const nextSmtpSignature = currentSmtpSignature || envSmtpSignature;
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ? WHERE id = ?',
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
         hash,
         'admin',
-        shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user,
+        nextSmtpUser,
+        nextSmtpPass,
+        nextSmtpSignature,
         account.id
       ]
     );
@@ -2174,6 +2276,57 @@ async function syncPublicTestAccount() {
     }
   } catch (error) {
     console.error('Failed to sync public test account:', error);
+  }
+}
+
+async function repairApprovedSmtpUsersFromRequests() {
+  try {
+    const approvedRows = await dbAll(
+      `SELECT request.user_id, request.smtp_user, request.smtp_pass
+       FROM smtp_requests request
+       INNER JOIN (
+         SELECT user_id, MAX(id) AS latest_id
+         FROM smtp_requests
+         WHERE status = 'approved' AND user_id IS NOT NULL
+         GROUP BY user_id
+       ) latest
+         ON latest.latest_id = request.id`,
+      []
+    );
+
+    for (const row of approvedRows) {
+      const userId = Number(row && row.user_id);
+      const approvedSmtpUser = String(row && row.smtp_user || '').trim().toLowerCase();
+      const approvedSmtpPass = String(row && row.smtp_pass || '').trim();
+      if (!Number.isInteger(userId) || userId <= 0 || !approvedSmtpUser || !approvedSmtpPass) {
+        continue;
+      }
+
+      const userRow = await dbGet('SELECT email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [userId]);
+      if (!userRow) {
+        continue;
+      }
+
+      const normalizedEmail = normalizeKnownEmail(userRow.email);
+      if (!smtpIdentityMatchesAccount(approvedSmtpUser, normalizedEmail)) {
+        continue;
+      }
+
+      const existingSmtpUser = String(userRow.smtp_user || '').trim();
+      const existingSmtpPass = String(userRow.smtp_pass || '').trim();
+      if (existingSmtpUser && existingSmtpPass) {
+        continue;
+      }
+
+      await dbRun(
+        'UPDATE users SET smtp_user = ?, smtp_pass = ?, smtp_signature = COALESCE(smtp_signature, \'\') WHERE id = ?',
+        [approvedSmtpUser, approvedSmtpPass, userId]
+      );
+    }
+  } catch (error) {
+    if (!/no such table/i.test(String(error && error.message || ''))) {
+      console.error('Failed to repair approved Gmail outboxes from request history:', error);
+    }
   }
 }
 
@@ -5263,44 +5416,42 @@ app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: MLS_IMPORT_
 });
 
 // GET /api/smtp-settings — returns the authenticated user's Gmail SMTP settings
-app.get('/api/smtp-settings', (req, res) => {
+app.get('/api/smtp-settings', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) return;
 
-  db.get('SELECT email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
-
-    const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
+  try {
+    const row = await dbGet('SELECT email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id]);
+    const effectiveSmtpConfig = await resolveEffectiveSmtpConfigForUser({
+      userId: decoded.id,
       email: row?.email || decoded.email,
       smtpUser: row?.smtp_user,
       smtpPass: row?.smtp_pass,
       smtpSignature: row?.smtp_signature
     });
-
-    db.get(
+    const pendingRow = await dbGet(
       `SELECT id, smtp_user, status, created_at
        FROM smtp_requests
        WHERE user_id = ? AND status = 'pending'
        ORDER BY datetime(created_at) DESC, id DESC
        LIMIT 1`,
-      [decoded.id],
-      (requestError, pendingRow) => {
-        if (requestError) return res.status(500).json({ error: 'Database error' });
-
-        return res.json({
-          smtpUser: pendingRow?.smtp_user || effectiveSmtpConfig.smtpUser,
-          hasPassword: effectiveSmtpConfig.hasPassword,
-          smtpSignature: effectiveSmtpConfig.smtpSignature,
-          pendingRequest: pendingRow ? {
-            id: pendingRow.id,
-            smtpUser: pendingRow.smtp_user,
-            status: pendingRow.status,
-            createdAt: pendingRow.created_at
-          } : null
-        });
-      }
+      [decoded.id]
     );
-  });
+
+    return res.json({
+      smtpUser: pendingRow?.smtp_user || effectiveSmtpConfig.smtpUser,
+      hasPassword: effectiveSmtpConfig.hasPassword,
+      smtpSignature: effectiveSmtpConfig.smtpSignature,
+      pendingRequest: pendingRow ? {
+        id: pendingRow.id,
+        smtpUser: pendingRow.smtp_user,
+        status: pendingRow.status,
+        createdAt: pendingRow.created_at
+      } : null
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // POST /api/smtp-settings — submit Gmail SMTP settings for admin approval
@@ -5455,10 +5606,10 @@ app.post('/api/test-smtp', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) return;
 
-  db.get('SELECT email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], async (err, row) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
-
-    const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
+  try {
+    const row = await dbGet('SELECT email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id]);
+    const effectiveSmtpConfig = await resolveEffectiveSmtpConfigForUser({
+      userId: decoded.id,
       email: row?.email || decoded.email,
       smtpUser: row?.smtp_user,
       smtpPass: row?.smtp_pass,
@@ -5472,24 +5623,22 @@ app.post('/api/test-smtp', async (req, res) => {
       return res.status(400).json({ error: 'No Gmail SMTP credentials are configured for your account. Save them in Profile or add the matching Render environment variables.' });
     }
 
-    try {
-      await sendAgentEmail({
-        fromName: decoded.name || 'Fast Bridge Group',
-        fromEmail: smtpUser,
-        toName: decoded.name || '',
-        toEmail: smtpUser,
-        subject: 'Test Email — Gmail SMTP Verified ✓',
-        body: `Hi ${decoded.name || 'there'},\n\nThis is a test email confirming that your Gmail account (${smtpUser}) is properly configured for the Fast Bridge Group dashboard.\n\nYou can now send emails directly from your own Gmail account.\n\nSent: ${new Date().toLocaleString()}`,
-        smtpSignature,
-        smtpUser,
-        smtpPass
-      });
-      return res.json({ success: true, message: `Test email sent to ${smtpUser}` });
-    } catch (error) {
-      console.error('Test SMTP error:', error);
-      return res.status(500).json({ error: getEmailFailureReason(error) || 'Failed to send test email' });
-    }
-  });
+    await sendAgentEmail({
+      fromName: decoded.name || 'Fast Bridge Group',
+      fromEmail: smtpUser,
+      toName: decoded.name || '',
+      toEmail: smtpUser,
+      subject: 'Test Email — Gmail SMTP Verified ✓',
+      body: `Hi ${decoded.name || 'there'},\n\nThis is a test email confirming that your Gmail account (${smtpUser}) is properly configured for the Fast Bridge Group dashboard.\n\nYou can now send emails directly from your own Gmail account.\n\nSent: ${new Date().toLocaleString()}`,
+      smtpSignature,
+      smtpUser,
+      smtpPass
+    });
+    return res.json({ success: true, message: `Test email sent to ${smtpUser}` });
+  } catch (error) {
+    console.error('Test SMTP error:', error);
+    return res.status(500).json({ error: getEmailFailureReason(error) || 'Failed to send test email' });
+  }
 });
 
 // Lead capture endpoint that triggers a notification email.
@@ -6114,13 +6263,10 @@ app.post('/api/send-agent-email', async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const row = await new Promise((resolve, reject) => {
-      db.get('SELECT name, email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id], (err, r) => {
-        if (err) reject(err); else resolve(r);
-      });
-    });
+    const row = await dbGet('SELECT name, email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [decoded.id]);
     authenticatedUser = row || null;
-    const effectiveSmtpConfig = resolveEffectiveSmtpConfig({
+    const effectiveSmtpConfig = await resolveEffectiveSmtpConfigForUser({
+      userId: decoded.id,
       email: row?.email || decoded.email,
       smtpUser: row?.smtp_user,
       smtpPass: row?.smtp_pass,
