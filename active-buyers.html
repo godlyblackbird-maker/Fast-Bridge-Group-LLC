@@ -853,11 +853,21 @@
                             buyersEmailStatus.textContent = 'No recipients selected.';
                             return;
                         }
+
+                        const authHeaders = getAuthHeader();
+                        if (!authHeaders.Authorization) {
+                            buyersEmailStatus.textContent = 'Error: Sign in again before sending email through the website.';
+                            return;
+                        }
+
                         try {
                             // Send to server for bulk email
                             const res = await fetch('/api/send-agent-email', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    ...authHeaders
+                                },
                                 body: JSON.stringify({
                                     toEmail: emails.join(','),
                                     subject,
