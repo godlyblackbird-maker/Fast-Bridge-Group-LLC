@@ -4926,6 +4926,10 @@ body.sidebar-collapsed .main-content {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.analytics-numbers-card {
+    order: -1;
+}
+
 .stat-card {
     position: relative;
 }

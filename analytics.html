@@ -340,43 +340,44 @@ https://templatemo.com/tm-607-glass-admin
 
             <!-- Stats Cards -->
             <section class="stats-grid analytics-stats-grid">
-                <div class="glass-card glass-card-3d stat-card tilt-firm" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
+                <div class="glass-card glass-card-3d stat-card tilt-firm analytics-numbers-card" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
                     <div class="stat-card-inner">
                         <div class="stat-info">
-                            <h3>My Profits</h3>
-                            <div class="profit-window-scroll" aria-label="Profit time range selector" data-no-tilt>
-                                <div class="profit-window-track" id="kpi-profit-window-track" role="tablist" aria-label="Profit time range" data-no-tilt>
-                                    <button type="button" class="profit-window-pill active" id="kpi-profit-window-q1" data-profit-window="q1" aria-pressed="true">First Quarter</button>
-                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-q2" data-profit-window="q2" aria-pressed="false">2nd Quarter</button>
-                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-q3" data-profit-window="q3" aria-pressed="false">3rd Quarter</button>
-                                    <button type="button" class="profit-window-pill" id="kpi-profit-window-q4" data-profit-window="q4" aria-pressed="false">4th Quarter</button>
+                            <h3>Numbers</h3>
+                            <div class="profit-window-scroll" aria-label="Numbers quarter selector" data-no-tilt>
+                                <div class="profit-window-track" id="analytics-numbers-window-track" role="tablist" aria-label="Numbers time range" data-no-tilt>
+                                    <button type="button" class="profit-window-pill" id="analytics-numbers-window-q1" data-numbers-window="q1" aria-pressed="false">1st Quarter</button>
+                                    <button type="button" class="profit-window-pill" id="analytics-numbers-window-q2" data-numbers-window="q2" aria-pressed="false">2nd Quarter</button>
+                                    <button type="button" class="profit-window-pill" id="analytics-numbers-window-q3" data-numbers-window="q3" aria-pressed="false">3rd Quarter</button>
+                                    <button type="button" class="profit-window-pill" id="analytics-numbers-window-q4" data-numbers-window="q4" aria-pressed="false">4th Quarter</button>
+                                    <button type="button" class="profit-window-pill active" id="analytics-numbers-window-all" data-numbers-window="all" aria-pressed="true">All</button>
                                 </div>
                             </div>
-                            <div class="stat-value" id="kpi-my-profits">$0</div>
+                            <div class="stat-value" id="analytics-numbers-total">$0</div>
                             <span class="stat-change positive">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
-                                <span id="kpi-my-profits-change">0 saved IA deals</span>
+                                <span id="analytics-numbers-change">$0 net earned with us</span>
                             </span>
-                            <div class="profit-goal-display" id="kpi-profit-goal-display" data-no-tilt>Set your target for this year.</div>
+                            <div class="profit-goal-display" id="analytics-numbers-goal-display" data-no-tilt>Set your daily number goal.</div>
                             <div class="profit-goal-box" data-no-tilt>
-                                <label class="profit-goal-label" for="kpi-profit-goal-input">Yearly profit goal</label>
+                                <label class="profit-goal-label" for="analytics-numbers-daily-goal">Daily number goal</label>
                                 <div class="profit-goal-row" data-no-tilt>
                                     <div class="profit-goal-input-wrap" data-no-tilt>
-                                        <input id="kpi-profit-goal-input" class="profit-goal-input" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 500000" data-no-tilt>
-                                        <button type="button" class="profit-goal-submit-btn" id="kpi-profit-goal-submit" aria-label="Save yearly profit goal" title="Save yearly profit goal" data-no-tilt>
+                                        <input id="analytics-numbers-daily-goal" class="profit-goal-input" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 10000" data-no-tilt>
+                                        <button type="button" class="profit-goal-submit-btn" id="analytics-numbers-daily-goal-submit" aria-label="Save daily number goal" title="Save daily number goal" data-no-tilt>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                                                 <polyline points="12 5 19 12 12 19"></polyline>
                                             </svg>
                                         </button>
                                     </div>
-                                    <div class="profit-goal-meta" id="kpi-profit-goal-meta" data-no-tilt>Your yearly target updates as you type. Press Enter or click the arrow to confirm.</div>
+                                    <div class="profit-goal-meta" id="analytics-numbers-goal-meta" data-no-tilt>Track the amount you want to net each day.</div>
                                 </div>
                             </div>
                         </div>
                         <div class="stat-icon cyan">
                             <svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald-light)" stroke-width="2">
-                                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                                <path d="M12 2v20"></path><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                             </svg>
                         </div>
                     </div>

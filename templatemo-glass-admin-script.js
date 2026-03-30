@@ -35,8 +35,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     };
     const THEME_LOGO_SELECTOR = 'img.logo-img, img.ecard-logo-image, img.flyer-logo-image';
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
-    const ANALYTICS_PROFIT_GOAL_KEY = 'analyticsProfitGoalByUser';
-    const ANALYTICS_PROFIT_WINDOW_KEY = 'analyticsProfitWindowByUser';
+    const ANALYTICS_DAILY_NUMBERS_GOAL_KEY = 'analyticsDailyNumbersGoalByUser';
+    const ANALYTICS_NUMBERS_WINDOW_KEY = 'analyticsNumbersWindowByUser';
     const ANALYTICS_CLOSED_DEAL_DRAFT_KEY = 'analyticsClosedDealDraftByUser';
     const PLANNER_DRAFT_KEY = 'plannerDraftByUser';
     const DASHBOARD_NOTES_KEY = 'dashboardNotesByUser';
@@ -3817,243 +3817,29 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     }
 
     function initLiveKpiStats() {
-        const myProfitsValueEl = document.getElementById('kpi-my-profits');
         const offerTermsSentEl = document.getElementById('kpi-offer-terms-sent');
         const offersSubmittedEl = document.getElementById('kpi-offers-submitted');
-        const profitGoalInputEl = document.getElementById('kpi-profit-goal-input');
-        const profitGoalSubmitEl = document.getElementById('kpi-profit-goal-submit');
-        const profitGoalDisplayEl = document.getElementById('kpi-profit-goal-display');
-        const profitGoalMetaEl = document.getElementById('kpi-profit-goal-meta');
-        const profitWindowButtons = Array.from(document.querySelectorAll('[data-profit-window]'));
 
-        if (!myProfitsValueEl || !offerTermsSentEl || !offersSubmittedEl) {
+        if (!offerTermsSentEl || !offersSubmittedEl) {
             return;
         }
 
-        const myProfitsChangeEl = document.getElementById('kpi-my-profits-change');
         const offerTermsChangeEl = document.getElementById('kpi-offer-terms-change');
         const offersChangeEl = document.getElementById('kpi-offers-change');
-        const profitWindowTrackEl = document.getElementById('kpi-profit-window-track');
-        let activeProfitWindowPointerButton = null;
-        const PROFIT_WINDOW_CONFIG = {
-            q1: { label: 'in first quarter', quarter: 0 },
-            q2: { label: 'in 2nd quarter', quarter: 1 },
-            q3: { label: 'in 3rd quarter', quarter: 2 },
-            q4: { label: 'in 4th quarter', quarter: 3 }
-        };
-        let activeProfitWindowState = getSelectedProfitWindow();
-
-        function getSelectedProfitWindow() {
-            const workspaceUser = getWorkspaceUserContext();
-            const storedWindow = String(getUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, 'q1') || 'q1').trim().toLowerCase();
-            return PROFIT_WINDOW_CONFIG[storedWindow] ? storedWindow : 'q1';
-        }
-
-        function setSelectedProfitWindow(windowKey) {
-            const workspaceUser = getWorkspaceUserContext();
-            const normalizedWindow = String(windowKey || 'q1').trim().toLowerCase();
-            const nextWindow = PROFIT_WINDOW_CONFIG[normalizedWindow] ? normalizedWindow : 'q1';
-            activeProfitWindowState = nextWindow;
-            setUserScopedValue(ANALYTICS_PROFIT_WINDOW_KEY, workspaceUser.key, nextWindow);
-        }
-
-        function parseAnalyticsTimestamp(...values) {
-            for (const value of values) {
-                if (value === null || value === undefined || value === '') {
-                    continue;
-                }
-
-                const numericValue = Number(value);
-                if (Number.isFinite(numericValue) && numericValue > 0) {
-                    return numericValue;
-                }
-
-                const parsedValue = Date.parse(String(value));
-                if (Number.isFinite(parsedValue) && parsedValue > 0) {
-                    return parsedValue;
-                }
-            }
-
-            return 0;
-        }
-
-        function getStateTimestamp(state) {
-            return parseAnalyticsTimestamp(
-                state && state.updatedAt,
-                state && state.createdAt,
-                state && state.savedAt,
-                state && state.timestamp
-            );
-        }
-
-        function getProfitWindowRange(windowKey, now) {
-            const config = PROFIT_WINDOW_CONFIG[windowKey] || PROFIT_WINDOW_CONFIG.q1;
-            const currentDate = now instanceof Date ? now : new Date(now);
-            const currentYear = currentDate.getFullYear();
-            const quarterIndex = Number(config.quarter);
-            const quarterStartMonth = Number.isFinite(quarterIndex) ? quarterIndex * 3 : 0;
-            const rangeStart = new Date(currentYear, quarterStartMonth, 1).getTime();
-            const rangeEnd = new Date(currentYear, quarterStartMonth + 3, 1).getTime();
-            return {
-                start: rangeStart,
-                end: rangeEnd
-            };
-        }
-
-        function isTimestampInProfitWindow(timestamp, range) {
-            return Number.isFinite(timestamp) && timestamp >= range.start && timestamp < range.end;
-        }
-
-        function getClosedDealTimestamp(item) {
-            return parseAnalyticsTimestamp(
-                item && item.closeDate,
-                item && item.updatedAt,
-                item && item.createdAt
-            );
-        }
-
-        function getClosedDealEarnedAmount(item) {
-            return Math.max(parseMoneyValue(item && (item.earnedAmount ?? item.amountEarned ?? item.earned)), 0);
-        }
-
-        function renderProfitGoalDisplay(profitGoal, yearlyProfitTotal) {
-            if (!profitGoalDisplayEl) {
-                return;
-            }
-
-            if (profitGoal > 0) {
-                const remaining = Math.max(profitGoal - yearlyProfitTotal, 0);
-                const percentToGoal = Math.min((yearlyProfitTotal / profitGoal) * 100, 999);
-                profitGoalDisplayEl.textContent = `Yearly goal: ${formatMoney(profitGoal)} • ${formatMoney(remaining)} left • ${percentToGoal.toFixed(1)}% reached`;
-                return;
-            }
-
-            profitGoalDisplayEl.textContent = 'Set your target for this year.';
-        }
-
-        function syncProfitWindowUi(activeWindow) {
-            profitWindowButtons.forEach((button) => {
-                const isActive = button.dataset.profitWindow === activeWindow;
-                button.classList.toggle('active', isActive);
-                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                button.setAttribute('role', 'tab');
-                button.tabIndex = isActive ? 0 : -1;
-            });
-
-            if (profitWindowTrackEl) {
-                profitWindowTrackEl.setAttribute('aria-activedescendant', `kpi-profit-window-${activeWindow}`);
-            }
-        }
-
-        function calculateIaNetProfit(state) {
-            if (!state || typeof state !== 'object') {
-                return 0;
-            }
-
-            const listPrice = Math.max(parseMoneyValue(state.listPrice), 0);
-            const rawArv = Math.max(parseMoneyValue(state.arv), 0);
-            const estimatedSalesPrice = rawArv;
-            const sellSidePct = Math.max(parseMoneyValue(state.sellSidePercent), 0);
-            const sellSideCost = estimatedSalesPrice * (sellSidePct / 100);
-            const buySideCost = listPrice * 0.006617;
-            const renovation = Math.max(parseMoneyValue(state.renovation), 0);
-            const offerPrice = Math.max(parseMoneyValue(state.offerPrice), 0);
-            const holdMonths = Math.max(parseMoneyValue(state.holdMonths), 0);
-            const financingMode = String(state.financingMode || '100-95-13-excel-ia').trim().toLowerCase();
-            const loanToArvPct = Math.max(parseMoneyValue(state.loanToArv), 0);
-            const interestRatePct = Math.max(parseMoneyValue(state.interestRate), 0);
-            const pointsPct = Math.max(parseMoneyValue(state.originationPoints), 0);
-            const lenderFees = Math.max(parseMoneyValue(state.lenderFees), 0);
-            const otherCosts = Array.isArray(state.otherCosts)
-                ? state.otherCosts.reduce((sum, item) => sum + Math.max(parseMoneyValue(item && item.amount), 0), 0)
-                : 0;
-
-            const investorDefaults = state.investorDefaults && typeof state.investorDefaults === 'object'
-                ? state.investorDefaults
-                : {};
-
-                const invEscrowPct = 0;
-                const invProratedPct = Math.max(parseMoneyValue(investorDefaults.invProratedPct), 0);
-            const invConcessionsPct = Math.max(parseMoneyValue(investorDefaults.invConcessionsPct), 0);
-            const invBuyerAgentPct = 0;
-            const invListingAgentPct = 0;
-            const invPerDiemPct = Math.max(parseMoneyValue(investorDefaults.invPerDiemPct), 0);
-            const invAssetMgmtPct = Math.max(parseMoneyValue(investorDefaults.invAssetMgmtPct), 0);
-            const invDueDiligence = Math.max(parseMoneyValue(investorDefaults.invDueDiligence), 0);
-            const invAcquisitionFee = Math.max(parseMoneyValue(investorDefaults.invAcquisitionFee), 0);
-            const invCashForKeys = Math.max(parseMoneyValue(investorDefaults.invCashForKeys), 0);
-
-            const invEscrowAmount = estimatedSalesPrice * (invEscrowPct / 100);
-            const invProratedAmount = estimatedSalesPrice * (invProratedPct / 100);
-            const invConcessionsAmount = estimatedSalesPrice * (invConcessionsPct / 100);
-            const invBuyerAgentAmount = estimatedSalesPrice * (invBuyerAgentPct / 100);
-            const invListingAgentAmount = estimatedSalesPrice * (invListingAgentPct / 100);
-            const invPerDiemAmount = estimatedSalesPrice * (invPerDiemPct / 100);
-            const invAssetMgmtAmount = estimatedSalesPrice * (invAssetMgmtPct / 100);
-
-            const grossSaleAdjustmentTotal = invEscrowAmount
-                + invProratedAmount
-                + invConcessionsAmount
-                + invBuyerAgentAmount
-                + invListingAgentAmount
-                + invPerDiemAmount
-                + invAssetMgmtAmount;
-            const grossPurchaseAdjustmentTotal = invDueDiligence + invAcquisitionFee + invCashForKeys;
-
-            const loanAmount = financingMode === 'cash' ? 0 : rawArv * (loanToArvPct / 100);
-            const originationAmount = financingMode === 'cash' ? 0 : loanAmount * (pointsPct / 100);
-            const interestCost = financingMode === 'cash' ? 0 : loanAmount * (interestRatePct / 100) * (holdMonths / 12);
-            const totalFinancingCost = financingMode === 'cash' ? 0 : (originationAmount + lenderFees + interestCost);
-
-            const grossProfitToSeller = estimatedSalesPrice - sellSideCost - grossSaleAdjustmentTotal;
-            const invTotalAcquisition = offerPrice + buySideCost + otherCosts;
-            const invHardMoneyCosts = totalFinancingCost;
-            const invMiscLessInterest = grossPurchaseAdjustmentTotal;
-            const invTotalDevelopmentCost = invTotalAcquisition + invHardMoneyCosts + renovation + invMiscLessInterest;
-            const invNetProfit = grossProfitToSeller - invTotalDevelopmentCost;
-
-            return Number.isFinite(invNetProfit) ? invNetProfit : 0;
-        }
 
         function refreshKpis() {
             const workspaceUser = getWorkspaceUserContext();
             const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
             const plannerItems = getUserScopedItems(TODO_GOALS_KEY, workspaceUser.key);
-            const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
-            const manualClosedDeals = getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
-            const rawProfitGoal = getUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, '');
-            const profitGoal = Math.max(parseMoneyValue(rawProfitGoal), 0);
-            activeProfitWindowState = getSelectedProfitWindow();
-            const activeProfitWindow = activeProfitWindowState;
-            const now = new Date();
-            const profitWindowStart = getProfitWindowRange(activeProfitWindow, now);
-            const windowedIaStates = iaStates.filter((state) => isTimestampInProfitWindow(getStateTimestamp(state), profitWindowStart));
-            const windowedClosedDeals = manualClosedDeals.filter((deal) => isTimestampInProfitWindow(getClosedDealTimestamp(deal), profitWindowStart));
-            const yearlyRange = {
-                start: new Date(now.getFullYear(), 0, 1).getTime(),
-                end: new Date(now.getFullYear() + 1, 0, 1).getTime()
-            };
-            const yearlyIaStates = iaStates.filter((state) => isTimestampInProfitWindow(getStateTimestamp(state), yearlyRange));
-            const yearlyClosedDeals = manualClosedDeals.filter((deal) => isTimestampInProfitWindow(getClosedDealTimestamp(deal), yearlyRange));
-
-            const latestByProperty = new Map();
             const offerLeadSet = new Set();
             const offerTermsSentSet = collectOfferTermsSentPropertyKeys(scopedStatuses, notes);
             const offerRegex = /\boffer\b|submitted|sent/i;
 
-            notes.forEach(note => {
+            notes.forEach((note) => {
                 const propertyAddress = String(note.propertyAddress || '').trim();
                 if (!propertyAddress) {
                     return;
-                }
-                const propertyKey = makePropertyStorageKey(note.propertyKey || propertyAddress);
-
-                const createdAt = Number(note.createdAt) || 0;
-                const existing = latestByProperty.get(propertyAddress);
-                if (!existing || createdAt > (Number(existing.createdAt) || 0)) {
-                    latestByProperty.set(propertyAddress, note);
                 }
 
                 const noteText = String(note.note || '');
@@ -4062,41 +3848,19 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             });
 
-            plannerItems.forEach(item => {
+            plannerItems.forEach((item) => {
                 const title = String(item.title || item.text || '');
                 if (item.completed && offerRegex.test(title)) {
                     offerLeadSet.add(`planner-${item.id}`);
                 }
             });
 
-            const windowedClosedDealEarnings = windowedClosedDeals.reduce((sum, deal) => sum + getClosedDealEarnedAmount(deal), 0);
-            const myProfitsTotal = windowedIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + windowedClosedDealEarnings;
             const offerTermsSentCount = offerTermsSentSet.size;
             const offersSubmitted = offerLeadSet.size;
-            const activeProfitWindowLabel = (PROFIT_WINDOW_CONFIG[activeProfitWindow] || PROFIT_WINDOW_CONFIG.q1).label;
 
-            myProfitsValueEl.textContent = formatMoney(myProfitsTotal);
             offerTermsSentEl.textContent = String(offerTermsSentCount);
             offersSubmittedEl.textContent = String(offersSubmitted);
-            syncProfitWindowUi(activeProfitWindow);
 
-            if (myProfitsChangeEl) {
-                const iaDealText = `${windowedIaStates.length} saved IA deal${windowedIaStates.length === 1 ? '' : 's'}`;
-                const closedDealText = `${windowedClosedDeals.length} closed deal earning${windowedClosedDeals.length === 1 ? '' : 's'}`;
-                myProfitsChangeEl.textContent = `${iaDealText} • ${closedDealText} ${activeProfitWindowLabel}`;
-            }
-            if (profitGoalInputEl) {
-                const formattedGoal = profitGoal > 0 ? Math.round(profitGoal).toLocaleString('en-US') : '';
-                if (profitGoalInputEl !== document.activeElement || !String(profitGoalInputEl.value || '').trim()) {
-                    profitGoalInputEl.value = formattedGoal;
-                }
-            }
-            const yearlyClosedDealEarnings = yearlyClosedDeals.reduce((sum, deal) => sum + getClosedDealEarnedAmount(deal), 0);
-            const yearlyProfitTotal = yearlyIaStates.reduce((sum, state) => sum + calculateIaNetProfit(state), 0) + yearlyClosedDealEarnings;
-            renderProfitGoalDisplay(profitGoal, yearlyProfitTotal);
-            if (profitGoalMetaEl) {
-                profitGoalMetaEl.textContent = 'Your yearly target updates as you type. Press Enter or click the arrow to confirm.';
-            }
             if (offerTermsChangeEl) {
                 offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} at offer terms sent`;
             }
@@ -4104,158 +3868,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 offersChangeEl.textContent = `${offersSubmitted} offer event${offersSubmitted === 1 ? '' : 's'}`;
             }
         }
-
-        function moveProfitWindowSelection(direction) {
-            if (!profitWindowButtons.length) {
-                return;
-            }
-
-            const orderedWindows = profitWindowButtons
-                .map((button) => String(button.dataset.profitWindow || '').trim())
-                .filter((windowKey) => PROFIT_WINDOW_CONFIG[windowKey]);
-            const currentIndex = Math.max(0, orderedWindows.indexOf(activeProfitWindowState));
-            const nextIndex = (currentIndex + direction + orderedWindows.length) % orderedWindows.length;
-            const nextWindow = orderedWindows[nextIndex] || 'year';
-            setSelectedProfitWindow(nextWindow);
-            refreshKpis();
-            const nextButton = profitWindowButtons.find((button) => button.dataset.profitWindow === nextWindow);
-            if (nextButton) {
-                nextButton.focus();
-            }
-        }
-
-        if (profitGoalInputEl) {
-            const persistProfitGoal = () => {
-                const workspaceUser = getWorkspaceUserContext();
-                const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
-                setUserScopedValue(ANALYTICS_PROFIT_GOAL_KEY, workspaceUser.key, digitsOnly);
-                return digitsOnly;
-            };
-
-            const commitProfitGoal = () => {
-                persistProfitGoal();
-                refreshKpis();
-                profitGoalInputEl.blur();
-            };
-
-            profitGoalInputEl.addEventListener('input', () => {
-                const digitsOnly = String(profitGoalInputEl.value || '').replace(/[^0-9]/g, '');
-                profitGoalInputEl.value = digitsOnly ? Number(digitsOnly).toLocaleString('en-US') : '';
-                persistProfitGoal();
-                refreshKpis();
-            });
-
-            profitGoalInputEl.addEventListener('change', () => {
-                persistProfitGoal();
-                refreshKpis();
-            });
-
-            profitGoalInputEl.addEventListener('blur', () => {
-                persistProfitGoal();
-                refreshKpis();
-            });
-
-            profitGoalInputEl.addEventListener('keydown', (event) => {
-                if (event.key !== 'Enter') {
-                    return;
-                }
-
-                event.preventDefault();
-                commitProfitGoal();
-            });
-
-            profitGoalInputEl.addEventListener('keyup', (event) => {
-                if (event.key !== 'Enter') {
-                    return;
-                }
-
-                event.preventDefault();
-                commitProfitGoal();
-            });
-
-            if (profitGoalSubmitEl) {
-                profitGoalSubmitEl.addEventListener('click', () => {
-                    commitProfitGoal();
-                });
-            }
-
-            if (profitGoalDisplayEl) {
-                profitGoalDisplayEl.addEventListener('click', () => {
-                    profitGoalInputEl.focus();
-                    profitGoalInputEl.select();
-                });
-            }
-        }
-
-        profitWindowButtons.forEach((button) => {
-            button.addEventListener('pointerdown', (event) => {
-                activeProfitWindowPointerButton = button;
-                button.classList.add('is-pressed');
-                event.stopPropagation();
-            });
-
-            button.addEventListener('pointerup', (event) => {
-                button.classList.remove('is-pressed');
-                if (activeProfitWindowPointerButton === button) {
-                    activeProfitWindowPointerButton = null;
-                }
-                event.stopPropagation();
-            });
-
-            button.addEventListener('pointercancel', () => {
-                button.classList.remove('is-pressed');
-                if (activeProfitWindowPointerButton === button) {
-                    activeProfitWindowPointerButton = null;
-                }
-            });
-
-            button.addEventListener('mouseleave', () => {
-                button.classList.remove('is-pressed');
-                if (activeProfitWindowPointerButton === button) {
-                    activeProfitWindowPointerButton = null;
-                }
-            });
-
-            button.addEventListener('click', (event) => {
-                button.classList.remove('is-pressed');
-                activeProfitWindowPointerButton = null;
-                event.stopPropagation();
-                setSelectedProfitWindow(button.dataset.profitWindow);
-                refreshKpis();
-            });
-
-            button.addEventListener('keydown', (event) => {
-                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    moveProfitWindowSelection(1);
-                    return;
-                }
-                if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    moveProfitWindowSelection(-1);
-                    return;
-                }
-                if (event.key === 'Home') {
-                    event.preventDefault();
-                    setSelectedProfitWindow('q1');
-                    refreshKpis();
-                    const firstButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'q1');
-                    if (firstButton) {
-                        firstButton.focus();
-                    }
-                    return;
-                }
-                if (event.key === 'End') {
-                    event.preventDefault();
-                    setSelectedProfitWindow('q4');
-                    refreshKpis();
-                    const lastButton = profitWindowButtons.find((entry) => entry.dataset.profitWindow === 'q4');
-                    if (lastButton) {
-                        lastButton.focus();
-                    }
-                }
-            });
-        });
 
         refreshKpis();
         window.addEventListener('dashboard-data-updated', refreshKpis);
@@ -4265,6 +3877,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function initClosedDealsWidget() {
         const closedDealsValueEl = document.getElementById('kpi-closed-deals');
         const closedDealsChangeEl = document.getElementById('kpi-closed-deals-change');
+        const numbersTotalEl = document.getElementById('analytics-numbers-total');
+        const numbersChangeEl = document.getElementById('analytics-numbers-change');
+        const numbersGoalInputEl = document.getElementById('analytics-numbers-daily-goal');
+        const numbersGoalSubmitEl = document.getElementById('analytics-numbers-daily-goal-submit');
+        const numbersGoalDisplayEl = document.getElementById('analytics-numbers-goal-display');
+        const numbersGoalMetaEl = document.getElementById('analytics-numbers-goal-meta');
+        const numbersWindowTrackEl = document.getElementById('analytics-numbers-window-track');
+        const numbersWindowButtons = Array.from(document.querySelectorAll('[data-numbers-window]'));
         const dealNameInput = document.getElementById('closed-deal-name');
         const dealDateInput = document.getElementById('closed-deal-date');
         const dealWholesaleFeeInput = document.getElementById('closed-deal-wholesale-fee');
@@ -4288,6 +3908,36 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const workspaceUser = getWorkspaceUserContext();
         const isTestRole = String(workspaceUser && workspaceUser.role || '').trim().toLowerCase() === 'test user';
         let pendingUploads = [];
+        const NUMBERS_WINDOW_CONFIG = {
+            q1: { label: '1st quarter', quarter: 0 },
+            q2: { label: '2nd quarter', quarter: 1 },
+            q3: { label: '3rd quarter', quarter: 2 },
+            q4: { label: '4th quarter', quarter: 3 },
+            all: { label: 'all quarters', quarter: null }
+        };
+        let activeNumbersWindow = getSelectedNumbersWindow();
+
+        function persistNumbersDailyGoal() {
+            if (!numbersGoalInputEl) {
+                return '';
+            }
+
+            const digitsOnly = String(numbersGoalInputEl.value || '').replace(/[^0-9]/g, '');
+            setUserScopedValue(ANALYTICS_DAILY_NUMBERS_GOAL_KEY, workspaceUser.key, digitsOnly);
+            return digitsOnly;
+        }
+
+        function getSelectedNumbersWindow() {
+            const storedWindow = String(getUserScopedValue(ANALYTICS_NUMBERS_WINDOW_KEY, workspaceUser.key, 'all') || 'all').trim().toLowerCase();
+            return NUMBERS_WINDOW_CONFIG[storedWindow] ? storedWindow : 'all';
+        }
+
+        function setSelectedNumbersWindow(windowKey) {
+            const normalizedWindow = String(windowKey || 'all').trim().toLowerCase();
+            const nextWindow = NUMBERS_WINDOW_CONFIG[normalizedWindow] ? normalizedWindow : 'all';
+            activeNumbersWindow = nextWindow;
+            setUserScopedValue(ANALYTICS_NUMBERS_WINDOW_KEY, workspaceUser.key, nextWindow);
+        }
 
         function getManualClosedDeals() {
             return getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
@@ -4398,6 +4048,104 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         function formatMoneyInputValue(value) {
             const amount = parseClosedDealMoney(value);
             return amount > 0 ? formatClosedDealMoney(amount) : '';
+        }
+
+        function parseClosedDealTimestamp(value) {
+            const numericValue = typeof value === 'number' ? value : Number(value);
+            if (Number.isFinite(numericValue) && numericValue > 0) {
+                return numericValue;
+            }
+
+            const parsedValue = Date.parse(String(value || ''));
+            return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 0;
+        }
+
+        function getNumbersWindowRange(windowKey) {
+            const config = NUMBERS_WINDOW_CONFIG[windowKey] || NUMBERS_WINDOW_CONFIG.all;
+            const currentYear = new Date().getFullYear();
+
+            if (config.quarter === null) {
+                return {
+                    start: new Date(currentYear, 0, 1).getTime(),
+                    end: new Date(currentYear + 1, 0, 1).getTime()
+                };
+            }
+
+            const quarterStartMonth = Number(config.quarter) * 3;
+            return {
+                start: new Date(currentYear, quarterStartMonth, 1).getTime(),
+                end: new Date(currentYear, quarterStartMonth + 3, 1).getTime()
+            };
+        }
+
+        function isTimestampInNumbersWindow(timestamp, range) {
+            return Number.isFinite(timestamp) && timestamp >= range.start && timestamp < range.end;
+        }
+
+        function syncNumbersWindowUi(activeWindow) {
+            numbersWindowButtons.forEach((button) => {
+                const isActive = button.dataset.numbersWindow === activeWindow;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                button.setAttribute('role', 'tab');
+                button.tabIndex = isActive ? 0 : -1;
+            });
+
+            if (numbersWindowTrackEl) {
+                numbersWindowTrackEl.setAttribute('aria-activedescendant', `analytics-numbers-window-${activeWindow}`);
+            }
+        }
+
+        function moveNumbersWindowSelection(direction) {
+            if (!numbersWindowButtons.length) {
+                return;
+            }
+
+            const orderedWindows = numbersWindowButtons
+                .map((button) => String(button.dataset.numbersWindow || '').trim())
+                .filter((windowKey) => NUMBERS_WINDOW_CONFIG[windowKey]);
+            const currentIndex = Math.max(0, orderedWindows.indexOf(activeNumbersWindow));
+            const nextIndex = (currentIndex + direction + orderedWindows.length) % orderedWindows.length;
+            const nextWindow = orderedWindows[nextIndex] || 'all';
+            setSelectedNumbersWindow(nextWindow);
+            renderClosedDeals();
+            const nextButton = numbersWindowButtons.find((button) => button.dataset.numbersWindow === nextWindow);
+            if (nextButton) {
+                nextButton.focus();
+            }
+        }
+
+        function getNumbersDailyGoal() {
+            const rawValue = getUserScopedValue(ANALYTICS_DAILY_NUMBERS_GOAL_KEY, workspaceUser.key, '');
+            return Math.max(parseClosedDealMoney(rawValue), 0);
+        }
+
+        function syncNumbersGoalUi(totalEarned, windowLabel) {
+            const dailyGoal = getNumbersDailyGoal();
+            const label = String(windowLabel || 'all quarters').trim();
+
+            if (numbersGoalInputEl) {
+                const formattedGoal = dailyGoal > 0 ? Math.round(dailyGoal).toLocaleString('en-US') : '';
+                if (numbersGoalInputEl !== document.activeElement || !String(numbersGoalInputEl.value || '').trim()) {
+                    numbersGoalInputEl.value = formattedGoal;
+                }
+            }
+
+            if (numbersGoalDisplayEl) {
+                if (dailyGoal > 0) {
+                    const daysCovered = totalEarned > 0 ? (totalEarned / dailyGoal) : 0;
+                    numbersGoalDisplayEl.textContent = `Daily goal: ${formatClosedDealMoney(dailyGoal)} • ${label.charAt(0).toUpperCase() + label.slice(1)} covers ${daysCovered.toFixed(1)} goal day${daysCovered === 1 ? '' : 's'}`;
+                } else {
+                    numbersGoalDisplayEl.textContent = 'Set your daily number goal.';
+                }
+            }
+
+            if (numbersGoalMetaEl) {
+                numbersGoalMetaEl.textContent = dailyGoal > 0
+                    ? 'Your daily number goal saves automatically as you type. Press Enter or click the arrow to confirm.'
+                    : 'Track the amount you want to net each day.';
+            }
         }
 
         function revealMyFileArchive() {
@@ -4932,9 +4680,27 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 totals.earnedAmount += parseClosedDealMoney(deal.earnedAmount);
                 return totals;
             }, { wholesaleFee: 0, earnedAmount: 0 });
+            activeNumbersWindow = getSelectedNumbersWindow();
+            const numbersWindowRange = getNumbersWindowRange(activeNumbersWindow);
+            const numbersWindowDeals = combinedDeals.filter((deal) => {
+                return isTimestampInNumbersWindow(parseClosedDealTimestamp(deal && deal.closeDate), numbersWindowRange);
+            });
+            const numbersWindowTotal = numbersWindowDeals.reduce((sum, deal) => {
+                return sum + parseClosedDealMoney(deal && deal.earnedAmount);
+            }, 0);
+            const numbersWindowLabel = (NUMBERS_WINDOW_CONFIG[activeNumbersWindow] || NUMBERS_WINDOW_CONFIG.all).label;
 
             closedDealsValueEl.textContent = String(combinedDeals.length);
             closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} • ${manualDeals.length} manual • ${formatClosedDealMoney(combinedTotals.earnedAmount)} earned`;
+
+            if (numbersTotalEl) {
+                numbersTotalEl.textContent = formatClosedDealMoney(numbersWindowTotal);
+            }
+            if (numbersChangeEl) {
+                numbersChangeEl.textContent = `${formatClosedDealMoney(numbersWindowTotal)} net earned in ${numbersWindowLabel}`;
+            }
+            syncNumbersWindowUi(activeNumbersWindow);
+            syncNumbersGoalUi(numbersWindowTotal, numbersWindowLabel);
 
             if (feesTotalEl) {
                 feesTotalEl.textContent = formatClosedDealMoney(combinedTotals.wholesaleFee);
@@ -4967,6 +4733,87 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         attachMoneyFormatter(dealWholesaleFeeInput);
         attachMoneyFormatter(dealEarnedInput);
         renderPendingUploads();
+
+        if (numbersGoalInputEl) {
+            const commitNumbersGoal = () => {
+                persistNumbersDailyGoal();
+                renderClosedDeals();
+                numbersGoalInputEl.blur();
+            };
+
+            numbersGoalInputEl.addEventListener('input', () => {
+                const digitsOnly = String(numbersGoalInputEl.value || '').replace(/[^0-9]/g, '');
+                numbersGoalInputEl.value = digitsOnly ? Number(digitsOnly).toLocaleString('en-US') : '';
+                persistNumbersDailyGoal();
+                renderClosedDeals();
+            });
+
+            numbersGoalInputEl.addEventListener('change', () => {
+                persistNumbersDailyGoal();
+                renderClosedDeals();
+            });
+
+            numbersGoalInputEl.addEventListener('blur', () => {
+                persistNumbersDailyGoal();
+                renderClosedDeals();
+            });
+
+            numbersGoalInputEl.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                commitNumbersGoal();
+            });
+        }
+
+        if (numbersGoalSubmitEl) {
+            numbersGoalSubmitEl.addEventListener('click', () => {
+                persistNumbersDailyGoal();
+                renderClosedDeals();
+            });
+        }
+
+        numbersWindowButtons.forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                setSelectedNumbersWindow(button.dataset.numbersWindow);
+                renderClosedDeals();
+            });
+
+            button.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    moveNumbersWindowSelection(1);
+                    return;
+                }
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    moveNumbersWindowSelection(-1);
+                    return;
+                }
+                if (event.key === 'Home') {
+                    event.preventDefault();
+                    setSelectedNumbersWindow('q1');
+                    renderClosedDeals();
+                    const firstButton = numbersWindowButtons.find((entry) => entry.dataset.numbersWindow === 'q1');
+                    if (firstButton) {
+                        firstButton.focus();
+                    }
+                    return;
+                }
+                if (event.key === 'End') {
+                    event.preventDefault();
+                    setSelectedNumbersWindow('all');
+                    renderClosedDeals();
+                    const lastButton = numbersWindowButtons.find((entry) => entry.dataset.numbersWindow === 'all');
+                    if (lastButton) {
+                        lastButton.focus();
+                    }
+                }
+            });
+        });
 
         [dealNameInput, dealDateInput, dealWholesaleFeeInput, dealEarnedInput, dealNoteInput]
             .filter(Boolean)
