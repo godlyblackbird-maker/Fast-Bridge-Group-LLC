@@ -1795,17 +1795,29 @@ function normalizeMlsImportStatusLabel(value) {
   if (!normalized) {
     return '';
   }
+  if (/\bact(?:ive)?\s*u\/?c\b|\bact\s+uc\b|\bauct\b/.test(normalized)) {
+    return 'Active Under Contract';
+  }
   if (normalized.includes('active under contract') || /\bauct\b/.test(normalized)) {
     return 'Active Under Contract';
   }
   if (normalized.includes('under contract') || /\bu\/?c\b/.test(normalized)) {
     return 'Active Under Contract';
   }
+  if (/\bpend(?:ing)?\b/.test(normalized)) {
+    return 'Pending';
+  }
   if (normalized.includes('pending') || normalized.includes('contingent') || normalized.includes('backup')) {
     return 'Pending';
   }
+  if (/\bhold\b|\bhld\b/.test(normalized)) {
+    return 'Hold';
+  }
   if (normalized.includes('hold')) {
     return 'Hold';
+  }
+  if (/\boff\b/.test(normalized) && normalized.includes('market')) {
+    return 'Off Market';
   }
   if (normalized.includes('temporarily off market') || normalized.includes('off market') || normalized.includes('withdrawn') || normalized.includes('cancelled') || normalized.includes('canceled') || normalized.includes('expired')) {
     return 'Off Market';
@@ -5344,7 +5356,9 @@ function formatMlsStatusFieldValue(value) {
     .replace(/\u00a0/g, ' ')
     .replace(/\|+/g, ' ')
     .replace(/\s+/g, ' ')
-    .replace(/^(?:status|listing status|mls status|current status|contract status|listing contract status|marketing status)\s*[:#-]?\s*/i, '')
+    .replace(/^['"([{]+\s*/g, '')
+    .replace(/\s*['"\])}]+$/g, '')
+    .replace(/^(?:(?:status|listing status|mls status|current status|contract status|listing contract status|marketing status)\s*[:#-]?\s*)+/i, '')
     .replace(/(?:\s{2,}|\s+[|/\\-]\s+)(?:dom|cdom|listing id|mls(?:#| no\.?| number)?|beds?|baths?|price|printed by|agent full|show contact|list price|original list price)\b.*$/i, '')
     .trim();
 
@@ -5390,6 +5404,21 @@ function extractMlsStatusFromPdfText(text, lines) {
     : [];
   const normalizedText = normalizePdfExtractText(text);
   const statusLabelPattern = '(?:listing status|mls status|current status|status|contract status|listing contract status|marketing status)';
+  const directStatusLinePatterns = [
+    /\bSTATUS\b\s*[:#-]?\s*([^\n|]+?)(?=\s{2,}\b(?:LIST PRICE|PRICE|MLS|DOM|CDOM|BED|BATH|SQFT|LOT|YEAR|PROP)\b|$)/i,
+    /\bSTATUS\b\s*[:#-]?\s*([^\n]+)$/i
+  ];
+  const recentStatusPattern = /\bRecent\s*:\s*[^\n]*?:\s*([A-Z][A-Z\s\/.-]{1,20})\s*:/i;
+
+  for (const pattern of directStatusLinePatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      const formattedStatus = formatMlsStatusFieldValue(match[1]);
+      if (formattedStatus) {
+        return formattedStatus;
+      }
+    }
+  }
 
   const labeledStatusPatterns = [
     new RegExp(`${statusLabelPattern}\\s*[:#-]\\s*([^\\n]+)`, 'i'),
@@ -5408,6 +5437,14 @@ function extractMlsStatusFromPdfText(text, lines) {
 
   for (let index = 0; index < normalizedLines.length; index += 1) {
     const line = normalizedLines[index];
+    const directLineStatusMatch = line.match(/\bSTATUS\b\s*[:#-]?\s*(.+?)(?=\s{2,}\b(?:LIST PRICE|PRICE|MLS|DOM|CDOM|BED|BATH|SQFT|LOT|YEAR|PROP)\b|$)/i);
+    if (directLineStatusMatch && directLineStatusMatch[1]) {
+      const directLineStatus = formatMlsStatusFieldValue(directLineStatusMatch[1]);
+      if (directLineStatus) {
+        return directLineStatus;
+      }
+    }
+
     const inlineMatch = line.match(new RegExp(`^${statusLabelPattern}\\s*[:#-]?\\s*(.+)$`, 'i'));
     if (inlineMatch && inlineMatch[1]) {
       const inlineStatus = formatMlsStatusFieldValue(inlineMatch[1]);
@@ -5429,6 +5466,14 @@ function extractMlsStatusFromPdfText(text, lines) {
     const standaloneStatus = formatMlsStatusFieldValue(line);
     if (standaloneStatus && /^(?:active|active under contract|under contract|pending|backup|off market|temporarily off market|on hold|contingent|coming soon|withdrawn|cancel(?:ed|led)|expired|closed|sold)$/i.test(line)) {
       return standaloneStatus;
+    }
+  }
+
+  const recentStatusMatch = normalizedText.match(recentStatusPattern);
+  if (recentStatusMatch && recentStatusMatch[1]) {
+    const recentStatus = normalizeMlsImportStatusLabel(recentStatusMatch[1]);
+    if (recentStatus) {
+      return recentStatus;
     }
   }
 
