@@ -25,6 +25,7 @@
   const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
   const ADMIN_CANONICAL_EMAILS = new Set();
   const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
+  const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
   const PREMIUM_SETTINGS_URL = '/settings.html?tab=subscriptions';
   const TEST_USER_ROLE = 'test user';
   let premiumUpgradeTooltip = null;
@@ -90,6 +91,90 @@
     return Array.from(keys).filter(Boolean);
   }
 
+  function readAuthTabSnapshot() {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(AUTH_TAB_SNAPSHOT_KEY) || 'null');
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function clearAuthTabSnapshot() {
+    sessionStorage.removeItem(AUTH_TAB_SNAPSHOT_KEY);
+  }
+
+  function persistAuthTabSnapshot(userLike, options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const token = String(config.token || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const normalizedUser = normalizeKnownUser(userLike);
+
+    if (!token || !normalizedUser || !String(normalizedUser.email || '').trim()) {
+      clearAuthTabSnapshot();
+      return null;
+    }
+
+    const snapshot = {
+      token,
+      user: {
+        email: normalizedUser.email,
+        name: String(normalizedUser.name || 'User').trim(),
+        role: String(normalizedUser.role || '').trim().toLowerCase()
+      },
+      updatedAt: Date.now()
+    };
+
+    sessionStorage.setItem(AUTH_TAB_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    return snapshot;
+  }
+
+  function isAuthTabSnapshotMismatch(userLike, options) {
+    const snapshot = readAuthTabSnapshot();
+    if (!snapshot) {
+      return false;
+    }
+
+    const config = options && typeof options === 'object' ? options : {};
+    const currentToken = String(config.token || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const snapshotToken = String(snapshot.token || '').trim();
+    const snapshotUser = normalizeKnownUser(snapshot.user || snapshot);
+    const currentUser = normalizeKnownUser(userLike);
+    const snapshotEmail = normalizeKnownEmail(snapshotUser && snapshotUser.email || '');
+    const currentEmail = normalizeKnownEmail(currentUser && currentUser.email || '');
+
+    if (snapshotToken && snapshotToken !== currentToken) {
+      return true;
+    }
+
+    if (snapshotEmail && currentEmail && snapshotEmail !== currentEmail) {
+      return true;
+    }
+
+    if (snapshotEmail && !currentEmail && currentToken) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function forceLogoutForTabAuthChange(expectedUser, actualUser) {
+    const expectedEmail = normalizeKnownEmail(expectedUser && expectedUser.email || '');
+    const actualEmail = normalizeKnownEmail(actualUser && actualUser.email || '');
+
+    console.warn('Auth session changed in another tab. Logging out to prevent account switching.', {
+      expectedEmail,
+      actualEmail
+    });
+
+    clearAuthState();
+
+    if (window.location.pathname !== '/login.html') {
+      window.location.href = '/login.html';
+    }
+
+    return null;
+  }
+
   function readStoredUser() {
     let storedUser = null;
     try {
@@ -99,6 +184,14 @@
     }
 
     const lockedUser = getVerifiedAuthUserLock();
+    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const resolvedUser = storedUser || lockedUser;
+
+    if (isAuthTabSnapshotMismatch(resolvedUser, { token: activeToken })) {
+      const snapshot = readAuthTabSnapshot();
+      return forceLogoutForTabAuthChange(snapshot && (snapshot.user || snapshot), resolvedUser);
+    }
+
     if (lockedUser && storedUser && isAuthIdentityMismatch(lockedUser, storedUser)) {
       return forceLogoutForAuthMismatch(lockedUser, storedUser);
     }
@@ -106,10 +199,17 @@
     if (lockedUser && !storedUser) {
       localStorage.setItem('user', JSON.stringify(lockedUser));
       syncLegacyUserProfile(lockedUser);
+      if (activeToken) {
+        persistAuthTabSnapshot(lockedUser, { token: activeToken });
+      }
       return lockedUser;
     }
 
-    return storedUser || lockedUser;
+    if (resolvedUser && activeToken) {
+      persistAuthTabSnapshot(resolvedUser, { token: activeToken });
+    }
+
+    return resolvedUser;
   }
 
   function writeStoredUser(userLike, options) {
@@ -131,6 +231,7 @@
     localStorage.setItem('user', JSON.stringify(normalizedUser));
     syncLegacyUserProfile(normalizedUser);
     persistVerifiedAuthUserLock(normalizedUser, { force: forceWrite });
+    persistAuthTabSnapshot(normalizedUser);
     return normalizedUser;
   }
 
@@ -257,11 +358,48 @@
   function clearAuthState() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('userProfile');
     localStorage.removeItem('registeredEmail');
     localStorage.removeItem('bypassAuth');
     localStorage.removeItem('bypassProfile');
     localStorage.removeItem(AUTH_USER_LOCK_KEY);
+    clearAuthTabSnapshot();
     sessionStorage.removeItem('authToken');
+  }
+
+  function handleExternalAuthStorageChange(event) {
+    const changedKey = String(event && event.key || '').trim();
+    if (!changedKey || !['authToken', 'user', 'userProfile', AUTH_USER_LOCK_KEY].includes(changedKey)) {
+      return;
+    }
+
+    const snapshot = readAuthTabSnapshot();
+    if (!snapshot) {
+      return;
+    }
+
+    let storedUser = null;
+    try {
+      storedUser = normalizeKnownUser(JSON.parse(localStorage.getItem('user') || 'null'));
+    } catch (error) {
+      storedUser = null;
+    }
+
+    const lockedUser = getVerifiedAuthUserLock();
+    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const resolvedUser = storedUser || lockedUser;
+
+    if (isAuthTabSnapshotMismatch(resolvedUser, { token: activeToken })) {
+      forceLogoutForTabAuthChange(snapshot.user || snapshot, resolvedUser);
+      return;
+    }
+
+    if (resolvedUser && activeToken) {
+      persistAuthTabSnapshot(resolvedUser, { token: activeToken });
+      return;
+    }
+
+    clearAuthTabSnapshot();
   }
 
   function setAuthSyncState(isSyncing) {
@@ -1272,5 +1410,6 @@
     return getStoredAuthToken();
   };
 
+  window.addEventListener('storage', handleExternalAuthStorageChange);
   bindAuthNavigationGuard();
 })();

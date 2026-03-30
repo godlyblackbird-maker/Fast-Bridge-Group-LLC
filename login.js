@@ -17,6 +17,8 @@ const KNOWN_EMAIL_GROUPS = [
   }
 ];
 const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
+const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
+const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
 
 KNOWN_EMAIL_GROUPS.forEach((group) => {
   group.aliases.forEach((alias) => {
@@ -43,6 +45,10 @@ function clearStoredAuthState() {
   localStorage.removeItem('user');
   localStorage.removeItem('userProfile');
   localStorage.removeItem('registeredEmail');
+  localStorage.removeItem(AUTH_USER_LOCK_KEY);
+  localStorage.removeItem('bypassAuth');
+  localStorage.removeItem('bypassProfile');
+  sessionStorage.removeItem(AUTH_TAB_SNAPSHOT_KEY);
   sessionStorage.removeItem('authToken');
 }
 
@@ -640,6 +646,8 @@ async function logout() {
   localStorage.removeItem('registeredEmail');
   localStorage.removeItem('bypassAuth');
   localStorage.removeItem('bypassProfile');
+  localStorage.removeItem(AUTH_USER_LOCK_KEY);
+  sessionStorage.removeItem(AUTH_TAB_SNAPSHOT_KEY);
   sessionStorage.removeItem('authToken');
   window.location.href = '/login.html';
 }

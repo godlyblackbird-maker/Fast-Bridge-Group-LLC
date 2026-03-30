@@ -8,7 +8,7 @@ const twilio = require('twilio');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { PDFParse } = require('pdf-parse');
+const { Worker } = require('worker_threads');
 
 require('dotenv').config();
 
@@ -60,10 +60,11 @@ const TOTP_WINDOW = 1;
 const TOTP_PERIOD_SECONDS = 30;
 const TOTP_DIGITS = 6;
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-const MLS_IMPORT_PDF_BODY_LIMIT = '160mb';
-const MLS_IMPORT_PDF_MAX_BYTES = 100 * 1024 * 1024;
+const MLS_IMPORT_PDF_BODY_LIMIT = '260mb';
+const MLS_IMPORT_PDF_MAX_BYTES = 180 * 1024 * 1024;
 const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
-const MLS_IMPORT_PDF_JOB_TTL_MS = 30 * 60 * 1000;
+const MLS_IMPORT_PDF_JOB_TTL_MS = 2 * 60 * 60 * 1000;
+const MLS_IMPORT_PDF_WORKER_TIMEOUT_MS = 90 * 60 * 1000;
 
 let cachedOpenAiApiKey = null;
 let cachedTwilioClient = null;
@@ -3081,28 +3082,22 @@ app.get('/api/admin/online-users', (req, res) => {
 
 // Verify token endpoint
 app.post('/api/verify', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    db.get('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id], (error, userRow) => {
-      if (error) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+  db.get('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id], (error, userRow) => {
+    if (error) {
+      return res.status(500).json({ error: 'Database error' });
+    }
 
-      if (!userRow) {
-        return res.status(404).json({ error: 'User not found' });
-      }
+    if (!userRow) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-      return res.json({ success: true, user: serializeUser(userRow) });
-    });
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+    return res.json({ success: true, user: serializeUser(userRow) });
+  });
 });
 
 app.post('/api/logout', async (req, res) => {
@@ -3734,32 +3729,6 @@ function buildMlsImportExtractionTextVariants(fullText, pageTexts) {
   return variants;
 }
 
-function buildPdfPartialPageList(pageCount) {
-  const totalPages = Number(pageCount) || 0;
-  if (totalPages <= 0) {
-    return undefined;
-  }
-
-  return Array.from({ length: totalPages }, (_, index) => index + 1);
-}
-
-function splitPdfPagesIntoBatches(pageCount, batchSize = MLS_IMPORT_PDF_PAGE_BATCH_SIZE) {
-  const totalPages = Number(pageCount) || 0;
-  const safeBatchSize = Math.max(1, Number(batchSize) || MLS_IMPORT_PDF_PAGE_BATCH_SIZE);
-  const batches = [];
-
-  if (totalPages <= 0) {
-    return batches;
-  }
-
-  for (let startPage = 1; startPage <= totalPages; startPage += safeBatchSize) {
-    const endPage = Math.min(totalPages, startPage + safeBatchSize - 1);
-    batches.push(Array.from({ length: endPage - startPage + 1 }, (_, index) => startPage + index));
-  }
-
-  return batches;
-}
-
 function cleanupExpiredMlsImportPdfJobs() {
   const now = Date.now();
   mlsImportPdfJobs.forEach((job, jobId) => {
@@ -3828,56 +3797,80 @@ function serializeMlsImportPdfJob(job) {
   };
 }
 
-async function extractPdfTextByPageBatches(parser, pageCount, options = {}) {
+function extractPdfTextInWorker(buffer, options = {}) {
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
-  const pageBatches = splitPdfPagesIntoBatches(pageCount);
+  const workerBytes = Uint8Array.from(buffer || []);
 
-  if (pageBatches.length === 0) {
-    const parsed = await parser.getText({ pageJoiner: '\n\n' });
-    return buildFullPdfText(parsed);
-  }
-
-  const combinedPageTexts = [];
-  const combinedTexts = [];
-
-  for (let batchIndex = 0; batchIndex < pageBatches.length; batchIndex += 1) {
-    const partialPages = pageBatches[batchIndex];
-    const startPage = Number(partialPages[0]) || 0;
-    const endPage = Number(partialPages[partialPages.length - 1]) || startPage;
-    if (onProgress) {
-      onProgress({
-        phase: 'parsing-pages',
-        batchIndex: batchIndex + 1,
-        totalBatches: pageBatches.length,
-        pageCount,
-        startPage,
-        endPage,
-        message: `Parsing pages ${startPage}-${endPage} of ${pageCount}...`
-      });
-    }
-
-    const parsed = await parser.getText({
-      partial: partialPages,
-      pageJoiner: '\n\n'
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timeoutId = null;
+    const worker = new Worker(path.join(__dirname, 'scripts', 'mls-pdf-text-worker.js'), {
+      workerData: {
+        pdfBytes: workerBytes,
+        defaultBatchSize: MLS_IMPORT_PDF_PAGE_BATCH_SIZE
+      }
     });
-    const batchResult = buildFullPdfText(parsed);
-    if (Array.isArray(batchResult.pageTexts) && batchResult.pageTexts.length > 0) {
-      combinedPageTexts.push(...batchResult.pageTexts);
-    } else if (batchResult.text) {
-      combinedTexts.push(batchResult.text);
-    }
-  }
 
-  const resolvedPageTexts = combinedPageTexts.map((pageText) => normalizePdfExtractText(pageText)).filter(Boolean);
-  const mergedText = resolvedPageTexts.length > 0
-    ? resolvedPageTexts.join('\n\n')
-    : normalizePdfExtractText(combinedTexts.join('\n\n'));
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      worker.removeAllListeners();
+    };
 
-  return {
-    text: mergedText,
-    pageTexts: resolvedPageTexts,
-    parsedPageCount: resolvedPageTexts.length
-  };
+    const finishResolve = (value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve(value);
+    };
+
+    const finishReject = (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    timeoutId = setTimeout(() => {
+      worker.terminate().catch(() => {});
+      finishReject(new Error('The PDF extraction took too long. Try a smaller file or retry the upload.'));
+    }, MLS_IMPORT_PDF_WORKER_TIMEOUT_MS);
+
+    worker.on('message', (message) => {
+      const payload = message && typeof message === 'object' ? message : {};
+      if (payload.type === 'progress') {
+        if (onProgress) {
+          onProgress(payload.progress || {});
+        }
+        return;
+      }
+
+      if (payload.type === 'result') {
+        finishResolve(payload.result || {});
+        return;
+      }
+
+      if (payload.type === 'error') {
+        finishReject(new Error(String(payload.error || 'Failed to extract PDF text.').trim()));
+      }
+    });
+
+    worker.on('error', (error) => {
+      finishReject(error instanceof Error ? error : new Error('Failed to extract PDF text.'));
+    });
+
+    worker.on('exit', (code) => {
+      if (!settled && code !== 0) {
+        finishReject(new Error(`PDF extraction worker stopped unexpectedly (exit code ${code}).`));
+      }
+    });
+  });
 }
 
 function extractPdfFieldByLabel(lines, labels, valuePattern, options = {}) {
@@ -4615,48 +4608,16 @@ function consolidateMlsImportRows(rows) {
 async function extractMlsImportPdfFields(buffer) {
   const options = arguments[1] && typeof arguments[1] === 'object' ? arguments[1] : {};
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
-  const parser = new PDFParse({ data: buffer });
   let normalizedText = '';
   let pageCount = 0;
   let pageTexts = [];
 
-  try {
-    if (onProgress) {
-      onProgress({ phase: 'metadata', message: 'Reading PDF metadata...' });
-    }
-    const info = await parser.getInfo();
-    pageCount = Number(info && info.total) || 0;
-    if (onProgress && pageCount > 0) {
-      onProgress({
-        phase: 'prepare',
-        pageCount,
-        message: `Preparing ${pageCount} PDF page${pageCount === 1 ? '' : 's'} for extraction...`
-      });
-    }
-    if (onProgress && pageCount > 0 && pageCount <= MLS_IMPORT_PDF_PAGE_BATCH_SIZE) {
-      onProgress({
-        phase: 'parsing-pages',
-        batchIndex: 1,
-        totalBatches: 1,
-        pageCount,
-        startPage: 1,
-        endPage: pageCount,
-        message: `Parsing pages 1-${pageCount} of ${pageCount}...`
-      });
-    }
-    const fullTextResult = pageCount > MLS_IMPORT_PDF_PAGE_BATCH_SIZE
-      ? await extractPdfTextByPageBatches(parser, pageCount, { onProgress })
-      : buildFullPdfText(await parser.getText({
-          partial: buildPdfPartialPageList(pageCount),
-          pageJoiner: '\n\n'
-        }));
-    normalizedText = fullTextResult.text;
-    pageTexts = Array.isArray(fullTextResult.pageTexts) ? fullTextResult.pageTexts : [];
-    if (!pageCount && fullTextResult.parsedPageCount > 0) {
-      pageCount = fullTextResult.parsedPageCount;
-    }
-  } finally {
-    await parser.destroy().catch(() => {});
+  const fullTextResult = await extractPdfTextInWorker(buffer, { onProgress });
+  normalizedText = normalizePdfExtractText(fullTextResult && fullTextResult.text);
+  pageTexts = Array.isArray(fullTextResult && fullTextResult.pageTexts) ? fullTextResult.pageTexts : [];
+  pageCount = Number(fullTextResult && fullTextResult.pageCount) || 0;
+  if (!pageCount && Number(fullTextResult && fullTextResult.parsedPageCount) > 0) {
+    pageCount = Number(fullTextResult.parsedPageCount) || 0;
   }
 
   if (!normalizedText) {
@@ -4731,7 +4692,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', express.json({ limit: MLS_IMP
     }
 
     if (buffer.length > MLS_IMPORT_PDF_MAX_BYTES) {
-      return res.status(413).json({ error: 'PDF files must be 100 MB or smaller.' });
+      return res.status(413).json({ error: 'PDF files must be 180 MB or smaller.' });
     }
 
     const job = createMlsImportPdfJob({ requesterId: decoded.id, fileName });
@@ -4826,7 +4787,7 @@ app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: MLS_IMPORT_
     }
 
     if (buffer.length > MLS_IMPORT_PDF_MAX_BYTES) {
-      return res.status(413).json({ error: 'PDF files must be 100 MB or smaller.' });
+      return res.status(413).json({ error: 'PDF files must be 180 MB or smaller.' });
     }
 
     const extracted = await extractMlsImportPdfFields(buffer);
