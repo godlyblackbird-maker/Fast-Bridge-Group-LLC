@@ -1790,6 +1790,42 @@ function normalizeMlsImportSpreadsheetValue(value) {
   return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function normalizeMlsImportStatusLabel(value) {
+  const normalized = normalizeMlsImportSpreadsheetValue(value).toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.includes('active under contract') || /\bauct\b/.test(normalized)) {
+    return 'Active Under Contract';
+  }
+  if (normalized.includes('under contract') || /\bu\/?c\b/.test(normalized)) {
+    return 'Active Under Contract';
+  }
+  if (normalized.includes('pending') || normalized.includes('contingent') || normalized.includes('backup')) {
+    return 'Pending';
+  }
+  if (normalized.includes('hold')) {
+    return 'Hold';
+  }
+  if (normalized.includes('temporarily off market') || normalized.includes('off market') || normalized.includes('withdrawn') || normalized.includes('cancelled') || normalized.includes('canceled') || normalized.includes('expired')) {
+    return 'Off Market';
+  }
+  if (normalized.includes('coming soon')) {
+    return 'Coming Soon';
+  }
+  if (normalized.includes('closed')) {
+    return 'Closed';
+  }
+  if (normalized.includes('sold')) {
+    return 'Sold';
+  }
+  if (normalized.includes('active')) {
+    return 'Active';
+  }
+  return normalized
+    .replace(/\b([a-z])/g, (match) => match.toUpperCase());
+}
+
 function normalizeMlsImportSpreadsheetDate(value) {
   const normalized = String(value || '').trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(normalized)
@@ -1822,7 +1858,7 @@ function normalizeMlsImportSpreadsheetRow(rowLike, defaults = {}) {
     loPhone: normalizeMlsImportSpreadsheetValue(row.loPhone || defaults.loPhone),
     offersEmail: normalizeMlsImportSpreadsheetValue(row.offersEmail || defaults.offersEmail),
     laCell: normalizeMlsImportSpreadsheetValue(row.laCell || defaults.laCell),
-    status: normalizeMlsImportSpreadsheetValue(row.status || defaults.status),
+    status: normalizeMlsImportStatusLabel(row.status || defaults.status),
     pdfFile: normalizeMlsImportSpreadsheetValue(row.pdfFile || defaults.pdfFile)
   };
 }
@@ -1870,7 +1906,7 @@ function mapMlsImportSpreadsheetRowRecord(rowLike) {
     loPhone: normalizeMlsImportSpreadsheetValue(row.lo_phone || row.loPhone),
     offersEmail: normalizeMlsImportSpreadsheetValue(row.offers_email || row.offersEmail),
     laCell: normalizeMlsImportSpreadsheetValue(row.la_cell || row.laCell),
-    status: normalizeMlsImportSpreadsheetValue(row.status),
+    status: normalizeMlsImportStatusLabel(row.status),
     pdfFile: normalizeMlsImportSpreadsheetValue(row.pdf_file || row.pdfFile)
   };
 }
@@ -5338,16 +5374,14 @@ function formatMlsStatusFieldValue(value) {
 
   const matchedStatus = knownStatuses.find((entry) => entry.pattern.test(normalized));
   if (matchedStatus) {
-    return matchedStatus.value;
+    return normalizeMlsImportStatusLabel(matchedStatus.value);
   }
 
   if (!/^[a-z][a-z /&-]{1,50}$/i.test(cleaned)) {
     return '';
   }
 
-  return cleaned
-    .toLowerCase()
-    .replace(/\b([a-z])/g, (match) => match.toUpperCase());
+  return normalizeMlsImportStatusLabel(cleaned);
 }
 
 function extractMlsStatusFromPdfText(text, lines) {
@@ -5488,7 +5522,7 @@ function normalizeMlsImportRow(row) {
     loPhone: String(source.loPhone || '').trim(),
     offersEmail: String(source.offersEmail || '').trim(),
     laCell: String(source.laCell || '').trim(),
-    status: String(source.status || '').trim()
+    status: normalizeMlsImportStatusLabel(source.status || '')
   };
 }
 

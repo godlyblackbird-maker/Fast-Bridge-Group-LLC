@@ -1173,7 +1173,7 @@
                     loPhone: normalizeCellValue(row && row.loPhone),
                     offersEmail: normalizeCellValue(row && row.offersEmail),
                     laCell: normalizeCellValue(row && row.laCell),
-                    status: normalizeCellValue(row && row.status),
+                    status: normalizeSpreadsheetStatusLabel(row && row.status),
                     pdfFile: normalizeCellValue(row && row.pdfFile)
                 };
             }
@@ -1514,8 +1514,49 @@
                 return normalized.split(' ')[0] || normalized;
             }
 
+            function normalizeSpreadsheetStatusLabel(value) {
+                const normalized = normalizeCellValue(value).toLowerCase();
+                if (!normalized) {
+                    return '';
+                }
+
+                if (normalized.includes('active under contract') || /\bauct\b/.test(normalized) || normalized.includes('under contract') || /\bu\/?c\b/.test(normalized)) {
+                    return 'Active Under Contract';
+                }
+
+                if (normalized.includes('pending') || normalized.includes('contingent') || normalized.includes('backup')) {
+                    return 'Pending';
+                }
+
+                if (normalized.includes('hold')) {
+                    return 'Hold';
+                }
+
+                if (normalized.includes('temporarily off market') || normalized.includes('off market') || normalized.includes('withdrawn') || normalized.includes('cancelled') || normalized.includes('canceled') || normalized.includes('expired')) {
+                    return 'Off Market';
+                }
+
+                if (normalized.includes('coming soon')) {
+                    return 'Coming Soon';
+                }
+
+                if (normalized.includes('closed')) {
+                    return 'Closed';
+                }
+
+                if (normalized.includes('sold')) {
+                    return 'Sold';
+                }
+
+                if (normalized.includes('active')) {
+                    return 'Active';
+                }
+
+                return normalized.replace(/\b([a-z])/g, (match) => match.toUpperCase());
+            }
+
             function normalizeStatusValue(value) {
-                return normalizeCellValue(value).toLowerCase();
+                return normalizeSpreadsheetStatusLabel(value).toLowerCase();
             }
 
             function normalizeTemplateStatusKey(value) {
@@ -1607,7 +1648,7 @@
                     loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
                     offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
                     laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                    status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                    status: cells[6] ? normalizeSpreadsheetStatusLabel(cells[6].textContent) : '',
                     pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
                 };
             }
@@ -2075,7 +2116,7 @@
                         loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
                         offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
                         laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                        status: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                        status: cells[6] ? normalizeSpreadsheetStatusLabel(cells[6].textContent) : '',
                         pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
                     };
                 });
@@ -2177,7 +2218,7 @@
                     loPhone: normalizeCellValue(row && row.loPhone),
                     offersEmail: normalizeCellValue(row && row.offersEmail),
                     laCell: normalizeCellValue(row && row.laCell),
-                    status: normalizeCellValue(row && row.status),
+                    status: normalizeSpreadsheetStatusLabel(row && row.status),
                     pdfFile: normalizeCellValue(row && row.pdfFile)
                 };
             }
@@ -2519,7 +2560,7 @@
                             loPhone: normalizeCellValue(row && row.loPhone),
                             offersEmail: normalizeCellValue(row && row.offersEmail),
                             laCell: normalizeCellValue(row && row.laCell),
-                            status: normalizeCellValue(row && row.status),
+                            status: normalizeSpreadsheetStatusLabel(row && row.status),
                             pdfFile: normalizeCellValue(payload.fileName || file.name || '')
                         }))
                         .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell].some((value) => String(value || '').trim()));
