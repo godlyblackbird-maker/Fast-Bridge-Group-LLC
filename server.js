@@ -1061,6 +1061,116 @@ async function queryOpenAiAssistant(question) {
   return { ok: false, error: lastError };
 }
 
+function extractJsonPayloadFromText(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return null;
+  }
+
+  const candidates = [];
+  const fencedMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fencedMatch && fencedMatch[1]) {
+    candidates.push(String(fencedMatch[1] || '').trim());
+  }
+
+  candidates.push(raw);
+
+  const arrayStart = raw.indexOf('[');
+  const arrayEnd = raw.lastIndexOf(']');
+  if (arrayStart >= 0 && arrayEnd > arrayStart) {
+    candidates.push(raw.slice(arrayStart, arrayEnd + 1));
+  }
+
+  const objectStart = raw.indexOf('{');
+  const objectEnd = raw.lastIndexOf('}');
+  if (objectStart >= 0 && objectEnd > objectStart) {
+    candidates.push(raw.slice(objectStart, objectEnd + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch (error) {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
+}
+
+async function queryOpenAiForStructuredJson(systemPrompt, userPrompt, options = {}) {
+  const apiKeys = getOpenAiApiKeyCandidates();
+  if (apiKeys.length === 0) {
+    return { ok: false, error: 'OpenAI API key is not configured.' };
+  }
+
+  if (typeof fetch !== 'function') {
+    return { ok: false, error: 'This Node runtime does not support fetch.' };
+  }
+
+  const maxInputChars = Math.max(2000, Math.min(Number(options.maxInputChars) || 14000, 40000));
+  const normalizedSystemPrompt = String(systemPrompt || '').trim();
+  const normalizedUserPrompt = String(userPrompt || '').slice(0, maxInputChars);
+  let lastError = 'OpenAI structured extraction failed.';
+
+  for (const apiKey of apiKeys) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          store: false,
+          input: [
+            {
+              role: 'system',
+              content: [
+                {
+                  type: 'input_text',
+                  text: normalizedSystemPrompt
+                }
+              ]
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_text',
+                  text: normalizedUserPrompt
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        lastError = `OpenAI structured extraction failed (${response.status}): ${detail.slice(0, 300)}`;
+        continue;
+      }
+
+      const payload = await response.json();
+      const answer = extractOpenAiResponseText(payload);
+      const parsed = extractJsonPayloadFromText(answer);
+      if (!parsed) {
+        lastError = 'OpenAI returned non-JSON output.';
+        continue;
+      }
+
+      cachedOpenAiApiKey = apiKey;
+      return { ok: true, payload: parsed };
+    } catch (error) {
+      lastError = error.message || 'OpenAI structured extraction failed.';
+    }
+  }
+
+  return { ok: false, error: lastError };
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
@@ -3694,6 +3804,42 @@ function buildMlsImportExtractionSegments(fullText, pageTexts) {
     pushSegment(pageText, `page ${index + 1}`);
   });
 
+  if (normalizedPages.length > 1) {
+    let currentPages = [];
+    let currentStartPage = 1;
+
+    const flushListingSegment = () => {
+      if (currentPages.length === 0) {
+        return;
+      }
+
+      const endPage = currentStartPage + currentPages.length - 1;
+      pushSegment(
+        currentPages.join('\n\n'),
+        currentStartPage === endPage
+          ? `listing page ${currentStartPage}`
+          : `listing pages ${currentStartPage}-${endPage}`
+      );
+      currentPages = [];
+    };
+
+    normalizedPages.forEach((pageText, index) => {
+      const lines = pageText.split(/\n+/).map((line) => String(line || '').trim()).filter(Boolean);
+      const pageLooksLikeListingStart = lines.slice(0, 8).some((line) => Boolean(extractPropertyAddressCandidateFromLine(line)));
+
+      if (pageLooksLikeListingStart && currentPages.length > 0) {
+        flushListingSegment();
+        currentStartPage = index + 1;
+      } else if (currentPages.length === 0) {
+        currentStartPage = index + 1;
+      }
+
+      currentPages.push(pageText);
+    });
+
+    flushListingSegment();
+  }
+
   for (let index = 0; index < normalizedPages.length - 1; index += 1) {
     pushSegment(
       [normalizedPages[index], normalizedPages[index + 1]].filter(Boolean).join('\n\n'),
@@ -3726,6 +3872,55 @@ function buildMlsImportExtractionSegments(fullText, pageTexts) {
   return segments;
 }
 
+function buildMlsImportAiExtractionSegments(fullText, pageTexts) {
+  const normalizedPages = (Array.isArray(pageTexts) ? pageTexts : [])
+    .map((pageText) => normalizePdfExtractText(pageText))
+    .filter(Boolean);
+
+  if (normalizedPages.length === 0) {
+    return [{
+      text: normalizePdfExtractText(fullText),
+      label: 'full document'
+    }].filter((segment) => Boolean(segment.text));
+  }
+
+  const segments = [];
+  const maxCharsPerSegment = normalizedPages.length >= 180 ? 12000 : 15000;
+  const maxPagesPerSegment = normalizedPages.length >= 240 ? 4 : normalizedPages.length >= 120 ? 5 : 6;
+
+  let index = 0;
+  while (index < normalizedPages.length) {
+    const collectedPages = [];
+    let collectedChars = 0;
+    const startPage = index + 1;
+
+    while (index < normalizedPages.length && collectedPages.length < maxPagesPerSegment) {
+      const nextPage = normalizedPages[index];
+      const nextLength = nextPage.length + (collectedPages.length > 0 ? 2 : 0);
+      if (collectedPages.length > 0 && collectedChars + nextLength > maxCharsPerSegment) {
+        break;
+      }
+
+      collectedPages.push(nextPage);
+      collectedChars += nextLength;
+      index += 1;
+    }
+
+    if (collectedPages.length === 0) {
+      collectedPages.push(normalizedPages[index].slice(0, maxCharsPerSegment));
+      index += 1;
+    }
+
+    const endPage = startPage + collectedPages.length - 1;
+    segments.push({
+      text: collectedPages.join('\n\n'),
+      label: startPage === endPage ? `page ${startPage}` : `pages ${startPage}-${endPage}`
+    });
+  }
+
+  return segments;
+}
+
 function extractRowsFromMlsImportCandidateText(text) {
   const normalizedText = normalizePdfExtractText(text);
   if (!normalizedText) {
@@ -3751,6 +3946,124 @@ function waitForMlsImportAnalysisTurn() {
   return new Promise((resolve) => {
     setImmediate(resolve);
   });
+}
+
+function sanitizeMlsImportAiRow(rowLike) {
+  const source = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  const rawAddress = normalizePdfPropertyAddressValue(source.propertyAddress || source.address || source.property || '');
+  const normalizedAddress = extractPropertyAddressCandidateFromLine(rawAddress) || rawAddress;
+  const normalizedName = formatPersonName(source.laName || source.agentName || source.listingAgent || source.name || '');
+  const normalizedOfficePhone = extractPhoneNumber(source.loPhone || source.officePhone || source.brokerPhone || '');
+  const normalizedOffersEmail = extractEmailAddress(source.offersEmail || source.offerEmail || source.email || '');
+  const normalizedLaCell = extractPhoneNumber(source.laCell || source.agentCell || source.mobile || source.phone || '');
+  const normalizedStatus = formatMlsStatusFieldValue(source.status || source.listingStatus || '');
+
+  return normalizeMlsImportRow({
+    propertyAddress: normalizedAddress,
+    laName: normalizedName,
+    loPhone: normalizedOfficePhone,
+    offersEmail: normalizedOffersEmail,
+    laCell: normalizedLaCell,
+    status: normalizedStatus
+  });
+}
+
+function isUsefulMlsImportRow(rowLike) {
+  const row = normalizeMlsImportRow(rowLike);
+  const hasAddress = Boolean(row.propertyAddress);
+  const hasContact = Boolean(row.laName || row.loPhone || row.offersEmail || row.laCell);
+  return hasAddress && hasContact;
+}
+
+function shouldUseOpenAiMlsFallback(rows, pageCount) {
+  if (getOpenAiApiKeyCandidates().length === 0) {
+    return false;
+  }
+
+  const usefulRows = (Array.isArray(rows) ? rows : []).filter(isUsefulMlsImportRow);
+  const totalPages = Math.max(0, Number(pageCount) || 0);
+  if (usefulRows.length === 0) {
+    return true;
+  }
+
+  if (totalPages >= 40 && usefulRows.length < 25) {
+    return true;
+  }
+
+  if (totalPages >= 120 && usefulRows.length < 80) {
+    return true;
+  }
+
+  return false;
+}
+
+async function extractMlsImportRowsWithOpenAi(fullText, pageTexts, options = {}) {
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+  const pageCount = Math.max(0, Number(options.pageCount) || 0);
+  const segments = buildMlsImportAiExtractionSegments(fullText, pageTexts);
+  const extractedRows = [];
+  const systemPrompt = [
+    'You extract MLS spreadsheet rows from PDF text.',
+    'Return only valid JSON.',
+    'Output a JSON array of objects with exactly these keys: propertyAddress, laName, loPhone, offersEmail, laCell, status.',
+    'Each object must represent one property listing explicitly present in the text.',
+    'Use empty strings for missing fields.',
+    'Do not invent listings or contact info.',
+    'Prefer listing agent contact details and offer submission email when present.'
+  ].join(' ');
+
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index] || {};
+    if (onProgress) {
+      onProgress({
+        phase: 'ai-analyzing-rows',
+        pageCount,
+        processedSegments: index,
+        totalSegments: segments.length,
+        discoveredRows: extractedRows.length,
+        message: `AI fallback is reviewing ${segment.label || `segment ${index + 1}`} for missed MLS rows...`
+      });
+    }
+
+    const result = await queryOpenAiForStructuredJson(
+      systemPrompt,
+      [
+        `Extract MLS rows from ${segment.label || `segment ${index + 1}`}.`,
+        'Return only a JSON array. No markdown. No extra commentary.',
+        '',
+        segment.text || ''
+      ].join('\n'),
+      { maxInputChars: 18000 }
+    );
+
+    if (result.ok) {
+      const payloadRows = Array.isArray(result.payload)
+        ? result.payload
+        : Array.isArray(result.payload && result.payload.rows)
+          ? result.payload.rows
+          : [];
+
+      payloadRows
+        .map(sanitizeMlsImportAiRow)
+        .filter(isUsefulMlsImportRow)
+        .forEach((row) => extractedRows.push(row));
+    }
+
+    if (onProgress) {
+      onProgress({
+        phase: 'ai-analyzing-rows',
+        pageCount,
+        processedSegments: index + 1,
+        totalSegments: segments.length,
+        discoveredRows: extractedRows.length,
+        message: `AI fallback analyzed ${index + 1}/${segments.length} MLS chunk${segments.length === 1 ? '' : 's'}... found ${extractedRows.length} additional row${extractedRows.length === 1 ? '' : 's'} so far.`
+      });
+    }
+
+    await waitForMlsImportAnalysisTurn();
+  }
+
+  return extractedRows;
 }
 
 function cleanupExpiredMlsImportPdfJobs() {
@@ -3859,6 +4172,13 @@ function getMlsImportPdfProgressPercent(progress) {
     const processedSegments = Math.max(0, Number(state.processedSegments) || 0);
     const ratio = Math.min(1, processedSegments / totalSegments);
     return Math.round(72 + (ratio * 27));
+  }
+
+  if (phase === 'ai-analyzing-rows') {
+    const totalSegments = Math.max(1, Number(state.totalSegments) || 1);
+    const processedSegments = Math.max(0, Number(state.processedSegments) || 0);
+    const ratio = Math.min(1, processedSegments / totalSegments);
+    return Math.round(86 + (ratio * 13));
   }
 
   return 4;
@@ -4266,6 +4586,20 @@ function extractAgentNameFromPdfText(lines) {
     }
   }
 
+  const showContactName = extractPdfFieldByLabel(
+    normalizedLines,
+    [/^show contact name\b/i],
+    /^(?:show contact name)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 2,
+      transform: (value) => formatPersonName(value),
+      validate: (value) => isLikelyPersonName(value)
+    }
+  );
+  if (showContactName) {
+    return showContactName;
+  }
+
   return '';
 }
 
@@ -4279,14 +4613,39 @@ function extractLaCellFromPdfText(lines) {
       validate: (value) => Boolean(extractPhoneNumber(value))
     }
   );
-  return extractPhoneNumber(labeledValue);
+  const directPhone = extractPhoneNumber(labeledValue);
+  if (directPhone) {
+    return directPhone;
+  }
+
+  const showContactType = extractPdfFieldByLabel(
+    lines,
+    [/^show contact type\b/i],
+    /^(?:show contact type)\s*[:#-]?\s*(.+)$/i,
+    { lookahead: 1 }
+  );
+  const showContactPhone = extractPdfFieldByLabel(
+    lines,
+    [/^show contact ph\b/i, /^show contact phone\b/i],
+    /^(?:show contact ph|show contact phone)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 2,
+      validate: (value) => Boolean(extractPhoneNumber(value))
+    }
+  );
+
+  if (/\bagent\b/i.test(String(showContactType || ''))) {
+    return extractPhoneNumber(showContactPhone);
+  }
+
+  return '';
 }
 
 function extractLoPhoneFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^lo phone\b/i, /^listing office phone\b/i, /^office phone\b/i, /^broker phone\b/i],
-    /^(?:lo phone|listing office phone|office phone|broker phone)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*lo phone\b/i, /^\d*\.?\s*listing office phone\b/i, /^\d*\.?\s*office phone\b/i, /^\d*\.?\s*broker phone\b/i],
+    /^(?:\d*\.?\s*)?(?:lo phone|listing office phone|office phone|broker phone)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractPhoneNumber(value))
@@ -4298,8 +4657,8 @@ function extractLoPhoneFromPdfText(lines) {
 function extractOffersEmailFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i],
-    /^(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i],
+    /^(?:\d*\.?\s*)?(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractEmailAddress(value))
@@ -4732,8 +5091,26 @@ async function extractMlsImportPdfFields(buffer) {
   const extractedRows = consolidateMlsImportRows(
     dedupeMlsImportRows(candidateRows)
   );
+  let mergedRows = extractedRows;
+
+  if (shouldUseOpenAiMlsFallback(extractedRows, pageCount)) {
+    const aiRows = await extractMlsImportRowsWithOpenAi(normalizedText, pageTexts, {
+      pageCount,
+      onProgress
+    });
+
+    if (aiRows.length > 0) {
+      mergedRows = consolidateMlsImportRows(
+        dedupeMlsImportRows([
+          ...extractedRows,
+          ...aiRows
+        ])
+      );
+    }
+  }
+
   const fallbackRow = extractMlsImportRowFromText(normalizedText) || {};
-  const primaryRow = extractedRows[0] || fallbackRow;
+  const primaryRow = mergedRows[0] || fallbackRow;
 
   return {
     pageCount,
@@ -4743,7 +5120,7 @@ async function extractMlsImportPdfFields(buffer) {
     offersEmail: String(primaryRow.offersEmail || '').trim(),
     laCell: String(primaryRow.laCell || '').trim(),
     status: String(primaryRow.status || '').trim(),
-    rows: extractedRows.length > 0 ? extractedRows : (Object.values(fallbackRow).some(Boolean) ? [fallbackRow] : [])
+    rows: mergedRows.length > 0 ? mergedRows : (Object.values(fallbackRow).some(Boolean) ? [fallbackRow] : [])
   };
 }
 
