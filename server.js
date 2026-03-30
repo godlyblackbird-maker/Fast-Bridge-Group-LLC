@@ -4,6 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const multer = require('multer');
 const twilio = require('twilio');
 const path = require('path');
 const fs = require('fs');
@@ -65,12 +66,38 @@ const MLS_IMPORT_PDF_MAX_BYTES = 180 * 1024 * 1024;
 const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
 const MLS_IMPORT_PDF_JOB_TTL_MS = 2 * 60 * 60 * 1000;
 const MLS_IMPORT_PDF_WORKER_TIMEOUT_MS = 90 * 60 * 1000;
+const MLS_IMPORT_TEMP_DIR = path.join(__dirname, 'temp', 'mls-imports');
 
 let cachedOpenAiApiKey = null;
 let cachedTwilioClient = null;
 let cachedTwilioClientKey = '';
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
+
+fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
+
+const mlsImportPdfUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, callback) => {
+      callback(null, MLS_IMPORT_TEMP_DIR);
+    },
+    filename: (_req, file, callback) => {
+      const extension = path.extname(String(file && file.originalname || '')).toLowerCase() || '.pdf';
+      callback(null, `${Date.now()}-${crypto.randomUUID()}${extension}`);
+    }
+  }),
+  limits: {
+    fileSize: MLS_IMPORT_PDF_MAX_BYTES
+  },
+  fileFilter: (_req, file, callback) => {
+    const extension = path.extname(String(file && file.originalname || '')).toLowerCase();
+    if (extension !== '.pdf') {
+      callback(new Error('Only PDF files are supported in this import tool.'));
+      return;
+    }
+    callback(null, true);
+  }
+});
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
@@ -1545,6 +1572,57 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS mls_import_runs (
+      id TEXT PRIMARY KEY,
+      requester_user_id INTEGER NOT NULL,
+      file_name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      message TEXT,
+      page_count INTEGER DEFAULT 0,
+      progress_percent INTEGER DEFAULT 0,
+      started_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      error TEXT DEFAULT ''
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating mls_import_runs table:', err);
+    } else {
+      console.log('MLS import runs table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_mls_import_runs_requester_updated ON mls_import_runs(requester_user_id, updated_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS mls_import_rows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_user_id INTEGER NOT NULL,
+      import_run_id TEXT,
+      match_key TEXT NOT NULL,
+      import_date TEXT,
+      property_address TEXT,
+      la_name TEXT,
+      lo_phone TEXT,
+      offers_email TEXT,
+      la_cell TEXT,
+      status TEXT,
+      pdf_file TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(owner_user_id, match_key)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating mls_import_rows table:', err);
+    } else {
+      console.log('MLS import rows table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_mls_import_rows_owner_updated ON mls_import_rows(owner_user_id, updated_at DESC, id DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_mls_import_rows_run ON mls_import_rows(import_run_id)', () => {});
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS property_assignments (
       property_key TEXT PRIMARY KEY,
       property_address TEXT,
@@ -1706,6 +1784,297 @@ function dbGet(sql, params) {
       resolve(row);
     });
   });
+}
+
+function normalizeMlsImportSpreadsheetValue(value) {
+  return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeMlsImportSpreadsheetDate(value) {
+  const normalized = String(value || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized)
+    ? normalized
+    : new Date().toISOString().slice(0, 10);
+}
+
+function hasMeaningfulMlsImportSpreadsheetRow(rowLike) {
+  const row = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  return [
+    row.importDate,
+    row.propertyAddress,
+    row.laName,
+    row.loPhone,
+    row.offersEmail,
+    row.laCell,
+    row.status,
+    row.pdfFile
+  ].some((value) => Boolean(normalizeMlsImportSpreadsheetValue(value)));
+}
+
+function normalizeMlsImportSpreadsheetRow(rowLike, defaults = {}) {
+  const row = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  return {
+    id: Number.isInteger(Number(row.id)) ? Number(row.id) : null,
+    matchKey: normalizeMlsImportSpreadsheetValue(row.matchKey || defaults.matchKey || ''),
+    importDate: normalizeMlsImportSpreadsheetDate(row.importDate || defaults.importDate),
+    propertyAddress: normalizeMlsImportSpreadsheetValue(row.propertyAddress || defaults.propertyAddress),
+    laName: normalizeMlsImportSpreadsheetValue(row.laName || defaults.laName),
+    loPhone: normalizeMlsImportSpreadsheetValue(row.loPhone || defaults.loPhone),
+    offersEmail: normalizeMlsImportSpreadsheetValue(row.offersEmail || defaults.offersEmail),
+    laCell: normalizeMlsImportSpreadsheetValue(row.laCell || defaults.laCell),
+    status: normalizeMlsImportSpreadsheetValue(row.status || defaults.status),
+    pdfFile: normalizeMlsImportSpreadsheetValue(row.pdfFile || defaults.pdfFile)
+  };
+}
+
+function createMlsImportSpreadsheetMatchKey(rowLike) {
+  const row = normalizeMlsImportSpreadsheetRow(rowLike);
+  const propertyAddressKey = normalizePropertyAddressForComparison(row.propertyAddress);
+  const offersEmailKey = row.offersEmail.toLowerCase();
+  const laCellKey = row.laCell.toLowerCase();
+  const loPhoneKey = row.loPhone.toLowerCase();
+  const pdfFileKey = row.pdfFile.toLowerCase();
+
+  if (propertyAddressKey) {
+    return [propertyAddressKey, offersEmailKey, laCellKey, loPhoneKey, pdfFileKey].join('|');
+  }
+
+  return row.matchKey || `manual|${crypto.randomUUID()}`;
+}
+
+function mapMlsImportSpreadsheetRowRecord(rowLike) {
+  const row = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  return {
+    id: Number(row.id) || 0,
+    matchKey: normalizeMlsImportSpreadsheetValue(row.match_key || row.matchKey || ''),
+    importDate: normalizeMlsImportSpreadsheetDate(row.import_date || row.importDate),
+    propertyAddress: normalizeMlsImportSpreadsheetValue(row.property_address || row.propertyAddress),
+    laName: normalizeMlsImportSpreadsheetValue(row.la_name || row.laName),
+    loPhone: normalizeMlsImportSpreadsheetValue(row.lo_phone || row.loPhone),
+    offersEmail: normalizeMlsImportSpreadsheetValue(row.offers_email || row.offersEmail),
+    laCell: normalizeMlsImportSpreadsheetValue(row.la_cell || row.laCell),
+    status: normalizeMlsImportSpreadsheetValue(row.status),
+    pdfFile: normalizeMlsImportSpreadsheetValue(row.pdf_file || row.pdfFile)
+  };
+}
+
+async function countMlsImportSpreadsheetRowsForUser(ownerUserId) {
+  const row = await dbGet('SELECT COUNT(*) AS total FROM mls_import_rows WHERE owner_user_id = ?', [ownerUserId]);
+  return Math.max(0, Number(row && row.total) || 0);
+}
+
+async function loadMlsImportSpreadsheetRowsForUser(ownerUserId, options = {}) {
+  const limit = Math.max(1, Math.min(Number(options.limit) || 150, 500));
+  const offset = Math.max(0, Number(options.offset) || 0);
+  const [rows, totalCount] = await Promise.all([
+    dbAll(
+      `SELECT id, match_key, import_date, property_address, la_name, lo_phone, offers_email, la_cell, status, pdf_file
+       FROM mls_import_rows
+       WHERE owner_user_id = ?
+       ORDER BY datetime(updated_at) DESC, id DESC
+       LIMIT ? OFFSET ?`,
+      [ownerUserId, limit, offset]
+    ),
+    countMlsImportSpreadsheetRowsForUser(ownerUserId)
+  ]);
+
+  return {
+    rows: Array.isArray(rows) ? rows.map(mapMlsImportSpreadsheetRowRecord) : [],
+    totalCount,
+    limit,
+    offset
+  };
+}
+
+async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options = {}) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  const importRunId = normalizeMlsImportSpreadsheetValue(options.importRunId || '');
+  const defaultPdfFile = normalizeMlsImportSpreadsheetValue(options.pdfFile || '');
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const savedRows = [];
+  let createdCount = 0;
+  let updatedCount = 0;
+
+  for (const rowLike of sourceRows) {
+    const normalizedRow = normalizeMlsImportSpreadsheetRow(rowLike, { pdfFile: defaultPdfFile });
+    if (!hasMeaningfulMlsImportSpreadsheetRow(normalizedRow)) {
+      continue;
+    }
+
+    const matchKey = createMlsImportSpreadsheetMatchKey({ ...normalizedRow, matchKey: normalizedRow.matchKey });
+    const desiredPdfFile = normalizedRow.pdfFile || defaultPdfFile;
+
+    let savedRow = null;
+    if (normalizedRow.id) {
+      const existingById = await dbGet(
+        'SELECT * FROM mls_import_rows WHERE id = ? AND owner_user_id = ?',
+        [normalizedRow.id, normalizedOwnerUserId]
+      );
+
+      if (existingById) {
+        await dbRun(
+          `UPDATE mls_import_rows
+           SET import_run_id = COALESCE(NULLIF(?, ''), import_run_id),
+               match_key = ?,
+               import_date = ?,
+               property_address = ?,
+               la_name = ?,
+               lo_phone = ?,
+               offers_email = ?,
+               la_cell = ?,
+               status = ?,
+               pdf_file = ?,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND owner_user_id = ?`,
+          [
+            importRunId,
+            matchKey,
+            normalizedRow.importDate,
+            normalizedRow.propertyAddress,
+            normalizedRow.laName,
+            normalizedRow.loPhone,
+            normalizedRow.offersEmail,
+            normalizedRow.laCell,
+            normalizedRow.status,
+            desiredPdfFile,
+            normalizedRow.id,
+            normalizedOwnerUserId
+          ]
+        );
+        savedRow = await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [normalizedRow.id]);
+        updatedCount += 1;
+      }
+    }
+
+    if (!savedRow) {
+      const existingByMatchKey = await dbGet(
+        'SELECT * FROM mls_import_rows WHERE owner_user_id = ? AND match_key = ?',
+        [normalizedOwnerUserId, matchKey]
+      );
+
+      if (existingByMatchKey) {
+        await dbRun(
+          `UPDATE mls_import_rows
+           SET import_run_id = COALESCE(NULLIF(?, ''), import_run_id),
+               import_date = ?,
+               property_address = ?,
+               la_name = ?,
+               lo_phone = ?,
+               offers_email = ?,
+               la_cell = ?,
+               status = ?,
+               pdf_file = ?,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [
+            importRunId,
+            normalizedRow.importDate,
+            normalizedRow.propertyAddress,
+            normalizedRow.laName,
+            normalizedRow.loPhone,
+            normalizedRow.offersEmail,
+            normalizedRow.laCell,
+            normalizedRow.status,
+            desiredPdfFile,
+            existingByMatchKey.id
+          ]
+        );
+        savedRow = await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [existingByMatchKey.id]);
+        updatedCount += 1;
+      } else {
+        const insertResult = await dbRun(
+          `INSERT INTO mls_import_rows (
+            owner_user_id,
+            import_run_id,
+            match_key,
+            import_date,
+            property_address,
+            la_name,
+            lo_phone,
+            offers_email,
+            la_cell,
+            status,
+            pdf_file
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            normalizedOwnerUserId,
+            importRunId,
+            matchKey,
+            normalizedRow.importDate,
+            normalizedRow.propertyAddress,
+            normalizedRow.laName,
+            normalizedRow.loPhone,
+            normalizedRow.offersEmail,
+            normalizedRow.laCell,
+            normalizedRow.status,
+            desiredPdfFile
+          ]
+        );
+        savedRow = await dbGet('SELECT * FROM mls_import_rows WHERE id = ?', [insertResult.lastID]);
+        createdCount += 1;
+      }
+    }
+
+    if (savedRow) {
+      savedRows.push(mapMlsImportSpreadsheetRowRecord(savedRow));
+    }
+  }
+
+  return {
+    rows: savedRows,
+    createdCount,
+    updatedCount,
+    totalCount: await countMlsImportSpreadsheetRowsForUser(normalizedOwnerUserId)
+  };
+}
+
+async function clearMlsImportSpreadsheetRowsForUser(ownerUserId) {
+  await dbRun('DELETE FROM mls_import_rows WHERE owner_user_id = ?', [ownerUserId]);
+}
+
+async function persistMlsImportPdfJobRecord(job) {
+  if (!job || typeof job !== 'object') {
+    return;
+  }
+
+  await dbRun(
+    `INSERT INTO mls_import_runs (
+      id,
+      requester_user_id,
+      file_name,
+      status,
+      message,
+      page_count,
+      progress_percent,
+      started_at,
+      updated_at,
+      completed_at,
+      error
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      requester_user_id = excluded.requester_user_id,
+      file_name = excluded.file_name,
+      status = excluded.status,
+      message = excluded.message,
+      page_count = excluded.page_count,
+      progress_percent = excluded.progress_percent,
+      updated_at = excluded.updated_at,
+      completed_at = excluded.completed_at,
+      error = excluded.error`,
+    [
+      String(job.id || '').trim(),
+      Number(job.requesterId) || 0,
+      String(job.fileName || '').trim(),
+      String(job.status || 'queued').trim(),
+      String(job.message || '').trim(),
+      Number(job.pageCount) || 0,
+      Math.max(0, Math.min(100, Number(job.progressPercent) || 0)),
+      Number(job.startedAt) || Date.now(),
+      Number(job.updatedAt) || Date.now(),
+      String(job.status || '') === 'completed' || String(job.status || '') === 'failed' ? Number(job.updatedAt) || Date.now() : null,
+      String(job.error || '').trim()
+    ]
+  );
 }
 
 function dbRun(sql, params) {
@@ -4152,6 +4521,7 @@ function shouldUseOpenAiMlsFallback(rows, pageCount) {
 
 async function extractMlsImportRowsWithOpenAi(fullText, pageTexts, options = {}) {
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+  const onRows = typeof options.onRows === 'function' ? options.onRows : null;
   const pageCount = Math.max(0, Number(options.pageCount) || 0);
   const segments = buildMlsImportAiExtractionSegments(fullText, pageTexts);
   const extractedRows = [];
@@ -4196,10 +4566,20 @@ async function extractMlsImportRowsWithOpenAi(fullText, pageTexts, options = {})
           ? result.payload.rows
           : [];
 
-      payloadRows
+      const nextRows = payloadRows
         .map(sanitizeMlsImportAiRow)
-        .filter(isUsefulMlsImportRow)
-        .forEach((row) => extractedRows.push(row));
+        .filter(isUsefulMlsImportRow);
+
+      nextRows.forEach((row) => extractedRows.push(row));
+
+      if (onRows && nextRows.length > 0) {
+        await onRows(nextRows, {
+          phase: 'ai-analyzing-rows',
+          pageCount,
+          processedSegments: index + 1,
+          totalSegments: segments.length
+        });
+      }
     }
 
     if (onProgress) {
@@ -4241,6 +4621,7 @@ function createMlsImportPdfJob({ requesterId, fileName }) {
     message: 'Queued MLS PDF extraction...',
     pageCount: 0,
     progressPercent: 0,
+    persistedRowCount: 0,
     startedAt: now,
     updatedAt: now,
     extracted: null,
@@ -4282,6 +4663,7 @@ function serializeMlsImportPdfJob(job) {
     message: job.message,
     pageCount: Number(job.pageCount) || 0,
     progressPercent: Math.max(0, Math.min(100, Number(job.progressPercent) || 0)),
+    persistedRowCount: Math.max(0, Number(job.persistedRowCount) || 0),
     startedAt: job.startedAt,
     updatedAt: job.updatedAt,
     extracted: job.status === 'completed' ? job.extracted : null,
@@ -4337,9 +4719,10 @@ function getMlsImportPdfProgressPercent(progress) {
   return 4;
 }
 
-function extractPdfTextInWorker(buffer, options = {}) {
+function extractPdfTextInWorker(source, options = {}) {
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
-  const workerBytes = Uint8Array.from(buffer || []);
+  const sourcePath = typeof source === 'string' ? source.trim() : '';
+  const workerBytes = sourcePath ? null : Uint8Array.from(source || []);
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -4347,6 +4730,7 @@ function extractPdfTextInWorker(buffer, options = {}) {
     const worker = new Worker(path.join(__dirname, 'scripts', 'mls-pdf-text-worker.js'), {
       workerData: {
         pdfBytes: workerBytes,
+        pdfPath: sourcePath,
         defaultBatchSize: MLS_IMPORT_PDF_PAGE_BATCH_SIZE
       }
     });
@@ -5184,14 +5568,15 @@ function consolidateMlsImportRows(rows) {
   });
 }
 
-async function extractMlsImportPdfFields(buffer) {
+async function extractMlsImportPdfFields(pdfSource) {
   const options = arguments[1] && typeof arguments[1] === 'object' ? arguments[1] : {};
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+  const onRows = typeof options.onRows === 'function' ? options.onRows : null;
   let normalizedText = '';
   let pageCount = 0;
   let pageTexts = [];
 
-  const fullTextResult = await extractPdfTextInWorker(buffer, { onProgress });
+  const fullTextResult = await extractPdfTextInWorker(pdfSource, { onProgress });
   normalizedText = normalizePdfExtractText(fullTextResult && fullTextResult.text);
   pageTexts = Array.isArray(fullTextResult && fullTextResult.pageTexts) ? fullTextResult.pageTexts : [];
   pageCount = Number(fullTextResult && fullTextResult.pageCount) || 0;
@@ -5221,6 +5606,15 @@ async function extractMlsImportPdfFields(buffer) {
     const extractedSegmentRows = extractRowsFromMlsImportCandidateText(segment.text);
     if (extractedSegmentRows.length > 0) {
       candidateRows.push(...extractedSegmentRows);
+
+      if (onRows) {
+        await onRows(extractedSegmentRows, {
+          phase: 'analyzing-rows',
+          pageCount,
+          processedSegments: index + 1,
+          totalSegments: analysisSegments.length
+        });
+      }
     }
 
     if (onProgress && (index === 0 || (index + 1) % 20 === 0 || index === analysisSegments.length - 1)) {
@@ -5249,7 +5643,8 @@ async function extractMlsImportPdfFields(buffer) {
   if (shouldUseOpenAiMlsFallback(extractedRows, pageCount)) {
     const aiRows = await extractMlsImportRowsWithOpenAi(normalizedText, pageTexts, {
       pageCount,
-      onProgress
+      onProgress,
+      onRows
     });
 
     if (aiRows.length > 0) {
@@ -5277,80 +5672,119 @@ async function extractMlsImportPdfFields(buffer) {
   };
 }
 
-app.post('/api/admin/mls-imports/extract-pdf-job', express.json({ limit: MLS_IMPORT_PDF_BODY_LIMIT }), async (req, res) => {
+app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
   const decoded = requireAdmin(req, res);
   if (!decoded) {
     return;
   }
 
-  try {
-    const fileName = String(req.body?.fileName || '').trim();
-    const contentBase64 = String(req.body?.contentBase64 || '').trim();
-    const extension = path.extname(fileName).toLowerCase();
-
-    if (!fileName || !contentBase64) {
-      return res.status(400).json({ error: 'A PDF file name and file content are required.' });
+  mlsImportPdfUpload.single('file')(req, res, async (uploadError) => {
+    if (uploadError) {
+      const uploadMessage = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'PDF files must be 180 MB or smaller.'
+        : (uploadError && uploadError.message ? uploadError.message : 'Failed to upload the PDF.');
+      return res.status(400).json({ error: uploadMessage });
     }
 
-    if (extension !== '.pdf') {
-      return res.status(400).json({ error: 'Only PDF files are supported in this import tool.' });
-    }
+    try {
+      const uploadedFile = req.file;
+      const fileName = String(uploadedFile && uploadedFile.originalname || '').trim();
+      const uploadedPath = String(uploadedFile && uploadedFile.path || '').trim();
+      const extension = path.extname(fileName).toLowerCase();
 
-    const buffer = Buffer.from(contentBase64, 'base64');
-    if (!buffer.length) {
-      return res.status(400).json({ error: 'The uploaded PDF was empty.' });
-    }
-
-    if (buffer.length > MLS_IMPORT_PDF_MAX_BYTES) {
-      return res.status(413).json({ error: 'PDF files must be 180 MB or smaller.' });
-    }
-
-    const job = createMlsImportPdfJob({ requesterId: decoded.id, fileName });
-    updateMlsImportPdfJob(job.id, {
-      status: 'running',
-      message: 'Starting MLS PDF extraction...',
-      progressPercent: 2
-    });
-
-    setImmediate(async () => {
-      try {
-        const extracted = await extractMlsImportPdfFields(buffer, {
-          onProgress: (progress) => {
-            updateMlsImportPdfJob(job.id, {
-              status: 'running',
-              pageCount: Number(progress && progress.pageCount) || 0,
-              message: String(progress && progress.message || 'Extracting MLS PDF...').trim(),
-              progressPercent: getMlsImportPdfProgressPercent(progress)
-            });
-          }
-        });
-
-        updateMlsImportPdfJob(job.id, {
-          status: 'completed',
-          pageCount: Number(extracted && extracted.pageCount) || 0,
-          progressPercent: 100,
-          message: Number(extracted && extracted.pageCount) > 0
-            ? `Finished parsing all ${Number(extracted.pageCount)} pages.`
-            : 'Finished parsing the PDF.',
-          extracted,
-          error: ''
-        });
-      } catch (error) {
-        console.error('Failed to extract MLS import PDF fields:', error);
-        updateMlsImportPdfJob(job.id, {
-          status: 'failed',
-          progressPercent: 100,
-          message: 'MLS PDF extraction failed.',
-          error: error && error.message ? error.message : 'Failed to extract fields from the uploaded PDF.'
-        });
+      if (!fileName || !uploadedPath) {
+        return res.status(400).json({ error: 'A PDF file is required.' });
       }
-    });
 
-    return res.status(202).json({ job: serializeMlsImportPdfJob(getMlsImportPdfJob(job.id)) });
-  } catch (error) {
-    console.error('Failed to start MLS import PDF extraction job:', error);
-    return res.status(500).json({ error: error && error.message ? error.message : 'Failed to start PDF extraction.' });
-  }
+      if (extension !== '.pdf') {
+        await fs.promises.unlink(uploadedPath).catch(() => {});
+        return res.status(400).json({ error: 'Only PDF files are supported in this import tool.' });
+      }
+
+      const stats = await fs.promises.stat(uploadedPath).catch(() => null);
+      if (!stats || !stats.size) {
+        await fs.promises.unlink(uploadedPath).catch(() => {});
+        return res.status(400).json({ error: 'The uploaded PDF was empty.' });
+      }
+
+      const job = createMlsImportPdfJob({ requesterId: decoded.id, fileName });
+      const queuedJob = updateMlsImportPdfJob(job.id, {
+        status: 'running',
+        message: 'Starting MLS PDF extraction...',
+        progressPercent: 2
+      });
+      void persistMlsImportPdfJobRecord(queuedJob || job).catch((error) => {
+        console.error('Failed to persist MLS import job start:', error);
+      });
+
+      setImmediate(async () => {
+        let persistedRowCount = 0;
+        try {
+          const extracted = await extractMlsImportPdfFields(uploadedPath, {
+            onProgress: (progress) => {
+              const nextJob = updateMlsImportPdfJob(job.id, {
+                status: 'running',
+                pageCount: Number(progress && progress.pageCount) || 0,
+                message: String(progress && progress.message || 'Extracting MLS PDF...').trim(),
+                progressPercent: getMlsImportPdfProgressPercent(progress),
+                persistedRowCount
+              });
+
+              void persistMlsImportPdfJobRecord(nextJob).catch((error) => {
+                console.error('Failed to persist MLS import job progress:', error);
+              });
+            },
+            onRows: async (rows) => {
+              const result = await persistMlsImportSpreadsheetRowsForUser(decoded.id, rows, {
+                importRunId: job.id,
+                pdfFile: fileName
+              });
+              persistedRowCount = Math.max(persistedRowCount, Number(result.totalCount) || 0);
+            }
+          });
+
+          const finalPersistResult = await persistMlsImportSpreadsheetRowsForUser(decoded.id, Array.isArray(extracted && extracted.rows) ? extracted.rows : [], {
+            importRunId: job.id,
+            pdfFile: fileName
+          });
+          persistedRowCount = Math.max(persistedRowCount, Number(finalPersistResult.totalCount) || 0);
+
+          const completedJob = updateMlsImportPdfJob(job.id, {
+            status: 'completed',
+            pageCount: Number(extracted && extracted.pageCount) || 0,
+            progressPercent: 100,
+            persistedRowCount,
+            message: Number(extracted && extracted.pageCount) > 0
+              ? `Finished parsing all ${Number(extracted.pageCount)} pages.`
+              : 'Finished parsing the PDF.',
+            extracted,
+            error: ''
+          });
+          await persistMlsImportPdfJobRecord(completedJob);
+        } catch (error) {
+          console.error('Failed to extract MLS import PDF fields:', error);
+          const failedJob = updateMlsImportPdfJob(job.id, {
+            status: 'failed',
+            progressPercent: 100,
+            persistedRowCount,
+            message: 'MLS PDF extraction failed.',
+            error: error && error.message ? error.message : 'Failed to extract fields from the uploaded PDF.'
+          });
+          await persistMlsImportPdfJobRecord(failedJob);
+        } finally {
+          await fs.promises.unlink(uploadedPath).catch(() => {});
+        }
+      });
+
+      return res.status(202).json({ job: serializeMlsImportPdfJob(getMlsImportPdfJob(job.id)) });
+    } catch (error) {
+      console.error('Failed to start MLS import PDF extraction job:', error);
+      if (req.file && req.file.path) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+      }
+      return res.status(500).json({ error: error && error.message ? error.message : 'Failed to start PDF extraction.' });
+    }
+  });
 });
 
 app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', (req, res) => {
@@ -5374,6 +5808,62 @@ app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', (req, res) => {
   }
 
   return res.json({ job: serializeMlsImportPdfJob(job) });
+});
+
+app.get('/api/admin/mls-imports/rows', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const limit = Math.max(1, Math.min(Number.parseInt(String(req.query?.limit || '150'), 10) || 150, 500));
+    const offset = Math.max(0, Number.parseInt(String(req.query?.offset || '0'), 10) || 0);
+    const payload = await loadMlsImportSpreadsheetRowsForUser(decoded.id, { limit, offset });
+    return res.json(payload);
+  } catch (error) {
+    console.error('Failed to load MLS import rows:', error);
+    return res.status(500).json({ error: 'Failed to load MLS import rows.' });
+  }
+});
+
+app.post('/api/admin/mls-imports/rows/batch', express.json({ limit: '5mb' }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    const importRunId = normalizeMlsImportSpreadsheetValue(req.body?.importRunId || '');
+    const pdfFile = normalizeMlsImportSpreadsheetValue(req.body?.pdfFile || '');
+    const result = await persistMlsImportSpreadsheetRowsForUser(decoded.id, rows, { importRunId, pdfFile });
+    return res.json({
+      success: true,
+      rows: result.rows,
+      createdCount: result.createdCount,
+      updatedCount: result.updatedCount,
+      totalCount: result.totalCount
+    });
+  } catch (error) {
+    console.error('Failed to save MLS import rows:', error);
+    return res.status(500).json({ error: 'Failed to save MLS import rows.' });
+  }
+});
+
+app.delete('/api/admin/mls-imports/rows', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    await clearMlsImportSpreadsheetRowsForUser(decoded.id);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to clear MLS import rows:', error);
+    return res.status(500).json({ error: 'Failed to clear MLS import rows.' });
+  }
 });
 
 app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: MLS_IMPORT_PDF_BODY_LIMIT }), async (req, res) => {

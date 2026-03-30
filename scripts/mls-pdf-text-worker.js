@@ -1,4 +1,5 @@
 const { parentPort, workerData } = require('worker_threads');
+const fs = require('fs');
 const { PDFParse } = require('pdf-parse');
 
 const DEFAULT_BATCH_SIZE = Math.max(1, Number(workerData && workerData.defaultBatchSize) || 40);
@@ -148,7 +149,11 @@ async function extractPdfTextByPageBatches(parser, pageCount) {
 }
 
 async function main() {
-  const parser = new PDFParse({ data: Buffer.from(workerData && workerData.pdfBytes ? workerData.pdfBytes : []) });
+  const pdfPath = String(workerData && workerData.pdfPath || '').trim();
+  const pdfBytes = workerData && workerData.pdfBytes ? Buffer.from(workerData.pdfBytes) : null;
+  const parser = new PDFParse({
+    data: pdfPath ? fs.readFileSync(pdfPath) : Buffer.from(pdfBytes || [])
+  });
 
   try {
     postProgress({ phase: 'metadata', message: 'Reading PDF metadata...' });

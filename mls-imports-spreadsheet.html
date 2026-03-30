@@ -240,6 +240,34 @@
             backdrop-filter: blur(8px);
         }
 
+        .buyers-sheet-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-pagination-meta {
+            color: var(--buyers-note);
+            font-size: 13px;
+        }
+
+        .buyers-sheet-pagination-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-page-indicator {
+            min-width: 120px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
         .buyers-sheet-table-wrap::-webkit-scrollbar {
             height: 14px;
         }
@@ -460,16 +488,24 @@
 
         .buyers-sheet-progress {
             display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-top: 12px;
-            padding: 10px 14px;
-            border-radius: 14px;
-            border: 1px solid rgba(var(--accent-rgb, 5, 150, 105), 0.28);
-            background: rgba(var(--accent-rgb, 5, 150, 105), 0.12);
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(var(--accent-rgb, 5, 150, 105), 0.22);
+            background: linear-gradient(145deg, rgba(var(--accent-rgb, 5, 150, 105), 0.16), rgba(255, 255, 255, 0.08));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 10px 28px rgba(15, 23, 42, 0.08);
             color: var(--text-primary, #e5eef8);
             font-size: 12px;
             line-height: 1.4;
+        }
+
+        [data-theme="light"] .buyers-sheet-progress,
+        [data-theme="beach"] .buyers-sheet-progress,
+        [data-theme="japan"] .buyers-sheet-progress {
+            background: linear-gradient(145deg, rgba(var(--accent-rgb, 5, 150, 105), 0.12), rgba(255, 255, 255, 0.74));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 10px 24px rgba(148, 163, 184, 0.16);
         }
 
         .buyers-sheet-progress[hidden] {
@@ -506,7 +542,9 @@
         }
 
         .buyers-sheet-progress-copy {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
             flex: 1 1 auto;
             width: 100%;
             min-width: 0;
@@ -522,38 +560,57 @@
         .buyers-sheet-progress-percent {
             flex: 0 0 auto;
             font-family: 'Space Mono', monospace;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.9);
+            color: color-mix(in srgb, var(--text-primary, #ffffff) 86%, rgb(var(--accent-light-rgb, 52, 211, 153) / 0.75) 14%);
             letter-spacing: 0.04em;
         }
 
         .buyers-sheet-progress-track {
             position: relative;
-            margin-top: 8px;
             display: block;
             width: 100%;
-            height: 10px;
+            height: 16px;
+            padding: 2px;
+            box-sizing: border-box;
             border-radius: 999px;
             overflow: hidden;
-            background: rgba(15, 23, 42, 0.18);
-            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.22);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.08));
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+            isolation: isolate;
+        }
+
+        [data-theme="light"] .buyers-sheet-progress-track,
+        [data-theme="beach"] .buyers-sheet-progress-track,
+        [data-theme="japan"] .buyers-sheet-progress-track {
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.26), rgba(226, 232, 240, 0.54));
+            box-shadow: inset 0 1px 2px rgba(148, 163, 184, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.45);
         }
 
         .buyers-sheet-progress-fill {
             position: absolute;
-            inset: 0 auto 0 0;
+            inset: 2px auto 2px 2px;
             display: block;
             width: 0%;
-            height: 100%;
+            height: calc(100% - 4px);
+            min-width: 0;
+            max-width: calc(100% - 4px);
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(var(--accent-rgb, 5, 150, 105), 0.95) 0%, rgba(var(--accent-light-rgb, 52, 211, 153), 0.96) 52%, rgba(255, 255, 255, 0.92) 100%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 0 20px rgba(var(--accent-light-rgb, 52, 211, 153), 0.24);
+            transition: width 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .buyers-sheet-progress-fill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
             border-radius: inherit;
-            background: linear-gradient(90deg, rgba(var(--accent-rgb, 5, 150, 105), 0.9), rgba(var(--accent-light-rgb, 52, 211, 153), 0.96));
-            box-shadow: 0 0 18px rgba(var(--accent-light-rgb, 52, 211, 153), 0.28);
-            transition: width 0.24s ease;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0));
+            pointer-events: none;
         }
 
         .buyers-sheet-progress-meta {
-            margin-top: 6px;
             font-size: 11px;
             color: var(--buyers-note);
         }
@@ -875,7 +932,15 @@
                             <tbody id="mls-imports-sheet-body"></tbody>
                         </table>
                     </div>
-                    <p class="buyers-sheet-note">Tip: Click any cell to edit. This spreadsheet saves automatically in this browser for the current admin user.</p>
+                    <div class="buyers-sheet-pagination">
+                        <span id="mls-imports-page-meta" class="buyers-sheet-pagination-meta">Loading rows...</span>
+                        <div class="buyers-sheet-pagination-actions">
+                            <button id="mls-imports-prev-page" class="card-btn" type="button">Previous 150</button>
+                            <span id="mls-imports-page-indicator" class="buyers-sheet-page-indicator">Page 1 of 1</span>
+                            <button id="mls-imports-next-page" class="card-btn" type="button">Next 150</button>
+                        </div>
+                    </div>
+                    <p class="buyers-sheet-note">Tip: Click any cell to edit. MLS spreadsheet rows now save on the server, while this browser only keeps light UI preferences and copy/template helpers.</p>
                 </div>
             </section>
 
@@ -976,10 +1041,10 @@
     <script src="profile.js"></script>
     <script>
         (function () {
-            const STORAGE_KEY_BASE = 'mlsImportsSpreadsheetRows';
             const COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetCopiedRows';
             const PHONE_COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetPhoneCopiedRows';
             const MY_AGENTS_STORAGE_KEY_BASE = 'myAgentsSheetRows';
+            const ROWS_PAGE_SIZE = 150;
 
             function safeReadJson(key) {
                 try {
@@ -1000,10 +1065,6 @@
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'default-user').trim();
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 return { email, name, userKey };
-            }
-
-            function getStorageKey() {
-                return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
             function getCopiedStorageKey() {
@@ -1054,19 +1115,6 @@
                 return normalized;
             }
 
-            const DEFAULT_ROWS = [
-                {
-                    importDate: new Date().toISOString().slice(0, 10),
-                    propertyAddress: '',
-                    laName: '',
-                    loPhone: '',
-                    offersEmail: '',
-                    laCell: '',
-                    status: '',
-                    pdfFile: ''
-                }
-            ];
-
             const tableBody = document.getElementById('mls-imports-sheet-body');
             const countBadge = document.getElementById('mls-imports-count');
             const addRowButton = document.getElementById('mls-imports-add-row');
@@ -1077,6 +1125,10 @@
             const copyTemplatesButton = document.getElementById('mls-imports-copy-templates');
             const addToMyAgentsButton = document.getElementById('mls-imports-add-to-my-agents');
             const clearAllButton = document.getElementById('mls-imports-clear-all');
+            const prevPageButton = document.getElementById('mls-imports-prev-page');
+            const nextPageButton = document.getElementById('mls-imports-next-page');
+            const pageIndicator = document.getElementById('mls-imports-page-indicator');
+            const pageMeta = document.getElementById('mls-imports-page-meta');
             const progressBox = document.getElementById('mls-imports-progress');
             const progressText = document.getElementById('mls-imports-progress-text');
             const progressPercent = document.getElementById('mls-imports-progress-percent');
@@ -1099,8 +1151,70 @@
             const templateResetButton = document.getElementById('mls-imports-template-reset');
             const templateCloseButtons = templateModal ? Array.from(templateModal.querySelectorAll('[data-template-close="true"]')) : [];
 
-            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton) {
+            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton || !prevPageButton || !nextPageButton || !pageIndicator || !pageMeta) {
                 return;
+            }
+
+            let currentRowsPage = 1;
+            let totalRowsCount = 0;
+            let lastLoadedRows = [];
+
+            function buildManualRowMatchKey() {
+                return `manual|${Date.now()}|${Math.random().toString(16).slice(2)}`;
+            }
+
+            function normalizeSpreadsheetRow(row) {
+                return {
+                    id: Number.isInteger(Number(row && row.id)) ? Number(row.id) : null,
+                    matchKey: normalizeCellValue(row && row.matchKey),
+                    importDate: normalizeCellValue(row && row.importDate) || new Date().toISOString().slice(0, 10),
+                    propertyAddress: normalizeCellValue(row && row.propertyAddress),
+                    laName: normalizeCellValue(row && row.laName),
+                    loPhone: normalizeCellValue(row && row.loPhone),
+                    offersEmail: normalizeCellValue(row && row.offersEmail),
+                    laCell: normalizeCellValue(row && row.laCell),
+                    status: normalizeCellValue(row && row.status),
+                    pdfFile: normalizeCellValue(row && row.pdfFile)
+                };
+            }
+
+            async function fetchJsonWithAuth(url, options) {
+                const authToken = getAuthToken();
+                if (!authToken) {
+                    throw new Error('Sign in again before using the MLS spreadsheet.');
+                }
+
+                const response = await fetch(url, {
+                    ...(options || {}),
+                    headers: {
+                        ...(options && options.headers ? options.headers : {}),
+                        Authorization: `Bearer ${authToken}`
+                    }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'The MLS spreadsheet request failed.');
+                }
+                return payload;
+            }
+
+            function updateCount(totalCount) {
+                const total = Math.max(0, Number(totalCount) || 0);
+                countBadge.textContent = `${total} Row${total === 1 ? '' : 's'}`;
+            }
+
+            function updatePaginationUi() {
+                const totalPages = Math.max(1, Math.ceil(totalRowsCount / ROWS_PAGE_SIZE));
+                const safePage = Math.min(Math.max(1, currentRowsPage), totalPages);
+                const startRow = totalRowsCount === 0 ? 0 : ((safePage - 1) * ROWS_PAGE_SIZE) + 1;
+                const endRow = totalRowsCount === 0 ? 0 : Math.min(totalRowsCount, safePage * ROWS_PAGE_SIZE);
+
+                pageIndicator.textContent = `Page ${safePage} of ${totalPages}`;
+                pageMeta.textContent = totalRowsCount === 0
+                    ? 'No MLS rows saved on the server yet.'
+                    : `Showing ${startRow}-${endRow} of ${totalRowsCount} saved MLS rows.`;
+                prevPageButton.disabled = safePage <= 1;
+                nextPageButton.disabled = safePage >= totalPages;
             }
 
             const TEMPLATE_SETTINGS_KEY_BASE = 'mlsImportsSpreadsheetTemplates';
@@ -1130,10 +1244,11 @@
                 return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             }
 
-            function getEmailRecipientEntries() {
+            function getEmailRecipientEntries(rows) {
                 const seen = new Set();
+                const sourceRows = Array.isArray(rows) ? rows : getRowsFromDom();
 
-                return getRowsFromDom().reduce((entries, row, rowIndex) => {
+                return sourceRows.reduce((entries, row, rowIndex) => {
                     const rawEmail = normalizeCellValue(row && row.offersEmail);
                     if (!rawEmail) {
                         return entries;
@@ -1168,7 +1283,49 @@
                 });
             }
 
-            function openEmailModal() {
+            async function fetchSpreadsheetRowsPage(pageNumber, options) {
+                const requestedPage = Math.max(1, Number(pageNumber) || 1);
+                const offset = (requestedPage - 1) * ROWS_PAGE_SIZE;
+                const payload = await fetchJsonWithAuth(`/api/admin/mls-imports/rows?offset=${offset}&limit=${ROWS_PAGE_SIZE}`);
+                currentRowsPage = requestedPage;
+                totalRowsCount = Math.max(0, Number(payload && payload.totalCount) || 0);
+                lastLoadedRows = Array.isArray(payload && payload.rows)
+                    ? payload.rows.map(normalizeSpreadsheetRow)
+                    : [];
+                renderRows(lastLoadedRows);
+                updateCount(totalRowsCount);
+                updatePaginationUi();
+
+                if (!options || !options.silent) {
+                    const totalPages = Math.max(1, Math.ceil(totalRowsCount / ROWS_PAGE_SIZE));
+                    currentRowsPage = Math.min(currentRowsPage, totalPages);
+                }
+
+                return lastLoadedRows;
+            }
+
+            async function fetchAllSpreadsheetRows() {
+                const collectedRows = [];
+                let offset = 0;
+
+                while (true) {
+                    const payload = await fetchJsonWithAuth(`/api/admin/mls-imports/rows?offset=${offset}&limit=500`);
+                    const pageRows = Array.isArray(payload && payload.rows)
+                        ? payload.rows.map(normalizeSpreadsheetRow)
+                        : [];
+                    collectedRows.push(...pageRows);
+
+                    if (pageRows.length === 0 || collectedRows.length >= (Number(payload && payload.totalCount) || 0)) {
+                        break;
+                    }
+
+                    offset += pageRows.length;
+                }
+
+                return collectedRows;
+            }
+
+            async function openEmailModal() {
                 if (!emailModal || !emailForm || !emailRecipientsList || !emailStatus || !emailSubjectInput || !emailBodyInput) {
                     return;
                 }
@@ -1178,7 +1335,13 @@
                 emailForm.reset();
                 emailRecipientsList.innerHTML = '';
 
-                const recipients = getEmailRecipientEntries();
+                let recipients = [];
+                try {
+                    recipients = getEmailRecipientEntries(await fetchAllSpreadsheetRows());
+                } catch (error) {
+                    emailRecipientsList.innerHTML = `<span style="color:#b91c1c;">${error && error.message ? error.message : 'Failed to load MLS recipients.'}</span>`;
+                    recipients = [];
+                }
                 recipients.forEach((recipient) => {
                     const recipientName = recipient.laName || 'Unknown Agent';
                     const detailText = recipient.propertyAddress
@@ -1245,31 +1408,11 @@
                 progressBox.hidden = true;
             }
 
-            function readFileAsBase64(file, onProgress) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const result = String(reader.result || '');
-                        const parts = result.split(',');
-                        resolve(parts.length > 1 ? parts[1] : parts[0]);
-                    };
-                    reader.onerror = () => reject(new Error('The selected PDF could not be read.'));
-                    reader.onprogress = (event) => {
-                        if (!onProgress || !event || !event.lengthComputable) {
-                            return;
-                        }
-                        onProgress(event.loaded, event.total);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            function startPdfExtractionJob(fileName, contentBase64, authToken, onUploadProgress) {
+            function startPdfExtractionJob(file, authToken, onUploadProgress) {
                 return new Promise((resolve, reject) => {
                     const request = new XMLHttpRequest();
                     request.open('POST', '/api/admin/mls-imports/extract-pdf-job', true);
                     request.responseType = 'json';
-                    request.setRequestHeader('Content-Type', 'application/json');
                     request.setRequestHeader('Authorization', `Bearer ${authToken}`);
 
                     request.upload.onprogress = (event) => {
@@ -1302,10 +1445,9 @@
                         resolve(payload);
                     };
 
-                    request.send(JSON.stringify({
-                        fileName,
-                        contentBase64
-                    }));
+                    const formData = new FormData();
+                    formData.append('file', file, file && file.name ? file.name : 'mls-import.pdf');
+                    request.send(formData);
                 });
             }
 
@@ -1679,7 +1821,7 @@
             }
 
             function getTemplatePreviewRowData() {
-                const firstMeaningfulRow = getRowsFromDom().find((row) => isMeaningfulRow(row));
+                const firstMeaningfulRow = lastLoadedRows.find((row) => isMeaningfulRow(row)) || getRowsFromDom().find((row) => isMeaningfulRow(row));
                 return firstMeaningfulRow || {
                     propertyAddress: '2443 Wilshire, Riverside 92501',
                     laName: 'Nelson Garcia',
@@ -1777,11 +1919,12 @@
                 td.spellcheck = false;
                 td.textContent = normalizeCellValue(value);
                 td.addEventListener('input', () => {
-                    saveRows();
                     syncPhoneCopyButtonState(td, td.dataset.phoneFieldKey || '');
                 });
                 td.addEventListener('blur', () => {
-                    saveRows();
+                    void saveRows().catch((error) => {
+                        showToast('error', 'Save Failed', error && error.message ? error.message : 'The MLS row could not be saved.');
+                    });
                     syncPhoneCopyButtonState(td, td.dataset.phoneFieldKey || '');
                 });
 
@@ -1894,9 +2037,12 @@
             }
 
             function createRow(row) {
+                const normalizedRow = normalizeSpreadsheetRow(row);
                 const tr = document.createElement('tr');
+                tr.dataset.rowId = normalizedRow.id ? String(normalizedRow.id) : '';
+                tr.dataset.matchKey = normalizedRow.matchKey || buildManualRowMatchKey();
                 ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
-                    tr.appendChild(createCell(row && row[key] ? row[key] : '', key));
+                    tr.appendChild(createCell(normalizedRow[key] || '', key));
                 });
                 tr.appendChild(createCopyCell());
                 tr.addEventListener('input', () => {
@@ -1921,6 +2067,8 @@
                 return Array.from(tableBody.querySelectorAll('tr')).map((tr) => {
                     const cells = tr.querySelectorAll('td');
                     return {
+                        id: Number.isInteger(Number(tr.dataset.rowId)) ? Number(tr.dataset.rowId) : null,
+                        matchKey: normalizeCellValue(tr.dataset.matchKey),
                         importDate: cells[0] ? normalizeCellValue(cells[0].textContent) : '',
                         propertyAddress: cells[1] ? normalizeCellValue(cells[1].textContent) : '',
                         laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
@@ -1969,96 +2117,56 @@
                 });
             }
 
-            function upsertImportedRows(nextRows) {
-                const rows = Array.isArray(nextRows) ? nextRows : [];
-                const mergedRows = getRowsFromDom().filter(isMeaningfulRow);
-                let createdCount = 0;
-                let updatedCount = 0;
-
-                rows.forEach((row) => {
-                    const matchIndex = findMatchingImportedRowIndex(mergedRows, row);
-
-                    if (matchIndex >= 0) {
-                        mergedRows[matchIndex] = {
-                            ...mergedRows[matchIndex],
-                            ...row
-                        };
-                        updatedCount += 1;
-                        return;
-                    }
-
-                    mergedRows.push(row);
-                    if (isMeaningfulRow(row)) {
-                        createdCount += 1;
-                    }
-                });
-
-                renderRows(mergedRows);
-                persistRows(mergedRows);
-
-                return {
-                    createdCount,
-                    updatedCount,
-                    totalCount: createdCount + updatedCount
-                };
-            }
-
-            function updateCount(rows) {
-                const total = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
-                countBadge.textContent = `${total} Row${total === 1 ? '' : 's'}`;
-            }
-
-            function persistRows(rows) {
-                try {
-                    localStorage.setItem(getStorageKey(), JSON.stringify(rows));
-                } catch (error) {
-                    if (error && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-                        throw new Error('The spreadsheet filled the browser storage limit after import. The rows are on screen now, but clear older MLS imports or export/save them before importing another massive PDF.');
-                    }
-                    throw error;
-                }
-                updateCount(rows);
-            }
-
-            function clearAllRows() {
-                localStorage.removeItem(getStorageKey());
-                localStorage.removeItem(getCopiedStorageKey());
-                copiedRowSignatures.clear();
-                renderRows([]);
-            }
-
-            function saveRows() {
-                const rows = getRowsFromDom().filter(isMeaningfulRow);
-                persistRows(rows);
-            }
-
             function renderRows(rows) {
                 tableBody.innerHTML = '';
-                rows.forEach((row) => {
-                    tableBody.appendChild(createRow(row));
+                (Array.isArray(rows) ? rows : []).forEach((row) => {
+                    tableBody.appendChild(createRow(normalizeSpreadsheetRow(row)));
                 });
-                updateCount(rows);
             }
 
-            function loadRows() {
-                try {
-                    const stored = JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
-                    if (Array.isArray(stored) && stored.length > 0) {
-                        return stored.map((row) => ({
-                            importDate: normalizeCellValue(row && row.importDate),
-                            propertyAddress: normalizeCellValue(row && row.propertyAddress),
-                            laName: normalizeCellValue(row && row.laName),
-                            loPhone: normalizeCellValue(row && row.loPhone),
-                            offersEmail: normalizeCellValue(row && row.offersEmail),
-                            laCell: normalizeCellValue(row && row.laCell),
-                            status: normalizeCellValue(row && row.status),
-                            pdfFile: normalizeCellValue(row && row.pdfFile)
-                        }));
-                    }
-                } catch (error) {
-                    // Ignore invalid stored values and fall back to defaults.
+            async function persistRows(rows) {
+                const meaningfulRows = (Array.isArray(rows) ? rows : []).map(normalizeSpreadsheetRow).filter(isMeaningfulRow);
+                const payload = await fetchJsonWithAuth('/api/admin/mls-imports/rows/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rows: meaningfulRows })
+                });
+
+                if (Array.isArray(payload && payload.rows)) {
+                    const domRows = Array.from(tableBody.querySelectorAll('tr'));
+                    payload.rows.forEach((row, index) => {
+                        const domRow = domRows[index];
+                        if (!domRow) {
+                            return;
+                        }
+                        domRow.dataset.rowId = row && row.id ? String(row.id) : '';
+                        domRow.dataset.matchKey = normalizeCellValue(row && row.matchKey) || domRow.dataset.matchKey || buildManualRowMatchKey();
+                    });
                 }
-                return DEFAULT_ROWS.slice();
+
+                totalRowsCount = Math.max(0, Number(payload && payload.totalCount) || 0);
+                updateCount(totalRowsCount);
+                updatePaginationUi();
+                return payload || {};
+            }
+
+            async function saveRows() {
+                const rows = getRowsFromDom();
+                return persistRows(rows);
+            }
+
+            async function clearAllRows() {
+                await fetchJsonWithAuth('/api/admin/mls-imports/rows', { method: 'DELETE' });
+                localStorage.removeItem(getCopiedStorageKey());
+                copiedRowSignatures.clear();
+                totalRowsCount = 0;
+                currentRowsPage = 1;
+                lastLoadedRows = [];
+                renderRows([]);
+                updateCount(0);
+                updatePaginationUi();
             }
 
             function normalizeMyAgentsRow(row) {
@@ -2213,8 +2321,8 @@
                 };
             }
 
-            function exportRowsToCsv() {
-                const rows = getRowsFromDom().filter(isMeaningfulRow);
+            async function exportRowsToCsv() {
+                const rows = (await fetchAllSpreadsheetRows()).filter(isMeaningfulRow);
                 if (rows.length === 0) {
                     showToast('error', 'No Rows To Export', 'Add at least one MLS import row before exporting a CSV.');
                     return;
@@ -2309,23 +2417,30 @@
                 });
             }
 
-            addRowButton.addEventListener('click', () => {
-                const nextRow = {
-                    importDate: new Date().toISOString().slice(0, 10),
-                    propertyAddress: '',
-                    laName: '',
-                    loPhone: '',
-                    offersEmail: '',
-                    laCell: '',
-                    status: '',
-                    pdfFile: ''
-                };
-                tableBody.appendChild(createRow(nextRow));
-                saveRows();
-                const lastRow = tableBody.lastElementChild;
-                const firstCell = lastRow ? lastRow.querySelector('td') : null;
-                if (firstCell) {
-                    firstCell.focus();
+            addRowButton.addEventListener('click', async () => {
+                try {
+                    const nextRow = {
+                        matchKey: buildManualRowMatchKey(),
+                        importDate: new Date().toISOString().slice(0, 10),
+                        propertyAddress: '',
+                        laName: '',
+                        loPhone: '',
+                        offersEmail: '',
+                        laCell: '',
+                        status: '',
+                        pdfFile: ''
+                    };
+                    tableBody.appendChild(createRow(nextRow));
+                    currentRowsPage = 1;
+                    await saveRows();
+                    await fetchSpreadsheetRowsPage(1, { silent: true });
+                    const lastRow = tableBody.lastElementChild;
+                    const firstCell = lastRow ? lastRow.querySelector('td') : null;
+                    if (firstCell) {
+                        firstCell.focus();
+                    }
+                } catch (error) {
+                    showToast('error', 'Add Row Failed', error && error.message ? error.message : 'The new MLS row could not be created.');
                 }
             });
 
@@ -2359,21 +2474,12 @@
                 addPdfButton.textContent = 'Extracting...';
 
                 try {
-                    setPdfProgressState('Reading PDF in your browser...', 2, `Preparing ${file.name} for upload.`);
-                    const contentBase64 = await readFileAsBase64(file, (loaded, total) => {
-                        const ratio = total > 0 ? loaded / total : 0;
-                        setPdfProgressState(
-                            'Reading PDF in your browser...',
-                            2 + (ratio * 8),
-                            `Loaded ${Math.round(ratio * 100)}% of ${file.name} into memory.`
-                        );
-                    });
-                    setPdfProgressState('Uploading PDF and starting extraction...', 12, `Sending ${file.name} to the server now.`);
-                    const payload = await startPdfExtractionJob(file.name, contentBase64, authToken, (loaded, total) => {
+                    setPdfProgressState('Uploading PDF and starting extraction...', 4, `Streaming ${file.name} to the server now.`);
+                    const payload = await startPdfExtractionJob(file, authToken, (loaded, total) => {
                         const ratio = total > 0 ? loaded / total : 0;
                         setPdfProgressState(
                             'Uploading PDF and starting extraction...',
-                            12 + (ratio * 23),
+                            4 + (ratio * 31),
                             `Uploaded ${Math.round(ratio * 100)}% of ${file.name}.`
                         );
                     });
@@ -2415,7 +2521,7 @@
                         throw new Error('The PDF was read, but no MLS contact rows could be extracted from it.');
                     }
 
-                    const upsertResult = upsertImportedRows(normalizedRows);
+                    await fetchSpreadsheetRowsPage(1, { silent: true });
                     const pageCountMessage = extractedPageCount > 1
                         ? ` Parsed all ${extractedPageCount} pages.`
                         : extractedPageCount === 1
@@ -2423,10 +2529,8 @@
                             : '';
                     showToast(
                         'success',
-                        upsertResult.updatedCount > 0 && upsertResult.createdCount === 0 ? 'PDF Updated' : 'PDF Extracted',
-                        upsertResult.updatedCount > 0
-                            ? `${upsertResult.createdCount} new row${upsertResult.createdCount === 1 ? '' : 's'} added and ${upsertResult.updatedCount} existing row${upsertResult.updatedCount === 1 ? '' : 's'} updated.${pageCountMessage}`
-                            : `${upsertResult.createdCount} MLS import row${upsertResult.createdCount === 1 ? '' : 's'} were added to the sheet.${pageCountMessage}`
+                        'PDF Extracted',
+                        `${normalizedRows.length} MLS import row${normalizedRows.length === 1 ? '' : 's'} were saved to the spreadsheet.${pageCountMessage}`
                     );
                 } catch (error) {
                     showToast('error', 'PDF Extraction Failed', error && error.message ? error.message : 'The PDF could not be processed.');
@@ -2437,48 +2541,60 @@
                 }
             });
 
-            exportCsvButton.addEventListener('click', exportRowsToCsv);
-
-            addToMyAgentsButton.addEventListener('click', () => {
-                const rows = getRowsFromDom().filter(isMeaningfulRow).map(normalizeMyAgentsRow);
-                if (rows.length === 0) {
-                    showToast('error', 'No Agents To Add', 'Add at least one MLS import row before sending agents to My Agents.');
-                    return;
-                }
-
-                const transferResult = mergeIntoMyAgents(rows);
-                if (transferResult.addedCount === 0 && transferResult.enrichedCount === 0) {
-                    showToast('success', 'Already In My Agents', 'Every current MLS import row already matches My Agents. Opening My Agents now.');
-                } else {
-                    const messageParts = [];
-                    if (transferResult.addedCount > 0) {
-                        messageParts.push(`${transferResult.addedCount} new agent row${transferResult.addedCount === 1 ? '' : 's'} added`);
-                    }
-                    if (transferResult.enrichedCount > 0) {
-                        messageParts.push(`${transferResult.enrichedCount} existing row${transferResult.enrichedCount === 1 ? '' : 's'} enriched`);
-                    }
-                    showToast('success', 'Added To My Agents', `${messageParts.join(' and ')}. Opening it now.`);
-                }
-
-                window.setTimeout(() => {
-                    window.location.href = 'my-agents.html';
-                }, 180);
+            exportCsvButton.addEventListener('click', () => {
+                void exportRowsToCsv().catch((error) => {
+                    showToast('error', 'CSV Export Failed', error && error.message ? error.message : 'The CSV could not be created.');
+                });
             });
 
-            clearAllButton.addEventListener('click', () => {
-                const existingRows = getRowsFromDom().filter(isMeaningfulRow);
-                if (existingRows.length === 0) {
-                    showToast('error', 'Nothing To Clear', 'There are no MLS import rows to clear right now.');
-                    return;
-                }
+            addToMyAgentsButton.addEventListener('click', async () => {
+                try {
+                    const rows = (await fetchAllSpreadsheetRows()).filter(isMeaningfulRow).map(normalizeMyAgentsRow);
+                    if (rows.length === 0) {
+                        showToast('error', 'No Agents To Add', 'Add at least one MLS import row before sending agents to My Agents.');
+                        return;
+                    }
 
-                const confirmed = window.confirm('Clear all MLS Imports spreadsheet rows for this admin in this browser?');
-                if (!confirmed) {
-                    return;
-                }
+                    const transferResult = mergeIntoMyAgents(rows);
+                    if (transferResult.addedCount === 0 && transferResult.enrichedCount === 0) {
+                        showToast('success', 'Already In My Agents', 'Every current MLS import row already matches My Agents. Opening My Agents now.');
+                    } else {
+                        const messageParts = [];
+                        if (transferResult.addedCount > 0) {
+                            messageParts.push(`${transferResult.addedCount} new agent row${transferResult.addedCount === 1 ? '' : 's'} added`);
+                        }
+                        if (transferResult.enrichedCount > 0) {
+                            messageParts.push(`${transferResult.enrichedCount} existing row${transferResult.enrichedCount === 1 ? '' : 's'} enriched`);
+                        }
+                        showToast('success', 'Added To My Agents', `${messageParts.join(' and ')}. Opening it now.`);
+                    }
 
-                clearAllRows();
-                showToast('success', 'Spreadsheet Cleared', 'All MLS Imports spreadsheet rows were removed.');
+                    window.setTimeout(() => {
+                        window.location.href = 'my-agents.html';
+                    }, 180);
+                } catch (error) {
+                    showToast('error', 'Transfer Failed', error && error.message ? error.message : 'The MLS rows could not be sent to My Agents.');
+                }
+            });
+
+            clearAllButton.addEventListener('click', async () => {
+                try {
+                    const existingRows = await fetchAllSpreadsheetRows();
+                    if (existingRows.length === 0) {
+                        showToast('error', 'Nothing To Clear', 'There are no MLS import rows to clear right now.');
+                        return;
+                    }
+
+                    const confirmed = window.confirm('Clear all MLS Imports spreadsheet rows for this admin?');
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    await clearAllRows();
+                    showToast('success', 'Spreadsheet Cleared', 'All MLS Imports spreadsheet rows were removed.');
+                } catch (error) {
+                    showToast('error', 'Clear Failed', error && error.message ? error.message : 'The MLS spreadsheet could not be cleared.');
+                }
             });
 
             if (copyTemplatesButton && templateModal && templateStatusSelect && templateIncludeTimeToggle && templateBodyInput && templatePreview && templateSaveButton && templateResetButton) {
@@ -2533,7 +2649,30 @@
                 });
             }
 
-            renderRows(loadRows());
+            prevPageButton.addEventListener('click', () => {
+                if (currentRowsPage > 1) {
+                    void fetchSpreadsheetRowsPage(currentRowsPage - 1).catch((error) => {
+                        showToast('error', 'Page Load Failed', error && error.message ? error.message : 'The previous page could not be loaded.');
+                    });
+                }
+            });
+
+            nextPageButton.addEventListener('click', () => {
+                const totalPages = Math.max(1, Math.ceil(totalRowsCount / ROWS_PAGE_SIZE));
+                if (currentRowsPage < totalPages) {
+                    void fetchSpreadsheetRowsPage(currentRowsPage + 1).catch((error) => {
+                        showToast('error', 'Page Load Failed', error && error.message ? error.message : 'The next page could not be loaded.');
+                    });
+                }
+            });
+
+            updatePaginationUi();
+            void fetchSpreadsheetRowsPage(1).catch((error) => {
+                pageMeta.textContent = error && error.message ? error.message : 'Failed to load MLS spreadsheet rows.';
+                renderRows([]);
+                updateCount(0);
+                updatePaginationUi();
+            });
         })();
     </script>
 </body>
