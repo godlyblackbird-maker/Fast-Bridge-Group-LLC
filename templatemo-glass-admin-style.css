@@ -3329,7 +3329,7 @@ a {
     color: var(--text-secondary);
     text-decoration: none;
     border-radius: 12px;
-    transition: all var(--transition-fast);
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
     position: relative;
     overflow: hidden;
 }
@@ -3362,6 +3362,11 @@ a {
     display: inline-block;
     flex-shrink: 0;
     opacity: 0.8;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: opacity;
+    transition: opacity var(--transition-fast), color var(--transition-fast), filter var(--transition-fast);
 }
 
 .nav-icon-fire {
@@ -5682,7 +5687,7 @@ body.sidebar-collapsed .main-content {
     font-family: inherit;
     font-size: 13px;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .card-btn:hover,
@@ -11407,7 +11412,7 @@ body.sidebar-collapsed .main-content {
     padding: 14px 18px;
     color: var(--text-secondary);
     border-radius: 12px;
-    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .settings-nav-link:hover {
@@ -11424,6 +11429,12 @@ body.sidebar-collapsed .main-content {
     width: 20px;
     height: 20px;
     opacity: 0.7;
+    flex-shrink: 0;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: opacity;
+    transition: opacity var(--transition-fast), color var(--transition-fast), filter var(--transition-fast);
 }
 
 .settings-nav-link.active svg,
@@ -14215,7 +14226,18 @@ body.sidebar-collapsed .main-content {
     padding: 10px 12px;
     cursor: pointer;
     pointer-events: auto;
-    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.property-tab-btn svg,
+.card-btn svg,
+.tab-btn svg,
+.tab-link svg {
+    flex-shrink: 0;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: opacity var(--transition-fast), color var(--transition-fast), filter var(--transition-fast);
 }
 
 .property-tab-btn:hover {
