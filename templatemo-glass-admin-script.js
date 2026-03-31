@@ -20909,7 +20909,8 @@ function initNavbarDateTime() {
                 const senderName = senderNameInput.value.trim();
                 const recipientName = recipientNameInput.value.trim();
                 const recipientEmail = recipientEmailInput.value.trim();
-                const signerName = 'Steve Medina';
+                const signerName = String(investorProfile?.signerName || 'Steve Medina').trim();
+                const signerLabel = investorProfile?.signerName ? 'Signor' : 'Signer';
                 const entityText = String(investorProfile?.entityLabel || getOfferSelectText('offer-entity') || 'Selected Entity').trim();
                 const categoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.label || 'Offer Terms';
                 const subcategoryLabel = OFFER_EMAIL_LIBRARY[categorySelect.value]?.subcategories[getEffectiveSubcategory()]?.label || 'General';
@@ -20967,7 +20968,7 @@ function initNavbarDateTime() {
                         investorProfile?.closingCostSummary ? `• Closing costs: ${investorProfile.closingCostSummary}` : '',
                         `• Additional terms: ${otherTerms}`,
                         `• Buyer / vesting: ${entityText}`,
-                        `• Signer: ${signerName}`,
+                        `• ${signerLabel}: ${signerName}`,
                         sellerCompEnabled
                             ? `• Seller compensation: ${sellerCompPercent ? `${sellerCompPercent}%` : ''}${sellerCompPercent && sellerCompAmount ? ' | ' : ''}${sellerCompAmount ? `$${sellerCompAmount}` : ''}`
                             : '• Seller compensation: Not included'
