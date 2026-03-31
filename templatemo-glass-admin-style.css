@@ -15020,9 +15020,22 @@ body.analytics-reboot .analytics-my-file-count {
     gap: 10px;
 }
 
+.property-detail-topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .property-detail-topbar h1 {
     margin: 0;
     font-size: 28px;
+}
+
+.property-share-message-btn {
+    min-height: 40px;
+    white-space: nowrap;
 }
 
 .property-back-link {
@@ -15056,6 +15069,17 @@ body.analytics-reboot .analytics-my-file-count {
     background: linear-gradient(135deg, rgba(var(--accent-light-rgb), 0.3), rgba(15, 23, 42, 0.38));
     transform: translateY(-1px);
     box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.32);
+}
+
+@media (max-width: 640px) {
+    .property-detail-topbar-actions {
+        align-items: stretch;
+    }
+
+    .property-share-message-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 .property-detail-grid {

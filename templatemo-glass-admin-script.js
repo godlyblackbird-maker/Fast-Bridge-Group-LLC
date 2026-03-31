@@ -17,6 +17,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
     const MESSAGE_NOTIFICATION_STATE_KEY = 'dashboardMessageNotificationStateByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
+    const FAST_SHARED_PROPERTY_MESSAGE_MARKER = '[FAST_SHARED_PROPERTY_V1]';
     const MAX_NOTIFICATION_HISTORY_ITEMS = 20;
     const MESSAGE_NOTIFICATION_POLL_MS = 15000;
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
@@ -1216,7 +1217,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         entries.forEach((entry) => {
             const senderName = String(entry && entry.sender && entry.sender.name || '').trim() || 'User';
             const body = String(entry && entry.body || '').trim();
-            const preview = body.length > 140 ? `${body.slice(0, 137)}...` : body;
+            const previewText = getFastMessagePreviewText(body, 'You received a new message.');
+            const preview = previewText.length > 140 ? `${previewText.slice(0, 137)}...` : previewText;
 
             if (settings.inApp) {
                 showDashboardToast('info', `New message from ${senderName}`, preview || 'You received a new message.', {
@@ -1485,6 +1487,213 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         return stored;
     }
+
+    function sanitizeSharedPropertyText(value, maxLength) {
+        const normalizedMaxLength = Math.max(0, Number(maxLength) || 0);
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!text) {
+            return '';
+        }
+
+        if (!normalizedMaxLength || text.length <= normalizedMaxLength) {
+            return text;
+        }
+
+        return `${text.slice(0, Math.max(0, normalizedMaxLength - 1)).trim()}…`;
+    }
+
+    function sanitizeSharedPropertyImages(value) {
+        return (Array.isArray(value) ? value : [])
+            .map((item) => sanitizeSharedPropertyText(item, 500))
+            .filter(Boolean)
+            .slice(0, 8);
+    }
+
+    function sanitizeSharedPropertyLinks(value) {
+        const links = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        const normalizedLinks = {};
+
+        ['zillow', 'redfin'].forEach((key) => {
+            const nextValue = sanitizeSharedPropertyText(links[key], 500);
+            if (nextValue) {
+                normalizedLinks[key] = nextValue;
+            }
+        });
+
+        return normalizedLinks;
+    }
+
+    function createShareablePropertyDetailSnapshot(detailLike) {
+        const detail = detailLike && typeof detailLike === 'object' && !Array.isArray(detailLike)
+            ? detailLike
+            : {};
+        const agentRecord = detail.agentRecord && typeof detail.agentRecord === 'object' && !Array.isArray(detail.agentRecord)
+            ? detail.agentRecord
+            : {};
+
+        const snapshot = {
+            address: sanitizeSharedPropertyText(detail.address || detail.propertyAddress, 180),
+            propertyImages: sanitizeSharedPropertyImages(detail.propertyImages),
+            propertyDetails: sanitizeSharedPropertyText(detail.propertyDetails, 320),
+            listPrice: sanitizeSharedPropertyText(detail.listPrice, 60),
+            propensity: Number.isFinite(Number(detail.propensity)) ? Number(detail.propensity) : '',
+            moderatePain: sanitizeSharedPropertyText(detail.moderatePain, 120),
+            taxDelinquency: sanitizeSharedPropertyText(detail.taxDelinquency, 120),
+            highDebt: sanitizeSharedPropertyText(detail.highDebt, 120),
+            marketInfo: sanitizeSharedPropertyText(detail.marketInfo, 140),
+            dom: Number.isFinite(Number(detail.dom)) ? Number(detail.dom) : '',
+            cdom: Number.isFinite(Number(detail.cdom)) ? Number(detail.cdom) : '',
+            askingVsArv: sanitizeSharedPropertyText(detail.askingVsArv, 60),
+            arv: sanitizeSharedPropertyText(detail.arv, 60),
+            compData: sanitizeSharedPropertyText(detail.compData, 80),
+            piq: sanitizeSharedPropertyText(detail.piq, 900),
+            comps: sanitizeSharedPropertyText(detail.comps, 900),
+            ia: sanitizeSharedPropertyText(detail.ia, 700),
+            recordCreated: sanitizeSharedPropertyText(detail.recordCreated, 80),
+            listingDate: sanitizeSharedPropertyText(detail.listingDate, 80),
+            idx: sanitizeSharedPropertyText(detail.idx, 80),
+            propertyType: sanitizeSharedPropertyText(detail.propertyType, 120),
+            mlsNumber: sanitizeSharedPropertyText(detail.mlsNumber, 80),
+            statusLabel: sanitizeSharedPropertyText(detail.statusLabel, 80),
+            autoTracker: sanitizeSharedPropertyText(detail.autoTracker, 120),
+            areaLabel: sanitizeSharedPropertyText(detail.areaLabel, 180),
+            city: sanitizeSharedPropertyText(detail.city, 80),
+            county: sanitizeSharedPropertyText(detail.county, 80),
+            propertyCover: sanitizeSharedPropertyText(detail.propertyCover, 180),
+            publicComments: sanitizeSharedPropertyText(detail.publicComments, 1200),
+            agentComments: sanitizeSharedPropertyText(detail.agentComments, 1200),
+            apn: sanitizeSharedPropertyText(detail.apn, 80),
+            unitNumber: sanitizeSharedPropertyText(detail.unitNumber, 40),
+            totalFloors: sanitizeSharedPropertyText(detail.totalFloors, 60),
+            sewer: sanitizeSharedPropertyText(detail.sewer, 120),
+            propertyCondition: sanitizeSharedPropertyText(detail.propertyCondition, 160),
+            zoning: sanitizeSharedPropertyText(detail.zoning, 120),
+            associationDues: sanitizeSharedPropertyText(detail.associationDues, 80),
+            commonWalls: sanitizeSharedPropertyText(detail.commonWalls, 120),
+            garageCount: sanitizeSharedPropertyText(detail.garageCount, 40),
+            lotSize: sanitizeSharedPropertyText(detail.lotSize, 80),
+            yearBuilt: sanitizeSharedPropertyText(detail.yearBuilt, 40),
+            lockboxType: sanitizeSharedPropertyText(detail.lockboxType, 120),
+            occupied: sanitizeSharedPropertyText(detail.occupied, 80),
+            showing: sanitizeSharedPropertyText(detail.showing, 200),
+            piqAgentStatus: sanitizeSharedPropertyText(detail.piqAgentStatus, 60),
+            sourceListingUrl: sanitizeSharedPropertyText(detail.sourceListingUrl, 500),
+            sourceListingLabel: sanitizeSharedPropertyText(detail.sourceListingLabel, 80),
+            sourceListingLinks: sanitizeSharedPropertyLinks(detail.sourceListingLinks),
+            agentRecord: {
+                name: sanitizeSharedPropertyText(agentRecord.name, 120),
+                title: sanitizeSharedPropertyText(agentRecord.title, 120),
+                phone: sanitizeSharedPropertyText(agentRecord.phone, 60),
+                email: sanitizeSharedPropertyText(agentRecord.email, 160),
+                brokerage: sanitizeSharedPropertyText(agentRecord.brokerage, 160),
+                lastCommunicationDate: sanitizeSharedPropertyText(agentRecord.lastCommunicationDate, 80),
+                lastAddressDiscussed: sanitizeSharedPropertyText(agentRecord.lastAddressDiscussed, 180),
+                lastCommunicatedAA: sanitizeSharedPropertyText(agentRecord.lastCommunicatedAA, 120),
+                activeInLast2Years: sanitizeSharedPropertyText(agentRecord.activeInLast2Years, 40),
+                averageDealsPerYear: sanitizeSharedPropertyText(agentRecord.averageDealsPerYear, 40),
+                doubleEnded: sanitizeSharedPropertyText(agentRecord.doubleEnded, 40),
+                investorSource: sanitizeSharedPropertyText(agentRecord.investorSource, 40),
+                agentStatus: sanitizeSharedPropertyText(agentRecord.agentStatus, 80)
+            }
+        };
+
+        return Object.keys(snapshot).reduce((accumulator, key) => {
+            const value = snapshot[key];
+            if (Array.isArray(value)) {
+                if (value.length > 0) {
+                    accumulator[key] = value;
+                }
+                return accumulator;
+            }
+
+            if (value && typeof value === 'object') {
+                if (Object.keys(value).length > 0) {
+                    accumulator[key] = value;
+                }
+                return accumulator;
+            }
+
+            if (value !== '') {
+                accumulator[key] = value;
+            }
+            return accumulator;
+        }, {});
+    }
+
+    function buildFastSharedPropertyMessage(detailLike, introMessage, senderLike) {
+        const propertySnapshot = createShareablePropertyDetailSnapshot(detailLike);
+        const sender = buildUserIdentity(senderLike || getWorkspaceUserContext());
+        const payload = {
+            version: 1,
+            type: 'shared-property',
+            introMessage: sanitizeSharedPropertyText(introMessage, 500),
+            sentAt: new Date().toISOString(),
+            sender: {
+                name: sanitizeSharedPropertyText(sender && sender.name, 120),
+                email: sanitizeSharedPropertyText(sender && sender.email, 160)
+            },
+            property: propertySnapshot
+        };
+
+        return `${FAST_SHARED_PROPERTY_MESSAGE_MARKER}\n${JSON.stringify(payload)}`;
+    }
+
+    function parseFastSharedPropertyMessage(body) {
+        const rawBody = String(body || '').trim();
+        if (!rawBody.startsWith(FAST_SHARED_PROPERTY_MESSAGE_MARKER)) {
+            return null;
+        }
+
+        const serializedPayload = rawBody.slice(FAST_SHARED_PROPERTY_MESSAGE_MARKER.length).trim();
+        if (!serializedPayload) {
+            return null;
+        }
+
+        try {
+            const parsedPayload = JSON.parse(serializedPayload);
+            if (!parsedPayload || typeof parsedPayload !== 'object' || parsedPayload.type !== 'shared-property') {
+                return null;
+            }
+
+            const property = createShareablePropertyDetailSnapshot(parsedPayload.property);
+            const introMessage = sanitizeSharedPropertyText(parsedPayload.introMessage, 500);
+            const sender = parsedPayload.sender && typeof parsedPayload.sender === 'object'
+                ? {
+                    name: sanitizeSharedPropertyText(parsedPayload.sender.name, 120),
+                    email: sanitizeSharedPropertyText(parsedPayload.sender.email, 160)
+                }
+                : { name: '', email: '' };
+            const address = sanitizeSharedPropertyText(property.address || property.propertyCover || 'Shared property', 180) || 'Shared property';
+
+            return {
+                version: Number(parsedPayload.version) || 1,
+                type: 'shared-property',
+                introMessage,
+                sender,
+                sentAt: sanitizeSharedPropertyText(parsedPayload.sentAt, 80),
+                property,
+                address,
+                previewText: introMessage
+                    ? `Shared property: ${address} - ${sanitizeSharedPropertyText(introMessage, 90)}`
+                    : `Shared property: ${address}`
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function getFastMessagePreviewText(body, fallbackText) {
+        const sharedPropertyMessage = parseFastSharedPropertyMessage(body);
+        if (sharedPropertyMessage) {
+            return sharedPropertyMessage.previewText;
+        }
+
+        return sanitizeSharedPropertyText(body || fallbackText || '', 220);
+    }
+
+    window.buildFastSharedPropertyMessage = buildFastSharedPropertyMessage;
+    window.parseFastSharedPropertyMessage = parseFastSharedPropertyMessage;
+    window.getFastMessagePreviewText = getFastMessagePreviewText;
 
     function buildPropertyAssignmentMeta(assignmentLike) {
         if (!assignmentLike || typeof assignmentLike !== 'object') {
@@ -15971,6 +16180,290 @@ function initNavbarDateTime() {
 
             applyAgentWorkspaceRecord(getCurrentAgentRecordState());
             renderPropertyListingLink();
+        }
+
+        function ensurePropertyShareModal() {
+            const existingModal = document.getElementById('property-share-modal');
+            if (existingModal) {
+                return existingModal;
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'property-share-modal';
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            modal.innerHTML = `
+                <div class="notes-folder-modal-backdrop" data-property-share-close="true"></div>
+                <div class="notes-folder-modal-card" data-property-share-dialog="true" role="dialog" aria-modal="true" aria-labelledby="property-share-modal-title">
+                    <div class="notes-folder-modal-head">
+                        <button type="button" class="notes-folder-modal-circle-btn" data-property-share-close="true" aria-label="Close property share dialog">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+                        </button>
+                        <h3 id="property-share-modal-title" class="notes-folder-modal-title">Send Property In FBG</h3>
+                        <button id="property-share-send-btn" type="button" class="notes-folder-modal-done-btn" aria-label="Send property to teammate">
+                            Send
+                        </button>
+                    </div>
+                    <p class="notes-folder-modal-copy">Pick a teammate, add an optional note, and FAST will send a clickable property card through internal messaging.</p>
+                    <div style="display:grid;gap:14px;margin-top:6px;">
+                        <label style="display:grid;gap:8px;">
+                            <span style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(148,163,184,0.92);">Send To</span>
+                            <select id="property-share-recipient-select" class="form-input" aria-label="Select teammate to receive this property">
+                                <option value="">Choose teammate</option>
+                            </select>
+                        </label>
+                        <label style="display:grid;gap:8px;">
+                            <span style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(148,163,184,0.92);">Message</span>
+                            <textarea id="property-share-message-input" class="form-input" rows="3" maxlength="500" placeholder="Add a quick note about this property before sending it."></textarea>
+                        </label>
+                        <div style="display:grid;gap:8px;">
+                            <span style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(148,163,184,0.92);">Preview</span>
+                            <div id="property-share-preview" style="max-height:240px;overflow:auto;border-radius:20px;border:1px solid rgba(148,163,184,0.18);background:rgba(15,23,42,0.7);padding:16px 18px;color:#e2e8f0;font-size:14px;line-height:1.55;white-space:pre-wrap;"></div>
+                        </div>
+                        <p id="property-share-status" style="min-height:20px;margin:0;color:rgba(148,163,184,0.92);font-size:13px;"></p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            return modal;
+        }
+
+        const propertyShareButton = document.getElementById('property-share-message-btn');
+        const propertyShareModal = ensurePropertyShareModal();
+        const propertyShareRecipient = propertyShareModal ? propertyShareModal.querySelector('#property-share-recipient-select') : null;
+        const propertyShareMessageInput = propertyShareModal ? propertyShareModal.querySelector('#property-share-message-input') : null;
+        const propertySharePreview = propertyShareModal ? propertyShareModal.querySelector('#property-share-preview') : null;
+        const propertyShareStatus = propertyShareModal ? propertyShareModal.querySelector('#property-share-status') : null;
+        const propertyShareSendButton = propertyShareModal ? propertyShareModal.querySelector('#property-share-send-btn') : null;
+        const propertyShareCloseButtons = propertyShareModal ? Array.from(propertyShareModal.querySelectorAll('[data-property-share-close="true"]')) : [];
+        let propertyShareUsersCache = [];
+
+        function setPropertyShareStatus(message, isError) {
+            if (!propertyShareStatus) {
+                return;
+            }
+            propertyShareStatus.textContent = String(message || '').trim();
+            propertyShareStatus.style.color = isError ? 'var(--danger)' : 'rgba(148,163,184,0.92)';
+        }
+
+        function getPropertyShareAuthToken() {
+            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        }
+
+        async function fetchPropertyShareableUsers() {
+            const token = getPropertyShareAuthToken();
+            if (!token) {
+                throw new Error('Sign in again before sending a property.');
+            }
+
+            const response = await fetch('/api/messages/users', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json'
+                }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to load teammates for property sharing.');
+            }
+
+            return Array.isArray(payload.users) ? payload.users : [];
+        }
+
+        function populatePropertyShareRecipients(users) {
+            if (!propertyShareRecipient) {
+                return;
+            }
+
+            const previousValue = String(propertyShareRecipient.value || '').trim();
+            propertyShareRecipient.innerHTML = '<option value="">Choose teammate</option>';
+
+            (Array.isArray(users) ? users : []).forEach((user) => {
+                const option = document.createElement('option');
+                option.value = String(user && user.id || '').trim();
+                option.textContent = String(user && (user.name || user.email) || 'User').trim() || 'User';
+                propertyShareRecipient.appendChild(option);
+            });
+
+            if (previousValue && Array.isArray(users) && users.some((user) => String(user && user.id || '') === previousValue)) {
+                propertyShareRecipient.value = previousValue;
+            }
+        }
+
+        function renderPropertySharePreview() {
+            if (!propertySharePreview) {
+                return;
+            }
+
+            const summaryLines = [
+                'Shared Property',
+                detailData.address || 'Property',
+                [detailData.listPrice || '', detailData.marketInfo || ''].filter(Boolean).join(' • '),
+                detailData.propertyDetails || ''
+            ].filter(Boolean);
+            const intro = sanitizeSharedPropertyText(propertyShareMessageInput && propertyShareMessageInput.value, 500);
+            if (intro) {
+                summaryLines.push('', `Note: ${intro}`);
+            }
+            summaryLines.push('', 'The recipient will be able to open this in Property Details from FBG Messages.');
+            propertySharePreview.textContent = summaryLines.join('\n');
+        }
+
+        function openPropertyShareModal() {
+            if (!propertyShareModal) {
+                return;
+            }
+
+            if (propertyShareMessageInput) {
+                propertyShareMessageInput.value = '';
+            }
+            setPropertyShareStatus('', false);
+            renderPropertySharePreview();
+            propertyShareModal.hidden = false;
+            propertyShareModal.setAttribute('aria-hidden', 'false');
+
+            if (propertyShareRecipient) {
+                propertyShareRecipient.innerHTML = '<option value="">Loading teammates...</option>';
+                propertyShareRecipient.disabled = true;
+            }
+            if (propertyShareSendButton) {
+                propertyShareSendButton.disabled = true;
+            }
+
+            void fetchPropertyShareableUsers()
+                .then((users) => {
+                    propertyShareUsersCache = users;
+                    populatePropertyShareRecipients(users);
+                    if (propertyShareRecipient) {
+                        propertyShareRecipient.disabled = false;
+                        if (propertyShareRecipient.options.length > 1) {
+                            propertyShareRecipient.selectedIndex = 1;
+                        }
+                        propertyShareRecipient.focus();
+                    }
+                    if (propertyShareSendButton) {
+                        propertyShareSendButton.disabled = false;
+                    }
+                })
+                .catch((error) => {
+                    setPropertyShareStatus(error && error.message ? error.message : 'Unable to load teammates for property sharing.', true);
+                    if (propertyShareRecipient) {
+                        propertyShareRecipient.innerHTML = '<option value="">No teammates available</option>';
+                        propertyShareRecipient.disabled = true;
+                    }
+                    if (propertyShareSendButton) {
+                        propertyShareSendButton.disabled = true;
+                    }
+                });
+        }
+
+        function closePropertyShareModal() {
+            if (!propertyShareModal) {
+                return;
+            }
+            propertyShareModal.hidden = true;
+            propertyShareModal.setAttribute('aria-hidden', 'true');
+            setPropertyShareStatus('', false);
+        }
+
+        async function sendSharedPropertyToUser() {
+            const recipientUserId = Number.parseInt(String(propertyShareRecipient && propertyShareRecipient.value || ''), 10);
+            if (!Number.isInteger(recipientUserId) || recipientUserId <= 0) {
+                setPropertyShareStatus('Choose a teammate to receive this property.', true);
+                return;
+            }
+
+            const token = getPropertyShareAuthToken();
+            if (!token) {
+                setPropertyShareStatus('Sign in again before sending a property.', true);
+                return;
+            }
+
+            const body = buildFastSharedPropertyMessage(detailData, propertyShareMessageInput && propertyShareMessageInput.value, mergeUserIdentityRecords(workspaceUser, activeUser));
+            if (!body) {
+                setPropertyShareStatus('This property is missing the data required to share it.', true);
+                return;
+            }
+
+            if (propertyShareSendButton) {
+                propertyShareSendButton.disabled = true;
+            }
+            setPropertyShareStatus('Sending property...', false);
+
+            try {
+                const response = await fetch(`/api/messages/conversations/${recipientUserId}`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({ body })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Unable to send the property.');
+                }
+
+                const recipient = propertyShareUsersCache.find((user) => Number(user && user.id) === recipientUserId) || null;
+                closePropertyShareModal();
+                showDashboardToast('success', 'Property Sent', `${String(detailData.address || 'Property').trim()} was sent to ${String(recipient && (recipient.name || recipient.email) || 'your teammate').trim()}.`, {
+                    eyebrow: 'FBG Messages',
+                    meta: 'They can open it directly in Property Details.'
+                });
+            } catch (error) {
+                setPropertyShareStatus(error && error.message ? error.message : 'Unable to send the property.', true);
+            } finally {
+                if (propertyShareSendButton) {
+                    propertyShareSendButton.disabled = false;
+                }
+            }
+        }
+
+        if (propertyShareButton) {
+            propertyShareButton.addEventListener('click', openPropertyShareModal);
+        }
+
+        propertyShareCloseButtons.forEach((button) => {
+            button.addEventListener('click', closePropertyShareModal);
+        });
+
+        if (propertyShareRecipient) {
+            propertyShareRecipient.addEventListener('change', () => {
+                setPropertyShareStatus('', false);
+                renderPropertySharePreview();
+            });
+        }
+
+        if (propertyShareMessageInput) {
+            propertyShareMessageInput.addEventListener('input', () => {
+                setPropertyShareStatus('', false);
+                renderPropertySharePreview();
+            });
+            propertyShareMessageInput.addEventListener('keydown', (event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                    event.preventDefault();
+                    void sendSharedPropertyToUser();
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closePropertyShareModal();
+                }
+            });
+        }
+
+        if (propertyShareSendButton) {
+            propertyShareSendButton.addEventListener('click', () => {
+                void sendSharedPropertyToUser();
+            });
+        }
+
+        if (propertyShareModal) {
+            propertyShareModal.addEventListener('click', (event) => {
+                if (event.target === propertyShareModal) {
+                    closePropertyShareModal();
+                }
+            });
         }
 
         renderPropertyDetailSnapshot();

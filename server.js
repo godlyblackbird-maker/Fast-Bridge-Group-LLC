@@ -7219,8 +7219,8 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
     return res.status(400).json({ error: 'Message text is required.' });
   }
 
-  if (body.length > 4000) {
-    return res.status(400).json({ error: 'Keep messages under 4000 characters.' });
+  if (body.length > 20000) {
+    return res.status(400).json({ error: 'Keep messages under 20000 characters.' });
   }
 
   try {
