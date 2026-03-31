@@ -4996,21 +4996,38 @@ body.analytics-reboot {
 }
 
 [data-theme="beach"] body.analytics-reboot {
-    --analytics-navbar-bg: linear-gradient(135deg, rgba(66, 38, 12, 0.88), rgba(120, 65, 18, 0.72));
-    --analytics-hero-bg: linear-gradient(135deg, rgba(90, 49, 14, 0.94), rgba(166, 92, 31, 0.84));
-    --analytics-panel-bg: linear-gradient(145deg, rgba(85, 48, 16, 0.94), rgba(148, 84, 24, 0.88));
-    --analytics-panel-alt-bg: linear-gradient(145deg, rgba(126, 70, 24, 0.92), rgba(88, 51, 20, 0.88));
-    --analytics-panel-strong-bg: linear-gradient(145deg, rgba(101, 58, 19, 0.95), rgba(177, 104, 34, 0.9));
-    --analytics-panel-soft-bg: linear-gradient(145deg, rgba(120, 69, 23, 0.94), rgba(94, 55, 20, 0.88));
-    --analytics-border: rgba(255, 236, 204, 0.12);
-    --analytics-chip-bg: rgba(255, 248, 235, 0.12);
-    --analytics-chip-border: rgba(255, 235, 196, 0.14);
-    --analytics-chip-text: rgba(255, 246, 230, 0.86);
-    --analytics-card-strong-border: rgba(251, 191, 36, 0.22);
-    --analytics-pill-active-bg: linear-gradient(135deg, #fbbf24, #fde68a);
-    --analytics-count-bg: rgba(251, 191, 36, 0.12);
-    --analytics-count-border: rgba(251, 191, 36, 0.22);
-    --analytics-count-text: #fff1c2;
+    --analytics-page-background:
+        radial-gradient(circle at 0% 0%, rgba(34, 211, 238, 0.16), transparent 28%),
+        radial-gradient(circle at 100% 0%, rgba(251, 146, 60, 0.14), transparent 30%),
+        radial-gradient(circle at 50% 100%, rgba(251, 191, 36, 0.16), transparent 34%);
+    --analytics-navbar-bg: linear-gradient(135deg, rgba(236, 253, 255, 0.9), rgba(255, 244, 214, 0.82));
+    --analytics-hero-bg: linear-gradient(135deg, rgba(225, 248, 255, 0.96), rgba(255, 237, 204, 0.9));
+    --analytics-panel-bg: linear-gradient(145deg, rgba(239, 252, 255, 0.94), rgba(216, 244, 255, 0.88));
+    --analytics-panel-alt-bg: linear-gradient(145deg, rgba(255, 248, 235, 0.94), rgba(228, 248, 255, 0.88));
+    --analytics-panel-strong-bg: linear-gradient(145deg, rgba(255, 243, 219, 0.95), rgba(220, 246, 255, 0.9));
+    --analytics-panel-soft-bg: linear-gradient(145deg, rgba(247, 252, 255, 0.94), rgba(236, 249, 255, 0.88));
+    --analytics-border: rgba(12, 74, 110, 0.12);
+    --analytics-border-strong: rgba(12, 74, 110, 0.18);
+    --analytics-text: #0b3a52;
+    --analytics-text-soft: rgba(11, 58, 82, 0.76);
+    --analytics-text-muted: rgba(11, 58, 82, 0.58);
+    --analytics-chip-bg: rgba(255, 255, 255, 0.48);
+    --analytics-chip-border: rgba(12, 74, 110, 0.12);
+    --analytics-chip-text: rgba(11, 58, 82, 0.82);
+    --analytics-card-soft-bg: rgba(255, 255, 255, 0.5);
+    --analytics-card-strong-bg: rgba(255, 255, 255, 0.7);
+    --analytics-card-strong-border: rgba(14, 165, 233, 0.18);
+    --analytics-positive-bg: rgba(14, 165, 233, 0.1);
+    --analytics-positive-border: rgba(14, 165, 233, 0.14);
+    --analytics-positive-text: #0b7285;
+    --analytics-pill-active-bg: linear-gradient(135deg, #38bdf8, #fde68a);
+    --analytics-pill-active-text: #0b3a52;
+    --analytics-button-bg: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(251, 191, 36, 0.14));
+    --analytics-button-bg-hover: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(251, 191, 36, 0.22));
+    --analytics-button-border-hover: rgba(14, 165, 233, 0.24);
+    --analytics-count-bg: rgba(14, 165, 233, 0.12);
+    --analytics-count-border: rgba(12, 74, 110, 0.16);
+    --analytics-count-text: #0b5f7a;
 }
 
 [data-theme="sunset"] body.analytics-reboot {
