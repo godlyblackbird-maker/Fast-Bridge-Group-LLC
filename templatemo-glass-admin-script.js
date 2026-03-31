@@ -4137,13 +4137,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     const daysCovered = totalEarned > 0 ? (totalEarned / dailyGoal) : 0;
                     numbersGoalDisplayEl.textContent = `Daily goal: ${formatClosedDealMoney(dailyGoal)} • ${label.charAt(0).toUpperCase() + label.slice(1)} covers ${daysCovered.toFixed(1)} goal day${daysCovered === 1 ? '' : 's'}`;
                 } else {
-                    numbersGoalDisplayEl.textContent = 'Set your daily number goal.';
+                        numbersGoalDisplayEl.textContent = 'Set your yearly numer goal.';
                 }
             }
 
             if (numbersGoalMetaEl) {
                 numbersGoalMetaEl.textContent = dailyGoal > 0
-                    ? 'Your daily number goal saves automatically as you type. Press Enter or click the arrow to confirm.'
+                        ? ''
                     : 'Track the amount you want to net each day.';
             }
         }
@@ -8564,6 +8564,273 @@ function initNavbarDateTime() {
         let composeOnLoad = initialRouteParams.get('compose') === '1';
         let lastSyncedWorkspaceHref = '';
         const expandedFolderIds = new Set([DEFAULT_FOLDER_ID]);
+        const noteShareModal = ensureNoteShareModal();
+        const noteShareDialog = noteShareModal ? noteShareModal.querySelector('[data-notes-share-dialog="true"]') : null;
+        const noteShareRecipient = noteShareModal ? noteShareModal.querySelector('#notes-share-recipient-select') : null;
+        const noteShareMessage = noteShareModal ? noteShareModal.querySelector('#notes-share-message-input') : null;
+        const noteSharePreview = noteShareModal ? noteShareModal.querySelector('#notes-share-preview') : null;
+        const noteShareStatus = noteShareModal ? noteShareModal.querySelector('#notes-share-status') : null;
+        const noteShareSendButton = noteShareModal ? noteShareModal.querySelector('#notes-share-send-btn') : null;
+        const noteShareCloseButtons = noteShareModal ? Array.from(noteShareModal.querySelectorAll('[data-notes-share-close="true"]')) : [];
+        let noteShareUsersCache = [];
+
+        function ensureNoteShareModal() {
+            const existingModal = document.getElementById('notes-share-modal');
+            if (existingModal) {
+                return existingModal;
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'notes-share-modal';
+            modal.className = 'notes-folder-modal';
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            modal.innerHTML = `
+                <div class="notes-folder-modal-backdrop" data-notes-share-close="true"></div>
+                <div class="notes-folder-modal-card" data-notes-share-dialog="true" role="dialog" aria-modal="true" aria-labelledby="notes-share-modal-title">
+                    <div class="notes-folder-modal-header">
+                        <button type="button" class="notes-folder-modal-circle-btn" data-notes-share-close="true" aria-label="Close share note dialog">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                        <h3 id="notes-share-modal-title" class="notes-folder-modal-title">Send Property Note</h3>
+                        <button id="notes-share-send-btn" type="button" class="notes-folder-modal-done-btn" aria-label="Send property note">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg>
+                        </button>
+                    </div>
+                    <div style="display:grid;gap:14px;margin-top:6px;">
+                        <label style="display:grid;gap:8px;">
+                            <span style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(148,163,184,0.92);">Send To</span>
+                            <select id="notes-share-recipient-select" class="form-input" aria-label="Select teammate to receive this property note">
+                                <option value="">Choose teammate</option>
+                            </select>
+                        </label>
+                        <label style="display:grid;gap:8px;">
+                            <span style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(148,163,184,0.92);">Message</span>
+                            <textarea id="notes-share-message-input" class="form-input" rows="3" maxlength="500" placeholder="Add a quick note before sending this property note."></textarea>
+                        </label>
+                        <div style="display:grid;gap:8px;">
+                            <span style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(148,163,184,0.92);">Preview</span>
+                            <div id="notes-share-preview" style="max-height:240px;overflow:auto;border-radius:20px;border:1px solid rgba(148,163,184,0.18);background:rgba(15,23,42,0.7);padding:16px 18px;color:#e2e8f0;font-size:14px;line-height:1.55;white-space:pre-wrap;"></div>
+                        </div>
+                        <p id="notes-share-status" style="min-height:20px;margin:0;color:rgba(148,163,184,0.92);font-size:13px;"></p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            return modal;
+        }
+
+        function getSelectedNoteRecord(dataLike) {
+            const data = dataLike && typeof dataLike === 'object' ? dataLike : getNotesData();
+            return data.notes.find((note) => note.id === selectedNoteId && !note.deletedAt) || null;
+        }
+
+        function getNotesShareAuthToken() {
+            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        }
+
+        async function fetchShareableMessageUsers() {
+            const token = getNotesShareAuthToken();
+            if (!token) {
+                throw new Error('Sign in again before sending property notes.');
+            }
+
+            const response = await fetch('/api/messages/users', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json'
+                }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || 'Unable to load teammates for note sharing.');
+            }
+            return Array.isArray(payload.users) ? payload.users : [];
+        }
+
+        function setNoteShareStatus(message, isError) {
+            if (!noteShareStatus) {
+                return;
+            }
+            noteShareStatus.textContent = String(message || '').trim();
+            noteShareStatus.style.color = isError ? 'var(--danger)' : 'rgba(148,163,184,0.92)';
+        }
+
+        function buildSharedPropertyNoteMessage(note, dataLike, introMessage) {
+            const data = dataLike && typeof dataLike === 'object' ? dataLike : getNotesData();
+            const safeNote = note && typeof note === 'object' ? note : {};
+            const folderName = getFolderName(safeNote.folderId, data.folders);
+            const noteTitle = getNoteDisplayTitle(safeNote);
+            const noteBody = String(safeNote.body || '').trim();
+            const intro = String(introMessage || '').trim();
+            const senderName = String(workspaceUser && workspaceUser.name || workspaceUser && workspaceUser.email || 'A FAST user').trim();
+            const lines = [
+                '[Shared Property Note]',
+                `Property: ${noteTitle}`,
+                `Folder: ${folderName}`,
+                `From: ${senderName}`
+            ];
+
+            if (intro) {
+                lines.push('', intro);
+            }
+
+            lines.push('', noteBody || '(No note body added yet.)');
+            return lines.join('\n').trim();
+        }
+
+        function populateNoteShareRecipients(users) {
+            if (!noteShareRecipient) {
+                return;
+            }
+
+            const previousValue = String(noteShareRecipient.value || '').trim();
+            noteShareRecipient.innerHTML = '<option value="">Choose teammate</option>';
+
+            (Array.isArray(users) ? users : []).forEach((user) => {
+                const option = document.createElement('option');
+                option.value = String(user && user.id || '').trim();
+                option.textContent = String(user && (user.name || user.email) || 'User').trim() || 'User';
+                noteShareRecipient.appendChild(option);
+            });
+
+            if (previousValue && Array.isArray(users) && users.some((user) => String(user && user.id || '') === previousValue)) {
+                noteShareRecipient.value = previousValue;
+            }
+        }
+
+        function renderNoteSharePreview() {
+            if (!noteSharePreview) {
+                return;
+            }
+            const selectedNote = getSelectedNoteRecord();
+            noteSharePreview.textContent = selectedNote
+                ? buildSharedPropertyNoteMessage(selectedNote, getNotesData(), noteShareMessage && noteShareMessage.value)
+                : 'Select a note first so FAST can package it into a direct message.';
+        }
+
+        function openNoteShareModal() {
+            const selectedNote = getSelectedNoteRecord();
+            if (!selectedNote) {
+                showDashboardToast('error', 'No Note Selected', 'Open the property note you want to send first.');
+                return;
+            }
+
+            if (noteShareMessage) {
+                noteShareMessage.value = '';
+            }
+            setNoteShareStatus('', false);
+            renderNoteSharePreview();
+
+            if (noteShareModal) {
+                noteShareModal.hidden = false;
+                noteShareModal.setAttribute('aria-hidden', 'false');
+            }
+
+            if (noteShareRecipient) {
+                noteShareRecipient.innerHTML = '<option value="">Loading teammates...</option>';
+                noteShareRecipient.disabled = true;
+            }
+            if (noteShareSendButton) {
+                noteShareSendButton.disabled = true;
+            }
+
+            void fetchShareableMessageUsers()
+                .then((users) => {
+                    noteShareUsersCache = users;
+                    populateNoteShareRecipients(users);
+                    if (noteShareRecipient) {
+                        noteShareRecipient.disabled = false;
+                        if (noteShareRecipient.options.length > 1) {
+                            noteShareRecipient.selectedIndex = 1;
+                        }
+                        noteShareRecipient.focus();
+                    }
+                    if (noteShareSendButton) {
+                        noteShareSendButton.disabled = false;
+                    }
+                })
+                .catch((error) => {
+                    setNoteShareStatus(error && error.message ? error.message : 'Unable to load teammates for sharing.', true);
+                    if (noteShareRecipient) {
+                        noteShareRecipient.innerHTML = '<option value="">No teammates available</option>';
+                        noteShareRecipient.disabled = true;
+                    }
+                    if (noteShareSendButton) {
+                        noteShareSendButton.disabled = true;
+                    }
+                });
+        }
+
+        function closeNoteShareModal() {
+            if (!noteShareModal) {
+                return;
+            }
+            noteShareModal.hidden = true;
+            noteShareModal.setAttribute('aria-hidden', 'true');
+            setNoteShareStatus('', false);
+        }
+
+        async function sendSelectedNoteToUser() {
+            const selectedNote = getSelectedNoteRecord();
+            const recipientUserId = Number.parseInt(String(noteShareRecipient && noteShareRecipient.value || ''), 10);
+
+            if (!selectedNote) {
+                setNoteShareStatus('Open a property note before sending it.', true);
+                return;
+            }
+
+            if (!Number.isInteger(recipientUserId) || recipientUserId <= 0) {
+                setNoteShareStatus('Choose a teammate to receive this property note.', true);
+                return;
+            }
+
+            const token = getNotesShareAuthToken();
+            if (!token) {
+                setNoteShareStatus('Sign in again before sending property notes.', true);
+                return;
+            }
+
+            const body = buildSharedPropertyNoteMessage(selectedNote, getNotesData(), noteShareMessage && noteShareMessage.value);
+            if (!body) {
+                setNoteShareStatus('There is no property note content to send yet.', true);
+                return;
+            }
+
+            if (noteShareSendButton) {
+                noteShareSendButton.disabled = true;
+            }
+            setNoteShareStatus('Sending property note...', false);
+
+            try {
+                const response = await fetch(`/api/messages/conversations/${recipientUserId}`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({ body })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Unable to send the property note.');
+                }
+
+                const recipient = noteShareUsersCache.find((user) => Number(user && user.id) === recipientUserId) || null;
+                closeNoteShareModal();
+                showDashboardToast('success', 'Property Note Sent', `${getNoteDisplayTitle(selectedNote)} was sent to ${String(recipient && (recipient.name || recipient.email) || 'your teammate').trim()}.`, {
+                    eyebrow: 'FBG Messages',
+                    meta: 'Open FBG Messages to continue the conversation.'
+                });
+            } catch (error) {
+                setNoteShareStatus(error && error.message ? error.message : 'Unable to send the property note.', true);
+            } finally {
+                if (noteShareSendButton) {
+                    noteShareSendButton.disabled = false;
+                }
+            }
+        }
 
         function normalizeNotesData(rawValue) {
             const value = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) ? rawValue : {};
@@ -9616,7 +9883,9 @@ function initNavbarDateTime() {
                 pinToggleButton.setAttribute('aria-pressed', 'false');
                 completeToggleButton.classList.remove('is-active');
                 completeToggleButton.setAttribute('aria-pressed', 'false');
+                    shareNoteButton.disabled = true;
                 renderFolderSelect(data, DEFAULT_FOLDER_ID);
+                    closeNoteShareModal();
                 return;
             }
 
@@ -9631,6 +9900,7 @@ function initNavbarDateTime() {
             pinToggleButton.setAttribute('aria-pressed', selectedNote.pinned ? 'true' : 'false');
             completeToggleButton.classList.toggle('is-active', Boolean(selectedNote.completed));
             completeToggleButton.setAttribute('aria-pressed', selectedNote.completed ? 'true' : 'false');
+                shareNoteButton.disabled = false;
             renderFolderSelect(data, selectedNote.folderId);
         }
 
@@ -9750,7 +10020,7 @@ function initNavbarDateTime() {
         });
 
         shareNoteButton.addEventListener('click', () => {
-            showDashboardToast('info', 'Share Notes Coming Soon', 'Share actions are not connected yet, but the layout is ready for it.');
+            openNoteShareModal();
         });
 
         moreNoteButton.addEventListener('click', () => {
@@ -9783,6 +10053,51 @@ function initNavbarDateTime() {
                 closeFolderModal();
             }
         });
+
+        noteShareCloseButtons.forEach((button) => {
+            button.addEventListener('click', closeNoteShareModal);
+        });
+
+        if (noteShareRecipient) {
+            noteShareRecipient.addEventListener('change', () => {
+                setNoteShareStatus('', false);
+                renderNoteSharePreview();
+            });
+        }
+
+        if (noteShareMessage) {
+            noteShareMessage.addEventListener('input', () => {
+                setNoteShareStatus('', false);
+                renderNoteSharePreview();
+            });
+
+            noteShareMessage.addEventListener('keydown', (event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                    event.preventDefault();
+                    void sendSelectedNoteToUser();
+                    return;
+                }
+
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeNoteShareModal();
+                }
+            });
+        }
+
+        if (noteShareSendButton) {
+            noteShareSendButton.addEventListener('click', () => {
+                void sendSelectedNoteToUser();
+            });
+        }
+
+        if (noteShareModal) {
+            noteShareModal.addEventListener('click', (event) => {
+                if (event.target === noteShareModal) {
+                    closeNoteShareModal();
+                }
+            });
+        }
 
         searchInput.addEventListener('input', () => {
             searchQuery = String(searchInput.value || '').trim();

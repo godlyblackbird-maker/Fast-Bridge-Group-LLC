@@ -157,6 +157,648 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        body.analytics-reboot .main-content {
+            position: relative;
+            padding: 30px 34px 48px;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(34, 197, 94, 0.12), transparent 28%),
+                radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.16), transparent 30%),
+                radial-gradient(circle at 50% 100%, rgba(14, 165, 233, 0.1), transparent 34%);
+        }
+
+        body.analytics-reboot .analytics-navbar {
+            position: sticky;
+            top: 18px;
+            z-index: 12;
+            margin-bottom: 22px;
+            padding: 18px 22px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+            background: linear-gradient(135deg, rgba(10, 16, 28, 0.9), rgba(15, 23, 42, 0.72));
+            box-shadow: 0 24px 60px rgba(2, 6, 23, 0.24);
+            backdrop-filter: blur(20px);
+        }
+
+        body.analytics-reboot .analytics-intro {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.8fr);
+            gap: 22px;
+            padding: 30px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 34px;
+            background:
+                linear-gradient(135deg, rgba(9, 14, 23, 0.94), rgba(18, 28, 45, 0.88)),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(2, 6, 23, 0.24);
+        }
+
+        body.analytics-reboot .analytics-intro::before {
+            content: '';
+            position: absolute;
+            inset: -20% auto auto -5%;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(34, 197, 94, 0.18), transparent 68%);
+            pointer-events: none;
+        }
+
+        body.analytics-reboot .analytics-intro::after {
+            content: '';
+            position: absolute;
+            right: -40px;
+            bottom: -80px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.18), transparent 70%);
+            pointer-events: none;
+        }
+
+        body.analytics-reboot .analytics-intro-copy,
+        body.analytics-reboot .analytics-intro-board {
+            position: relative;
+            z-index: 1;
+        }
+
+        body.analytics-reboot .analytics-intro-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        body.analytics-reboot .analytics-intro-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(125, 211, 252, 0.12);
+            border: 1px solid rgba(125, 211, 252, 0.22);
+            color: #c7e8ff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        body.analytics-reboot .analytics-intro-title {
+            margin: 0;
+            font-size: clamp(2.2rem, 4vw, 3.7rem);
+            line-height: 1;
+            letter-spacing: -0.04em;
+            max-width: 12ch;
+        }
+
+        body.analytics-reboot .analytics-intro-copy p {
+            margin: 0;
+            max-width: 58ch;
+            color: rgba(232, 241, 255, 0.8);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        body.analytics-reboot .analytics-intro-points {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        body.analytics-reboot .analytics-intro-points span {
+            padding: 9px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(232, 241, 255, 0.84);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        body.analytics-reboot .analytics-intro-board {
+            display: grid;
+            gap: 14px;
+            align-content: start;
+        }
+
+        body.analytics-reboot .analytics-board-card {
+            padding: 18px 20px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+            backdrop-filter: blur(18px);
+        }
+
+        body.analytics-reboot .analytics-board-card strong,
+        body.analytics-reboot .analytics-board-card span {
+            display: block;
+        }
+
+        body.analytics-reboot .analytics-board-label {
+            margin-bottom: 6px;
+            color: rgba(232, 241, 255, 0.62);
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        body.analytics-reboot .analytics-board-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.45rem;
+            color: #f8fafc;
+        }
+
+        body.analytics-reboot .analytics-board-note {
+            margin-top: 8px;
+            color: rgba(232, 241, 255, 0.7);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        body.analytics-reboot .analytics-layout-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.34fr) minmax(280px, 0.82fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        body.analytics-reboot .analytics-panel,
+        body.analytics-reboot .analytics-kpi-panel,
+        body.analytics-reboot .analytics-deal-studio-card,
+        body.analytics-reboot .analytics-vault-card {
+            position: relative;
+            border-radius: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 26px 60px rgba(2, 6, 23, 0.22);
+            overflow: hidden;
+        }
+
+        body.analytics-reboot .analytics-panel {
+            padding: 28px;
+            background:
+                linear-gradient(145deg, rgba(10, 17, 29, 0.96), rgba(16, 28, 48, 0.9));
+        }
+
+        body.analytics-reboot .analytics-numbers-card::before,
+        body.analytics-reboot .analytics-deal-studio-card::before,
+        body.analytics-reboot .analytics-vault-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.06), transparent 28%, transparent 72%, rgba(255, 255, 255, 0.05));
+            pointer-events: none;
+        }
+
+        body.analytics-reboot .analytics-numbers-card .stat-card-inner {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 144px;
+            gap: 22px;
+            align-items: stretch;
+        }
+
+        body.analytics-reboot .analytics-panel .stat-info h3,
+        body.analytics-reboot .analytics-kpi-panel .stat-info h3 {
+            margin: 0 0 10px;
+            color: rgba(232, 241, 255, 0.56);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        body.analytics-reboot .analytics-panel .stat-value,
+        body.analytics-reboot .analytics-kpi-panel .stat-value,
+        body.analytics-reboot .analytics-studio-value {
+            font-family: 'Space Mono', monospace;
+            background: none;
+            -webkit-text-fill-color: initial;
+            color: #f8fafc;
+            text-shadow: none;
+        }
+
+        body.analytics-reboot .analytics-panel .stat-value {
+            margin-top: 10px;
+            margin-bottom: 16px;
+            font-size: clamp(2.4rem, 4vw, 4rem);
+            line-height: 0.95;
+        }
+
+        body.analytics-reboot .profit-window-scroll {
+            margin: 0 0 16px;
+        }
+
+        body.analytics-reboot .profit-window-track {
+            gap: 6px;
+            padding: 6px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        body.analytics-reboot .profit-window-pill {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            color: rgba(232, 241, 255, 0.72);
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        body.analytics-reboot .profit-window-pill:hover,
+        body.analytics-reboot .profit-window-pill:focus-visible {
+            transform: none;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
+        }
+
+        body.analytics-reboot .profit-window-pill.active {
+            color: #07121d;
+            background: linear-gradient(135deg, #f8d477, #c7f9cc);
+            box-shadow: 0 10px 26px rgba(199, 249, 204, 0.2);
+        }
+
+        body.analytics-reboot .stat-change {
+            width: fit-content;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        body.analytics-reboot .stat-change.positive {
+            color: #d6ffe2;
+            background: rgba(34, 197, 94, 0.14);
+            border: 1px solid rgba(34, 197, 94, 0.18);
+        }
+
+        body.analytics-reboot #analytics-numbers-goal-display {
+            margin-top: 18px;
+            padding: 16px 18px;
+            border-radius: 22px;
+            background: rgba(7, 18, 29, 0.58);
+            border: 1px solid rgba(167, 243, 208, 0.16);
+            color: #d7ffeb;
+            font-size: 17px;
+            line-height: 1.55;
+            text-shadow: none;
+        }
+
+        body.analytics-reboot .profit-goal-box {
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        body.analytics-reboot .profit-goal-label,
+        body.analytics-reboot .closed-deals-label,
+        body.analytics-reboot .analytics-side-label {
+            margin-bottom: 8px;
+            color: rgba(232, 241, 255, 0.56);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        body.analytics-reboot .profit-goal-input-wrap,
+        body.analytics-reboot .closed-deals-actions {
+            gap: 10px;
+        }
+
+        body.analytics-reboot .profit-goal-input,
+        body.analytics-reboot .closed-deals-input {
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(9, 15, 25, 0.72);
+            color: #f8fafc;
+            box-shadow: none;
+        }
+
+        body.analytics-reboot .profit-goal-submit-btn,
+        body.analytics-reboot .card-btn {
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, rgba(248, 212, 119, 0.18), rgba(125, 211, 252, 0.14));
+            color: #f8fafc;
+            box-shadow: none;
+        }
+
+        body.analytics-reboot .profit-goal-submit-btn:hover,
+        body.analytics-reboot .profit-goal-submit-btn:focus-visible,
+        body.analytics-reboot .card-btn:hover,
+        body.analytics-reboot .card-btn:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(248, 212, 119, 0.42);
+            background: linear-gradient(135deg, rgba(248, 212, 119, 0.3), rgba(125, 211, 252, 0.22));
+            box-shadow: 0 18px 34px rgba(2, 6, 23, 0.16);
+        }
+
+        body.analytics-reboot .profit-goal-meta {
+            font-size: 13px;
+            color: rgba(232, 241, 255, 0.66);
+            line-height: 1.6;
+        }
+
+        body.analytics-reboot .analytics-numbers-side {
+            display: grid;
+            align-content: space-between;
+            gap: 14px;
+        }
+
+        body.analytics-reboot .analytics-symbol-tower {
+            display: grid;
+            place-items: center;
+            min-height: 178px;
+            border-radius: 26px;
+            background:
+                radial-gradient(circle at 35% 35%, rgba(125, 211, 252, 0.3), transparent 40%),
+                linear-gradient(145deg, rgba(248, 212, 119, 0.12), rgba(125, 211, 252, 0.08));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        body.analytics-reboot .analytics-symbol-ring {
+            width: 112px;
+            height: 112px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(7, 18, 29, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 0 0 12px rgba(255, 255, 255, 0.03);
+        }
+
+        body.analytics-reboot .analytics-symbol-ring svg {
+            width: 54px;
+            height: 54px;
+        }
+
+        body.analytics-reboot .analytics-side-note {
+            padding: 16px 18px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        body.analytics-reboot .analytics-side-note p {
+            margin: 0;
+            color: rgba(232, 241, 255, 0.72);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        body.analytics-reboot .analytics-performance-stack {
+            display: grid;
+            gap: 24px;
+        }
+
+        body.analytics-reboot .analytics-kpi-panel {
+            padding: 24px;
+            background: linear-gradient(145deg, rgba(16, 25, 41, 0.94), rgba(11, 18, 31, 0.9));
+        }
+
+        body.analytics-reboot .analytics-kpi-panel .stat-card-inner {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: start;
+        }
+
+        body.analytics-reboot .analytics-kpi-panel .stat-value {
+            margin-bottom: 14px;
+            font-size: clamp(2rem, 3vw, 3.2rem);
+            line-height: 1;
+        }
+
+        body.analytics-reboot .analytics-kpi-panel .stat-icon,
+        body.analytics-reboot .analytics-numbers-icon-shell {
+            width: 78px;
+            height: 78px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        body.analytics-reboot .analytics-kpi-panel .stat-icon svg,
+        body.analytics-reboot .analytics-numbers-icon-shell svg {
+            width: 34px;
+            height: 34px;
+        }
+
+        body.analytics-reboot .analytics-deal-studio-card {
+            padding: 30px;
+            margin-bottom: 24px;
+            background: linear-gradient(145deg, rgba(13, 22, 37, 0.97), rgba(19, 32, 51, 0.92));
+        }
+
+        body.analytics-reboot .analytics-deal-studio-head {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            align-items: flex-start;
+            margin-bottom: 22px;
+        }
+
+        body.analytics-reboot .analytics-deal-studio-head h2,
+        body.analytics-reboot .analytics-vault-card .card-title {
+            margin: 0 0 8px;
+            font-size: clamp(1.7rem, 2.4vw, 2.4rem);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+        }
+
+        body.analytics-reboot .analytics-deal-studio-head p,
+        body.analytics-reboot .analytics-vault-card .card-subtitle {
+            margin: 0;
+            color: rgba(232, 241, 255, 0.72);
+            font-size: 0.98rem;
+            line-height: 1.65;
+            max-width: 62ch;
+        }
+
+        body.analytics-reboot .analytics-deal-studio-kpi {
+            min-width: 220px;
+            padding: 18px 20px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        body.analytics-reboot .analytics-studio-value {
+            margin: 8px 0 14px;
+            font-size: clamp(2.6rem, 4vw, 4rem);
+            line-height: 0.95;
+        }
+
+        body.analytics-reboot .analytics-deal-studio-body {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(300px, 0.92fr) minmax(0, 1.08fr);
+            gap: 24px;
+        }
+
+        body.analytics-reboot .analytics-deal-form-column,
+        body.analytics-reboot .analytics-deal-log-column {
+            padding: 22px;
+            border-radius: 26px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        body.analytics-reboot .closed-deals-box {
+            margin-top: 0;
+        }
+
+        body.analytics-reboot .closed-deals-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        body.analytics-reboot .closed-deals-textarea {
+            grid-column: 1 / -1;
+            min-height: 120px;
+        }
+
+        body.analytics-reboot .closed-deals-pending-docs,
+        body.analytics-reboot .closed-deals-list {
+            margin-top: 14px;
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+            background: rgba(7, 18, 29, 0.45);
+        }
+
+        body.analytics-reboot .closed-deals-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        body.analytics-reboot .closed-deals-summary-item {
+            padding: 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        body.analytics-reboot .closed-deals-summary-label {
+            display: block;
+            color: rgba(232, 241, 255, 0.56);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        body.analytics-reboot .closed-deals-summary-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.5rem;
+            color: #f8fafc;
+        }
+
+        body.analytics-reboot .closed-deals-list .closed-deal-item,
+        body.analytics-reboot .analytics-my-file-list .closed-deal-item {
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.analytics-reboot .analytics-vault-card {
+            padding: 30px;
+            background: linear-gradient(145deg, rgba(16, 22, 36, 0.96), rgba(21, 36, 59, 0.9));
+        }
+
+        body.analytics-reboot .analytics-my-file-header {
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        body.analytics-reboot .analytics-my-file-list {
+            margin-top: 0;
+            gap: 16px;
+        }
+
+        body.analytics-reboot .analytics-my-file-count {
+            border-color: rgba(125, 211, 252, 0.22);
+            background: rgba(125, 211, 252, 0.12);
+            color: #d7efff;
+        }
+
+        @media (max-width: 1180px) {
+            body.analytics-reboot .analytics-intro,
+            body.analytics-reboot .analytics-layout-grid,
+            body.analytics-reboot .analytics-deal-studio-body {
+                grid-template-columns: 1fr;
+            }
+
+            body.analytics-reboot .analytics-deal-studio-head {
+                flex-direction: column;
+            }
+
+            body.analytics-reboot .analytics-deal-studio-kpi {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body.analytics-reboot .main-content {
+                padding: 18px 16px 34px;
+            }
+
+            body.analytics-reboot .analytics-navbar,
+            body.analytics-reboot .analytics-intro,
+            body.analytics-reboot .analytics-panel,
+            body.analytics-reboot .analytics-kpi-panel,
+            body.analytics-reboot .analytics-deal-studio-card,
+            body.analytics-reboot .analytics-vault-card {
+                border-radius: 24px;
+            }
+
+            body.analytics-reboot .analytics-intro,
+            body.analytics-reboot .analytics-panel,
+            body.analytics-reboot .analytics-kpi-panel,
+            body.analytics-reboot .analytics-deal-studio-card,
+            body.analytics-reboot .analytics-vault-card {
+                padding: 20px;
+            }
+
+            body.analytics-reboot .analytics-numbers-card .stat-card-inner,
+            body.analytics-reboot .analytics-kpi-panel .stat-card-inner {
+                grid-template-columns: 1fr;
+            }
+
+            body.analytics-reboot .closed-deals-form-grid,
+            body.analytics-reboot .closed-deals-summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            body.analytics-reboot .analytics-symbol-tower {
+                min-height: 132px;
+            }
+        }
+    </style>
     <!--
 
 TemplateMo 607 Glass Admin
@@ -165,7 +807,7 @@ https://templatemo.com/tm-607-glass-admin
 
 -->
 </head>
-<body>
+<body class="analytics-reboot">
     <!-- Animated Background -->
     <div class="background"></div>
     <div class="orb orb-1"></div>
@@ -313,7 +955,7 @@ https://templatemo.com/tm-607-glass-admin
         <!-- Main Content -->
         <main class="main-content">
             <!-- Top Navbar -->
-            <nav class="navbar">
+            <nav class="navbar analytics-navbar">
                 <div class="page-header">
                     <h1 class="page-title">Analytics</h1>
                     <div class="page-breadcrumb">
@@ -338,9 +980,33 @@ https://templatemo.com/tm-607-glass-admin
                 </div>
             </nav>
 
-            <!-- Stats Cards -->
-            <section class="stats-grid analytics-stats-grid">
-                <div class="glass-card glass-card-3d stat-card tilt-firm analytics-numbers-card" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
+            <section class="analytics-intro">
+                <div class="analytics-intro-copy">
+                    <span class="analytics-intro-eyebrow">Investor Performance Board</span>
+                    <h2 class="analytics-intro-title">Rebuilt analytics for acquisitions work.</h2>
+                    <p>The numbers, deal inputs, and archive stay exactly the same. The page now reads like a live deal desk instead of a standard dashboard grid.</p>
+                    <div class="analytics-intro-points">
+                        <span>Quarter tracking stays live</span>
+                        <span>Closed-deal logging stays intact</span>
+                        <span>Archive stays synced per user</span>
+                    </div>
+                </div>
+                <div class="analytics-intro-board" aria-label="Analytics board overview">
+                    <div class="analytics-board-card">
+                        <span class="analytics-board-label">Board Mode</span>
+                        <strong class="analytics-board-value">Deal Desk Layout</strong>
+                        <span class="analytics-board-note">Same analytics engine, rebuilt into a stronger investor-facing presentation.</span>
+                    </div>
+                    <div class="analytics-board-card">
+                        <span class="analytics-board-label">Focus</span>
+                        <strong class="analytics-board-value">Numbers, offer flow, closes</strong>
+                        <span class="analytics-board-note">The page stays centered on production, outcomes, and saved deal files.</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="analytics-layout-grid">
+                <article class="glass-card glass-card-3d stat-card tilt-firm analytics-panel analytics-numbers-card" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
                     <div class="stat-card-inner">
                         <div class="stat-info">
                             <h3>Numbers</h3>
@@ -358,13 +1024,13 @@ https://templatemo.com/tm-607-glass-admin
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
                                 <span id="analytics-numbers-change">$0 net earned with us</span>
                             </span>
-                            <div class="profit-goal-display" id="analytics-numbers-goal-display" data-no-tilt>Set your daily number goal.</div>
+                            <div class="profit-goal-display" id="analytics-numbers-goal-display" data-no-tilt>Set your yearly numer goal.</div>
                             <div class="profit-goal-box" data-no-tilt>
-                                <label class="profit-goal-label" for="analytics-numbers-daily-goal">Daily number goal</label>
+                                <label class="profit-goal-label" for="analytics-numbers-daily-goal">Yearly numer goal</label>
                                 <div class="profit-goal-row" data-no-tilt>
                                     <div class="profit-goal-input-wrap" data-no-tilt>
                                         <input id="analytics-numbers-daily-goal" class="profit-goal-input" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 10000" data-no-tilt>
-                                        <button type="button" class="profit-goal-submit-btn" id="analytics-numbers-daily-goal-submit" aria-label="Save daily number goal" title="Save daily number goal" data-no-tilt>
+                                        <button type="button" class="profit-goal-submit-btn" id="analytics-numbers-daily-goal-submit" aria-label="Save yearly numer goal" title="Save yearly numer goal" data-no-tilt>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                                                 <polyline points="12 5 19 12 12 19"></polyline>
@@ -375,104 +1041,119 @@ https://templatemo.com/tm-607-glass-admin
                                 </div>
                             </div>
                         </div>
-                        <div class="stat-icon cyan">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald-light)" stroke-width="2">
-                                <path d="M12 2v20"></path><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-card glass-card-3d stat-card tilt-firm" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
-                    <div class="stat-card-inner">
-                        <div class="stat-info">
-                            <h3>Offers Terms Sent</h3>
-                            <div class="stat-value" id="kpi-offer-terms-sent">0</div>
-                            <span class="stat-change positive">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
-                                <span id="kpi-offer-terms-change">0 properties at offer terms sent</span>
-                            </span>
-                        </div>
-                        <div class="stat-icon magenta">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-card glass-card-3d stat-card tilt-firm" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
-                    <div class="stat-card-inner">
-                        <div class="stat-info">
-                            <h3>Offers Submitted</h3>
-                            <div class="stat-value" id="kpi-offers-submitted">0</div>
-                            <span class="stat-change positive">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
-                                <span id="kpi-offers-change">0 offer events</span>
-                            </span>
-                        </div>
-                        <div class="stat-icon purple">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2">
-                                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-card glass-card-3d stat-card tilt-firm" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
-                    <div class="stat-card-inner">
-                        <div class="stat-info">
-                            <h3>Closed Deals</h3>
-                            <div class="stat-value" id="kpi-closed-deals">0</div>
-                            <span class="stat-change positive">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
-                                <span id="kpi-closed-deals-change">0 auto closed deals</span>
-                            </span>
-                            <div class="closed-deals-box">
-                                <label class="closed-deals-label" for="closed-deal-name">Record closed deal</label>
-                                <div class="closed-deals-form-grid">
-                                    <input id="closed-deal-name" class="closed-deals-input" type="text" autocomplete="off" placeholder="Property address or deal name">
-                                    <input id="closed-deal-date" class="closed-deals-input" type="date">
-                                    <input id="closed-deal-wholesale-fee" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Wholesale fee">
-                                    <input id="closed-deal-earned" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Amount earned">
-                                    <textarea id="closed-deal-note" class="closed-deals-input closed-deals-textarea" placeholder="Optional note about this close"></textarea>
-                                </div>
-                                <input id="closed-deal-document-upload" class="closed-deal-document-upload-input" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" tabindex="-1" aria-hidden="true" data-no-tilt>
-                                <div class="closed-deals-actions" data-no-tilt>
-                                    <button type="button" class="card-btn closed-deal-upload-trigger" id="closed-deal-upload-btn" data-no-tilt>Attach Documents</button>
-                                    <button type="button" class="card-btn active" id="closed-deal-save-btn">Save Closed Deal</button>
-                                </div>
-                                <div class="closed-deals-pending-docs" id="closed-deal-pending-docs">
-                                    <p class="closed-deals-docs-empty">No documents selected for this deal yet.</p>
-                                </div>
-                                <div class="closed-deals-summary-grid">
-                                    <div class="closed-deals-summary-item">
-                                        <span class="closed-deals-summary-label">Wholesale Fees</span>
-                                        <strong class="closed-deals-summary-value" id="analytics-closed-deals-fees-total">$0</strong>
-                                    </div>
-                                    <div class="closed-deals-summary-item">
-                                        <span class="closed-deals-summary-label">Net Earned</span>
-                                        <strong class="closed-deals-summary-value" id="analytics-closed-deals-earned-total">$0</strong>
-                                    </div>
-                                </div>
-                                <div class="closed-deals-list" id="analytics-closed-deals-list">
-                                    <p class="outreach-empty">No closed deals recorded yet.</p>
+                        <div class="analytics-numbers-side">
+                            <div class="analytics-symbol-tower" aria-hidden="true">
+                                <div class="analytics-symbol-ring">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald-light)" stroke-width="2">
+                                        <path d="M12 2v20"></path><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                    </svg>
                                 </div>
                             </div>
+                            <div class="analytics-side-note">
+                                <span class="analytics-side-label">Readout</span>
+                                <p>This panel keeps your selected quarter, goal input, and net-earned total front and center.</p>
+                            </div>
                         </div>
-                        <div class="stat-icon success">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2">
-                                <path d="M20 6 9 17l-5-5"/>
-                            </svg>
+                    </div>
+                </article>
+
+                <div class="analytics-performance-stack">
+                    <article class="glass-card glass-card-3d stat-card tilt-firm analytics-kpi-panel" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
+                        <div class="stat-card-inner">
+                            <div class="stat-info">
+                                <h3>Offers Terms Sent</h3>
+                                <div class="stat-value" id="kpi-offer-terms-sent">0</div>
+                                <span class="stat-change positive">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+                                    <span id="kpi-offer-terms-change">0 properties at offer terms sent</span>
+                                </span>
+                            </div>
+                            <div class="stat-icon magenta">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="glass-card glass-card-3d stat-card tilt-firm analytics-kpi-panel" data-tilt-divisor="40" data-tilt-depth="4" data-tilt-max="2.5">
+                        <div class="stat-card-inner">
+                            <div class="stat-info">
+                                <h3>Offers Submitted</h3>
+                                <div class="stat-value" id="kpi-offers-submitted">0</div>
+                                <span class="stat-change positive">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+                                    <span id="kpi-offers-change">0 offer events</span>
+                                </span>
+                            </div>
+                            <div class="stat-icon purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2">
+                                    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="glass-card glass-card-3d tilt-firm analytics-deal-studio-card" data-tilt-divisor="48" data-tilt-depth="4" data-tilt-max="2.5">
+                <div class="analytics-deal-studio-head">
+                    <div>
+                        <h2>Closed Deal Studio</h2>
+                        <p>Record a close, attach the paperwork, and keep the running fee and earnings history in one working section.</p>
+                    </div>
+                    <div class="analytics-deal-studio-kpi">
+                        <span class="analytics-side-label">Closed Deals</span>
+                        <div class="analytics-studio-value" id="kpi-closed-deals">0</div>
+                        <span class="stat-change positive">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+                            <span id="kpi-closed-deals-change">0 auto closed deals</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="closed-deals-box analytics-deal-studio-body">
+                    <div class="analytics-deal-form-column">
+                        <label class="closed-deals-label" for="closed-deal-name">Record closed deal</label>
+                        <div class="closed-deals-form-grid">
+                            <input id="closed-deal-name" class="closed-deals-input" type="text" autocomplete="off" placeholder="Property address or deal name">
+                            <input id="closed-deal-date" class="closed-deals-input" type="date">
+                            <input id="closed-deal-wholesale-fee" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Wholesale fee">
+                            <input id="closed-deal-earned" class="closed-deals-input closed-deals-money-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Amount earned">
+                            <textarea id="closed-deal-note" class="closed-deals-input closed-deals-textarea" placeholder="Optional note about this close"></textarea>
+                        </div>
+                        <input id="closed-deal-document-upload" class="closed-deal-document-upload-input" type="file" multiple accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv" tabindex="-1" aria-hidden="true" data-no-tilt>
+                        <div class="closed-deals-actions" data-no-tilt>
+                            <button type="button" class="card-btn closed-deal-upload-trigger" id="closed-deal-upload-btn" data-no-tilt>Attach Documents</button>
+                            <button type="button" class="card-btn active" id="closed-deal-save-btn">Save Closed Deal</button>
+                        </div>
+                        <div class="closed-deals-pending-docs" id="closed-deal-pending-docs">
+                            <p class="closed-deals-docs-empty">No documents selected for this deal yet.</p>
+                        </div>
+                    </div>
+
+                    <div class="analytics-deal-log-column">
+                        <div class="closed-deals-summary-grid">
+                            <div class="closed-deals-summary-item">
+                                <span class="closed-deals-summary-label">Wholesale Fees</span>
+                                <strong class="closed-deals-summary-value" id="analytics-closed-deals-fees-total">$0</strong>
+                            </div>
+                            <div class="closed-deals-summary-item">
+                                <span class="closed-deals-summary-label">Net Earned</span>
+                                <strong class="closed-deals-summary-value" id="analytics-closed-deals-earned-total">$0</strong>
+                            </div>
+                        </div>
+                        <div class="closed-deals-list" id="analytics-closed-deals-list">
+                            <p class="outreach-empty">No closed deals recorded yet.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
             <section class="outreach-workspace-grid analytics-my-file-grid">
-                <div class="glass-card widget-card outreach-card analytics-my-file-card" data-widget-id="analytics-my-file" data-widget-title="My File">
+                <div class="glass-card widget-card outreach-card analytics-my-file-card analytics-vault-card" data-widget-id="analytics-my-file" data-widget-title="My File">
                     <div class="card-header analytics-my-file-header">
                         <div>
                             <h2 class="card-title">My File</h2>
