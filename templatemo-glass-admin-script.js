@@ -4135,7 +4135,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             if (numbersGoalDisplayEl) {
                 if (dailyGoal > 0) {
                     const daysCovered = totalEarned > 0 ? (totalEarned / dailyGoal) : 0;
-                    numbersGoalDisplayEl.textContent = `Daily goal: ${formatClosedDealMoney(dailyGoal)} • ${label.charAt(0).toUpperCase() + label.slice(1)} covers ${daysCovered.toFixed(1)} goal day${daysCovered === 1 ? '' : 's'}`;
+                    numbersGoalDisplayEl.textContent = `Year goal: ${formatClosedDealMoney(dailyGoal)} • ${label.charAt(0).toUpperCase() + label.slice(1)} covers ${daysCovered.toFixed(1)} goal day${daysCovered === 1 ? '' : 's'}`;
                 } else {
                         numbersGoalDisplayEl.textContent = 'Set your yearly numer goal.';
                 }
