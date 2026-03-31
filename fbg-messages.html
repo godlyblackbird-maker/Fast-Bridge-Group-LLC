@@ -484,6 +484,73 @@
             min-height: 36px;
         }
 
+        .messages-shared-property-link {
+            display: grid;
+            gap: 10px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .messages-shared-property-link:hover .messages-shared-property-title,
+        .messages-shared-property-link:focus-visible .messages-shared-property-title {
+            text-decoration: underline;
+        }
+
+        .messages-pending-share {
+            display: none;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(0, 122, 255, 0.16);
+            background: rgba(0, 122, 255, 0.06);
+        }
+
+        .messages-pending-share.active {
+            display: grid;
+        }
+
+        .messages-pending-share-copy {
+            min-width: 0;
+            display: grid;
+            gap: 4px;
+        }
+
+        .messages-pending-share-label {
+            color: #007aff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .messages-pending-share-title,
+        .messages-pending-share-meta {
+            margin: 0;
+            color: #111827;
+        }
+
+        .messages-pending-share-title {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .messages-pending-share-meta {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .messages-pending-share-clear {
+            min-height: 36px;
+            white-space: nowrap;
+        }
+
         .messages-chat-form {
             display: grid;
             gap: 10px;
@@ -717,6 +784,14 @@
                             <p class="messages-chat-placeholder">No conversation selected yet.</p>
                         </div>
                         <form id="messages-chat-form" class="messages-chat-form">
+                            <div id="messages-pending-share" class="messages-pending-share" aria-live="polite">
+                                <div class="messages-pending-share-copy">
+                                    <span class="messages-pending-share-label">Property Link Ready</span>
+                                    <p id="messages-pending-share-title" class="messages-pending-share-title">No property selected</p>
+                                    <p id="messages-pending-share-meta" class="messages-pending-share-meta">Open a property and tap Share In FBG to attach it here.</p>
+                                </div>
+                                <button id="messages-pending-share-clear" type="button" class="card-btn messages-pending-share-clear">Clear</button>
+                            </div>
                             <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
                             <div class="messages-chat-actions">
                                 <div id="messages-chat-status" class="messages-chat-status"></div>
@@ -849,11 +924,16 @@
             const input = document.getElementById('messages-chat-input');
             const sendButton = document.getElementById('messages-chat-send');
             const status = document.getElementById('messages-chat-status');
+            const pendingShare = document.getElementById('messages-pending-share');
+            const pendingShareTitle = document.getElementById('messages-pending-share-title');
+            const pendingShareMeta = document.getElementById('messages-pending-share-meta');
+            const pendingShareClear = document.getElementById('messages-pending-share-clear');
             const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             let selectedUserId = null;
             let selectedUserRecord = null;
             let usersCache = [];
             let pollTimer = null;
+            let pendingSharedProperty = null;
 
             async function copyText(text) {
                 const value = String(text || '').trim();
@@ -939,6 +1019,77 @@
                 window.location.href = 'property-details.html';
             }
 
+            function getPersistedSelectedPropertyDetail() {
+                const candidates = [
+                    () => localStorage.getItem('selectedPropertyDetail'),
+                    () => sessionStorage.getItem('selectedPropertyDetail')
+                ];
+
+                for (const reader of candidates) {
+                    try {
+                        const rawValue = reader();
+                        if (!rawValue) {
+                            continue;
+                        }
+                        const parsedValue = JSON.parse(rawValue);
+                        if (parsedValue && typeof parsedValue === 'object' && !Array.isArray(parsedValue)) {
+                            return parsedValue;
+                        }
+                    } catch (error) {
+                        // Ignore storage read failures.
+                    }
+                }
+
+                return null;
+            }
+
+            function renderPendingSharedProperty() {
+                if (!pendingShare || !pendingShareTitle || !pendingShareMeta) {
+                    return;
+                }
+
+                if (!pendingSharedProperty || typeof pendingSharedProperty !== 'object') {
+                    pendingShare.classList.remove('active');
+                    pendingShare.setAttribute('hidden', 'hidden');
+                    return;
+                }
+
+                pendingShare.classList.add('active');
+                pendingShare.removeAttribute('hidden');
+                pendingShareTitle.textContent = String(pendingSharedProperty.address || pendingSharedProperty.propertyCover || 'Property').trim() || 'Property';
+                pendingShareMeta.textContent = [
+                    String(pendingSharedProperty.listPrice || '').trim(),
+                    String(pendingSharedProperty.marketInfo || '').trim(),
+                    String(pendingSharedProperty.propertyDetails || '').trim()
+                ].filter(Boolean).join(' • ') || 'This property will send as a clickable item in the thread.';
+            }
+
+            function syncPendingSharedPropertyFromUrl() {
+                const url = new URL(window.location.href);
+                if (url.searchParams.get('shareProperty') !== '1') {
+                    return;
+                }
+
+                const detail = getPersistedSelectedPropertyDetail();
+                if (!detail) {
+                    return;
+                }
+
+                pendingSharedProperty = detail;
+                renderPendingSharedProperty();
+                setChatStatus('Property link ready. Pick a teammate and press send.', false);
+            }
+
+            function clearPendingSharedProperty() {
+                pendingSharedProperty = null;
+                renderPendingSharedProperty();
+                const url = new URL(window.location.href);
+                if (url.searchParams.get('shareProperty') === '1') {
+                    url.searchParams.delete('shareProperty');
+                    window.history.replaceState({}, '', url.toString());
+                }
+            }
+
             function buildSharedPropertyCard(sharedMessage, messageBody) {
                 const property = sharedMessage && sharedMessage.property && typeof sharedMessage.property === 'object'
                     ? sharedMessage.property
@@ -946,43 +1097,43 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = 'messages-shared-property-card';
 
+                const linkButton = document.createElement('button');
+                linkButton.type = 'button';
+                linkButton.className = 'messages-shared-property-link';
+                linkButton.addEventListener('click', () => {
+                    openSharedPropertyDetail(messageBody);
+                });
+
                 const label = document.createElement('span');
                 label.className = 'messages-shared-property-label';
                 label.textContent = 'Shared Property';
-                wrapper.appendChild(label);
+                linkButton.appendChild(label);
 
                 const title = document.createElement('h4');
                 title.className = 'messages-shared-property-title';
                 title.textContent = property.address || property.propertyCover || 'Property';
-                wrapper.appendChild(title);
+                linkButton.appendChild(title);
 
                 const meta = document.createElement('p');
                 meta.className = 'messages-shared-property-meta';
                 meta.textContent = [property.listPrice || '', property.marketInfo || ''].filter(Boolean).join(' • ') || 'Open this property in FAST.';
-                wrapper.appendChild(meta);
+                linkButton.appendChild(meta);
 
                 if (property.propertyDetails) {
                     const details = document.createElement('p');
                     details.className = 'messages-shared-property-details';
                     details.textContent = property.propertyDetails;
-                    wrapper.appendChild(details);
+                    linkButton.appendChild(details);
                 }
 
                 if (sharedMessage && sharedMessage.introMessage) {
                     const note = document.createElement('p');
                     note.className = 'messages-shared-property-note';
                     note.textContent = sharedMessage.introMessage;
-                    wrapper.appendChild(note);
+                    linkButton.appendChild(note);
                 }
 
-                const openButton = document.createElement('button');
-                openButton.type = 'button';
-                openButton.className = 'card-btn active messages-shared-property-open';
-                openButton.textContent = 'Open Property Details';
-                openButton.addEventListener('click', () => {
-                    openSharedPropertyDetail(messageBody);
-                });
-                wrapper.appendChild(openButton);
+                wrapper.appendChild(linkButton);
 
                 return wrapper;
             }
@@ -1181,13 +1332,17 @@
                     return;
                 }
 
-                const body = String(input.value || '').trim();
+                const hadPendingProperty = Boolean(pendingSharedProperty);
+                const noteBody = String(input.value || '').trim();
+                const body = hadPendingProperty && typeof window.buildFastSharedPropertyMessage === 'function'
+                    ? window.buildFastSharedPropertyMessage(pendingSharedProperty, noteBody, null)
+                    : noteBody;
                 if (!body) {
-                    setChatStatus('Type a message before sending.', true);
+                    setChatStatus('Type a message or attach a property before sending.', true);
                     return;
                 }
 
-                setChatStatus('Sending message...', false);
+                setChatStatus(hadPendingProperty ? 'Sending property link...' : 'Sending message...', false);
                 if (sendButton) {
                     sendButton.disabled = true;
                 }
@@ -1198,8 +1353,9 @@
                         body: JSON.stringify({ body })
                     });
                     input.value = '';
+                    clearPendingSharedProperty();
                     await openConversation(selectedUserId, { focusInput: true });
-                    setChatStatus('Message sent.', false);
+                    setChatStatus(hadPendingProperty ? 'Property link sent.' : 'Message sent.', false);
                 } finally {
                     if (sendButton) {
                         sendButton.disabled = false;
@@ -1263,6 +1419,15 @@
                     usersList.innerHTML = '<p class="messages-chat-empty">Sign in again to use direct messages.</p>';
                 }
                 setChatStatus('Sign in again to use direct messages.', true);
+            }
+
+            syncPendingSharedPropertyFromUrl();
+
+            if (pendingShareClear) {
+                pendingShareClear.addEventListener('click', () => {
+                    clearPendingSharedProperty();
+                    setChatStatus('', false);
+                });
             }
 
             document.querySelectorAll('[data-copy-message-target]').forEach((button) => {
