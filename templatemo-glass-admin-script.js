@@ -15471,6 +15471,9 @@ function initNavbarDateTime() {
         const list = document.getElementById('deals-compact-list');
         const count = document.getElementById('deals-compact-count');
         const listPagination = document.getElementById('deals-compact-pagination');
+        const importedList = document.getElementById('imported-properties-list');
+        const importedCount = document.getElementById('imported-properties-count');
+        const importedPagination = document.getElementById('imported-properties-pagination');
         const assignedList = document.getElementById('assigned-properties-list');
         const assignedCount = document.getElementById('assigned-properties-count');
         const assignedPagination = document.getElementById('assigned-properties-pagination');
@@ -15490,19 +15493,39 @@ function initNavbarDateTime() {
             : null;
         const pageSize = 10;
         const paginationState = {
+            imported: 1,
             assigned: 1,
             clicked: 1
         };
         let importBackdropPointerDown = false;
         let importSource = 'redfin';
 
-        if (!list || !count || !assignedList || !assignedCount || !listPagination || !assignedPagination) {
+        if (!list || !count || !listPagination || !importedList || !importedCount || !importedPagination || !assignedList || !assignedCount || !assignedPagination) {
             return;
         }
 
         await propertyAssignmentsReady;
 
         const workspaceUser = getWorkspaceUserContext();
+        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+
+        function isImportedPropertyItem(item) {
+            if (!item || typeof item !== 'object') {
+                return false;
+            }
+
+            const itemId = String(item.id || '').trim().toLowerCase();
+            if (itemId.startsWith('manual:')) {
+                return true;
+            }
+
+            const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                ? item.propertySnapshot
+                : null;
+            const mlsNumber = String(snapshot?.mlsNumber || '').trim().toUpperCase();
+            const idxValue = String(snapshot?.idx || '').trim().toLowerCase();
+            return mlsNumber === 'MANUAL' || idxValue === 'manual mls import';
+        }
 
         function closeImportWidget() {
             if (!importOverlay || importOverlay.hasAttribute('hidden')) {
@@ -16073,6 +16096,28 @@ function initNavbarDateTime() {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
+        function deleteImportedProperty(item) {
+            if (!item || typeof item !== 'object') {
+                return;
+            }
+
+            const itemId = String(item.id || '').trim();
+            if (!itemId) {
+                return;
+            }
+
+            const propertyLabel = String(item.address || 'this property').trim() || 'this property';
+            if (!window.confirm(`Delete ${propertyLabel} from Imported Properties?`)) {
+                return;
+            }
+
+            const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const nextItems = items.filter(entry => String(entry.id || '') !== itemId);
+            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+            showDashboardToast('success', 'Imported Property Removed', `${propertyLabel} was removed from Imported Properties.`);
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+
         async function deleteAssignedProperty(item) {
             if (!item || typeof item !== 'object') {
                 return;
@@ -16179,6 +16224,13 @@ function initNavbarDateTime() {
 
             return Array.from(mergedAssignments.values())
                 .sort((a, b) => new Date(b.assignedAt || 0).getTime() - new Date(a.assignedAt || 0).getTime());
+        }
+
+        function getImportedItemsForWorkspaceUser() {
+            return getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key)
+                .filter(isImportedPropertyItem)
+                .slice()
+                .sort((a, b) => (Number(b.clickedAt) || 0) - (Number(a.clickedAt) || 0));
         }
 
         function buildAssignedByLabel(item) {
@@ -16357,8 +16409,101 @@ function initNavbarDateTime() {
             });
         }
 
+        function renderImported() {
+            const items = getImportedItemsForWorkspaceUser();
+            paginationState.imported = clampPage(paginationState.imported, items.length);
+            importedCount.textContent = String(items.length);
+            importedList.innerHTML = '';
+
+            if (items.length === 0) {
+                importedList.innerHTML = '<p class="deals-compact-empty">No imported properties yet. Use Import MLS Property to add one.</p>';
+                importedPagination.hidden = true;
+                return;
+            }
+
+            const startIndex = (paginationState.imported - 1) * pageSize;
+            const visibleItems = items.slice(startIndex, startIndex + pageSize);
+
+            visibleItems.forEach(item => {
+                const resolvedState = resolveDealWorkspaceState(item);
+                const roiText = Number(item.roi || resolvedState.snapshot.roi || 0).toFixed(1);
+
+                const row = document.createElement('div');
+                row.className = 'deals-compact-row';
+                row.tabIndex = 0;
+                row.setAttribute('role', 'button');
+                row.setAttribute('aria-label', `Open ${String(resolvedState.propertyAddress || item.address || 'property').trim() || 'property'}`);
+                row.innerHTML = `
+                    <button type="button" class="deals-compact-delete-btn" aria-label="Delete ${String(resolvedState.propertyAddress || item.address || 'property').trim() || 'property'} from Imported Properties">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6"></path>
+                            <path d="M18 6l-.8 11.2A2 2 0 0 1 15.2 19H8.8a2 2 0 0 1-1.99-1.8L6 6"></path>
+                            <path d="M10 10.25v5.5"></path>
+                            <path d="M14 10.25v5.5"></path>
+                        </svg>
+                    </button>
+                    <div class="deals-compact-thumb-wrap">
+                        <img class="deals-compact-thumb" src="${resolvedState.imageUrl}" alt="Imported property preview">
+                    </div>
+                    <div class="deals-compact-main">
+                        <p class="deals-compact-address">${String(resolvedState.propertyAddress || item.address || 'Property')}</p>
+                        <p class="deals-compact-meta">${String(item.location || resolvedState.locationLabel || '-')}
+                        <span>•</span> ${String(item.price || '$0')} <span>•</span> ${String(item.beds || '0 Beds')} <span>•</span> ${String(item.baths || '0 Baths')} <span>•</span> ${String(item.area || '0 sqft')}</p>
+                        ${resolvedState.assignmentSummary ? `<p class="deals-assigned-by"><strong>${resolvedState.assignmentSummary}</strong></p>` : ''}
+                    </div>
+                    <div class="deals-compact-side">
+                        <span class="deals-assigned-pill">Imported</span>
+                        <span class="deals-status-pill ${resolvedState.statusClassName}">${resolvedState.statusLabel}</span>
+                        <span class="deals-roi">ROI ${roiText}%</span>
+                    </div>
+                `;
+
+                const openImportedProperty = () => {
+                    if (resolvedState.snapshot && typeof resolvedState.snapshot === 'object') {
+                        persistSelectedPropertyDetail(resolvedState.snapshot);
+                    }
+                    window.location.href = 'property-details.html';
+                };
+
+                row.addEventListener('click', () => {
+                    openImportedProperty();
+                });
+
+                row.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+                    event.preventDefault();
+                    openImportedProperty();
+                });
+
+                const deleteButton = row.querySelector('.deals-compact-delete-btn');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        deleteImportedProperty(item);
+                    });
+                }
+
+                importedList.appendChild(row);
+            });
+
+            paginationState.imported = renderPagination(importedPagination, {
+                page: paginationState.imported,
+                totalItems: items.length,
+                label: 'imported properties',
+                onPageChange(nextPage) {
+                    paginationState.imported = nextPage;
+                    renderImported();
+                }
+            });
+        }
+
         function render() {
             const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key)
+                .filter(item => !isImportedPropertyItem(item))
                 .slice()
                 .sort((a, b) => (Number(b.clickedAt) || 0) - (Number(a.clickedAt) || 0));
 
@@ -16369,6 +16514,7 @@ function initNavbarDateTime() {
             if (items.length === 0) {
                 list.innerHTML = '<p class="deals-compact-empty">No clicked properties yet. Open properties in MLS Hot Deals and they will appear here.</p>';
                 listPagination.hidden = true;
+                renderImported();
                 renderAssigned();
                 return;
             }
@@ -16453,6 +16599,7 @@ function initNavbarDateTime() {
                 }
             });
 
+            renderImported();
             renderAssigned();
         }
 
@@ -16487,7 +16634,7 @@ function initNavbarDateTime() {
                 if (defaultStatus) {
                     defaultStatus.value = 'active';
                 }
-                showDashboardToast('success', 'Property Imported', 'Your MLS property was added to My Deals and opened in the system.');
+                showDashboardToast('success', 'Property Imported', 'Your MLS property was added to Imported Properties and opened in the system.');
                 render();
                 window.location.href = 'property-details.html';
             });

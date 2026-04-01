@@ -345,7 +345,7 @@
                             <div>
                                 <p class="deals-import-launcher-eyebrow">MLS import widget</p>
                                 <h2 id="deals-import-title" class="card-title">Import Your MLS Property</h2>
-                                <p class="card-subtitle">Bring your own listing into FAST so it shows up in My Deals and opens in Property Details.</p>
+                                <p class="card-subtitle">Bring your own listing into FAST so it shows up in Imported Properties and opens in Property Details.</p>
                             </div>
                             <button type="button" class="deals-import-close-btn" aria-label="Close import widget" data-deals-import-close="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -431,7 +431,7 @@
                             <textarea id="deals-import-notes" name="notes" class="form-input deals-import-notes" rows="4" placeholder="Paste the MLS remarks, rehab notes, or your underwriting summary here."></textarea>
                         </label>
                         <div class="deals-import-actions deals-import-span-2">
-                            <p class="deals-import-help">Imported properties stay private to the logged-in user and are added to your My Deals list immediately.</p>
+                            <p class="deals-import-help">Imported properties stay private to the logged-in user and are added to your Imported Properties widget immediately.</p>
                             <div class="deals-import-buttons">
                                 <button type="button" id="deals-import-reset" class="btn-secondary">Clear</button>
                                 <button type="submit" class="btn-primary">Import Property</button>
@@ -439,6 +439,20 @@
                         </div>
                         </form>
                     </div>
+                </div>
+
+                <div class="glass-card deals-compact-card">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Imported Properties</h2>
+                            <p class="card-subtitle">Private MLS imports you added manually or autofilled.</p>
+                        </div>
+                        <span id="imported-properties-count" class="deals-compact-count">0</span>
+                    </div>
+                    <div id="imported-properties-list" class="deals-compact-list">
+                        <p class="deals-compact-empty">No imported properties yet. Use Import MLS Property to add one.</p>
+                    </div>
+                    <div id="imported-properties-pagination" class="deals-compact-pagination" hidden></div>
                 </div>
 
                 <div class="glass-card deals-compact-card">
@@ -459,7 +473,7 @@
                     <div class="card-header">
                         <div>
                             <h2 class="card-title">Clicked Properties</h2>
-                            <p class="card-subtitle">Skim recently opened properties from MLS plus anything you imported yourself.</p>
+                            <p class="card-subtitle">Skim recently opened properties from MLS without your private imported inventory mixed in.</p>
                         </div>
                         <span id="deals-compact-count" class="deals-compact-count">0</span>
                     </div>
