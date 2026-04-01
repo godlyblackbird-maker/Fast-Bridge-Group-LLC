@@ -1349,6 +1349,9 @@
                 if (normalized.includes('active under contract') || normalized.includes('under contract')) {
                     return 'active-under-contract';
                 }
+                if (normalized.includes('coming soon')) {
+                    return 'coming-soon';
+                }
                 if (normalized.includes('pending') || normalized.includes('contingent') || normalized.includes('backup')) {
                     return 'pending';
                 }
