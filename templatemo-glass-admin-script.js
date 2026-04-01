@@ -21710,6 +21710,49 @@ function initNavbarDateTime() {
                 field.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
+            function normalizeRecipientValue(value) {
+                return String(value || '').trim().toLowerCase();
+            }
+
+            function getAgentRecipientDefaults() {
+                return {
+                    name: String(agentRecord.name || '').trim(),
+                    email: String(agentRecord.email || '').trim()
+                };
+            }
+
+            function recipientMatchesInvestorProfile(profile) {
+                if (!profile || typeof profile !== 'object') {
+                    return false;
+                }
+
+                const profileName = normalizeRecipientValue(profile.recipientName);
+                const profileEmail = normalizeRecipientValue(profile.recipientEmail);
+                const currentName = normalizeRecipientValue(recipientNameInput.value);
+                const currentEmail = normalizeRecipientValue(recipientEmailInput.value);
+
+                return (profileName && currentName === profileName)
+                    || (profileEmail && currentEmail === profileEmail);
+            }
+
+            function ensureAgentRecipient(profile) {
+                const agentRecipient = getAgentRecipientDefaults();
+                if (!agentRecipient.name && !agentRecipient.email) {
+                    return;
+                }
+
+                const shouldResetToAgent = !recipientNameInput.value.trim()
+                    || !recipientEmailInput.value.trim()
+                    || recipientMatchesInvestorProfile(profile);
+
+                if (!shouldResetToAgent) {
+                    return;
+                }
+
+                recipientNameInput.value = agentRecipient.name;
+                recipientEmailInput.value = agentRecipient.email;
+            }
+
             function applyInvestorAttachmentProfile(profile) {
                 if (!profile || typeof profile !== 'object') {
                     return;
@@ -21733,13 +21776,6 @@ function initNavbarDateTime() {
                 setFieldValue('offer-escrow', profile.escrowCompany);
                 setFieldValue('offer-title-company', profile.titleCompany);
                 setFieldValue('offer-other-terms', profile.otherTermsSummary);
-
-                if (profile.recipientName) {
-                    recipientNameInput.value = String(profile.recipientName).trim();
-                }
-                if (profile.recipientEmail) {
-                    recipientEmailInput.value = String(profile.recipientEmail).trim();
-                }
 
                 renderDocumentSummary();
                 if (includeTermsToggle.checked) {
@@ -22141,6 +22177,7 @@ function initNavbarDateTime() {
             });
             loadInvestorAttachmentPackages().finally(() => {
                 applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
+                ensureAgentRecipient(getSelectedInvestorAttachmentProfile());
                 renderDocumentSummary();
             });
 
@@ -22170,6 +22207,7 @@ function initNavbarDateTime() {
             templateSelect.addEventListener('change', saveDraft);
             investorAttachmentsSelect.addEventListener('change', () => {
                 applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
+                ensureAgentRecipient(getSelectedInvestorAttachmentProfile());
                 renderDocumentSummary();
                 saveDraft();
             });
