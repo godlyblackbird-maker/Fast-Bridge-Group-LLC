@@ -8,6 +8,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const AGENT_NOTES_KEY = 'agentNotesByUser';
     const TODO_GOALS_KEY = 'personalTodoGoalsByUser';
     const DEALS_CLICKED_KEY = 'clickedDealsByUser';
+    const IMPORTED_PROPERTIES_KEY = 'importedPropertiesByUser';
     const OFFER_DOCUMENTS_KEY = 'offerDocumentsByUser';
     const AGENT_WORKSPACE_EMAIL_PREP_KEY = 'agentWorkspaceEmailPrepByUser';
     const IA_CALCULATOR_STATE_KEY = 'iaCalculatorStateByUser';
@@ -220,6 +221,158 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     let themeAwareLogosInitialized = false;
     let themeLogoObserver = null;
 
+    function getDealsScopedStatus(propertyKey, workspaceUserLike) {
+        const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+        if (!normalizedPropertyKey) {
+            return '';
+        }
+
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+        const workspaceStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+        if (Object.prototype.hasOwnProperty.call(workspaceStatuses, normalizedPropertyKey)) {
+            return normalizeAgentStatusValue(workspaceStatuses[normalizedPropertyKey] || '');
+        }
+
+        if (!usersMatch(activeSessionUser, workspaceUser)) {
+            const sessionStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, activeSessionUser.key);
+            if (Object.prototype.hasOwnProperty.call(sessionStatuses, normalizedPropertyKey)) {
+                return normalizeAgentStatusValue(sessionStatuses[normalizedPropertyKey] || '');
+            }
+        }
+
+        return '';
+    }
+
+    function buildAssignmentSummaryLabel(assignmentMeta, workspaceUserLike) {
+        const assignedTo = assignmentMeta && assignmentMeta.assignedTo && typeof assignmentMeta.assignedTo === 'object'
+            ? assignmentMeta.assignedTo
+            : null;
+        if (!assignedTo) {
+            return '';
+        }
+
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+        const assignedToName = String(assignedTo.name || assignedTo.email || 'Unknown user').trim() || 'Unknown user';
+        const assignedTargetLabel = usersMatch(assignedTo, workspaceUser) || usersMatch(assignedTo, activeSessionUser)
+            ? 'You'
+            : assignedToName;
+        const assignedAt = assignmentMeta.assignedAt ? new Date(assignmentMeta.assignedAt) : null;
+        const assignedAtLabel = assignedAt && !Number.isNaN(assignedAt.getTime())
+            ? assignedAt.toLocaleDateString()
+            : '';
+
+        if (assignedAtLabel) {
+            return `Assigned to ${assignedTargetLabel} on ${assignedAtLabel}`;
+        }
+
+        return `Assigned to ${assignedTargetLabel}`;
+    }
+
+    function buildDealStatusClassName(statusValue) {
+        const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
+        return normalizedStatus.replace(/\s+/g, '-').replace(/[^a-z-]/g, '') || 'none';
+    }
+
+    function isImportedPropertyItem(item) {
+        if (!item || typeof item !== 'object') {
+            return false;
+        }
+
+        const itemId = String(item.id || '').trim().toLowerCase();
+        if (itemId.startsWith('manual:')) {
+            return true;
+        }
+
+        const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
+            ? item.propertySnapshot
+            : null;
+        const mlsNumber = String(snapshot?.mlsNumber || '').trim().toUpperCase();
+        const idxValue = String(snapshot?.idx || '').trim().toLowerCase();
+        return mlsNumber === 'MANUAL' || idxValue === 'manual mls import';
+    }
+
+    function resolveDealWorkspaceState(item, workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const baseSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+            ? item.propertySnapshot
+            : {};
+        const normalizedPropertyKey = makePropertyStorageKey(
+            item?.propertyKey
+            || baseSnapshot.address
+            || item?.address
+            || item?.propertyAddress
+        );
+        const assignmentRecord = normalizedPropertyKey ? getPropertyAssignmentRecord(normalizedPropertyKey) : null;
+        const assignmentSnapshot = assignmentRecord && assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object'
+            ? assignmentRecord.propertySnapshot
+            : {};
+        const mergedSnapshot = {
+            ...baseSnapshot,
+            ...assignmentSnapshot
+        };
+        const assignmentMeta = assignmentRecord
+            ? buildPropertyAssignmentMeta(assignmentRecord)
+            : (mergedSnapshot.propertyAssignment && typeof mergedSnapshot.propertyAssignment === 'object'
+                ? buildPropertyAssignmentMeta(mergedSnapshot.propertyAssignment)
+                : null);
+        const propertyAddress = String(
+            mergedSnapshot.address
+            || mergedSnapshot.propertyAddress
+            || item?.address
+            || item?.propertyAddress
+            || normalizedPropertyKey
+            || 'Property'
+        ).trim() || 'Property';
+        const statusValue = normalizeAgentStatusValue(
+            getDealsScopedStatus(normalizedPropertyKey, workspaceUser)
+            || mergedSnapshot.piqAgentStatus
+            || item?.piqAgentStatus
+            || 'none'
+        );
+        const baseDetail = buildDashboardPropertyDetailFallback(propertyAddress, statusValue, mergedSnapshot);
+        const nextAgentRecord = {
+            ...(baseDetail.agentRecord && typeof baseDetail.agentRecord === 'object' ? baseDetail.agentRecord : {}),
+            ...(mergedSnapshot.agentRecord && typeof mergedSnapshot.agentRecord === 'object' ? mergedSnapshot.agentRecord : {}),
+            agentStatus: formatAgentStatusLabel(statusValue)
+        };
+        const detailPayload = {
+            ...baseDetail,
+            ...mergedSnapshot,
+            address: propertyAddress,
+            propertyAddress,
+            piqAgentStatus: statusValue,
+            agentRecord: nextAgentRecord
+        };
+
+        if (assignmentMeta) {
+            detailPayload.propertyAssignment = assignmentMeta;
+        } else {
+            delete detailPayload.propertyAssignment;
+        }
+
+        return {
+            propertyKey: normalizedPropertyKey,
+            propertyAddress,
+            statusValue,
+            statusLabel: formatAgentStatusLabel(statusValue),
+            statusClassName: buildDealStatusClassName(statusValue),
+            assignmentRecord,
+            assignmentMeta,
+            assignmentSummary: buildAssignmentSummaryLabel(assignmentMeta, workspaceUser),
+            snapshot: detailPayload,
+            imageUrl: String(detailPayload.propertyImages?.[0] || item?.imageUrl || '').trim(),
+            locationLabel: String(detailPayload.marketInfo || detailPayload.location || item?.location || '-').trim() || '-'
+        };
+    }
+
     function getSoundSettings() {
         const defaults = {
             menuHover: true,
@@ -227,130 +380,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
 
         const workspaceUser = getWorkspaceUserContext();
-        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
-
-        function getDealsScopedStatus(propertyKey) {
-            const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
-            if (!normalizedPropertyKey) {
-                return '';
-            }
-
-            const workspaceStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
-            if (Object.prototype.hasOwnProperty.call(workspaceStatuses, normalizedPropertyKey)) {
-                return normalizeAgentStatusValue(workspaceStatuses[normalizedPropertyKey] || '');
-            }
-
-            if (!usersMatch(activeSessionUser, workspaceUser)) {
-                const sessionStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, activeSessionUser.key);
-                if (Object.prototype.hasOwnProperty.call(sessionStatuses, normalizedPropertyKey)) {
-                    return normalizeAgentStatusValue(sessionStatuses[normalizedPropertyKey] || '');
-                }
-            }
-
-            return '';
-        }
-
-        function buildAssignmentSummaryLabel(assignmentMeta) {
-            const assignedTo = assignmentMeta && assignmentMeta.assignedTo && typeof assignmentMeta.assignedTo === 'object'
-                ? assignmentMeta.assignedTo
-                : null;
-            if (!assignedTo) {
-                return '';
-            }
-
-            const assignedToName = String(assignedTo.name || assignedTo.email || 'Unknown user').trim() || 'Unknown user';
-            const assignedTargetLabel = usersMatch(assignedTo, workspaceUser) || usersMatch(assignedTo, activeSessionUser)
-                ? 'You'
-                : assignedToName;
-            const assignedAt = assignmentMeta.assignedAt ? new Date(assignmentMeta.assignedAt) : null;
-            const assignedAtLabel = assignedAt && !Number.isNaN(assignedAt.getTime())
-                ? assignedAt.toLocaleDateString()
-                : '';
-
-            if (assignedAtLabel) {
-                return `Assigned to ${assignedTargetLabel} on ${assignedAtLabel}`;
-            }
-
-            return `Assigned to ${assignedTargetLabel}`;
-        }
-
-        function buildDealStatusClassName(statusValue) {
-            const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
-            return normalizedStatus.replace(/\s+/g, '-').replace(/[^a-z-]/g, '') || 'none';
-        }
-
-        function resolveDealWorkspaceState(item) {
-            const baseSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
-                ? item.propertySnapshot
-                : {};
-            const normalizedPropertyKey = makePropertyStorageKey(
-                item?.propertyKey
-                || baseSnapshot.address
-                || item?.address
-                || item?.propertyAddress
-            );
-            const assignmentRecord = normalizedPropertyKey ? getPropertyAssignmentRecord(normalizedPropertyKey) : null;
-            const assignmentSnapshot = assignmentRecord && assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object'
-                ? assignmentRecord.propertySnapshot
-                : {};
-            const mergedSnapshot = {
-                ...baseSnapshot,
-                ...assignmentSnapshot
-            };
-            const assignmentMeta = assignmentRecord
-                ? buildPropertyAssignmentMeta(assignmentRecord)
-                : (mergedSnapshot.propertyAssignment && typeof mergedSnapshot.propertyAssignment === 'object'
-                    ? buildPropertyAssignmentMeta(mergedSnapshot.propertyAssignment)
-                    : null);
-            const propertyAddress = String(
-                mergedSnapshot.address
-                || mergedSnapshot.propertyAddress
-                || item?.address
-                || item?.propertyAddress
-                || normalizedPropertyKey
-                || 'Property'
-            ).trim() || 'Property';
-            const statusValue = normalizeAgentStatusValue(
-                getDealsScopedStatus(normalizedPropertyKey)
-                || mergedSnapshot.piqAgentStatus
-                || item?.piqAgentStatus
-                || 'none'
-            );
-            const baseDetail = buildDashboardPropertyDetailFallback(propertyAddress, statusValue, mergedSnapshot);
-            const nextAgentRecord = {
-                ...(baseDetail.agentRecord && typeof baseDetail.agentRecord === 'object' ? baseDetail.agentRecord : {}),
-                ...(mergedSnapshot.agentRecord && typeof mergedSnapshot.agentRecord === 'object' ? mergedSnapshot.agentRecord : {}),
-                agentStatus: formatAgentStatusLabel(statusValue)
-            };
-            const detailPayload = {
-                ...baseDetail,
-                ...mergedSnapshot,
-                address: propertyAddress,
-                propertyAddress,
-                piqAgentStatus: statusValue,
-                agentRecord: nextAgentRecord
-            };
-
-            if (assignmentMeta) {
-                detailPayload.propertyAssignment = assignmentMeta;
-            } else {
-                delete detailPayload.propertyAssignment;
-            }
-
-            return {
-                propertyKey: normalizedPropertyKey,
-                propertyAddress,
-                statusValue,
-                statusLabel: formatAgentStatusLabel(statusValue),
-                statusClassName: buildDealStatusClassName(statusValue),
-                assignmentRecord,
-                assignmentMeta,
-                assignmentSummary: buildAssignmentSummaryLabel(assignmentMeta),
-                snapshot: detailPayload,
-                imageUrl: String(detailPayload.propertyImages?.[0] || item?.imageUrl || '').trim(),
-                locationLabel: String(detailPayload.marketInfo || detailPayload.location || item?.location || '-').trim() || '-'
-            };
-        }
 
         try {
             const parsed = JSON.parse(localStorage.getItem(SOUND_SETTINGS_KEY) || '{}');
@@ -1851,40 +1880,42 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             ? workspaceUserLike
             : getWorkspaceUserContext();
         const assignmentMeta = buildPropertyAssignmentMeta(assignmentRecord);
-        const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
-        let clickedItemsChanged = false;
+        [DEALS_CLICKED_KEY, IMPORTED_PROPERTIES_KEY].forEach((storageKey) => {
+            const items = getUserScopedItems(storageKey, workspaceUser.key);
+            let itemsChanged = false;
 
-        const nextClickedItems = clickedItems.map((item) => {
-            const itemSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
-                ? item.propertySnapshot
-                : null;
-            const itemPropertyKey = makePropertyStorageKey(
-                itemSnapshot?.address
-                || item?.address
-                || item?.propertyAddress
-            );
+            const nextItems = items.map((item) => {
+                const itemSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                const itemPropertyKey = makePropertyStorageKey(
+                    itemSnapshot?.address
+                    || item?.address
+                    || item?.propertyAddress
+                );
 
-            if (itemPropertyKey !== normalizedPropertyKey || !itemSnapshot) {
-                return item;
+                if (itemPropertyKey !== normalizedPropertyKey || !itemSnapshot) {
+                    return item;
+                }
+
+                const nextSnapshot = { ...itemSnapshot };
+                if (assignmentMeta) {
+                    nextSnapshot.propertyAssignment = assignmentMeta;
+                } else {
+                    delete nextSnapshot.propertyAssignment;
+                }
+
+                itemsChanged = true;
+                return {
+                    ...item,
+                    propertySnapshot: nextSnapshot
+                };
+            });
+
+            if (itemsChanged) {
+                setUserScopedItems(storageKey, workspaceUser.key, nextItems);
             }
-
-            const nextSnapshot = { ...itemSnapshot };
-            if (assignmentMeta) {
-                nextSnapshot.propertyAssignment = assignmentMeta;
-            } else {
-                delete nextSnapshot.propertyAssignment;
-            }
-
-            clickedItemsChanged = true;
-            return {
-                ...item,
-                propertySnapshot: nextSnapshot
-            };
         });
-
-        if (clickedItemsChanged) {
-            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
-        }
 
         const persistedDetail = getPersistedSelectedPropertyDetail();
         if (!persistedDetail || typeof persistedDetail !== 'object') {
@@ -1925,10 +1956,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
             ? workspaceUserLike
             : getWorkspaceUserContext();
-        const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
-        if (!Array.isArray(clickedItems) || clickedItems.length === 0) {
-            return;
-        }
 
         const summaryParts = String(detail.propertyDetails || '')
             .split('/')
@@ -1945,69 +1972,82 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const compactLocation = String(detail.areaLabel || detail.city || detail.county || detail.marketInfo || '').trim() || '-';
         const compactImageUrl = String((Array.isArray(detail.propertyImages) ? detail.propertyImages[0] : '') || detail.imageUrl || '').trim();
         const compactSnapshot = { ...detail };
-        const matchingItems = [];
-        const unmatchedItems = [];
+        let didChange = false;
 
-        clickedItems.forEach((item) => {
-            const itemSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
-                ? item.propertySnapshot
-                : null;
-            const itemPropertyKey = makePropertyStorageKey(
-                itemSnapshot?.address
-                || item?.address
-                || item?.propertyAddress
-            );
-
-            if (!normalizedKeys.includes(itemPropertyKey)) {
-                unmatchedItems.push(item);
+        [IMPORTED_PROPERTIES_KEY, DEALS_CLICKED_KEY].forEach((storageKey) => {
+            const scopedItems = getUserScopedItems(storageKey, workspaceUser.key);
+            if (!Array.isArray(scopedItems) || scopedItems.length === 0) {
                 return;
             }
 
-            matchingItems.push(item);
+            const matchingItems = [];
+            const unmatchedItems = [];
+
+            scopedItems.forEach((item) => {
+                const itemSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                const itemPropertyKey = makePropertyStorageKey(
+                    itemSnapshot?.address
+                    || item?.address
+                    || item?.propertyAddress
+                );
+
+                if (!normalizedKeys.includes(itemPropertyKey)) {
+                    unmatchedItems.push(item);
+                    return;
+                }
+
+                matchingItems.push(item);
+            });
+
+            if (matchingItems.length === 0) {
+                return;
+            }
+
+            const preferredMatch = matchingItems.find((item) => {
+                const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                const itemPropertyKey = makePropertyStorageKey(
+                    snapshot?.address
+                    || item?.address
+                    || item?.propertyAddress
+                );
+                return itemPropertyKey === detailPropertyKey;
+            }) || matchingItems[0];
+
+            const mergedClickedAt = matchingItems.reduce((latest, item) => {
+                const nextValue = Number(item?.clickedAt) || 0;
+                return Math.max(latest, nextValue);
+            }, 0);
+
+            const mergedItem = {
+                ...preferredMatch,
+                id: String(preferredMatch?.id || `manual:${detailPropertyKey || Date.now()}`),
+                address: String(detail.address || preferredMatch?.address || preferredMatch?.propertySnapshot?.address || 'Property').trim() || 'Property',
+                location: compactLocation,
+                price: String(detail.listPrice || preferredMatch?.price || '$0').trim() || '$0',
+                beds: compactBeds,
+                baths: compactBaths,
+                area: compactArea,
+                status: compactStatus || preferredMatch?.status || 'active',
+                imageUrl: compactImageUrl || preferredMatch?.imageUrl || '',
+                clickedAt: mergedClickedAt || Date.now(),
+                propertySnapshot: compactSnapshot
+            };
+
+            const nextItems = [mergedItem, ...unmatchedItems]
+                .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
+                .slice(0, 120);
+
+            setUserScopedItems(storageKey, workspaceUser.key, nextItems);
+            didChange = true;
         });
 
-        if (matchingItems.length === 0) {
-            return;
+        if (didChange) {
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
-
-        const preferredMatch = matchingItems.find((item) => {
-            const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
-                ? item.propertySnapshot
-                : null;
-            const itemPropertyKey = makePropertyStorageKey(
-                snapshot?.address
-                || item?.address
-                || item?.propertyAddress
-            );
-            return itemPropertyKey === detailPropertyKey;
-        }) || matchingItems[0];
-
-        const mergedClickedAt = matchingItems.reduce((latest, item) => {
-            const nextValue = Number(item?.clickedAt) || 0;
-            return Math.max(latest, nextValue);
-        }, 0);
-
-        const mergedItem = {
-            ...preferredMatch,
-            id: String(preferredMatch?.id || `manual:${detailPropertyKey || Date.now()}`),
-            address: String(detail.address || preferredMatch?.address || preferredMatch?.propertySnapshot?.address || 'Property').trim() || 'Property',
-            location: compactLocation,
-            price: String(detail.listPrice || preferredMatch?.price || '$0').trim() || '$0',
-            beds: compactBeds,
-            baths: compactBaths,
-            area: compactArea,
-            status: compactStatus || preferredMatch?.status || 'active',
-            imageUrl: compactImageUrl || preferredMatch?.imageUrl || '',
-            clickedAt: mergedClickedAt || Date.now(),
-            propertySnapshot: compactSnapshot
-        };
-
-        const nextClickedItems = [mergedItem, ...unmatchedItems]
-            .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
-            .slice(0, 120);
-
-        setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems);
-        window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
     }
 
     function ensurePropertyWorkspaceSnapshot(detailLike, workspaceUserLike, options) {
@@ -2025,6 +2065,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
             ? workspaceUserLike
             : getWorkspaceUserContext();
+        const importedItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
         const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
         const summaryParts = String(detail.propertyDetails || '')
             .split('/')
@@ -2041,8 +2082,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const compactLocation = String(detail.areaLabel || detail.city || detail.county || detail.marketInfo || '').trim() || '-';
         const compactImageUrl = String((Array.isArray(detail.propertyImages) ? detail.propertyImages[0] : '') || detail.imageUrl || '').trim();
         const compactSnapshot = { ...detail };
-        const existingItem = Array.isArray(clickedItems)
-            ? clickedItems.find((item) => {
+        const locateExistingItem = (items) => Array.isArray(items)
+            ? items.find((item) => {
                 const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
                     ? item.propertySnapshot
                     : null;
@@ -2055,6 +2096,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return itemPropertyKey === detailPropertyKey;
             })
             : null;
+        const existingImportedItem = locateExistingItem(importedItems);
+        const existingClickedItem = locateExistingItem(clickedItems);
+        const shouldPersistAsImported = Boolean(existingImportedItem)
+            || String(detail.mlsNumber || '').trim().toUpperCase() === 'MANUAL'
+            || String(detail.idx || '').trim().toLowerCase() === 'manual mls import';
+        const existingItem = existingImportedItem || existingClickedItem;
 
         const mergedItem = {
             ...existingItem,
@@ -2071,9 +2118,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             propertySnapshot: compactSnapshot
         };
 
-        const nextClickedItems = [
+        const targetStorageKey = shouldPersistAsImported ? IMPORTED_PROPERTIES_KEY : DEALS_CLICKED_KEY;
+        const targetItems = shouldPersistAsImported ? importedItems : clickedItems;
+        const nextTargetItems = [
             mergedItem,
-            ...(Array.isArray(clickedItems) ? clickedItems : []).filter((item) => {
+            ...(Array.isArray(targetItems) ? targetItems : []).filter((item) => {
                 const itemId = String(item?.id || '').trim();
                 return itemId !== mergedItem.id;
             })
@@ -2081,7 +2130,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
             .slice(0, 120);
 
-        setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems, { silent: config.silent });
+        setUserScopedItems(targetStorageKey, workspaceUser.key, nextTargetItems, { silent: config.silent });
+
+        if (shouldPersistAsImported && existingClickedItem) {
+            const nextClickedItems = (Array.isArray(clickedItems) ? clickedItems : []).filter((item) => {
+                const itemId = String(item?.id || '').trim();
+                return itemId !== mergedItem.id;
+            });
+            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems, { silent: config.silent });
+        }
     }
 
     function normalizeAcceptedAtValue(value) {
@@ -3144,6 +3201,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         if (!config.silent) {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
+    }
+
+    function updateUserScopedItems(storageKey, userKey, updater, options) {
+        const currentItems = getUserScopedItems(storageKey, userKey);
+        const nextItems = typeof updater === 'function' ? updater(currentItems) : currentItems;
+        setUserScopedItems(storageKey, userKey, nextItems, options);
     }
 
     function getUserScopedValue(storageKey, userKey, fallbackValue = '') {
@@ -15509,6 +15572,44 @@ function initNavbarDateTime() {
         const workspaceUser = getWorkspaceUserContext();
         const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
 
+        function dedupeScopedItems(items) {
+            const collection = Array.isArray(items) ? items : [];
+            return collection.filter((item, index) => {
+                const signature = getScopedItemSignature(item);
+                return collection.findIndex((entry) => getScopedItemSignature(entry) === signature) === index;
+            });
+        }
+
+        function migrateImportedPropertiesAcrossUsers() {
+            const clickedStore = getGlobalObject(DEALS_CLICKED_KEY);
+            const importedStore = getGlobalObject(IMPORTED_PROPERTIES_KEY);
+            let didChange = false;
+
+            Object.entries(clickedStore).forEach(([userKey, items]) => {
+                if (!Array.isArray(items) || !items.length) {
+                    return;
+                }
+
+                const importedItems = items.filter(isImportedPropertyItem);
+                if (!importedItems.length) {
+                    return;
+                }
+
+                const remainingItems = items.filter((item) => !isImportedPropertyItem(item));
+                const existingImported = Array.isArray(importedStore[userKey]) ? importedStore[userKey] : [];
+                importedStore[userKey] = dedupeScopedItems([...importedItems, ...existingImported]).slice(0, 120);
+                clickedStore[userKey] = remainingItems;
+                didChange = true;
+            });
+
+            if (!didChange) {
+                return;
+            }
+
+            localStorage.setItem(DEALS_CLICKED_KEY, JSON.stringify(clickedStore));
+            localStorage.setItem(IMPORTED_PROPERTIES_KEY, JSON.stringify(importedStore));
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
         function isImportedPropertyItem(item) {
             if (!item || typeof item !== 'object') {
                 return false;
@@ -16013,13 +16114,75 @@ function initNavbarDateTime() {
         }
 
         function saveImportedProperty(record) {
-            const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const items = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
             const nextItems = [record, ...items.filter(item => String(item.id || '') !== record.id)].slice(0, 120);
-            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+            setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextItems);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
         function migrateLegacyImportedPropertiesForWorkspaceUser() {
+            const normalizedWorkspaceKey = String(workspaceUser.key || '').trim();
+            if (!normalizedWorkspaceKey || normalizedWorkspaceKey === 'default-user') {
+                return;
+            }
+
+            let store = {};
+            let importedStore = {};
+            try {
+                store = JSON.parse(localStorage.getItem(DEALS_CLICKED_KEY) || '{}');
+            } catch (error) {
+                store = {};
+            }
+            try {
+                importedStore = JSON.parse(localStorage.getItem(IMPORTED_PROPERTIES_KEY) || '{}');
+            } catch (error) {
+                importedStore = {};
+            }
+
+            if (!store || typeof store !== 'object' || Array.isArray(store)) {
+                return;
+            }
+
+            const legacyDefaultItems = Array.isArray(store['default-user']) ? store['default-user'] : [];
+            if (!legacyDefaultItems.length) {
+                return;
+            }
+
+            const importedLegacyItems = legacyDefaultItems.filter((item) => {
+                const itemId = String(item && item.id || '').trim().toLowerCase();
+                return item && typeof item === 'object' && itemId.startsWith('manual:');
+            });
+
+            if (!importedLegacyItems.length) {
+                return;
+            }
+
+            const existingItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, normalizedWorkspaceKey);
+            const mergedItems = [...importedLegacyItems, ...existingItems]
+                .filter((item, index, collection) => {
+                    const signature = getScopedItemSignature(item);
+                    return collection.findIndex((entry) => getScopedItemSignature(entry) === signature) === index;
+                })
+                .slice(0, 120);
+
+            const remainingDefaultItems = legacyDefaultItems.filter((item) => {
+                const itemId = String(item && item.id || '').trim().toLowerCase();
+                return !itemId.startsWith('manual:');
+            });
+
+            importedStore[normalizedWorkspaceKey] = mergedItems;
+            if (remainingDefaultItems.length) {
+                store['default-user'] = remainingDefaultItems;
+            } else {
+                delete store['default-user'];
+            }
+
+            localStorage.setItem(DEALS_CLICKED_KEY, JSON.stringify(store));
+            localStorage.setItem(IMPORTED_PROPERTIES_KEY, JSON.stringify(importedStore));
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+
+        function migrateLegacyClickedPropertiesForWorkspaceUser() {
             const normalizedWorkspaceKey = String(workspaceUser.key || '').trim();
             if (!normalizedWorkspaceKey || normalizedWorkspaceKey === 'default-user') {
                 return;
@@ -16041,27 +16204,21 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const importedLegacyItems = legacyDefaultItems.filter((item) => {
-                const itemId = String(item && item.id || '').trim().toLowerCase();
-                return item && typeof item === 'object' && itemId.startsWith('manual:');
-            });
-
-            if (!importedLegacyItems.length) {
+            const legacyClickedItems = legacyDefaultItems.filter((item) => item && typeof item === 'object' && !isImportedPropertyItem(item));
+            if (!legacyClickedItems.length) {
                 return;
             }
 
             const existingItems = getUserScopedItems(DEALS_CLICKED_KEY, normalizedWorkspaceKey);
-            const mergedItems = [...importedLegacyItems, ...existingItems]
+            const mergedItems = [...legacyClickedItems, ...existingItems]
                 .filter((item, index, collection) => {
                     const signature = getScopedItemSignature(item);
                     return collection.findIndex((entry) => getScopedItemSignature(entry) === signature) === index;
                 })
+                .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
                 .slice(0, 120);
 
-            const remainingDefaultItems = legacyDefaultItems.filter((item) => {
-                const itemId = String(item && item.id || '').trim().toLowerCase();
-                return !itemId.startsWith('manual:');
-            });
+            const remainingDefaultItems = legacyDefaultItems.filter((item) => isImportedPropertyItem(item));
 
             store[normalizedWorkspaceKey] = mergedItems;
             if (remainingDefaultItems.length) {
@@ -16111,9 +16268,9 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const items = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
             const nextItems = items.filter(entry => String(entry.id || '') !== itemId);
-            setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+            setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextItems);
             showDashboardToast('success', 'Imported Property Removed', `${propertyLabel} was removed from Imported Properties.`);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
@@ -16227,8 +16384,7 @@ function initNavbarDateTime() {
         }
 
         function getImportedItemsForWorkspaceUser() {
-            return getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key)
-                .filter(isImportedPropertyItem)
+            return getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key)
                 .slice()
                 .sort((a, b) => (Number(b.clickedAt) || 0) - (Number(a.clickedAt) || 0));
         }
@@ -16603,7 +16759,9 @@ function initNavbarDateTime() {
             renderAssigned();
         }
 
+        migrateImportedPropertiesAcrossUsers();
         migrateLegacyImportedPropertiesForWorkspaceUser();
+        migrateLegacyClickedPropertiesForWorkspaceUser();
         render();
         window.addEventListener('storage', render);
         window.addEventListener('dashboard-data-updated', render);
