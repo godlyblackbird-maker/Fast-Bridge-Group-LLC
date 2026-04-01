@@ -7145,6 +7145,40 @@ body.analytics-reboot .analytics-my-file-count {
     gap: 8px;
 }
 
+.offers-accepted-toolbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 0 0 12px;
+    align-items: end;
+}
+
+.offers-accepted-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.offers-accepted-filter span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.offers-accepted-toolbar .form-input,
+.offers-accepted-toolbar .card-btn {
+    min-height: 40px;
+}
+
+.offers-accepted-toolbar .card-btn[aria-pressed="true"] {
+    background: var(--glass-hover);
+    border-color: rgba(var(--accent-light-rgb), 0.72);
+    color: var(--text-primary);
+}
+
 .outreach-full-width {
     grid-column: 1 / -1;
 }
@@ -8242,6 +8276,36 @@ body.analytics-reboot .analytics-my-file-count {
 .agent-note-link-agent {
     font-size: 13px;
     font-weight: 600;
+}
+
+.agent-note-stale-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(234, 179, 8, 0.34);
+    background: rgba(234, 179, 8, 0.14);
+    color: #fde68a;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.agent-note-stale-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+}
+
+[data-theme="light"] .agent-note-stale-badge {
+    border-color: rgba(180, 83, 9, 0.26);
+    background: rgba(245, 158, 11, 0.14);
+    color: #92400e;
 }
 
 .agent-note-link-time {
@@ -17277,6 +17341,10 @@ body.analytics-reboot .analytics-my-file-count {
 @media (max-width: 768px) {
     .agent-record-toolbar {
         flex-direction: column;
+    }
+
+    .offers-accepted-toolbar {
+        grid-template-columns: 1fr;
     }
 
     .agent-record-controls {
