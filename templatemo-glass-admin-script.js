@@ -738,7 +738,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.3.4';
+                versionLabel.textContent = 'v1.3.5';
             });
     }
 
@@ -3261,6 +3261,120 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         });
     }
 
+    function getCloudUploadAuthToken() {
+        return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    }
+
+    function buildCloudUploadDocument(documentLike, fallbackLabel = 'Document') {
+        const safeDocument = documentLike && typeof documentLike === 'object' ? documentLike : {};
+        const fileName = String(safeDocument.fileName || safeDocument.label || fallbackLabel).trim() || fallbackLabel;
+        return {
+            id: String(safeDocument.id || '').trim(),
+            label: String(safeDocument.label || fileName).trim() || fileName,
+            fileName,
+            fileSize: Math.max(Number(safeDocument.fileSize) || 0, 0),
+            fileType: String(safeDocument.fileType || '').trim(),
+            storage: 'cloud',
+            createdAt: Number(safeDocument.createdAt) || Date.now(),
+            updatedAt: Number(safeDocument.updatedAt) || Number(safeDocument.createdAt) || Date.now()
+        };
+    }
+
+    async function uploadFileToCloudStorage(scope, contextKey, file, explicitFileName = '') {
+        const token = getCloudUploadAuthToken();
+        if (!token) {
+            throw new Error('Sign in is required before using cloud uploads.');
+        }
+
+        const formData = new FormData();
+        formData.append('scope', String(scope || '').trim());
+        formData.append('contextKey', String(contextKey || '').trim());
+        formData.append('file', file, String(explicitFileName || file?.name || 'document').trim() || 'document');
+
+        const response = await fetch('/api/user-uploads', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = null;
+        }
+
+        if (!response.ok) {
+            throw new Error(payload && payload.error ? payload.error : 'The file could not be uploaded to cloud storage.');
+        }
+
+        return buildCloudUploadDocument(payload && payload.document, explicitFileName || file?.name || 'Document');
+    }
+
+    async function openCloudStoredDocument(documentItem, download = false) {
+        const token = getCloudUploadAuthToken();
+        if (!token) {
+            throw new Error('Sign in is required before opening cloud files.');
+        }
+
+        const response = await fetch(`/api/user-uploads/${encodeURIComponent(String(documentItem && documentItem.id || '').trim())}/content?download=${download ? '1' : '0'}`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
+            }
+            throw new Error(payload && payload.error ? payload.error : 'The file could not be opened.');
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        if (download) {
+            link.download = documentItem.fileName || documentItem.label || 'document';
+        } else {
+            link.target = '_blank';
+            link.rel = 'noopener';
+        }
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+
+    async function deleteCloudStoredDocument(documentItem) {
+        const token = getCloudUploadAuthToken();
+        if (!token) {
+            throw new Error('Sign in is required before deleting cloud files.');
+        }
+
+        const response = await fetch(`/api/user-uploads/${encodeURIComponent(String(documentItem && documentItem.id || '').trim())}`, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
+            }
+            throw new Error(payload && payload.error ? payload.error : 'The file could not be deleted.');
+        }
+    }
+
     function normalizeExternalUrl(value) {
         try {
             const parsed = new URL(String(value || '').trim());
@@ -4111,7 +4225,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         const workspaceUser = getWorkspaceUserContext();
         const isTestRole = String(workspaceUser && workspaceUser.role || '').trim().toLowerCase() === 'test user';
+        const closedDealsAuthToken = getCloudUploadAuthToken();
+        const hasClosedDealsServerSync = Boolean(closedDealsAuthToken);
         let pendingUploads = [];
+        let manualClosedDealsCache = getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
+        let closedDealsServerLoaded = false;
         const NUMBERS_WINDOW_CONFIG = {
             q1: { label: '1st quarter', quarter: 0 },
             q2: { label: '2nd quarter', quarter: 1 },
@@ -4120,6 +4238,18 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             all: { label: 'all quarters', quarter: null }
         };
         let activeNumbersWindow = getSelectedNumbersWindow();
+        let activeClosedDealDraftId = '';
+
+        function buildClosedDealDraftId() {
+            return `closed-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+        }
+
+        function ensureClosedDealDraftId() {
+            if (!activeClosedDealDraftId) {
+                activeClosedDealDraftId = buildClosedDealDraftId();
+            }
+            return activeClosedDealDraftId;
+        }
 
         function persistNumbersDailyGoal() {
             if (!numbersGoalInputEl) {
@@ -4144,17 +4274,85 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         function getManualClosedDeals() {
-            return getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
+            return Array.isArray(manualClosedDealsCache) ? manualClosedDealsCache : [];
         }
 
         function setManualClosedDeals(items) {
-            setUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key, items);
+            manualClosedDealsCache = Array.isArray(items) ? items.map((item) => ({ ...item })) : [];
+            setUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key, manualClosedDealsCache);
         }
 
-        function persistManualClosedDeal(nextDeal) {
+        async function requestClosedDealsApi(pathname, options = {}) {
+            if (!hasClosedDealsServerSync) {
+                throw new Error('Sign in is required to sync closed deals across devices.');
+            }
+
+            const method = String(options.method || 'GET').trim().toUpperCase() || 'GET';
+            const headers = {
+                Authorization: `Bearer ${closedDealsAuthToken}`,
+                ...(options.headers || {})
+            };
+
+            if (method !== 'GET' && method !== 'HEAD' && !headers['Content-Type']) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            const response = await fetch(pathname, {
+                ...options,
+                method,
+                headers
+            });
+
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
+            }
+
+            if (!response.ok) {
+                throw new Error(payload && payload.error ? payload.error : 'Closed deal sync failed.');
+            }
+
+            return payload;
+        }
+
+        async function loadManualClosedDealsFromServer() {
+            if (!hasClosedDealsServerSync) {
+                closedDealsServerLoaded = true;
+                return;
+            }
+
+            try {
+                const payload = await requestClosedDealsApi('/api/closed-deals', { method: 'GET' });
+                const deals = Array.isArray(payload && payload.deals) ? payload.deals : [];
+                setManualClosedDeals(deals);
+            } catch (error) {
+                console.error('Failed to load closed deals from server:', error);
+            } finally {
+                closedDealsServerLoaded = true;
+                renderClosedDeals();
+            }
+        }
+
+        async function persistManualClosedDeal(nextDeal) {
             const normalizedDeal = nextDeal && typeof nextDeal === 'object' ? { ...nextDeal } : null;
             if (!normalizedDeal || !normalizedDeal.id) {
                 throw new Error('The closed deal record could not be prepared for saving.');
+            }
+
+            if (hasClosedDealsServerSync) {
+                const payload = await requestClosedDealsApi('/api/closed-deals', {
+                    method: 'POST',
+                    body: JSON.stringify(normalizedDeal)
+                });
+                const savedDeal = payload && payload.deal ? payload.deal : normalizedDeal;
+                const nextItems = [
+                    savedDeal,
+                    ...getManualClosedDeals().filter((item) => String(item && item.id || '') !== String(savedDeal.id || ''))
+                ];
+                setManualClosedDeals(nextItems);
+                return nextItems;
             }
 
             const nextItems = [...getManualClosedDeals(), normalizedDeal];
@@ -4169,6 +4367,22 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return storedItems;
         }
 
+        async function removeManualClosedDeal(deal) {
+            const dealId = String(deal && deal.id || '').trim();
+            if (!dealId) {
+                return;
+            }
+
+            if (hasClosedDealsServerSync) {
+                await requestClosedDealsApi(`/api/closed-deals/${encodeURIComponent(dealId)}`, {
+                    method: 'DELETE'
+                });
+            }
+
+            const nextItems = getManualClosedDeals().filter((item) => String(item && item.id || '') !== dealId);
+            setManualClosedDeals(nextItems);
+        }
+
         function getClosedDealDraft() {
             const savedDraft = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, null);
             if (!savedDraft || typeof savedDraft !== 'object' || Array.isArray(savedDraft)) {
@@ -4176,6 +4390,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             return {
+                id: String(savedDraft.id || '').trim(),
                 title: String(savedDraft.title || ''),
                 closeDate: String(savedDraft.closeDate || ''),
                 wholesaleFee: String(savedDraft.wholesaleFee || ''),
@@ -4187,6 +4402,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         function saveClosedDealDraft() {
             setUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, {
+                id: ensureClosedDealDraftId(),
                 title: String(dealNameInput && dealNameInput.value || ''),
                 closeDate: String(dealDateInput && dealDateInput.value || ''),
                 wholesaleFee: String(dealWholesaleFeeInput && dealWholesaleFeeInput.value || ''),
@@ -4197,6 +4413,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         function clearClosedDealDraft() {
+            activeClosedDealDraftId = '';
             setUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, null);
         }
 
@@ -4205,6 +4422,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             if (!draft) {
                 return;
             }
+
+            activeClosedDealDraftId = draft.id || buildClosedDealDraftId();
 
             if (dealNameInput) {
                 dealNameInput.value = draft.title;
@@ -4400,16 +4619,23 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     fileType: String(documentItem && documentItem.fileType || '').trim(),
                     storage: String(documentItem && documentItem.storage || 'indexeddb').trim() || 'indexeddb',
                     contentBase64: String(documentItem && documentItem.contentBase64 || '').trim(),
-                    createdAt: Number(documentItem && documentItem.createdAt) || Date.now()
+                    createdAt: Number(documentItem && documentItem.createdAt) || Date.now(),
+                    updatedAt: Number(documentItem && documentItem.updatedAt) || Number(documentItem && documentItem.createdAt) || Date.now()
                 }))
                 .filter((documentItem) => documentItem.id && (documentItem.storage !== 'inline-base64' || documentItem.contentBase64));
         }
 
         async function createStoredClosedDealDocument(file) {
-            const documentId = `closed-deal-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
             const fileName = String(file && file.name || 'Document').trim() || 'Document';
             const fileSize = Math.max(Number(file && file.size) || 0, 0);
             const fileType = String(file && file.type || '').trim() || 'File';
+
+            try {
+                return await uploadFileToCloudStorage('closed-deal', ensureClosedDealDraftId(), file, fileName);
+            } catch (cloudError) {
+            }
+
+            const documentId = `closed-deal-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
 
             try {
                 await putOfferDocumentBlob(documentId, file);
@@ -4495,6 +4721,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         async function openStoredClosedDealDocument(documentItem, download = false) {
             let blob = null;
 
+            if (documentItem.storage === 'cloud') {
+                try {
+                    await openCloudStoredDocument(documentItem, download);
+                } catch (error) {
+                    showDashboardToast('error', 'File Missing', error && error.message ? error.message : 'This cloud document could not be opened.');
+                }
+                return;
+            }
+
             if (documentItem.storage === 'inline-base64') {
                 blob = createBlobFromBase64(documentItem.contentBase64, documentItem.fileType);
             } else {
@@ -4523,7 +4758,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         async function deleteClosedDealDocumentBlobs(documents) {
             for (const documentItem of documents) {
-                if (documentItem.storage === 'indexeddb' && documentItem.id) {
+                if (documentItem.storage === 'cloud' && documentItem.id) {
+                    await deleteCloudStoredDocument(documentItem);
+                } else if (documentItem.storage === 'indexeddb' && documentItem.id) {
                     await deleteOfferDocumentBlob(documentItem.id);
                 }
             }
@@ -4691,6 +4928,17 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         async function removeFiledClosedDeal(deal) {
+            if (hasClosedDealsServerSync && deal && deal.manual) {
+                try {
+                    await removeManualClosedDeal(deal);
+                    renderClosedDeals();
+                    showDashboardToast('success', 'File Removed', 'The saved deal file was removed from My File.');
+                } catch (error) {
+                    showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The saved deal file could not be removed.');
+                }
+                return;
+            }
+
             try {
                 await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
             } catch (error) {
@@ -4793,6 +5041,16 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 removeButton.className = 'closed-deal-remove-btn';
                 removeButton.textContent = 'Remove manual entry';
                 removeButton.addEventListener('click', async () => {
+                    if (hasClosedDealsServerSync) {
+                        try {
+                            await removeManualClosedDeal(deal);
+                            renderClosedDeals();
+                        } catch (error) {
+                            showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The closed-deal record could not be removed.');
+                        }
+                        return;
+                    }
+
                     try {
                         await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
                     } catch (error) {
@@ -5093,7 +5351,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                         await deleteClosedDealDocumentBlobs(nextUploads);
                     } catch (cleanupError) {
                     }
-                    showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'The browser could not store one or more closed-deal documents.');
+                    showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'One or more closed-deal documents could not be stored.');
                     return;
                 }
 
@@ -5125,9 +5383,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
                 try {
                     const uploadedDocuments = normalizeClosedDealDocuments({ documents: pendingUploads });
+                    const dealId = ensureClosedDealDraftId();
 
                     const closedDealRecord = {
-                        id: `closed-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                        id: dealId,
                         title,
                         propertyAddress: title,
                         closeDate: closeDate || new Date().toISOString().slice(0, 10),
@@ -5138,7 +5397,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                         createdAt: Date.now()
                     };
 
-                    persistManualClosedDeal(closedDealRecord);
+                    await persistManualClosedDeal(closedDealRecord);
                     pendingUploads = [];
                     clearClosedDealDraft();
                     dealNameInput.value = '';
@@ -5194,6 +5453,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         renderClosedDeals();
+        void loadManualClosedDealsFromServer();
         window.addEventListener('dashboard-data-updated', renderClosedDeals);
         window.addEventListener('storage', renderClosedDeals);
     }
@@ -19271,6 +19531,15 @@ function initNavbarDateTime() {
             }
 
             async function openStoredDocument(documentItem, download = false) {
+                if (documentItem.storage === 'cloud') {
+                    try {
+                        await openCloudStoredDocument(documentItem, download);
+                    } catch (error) {
+                        showDashboardToast('error', 'File Missing', error && error.message ? error.message : 'This cloud document could not be opened.');
+                    }
+                    return;
+                }
+
                 const blob = await getOfferDocumentBlob(documentItem.id);
                 if (!blob) {
                     showDashboardToast('error', 'File Missing', 'This document file is no longer available in browser storage.');
@@ -19298,7 +19567,14 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                if (documentItem.storage === 'indexeddb') {
+                if (documentItem.storage === 'cloud') {
+                    try {
+                        await deleteCloudStoredDocument(documentItem);
+                    } catch (error) {
+                        showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'Unable to remove the cloud file.');
+                        return;
+                    }
+                } else if (documentItem.storage === 'indexeddb') {
                     try {
                         await deleteOfferDocumentBlob(documentItem.id);
                     } catch (error) {
@@ -19517,20 +19793,39 @@ function initNavbarDateTime() {
 
                 try {
                     for (const file of files) {
-                        const documentId = `offer-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
-                        await putOfferDocumentBlob(documentId, file);
+                        let uploadedDocument = null;
+
+                        try {
+                            uploadedDocument = await uploadFileToCloudStorage(
+                                'offer-package',
+                                `${propertyAddress}::${selectedEntity}`,
+                                file,
+                                file.name
+                            );
+                        } catch (cloudError) {
+                            const documentId = `offer-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+                            await putOfferDocumentBlob(documentId, file);
+                            uploadedDocument = {
+                                id: documentId,
+                                label: file.name,
+                                fileName: file.name,
+                                fileSize: file.size,
+                                fileType: file.type || 'File',
+                                storage: 'indexeddb',
+                                createdAt: Date.now()
+                            };
+                        }
+
                         saveDocumentMetadata({
-                            id: documentId,
+                            ...uploadedDocument,
                             propertyAddress,
                             entity: selectedEntity,
                             label: file.name,
                             fileName: file.name,
                             fileSize: file.size,
-                            fileType: file.type || 'File',
+                            fileType: file.type || uploadedDocument.fileType || 'File',
                             kind: 'upload',
-                            kindLabel: 'Uploaded File',
-                            storage: 'indexeddb',
-                            createdAt: Date.now()
+                            kindLabel: 'Uploaded File'
                         });
                     }
                 } catch (error) {
@@ -19555,9 +19850,30 @@ function initNavbarDateTime() {
 
                 try {
                     const pdfBlob = buildSimplePdfBlob(buildOfferPdfLines(selectedEntity));
-                    await putOfferDocumentBlob(documentId, pdfBlob);
-                    const documentItem = {
-                        id: documentId,
+                    let documentItem = null;
+
+                    try {
+                        documentItem = await uploadFileToCloudStorage(
+                            'offer-package',
+                            `${propertyAddress}::${selectedEntity}`,
+                            pdfBlob,
+                            fileName
+                        );
+                    } catch (cloudError) {
+                        await putOfferDocumentBlob(documentId, pdfBlob);
+                        documentItem = {
+                            id: documentId,
+                            label: 'Offer PDF Template',
+                            fileName,
+                            fileSize: pdfBlob.size,
+                            fileType: 'application/pdf',
+                            storage: 'indexeddb',
+                            createdAt: Date.now()
+                        };
+                    }
+
+                    documentItem = {
+                        ...documentItem,
                         propertyAddress,
                         entity: selectedEntity,
                         label: 'Offer PDF Template',
@@ -19565,9 +19881,7 @@ function initNavbarDateTime() {
                         fileSize: pdfBlob.size,
                         fileType: 'application/pdf',
                         kind: 'template',
-                        kindLabel: 'PDF Template',
-                        storage: 'indexeddb',
-                        createdAt: Date.now()
+                        kindLabel: 'PDF Template'
                     };
                     saveDocumentMetadata({
                         ...documentItem

@@ -53,6 +53,37 @@
                     }
                 };
 
+                const resolveStoredTheme = (value, fallback = 'beach') => {
+                    const normalizedValue = String(value || '').trim().toLowerCase();
+
+                    if (normalizedValue === 'system') {
+                        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    }
+
+                    return /^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(normalizedValue)
+                        ? normalizedValue
+                        : fallback;
+                };
+
+                const resolveHomepageVersionTheme = (value) => {
+                    const normalizedValue = String(value || '').trim().toLowerCase();
+                    return normalizedValue === 'sunset' ? 'sunset' : 'beach';
+                };
+
+                const isPublicReferrer = () => {
+                    try {
+                        if (!document.referrer) {
+                            return false;
+                        }
+
+                        const referrerUrl = new URL(document.referrer, window.location.origin);
+                        const referrerPath = String(referrerUrl.pathname || '').trim().toLowerCase();
+                        return referrerPath === '/' || referrerPath.endsWith('/index.html') || referrerPath.endsWith('/login.html');
+                    } catch (error) {
+                        return false;
+                    }
+                };
+
                 const normalizeKnownEmail = (value) => {
                     const normalizedValue = String(value || '').trim().toLowerCase();
                     return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedValue) || normalizedValue;
@@ -98,19 +129,16 @@
 
                 const themeStore = readJson('dashboardThemeByUser');
                 const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                const source = String(new URLSearchParams(window.location.search).get('source') || '').trim().toLowerCase();
+                const usePublicTheme = source === 'public' || (source !== 'app' && isPublicReferrer());
                 const userKeys = buildUserKeys();
                 const scopedTheme = userKeys
                     .map((key) => themeStore[key] && themeStore[key].value)
                     .find((value) => typeof value === 'string' && value.trim());
-                let theme = String(scopedTheme || storedHomepageTheme || 'beach').trim().toLowerCase();
-
-                if (theme === 'system') {
-                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                }
-
-                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
-                    theme = 'beach';
-                }
+                const homepageTheme = resolveHomepageVersionTheme(storedHomepageTheme);
+                let theme = usePublicTheme
+                    ? homepageTheme
+                    : resolveStoredTheme(scopedTheme || homepageTheme || 'beach');
 
                 root.setAttribute('data-theme', theme);
             } catch (error) {
@@ -684,16 +712,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.3.4</span>
-                    <span>Fixed tab switching flicker</span>
-                    <span>Stable E-card JPG export</span>
-                    <span>Agent workspace and legal polish</span>
+                    <span>Newest build: 1.3.5</span>
+                    <span>Cloud-backed user uploads</span>
+                    <span>Analytics records now persist by account</span>
+                    <span>Version history respects page theme context</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>17</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.4, including the full 1.2.3 to 1.3.4 release sequence.</span>
+                    <strong>18</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.5, including the full 1.2.3 to 1.3.5 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -705,23 +733,23 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.3.4</h2>
-                <p>This release tightens day-to-day UI quality across FAST BRIDGE GROUP by removing tab flicker, stabilizing E-card downloads at a fixed size, polishing the Agent Workspace icon and accepted-offer flow, and cleaning up the legal contracts preview.</p>
+                <h2>Version 1.3.5</h2>
+                <p>This release pushes more persistent user files onto the new storage path, upgrades analytics document retention so users keep their own records across sessions, and makes version history follow the right theme depending on whether the page was opened publicly or from inside the app.</p>
                 <div class="version-history-meta">
-                    <span>March 28, 2026</span>
-                    <span>UI stabilization</span>
-                    <span>Export reliability</span>
-                    <span>Version 1.3.4</span>
+                    <span>March 31, 2026</span>
+                    <span>Cloud storage rollout</span>
+                    <span>Theme routing polish</span>
+                    <span>Version 1.3.5</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Fixed tab switching flicker and lag by stopping redundant re-activation work across Property Details, Settings, and image tab controls.</li>
-                    <li>Made Digital E Card JPG downloads render at a fixed export size so browser zoom no longer changes the output dimensions.</li>
-                    <li>Repaired the Digital E Card preview container by widening the panel, centering the preview in a stable stage, and cleaning up the internal card layout.</li>
-                    <li>Added the accepted-offers panel hookup on Agent Workspace so properties marked 80% - Offer Accepted surface in the workspace correctly.</li>
-                    <li>Updated the Agent Workspace sidebar entry to use the new SVG symbol and narrowed the Legal Buildout contracts preview so it reads like a centered document.</li>
+                    <li>Moved persistent upload-heavy areas onto the new storage flow so user files are no longer stuck living only in local browser state.</li>
+                    <li>Added cloud-backed persistence for Analytics closed-deal documents and saved deal records so each signed-in user keeps their own document tabs and history.</li>
+                    <li>Shifted profile avatar uploads onto the same shared storage path so profile images persist as account assets instead of base64 blobs in local storage.</li>
+                    <li>Kept temporary MLS PDF processing local-only on purpose while preserving the cloud path for long-lived user documents and workspace files.</li>
+                    <li>Updated Version History theme behavior so public navigation follows the homepage Beach or Sunset toggle while in-app navigation follows the logged-in user theme.</li>
                 </ul>
             </div>
         </section>
@@ -733,6 +761,23 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.3.4</h2>
+                            <span class="version-date">March 28, 2026</span>
+                        </div>
+                        <span class="version-chip">1.3.4</span>
+                    </div>
+                    <ul>
+                        <li>Fixed tab switching flicker and lag by stopping redundant re-activation work across Property Details, Settings, and image tab controls.</li>
+                        <li>Made Digital E Card JPG downloads render at a fixed export size so browser zoom no longer changes the output dimensions.</li>
+                        <li>Repaired the Digital E Card preview container by widening the panel, centering the preview in a stable stage, and cleaning up the internal card layout.</li>
+                        <li>Added the accepted-offers panel hookup on Agent Workspace so properties marked 80% - Offer Accepted surface in the workspace correctly.</li>
+                        <li>Updated the Agent Workspace sidebar entry to use the new SVG symbol and narrowed the Legal Buildout contracts preview so it reads like a centered document.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>

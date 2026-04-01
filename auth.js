@@ -91,6 +91,15 @@
     return Array.from(keys).filter(Boolean);
   }
 
+  function buildProfileAvatarImage(avatarUploadId) {
+    const normalizedAvatarUploadId = String(avatarUploadId || '').trim();
+    if (!normalizedAvatarUploadId) {
+      return '';
+    }
+
+    return `/api/profile/avatar/content/${encodeURIComponent(normalizedAvatarUploadId)}`;
+  }
+
   function readAuthTabSnapshot() {
     try {
       const parsed = JSON.parse(sessionStorage.getItem(AUTH_TAB_SNAPSHOT_KEY) || 'null');
@@ -348,7 +357,10 @@
       name: String((scopedProfile && scopedProfile.name) || normalizedUser.name || 'User').trim(),
       email: normalizedUser.email,
       role: String(normalizedUser.role || (scopedProfile && scopedProfile.role) || '').trim(),
-      avatarImage: String((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '').trim()
+      avatarUploadId: String(normalizedUser.avatarUploadId || (scopedProfile && scopedProfile.avatarUploadId) || '').trim(),
+      avatarImage: String(normalizedUser.avatarUploadId
+        ? buildProfileAvatarImage(normalizedUser.avatarUploadId)
+        : ((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '')).trim()
     };
 
     localStorage.setItem('userProfile', JSON.stringify(mirroredProfile));

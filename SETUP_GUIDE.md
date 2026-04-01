@@ -216,6 +216,11 @@ Edit `.env` file to customize:
 - **STEVE_SMTP_PASS:** Steve's Gmail App Password used when his profile does not already have a saved password
 - **STEVE_SMTP_SIGNATURE:** Optional default signature/footer for Steve's outbound emails
 - **ISAAC_SMTP_USER / ISAAC_SMTP_PASS / ISAAC_SMTP_SIGNATURE:** Optional per-user fallback SMTP settings for Isaac using the same pattern
+- **AWS_S3_BUCKET / S3_BUCKET / AWS_BUCKET_NAME:** Bucket used for persistent user uploads
+- **AWS_S3_REGION / S3_REGION / AWS_REGION:** AWS region for that bucket
+- **AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY:** Access keys for S3 if the host is not already using an AWS IAM role
+- **AWS_S3_ENDPOINT / S3_ENDPOINT:** Optional custom endpoint for S3-compatible storage
+- **AWS_S3_FORCE_PATH_STYLE / S3_FORCE_PATH_STYLE:** Optional `true`/`1` if your provider requires path-style S3 URLs
 
 Example Twilio block for `.env`:
 ```env
@@ -234,6 +239,17 @@ STEVE_SMTP_PASS=your_16_character_gmail_app_password
 STEVE_SMTP_SIGNATURE=Steve Medina\nFAST BRIDGE GROUP\nsteve.medina@fastbridgegroupllc.com
 ```
 
+Example S3 block:
+```env
+AWS_S3_BUCKET=your-fast-bridge-uploads
+AWS_S3_REGION=us-west-1
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+# Optional if you use Cloudflare R2, MinIO, or another S3-compatible provider:
+# AWS_S3_ENDPOINT=https://your-endpoint.example.com
+# AWS_S3_FORCE_PATH_STYLE=true
+```
+
 On Render, add these in the service dashboard under Environment:
 - `JWT_SECRET`
 - `OPENAI_API_KEY`
@@ -246,6 +262,10 @@ On Render, add these in the service dashboard under Environment:
 - `TWILIO_ACCOUNT_SID`
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_PHONE_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID`
+- `AWS_S3_BUCKET`
+- `AWS_S3_REGION`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI`

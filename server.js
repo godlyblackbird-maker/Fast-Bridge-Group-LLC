@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { Worker } = require('worker_threads');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 require('dotenv').config();
 
@@ -67,10 +68,14 @@ const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
 const MLS_IMPORT_PDF_JOB_TTL_MS = 2 * 60 * 60 * 1000;
 const MLS_IMPORT_PDF_WORKER_TIMEOUT_MS = 90 * 60 * 1000;
 const MLS_IMPORT_TEMP_DIR = path.join(__dirname, 'temp', 'mls-imports');
+const USER_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
+const USER_UPLOADS_LOCAL_ROOT = path.join(__dirname, 'USER_UPLOADS');
 
 let cachedOpenAiApiKey = null;
 let cachedTwilioClient = null;
 let cachedTwilioClientKey = '';
+let cachedS3Client = null;
+let cachedS3ClientKey = '';
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
 
@@ -96,6 +101,13 @@ const mlsImportPdfUpload = multer({
       return;
     }
     callback(null, true);
+  }
+});
+
+const userUploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: USER_UPLOAD_MAX_BYTES
   }
 });
 
@@ -1494,6 +1506,7 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN smtp_pass TEXT`, () => {});
       db.run(`ALTER TABLE users ADD COLUMN smtp_signature TEXT`, () => {});
       db.run(`ALTER TABLE users ADD COLUMN phone TEXT`, () => {});
+      db.run(`ALTER TABLE users ADD COLUMN avatar_upload_id TEXT`, () => {});
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
       syncPublicTestAccount();
@@ -1744,6 +1757,55 @@ function initializeDatabase() {
           }
         });
       });
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_uploads (
+      id TEXT PRIMARY KEY,
+      owner_user_id INTEGER NOT NULL,
+      scope TEXT NOT NULL,
+      context_key TEXT NOT NULL,
+      original_file_name TEXT NOT NULL,
+      stored_file_name TEXT NOT NULL,
+      file_size INTEGER NOT NULL DEFAULT 0,
+      file_type TEXT,
+      storage_provider TEXT NOT NULL,
+      storage_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating user_uploads table:', err);
+    } else {
+      console.log('User uploads table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_user_uploads_owner_scope_context ON user_uploads(owner_user_id, scope, context_key, updated_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS closed_deals (
+      id TEXT PRIMARY KEY,
+      owner_user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      property_address TEXT,
+      close_date TEXT,
+      wholesale_fee REAL NOT NULL DEFAULT 0,
+      earned_amount REAL NOT NULL DEFAULT 0,
+      note TEXT,
+      documents_json TEXT NOT NULL DEFAULT '[]',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating closed_deals table:', err);
+    } else {
+      console.log('Closed deals table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_closed_deals_owner_updated ON closed_deals(owner_user_id, updated_at DESC, created_at DESC)', () => {});
     }
   });
 }
@@ -2201,6 +2263,399 @@ function dbAll(sql, params) {
   });
 }
 
+function getS3StorageConfig() {
+  const region = getFirstConfiguredEnvValue('AWS_S3_REGION', 'S3_REGION', 'AWS_REGION', 'AWS_DEFAULT_REGION');
+  const bucket = getFirstConfiguredEnvValue('AWS_S3_BUCKET', 'S3_BUCKET', 'AWS_BUCKET_NAME');
+  const accessKeyId = getFirstConfiguredEnvValue('AWS_ACCESS_KEY_ID');
+  const secretAccessKey = getFirstConfiguredEnvValue('AWS_SECRET_ACCESS_KEY');
+  const endpoint = getFirstConfiguredEnvValue('AWS_S3_ENDPOINT', 'S3_ENDPOINT');
+  const forcePathStyle = /^(1|true|yes)$/i.test(getFirstConfiguredEnvValue('AWS_S3_FORCE_PATH_STYLE', 'S3_FORCE_PATH_STYLE'));
+
+  return {
+    region,
+    bucket,
+    accessKeyId,
+    secretAccessKey,
+    endpoint,
+    forcePathStyle
+  };
+}
+
+function isS3StorageConfigured(config = getS3StorageConfig()) {
+  return Boolean(config && config.region && config.bucket);
+}
+
+function getS3Client() {
+  const config = getS3StorageConfig();
+  if (!isS3StorageConfigured(config)) {
+    return null;
+  }
+
+  const cacheKey = JSON.stringify({
+    region: config.region,
+    bucket: config.bucket,
+    endpoint: config.endpoint,
+    forcePathStyle: config.forcePathStyle,
+    accessKeyId: config.accessKeyId,
+    hasSecret: Boolean(config.secretAccessKey)
+  });
+
+  if (!cachedS3Client || cachedS3ClientKey !== cacheKey) {
+    const clientConfig = {
+      region: config.region,
+      forcePathStyle: config.forcePathStyle
+    };
+
+    if (config.endpoint) {
+      clientConfig.endpoint = config.endpoint;
+    }
+
+    if (config.accessKeyId && config.secretAccessKey) {
+      clientConfig.credentials = {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey
+      };
+    }
+
+    cachedS3Client = new S3Client(clientConfig);
+    cachedS3ClientKey = cacheKey;
+  }
+
+  return cachedS3Client;
+}
+
+function getContentTypeForFileName(fileName, fallbackType = '') {
+  const normalizedFallback = String(fallbackType || '').trim();
+  if (normalizedFallback) {
+    return normalizedFallback;
+  }
+
+  const extension = path.extname(String(fileName || '')).toLowerCase();
+  if (extension === '.pdf') return 'application/pdf';
+  if (extension === '.doc') return 'application/msword';
+  if (extension === '.docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (extension === '.xls') return 'application/vnd.ms-excel';
+  if (extension === '.xlsx') return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if (extension === '.csv') return 'text/csv; charset=utf-8';
+  if (extension === '.txt') return 'text/plain; charset=utf-8';
+  if (extension === '.png') return 'image/png';
+  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
+  if (extension === '.gif') return 'image/gif';
+  if (extension === '.webp') return 'image/webp';
+  return 'application/octet-stream';
+}
+
+function sanitizeUserUploadScope(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar'].includes(normalized)
+    ? normalized
+    : '';
+}
+
+function buildProfileAvatarContentPath(documentId) {
+  const normalizedDocumentId = String(documentId || '').trim();
+  if (!normalizedDocumentId) {
+    return '';
+  }
+
+  return `/api/profile/avatar/content/${encodeURIComponent(normalizedDocumentId)}`;
+}
+
+function sanitizeUserUploadContextKey(value, fallback = 'default') {
+  const normalized = String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, 160);
+
+  return normalized || fallback;
+}
+
+function buildUserUploadStoredFileName(documentId, originalFileName) {
+  const extension = path.extname(String(originalFileName || '')).toLowerCase();
+  const baseName = path.basename(String(originalFileName || 'document'), extension);
+  const safeBaseName = sanitizeAgentWorkspaceSegment(baseName)
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase() || 'document';
+  return `${documentId}__${safeBaseName}${extension}`;
+}
+
+function buildUserUploadStorageLocation({ ownerUserId, scope, contextKey, documentId, fileName }) {
+  const safeScope = sanitizeUserUploadScope(scope);
+  const safeContextKey = sanitizeUserUploadContextKey(contextKey, 'default');
+  const storedFileName = buildUserUploadStoredFileName(documentId, fileName);
+  const s3Key = `user-uploads/${safeScope}/user-${Number(ownerUserId) || 0}/${safeContextKey}/${storedFileName}`;
+  const localDirectory = path.join(USER_UPLOADS_LOCAL_ROOT, safeScope, `user-${Number(ownerUserId) || 0}`, safeContextKey);
+
+  return {
+    storedFileName,
+    s3Key,
+    localDirectory,
+    localPath: path.join(localDirectory, storedFileName)
+  };
+}
+
+async function storeUserUploadBuffer({ ownerUserId, scope, contextKey, documentId, fileName, fileType, buffer }) {
+  const storageLocation = buildUserUploadStorageLocation({ ownerUserId, scope, contextKey, documentId, fileName });
+  const s3Client = getS3Client();
+  const s3Config = getS3StorageConfig();
+  const contentType = getContentTypeForFileName(fileName, fileType);
+
+  if (s3Client && isS3StorageConfigured(s3Config)) {
+    await s3Client.send(new PutObjectCommand({
+      Bucket: s3Config.bucket,
+      Key: storageLocation.s3Key,
+      Body: buffer,
+      ContentType: contentType
+    }));
+
+    return {
+      storageProvider: 's3',
+      storageKey: storageLocation.s3Key,
+      storedFileName: storageLocation.storedFileName,
+      contentType
+    };
+  }
+
+  fs.mkdirSync(storageLocation.localDirectory, { recursive: true });
+  fs.writeFileSync(storageLocation.localPath, buffer);
+
+  return {
+    storageProvider: 'local',
+    storageKey: storageLocation.localPath,
+    storedFileName: storageLocation.storedFileName,
+    contentType
+  };
+}
+
+async function deleteStoredUserUpload(uploadRecord) {
+  const storageProvider = String(uploadRecord?.storage_provider || uploadRecord?.storageProvider || '').trim().toLowerCase();
+  const storageKey = String(uploadRecord?.storage_key || uploadRecord?.storageKey || '').trim();
+  if (!storageProvider || !storageKey) {
+    return;
+  }
+
+  if (storageProvider === 's3') {
+    const s3Client = getS3Client();
+    const s3Config = getS3StorageConfig();
+    if (!s3Client || !isS3StorageConfigured(s3Config)) {
+      throw new Error('S3 storage is not configured.');
+    }
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: s3Config.bucket,
+      Key: storageKey
+    }));
+    return;
+  }
+
+  await fs.promises.unlink(storageKey).catch(() => {});
+}
+
+async function createUserUploadRecord({ ownerUserId, scope, contextKey, fileName, fileSize, fileType, buffer }) {
+  const documentId = crypto.randomUUID();
+  const safeScope = sanitizeUserUploadScope(scope);
+  const safeContextKey = sanitizeUserUploadContextKey(contextKey, 'default');
+  const createdAt = Date.now();
+  const stored = await storeUserUploadBuffer({
+    ownerUserId,
+    scope: safeScope,
+    contextKey: safeContextKey,
+    documentId,
+    fileName,
+    fileType,
+    buffer
+  });
+
+  await dbRun(
+    `INSERT INTO user_uploads (
+      id, owner_user_id, scope, context_key, original_file_name, stored_file_name,
+      file_size, file_type, storage_provider, storage_key, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      documentId,
+      ownerUserId,
+      safeScope,
+      safeContextKey,
+      fileName,
+      stored.storedFileName,
+      Math.max(Number(fileSize) || 0, 0),
+      stored.contentType,
+      stored.storageProvider,
+      stored.storageKey,
+      createdAt,
+      createdAt
+    ]
+  );
+
+  return getUserUploadByIdForOwner(ownerUserId, documentId);
+}
+
+async function listUserUploadsForOwner(ownerUserId, options = {}) {
+  const whereClauses = ['owner_user_id = ?'];
+  const params = [ownerUserId];
+  const scope = sanitizeUserUploadScope(options.scope || '');
+  const contextKey = String(options.contextKey || '').trim();
+
+  if (scope) {
+    whereClauses.push('scope = ?');
+    params.push(scope);
+  }
+
+  if (contextKey) {
+    whereClauses.push('context_key = ?');
+    params.push(sanitizeUserUploadContextKey(contextKey, 'default'));
+  }
+
+  return dbAll(
+    `SELECT *
+       FROM user_uploads
+      WHERE ${whereClauses.join(' AND ')}
+      ORDER BY updated_at DESC, created_at DESC`,
+    params
+  );
+}
+
+async function getUserUploadByIdForOwner(ownerUserId, documentId) {
+  return dbGet(
+    `SELECT *
+       FROM user_uploads
+      WHERE owner_user_id = ? AND id = ?`,
+    [ownerUserId, String(documentId || '').trim()]
+  );
+}
+
+async function getProfileAvatarUploadRecordForUser(ownerUserId) {
+  const userRow = await dbGet('SELECT avatar_upload_id FROM users WHERE id = ?', [ownerUserId]);
+  const avatarUploadId = String(userRow?.avatar_upload_id || '').trim();
+  if (!avatarUploadId) {
+    return null;
+  }
+
+  return getUserUploadByIdForOwner(ownerUserId, avatarUploadId);
+}
+
+function normalizeClosedDealDocumentsForStorage(documents) {
+  if (!Array.isArray(documents)) {
+    return [];
+  }
+
+  return documents
+    .map((documentItem) => ({
+      id: String(documentItem?.id || '').trim(),
+      label: String(documentItem?.label || documentItem?.fileName || 'Document').trim() || 'Document',
+      fileName: String(documentItem?.fileName || documentItem?.label || 'Document').trim() || 'Document',
+      fileSize: Math.max(Number(documentItem?.fileSize) || 0, 0),
+      fileType: String(documentItem?.fileType || '').trim(),
+      storage: ['cloud', 'indexeddb', 'inline-base64'].includes(String(documentItem?.storage || '').trim())
+        ? String(documentItem.storage).trim()
+        : 'cloud',
+      contentBase64: String(documentItem?.contentBase64 || '').trim(),
+      createdAt: Number(documentItem?.createdAt) || Date.now(),
+      updatedAt: Number(documentItem?.updatedAt) || Number(documentItem?.createdAt) || Date.now()
+    }))
+    .filter((documentItem) => documentItem.id && (documentItem.storage !== 'inline-base64' || documentItem.contentBase64));
+}
+
+function serializeClosedDealRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  let documents = [];
+  try {
+    documents = normalizeClosedDealDocumentsForStorage(JSON.parse(String(row.documents_json || '[]')));
+  } catch (error) {
+    documents = [];
+  }
+
+  return {
+    id: String(row.id || '').trim(),
+    title: String(row.title || '').trim(),
+    propertyAddress: String(row.property_address || row.title || '').trim(),
+    closeDate: String(row.close_date || '').trim(),
+    wholesaleFee: Number(row.wholesale_fee) || 0,
+    earnedAmount: Number(row.earned_amount) || 0,
+    note: String(row.note || '').trim(),
+    documents,
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+async function listClosedDealsForOwner(ownerUserId) {
+  const rows = await dbAll(
+    `SELECT *
+       FROM closed_deals
+      WHERE owner_user_id = ?
+      ORDER BY updated_at DESC, created_at DESC`,
+    [ownerUserId]
+  );
+  return rows.map((row) => serializeClosedDealRow(row)).filter(Boolean);
+}
+
+async function getClosedDealForOwner(ownerUserId, closedDealId) {
+  const row = await dbGet(
+    `SELECT *
+       FROM closed_deals
+      WHERE owner_user_id = ? AND id = ?`,
+    [ownerUserId, String(closedDealId || '').trim()]
+  );
+  return serializeClosedDealRow(row);
+}
+
+function serializeUserUpload(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: String(row.id || '').trim(),
+    scope: String(row.scope || '').trim(),
+    contextKey: String(row.context_key || '').trim(),
+    fileName: String(row.original_file_name || '').trim(),
+    fileSize: Math.max(Number(row.file_size) || 0, 0),
+    fileType: String(row.file_type || '').trim() || getContentTypeForFileName(row.original_file_name),
+    storage: String(row.storage_provider || '').trim().toLowerCase() === 's3' ? 'cloud' : 'local',
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+async function streamStoredUserUploadToResponse(uploadRecord, res) {
+  const storageProvider = String(uploadRecord?.storage_provider || '').trim().toLowerCase();
+  const storageKey = String(uploadRecord?.storage_key || '').trim();
+
+  if (storageProvider === 's3') {
+    const s3Client = getS3Client();
+    const s3Config = getS3StorageConfig();
+    if (!s3Client || !isS3StorageConfigured(s3Config)) {
+      throw new Error('S3 storage is not configured.');
+    }
+
+    const response = await s3Client.send(new GetObjectCommand({
+      Bucket: s3Config.bucket,
+      Key: storageKey
+    }));
+
+    if (response?.Body && typeof response.Body.pipe === 'function') {
+      response.Body.pipe(res);
+      return;
+    }
+
+    const chunks = [];
+    for await (const chunk of response.Body) {
+      chunks.push(chunk);
+    }
+    res.end(Buffer.concat(chunks));
+    return;
+  }
+
+  fs.createReadStream(storageKey).pipe(res);
+}
+
 function base32Encode(buffer) {
   const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || []);
   let bits = 0;
@@ -2373,11 +2828,15 @@ function serializeUser(userLike) {
     return null;
   }
 
+  const avatarUploadId = String(userLike.avatar_upload_id || userLike.avatarUploadId || '').trim();
+
   return {
     id: userLike.id,
     name: userLike.name,
     email: userLike.email,
-    role: isKnownAdminEmail(userLike.email) ? 'admin' : String(userLike.role || '').trim().toLowerCase()
+    role: isKnownAdminEmail(userLike.email) ? 'admin' : String(userLike.role || '').trim().toLowerCase(),
+    avatarUploadId,
+    avatarImage: buildProfileAvatarContentPath(avatarUploadId)
   };
 }
 
@@ -2988,7 +3447,7 @@ const AGENT_WORKSPACE_DOCUMENT_CATEGORIES = Object.freeze({
 });
 
 function isAllowedInvestorAttachmentExtension(extension) {
-  return ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.png', '.jpg', '.jpeg', '.txt'].includes(String(extension || '').toLowerCase());
+  return ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.txt'].includes(String(extension || '').toLowerCase());
 }
 
 function isProofOfFundsFileName(value) {
@@ -3060,7 +3519,7 @@ function parseAgentWorkspaceStoredFileName(fileName) {
   };
 }
 
-function listAgentWorkspaceDocumentsForUser(decoded) {
+function listLegacyAgentWorkspaceDocumentsForUser(decoded) {
   const userRoot = getAgentWorkspaceUserRoot(decoded);
   if (!fs.existsSync(userRoot)) {
     return [];
@@ -3104,7 +3563,7 @@ function listAgentWorkspaceDocumentsForUser(decoded) {
     .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0));
 }
 
-function findAgentWorkspaceDocumentForUser(decoded, documentId) {
+function findLegacyAgentWorkspaceDocumentForUser(decoded, documentId) {
   const normalizedId = String(documentId || '').trim();
   if (!normalizedId) {
     return null;
@@ -3148,6 +3607,55 @@ function findAgentWorkspaceDocumentForUser(decoded, documentId) {
   }
 
   return null;
+}
+
+async function listAgentWorkspaceDocumentsForUser(decoded) {
+  const uploadedRows = await listUserUploadsForOwner(Number(decoded?.id) || 0, {
+    scope: 'agent-workspace'
+  });
+  const cloudDocuments = uploadedRows.map((row) => ({
+    id: String(row.id || '').trim(),
+    category: String(row.context_key || '').trim(),
+    categoryLabel: getAgentWorkspaceCategoryLabel(row.context_key),
+    fileName: String(row.original_file_name || '').trim(),
+    fileSize: Math.max(Number(row.file_size) || 0, 0),
+    fileType: String(row.file_type || '').trim() || getContentTypeForFileName(row.original_file_name),
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now(),
+    storage: String(row.storage_provider || '').trim().toLowerCase() === 's3' ? 'cloud' : 'local'
+  }));
+
+  const legacyDocuments = listLegacyAgentWorkspaceDocumentsForUser(decoded);
+  const seenIds = new Set(cloudDocuments.map((item) => item.id));
+
+  legacyDocuments.forEach((item) => {
+    if (!seenIds.has(item.id)) {
+      cloudDocuments.push(item);
+    }
+  });
+
+  return cloudDocuments.sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0));
+}
+
+async function findAgentWorkspaceDocumentForUser(decoded, documentId) {
+  const uploadRow = await getUserUploadByIdForOwner(Number(decoded?.id) || 0, documentId);
+  if (uploadRow && String(uploadRow.scope || '').trim() === 'agent-workspace') {
+    return {
+      id: String(uploadRow.id || '').trim(),
+      category: String(uploadRow.context_key || '').trim(),
+      categoryLabel: getAgentWorkspaceCategoryLabel(uploadRow.context_key),
+      fileName: String(uploadRow.original_file_name || '').trim(),
+      fileSize: Math.max(Number(uploadRow.file_size) || 0, 0),
+      fileType: String(uploadRow.file_type || '').trim() || getContentTypeForFileName(uploadRow.original_file_name),
+      createdAt: Number(uploadRow.created_at) || Date.now(),
+      updatedAt: Number(uploadRow.updated_at) || Number(uploadRow.created_at) || Date.now(),
+      storageProvider: String(uploadRow.storage_provider || '').trim().toLowerCase(),
+      storageKey: String(uploadRow.storage_key || '').trim(),
+      dbRow: uploadRow
+    };
+  }
+
+  return findLegacyAgentWorkspaceDocumentForUser(decoded, documentId);
 }
 
 function resolveInvestorAttachmentPath(relativePath) {
@@ -3548,7 +4056,7 @@ app.post('/api/login/2fa', async (req, res) => {
 
   try {
     const challenge = verifyTwoFactorChallenge(challengeToken);
-    const user = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [challenge.id]);
+    const user = await dbGet('SELECT id, name, email, role, avatar_upload_id FROM users WHERE id = ?', [challenge.id]);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
@@ -3819,7 +4327,7 @@ app.post('/api/verify', (req, res) => {
     return;
   }
 
-  db.get('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id], (error, userRow) => {
+  db.get('SELECT id, name, email, role, avatar_upload_id FROM users WHERE id = ?', [decoded.id], (error, userRow) => {
     if (error) {
       return res.status(500).json({ error: 'Database error' });
     }
@@ -6638,14 +7146,14 @@ app.get('/api/admin-ecards', (req, res) => {
   }
 });
 
-app.get('/api/agent-workspace-documents', (req, res) => {
+app.get('/api/agent-workspace-documents', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
   }
 
   try {
-    return res.json({ documents: listAgentWorkspaceDocumentsForUser(decoded) });
+    return res.json({ documents: await listAgentWorkspaceDocumentsForUser(decoded) });
   } catch (error) {
     console.error('Failed to list Agent Workspace documents:', error);
     return res.status(500).json({ error: 'Failed to load Agent Workspace documents.' });
@@ -6658,7 +7166,7 @@ app.post('/api/agent-workspace-documents', express.json({ limit: '20mb' }), (req
     return;
   }
 
-  try {
+  (async () => {
     const category = String(req.body?.category || '').trim().toLowerCase();
     const categoryLabel = getAgentWorkspaceCategoryLabel(category);
     const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(req.body?.fileName || '').trim()));
@@ -6686,97 +7194,430 @@ app.post('/api/agent-workspace-documents', express.json({ limit: '20mb' }), (req
       return res.status(413).json({ error: 'Files must be 15 MB or smaller.' });
     }
 
-    const documentId = crypto.randomUUID();
-    const userRoot = getAgentWorkspaceUserRoot(decoded);
-    const categoryRoot = path.join(userRoot, category);
-    fs.mkdirSync(categoryRoot, { recursive: true });
-
-    const storedFileName = buildAgentWorkspaceStoredFileName(documentId, fileName);
-    const absolutePath = path.join(categoryRoot, storedFileName);
-    fs.writeFileSync(absolutePath, buffer);
-    const stats = fs.statSync(absolutePath);
+    const createdRecord = await createUserUploadRecord({
+      ownerUserId: Number(decoded.id) || 0,
+      scope: 'agent-workspace',
+      contextKey: category,
+      fileName,
+      fileSize: buffer.length,
+      fileType: getContentTypeForFileName(fileName),
+      buffer
+    });
 
     return res.status(201).json({
       document: {
-        id: documentId,
+        id: String(createdRecord.id || '').trim(),
         category,
         categoryLabel,
         fileName,
-        fileSize: stats.size,
-        fileType: extension || 'file',
-        createdAt: stats.birthtimeMs || stats.mtimeMs || Date.now(),
-        updatedAt: stats.mtimeMs || stats.birthtimeMs || Date.now()
+        fileSize: Math.max(Number(createdRecord.file_size) || buffer.length, 0),
+        fileType: String(createdRecord.file_type || '').trim() || getContentTypeForFileName(fileName),
+        createdAt: Number(createdRecord.created_at) || Date.now(),
+        updatedAt: Number(createdRecord.updated_at) || Number(createdRecord.created_at) || Date.now(),
+        storage: String(createdRecord.storage_provider || '').trim().toLowerCase() === 's3' ? 'cloud' : 'local'
       }
     });
-  } catch (error) {
+  })().catch((error) => {
     console.error('Failed to save Agent Workspace document:', error);
     return res.status(500).json({ error: 'Failed to save the uploaded file.' });
-  }
+  });
 });
 
-app.get('/api/agent-workspace-documents/:documentId/content', (req, res) => {
+app.get('/api/agent-workspace-documents/:documentId/content', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
   }
 
   try {
-    const documentItem = findAgentWorkspaceDocumentForUser(decoded, req.params.documentId);
+    const documentItem = await findAgentWorkspaceDocumentForUser(decoded, req.params.documentId);
     if (!documentItem) {
       return res.status(404).json({ error: 'Document not found.' });
     }
 
     const download = String(req.query?.download || '').trim() === '1';
-    const extension = path.extname(documentItem.fileName).toLowerCase();
-    const contentType = extension === '.pdf'
-      ? 'application/pdf'
-      : extension === '.doc'
-        ? 'application/msword'
-        : extension === '.docx'
-          ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          : extension === '.xls'
-            ? 'application/vnd.ms-excel'
-            : extension === '.xlsx'
-              ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-              : extension === '.csv'
-                ? 'text/csv'
-                : extension === '.png'
-                  ? 'image/png'
-                  : ['.jpg', '.jpeg'].includes(extension)
-                    ? 'image/jpeg'
-                    : extension === '.txt'
-                      ? 'text/plain; charset=utf-8'
-                      : 'application/octet-stream';
+    const contentType = getContentTypeForFileName(documentItem.fileName, documentItem.fileType);
 
     res.setHeader('Content-Type', contentType);
     res.setHeader(
       'Content-Disposition',
       `${download ? 'attachment' : 'inline'}; filename="${documentItem.fileName.replace(/"/g, '')}"`
     );
-    return fs.createReadStream(documentItem.absolutePath).pipe(res);
+    await streamStoredUserUploadToResponse(documentItem.dbRow || documentItem, res);
+    return;
   } catch (error) {
     console.error('Failed to stream Agent Workspace document:', error);
     return res.status(500).json({ error: 'Failed to open the requested file.' });
   }
 });
 
-app.delete('/api/agent-workspace-documents/:documentId', (req, res) => {
+app.delete('/api/agent-workspace-documents/:documentId', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
   }
 
   try {
-    const documentItem = findAgentWorkspaceDocumentForUser(decoded, req.params.documentId);
+    const documentItem = await findAgentWorkspaceDocumentForUser(decoded, req.params.documentId);
     if (!documentItem) {
       return res.status(404).json({ error: 'Document not found.' });
     }
 
-    fs.unlinkSync(documentItem.absolutePath);
+    if (documentItem.dbRow) {
+      await deleteStoredUserUpload(documentItem.dbRow);
+      await dbRun('DELETE FROM user_uploads WHERE id = ? AND owner_user_id = ?', [documentItem.id, Number(decoded.id) || 0]);
+    } else if (documentItem.absolutePath) {
+      fs.unlinkSync(documentItem.absolutePath);
+    }
+
     return res.json({ success: true });
   } catch (error) {
     console.error('Failed to delete Agent Workspace document:', error);
     return res.status(500).json({ error: 'Failed to delete the selected file.' });
+  }
+});
+
+app.get('/api/user-uploads', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const scope = sanitizeUserUploadScope(req.query?.scope || '');
+    if (!scope) {
+      return res.status(400).json({ error: 'A valid upload scope is required.' });
+    }
+
+    const contextKey = sanitizeUserUploadContextKey(req.query?.contextKey || 'default', 'default');
+    const rows = await listUserUploadsForOwner(Number(decoded.id) || 0, { scope, contextKey });
+    return res.json({ documents: rows.map((row) => serializeUserUpload(row)).filter(Boolean) });
+  } catch (error) {
+    console.error('Failed to list user uploads:', error);
+    return res.status(500).json({ error: 'Failed to load uploaded files.' });
+  }
+});
+
+app.post('/api/user-uploads', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  userUploadMemory.single('file')(req, res, async (uploadError) => {
+    if (uploadError) {
+      const uploadMessage = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'Files must be 15 MB or smaller.'
+        : (uploadError && uploadError.message ? uploadError.message : 'Failed to upload the file.');
+      return res.status(400).json({ error: uploadMessage });
+    }
+
+    try {
+      const scope = sanitizeUserUploadScope(req.body?.scope || '');
+      const contextKey = sanitizeUserUploadContextKey(req.body?.contextKey || 'default', 'default');
+      const uploadedFile = req.file;
+      const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(uploadedFile?.originalname || '').trim()));
+      const extension = path.extname(fileName).toLowerCase();
+
+      if (!scope || !['closed-deal', 'offer-package'].includes(scope)) {
+        return res.status(400).json({ error: 'A valid upload scope is required.' });
+      }
+
+      if (!uploadedFile || !fileName) {
+        return res.status(400).json({ error: 'A file is required.' });
+      }
+
+      if (!isAllowedInvestorAttachmentExtension(extension)) {
+        return res.status(400).json({ error: 'This file type is not allowed.' });
+      }
+
+      if (!uploadedFile.buffer || !uploadedFile.buffer.length) {
+        return res.status(400).json({ error: 'The uploaded file was empty.' });
+      }
+
+      const createdRecord = await createUserUploadRecord({
+        ownerUserId: Number(decoded.id) || 0,
+        scope,
+        contextKey,
+        fileName,
+        fileSize: uploadedFile.size,
+        fileType: getContentTypeForFileName(fileName, uploadedFile.mimetype),
+        buffer: uploadedFile.buffer
+      });
+
+      return res.status(201).json({ document: serializeUserUpload(createdRecord) });
+    } catch (error) {
+      console.error('Failed to save user upload:', error);
+      return res.status(500).json({ error: 'Failed to save the uploaded file.' });
+    }
+  });
+});
+
+app.get('/api/user-uploads/:documentId/content', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const uploadRecord = await getUserUploadByIdForOwner(Number(decoded.id) || 0, req.params.documentId);
+    if (!uploadRecord) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    const download = String(req.query?.download || '').trim() === '1';
+    const fileName = String(uploadRecord.original_file_name || 'document').trim() || 'document';
+    res.setHeader('Content-Type', getContentTypeForFileName(fileName, uploadRecord.file_type));
+    res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="${fileName.replace(/"/g, '')}"`);
+    await streamStoredUserUploadToResponse(uploadRecord, res);
+    return;
+  } catch (error) {
+    console.error('Failed to stream user upload:', error);
+    return res.status(500).json({ error: 'Failed to open the requested file.' });
+  }
+});
+
+app.delete('/api/user-uploads/:documentId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const uploadRecord = await getUserUploadByIdForOwner(Number(decoded.id) || 0, req.params.documentId);
+    if (!uploadRecord) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    await deleteStoredUserUpload(uploadRecord);
+    await dbRun('DELETE FROM user_uploads WHERE id = ? AND owner_user_id = ?', [String(uploadRecord.id || '').trim(), Number(decoded.id) || 0]);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete user upload:', error);
+    return res.status(500).json({ error: 'Failed to delete the selected file.' });
+  }
+});
+
+app.get('/api/profile/avatar/content/:documentId', async (req, res) => {
+  try {
+    const documentId = String(req.params.documentId || '').trim();
+    if (!documentId) {
+      return res.status(404).end();
+    }
+
+    const uploadRecord = await dbGet(
+      `SELECT *
+         FROM user_uploads
+        WHERE id = ? AND scope = 'profile-avatar'`,
+      [documentId]
+    );
+
+    if (!uploadRecord) {
+      return res.status(404).end();
+    }
+
+    const fileName = String(uploadRecord.original_file_name || 'avatar').trim() || 'avatar';
+    res.setHeader('Content-Type', getContentTypeForFileName(fileName, uploadRecord.file_type));
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Content-Disposition', `inline; filename="${fileName.replace(/"/g, '')}"`);
+    await streamStoredUserUploadToResponse(uploadRecord, res);
+    return;
+  } catch (error) {
+    console.error('Failed to stream profile avatar:', error);
+    return res.status(500).end();
+  }
+});
+
+app.post('/api/profile/avatar', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  userUploadMemory.single('avatar')(req, res, async (uploadError) => {
+    if (uploadError) {
+      const uploadMessage = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'Profile images must be 15 MB or smaller.'
+        : (uploadError && uploadError.message ? uploadError.message : 'Failed to upload the profile image.');
+      return res.status(400).json({ error: uploadMessage });
+    }
+
+    try {
+      const uploadedFile = req.file;
+      const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(uploadedFile?.originalname || '').trim()));
+      const extension = path.extname(fileName).toLowerCase();
+      const ownerUserId = Number(decoded.id) || 0;
+
+      if (!uploadedFile || !fileName) {
+        return res.status(400).json({ error: 'A profile image is required.' });
+      }
+
+      if (!['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(extension)) {
+        return res.status(400).json({ error: 'Profile images must be PNG, JPG, GIF, or WebP.' });
+      }
+
+      if (!String(uploadedFile.mimetype || '').trim().toLowerCase().startsWith('image/')) {
+        return res.status(400).json({ error: 'Only image uploads are supported for profile avatars.' });
+      }
+
+      if (!uploadedFile.buffer || !uploadedFile.buffer.length) {
+        return res.status(400).json({ error: 'The uploaded profile image was empty.' });
+      }
+
+      const previousAvatarRecord = await getProfileAvatarUploadRecordForUser(ownerUserId);
+      const createdRecord = await createUserUploadRecord({
+        ownerUserId,
+        scope: 'profile-avatar',
+        contextKey: 'current',
+        fileName,
+        fileSize: uploadedFile.size,
+        fileType: getContentTypeForFileName(fileName, uploadedFile.mimetype),
+        buffer: uploadedFile.buffer
+      });
+
+      await dbRun('UPDATE users SET avatar_upload_id = ? WHERE id = ?', [String(createdRecord?.id || '').trim(), ownerUserId]);
+
+      if (previousAvatarRecord && String(previousAvatarRecord.id || '').trim() !== String(createdRecord?.id || '').trim()) {
+        await deleteStoredUserUpload(previousAvatarRecord).catch(() => {});
+        await dbRun('DELETE FROM user_uploads WHERE id = ? AND owner_user_id = ?', [String(previousAvatarRecord.id || '').trim(), ownerUserId]);
+      }
+
+      const userRow = await dbGet('SELECT id, name, email, role, avatar_upload_id FROM users WHERE id = ?', [ownerUserId]);
+      return res.status(201).json({
+        document: serializeUserUpload(createdRecord),
+        user: serializeUser(userRow)
+      });
+    } catch (error) {
+      console.error('Failed to save profile avatar:', error);
+      return res.status(500).json({ error: 'Failed to save the profile image.' });
+    }
+  });
+});
+
+app.delete('/api/profile/avatar', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownerUserId = Number(decoded.id) || 0;
+    const avatarRecord = await getProfileAvatarUploadRecordForUser(ownerUserId);
+    await dbRun('UPDATE users SET avatar_upload_id = NULL WHERE id = ?', [ownerUserId]);
+
+    if (avatarRecord) {
+      await deleteStoredUserUpload(avatarRecord).catch(() => {});
+      await dbRun('DELETE FROM user_uploads WHERE id = ? AND owner_user_id = ?', [String(avatarRecord.id || '').trim(), ownerUserId]);
+    }
+
+    const userRow = await dbGet('SELECT id, name, email, role, avatar_upload_id FROM users WHERE id = ?', [ownerUserId]);
+    return res.json({ success: true, user: serializeUser(userRow) });
+  } catch (error) {
+    console.error('Failed to delete profile avatar:', error);
+    return res.status(500).json({ error: 'Failed to delete the profile image.' });
+  }
+});
+
+app.get('/api/closed-deals', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    return res.json({ deals: await listClosedDealsForOwner(Number(decoded.id) || 0) });
+  } catch (error) {
+    console.error('Failed to list closed deals:', error);
+    return res.status(500).json({ error: 'Failed to load closed deals.' });
+  }
+});
+
+app.post('/api/closed-deals', express.json({ limit: '2mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const id = String(req.body?.id || '').trim();
+    const title = String(req.body?.title || '').trim();
+    const propertyAddress = String(req.body?.propertyAddress || title).trim();
+    const closeDate = String(req.body?.closeDate || '').trim();
+    const wholesaleFee = Math.max(Number(req.body?.wholesaleFee) || 0, 0);
+    const earnedAmount = Math.max(Number(req.body?.earnedAmount) || 0, 0);
+    const note = String(req.body?.note || '').trim();
+    const documents = normalizeClosedDealDocumentsForStorage(req.body?.documents);
+    const ownerUserId = Number(decoded.id) || 0;
+    const timestamp = Date.now();
+
+    if (!id || !title) {
+      return res.status(400).json({ error: 'A closed deal id and title are required.' });
+    }
+
+    await dbRun(
+      `INSERT INTO closed_deals (
+        id, owner_user_id, title, property_address, close_date, wholesale_fee, earned_amount, note, documents_json, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        property_address = excluded.property_address,
+        close_date = excluded.close_date,
+        wholesale_fee = excluded.wholesale_fee,
+        earned_amount = excluded.earned_amount,
+        note = excluded.note,
+        documents_json = excluded.documents_json,
+        updated_at = excluded.updated_at`,
+      [
+        id,
+        ownerUserId,
+        title,
+        propertyAddress,
+        closeDate,
+        wholesaleFee,
+        earnedAmount,
+        note,
+        JSON.stringify(documents),
+        Number(req.body?.createdAt) || timestamp,
+        timestamp
+      ]
+    );
+
+    const deal = await getClosedDealForOwner(ownerUserId, id);
+    return res.status(201).json({ deal });
+  } catch (error) {
+    console.error('Failed to save closed deal:', error);
+    return res.status(500).json({ error: 'Failed to save closed deal.' });
+  }
+});
+
+app.delete('/api/closed-deals/:dealId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownerUserId = Number(decoded.id) || 0;
+    const deal = await getClosedDealForOwner(ownerUserId, req.params.dealId);
+    if (!deal) {
+      return res.status(404).json({ error: 'Closed deal not found.' });
+    }
+
+    for (const documentItem of normalizeClosedDealDocumentsForStorage(deal.documents)) {
+      if (documentItem.storage === 'cloud' && documentItem.id) {
+        const uploadRecord = await getUserUploadByIdForOwner(ownerUserId, documentItem.id);
+        if (uploadRecord) {
+          await deleteStoredUserUpload(uploadRecord);
+          await dbRun('DELETE FROM user_uploads WHERE id = ? AND owner_user_id = ?', [uploadRecord.id, ownerUserId]);
+        }
+      }
+    }
+
+    await dbRun('DELETE FROM closed_deals WHERE id = ? AND owner_user_id = ?', [deal.id, ownerUserId]);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete closed deal:', error);
+    return res.status(500).json({ error: 'Failed to delete closed deal.' });
   }
 });
 

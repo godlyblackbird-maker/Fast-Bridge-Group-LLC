@@ -104,6 +104,15 @@ function getStoredProfileMirror(userLike) {
   return null;
 }
 
+function buildProfileAvatarImage(avatarUploadId) {
+  const normalizedAvatarUploadId = String(avatarUploadId || '').trim();
+  if (!normalizedAvatarUploadId) {
+    return '';
+  }
+
+  return `/api/profile/avatar/content/${encodeURIComponent(normalizedAvatarUploadId)}`;
+}
+
 function persistAuthenticatedUser(userLike) {
   if (!userLike || typeof userLike !== 'object') {
     return;
@@ -121,7 +130,10 @@ function persistAuthenticatedUser(userLike) {
     name: String((scopedProfile && scopedProfile.name) || normalizedUser.name || 'User').trim(),
     email: normalizedUser.email,
     role: String(normalizedUser.role || (scopedProfile && scopedProfile.role) || '').trim(),
-    avatarImage: String((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '').trim()
+    avatarUploadId: String(normalizedUser.avatarUploadId || (scopedProfile && scopedProfile.avatarUploadId) || '').trim(),
+    avatarImage: String(normalizedUser.avatarUploadId
+      ? buildProfileAvatarImage(normalizedUser.avatarUploadId)
+      : ((scopedProfile && scopedProfile.avatarImage) || normalizedUser.avatarImage || '')).trim()
   };
 
   localStorage.setItem('user', JSON.stringify(normalizedUser));
@@ -284,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       loginVersionLabel.textContent = `Version v${version}`;
     } catch (error) {
-      loginVersionLabel.textContent = 'Version v1.3.4';
+      loginVersionLabel.textContent = 'Version v1.3.5';
     }
   }
 

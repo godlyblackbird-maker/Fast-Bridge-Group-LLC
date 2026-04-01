@@ -99,14 +99,87 @@
     };
   }
 
+  function getAuthToken() {
+    return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+  }
+
+  function buildProfileAvatarImage(avatarUploadId) {
+    const normalizedAvatarUploadId = String(avatarUploadId || '').trim();
+    if (!normalizedAvatarUploadId) {
+      return '';
+    }
+
+    return `/api/profile/avatar/content/${encodeURIComponent(normalizedAvatarUploadId)}`;
+  }
+
+  function resolveProfileAvatarFields(primarySource, fallbackSource = null) {
+    const primary = primarySource && typeof primarySource === 'object' ? primarySource : {};
+    const fallback = fallbackSource && typeof fallbackSource === 'object' ? fallbackSource : {};
+    const avatarUploadId = String(primary.avatarUploadId || fallback.avatarUploadId || '').trim();
+
+    if (avatarUploadId) {
+      return {
+        avatarUploadId,
+        avatarImage: buildProfileAvatarImage(avatarUploadId)
+      };
+    }
+
+    return {
+      avatarUploadId: '',
+      avatarImage: String(primary.avatarImage || fallback.avatarImage || '').trim()
+    };
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const normalizedDataUrl = String(dataUrl || '').trim();
+    const match = normalizedDataUrl.match(/^data:([^;,]+)?(?:;base64)?,(.*)$/i);
+    if (!match) {
+      throw new Error('The selected profile image could not be processed.');
+    }
+
+    const mimeType = String(match[1] || 'application/octet-stream').trim() || 'application/octet-stream';
+    const payload = match[2] || '';
+    const binary = window.atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+
+    return new Blob([bytes], { type: mimeType });
+  }
+
+  async function requestProfileAvatar(url, options = {}) {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Sign in again to update your profile image.');
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(options.headers || {})
+      }
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(String(payload && payload.error || 'The profile image request failed.'));
+    }
+
+    return payload;
+  }
+
   function buildScopedProfileData(profileData) {
     const identity = getActiveAccountIdentity();
+    const avatarState = resolveProfileAvatarFields(profileData);
     return {
       ...(profileData && typeof profileData === 'object' ? profileData : {}),
       name: String((profileData && profileData.name) || identity.name || 'User').trim(),
       email: identity.email || normalizeKnownEmail(profileData && profileData.email || ''),
       role: String(identity.role || (profileData && profileData.role) || '').trim(),
-      avatarImage: String((profileData && profileData.avatarImage) || '').trim()
+      avatarUploadId: avatarState.avatarUploadId,
+      avatarImage: avatarState.avatarImage
     };
   }
 
@@ -226,6 +299,7 @@
     const activeEmail = normalizeKnownEmail((user && user.email) || '');
     const storedEmail = normalizeKnownEmail(stored.email || '');
     const resolvedEmail = activeEmail || storedEmail;
+    const avatarState = resolveProfileAvatarFields(stored, user);
     return {
       name: stored.name || (user && user.name) || 'User',
       email: resolvedEmail,
@@ -239,7 +313,8 @@
       jobTitle: stored.jobTitle || '',
       bio: stored.bio || '',
       social: stored.social || '',
-      avatarImage: stored.avatarImage || (user && user.avatarImage) || '',
+      avatarUploadId: avatarState.avatarUploadId,
+      avatarImage: avatarState.avatarImage,
       role: (user && user.role) || 'Administrator'
     };
   }
@@ -538,16 +613,20 @@
     }
 
     if (avatarApplyBtn) {
-      avatarApplyBtn.addEventListener('click', function() {
+      avatarApplyBtn.addEventListener('click', async function() {
         const finalImage = renderAdjustedAvatarDataUrl();
         if (!finalImage) {
           showNotification('Could not process the selected image. Please try again.', 'info');
           return;
         }
 
-        saveAvatarImage(finalImage);
-        showNotification('Profile image updated successfully!', 'success');
-        closeAvatarAdjuster(true);
+        try {
+          await saveAvatarImage(finalImage);
+          showNotification('Profile image updated successfully!', 'success');
+          closeAvatarAdjuster(true);
+        } catch (error) {
+          showNotification(error.message || 'Could not update the selected image.', 'error');
+        }
       });
     }
 
@@ -676,6 +755,7 @@
         jobTitle: document.getElementById('profile-job-title').value,
         bio: document.getElementById('profile-bio').value,
         social: document.getElementById('profile-social').value,
+        avatarUploadId: existingProfile.avatarUploadId || '',
         avatarImage: existingProfile.avatarImage || '',
         updatedAt: new Date().toISOString()
       };
@@ -1230,6 +1310,7 @@
       name: fullName || existingProfile.name || 'User',
       email: resolvedAccountEmail,
       phone: document.getElementById('settings-phone').value.trim(),
+      avatarUploadId: existingProfile.avatarUploadId || '',
       bio: document.getElementById('settings-bio').value.trim(),
       updatedAt: new Date().toISOString()
     };
@@ -1248,19 +1329,44 @@
     showNotification('Settings profile updated successfully!', 'success');
   }
 
-  function saveAvatarImage(avatarImage) {
+  async function saveAvatarImage(avatarImage) {
     const profileData = getStoredProfileData();
+    const user = getCurrentUser();
+    let nextAvatarUploadId = String(profileData.avatarUploadId || (user && user.avatarUploadId) || '').trim();
+    let nextAvatarImage = String(avatarImage || '').trim();
+
+    if (nextAvatarImage && getAuthToken()) {
+      const avatarBlob = dataUrlToBlob(nextAvatarImage);
+      const formData = new FormData();
+      formData.append('avatar', avatarBlob, 'profile-avatar.jpg');
+      const payload = await requestProfileAvatar('/api/profile/avatar', {
+        method: 'POST',
+        body: formData
+      });
+      const serverUser = payload && payload.user && typeof payload.user === 'object' ? payload.user : {};
+      nextAvatarUploadId = String(serverUser.avatarUploadId || '').trim();
+      nextAvatarImage = String(serverUser.avatarImage || buildProfileAvatarImage(nextAvatarUploadId)).trim();
+    } else if (!nextAvatarImage && nextAvatarUploadId && getAuthToken()) {
+      const payload = await requestProfileAvatar('/api/profile/avatar', {
+        method: 'DELETE'
+      });
+      const serverUser = payload && payload.user && typeof payload.user === 'object' ? payload.user : {};
+      nextAvatarUploadId = String(serverUser.avatarUploadId || '').trim();
+      nextAvatarImage = String(serverUser.avatarImage || '').trim();
+    }
+
     const updatedProfile = {
       ...profileData,
-      avatarImage,
+      avatarUploadId: nextAvatarUploadId,
+      avatarImage: nextAvatarImage,
       updatedAt: new Date().toISOString()
     };
 
     setStoredProfileData(updatedProfile);
 
-    const user = getCurrentUser();
     if (user) {
-      user.avatarImage = avatarImage;
+      user.avatarUploadId = nextAvatarUploadId;
+      user.avatarImage = nextAvatarImage;
       persistCurrentUserIdentity(user);
     }
 
@@ -1275,17 +1381,42 @@
   }
 
   if (removeAvatarBtn) {
-    removeAvatarBtn.addEventListener('click', function() {
+    removeAvatarBtn.addEventListener('click', async function() {
       const profileData = getResolvedProfileData();
       if (!profileData.avatarImage) {
         updateRemoveAvatarButtonState(profileData);
         return;
       }
 
-      saveAvatarImage('');
-      closeAvatarAdjuster(true);
-      showNotification('Profile image removed successfully!', 'success');
+      try {
+        await saveAvatarImage('');
+        closeAvatarAdjuster(true);
+        showNotification('Profile image removed successfully!', 'success');
+      } catch (error) {
+        showNotification(error.message || 'Could not remove the profile image.', 'error');
+      }
     });
+  }
+
+  let avatarMigrationStarted = false;
+
+  async function migrateLegacyAvatarToCloudIfNeeded() {
+    if (avatarMigrationStarted || !getAuthToken()) {
+      return;
+    }
+
+    const profileData = getResolvedProfileData();
+    if (profileData.avatarUploadId || !String(profileData.avatarImage || '').startsWith('data:image/')) {
+      return;
+    }
+
+    avatarMigrationStarted = true;
+    try {
+      await saveAvatarImage(profileData.avatarImage);
+    } catch (error) {
+      avatarMigrationStarted = false;
+      return;
+    }
   }
 
   // Notification function
@@ -1436,6 +1567,7 @@
   });
 
   syncSettingsProfileSection();
+  void migrateLegacyAvatarToCloudIfNeeded();
 
   // ── Gmail / SMTP settings ───────────────────────────────────────────────────
   (function initSmtpSettings() {
