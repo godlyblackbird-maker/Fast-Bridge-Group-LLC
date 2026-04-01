@@ -227,6 +227,130 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
 
         const workspaceUser = getWorkspaceUserContext();
+        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+
+        function getDealsScopedStatus(propertyKey) {
+            const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+            if (!normalizedPropertyKey) {
+                return '';
+            }
+
+            const workspaceStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+            if (Object.prototype.hasOwnProperty.call(workspaceStatuses, normalizedPropertyKey)) {
+                return normalizeAgentStatusValue(workspaceStatuses[normalizedPropertyKey] || '');
+            }
+
+            if (!usersMatch(activeSessionUser, workspaceUser)) {
+                const sessionStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, activeSessionUser.key);
+                if (Object.prototype.hasOwnProperty.call(sessionStatuses, normalizedPropertyKey)) {
+                    return normalizeAgentStatusValue(sessionStatuses[normalizedPropertyKey] || '');
+                }
+            }
+
+            return '';
+        }
+
+        function buildAssignmentSummaryLabel(assignmentMeta) {
+            const assignedTo = assignmentMeta && assignmentMeta.assignedTo && typeof assignmentMeta.assignedTo === 'object'
+                ? assignmentMeta.assignedTo
+                : null;
+            if (!assignedTo) {
+                return '';
+            }
+
+            const assignedToName = String(assignedTo.name || assignedTo.email || 'Unknown user').trim() || 'Unknown user';
+            const assignedTargetLabel = usersMatch(assignedTo, workspaceUser) || usersMatch(assignedTo, activeSessionUser)
+                ? 'You'
+                : assignedToName;
+            const assignedAt = assignmentMeta.assignedAt ? new Date(assignmentMeta.assignedAt) : null;
+            const assignedAtLabel = assignedAt && !Number.isNaN(assignedAt.getTime())
+                ? assignedAt.toLocaleDateString()
+                : '';
+
+            if (assignedAtLabel) {
+                return `Assigned to ${assignedTargetLabel} on ${assignedAtLabel}`;
+            }
+
+            return `Assigned to ${assignedTargetLabel}`;
+        }
+
+        function buildDealStatusClassName(statusValue) {
+            const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
+            return normalizedStatus.replace(/\s+/g, '-').replace(/[^a-z-]/g, '') || 'none';
+        }
+
+        function resolveDealWorkspaceState(item) {
+            const baseSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                ? item.propertySnapshot
+                : {};
+            const normalizedPropertyKey = makePropertyStorageKey(
+                item?.propertyKey
+                || baseSnapshot.address
+                || item?.address
+                || item?.propertyAddress
+            );
+            const assignmentRecord = normalizedPropertyKey ? getPropertyAssignmentRecord(normalizedPropertyKey) : null;
+            const assignmentSnapshot = assignmentRecord && assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object'
+                ? assignmentRecord.propertySnapshot
+                : {};
+            const mergedSnapshot = {
+                ...baseSnapshot,
+                ...assignmentSnapshot
+            };
+            const assignmentMeta = assignmentRecord
+                ? buildPropertyAssignmentMeta(assignmentRecord)
+                : (mergedSnapshot.propertyAssignment && typeof mergedSnapshot.propertyAssignment === 'object'
+                    ? buildPropertyAssignmentMeta(mergedSnapshot.propertyAssignment)
+                    : null);
+            const propertyAddress = String(
+                mergedSnapshot.address
+                || mergedSnapshot.propertyAddress
+                || item?.address
+                || item?.propertyAddress
+                || normalizedPropertyKey
+                || 'Property'
+            ).trim() || 'Property';
+            const statusValue = normalizeAgentStatusValue(
+                getDealsScopedStatus(normalizedPropertyKey)
+                || mergedSnapshot.piqAgentStatus
+                || item?.piqAgentStatus
+                || 'none'
+            );
+            const baseDetail = buildDashboardPropertyDetailFallback(propertyAddress, statusValue, mergedSnapshot);
+            const nextAgentRecord = {
+                ...(baseDetail.agentRecord && typeof baseDetail.agentRecord === 'object' ? baseDetail.agentRecord : {}),
+                ...(mergedSnapshot.agentRecord && typeof mergedSnapshot.agentRecord === 'object' ? mergedSnapshot.agentRecord : {}),
+                agentStatus: formatAgentStatusLabel(statusValue)
+            };
+            const detailPayload = {
+                ...baseDetail,
+                ...mergedSnapshot,
+                address: propertyAddress,
+                propertyAddress,
+                piqAgentStatus: statusValue,
+                agentRecord: nextAgentRecord
+            };
+
+            if (assignmentMeta) {
+                detailPayload.propertyAssignment = assignmentMeta;
+            } else {
+                delete detailPayload.propertyAssignment;
+            }
+
+            return {
+                propertyKey: normalizedPropertyKey,
+                propertyAddress,
+                statusValue,
+                statusLabel: formatAgentStatusLabel(statusValue),
+                statusClassName: buildDealStatusClassName(statusValue),
+                assignmentRecord,
+                assignmentMeta,
+                assignmentSummary: buildAssignmentSummaryLabel(assignmentMeta),
+                snapshot: detailPayload,
+                imageUrl: String(detailPayload.propertyImages?.[0] || item?.imageUrl || '').trim(),
+                locationLabel: String(detailPayload.marketInfo || detailPayload.location || item?.location || '-').trim() || '-'
+            };
+        }
 
         try {
             const parsed = JSON.parse(localStorage.getItem(SOUND_SETTINGS_KEY) || '{}');
@@ -15992,7 +16116,6 @@ function initNavbarDateTime() {
         }
 
         function getAssignedItemsForWorkspaceUser() {
-            const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
             const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
             const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
             const mergedAssignments = new Map();
@@ -16154,20 +16277,21 @@ function initNavbarDateTime() {
             const visibleItems = items.slice(startIndex, startIndex + pageSize);
 
             visibleItems.forEach(item => {
-                const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
-                    ? item.propertySnapshot
-                    : {};
-                const statusValue = normalizeAgentStatusValue(snapshot.piqAgentStatus || 'none');
-                const statusLabel = formatAgentStatusLabel(statusValue);
+                const resolvedState = resolveDealWorkspaceState(item);
+                const snapshot = resolvedState.snapshot;
                 const roiText = Number(snapshot.roi || item.roi || 0).toFixed(1);
+                const assignedByLabel = buildAssignedByLabel({
+                    assignedBy: resolvedState.assignmentMeta?.assignedBy || item.assignedBy,
+                    assignedAt: resolvedState.assignmentMeta?.assignedAt || item.assignedAt
+                }) || resolvedState.assignmentSummary || 'Assigned property';
 
                 const row = document.createElement('div');
                 row.className = 'deals-compact-row';
                 row.tabIndex = 0;
                 row.setAttribute('role', 'button');
-                row.setAttribute('aria-label', `Open ${String(item.propertyAddress || snapshot.address || 'property').trim() || 'property'}`);
+                row.setAttribute('aria-label', `Open ${String(resolvedState.propertyAddress || snapshot.address || 'property').trim() || 'property'}`);
                 row.innerHTML = `
-                    <button type="button" class="deals-compact-delete-btn" aria-label="Delete ${String(item.propertyAddress || snapshot.address || 'property').trim() || 'property'} from Assigned Properties">
+                    <button type="button" class="deals-compact-delete-btn" aria-label="Delete ${String(resolvedState.propertyAddress || snapshot.address || 'property').trim() || 'property'} from Assigned Properties">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M3 6h18"></path>
                             <path d="M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6"></path>
@@ -16177,23 +16301,23 @@ function initNavbarDateTime() {
                         </svg>
                     </button>
                     <div class="deals-compact-thumb-wrap">
-                        <img class="deals-compact-thumb" src="${String(snapshot.propertyImages?.[0] || item.imageUrl || '').trim()}" alt="Assigned property preview">
+                        <img class="deals-compact-thumb" src="${resolvedState.imageUrl}" alt="Assigned property preview">
                     </div>
                     <div class="deals-compact-main">
-                        <p class="deals-compact-address">${String(item.propertyAddress || snapshot.address || 'Property')}</p>
-                        <p class="deals-compact-meta">${String(snapshot.marketInfo || snapshot.location || item.location || '-')}</p>
-                        <p class="deals-assigned-by"><strong>${buildAssignedByLabel(item)}</strong></p>
+                        <p class="deals-compact-address">${String(resolvedState.propertyAddress || snapshot.address || 'Property')}</p>
+                        <p class="deals-compact-meta">${resolvedState.locationLabel}</p>
+                        <p class="deals-assigned-by"><strong>${assignedByLabel}</strong></p>
                     </div>
                     <div class="deals-compact-side">
                         <span class="deals-assigned-pill">Assigned</span>
-                        <span class="deals-status-pill ${statusValue.replace(/\s+/g, '-').replace(/[^a-z-]/g, '')}">${statusLabel}</span>
+                        <span class="deals-status-pill ${resolvedState.statusClassName}">${resolvedState.statusLabel}</span>
                         <span class="deals-roi">ROI ${roiText}%</span>
                     </div>
                 `;
 
                 const openAssignedProperty = () => {
-                    if (snapshot && typeof snapshot === 'object') {
-                        persistSelectedPropertyDetail(snapshot);
+                    if (resolvedState.snapshot && typeof resolvedState.snapshot === 'object') {
+                        persistSelectedPropertyDetail(resolvedState.snapshot);
                     }
                     window.location.href = 'property-details.html';
                 };
@@ -16253,17 +16377,17 @@ function initNavbarDateTime() {
             const visibleItems = items.slice(startIndex, startIndex + pageSize);
 
             visibleItems.forEach(item => {
+                const resolvedState = resolveDealWorkspaceState(item);
                 const row = document.createElement('div');
                 row.className = 'deals-compact-row';
                 row.tabIndex = 0;
                 row.setAttribute('role', 'button');
-                row.setAttribute('aria-label', `Open ${String(item.address || 'property').trim() || 'property'}`);
+                row.setAttribute('aria-label', `Open ${String(resolvedState.propertyAddress || item.address || 'property').trim() || 'property'}`);
 
-                const statusLabel = String(item.status || 'active').replace('-', ' ');
                 const roiText = Number(item.roi || 0).toFixed(1);
 
                 row.innerHTML = `
-                    <button type="button" class="deals-compact-delete-btn" aria-label="Delete ${String(item.address || 'property').trim() || 'property'} from My Deals">
+                    <button type="button" class="deals-compact-delete-btn" aria-label="Delete ${String(resolvedState.propertyAddress || item.address || 'property').trim() || 'property'} from My Deals">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M3 6h18"></path>
                             <path d="M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6"></path>
@@ -16273,22 +16397,24 @@ function initNavbarDateTime() {
                         </svg>
                     </button>
                     <div class="deals-compact-thumb-wrap">
-                        <img class="deals-compact-thumb" src="${String(item.imageUrl || '').trim()}" alt="Property preview">
+                        <img class="deals-compact-thumb" src="${resolvedState.imageUrl}" alt="Property preview">
                     </div>
                     <div class="deals-compact-main">
-                        <p class="deals-compact-address">${String(item.address || 'Property')}</p>
-                        <p class="deals-compact-meta">${String(item.location || '-')}
+                        <p class="deals-compact-address">${String(resolvedState.propertyAddress || item.address || 'Property')}</p>
+                        <p class="deals-compact-meta">${String(item.location || resolvedState.locationLabel || '-')}
                         <span>•</span> ${String(item.price || '$0')} <span>•</span> ${String(item.beds || '0 Beds')} <span>•</span> ${String(item.baths || '0 Baths')} <span>•</span> ${String(item.area || '0 sqft')}</p>
+                        ${resolvedState.assignmentSummary ? `<p class="deals-assigned-by"><strong>${resolvedState.assignmentSummary}</strong></p>` : ''}
                     </div>
                     <div class="deals-compact-side">
-                        <span class="deals-status-pill ${statusLabel.replace(/\s+/g, '-')}">${statusLabel}</span>
+                        ${resolvedState.assignmentSummary ? '<span class="deals-assigned-pill">Assigned</span>' : ''}
+                        <span class="deals-status-pill ${resolvedState.statusClassName}">${resolvedState.statusLabel}</span>
                         <span class="deals-roi">ROI ${roiText}%</span>
                     </div>
                 `;
 
                 const openClickedProperty = () => {
-                    if (item.propertySnapshot && typeof item.propertySnapshot === 'object') {
-                        persistSelectedPropertyDetail(item.propertySnapshot);
+                    if (resolvedState.snapshot && typeof resolvedState.snapshot === 'object') {
+                        persistSelectedPropertyDetail(resolvedState.snapshot);
                     }
                     window.location.href = 'property-details.html';
                 };
