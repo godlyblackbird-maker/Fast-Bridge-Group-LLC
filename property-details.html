@@ -1280,6 +1280,127 @@
                             <span class="offer-toggle-slider" aria-hidden="true"></span>
                         </label>
                         </div>
+
+                        <div class="offer-bubble offer-email-bubble">
+                        <h3>Email Prep</h3>
+                        <div class="offer-section">
+                            <div class="offer-email-card">
+                                <div class="offer-grid offer-email-grid">
+                                    <label>Sender
+                                        <input id="offer-email-sender-name" class="form-input" type="text" placeholder="Sender name">
+                                    </label>
+                                    <label>Sender Email
+                                        <input id="offer-email-sender" class="form-input" type="email" placeholder="sender@example.com">
+                                    </label>
+                                    <label>Recipient
+                                        <input id="offer-email-recipient-name" class="form-input" type="text" placeholder="Recipient name">
+                                    </label>
+                                    <label>Recipient Email
+                                        <input id="offer-email-recipient" class="form-input" type="email" placeholder="recipient@example.com">
+                                    </label>
+                                    <label>Template Category
+                                        <select id="offer-email-category" class="form-input">
+                                            <option value="">Select Category</option>
+                                        </select>
+                                    </label>
+                                    <label>Template Sub Category
+                                        <select id="offer-email-subcategory" class="form-input">
+                                            <option value="">Select Sub Category</option>
+                                        </select>
+                                    </label>
+                                    <label>Template
+                                        <select id="offer-email-template" class="form-input">
+                                            <option value="">Select Template</option>
+                                        </select>
+                                    </label>
+                                    <label>Investor Attachments
+                                        <select id="offer-email-investor-attachments" class="form-input">
+                                            <option value="">No investor package</option>
+                                        </select>
+                                    </label>
+                                    <label>Send Mode
+                                        <select id="offer-email-send-mode" class="form-input">
+                                            <option value="mailto">Open Email Draft</option>
+                                            <option value="copy">Copy Only</option>
+                                        </select>
+                                    </label>
+                                    <div class="offer-email-span-2 offer-email-ecard-field">
+                                        <span class="offer-email-field-label">E-Card JPG</span>
+                                        <div class="offer-email-ecard-row">
+                                            <select id="offer-email-ecard" class="form-input offer-email-ecard-select">
+                                                <option value="">Do not include E-card</option>
+                                            </select>
+                                            <label class="offer-email-toggle-row offer-email-ecard-toggle" for="offer-email-ecard-toggle">
+                                                <input type="checkbox" id="offer-email-ecard-toggle">
+                                                <span class="offer-email-toggle-text">Include My E-Card</span>
+                                                <span class="offer-toggle-slider" aria-hidden="true"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="offer-email-span-2 offer-email-ecard-field">
+                                        <span class="offer-email-field-label">Static Attachments</span>
+                                        <div class="offer-email-ecard-row">
+                                            <div class="offer-email-static-attachment-note" id="offer-email-fbg-terms-note">Attach FAST BRIDGE offer terms PDFs to Send To Agent emails.</div>
+                                            <label class="offer-email-toggle-row offer-email-ecard-toggle" for="offer-email-fbg-terms-toggle">
+                                                <input type="checkbox" id="offer-email-fbg-terms-toggle">
+                                                <span class="offer-email-toggle-text">FBG Offer Terms</span>
+                                                <span class="offer-toggle-slider" aria-hidden="true"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <label class="offer-email-span-2">Subject
+                                        <input id="offer-email-subject" class="form-input" type="text" placeholder="Offer Terms - 123 Main St">
+                                    </label>
+                                    <div class="offer-email-span-2 offer-email-editor-wrap">
+                                        <span class="offer-email-editor-label">Email Body</span>
+                                        <div class="offer-email-toolbar" id="offer-email-toolbar">
+                                            <select id="offer-email-font-family" class="form-input">
+                                                <option value="Arial">Arial</option>
+                                                <option value="Georgia">Georgia</option>
+                                                <option value="Tahoma">Tahoma</option>
+                                                <option value="Trebuchet MS">Trebuchet MS</option>
+                                                <option value="Verdana">Verdana</option>
+                                            </select>
+                                            <select id="offer-email-font-size" class="form-input">
+                                                <option value="2">10 pt</option>
+                                                <option value="3" selected>12 pt</option>
+                                                <option value="4">14 pt</option>
+                                                <option value="5">18 pt</option>
+                                                <option value="6">24 pt</option>
+                                            </select>
+                                            <label class="offer-email-color-control" for="offer-email-text-color" title="Text color">
+                                                <span class="offer-email-color-label">Color</span>
+                                                <input id="offer-email-text-color" class="offer-email-text-color" type="color" value="#111827" aria-label="Email text color">
+                                            </label>
+                                            <button type="button" class="offer-toolbar-btn" data-command="bold"><strong>B</strong></button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="italic"><em>I</em></button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="underline"><u>U</u></button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="insertUnorderedList">Bullets</button>
+                                            <button type="button" class="offer-toolbar-btn" data-command="removeFormat">Clear</button>
+                                        </div>
+                                        <div id="offer-email-body" class="form-input offer-email-body offer-email-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Offer email body will be prepared here."></div>
+                                    </div>
+                                </div>
+                                <div id="offer-email-doc-summary" class="offer-email-doc-summary">No offer documents attached yet.</div>
+                                <p class="offer-docs-note" id="offer-email-note">Uploaded files in the Offer Documents section below will be sent automatically with Send To Agent. Browser-based email drafts still cannot auto-attach local files. Send To Agent can also embed the selected E-card JPG inline.</p>
+                                <div class="offer-docs-actions">
+                                    <button type="button" class="card-btn" id="offer-email-copy-subject-btn">Copy Subject</button>
+                                    <button type="button" class="card-btn" id="offer-email-copy-body-btn">Copy Body</button>
+                                    <button type="button" class="card-btn offer-email-send-btn" id="offer-email-send-agent-btn">
+                                        <span class="offer-email-send-btn-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M22 2L11 13"></path>
+                                                <path d="M22 2L15 22l-4-9-9-4 20-7z"></path>
+                                            </svg>
+                                        </span>
+                                        <span>Send To Agent</span>
+                                    </button>
+                                    <button type="button" class="card-btn active" id="offer-email-open-btn">Open Email Draft</button>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+
                         <div class="offer-bubble offer-email-bubble">
                         <h3>Offer Documents</h3>
                         <div class="offer-section">

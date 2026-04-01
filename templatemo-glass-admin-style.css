@@ -16978,6 +16978,63 @@ body.analytics-reboot .analytics-my-file-count {
     padding: 14px;
 }
 
+.deals-compact-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.deals-compact-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.deals-compact-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.deals-compact-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.2);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.deals-compact-toggle-btn:hover,
+.deals-compact-toggle-btn:focus-visible {
+    border-color: rgba(52, 211, 153, 0.3);
+    color: var(--text-primary);
+    background: rgba(52, 211, 153, 0.12);
+    outline: none;
+}
+
+.deals-compact-toggle-icon {
+    width: 14px;
+    height: 14px;
+    transition: transform var(--transition-fast);
+}
+
+.deals-compact-card.is-collapsed .deals-compact-body {
+    display: none;
+}
+
+.deals-compact-card.is-collapsed .deals-compact-toggle-icon {
+    transform: rotate(-90deg);
+}
+
 .deals-compact-count {
     display: inline-flex;
     align-items: center;
@@ -17237,6 +17294,15 @@ body.analytics-reboot .analytics-my-file-count {
 }
 
 @media (max-width: 768px) {
+    .deals-compact-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .deals-compact-header-actions {
+        justify-content: space-between;
+    }
+
     .deals-import-launcher-card {
         flex-direction: column;
         align-items: flex-start;

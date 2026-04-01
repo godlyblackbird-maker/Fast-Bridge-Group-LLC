@@ -15554,6 +15554,7 @@ function initNavbarDateTime() {
         const importBackdrop = importOverlay
             ? importOverlay.querySelector('.deals-import-backdrop[data-deals-import-close="true"]')
             : null;
+        const panelCards = Array.from(document.querySelectorAll('[data-deals-panel]'));
         const pageSize = 10;
         const paginationState = {
             imported: 1,
@@ -15571,6 +15572,72 @@ function initNavbarDateTime() {
 
         const workspaceUser = getWorkspaceUserContext();
         const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+        const dealsPanelStateKey = `fast-deals-panel-state:${String(workspaceUser.key || 'default-user').trim() || 'default-user'}`;
+        const dealsPanelState = readDealsPanelState();
+
+        function readDealsPanelState() {
+            try {
+                const rawValue = localStorage.getItem(dealsPanelStateKey);
+                const parsedValue = rawValue ? JSON.parse(rawValue) : {};
+                if (parsedValue && typeof parsedValue === 'object' && !Array.isArray(parsedValue)) {
+                    return parsedValue;
+                }
+            } catch (error) {
+                // Ignore malformed saved state and fall back to defaults.
+            }
+
+            return {};
+        }
+
+        function persistDealsPanelState() {
+            try {
+                localStorage.setItem(dealsPanelStateKey, JSON.stringify(dealsPanelState));
+            } catch (error) {
+                // Ignore local storage write failures for panel state.
+            }
+        }
+
+        function setDealsPanelCollapsed(panelName, collapsed, options = {}) {
+            const card = panelCards.find((entry) => entry.dataset.dealsPanel === panelName);
+            if (!card) {
+                return;
+            }
+
+            const toggleButton = card.querySelector('[data-deals-panel-toggle]');
+            const toggleLabel = toggleButton ? toggleButton.querySelector('.deals-compact-toggle-label') : null;
+            const title = String(card.querySelector('.card-title')?.textContent || panelName || 'panel').trim() || 'panel';
+            const shouldCollapse = Boolean(collapsed);
+
+            card.classList.toggle('is-collapsed', shouldCollapse);
+
+            if (toggleButton) {
+                toggleButton.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
+                toggleButton.setAttribute('aria-label', shouldCollapse ? `Open ${title}` : `Minimize ${title}`);
+            }
+
+            if (toggleLabel) {
+                toggleLabel.textContent = shouldCollapse ? 'Open' : 'Minimize';
+            }
+
+            dealsPanelState[panelName] = shouldCollapse;
+            if (options.persist !== false) {
+                persistDealsPanelState();
+            }
+        }
+
+        panelCards.forEach((card) => {
+            const panelName = String(card.dataset.dealsPanel || '').trim();
+            const toggleButton = card.querySelector('[data-deals-panel-toggle]');
+            if (!panelName || !toggleButton) {
+                return;
+            }
+
+            toggleButton.addEventListener('click', () => {
+                setDealsPanelCollapsed(panelName, !card.classList.contains('is-collapsed'));
+            });
+
+            setDealsPanelCollapsed(panelName, Boolean(dealsPanelState[panelName]), { persist: false });
+        });
 
         function dedupeScopedItems(items) {
             const collection = Array.isArray(items) ? items : [];

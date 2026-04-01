@@ -441,46 +441,76 @@
                     </div>
                 </div>
 
-                <div class="glass-card deals-compact-card">
-                    <div class="card-header">
+                <div class="glass-card deals-compact-card" data-deals-panel="imported">
+                    <div class="card-header deals-compact-header">
                         <div>
                             <h2 class="card-title">Imported Properties</h2>
                             <p class="card-subtitle">Private MLS imports you added manually or autofilled.</p>
                         </div>
-                        <span id="imported-properties-count" class="deals-compact-count">0</span>
+                        <div class="deals-compact-header-actions">
+                            <span id="imported-properties-count" class="deals-compact-count">0</span>
+                            <button type="button" class="deals-compact-toggle-btn" data-deals-panel-toggle="imported" aria-expanded="true" aria-controls="imported-properties-body" aria-label="Minimize Imported Properties">
+                                <span class="deals-compact-toggle-label">Minimize</span>
+                                <svg class="deals-compact-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                    <div id="imported-properties-list" class="deals-compact-list">
-                        <p class="deals-compact-empty">No imported properties yet. Use Import MLS Property to add one.</p>
+                    <div id="imported-properties-body" class="deals-compact-body">
+                        <div id="imported-properties-list" class="deals-compact-list">
+                            <p class="deals-compact-empty">No imported properties yet. Use Import MLS Property to add one.</p>
+                        </div>
+                        <div id="imported-properties-pagination" class="deals-compact-pagination" hidden></div>
                     </div>
-                    <div id="imported-properties-pagination" class="deals-compact-pagination" hidden></div>
                 </div>
 
-                <div class="glass-card deals-compact-card">
-                    <div class="card-header">
+                <div class="glass-card deals-compact-card" data-deals-panel="assigned">
+                    <div class="card-header deals-compact-header">
                         <div>
                             <h2 class="card-title">Assigned Properties</h2>
                             <p class="card-subtitle">Deals another user assigned to you, including who handed them off.</p>
                         </div>
-                        <span id="assigned-properties-count" class="deals-compact-count">0</span>
+                        <div class="deals-compact-header-actions">
+                            <span id="assigned-properties-count" class="deals-compact-count">0</span>
+                            <button type="button" class="deals-compact-toggle-btn" data-deals-panel-toggle="assigned" aria-expanded="true" aria-controls="assigned-properties-body" aria-label="Minimize Assigned Properties">
+                                <span class="deals-compact-toggle-label">Minimize</span>
+                                <svg class="deals-compact-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                    <div id="assigned-properties-list" class="deals-compact-list">
-                        <p class="deals-compact-empty">No properties have been assigned to you yet.</p>
+                    <div id="assigned-properties-body" class="deals-compact-body">
+                        <div id="assigned-properties-list" class="deals-compact-list">
+                            <p class="deals-compact-empty">No properties have been assigned to you yet.</p>
+                        </div>
+                        <div id="assigned-properties-pagination" class="deals-compact-pagination" hidden></div>
                     </div>
-                    <div id="assigned-properties-pagination" class="deals-compact-pagination" hidden></div>
                 </div>
 
-                <div class="glass-card deals-compact-card">
-                    <div class="card-header">
+                <div class="glass-card deals-compact-card" data-deals-panel="clicked">
+                    <div class="card-header deals-compact-header">
                         <div>
                             <h2 class="card-title">Clicked Properties</h2>
                             <p class="card-subtitle">Skim recently opened properties from MLS without your private imported inventory mixed in.</p>
                         </div>
-                        <span id="deals-compact-count" class="deals-compact-count">0</span>
+                        <div class="deals-compact-header-actions">
+                            <span id="deals-compact-count" class="deals-compact-count">0</span>
+                            <button type="button" class="deals-compact-toggle-btn" data-deals-panel-toggle="clicked" aria-expanded="true" aria-controls="deals-compact-body" aria-label="Minimize Clicked Properties">
+                                <span class="deals-compact-toggle-label">Minimize</span>
+                                <svg class="deals-compact-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                    <div id="deals-compact-list" class="deals-compact-list">
-                        <p class="deals-compact-empty">No clicked properties yet. Open properties in MLS Hot Deals and they will appear here.</p>
+                    <div id="deals-compact-body" class="deals-compact-body">
+                        <div id="deals-compact-list" class="deals-compact-list">
+                            <p class="deals-compact-empty">No clicked properties yet. Open properties in MLS Hot Deals and they will appear here.</p>
+                        </div>
+                        <div id="deals-compact-pagination" class="deals-compact-pagination" hidden></div>
                     </div>
-                    <div id="deals-compact-pagination" class="deals-compact-pagination" hidden></div>
                 </div>
             </section>
         </main>
