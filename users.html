@@ -330,24 +330,38 @@
                 <div class="glass-card widget-card outreach-card" data-widget-id="offers-accepted" data-widget-title="Offers Accepted">
                     <div class="card-header">
                         <div>
-                            <h2 class="card-title">80% - Offer Terms Accepted</h2>
+                            <h2 class="card-title">Offer Accepted Widget</h2>
                             <p class="card-subtitle">Properties marked as 80% - Offer Terms Accepted in Property Details appear here for this user.</p>
                         </div>
                         <button id="offers-accepted-resync-btn" class="card-btn" type="button" hidden>Resync Accepted</button>
                     </div>
                     <div class="offers-accepted-toolbar">
+                        <label class="offers-accepted-filter outreach-full-width">
+                            <span>Search Properties</span>
+                            <input id="offers-accepted-search-filter" class="form-input" type="text" placeholder="Search address, status, assignee, location...">
+                        </label>
                         <label class="offers-accepted-filter">
                             <span>View</span>
                             <select id="offers-accepted-scope-filter" class="form-input">
                                 <option value="mine-only">Mine Only</option>
-                                <option value="assigned-to-me" selected>All Assigned to Me</option>
+                                <option value="assigned-to-me" selected>Assigned to Me</option>
+                                <option value="assigned-to-other-users">Assigned to Other Users</option>
+                                <option value="all-assigned">All Assigned</option>
+                                <option value="all-visible">All Visible</option>
+                            </select>
+                        </label>
+                        <label class="offers-accepted-filter">
+                            <span>Agent Status</span>
+                            <select id="offers-accepted-status-filter" class="form-input">
+                                <option value="offer-accepted" selected>80% - Offer Terms Accepted</option>
+                                <option value="all-statuses">All Agent Statuses</option>
                             </select>
                         </label>
                         <label class="offers-accepted-filter">
                             <span>Sort</span>
                             <select id="offers-accepted-sort-filter" class="form-input">
-                                <option value="newest" selected>Newest Accepted</option>
-                                <option value="oldest">Oldest Accepted</option>
+                                <option value="newest" selected>Newest Activity</option>
+                                <option value="oldest">Oldest Activity</option>
                             </select>
                         </label>
                         <button id="offers-accepted-followup-filter" class="card-btn" type="button" aria-pressed="false">Needs Follow-Up</button>

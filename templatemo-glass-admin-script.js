@@ -4076,6 +4076,35 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
         const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
 
+        function getScopedPropertyStatusForUser(userLike, propertyKey) {
+            const normalizedUser = buildUserIdentity(userLike);
+            const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+            if (!normalizedUser.key || !normalizedPropertyKey) {
+                return 'none';
+            }
+
+            const scopedStatusMap = getUserScopedObject(PIQ_AGENT_STATUS_KEY, normalizedUser.key);
+            return normalizeAgentStatusValue(scopedStatusMap[normalizedPropertyKey] || 'none');
+        }
+
+        function resolveAcceptedItemStatus(propertyKey, snapshotLike, relatedUsers) {
+            const snapshot = snapshotLike && typeof snapshotLike === 'object' ? snapshotLike : null;
+            const snapshotStatus = normalizeAgentStatusValue(snapshot?.piqAgentStatus || 'none');
+            if (snapshotStatus !== 'none') {
+                return snapshotStatus;
+            }
+
+            const usersToCheck = Array.isArray(relatedUsers) ? relatedUsers : [];
+            for (const userLike of usersToCheck) {
+                const scopedStatus = getScopedPropertyStatusForUser(userLike, propertyKey);
+                if (scopedStatus !== 'none') {
+                    return scopedStatus;
+                }
+            }
+
+            return 'none';
+        }
+
         function addAcceptedSnapshotCandidate(snapshotLike, fallbackPropertyKey, fallbackPropertyAddress, options) {
             const config = options && typeof options === 'object' ? options : {};
             const snapshot = snapshotLike && typeof snapshotLike === 'object' ? snapshotLike : null;
@@ -4085,37 +4114,47 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 || snapshot?.propertyAddress
                 || fallbackPropertyAddress
             );
-            const normalizedStatus = normalizeAgentStatusValue(snapshot?.piqAgentStatus || 'none');
 
-            if (!snapshot || !normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
+            if (!normalizedPropertyKey) {
                 return;
             }
 
+            const normalizedStatus = normalizeAgentStatusValue(
+                config.statusValue
+                || resolveAcceptedItemStatus(normalizedPropertyKey, snapshot, config.relatedUsers)
+                || 'none'
+            );
             const existing = acceptedByPropertyKey.get(normalizedPropertyKey) || {};
+            const existingStatus = normalizeAgentStatusValue(existing.statusValue || 'none');
+            const resolvedStatus = existingStatus !== 'none' && normalizedStatus === 'none'
+                ? existingStatus
+                : normalizedStatus;
+
             acceptedByPropertyKey.set(normalizedPropertyKey, {
                 propertyKey: normalizedPropertyKey,
-                statusValue: normalizedStatus,
+                statusValue: resolvedStatus,
                 snapshot: existing.snapshot || snapshot,
-                assignmentRecord: existing.assignmentRecord || null,
+                assignmentRecord: existing.assignmentRecord || config.assignmentRecord || null,
                 sourceInWorkspace: Boolean(existing.sourceInWorkspace || config.sourceInWorkspace),
-                assignedToWorkspace: Boolean(existing.assignedToWorkspace || config.assignedToWorkspace)
+                assignedToWorkspace: Boolean(existing.assignedToWorkspace || config.assignedToWorkspace),
+                assignedToOtherUser: Boolean(existing.assignedToOtherUser || config.assignedToOtherUser)
             });
         }
 
         Object.entries(scopedStatuses || {}).forEach(([propertyKey, statusValue]) => {
             const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
-            const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
-            if (!normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
+            if (!normalizedPropertyKey) {
                 return;
             }
 
             acceptedByPropertyKey.set(normalizedPropertyKey, {
                 propertyKey: normalizedPropertyKey,
-                statusValue: normalizedStatus,
+                statusValue: normalizeAgentStatusValue(statusValue || 'none'),
                 snapshot: null,
                 assignmentRecord: null,
                 sourceInWorkspace: Object.prototype.hasOwnProperty.call(workspaceScopedStatuses, propertyKey),
-                assignedToWorkspace: false
+                assignedToWorkspace: false,
+                assignedToOtherUser: false
             });
         });
 
@@ -4124,35 +4163,34 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return;
             }
 
-            if (!usersMatch(assignmentRecord.assignedTo || {}, activeSessionUser)
-                && !usersMatch(assignmentRecord.assignedTo || {}, workspaceUser)) {
-                return;
-            }
-
             const snapshot = assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object'
                 ? assignmentRecord.propertySnapshot
                 : null;
-            const normalizedPropertyKey = makePropertyStorageKey(
+            const assignedToWorkspace = usersMatch(assignmentRecord.assignedTo || {}, workspaceUser);
+            const assignedToOtherUser = Boolean(assignmentRecord.assignedTo && !assignedToWorkspace);
+
+            addAcceptedSnapshotCandidate(
+                snapshot,
                 assignmentRecord.propertyKey
                 || storedPropertyKey
                 || assignmentRecord.propertyAddress
-                || snapshot?.address
+                || snapshot?.address,
+                assignmentRecord.propertyAddress || snapshot?.address,
+                {
+                    statusValue: resolveAcceptedItemStatus(
+                        assignmentRecord.propertyKey
+                        || storedPropertyKey
+                        || assignmentRecord.propertyAddress
+                        || snapshot?.address,
+                        snapshot,
+                        [assignmentRecord.assignedTo, assignmentRecord.assignedBy, workspaceUser, activeSessionUser]
+                    ),
+                    assignmentRecord,
+                    assignedToWorkspace,
+                    assignedToOtherUser,
+                    relatedUsers: [assignmentRecord.assignedTo, assignmentRecord.assignedBy, workspaceUser, activeSessionUser]
+                }
             );
-            const normalizedStatus = normalizeAgentStatusValue(snapshot?.piqAgentStatus || 'none');
-
-            if (!normalizedPropertyKey || normalizedStatus !== 'offer-accepted') {
-                return;
-            }
-
-            const existing = acceptedByPropertyKey.get(normalizedPropertyKey) || {};
-            acceptedByPropertyKey.set(normalizedPropertyKey, {
-                propertyKey: normalizedPropertyKey,
-                statusValue: 'offer-accepted',
-                snapshot: existing.snapshot || snapshot,
-                assignmentRecord: assignmentRecord,
-                sourceInWorkspace: Boolean(existing.sourceInWorkspace),
-                assignedToWorkspace: usersMatch(assignmentRecord.assignedTo || {}, workspaceUser)
-            });
         });
 
         [workspaceUser, activeSessionUser].forEach((userIdentity) => {
@@ -4169,8 +4207,28 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     item?.propertyKey || item?.address || item?.propertyAddress,
                     item?.address || item?.propertyAddress,
                     {
+                        statusValue: item?.piqAgentStatus || snapshot?.piqAgentStatus || 'none',
                         sourceInWorkspace: usersMatch(userIdentity, workspaceUser),
-                        assignedToWorkspace: false
+                        assignedToWorkspace: false,
+                        assignedToOtherUser: false
+                    }
+                );
+            });
+
+            getUserScopedItems(IMPORTED_PROPERTIES_KEY, userIdentity.key).forEach((item) => {
+                const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                addAcceptedSnapshotCandidate(
+                    snapshot,
+                    item?.propertyKey || item?.address || item?.propertyAddress,
+                    item?.address || item?.propertyAddress,
+                    {
+                        statusValue: item?.piqAgentStatus || snapshot?.piqAgentStatus || 'none',
+                        sourceInWorkspace: usersMatch(userIdentity, workspaceUser),
+                        assignedToWorkspace: false,
+                        assignedToOtherUser: false,
+                        relatedUsers: [userIdentity]
                     }
                 );
             });
@@ -4184,8 +4242,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     item?.propertyKey || item?.propertyAddress,
                     item?.propertyAddress,
                     {
+                        statusValue: item?.piqAgentStatus || snapshot?.piqAgentStatus || 'none',
                         sourceInWorkspace: usersMatch(userIdentity, workspaceUser),
-                        assignedToWorkspace: false
+                        assignedToWorkspace: false,
+                        assignedToOtherUser: false
                     }
                 );
             });
@@ -4213,6 +4273,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 );
                 const acceptedAtMs = Number.isNaN(acceptedAt.getTime()) ? 0 : acceptedAt.getTime();
                 const assignedToWorkspace = item.assignedToWorkspace || usersMatch(assignmentRecord?.assignedTo || {}, workspaceUser);
+                const assignedToOtherUser = Boolean(item.assignedToOtherUser || (assignmentRecord?.assignedTo && !assignedToWorkspace));
 
                 return {
                     ...item,
@@ -4220,8 +4281,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     snapshot,
                     assignmentRecord,
                     acceptedAt: acceptedAtMs,
+                    statusValue: normalizeAgentStatusValue(item.statusValue || snapshot?.piqAgentStatus || 'none'),
                     sourceInWorkspace: Boolean(item.sourceInWorkspace),
                     assignedToWorkspace: Boolean(assignedToWorkspace),
+                    assignedToOtherUser: assignedToOtherUser,
                     needsFollowUp: acceptedAtMs > 0 && (Date.now() - acceptedAtMs) >= ACCEPTED_OFFER_FOLLOW_UP_DAYS * 24 * 60 * 60 * 1000
                 };
             })
@@ -4244,19 +4307,21 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             candidates.push(assignmentRecord.propertySnapshot);
         }
 
-        getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key).forEach((item) => {
-            const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
-                ? item.propertySnapshot
-                : null;
-            const itemPropertyKey = makePropertyStorageKey(
-                snapshot?.address
-                || item?.address
-                || item?.propertyAddress
-            );
+        [DEALS_CLICKED_KEY, IMPORTED_PROPERTIES_KEY].forEach((storageKey) => {
+            getUserScopedItems(storageKey, workspaceUser.key).forEach((item) => {
+                const snapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? item.propertySnapshot
+                    : null;
+                const itemPropertyKey = makePropertyStorageKey(
+                    snapshot?.address
+                    || item?.address
+                    || item?.propertyAddress
+                );
 
-            if (snapshot && itemPropertyKey === normalizedPropertyKey) {
-                candidates.push(snapshot);
-            }
+                if (snapshot && itemPropertyKey === normalizedPropertyKey) {
+                    candidates.push(snapshot);
+                }
+            });
         });
 
         getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key).forEach((item) => {
@@ -4293,10 +4358,48 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         const backfillResult = backfillAcceptedOfferWorkspace();
         const resyncButton = document.getElementById('offers-accepted-resync-btn');
+        const searchFilter = document.getElementById('offers-accepted-search-filter');
         const scopeFilter = document.getElementById('offers-accepted-scope-filter');
+        const statusFilter = document.getElementById('offers-accepted-status-filter');
         const sortFilter = document.getElementById('offers-accepted-sort-filter');
         const followUpFilterButton = document.getElementById('offers-accepted-followup-filter');
         let showNeedsFollowUpOnly = false;
+
+        function hydrateStatusFilterOptions() {
+            if (!statusFilter) {
+                return;
+            }
+
+            const selectedValue = normalizeAgentStatusValue(statusFilter.value || 'offer-accepted');
+            const staticOptions = [
+                { value: 'offer-accepted', label: 'Offer Accepted' },
+                { value: 'all-statuses', label: 'All Statuses' }
+            ];
+
+            statusFilter.innerHTML = '';
+            staticOptions.forEach((optionConfig) => {
+                const option = document.createElement('option');
+                option.value = optionConfig.value;
+                option.textContent = optionConfig.label;
+                statusFilter.appendChild(option);
+            });
+
+            AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
+                if (!optionConfig || optionConfig.value === 'none' || optionConfig.value === 'offer-accepted') {
+                    return;
+                }
+
+                const option = document.createElement('option');
+                option.value = optionConfig.value;
+                option.textContent = optionConfig.label;
+                statusFilter.appendChild(option);
+            });
+
+            const hasSelectedOption = Array.from(statusFilter.options).some((option) => option.value === selectedValue);
+            statusFilter.value = hasSelectedOption ? selectedValue : 'offer-accepted';
+        }
+
+        hydrateStatusFilterOptions();
 
         function buildStaleAcceptedAlertSnapshot(items, workspaceUser) {
             const staleItems = Array.isArray(items)
@@ -4470,7 +4573,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         function getFilteredAcceptedItems(items) {
             const acceptedItems = Array.isArray(items) ? [...items] : [];
+            const searchValue = String(searchFilter?.value || '').trim().toLowerCase();
             const scopeValue = String(scopeFilter?.value || 'assigned-to-me').trim().toLowerCase();
+            const statusValue = String(statusFilter?.value || 'offer-accepted').trim().toLowerCase();
             const sortValue = String(sortFilter?.value || 'newest').trim().toLowerCase();
 
             const scopedItems = acceptedItems.filter((item) => {
@@ -4478,12 +4583,53 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     return Boolean(item.sourceInWorkspace);
                 }
 
+                if (scopeValue === 'assigned-to-me') {
+                    return Boolean(item.assignedToWorkspace || item.sourceInWorkspace);
+                }
+
+                if (scopeValue === 'assigned-to-other-users') {
+                    return Boolean(item.assignedToOtherUser);
+                }
+
+                if (scopeValue === 'all-assigned') {
+                    return Boolean(item.assignedToWorkspace || item.assignedToOtherUser);
+                }
+
+                if (scopeValue === 'all-visible') {
+                    return true;
+                }
+
                 return Boolean(item.assignedToWorkspace || item.sourceInWorkspace);
             });
 
+            const statusItems = statusValue === 'all-statuses'
+                ? scopedItems
+                : scopedItems.filter((item) => normalizeAgentStatusValue(item.statusValue || 'none') === statusValue);
+
+            const searchedItems = searchValue
+                ? statusItems.filter((item) => {
+                    const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+                    const assignedLabel = item.assignmentRecord
+                        ? buildAssignedByLabel(item.assignmentRecord)
+                        : '';
+                    const haystack = [
+                        item.propertyAddress,
+                        snapshot.marketInfo,
+                        snapshot.location,
+                        snapshot.areaLabel,
+                        snapshot.city,
+                        snapshot.zip,
+                        snapshot.listPrice,
+                        formatAgentStatusLabel(item.statusValue),
+                        assignedLabel
+                    ].join(' ').toLowerCase();
+                    return haystack.includes(searchValue);
+                })
+                : statusItems;
+
             const followUpItems = showNeedsFollowUpOnly
-                ? scopedItems.filter((item) => item.needsFollowUp)
-                : scopedItems;
+                ? searchedItems.filter((item) => item.needsFollowUp)
+                : searchedItems;
 
             followUpItems.sort((left, right) => {
                 if (sortValue === 'oldest') {
@@ -4505,8 +4651,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
             if (!acceptedItems.length) {
                 offersAcceptedList.innerHTML = showNeedsFollowUpOnly
-                    ? '<p class="outreach-empty">No accepted offers need follow-up right now.</p>'
-                    : '<p class="outreach-empty">No accepted offers match these filters.</p>';
+                    ? '<p class="outreach-empty">No properties need follow-up right now.</p>'
+                    : '<p class="outreach-empty">No properties match these filters.</p>';
                 return;
             }
 
@@ -4531,7 +4677,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
                 const acceptedLabel = document.createElement('span');
                 acceptedLabel.className = 'agent-note-link-agent';
-                acceptedLabel.textContent = 'Accepted Offer';
+                acceptedLabel.textContent = statusLabel;
 
                 if (item.needsFollowUp) {
                     const staleBadge = document.createElement('span');
@@ -4583,7 +4729,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     option.textContent = optionConfig.label;
                     statusSelect.appendChild(option);
                 });
-                statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'offer-accepted');
+                statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'none');
 
                 const statusSaveButton = document.createElement('button');
                 statusSaveButton.type = 'button';
@@ -4672,7 +4818,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 statusCancelButton.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'offer-accepted');
+                    statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'none');
                     toggleStatusEditor(false);
                 });
 
@@ -4681,7 +4827,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     event.stopPropagation();
 
                     const nextStatus = normalizeAgentStatusValue(statusSelect.value || 'none');
-                    if (nextStatus === normalizeAgentStatusValue(item.statusValue || 'offer-accepted')) {
+                    if (nextStatus === normalizeAgentStatusValue(item.statusValue || 'none')) {
                         toggleStatusEditor(false);
                         return;
                     }
@@ -4728,6 +4874,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         if (scopeFilter) {
             scopeFilter.addEventListener('change', render);
+        }
+
+        if (searchFilter) {
+            searchFilter.addEventListener('input', render);
+        }
+
+        if (statusFilter) {
+            statusFilter.addEventListener('change', render);
         }
 
         if (sortFilter) {
