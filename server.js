@@ -5690,6 +5690,19 @@ function isDuplicatePropertyAddressLine(currentBlock, nextLine) {
   return existingAddresses.some((existingAddress) => areMatchingPropertyAddresses(existingAddress, nextAddress));
 }
 
+function isLikelyDirectionalInstructionAddressLine(value) {
+  const normalized = normalizePdfPropertyAddressValue(value).toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  if (/^\d{2,6}\s+f(?:ree|re)?way\b/.test(normalized)) {
+    return true;
+  }
+
+  return /\b(?:get\s+off|take\s+(?:the\s+)?exit|turn|merge|keep\s+(?:left|right)|continue\s+(?:on|onto)|toward(?:s)?|ramp)\b/.test(normalized);
+}
+
 function extractPropertyAddressCandidateFromLine(line) {
   const normalizedLine = normalizePdfPropertyAddressValue(
     String(line || '')
@@ -5712,6 +5725,10 @@ function extractPropertyAddressCandidateFromLine(line) {
   }
 
   if (extractPhoneNumber(normalizedLine) || extractEmailAddress(normalizedLine)) {
+    return '';
+  }
+
+  if (isLikelyDirectionalInstructionAddressLine(normalizedLine)) {
     return '';
   }
 
