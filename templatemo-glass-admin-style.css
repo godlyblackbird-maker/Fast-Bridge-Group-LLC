@@ -1019,7 +1019,7 @@
     inset: 0;
     background:
         linear-gradient(180deg, rgba(3, 2, 1, 0.44), rgba(19, 10, 4, 0.24)),
-        url("Themes/Wallpaper%20HOLLOWEEN.jpg") no-repeat center center;
+        url("Themes/Fall%20mode.jpg") no-repeat center center;
     background-size: cover;
     opacity: 0.34;
     filter: saturate(1.04) contrast(1.04);

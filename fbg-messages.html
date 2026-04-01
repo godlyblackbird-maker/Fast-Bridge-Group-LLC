@@ -56,7 +56,6 @@
                 const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
                 const themeLogoPaths = {
                     christmas: 'png photos/Christmas Theme Logo.png',
-                    holloween: 'png photos/New Holloween Logo.png',
                     swamp: 'png photos/Swamp Theme Logo.png',
                     cyberpunk: 'png photos/CYBERPUNK LOGO.png',
                     japan: 'png photos/Japan Theme Mode Logo.png'
@@ -929,6 +928,14 @@
             const pendingShareMeta = document.getElementById('messages-pending-share-meta');
             const pendingShareClear = document.getElementById('messages-pending-share-clear');
             const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            const MESSAGES_TIMEZONE = 'America/Los_Angeles';
+            const messageDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: MESSAGES_TIMEZONE,
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
             let selectedUserId = null;
             let selectedUserRecord = null;
             let usersCache = [];
@@ -971,18 +978,41 @@
                     .replace(/'/g, '&#39;');
             }
 
+            function parseMessageTimestamp(value) {
+                if (value === null || value === undefined) {
+                    return null;
+                }
+
+                if (value instanceof Date) {
+                    return Number.isNaN(value.getTime()) ? null : value;
+                }
+
+                if (typeof value === 'number') {
+                    const fromNumber = new Date(value);
+                    return Number.isNaN(fromNumber.getTime()) ? null : fromNumber;
+                }
+
+                const rawValue = String(value || '').trim();
+                if (!rawValue) {
+                    return null;
+                }
+
+                if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(rawValue)) {
+                    const sqliteUtc = new Date(`${rawValue.replace(' ', 'T')}Z`);
+                    return Number.isNaN(sqliteUtc.getTime()) ? null : sqliteUtc;
+                }
+
+                const parsed = new Date(rawValue);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
             function formatDateTime(value) {
-                const date = value ? new Date(value) : null;
-                if (!date || Number.isNaN(date.getTime())) {
+                const date = parseMessageTimestamp(value);
+                if (!date) {
                     return '';
                 }
 
-                return date.toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit'
-                });
+                return messageDateTimeFormatter.format(date);
             }
 
             function getMessagePreviewText(value, fallback) {

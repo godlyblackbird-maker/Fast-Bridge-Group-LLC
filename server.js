@@ -4309,6 +4309,37 @@ function requireAdmin(req, res) {
   return decoded;
 }
 
+function normalizeApiTimestamp(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+
+  if (typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  const rawValue = String(value || '').trim();
+  if (!rawValue) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(rawValue)) {
+    return `${rawValue.replace(' ', 'T')}Z`;
+  }
+
+  const parsed = new Date(rawValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return rawValue;
+  }
+
+  return parsed.toISOString();
+}
+
 function serializeUserMessage(row, currentUserId) {
   if (!row || typeof row !== 'object') {
     return null;
@@ -4323,8 +4354,8 @@ function serializeUserMessage(row, currentUserId) {
     senderUserId,
     recipientUserId,
     body: String(row.body || '').trim(),
-    createdAt: row.created_at || '',
-    readAt: row.read_at || null,
+    createdAt: normalizeApiTimestamp(row.created_at),
+    readAt: normalizeApiTimestamp(row.read_at),
     direction: senderUserId === activeUserId ? 'outgoing' : 'incoming'
   };
 }
@@ -7128,9 +7159,9 @@ app.get('/api/messages/users', async (req, res) => {
       success: true,
       users: users.map((row) => ({
         ...serializeUser(row),
-        lastLogin: row.last_login || null,
+        lastLogin: normalizeApiTimestamp(row.last_login),
         lastMessage: String(row.last_message || '').trim(),
-        lastMessageAt: row.last_message_at || null,
+        lastMessageAt: normalizeApiTimestamp(row.last_message_at),
         unreadCount: Number(row.unread_count) || 0
       }))
     });
@@ -7187,7 +7218,7 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
       success: true,
       otherUser: {
         ...serializeUser(otherUser),
-        lastLogin: otherUser.last_login || null
+        lastLogin: normalizeApiTimestamp(otherUser.last_login)
       },
       messages: rows.map((row) => serializeUserMessage(row, currentUserId)).filter(Boolean)
     });

@@ -29,7 +29,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const DEFAULT_THEME_LOGO_PATH = 'png photos/FAST LOGO 777.png';
     const THEME_LOGO_PATHS = {
         christmas: 'png photos/Christmas Theme Logo.png',
-        holloween: 'png photos/New Holloween Logo.png',
         swamp: 'png photos/Swamp Theme Logo.png',
         cyberpunk: 'png photos/CYBERPUNK LOGO.png',
         japan: 'png photos/Japan Theme Mode Logo.png'
@@ -1960,10 +1959,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         const normalizedStatus = normalizeAgentStatusValue(detail.piqAgentStatus || 'none');
-        if (normalizedStatus !== 'offer-accepted') {
-            return;
-        }
-
         const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
             ? workspaceUserLike
             : getWorkspaceUserContext();
@@ -17376,9 +17371,7 @@ function initNavbarDateTime() {
             setPersistedPiqStatus(detailData.piqAgentStatus);
             syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
             persistSelectedPropertyDetail(detailData);
-            if (detailData.piqAgentStatus === 'offer-accepted') {
-                syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
-            }
+            syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
             renderAgentWorkspaceAcceptedOffer();
 
             if (agentCurrentStatusEl) {
@@ -17397,8 +17390,8 @@ function initNavbarDateTime() {
                 setPersistedPiqStatus(detailData.piqAgentStatus);
                 syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
                 persistSelectedPropertyDetail(detailData);
+                syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
                 if (detailData.piqAgentStatus === 'offer-accepted') {
-                    syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
                     activatePropertyTab('agent');
                 }
                 syncCurrentAssignmentSnapshot();
@@ -17474,9 +17467,7 @@ function initNavbarDateTime() {
                             detailData.piqAgentStatus,
                             { silent: true }
                         );
-                        if (detailData.piqAgentStatus === 'offer-accepted') {
-                            syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
-                        }
+                        syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
                         syncAssignmentIntoLocalDealCache(propertyKey, persistedRecord || assignmentRecord, workspaceUser);
                         renderOfferNegotiator(persistedRecord);
                         renderAgentWorkspaceAcceptedOffer();
