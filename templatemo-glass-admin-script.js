@@ -19059,6 +19059,22 @@ function initNavbarDateTime() {
             return googleMapsStylesPromise;
         }
 
+        function buildNakedGoogleMapsStyles(baseStyles) {
+            const normalizedBaseStyles = Array.isArray(baseStyles) ? baseStyles.slice() : [];
+            return normalizedBaseStyles.concat([
+                {
+                    featureType: 'all',
+                    elementType: 'labels',
+                    stylers: [{ visibility: 'off' }]
+                },
+                {
+                    featureType: 'all',
+                    elementType: 'labels.icon',
+                    stylers: [{ visibility: 'off' }]
+                }
+            ]);
+        }
+
         function geocodeAddressWithGoogle(address) {
             const trimmedAddress = String(address || '').trim();
             if (!trimmedAddress || !window.google || !window.google.maps || typeof window.google.maps.Geocoder !== 'function') {
@@ -19214,6 +19230,7 @@ function initNavbarDateTime() {
             const activePillEl = document.getElementById('comps-map-focus-pill');
             const viewButtons = Array.from(document.querySelectorAll('[data-comps-view]'));
             const layerButtons = Array.from(document.querySelectorAll('[data-comps-map-layer]'));
+            const nakedMapButton = document.querySelector('[data-comps-map-naked-toggle]');
             const drawButtons = Array.from(document.querySelectorAll('[data-comps-draw-mode]'));
 
             if (!nearbyList || !summaryRow || !resultsMeta || !applyBtn || !resetBtn || !compsExplorer) {
@@ -19250,11 +19267,14 @@ function initNavbarDateTime() {
 
             let currentViewMode = 'split';
             let currentMapLayer = 'street';
+            let currentMapNaked = false;
             let currentDrawMode = 'none';
             let activeCompKey = '';
             let streetViewEnabled = false;
             let streetViewLoading = false;
             let mapInstance = null;
+            let defaultGoogleMapsStyles = null;
+            let nakedGoogleMapsStyles = null;
             let panoramaInstance = null;
             let infoWindowInstance = null;
             let subjectMarker = null;
@@ -19690,6 +19710,34 @@ function initNavbarDateTime() {
                     : 'Fallback JSON styling is active because no GOOGLE_MAPS_MAP_ID is configured.';
             }
 
+            function syncNakedButtonState() {
+                if (!nakedMapButton) {
+                    return;
+                }
+                nakedMapButton.classList.toggle('active', currentMapNaked);
+                nakedMapButton.setAttribute('aria-pressed', currentMapNaked ? 'true' : 'false');
+            }
+
+            function applyCurrentMapStyles() {
+                if (!mapInstance) {
+                    return;
+                }
+
+                const nextStyles = currentMapNaked
+                    ? (nakedGoogleMapsStyles || buildNakedGoogleMapsStyles(defaultGoogleMapsStyles))
+                    : (Array.isArray(defaultGoogleMapsStyles) ? defaultGoogleMapsStyles : null);
+
+                mapInstance.setOptions({
+                    styles: nextStyles
+                });
+            }
+
+            function setNakedMapMode(isEnabled) {
+                currentMapNaked = Boolean(isEnabled);
+                syncNakedButtonState();
+                applyCurrentMapStyles();
+            }
+
             function syncStreetViewButtonState() {
                 if (!compsMapStreetViewButton) {
                     return;
@@ -20020,6 +20068,8 @@ function initNavbarDateTime() {
                     }
 
                     const styles = config.mapId ? null : await loadGoogleMapsStyles(config.stylePath);
+                    defaultGoogleMapsStyles = Array.isArray(styles) ? styles : null;
+                    nakedGoogleMapsStyles = buildNakedGoogleMapsStyles(defaultGoogleMapsStyles);
                     const subjectLocation = getSubjectLocation();
                     const mapOptions = {
                         center: subjectLocation,
@@ -20038,6 +20088,7 @@ function initNavbarDateTime() {
                     }
 
                     mapInstance = new window.google.maps.Map(compsMapCanvas, mapOptions);
+                    applyCurrentMapStyles();
                     panoramaInstance = new window.google.maps.StreetViewPanorama(compsMapPano, {
                         position: subjectLocation,
                         pov: {
@@ -20106,6 +20157,13 @@ function initNavbarDateTime() {
                 if (!['street', 'aerial', 'earth', 'hybrid'].includes(nextLayer)) {
                     return;
                 }
+
+                const shouldResetNakedMode = currentMapNaked && nextLayer !== currentMapLayer && nextLayer !== 'aerial';
+                if (shouldResetNakedMode) {
+                    currentMapNaked = false;
+                    syncNakedButtonState();
+                }
+
                 currentMapLayer = nextLayer;
                 layerButtons.forEach((button) => {
                     button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
@@ -20153,6 +20211,7 @@ function initNavbarDateTime() {
                     ? 'satellite'
                     : (currentMapLayer === 'hybrid' ? 'hybrid' : 'roadmap');
                 mapInstance.setMapTypeId(nextMapTypeId);
+                applyCurrentMapStyles();
 
                 if (typeof mapInstance.setTilt === 'function') {
                     mapInstance.setTilt(0);
@@ -20861,6 +20920,13 @@ function initNavbarDateTime() {
                     setMapLayerMode(button.dataset.compsMapLayer || 'street');
                 });
             });
+
+            if (nakedMapButton) {
+                nakedMapButton.addEventListener('click', () => {
+                    setNakedMapMode(!currentMapNaked);
+                });
+                syncNakedButtonState();
+            }
 
             drawButtons.forEach((button) => {
                 button.addEventListener('click', () => {
