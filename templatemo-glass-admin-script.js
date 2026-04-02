@@ -18520,6 +18520,24 @@ function initNavbarDateTime() {
         const agentOffersAcceptedList = document.getElementById('agent-workspace-offers-accepted-list');
         const defaultAgentStatus = 'none';
 
+        function buildPropertyDetailAssignedByLabel(item) {
+            const assignmentLike = item && typeof item === 'object' ? item : {};
+            const assignedBy = assignmentLike.assignedBy && typeof assignmentLike.assignedBy === 'object'
+                ? assignmentLike.assignedBy
+                : {};
+            const assignedByName = String(assignedBy.name || assignedBy.email || 'Unknown user').trim();
+            const assignedAt = assignmentLike.assignedAt ? new Date(assignmentLike.assignedAt) : null;
+            const assignedAtLabel = assignedAt && !Number.isNaN(assignedAt.getTime())
+                ? assignedAt.toLocaleDateString()
+                : '';
+
+            if (assignedAtLabel) {
+                return `Assigned by ${assignedByName} on ${assignedAtLabel}`;
+            }
+
+            return `Assigned by ${assignedByName}`;
+        }
+
         function getOfferNegotiatorName(assignmentLike) {
             const assignment = assignmentLike && typeof assignmentLike === 'object' ? assignmentLike : {};
             const assignedTo = assignment.assignedTo && typeof assignment.assignedTo === 'object'
@@ -18590,7 +18608,7 @@ function initNavbarDateTime() {
             const locationLabel = String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '-').trim() || '-';
             const priceLabel = String(snapshot.listPrice || '$0').trim() || '$0';
             const assignedLabel = assignmentRecord
-                ? buildAssignedByLabel(assignmentRecord)
+                ? buildPropertyDetailAssignedByLabel(assignmentRecord)
                 : 'Assigned user pending';
 
             const entry = document.createElement('button');
