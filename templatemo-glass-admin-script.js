@@ -17654,6 +17654,12 @@ function initNavbarDateTime() {
                 panel.classList.toggle('active', isActive);
                 panel.hidden = !isActive;
             });
+
+            if (nextTabId === 'comps') {
+                window.setTimeout(() => {
+                    void maybeAutoSearchSubjectOnCompsOpen();
+                }, 40);
+            }
         }
 
         if (calculatorToggle && calculatorWidget && calculatorDisplay) {
@@ -19270,6 +19276,7 @@ function initNavbarDateTime() {
             let lastTopResults = [];
             let searchedMarker = null;
             let lastSearchResult = null;
+            let lastAutoSearchPropertyAddress = '';
             let aerialViewLookupPromise = null;
             let aerialViewActiveAddress = '';
 
@@ -20259,6 +20266,35 @@ function initNavbarDateTime() {
                     compsMapSearchInput.value = geocodeMatch.formattedAddress || searchText;
                 }
                 focusSearchLocation(geocodeMatch, geocodeMatch.formattedAddress || searchText);
+            }
+
+            function normalizeAddressForAutoSearch(value) {
+                return String(value || '').trim().toLowerCase();
+            }
+
+            async function maybeAutoSearchSubjectOnCompsOpen() {
+                const propertyAddress = String(detailData.address || '').trim();
+                const normalizedPropertyAddress = normalizeAddressForAutoSearch(propertyAddress);
+                if (!normalizedPropertyAddress) {
+                    return;
+                }
+
+                if (lastAutoSearchPropertyAddress === normalizedPropertyAddress) {
+                    return;
+                }
+
+                const normalizedLastSearchLabel = normalizeAddressForAutoSearch(lastSearchResult && lastSearchResult.label);
+                if (normalizedLastSearchLabel === normalizedPropertyAddress) {
+                    lastAutoSearchPropertyAddress = normalizedPropertyAddress;
+                    return;
+                }
+
+                try {
+                    await searchAddressOnMap(propertyAddress);
+                    lastAutoSearchPropertyAddress = normalizedPropertyAddress;
+                } catch (error) {
+                    updateCompsMapOpenLink(propertyAddress);
+                }
             }
 
             async function initCompsAddressAutocomplete() {
