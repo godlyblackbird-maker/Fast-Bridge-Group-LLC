@@ -15740,6 +15740,24 @@ body.analytics-reboot .analytics-my-file-count {
     pointer-events: auto;
 }
 
+.comps-map-earth-shell {
+    position: absolute;
+    inset: 0;
+    z-index: 420;
+    background: rgba(5, 10, 18, 0.16);
+}
+
+.comps-map-earth-canvas,
+.comps-map-earth-canvas > * {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.comps-map-wrap.is-earth-active .comps-map-legend {
+    display: none;
+}
+
 .comps-aerial-view-status strong {
     display: block;
     color: var(--text-primary);

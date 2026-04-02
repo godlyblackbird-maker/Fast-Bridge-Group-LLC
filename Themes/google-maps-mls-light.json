@@ -91,7 +91,7 @@
     "elementType": "geometry",
     "stylers": [
       {
-        "color": "#ffffff"
+        "color": "#dde5ee"
       }
     ]
   },
@@ -100,7 +100,7 @@
     "elementType": "geometry.stroke",
     "stylers": [
       {
-        "color": "#dde4ee"
+        "color": "#b9c4d3"
       }
     ]
   },
@@ -118,7 +118,25 @@
     "elementType": "geometry",
     "stylers": [
       {
-        "color": "#fdfefe"
+        "color": "#d7e0ea"
+      }
+    ]
+  },
+  {
+    "featureType": "road.local",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#dfe6ee"
+      }
+    ]
+  },
+  {
+    "featureType": "road.local",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#bcc7d5"
       }
     ]
   },
