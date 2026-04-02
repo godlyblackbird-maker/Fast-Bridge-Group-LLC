@@ -895,7 +895,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.3.5';
+                versionLabel.textContent = 'v1.3.6';
             });
     }
 
@@ -1645,6 +1645,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         return stored;
+    }
+
+    function withPropertyDetailOrigin(detail, originKey) {
+        const nextDetail = detail && typeof detail === 'object' ? { ...detail } : {};
+        const normalizedOrigin = String(originKey || nextDetail.propertyDetailOrigin || '').trim().toLowerCase();
+        nextDetail.propertyDetailOrigin = normalizedOrigin === 'deals' ? 'deals' : 'mls';
+        return nextDetail;
     }
 
     function sanitizeSharedPropertyText(value, maxLength) {
@@ -3787,6 +3794,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             piq: String(snapshot.piq || 'About property notes will appear here.').trim() || 'About property notes will appear here.',
             comps: String(snapshot.comps || '').trim(),
             ia: String(snapshot.ia || 'IA tab content placeholder.').trim() || 'IA tab content placeholder.',
+            propertyDetailOrigin: String(snapshot.propertyDetailOrigin || '').trim().toLowerCase() === 'deals' ? 'deals' : 'mls',
             agentRecord: {
                 ...(snapshot.agentRecord && typeof snapshot.agentRecord === 'object' ? snapshot.agentRecord : {}),
                 agentStatus: formatAgentStatusLabel(normalizedStatus)
@@ -4361,9 +4369,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const searchFilter = document.getElementById('offers-accepted-search-filter');
         const scopeFilter = document.getElementById('offers-accepted-scope-filter');
         const statusFilter = document.getElementById('offers-accepted-status-filter');
-        const sortFilter = document.getElementById('offers-accepted-sort-filter');
-        const followUpFilterButton = document.getElementById('offers-accepted-followup-filter');
-        let showNeedsFollowUpOnly = false;
 
         function hydrateStatusFilterOptions() {
             if (!statusFilter) {
@@ -4466,7 +4471,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const canShareToEmailPrep = Boolean(emailPrepRecipientNameInput && emailPrepRecipientEmailInput && emailPrepCard);
 
         function openAcceptedProperty(snapshot, propertyAddress, statusValue) {
-            const payload = buildDashboardPropertyDetailFallback(propertyAddress, statusValue, snapshot);
+            const payload = withPropertyDetailOrigin(buildDashboardPropertyDetailFallback(propertyAddress, statusValue, snapshot), 'deals');
             persistSelectedPropertyDetail(payload);
             window.location.href = 'property-details.html';
         }
@@ -4579,7 +4584,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const searchValue = String(searchFilter?.value || '').trim().toLowerCase();
             const scopeValue = String(scopeFilter?.value || 'assigned-to-me').trim().toLowerCase();
             const statusValue = String(statusFilter?.value || 'offer-accepted').trim().toLowerCase();
-            const sortValue = String(sortFilter?.value || 'newest').trim().toLowerCase();
 
             const scopedItems = acceptedItems.filter((item) => {
                 if (scopeValue === 'mine-only') {
@@ -4630,19 +4634,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 })
                 : statusItems;
 
-            const followUpItems = showNeedsFollowUpOnly
-                ? searchedItems.filter((item) => item.needsFollowUp)
-                : searchedItems;
-
-            followUpItems.sort((left, right) => {
-                if (sortValue === 'oldest') {
-                    return left.acceptedAt - right.acceptedAt || left.propertyAddress.localeCompare(right.propertyAddress);
-                }
-
-                return right.acceptedAt - left.acceptedAt || left.propertyAddress.localeCompare(right.propertyAddress);
-            });
-
-            return followUpItems;
+            return searchedItems;
         }
 
         function render() {
@@ -4653,9 +4645,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             offersAcceptedList.innerHTML = '';
 
             if (!acceptedItems.length) {
-                offersAcceptedList.innerHTML = showNeedsFollowUpOnly
-                    ? '<p class="outreach-empty">No properties need follow-up right now.</p>'
-                    : '<p class="outreach-empty">No properties match these filters.</p>';
+                offersAcceptedList.innerHTML = '<p class="outreach-empty">No properties match these filters.</p>';
                 return;
             }
 
@@ -4885,18 +4875,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         if (statusFilter) {
             statusFilter.addEventListener('change', render);
-        }
-
-        if (sortFilter) {
-            sortFilter.addEventListener('change', render);
-        }
-
-        if (followUpFilterButton) {
-            followUpFilterButton.addEventListener('click', () => {
-                showNeedsFollowUpOnly = !showNeedsFollowUpOnly;
-                followUpFilterButton.setAttribute('aria-pressed', showNeedsFollowUpOnly ? 'true' : 'false');
-                render();
-            });
         }
 
 
@@ -6939,7 +6917,9 @@ function initNavbarDateTime() {
         const icon = button.querySelector('svg');
 
         function persistState(nextCollapsed) {
+            const existingState = getUserScopedObject(SIDEBAR_STATE_KEY, workspaceUser.key);
             setUserScopedObject(SIDEBAR_STATE_KEY, workspaceUser.key, {
+                ...existingState,
                 collapsed: Boolean(nextCollapsed),
                 updatedAt: Date.now()
             });
@@ -6985,6 +6965,67 @@ function initNavbarDateTime() {
         }
 
         applyCollapsedState(isCollapsed, { persist: false });
+    }
+
+    function initSidebarScrollState() {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+        const sidebarLinks = Array.from(sidebar.querySelectorAll('.nav-link[href]'));
+        let restoreFrameId = 0;
+        let persistFrameQueued = false;
+
+        function persistScrollPosition() {
+            const existingState = getUserScopedObject(SIDEBAR_STATE_KEY, workspaceUser.key);
+            setUserScopedObject(SIDEBAR_STATE_KEY, workspaceUser.key, {
+                ...existingState,
+                scrollTop: Math.max(0, Math.round(sidebar.scrollTop || 0)),
+                updatedAt: Date.now()
+            }, { silent: true });
+        }
+
+        function queuePersistScrollPosition() {
+            if (persistFrameQueued) {
+                return;
+            }
+
+            persistFrameQueued = true;
+            window.requestAnimationFrame(() => {
+                persistFrameQueued = false;
+                persistScrollPosition();
+            });
+        }
+
+        function restoreScrollPosition() {
+            const storedState = getUserScopedObject(SIDEBAR_STATE_KEY, workspaceUser.key);
+            const storedScrollTop = Number(storedState.scrollTop);
+            if (!Number.isFinite(storedScrollTop) || storedScrollTop <= 0) {
+                return;
+            }
+
+            if (restoreFrameId) {
+                window.cancelAnimationFrame(restoreFrameId);
+            }
+
+            restoreFrameId = window.requestAnimationFrame(() => {
+                sidebar.scrollTop = storedScrollTop;
+                restoreFrameId = window.requestAnimationFrame(() => {
+                    sidebar.scrollTop = storedScrollTop;
+                });
+            });
+        }
+
+        restoreScrollPosition();
+
+        sidebar.addEventListener('scroll', queuePersistScrollPosition, { passive: true });
+        sidebarLinks.forEach((link) => {
+            link.addEventListener('click', persistScrollPosition);
+        });
+
+        window.addEventListener('beforeunload', persistScrollPosition, { capture: true });
     }
 
     function initMenuSoundEffects() {
@@ -14156,7 +14197,7 @@ function initNavbarDateTime() {
 
             rememberClickedProperty(card, propertyPayload, status, roi);
 
-            persistSelectedPropertyDetail(propertyPayload);
+            persistSelectedPropertyDetail(withPropertyDetailOrigin(propertyPayload, 'mls'));
             window.location.href = 'property-details.html';
         }
 
@@ -16749,7 +16790,7 @@ function initNavbarDateTime() {
 
                 const openAssignedProperty = () => {
                     if (resolvedState.snapshot && typeof resolvedState.snapshot === 'object') {
-                        persistSelectedPropertyDetail(resolvedState.snapshot);
+                        persistSelectedPropertyDetail(withPropertyDetailOrigin(resolvedState.snapshot, 'deals'));
                     }
                     window.location.href = 'property-details.html';
                 };
@@ -16841,7 +16882,7 @@ function initNavbarDateTime() {
 
                 const openImportedProperty = () => {
                     if (resolvedState.snapshot && typeof resolvedState.snapshot === 'object') {
-                        persistSelectedPropertyDetail(resolvedState.snapshot);
+                        persistSelectedPropertyDetail(withPropertyDetailOrigin(resolvedState.snapshot, 'deals'));
                     }
                     window.location.href = 'property-details.html';
                 };
@@ -16940,7 +16981,7 @@ function initNavbarDateTime() {
 
                 const openClickedProperty = () => {
                     if (resolvedState.snapshot && typeof resolvedState.snapshot === 'object') {
-                        persistSelectedPropertyDetail(resolvedState.snapshot);
+                        persistSelectedPropertyDetail(withPropertyDetailOrigin(resolvedState.snapshot, 'deals'));
                     }
                     window.location.href = 'property-details.html';
                 };
@@ -17009,7 +17050,7 @@ function initNavbarDateTime() {
                 const payload = new FormData(importForm);
                 const record = createImportedPropertyRecord(payload);
                 saveImportedProperty(record);
-                persistSelectedPropertyDetail(record.propertySnapshot);
+                persistSelectedPropertyDetail(withPropertyDetailOrigin(record.propertySnapshot, 'deals'));
                 importForm.reset();
                 closeImportWidget();
                 const defaultStatus = document.getElementById('deals-import-status');
@@ -17119,6 +17160,7 @@ function initNavbarDateTime() {
             ? {
                 ...defaultDetailData,
                 ...detailData,
+                propertyDetailOrigin: String(detailData.propertyDetailOrigin || '').trim().toLowerCase() === 'deals' ? 'deals' : 'mls',
                 propertyImages: Array.isArray(detailData.propertyImages) && detailData.propertyImages.length > 0
                     ? detailData.propertyImages
                     : defaultDetailData.propertyImages,
@@ -17128,6 +17170,37 @@ function initNavbarDateTime() {
                 }
             }
             : defaultDetailData;
+
+        const propertyBackLink = document.querySelector('.property-back-link');
+        const mlsNavLink = document.querySelector('.sidebar .nav-link[href="mls.html"], .sidebar .nav-link[href="/mls.html"]');
+        const dealsNavLink = document.querySelector('.sidebar .nav-link[href="deals.html"], .sidebar .nav-link[href="/deals.html"]');
+        const propertyDetailOrigin = detailData.propertyDetailOrigin === 'deals' ? 'deals' : 'mls';
+
+        [mlsNavLink, dealsNavLink].forEach((link) => {
+            if (link) {
+                link.classList.remove('active');
+            }
+        });
+
+        if (propertyDetailOrigin === 'deals') {
+            if (dealsNavLink) {
+                dealsNavLink.classList.add('active');
+            }
+            if (propertyBackLink) {
+                propertyBackLink.setAttribute('href', 'deals.html');
+                propertyBackLink.setAttribute('aria-label', 'Back to My Deals');
+                propertyBackLink.textContent = 'Back to My Deals';
+            }
+        } else {
+            if (mlsNavLink) {
+                mlsNavLink.classList.add('active');
+            }
+            if (propertyBackLink) {
+                propertyBackLink.setAttribute('href', 'mls.html');
+                propertyBackLink.setAttribute('aria-label', 'Back to MLS hot deals');
+                propertyBackLink.textContent = 'Back to MLS';
+            }
+        }
 
         const compsText = String(detailData.comps || '').trim();
         if (
@@ -24640,6 +24713,7 @@ function initNavbarDateTime() {
             ['initSharedSidebarLinks', initSharedSidebarLinks],
             ['initFbgMessagesNavUnreadIndicator', initFbgMessagesNavUnreadIndicator],
             ['initSidebarCollapse', initSidebarCollapse],
+            ['initSidebarScrollState', initSidebarScrollState],
             ['initMenuSoundEffects', initMenuSoundEffects],
             ['initSoundSettingsTab', initSoundSettingsTab],
             ['initFormValidation', initFormValidation],

@@ -19,6 +19,7 @@
         (function () {
             try {
                 const root = document.documentElement;
+                const validThemePattern = /^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/;
                 const KNOWN_EMAIL_GROUPS = [
                     {
                         canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -60,28 +61,9 @@
                         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                     }
 
-                    return /^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(normalizedValue)
+                    return validThemePattern.test(normalizedValue)
                         ? normalizedValue
                         : fallback;
-                };
-
-                const resolveHomepageVersionTheme = (value) => {
-                    const normalizedValue = String(value || '').trim().toLowerCase();
-                    return normalizedValue === 'sunset' ? 'sunset' : 'beach';
-                };
-
-                const isPublicReferrer = () => {
-                    try {
-                        if (!document.referrer) {
-                            return false;
-                        }
-
-                        const referrerUrl = new URL(document.referrer, window.location.origin);
-                        const referrerPath = String(referrerUrl.pathname || '').trim().toLowerCase();
-                        return referrerPath === '/' || referrerPath.endsWith('/index.html') || referrerPath.endsWith('/login.html');
-                    } catch (error) {
-                        return false;
-                    }
                 };
 
                 const normalizeKnownEmail = (value) => {
@@ -127,20 +109,50 @@
                     return Array.from(keys).filter(Boolean);
                 };
 
-                const themeStore = readJson('dashboardThemeByUser');
-                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
-                const source = String(new URLSearchParams(window.location.search).get('source') || '').trim().toLowerCase();
-                const usePublicTheme = source === 'public' || (source !== 'app' && isPublicReferrer());
-                const userKeys = buildUserKeys();
-                const scopedTheme = userKeys
-                    .map((key) => themeStore[key] && themeStore[key].value)
-                    .find((value) => typeof value === 'string' && value.trim());
-                const homepageTheme = resolveHomepageVersionTheme(storedHomepageTheme);
-                let theme = usePublicTheme
-                    ? homepageTheme
-                    : resolveStoredTheme(scopedTheme || homepageTheme || 'beach');
+                const getResolvedTheme = () => {
+                    const themeStore = readJson('dashboardThemeByUser');
+                    const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                    const storedLegacyTheme = String(localStorage.getItem('theme') || '').trim().toLowerCase();
+                    const userKeys = buildUserKeys();
+                    const scopedTheme = userKeys
+                        .map((key) => themeStore[key] && themeStore[key].value)
+                        .find((value) => typeof value === 'string' && value.trim());
 
-                root.setAttribute('data-theme', theme);
+                    return resolveStoredTheme(scopedTheme || storedLegacyTheme || storedHomepageTheme || 'beach');
+                };
+
+                const applyResolvedTheme = () => {
+                    root.setAttribute('data-theme', getResolvedTheme());
+                };
+
+                applyResolvedTheme();
+
+                window.addEventListener('storage', (event) => {
+                    const changedKey = String(event.key || '').trim();
+                    if (!changedKey || ['dashboardThemeByUser', 'homepageTheme', 'theme', 'user', 'userProfile', 'userProfilesByUser', 'authToken'].includes(changedKey)) {
+                        applyResolvedTheme();
+                    }
+                });
+
+                window.addEventListener('dashboard-theme-updated', () => {
+                    applyResolvedTheme();
+                });
+
+                const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                if (colorSchemeQuery && typeof colorSchemeQuery.addEventListener === 'function') {
+                    colorSchemeQuery.addEventListener('change', () => {
+                        const storedTheme = String(localStorage.getItem('theme') || '').trim().toLowerCase();
+                        const themeStore = readJson('dashboardThemeByUser');
+                        const userKeys = buildUserKeys();
+                        const scopedTheme = userKeys
+                            .map((key) => themeStore[key] && themeStore[key].value)
+                            .find((value) => typeof value === 'string' && value.trim());
+
+                        if (scopedTheme === 'system' || storedTheme === 'system') {
+                            applyResolvedTheme();
+                        }
+                    });
+                }
             } catch (error) {
                 document.documentElement.setAttribute('data-theme', 'beach');
             }
@@ -712,16 +724,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.3.5</span>
-                    <span>Cloud-backed user uploads</span>
-                    <span>Analytics records now persist by account</span>
-                    <span>Version history respects page theme context</span>
+                    <span>Newest build: 1.3.6</span>
+                    <span>Google Maps layer upgrades</span>
+                    <span>Naked map view added</span>
+                    <span>Agent Workspace status filter aligned</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>18</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.5, including the full 1.2.3 to 1.3.5 release sequence.</span>
+                    <strong>19</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.6, including the full 1.2.3 to 1.3.6 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -733,23 +745,23 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.3.5</h2>
-                <p>This release pushes more persistent user files onto the new storage path, upgrades analytics document retention so users keep their own records across sessions, and makes version history follow the right theme depending on whether the page was opened publicly or from inside the app.</p>
+                <h2>Version 1.3.6</h2>
+                <p>This release sharpens the Google Maps workflow inside Property Details with a new stripped-down map mode, cleaner aerial transitions, and better status consistency in Agent Workspace so filters behave the same anywhere agent status appears.</p>
                 <div class="version-history-meta">
-                    <span>March 31, 2026</span>
-                    <span>Cloud storage rollout</span>
-                    <span>Theme routing polish</span>
-                    <span>Version 1.3.5</span>
+                    <span>April 2, 2026</span>
+                    <span>Map workflow upgrade</span>
+                    <span>Filter consistency fix</span>
+                    <span>Version 1.3.6</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Moved persistent upload-heavy areas onto the new storage flow so user files are no longer stuck living only in local browser state.</li>
-                    <li>Added cloud-backed persistence for Analytics closed-deal documents and saved deal records so each signed-in user keeps their own document tabs and history.</li>
-                    <li>Shifted profile avatar uploads onto the same shared storage path so profile images persist as account assets instead of base64 blobs in local storage.</li>
-                    <li>Kept temporary MLS PDF processing local-only on purpose while preserving the cloud path for long-lived user documents and workspace files.</li>
-                    <li>Updated Version History theme behavior so public navigation follows the homepage Beach or Sunset toggle while in-app navigation follows the logged-in user theme.</li>
+                    <li>Added a new Naked map button in Property Details so users can hide map labels and icons while staying inside the existing Google Maps layout.</li>
+                    <li>Kept Naked mode working when switching into Aerial so satellite viewing stays clean until the user changes back to a normal map layer.</li>
+                    <li>Reset map styling correctly when users leave Naked mode and return to standard Street map viewing.</li>
+                    <li>Aligned the Agent Workspace Agent Status filter with the same canonical status values used in Property Details so status filtering finally matches across both areas.</li>
+                    <li>Removed extra Offer Accepted widget controls that were adding noise without helping the workflow, leaving the panel cleaner and easier to scan.</li>
                 </ul>
             </div>
         </section>
@@ -761,6 +773,23 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.3.5</h2>
+                            <span class="version-date">March 31, 2026</span>
+                        </div>
+                        <span class="version-chip">1.3.5</span>
+                    </div>
+                    <ul>
+                        <li>Moved persistent upload-heavy areas onto the new storage flow so user files are no longer stuck living only in local browser state.</li>
+                        <li>Added cloud-backed persistence for Analytics closed-deal documents and saved deal records so each signed-in user keeps their own document tabs and history.</li>
+                        <li>Shifted profile avatar uploads onto the same shared storage path so profile images persist as account assets instead of base64 blobs in local storage.</li>
+                        <li>Kept temporary MLS PDF processing local-only on purpose while preserving the cloud path for long-lived user documents and workspace files.</li>
+                        <li>Updated Version History theme behavior so public navigation follows the homepage Beach or Sunset toggle while in-app navigation follows the logged-in user theme.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>
