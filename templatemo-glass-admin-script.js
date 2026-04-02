@@ -4370,10 +4370,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return;
             }
 
-            const selectedValue = normalizeAgentStatusValue(statusFilter.value || 'offer-accepted');
+            const rawSelectedValue = String(statusFilter.value || 'offer-accepted').trim().toLowerCase();
+            const selectedValue = rawSelectedValue === 'all-statuses'
+                ? 'all-statuses'
+                : normalizeAgentStatusValue(rawSelectedValue || 'offer-accepted');
             const staticOptions = [
-                { value: 'offer-accepted', label: 'Offer Accepted' },
-                { value: 'all-statuses', label: 'All Statuses' }
+                { value: 'offer-accepted', label: formatAgentStatusLabel('offer-accepted') },
+                { value: 'all-statuses', label: 'All Agent Statuses' }
             ];
 
             statusFilter.innerHTML = '';
@@ -4385,7 +4388,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
 
             AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
-                if (!optionConfig || optionConfig.value === 'none' || optionConfig.value === 'offer-accepted') {
+                if (!optionConfig || optionConfig.value === 'offer-accepted') {
                     return;
                 }
 
