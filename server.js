@@ -4896,6 +4896,21 @@ async function trimDirectMessageConversationHistory(userIdA, userIdB) {
     return;
   }
 
+  const countRow = await dbGet(
+    `SELECT COUNT(*) AS total
+     FROM user_messages
+     WHERE (sender_user_id = ? AND recipient_user_id = ?)
+        OR (sender_user_id = ? AND recipient_user_id = ?)`,
+    [firstUserId, secondUserId, secondUserId, firstUserId]
+  );
+
+  const totalMessages = Number(countRow && countRow.total) || 0;
+  const overflowCount = Math.max(0, totalMessages - DIRECT_MESSAGE_HISTORY_LIMIT);
+
+  if (overflowCount <= 0) {
+    return;
+  }
+
   await dbRun(
     `DELETE FROM user_messages
      WHERE id IN (
@@ -4903,10 +4918,10 @@ async function trimDirectMessageConversationHistory(userIdA, userIdB) {
        FROM user_messages
        WHERE (sender_user_id = ? AND recipient_user_id = ?)
           OR (sender_user_id = ? AND recipient_user_id = ?)
-       ORDER BY datetime(created_at) DESC, id DESC
-       LIMIT -1 OFFSET ?
+       ORDER BY datetime(created_at) ASC, id ASC
+       LIMIT ?
      )`,
-    [firstUserId, secondUserId, secondUserId, firstUserId, DIRECT_MESSAGE_HISTORY_LIMIT]
+    [firstUserId, secondUserId, secondUserId, firstUserId, overflowCount]
   );
 }
 
@@ -8054,8 +8069,6 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
     if (!otherUser) {
       return res.status(404).json({ error: 'Selected user was not found.' });
     }
-
-    await trimDirectMessageConversationHistory(currentUserId, otherUserId);
 
     await dbRun(
       `UPDATE user_messages
