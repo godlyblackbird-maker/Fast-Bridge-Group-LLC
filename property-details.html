@@ -704,6 +704,10 @@
                                         <button type="button" class="card-btn" id="comps-map-clear-area-btn">Clear Area</button>
                                     </div>
                                     <div class="comps-map-toolbar">
+                                        <label class="comps-map-search-shell" for="comps-map-address-search">
+                                            <input id="comps-map-address-search" class="comps-map-search-input" type="text" placeholder="Search address or pocket on map">
+                                            <button id="comps-map-address-search-btn" class="card-btn active" type="button">Search</button>
+                                        </label>
                                         <span id="comps-map-style-source" class="comps-map-style-source">JSON Style</span>
                                         <a id="comps-map-open-link" class="card-btn" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer">Open In Google Maps</a>
                                         <button id="comps-map-street-view-btn" class="card-btn" type="button">Street View</button>
@@ -732,6 +736,19 @@
                                     </div>
 
                                     <div class="comps-map-wrap">
+                                        <div id="comps-map-empty-state" class="comps-map-empty-state" hidden>
+                                            <strong>Google Maps is not ready yet.</strong>
+                                            <p id="comps-map-empty-message">FAST can still show nearby comps while the interactive map finishes loading.</p>
+                                        </div>
+                                        <div id="comps-aerial-view-shell" class="comps-aerial-view-shell" hidden>
+                                            <div class="comps-aerial-view-status" id="comps-aerial-view-status">
+                                                <strong>Aerial View</strong>
+                                                <p id="comps-aerial-view-message">FAST is checking whether Google has a photorealistic aerial video for this address.</p>
+                                            </div>
+                                            <video id="comps-aerial-view-video" class="comps-aerial-view-video" muted autoplay loop playsinline hidden>
+                                                Your browser does not support HTML5 video.
+                                            </video>
+                                        </div>
                                         <div class="comps-map-stage-grid">
                                             <div id="comps-map-canvas" class="comps-map-canvas" aria-label="Interactive comps map"></div>
                                             <div id="comps-map-pano" class="comps-map-pano" aria-label="Street View panorama"></div>

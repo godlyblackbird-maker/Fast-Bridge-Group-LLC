@@ -15473,6 +15473,34 @@ body.analytics-reboot .analytics-my-file-count {
     flex-wrap: wrap;
 }
 
+.comps-map-search-shell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: min(100%, 360px);
+}
+
+.comps-map-search-input {
+    flex: 1 1 220px;
+    min-height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.18);
+    color: var(--text-primary);
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+.comps-map-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.comps-map-search-input:focus {
+    outline: none;
+    border-color: rgba(var(--accent-rgb), 0.42);
+    box-shadow: 0 0 0 3px rgba(var(--accent-light-rgb), 0.12);
+}
+
 .comps-map-explorer {
     display: flex;
     flex-direction: column;
@@ -15606,6 +15634,79 @@ body.analytics-reboot .analytics-my-file-count {
         rgba(15, 23, 42, 0.22);
 }
 
+.comps-map-empty-state {
+    position: absolute;
+    inset: 14px;
+    z-index: 450;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(8, 15, 28, 0.82);
+    backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 22px;
+    text-align: center;
+}
+
+.comps-map-empty-state strong {
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
+.comps-map-empty-state p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.comps-aerial-view-shell {
+    position: absolute;
+    inset: 0;
+    z-index: 430;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.comps-aerial-view-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+    pointer-events: auto;
+    background: rgba(5, 10, 18, 0.92);
+}
+
+.comps-aerial-view-status {
+    position: absolute;
+    inset: auto 18px 18px 18px;
+    z-index: 2;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(8, 15, 28, 0.74);
+    backdrop-filter: blur(16px);
+    pointer-events: auto;
+}
+
+.comps-aerial-view-status strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.comps-aerial-view-status p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
 .comps-map-stage-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -15646,6 +15747,10 @@ body.analytics-reboot .analytics-my-file-count {
     border: 1px solid rgba(255, 255, 255, 0.14);
     backdrop-filter: blur(12px);
     z-index: 500;
+}
+
+.comps-map-wrap.has-empty-state .comps-map-legend {
+    opacity: 0.38;
 }
 
 .comps-map-legend span {

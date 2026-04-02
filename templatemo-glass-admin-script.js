@@ -18959,6 +18959,11 @@ function initNavbarDateTime() {
             googleMapsScriptPromise = new Promise((resolve, reject) => {
                 const existing = document.getElementById('fast-google-maps-script');
                 if (existing) {
+                    if (window.google && window.google.maps) {
+                        resolve(window.google.maps);
+                        return;
+                    }
+
                     existing.addEventListener('load', () => resolve(window.google.maps));
                     existing.addEventListener('error', () => reject(new Error('Google Maps failed to load.')));
                     return;
@@ -18978,9 +18983,12 @@ function initNavbarDateTime() {
                 script.id = 'fast-google-maps-script';
                 script.async = true;
                 script.defer = true;
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=marker,drawing,geometry&callback=${callbackName}`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&libraries=marker,drawing,geometry,places&callback=${callbackName}`;
                 script.onerror = () => reject(new Error('Google Maps failed to load.'));
                 document.body.appendChild(script);
+            }).catch((error) => {
+                googleMapsScriptPromise = null;
+                throw error;
             });
 
             return googleMapsScriptPromise;
@@ -19121,6 +19129,14 @@ function initNavbarDateTime() {
             const compsExplorer = document.getElementById('comps-map-explorer');
             const compsMapCanvas = document.getElementById('comps-map-canvas');
             const compsMapPano = document.getElementById('comps-map-pano');
+            const compsMapEmptyState = document.getElementById('comps-map-empty-state');
+            const compsMapEmptyMessage = document.getElementById('comps-map-empty-message');
+            const compsAerialViewShell = document.getElementById('comps-aerial-view-shell');
+            const compsAerialViewStatus = document.getElementById('comps-aerial-view-status');
+            const compsAerialViewMessage = document.getElementById('comps-aerial-view-message');
+            const compsAerialViewVideo = document.getElementById('comps-aerial-view-video');
+            const compsMapSearchInput = document.getElementById('comps-map-address-search');
+            const compsMapSearchButton = document.getElementById('comps-map-address-search-btn');
             const compsMapStyleSource = document.getElementById('comps-map-style-source');
             const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
             const nearbyList = document.getElementById('comps-nearby-list');
@@ -19189,6 +19205,8 @@ function initNavbarDateTime() {
             let subjectMarker = null;
             let radiusCircle = null;
             let markerCtor = null;
+            let autocompleteCtor = null;
+            let addressAutocomplete = null;
             let drawingManager = null;
             let drawnPolygon = null;
             let mapReadyPromise = null;
@@ -19203,6 +19221,43 @@ function initNavbarDateTime() {
             const markerRegistry = new Map();
             let lastFilteredPool = [];
             let lastTopResults = [];
+            let searchedMarker = null;
+            let lastSearchResult = null;
+            let aerialViewLookupPromise = null;
+            let aerialViewActiveAddress = '';
+
+            function buildFallbackMarkerIcon(label, variant, isActive) {
+                const safeLabel = String(label || '').trim() || 'COMP';
+                const theme = variant === 'subject'
+                    ? {
+                        fill: '#111827',
+                        stroke: '#fef3c7',
+                        text: '#fef3c7'
+                    }
+                    : {
+                        fill: variant === 'green' ? '#10b981' : (variant === 'orange' ? '#f59e0b' : '#ef4444'),
+                        stroke: isActive ? '#f8fafc' : 'rgba(8,15,28,0.78)',
+                        text: variant === 'orange' ? '#111827' : '#ffffff'
+                    };
+                const width = Math.max(78, Math.min(152, 26 + safeLabel.length * (variant === 'subject' ? 8.5 : 7.2)));
+                const height = variant === 'subject' ? 44 : 36;
+                const radius = Math.round(height / 2);
+                const outerStroke = isActive ? '#f59e0b' : 'transparent';
+                const outerStrokeWidth = isActive ? 4 : 0;
+                const svg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                        <rect x="${outerStrokeWidth / 2}" y="${outerStrokeWidth / 2}" width="${width - outerStrokeWidth}" height="${height - outerStrokeWidth}" rx="${radius}" fill="${theme.fill}" stroke="${outerStroke}" stroke-width="${outerStrokeWidth}" />
+                        <rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="${radius - 1}" fill="none" stroke="${theme.stroke}" stroke-width="2" />
+                        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-size="${variant === 'subject' ? 13 : 11}" font-weight="700" fill="${theme.text}">${escapeHtml(safeLabel)}</text>
+                    </svg>
+                `.trim();
+
+                return {
+                    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+                    scaledSize: new window.google.maps.Size(width, height),
+                    anchor: new window.google.maps.Point(width / 2, height / 2)
+                };
+            }
 
             function parseCurrencyAmount(value) {
                 const numericValue = Number(String(value || '').replace(/[^0-9.\-]/g, ''));
@@ -19237,7 +19292,224 @@ function initNavbarDateTime() {
             }
 
             function setMapEmptyState(isVisible, message) {
-                return;
+                if (!compsMapEmptyState || !compsMapCanvas) {
+                    return;
+                }
+
+                const visible = Boolean(isVisible);
+                compsMapEmptyState.hidden = !visible;
+                compsMapCanvas.setAttribute('aria-hidden', visible ? 'true' : 'false');
+                if (compsMapPano) {
+                    compsMapPano.setAttribute('aria-hidden', visible ? 'true' : 'false');
+                }
+
+                const wrap = compsMapCanvas.closest('.comps-map-wrap');
+                if (wrap) {
+                    wrap.classList.toggle('has-empty-state', visible);
+                }
+
+                if (compsMapEmptyMessage) {
+                    compsMapEmptyMessage.textContent = String(message || 'FAST can still show nearby comps while the interactive map finishes loading.').trim();
+                }
+            }
+
+            function setAerialViewState(options = {}) {
+                if (!compsAerialViewShell || !compsAerialViewStatus || !compsAerialViewMessage || !compsAerialViewVideo) {
+                    return;
+                }
+
+                const settings = options && typeof options === 'object' ? options : {};
+                const isVisible = Boolean(settings.visible);
+                const hasVideo = Boolean(settings.videoUrl);
+                compsAerialViewShell.hidden = !isVisible;
+                compsAerialViewVideo.hidden = !hasVideo;
+                compsAerialViewStatus.hidden = !isVisible;
+                compsAerialViewMessage.textContent = String(settings.message || 'FAST is checking whether Google has a photorealistic aerial video for this address.').trim();
+
+                if (hasVideo) {
+                    if (compsAerialViewVideo.src !== settings.videoUrl) {
+                        compsAerialViewVideo.src = settings.videoUrl;
+                    }
+                    void compsAerialViewVideo.play().catch(() => {});
+                } else {
+                    compsAerialViewVideo.pause();
+                    compsAerialViewVideo.removeAttribute('src');
+                    compsAerialViewVideo.load();
+                }
+            }
+
+            function getAerialViewAddress() {
+                return String(
+                    (lastSearchResult && lastSearchResult.label) ||
+                    detailData.address ||
+                    detailData.streetViewAddress ||
+                    ''
+                ).trim();
+            }
+
+            async function lookupAerialViewVideo(address) {
+                const queryAddress = String(address || '').trim();
+                if (!queryAddress) {
+                    throw new Error('No property address is available for aerial view.');
+                }
+
+                const config = await getGoogleMapsBrowserConfig();
+                if (!config.enabled || !config.apiKey) {
+                    throw new Error('Google Maps API key is not configured for aerial view.');
+                }
+
+                const params = new URLSearchParams();
+                params.set('address', queryAddress);
+                params.set('key', String(config.apiKey || '').trim());
+                const response = await fetch(`https://aerialview.googleapis.com/v1/videos:lookupVideo?${params.toString()}`);
+                const payload = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    const errorCode = Number(payload && payload.error && payload.error.code);
+                    if (errorCode === 404) {
+                        return { state: 'NOT_FOUND', payload };
+                    }
+                    throw new Error(String(payload && payload.error && payload.error.message || 'Google Aerial View could not be loaded.'));
+                }
+
+                return payload && typeof payload === 'object' ? payload : {};
+            }
+
+            async function showAerialViewForCurrentAddress() {
+                const address = getAerialViewAddress();
+                aerialViewActiveAddress = address;
+                setAerialViewState({
+                    visible: true,
+                    message: `Checking Google Aerial View for ${address || 'this property'}...`
+                });
+
+                aerialViewLookupPromise = lookupAerialViewVideo(address)
+                    .then((payload) => {
+                        if (currentMapLayer !== 'aerial' || aerialViewActiveAddress !== address) {
+                            return;
+                        }
+
+                        const state = String(payload && payload.state || '').trim().toUpperCase();
+                        const uris = payload && payload.uris && typeof payload.uris === 'object' ? payload.uris : {};
+                        const preferredUri = (
+                            (uris.MP4_MEDIUM && uris.MP4_MEDIUM.landscapeUri) ||
+                            (uris.MP4_HIGH && uris.MP4_HIGH.landscapeUri) ||
+                            (uris.MP4_LOW && uris.MP4_LOW.landscapeUri) ||
+                            ''
+                        );
+
+                        if (preferredUri) {
+                            setAerialViewState({
+                                visible: true,
+                                videoUrl: preferredUri,
+                                message: `Aerial View for ${address}. Click the video to pause or resume playback.`
+                            });
+                            return;
+                        }
+
+                        if (state === 'PROCESSING') {
+                            setAerialViewState({
+                                visible: true,
+                                message: `Google is still processing an aerial video for ${address}. FAST left the aerial layer open so you can retry shortly.`
+                            });
+                            return;
+                        }
+
+                        if (state === 'NOT_FOUND' || state === 'UNSPECIFIED') {
+                            setAerialViewState({
+                                visible: true,
+                                message: `No pre-rendered aerial video was found for ${address}. FAST is keeping the satellite map available underneath.`
+                            });
+                            return;
+                        }
+
+                        setAerialViewState({
+                            visible: true,
+                            message: `Aerial View is not currently available for ${address}. FAST is keeping the satellite map available underneath.`
+                        });
+                    })
+                    .catch((error) => {
+                        if (currentMapLayer !== 'aerial' || aerialViewActiveAddress !== address) {
+                            return;
+                        }
+                        setAerialViewState({
+                            visible: true,
+                            message: String(error && error.message || 'Aerial View could not be loaded for this address. FAST is keeping the satellite map available underneath.')
+                        });
+                    })
+                    .finally(() => {
+                        aerialViewLookupPromise = null;
+                    });
+
+                return aerialViewLookupPromise;
+            }
+
+            function detachMarker(marker) {
+                if (!marker) {
+                    return;
+                }
+                if (typeof marker.setMap === 'function') {
+                    marker.setMap(null);
+                    return;
+                }
+                marker.map = null;
+            }
+
+            function getMarkerPosition(marker) {
+                if (!marker) {
+                    return null;
+                }
+
+                if (typeof marker.getPosition === 'function') {
+                    const position = marker.getPosition();
+                    if (!position) {
+                        return null;
+                    }
+                    if (typeof position.toJSON === 'function') {
+                        return position.toJSON();
+                    }
+                    if (typeof position.lat === 'function' && typeof position.lng === 'function') {
+                        return {
+                            lat: Number(position.lat()),
+                            lng: Number(position.lng())
+                        };
+                    }
+                    return position;
+                }
+
+                const { position } = marker;
+                if (!position) {
+                    return null;
+                }
+                if (typeof position.toJSON === 'function') {
+                    return position.toJSON();
+                }
+                if (typeof position.lat === 'function' && typeof position.lng === 'function') {
+                    return {
+                        lat: Number(position.lat()),
+                        lng: Number(position.lng())
+                    };
+                }
+                return position;
+            }
+
+            function createMapMarker(options) {
+                if (!mapInstance || !window.google || !window.google.maps) {
+                    return null;
+                }
+
+                const markerOptions = options && typeof options === 'object' ? options : {};
+                if (markerCtor) {
+                    return new markerCtor(markerOptions);
+                }
+
+                return new window.google.maps.Marker({
+                    map: markerOptions.map,
+                    position: markerOptions.position,
+                    title: markerOptions.title,
+                    zIndex: markerOptions.zIndex,
+                    icon: buildFallbackMarkerIcon(markerOptions.label, markerOptions.variant, markerOptions.isActive)
+                });
             }
 
             function updateMapStyleSource(config) {
@@ -19577,7 +19849,9 @@ function initNavbarDateTime() {
                     if (window.google && window.google.maps && window.google.maps.importLibrary) {
                         await window.google.maps.importLibrary('maps');
                         const markerLibrary = await window.google.maps.importLibrary('marker');
-                        markerCtor = markerLibrary.AdvancedMarkerElement;
+                        markerCtor = markerLibrary && markerLibrary.AdvancedMarkerElement
+                            ? markerLibrary.AdvancedMarkerElement
+                            : null;
                     }
 
                     const styles = config.mapId ? null : await loadGoogleMapsStyles(config.stylePath);
@@ -19643,7 +19917,11 @@ function initNavbarDateTime() {
                     syncDrawButtons();
                     return mapInstance;
                 })().catch((error) => {
-                    setMapEmptyState(true, 'FAST can still show nearby comps and open the search in Google Maps while the Google map or Street View pane loads.');
+                    mapReadyPromise = null;
+                    const message = error && error.message
+                        ? `${String(error.message).trim()} FAST can still show nearby comps and open the search in Google Maps while the interactive map is unavailable.`
+                        : 'FAST can still show nearby comps and open the search in Google Maps while the interactive map is unavailable.';
+                    setMapEmptyState(true, message);
                     return null;
                 });
 
@@ -19667,6 +19945,11 @@ function initNavbarDateTime() {
                 layerButtons.forEach((button) => {
                     button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
                 });
+
+                if (currentMapLayer !== 'aerial') {
+                    aerialViewActiveAddress = '';
+                    setAerialViewState({ visible: false });
+                }
                 if (!mapInstance) {
                     return;
                 }
@@ -19675,6 +19958,9 @@ function initNavbarDateTime() {
                     ? 'satellite'
                     : (currentMapLayer === 'hybrid' ? 'hybrid' : 'roadmap');
                 mapInstance.setMapTypeId(nextMapTypeId);
+                if (currentMapLayer === 'aerial') {
+                    void showAerialViewForCurrentAddress();
+                }
             }
 
             function setStreetViewMode(isEnabled) {
@@ -19787,11 +20073,15 @@ function initNavbarDateTime() {
 
             function clearMapArtifacts() {
                 if (subjectMarker) {
-                    subjectMarker.map = null;
+                    detachMarker(subjectMarker);
                     subjectMarker = null;
                 }
+                if (searchedMarker) {
+                    searchedMarker.setMap(null);
+                    searchedMarker = null;
+                }
                 markerRegistry.forEach((marker) => {
-                    marker.map = null;
+                    detachMarker(marker);
                 });
                 markerRegistry.clear();
                 if (radiusCircle) {
@@ -19819,29 +20109,179 @@ function initNavbarDateTime() {
                 });
             }
 
+            function updateCompsMapOpenLink(searchText = '') {
+                const trimmedSearch = String(searchText || '').trim();
+                const baseQuery = trimmedSearch || `real estate comps near ${detailData.address || 'California'}`;
+                const mapQuery = trimmedSearch
+                    ? baseQuery
+                    : `${baseQuery} near ${detailData.address || 'Santa Paula, CA'}`;
+                if (compsMapOpenLink) {
+                    compsMapOpenLink.href = buildGoogleMapsSearchUrl(mapQuery);
+                }
+            }
+
+            function focusSearchLocation(locationLike, labelText) {
+                if (!mapInstance || !window.google || !window.google.maps) {
+                    return;
+                }
+
+                const lat = Number(locationLike && locationLike.lat);
+                const lng = Number(locationLike && locationLike.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return;
+                }
+
+                const position = { lat, lng };
+                lastSearchResult = {
+                    lat,
+                    lng,
+                    label: String(labelText || 'Search result').trim() || 'Search result'
+                };
+                detailData.compsSearchLat = lat;
+                detailData.compsSearchLng = lng;
+                detailData.compsSearchLabel = lastSearchResult.label;
+                persistCurrentPropertyDetail();
+
+                if (searchedMarker) {
+                    searchedMarker.setMap(null);
+                }
+
+                searchedMarker = new window.google.maps.Marker({
+                    map: mapInstance,
+                    position,
+                    title: lastSearchResult.label,
+                    label: {
+                        text: 'S',
+                        color: '#ffffff',
+                        fontWeight: '700'
+                    },
+                    icon: {
+                        path: window.google.maps.SymbolPath.CIRCLE,
+                        fillColor: '#2563eb',
+                        fillOpacity: 1,
+                        strokeColor: '#f8fafc',
+                        strokeWeight: 2,
+                        scale: 10
+                    },
+                    zIndex: 320
+                });
+                searchedMarker.addListener('click', () => {
+                    openMarkerInfoWindow(searchedMarker, {
+                        address: lastSearchResult.label,
+                        propertyType: 'Search Result',
+                        price: 0,
+                        title: lastSearchResult.label
+                    }, false);
+                });
+
+                mapInstance.panTo(position);
+                if ((Number(mapInstance.getZoom()) || 0) < 15) {
+                    mapInstance.setZoom(15);
+                }
+                openMarkerInfoWindow(searchedMarker, {
+                    address: lastSearchResult.label,
+                    propertyType: 'Search Result',
+                    price: 0,
+                    title: lastSearchResult.label
+                }, false);
+                updateCompsMapOpenLink(lastSearchResult.label);
+                if (currentMapLayer === 'aerial') {
+                    void showAerialViewForCurrentAddress();
+                }
+            }
+
+            async function searchAddressOnMap(rawValue = '') {
+                const searchText = String(rawValue || '').trim();
+                if (!searchText) {
+                    showDashboardToast('error', 'Address Required', 'Enter an address or neighborhood to search on the comps map.');
+                    return;
+                }
+
+                await ensureMapReady();
+                const geocodeMatch = await geocodeAddressWithGoogle(searchText);
+                if (!geocodeMatch) {
+                    throw new Error('Google Maps could not locate that search address.');
+                }
+
+                if (compsMapSearchInput) {
+                    compsMapSearchInput.value = geocodeMatch.formattedAddress || searchText;
+                }
+                focusSearchLocation(geocodeMatch, geocodeMatch.formattedAddress || searchText);
+            }
+
+            async function initCompsAddressAutocomplete() {
+                if (!compsMapSearchInput) {
+                    return;
+                }
+
+                const config = await getGoogleMapsBrowserConfig();
+                if (!config.enabled || !config.apiKey) {
+                    return;
+                }
+
+                await loadGoogleMapsScript(config.apiKey);
+                if (window.google && window.google.maps && window.google.maps.importLibrary) {
+                    const placesLibrary = await window.google.maps.importLibrary('places');
+                    autocompleteCtor = placesLibrary && placesLibrary.Autocomplete
+                        ? placesLibrary.Autocomplete
+                        : (window.google.maps.places && window.google.maps.places.Autocomplete ? window.google.maps.places.Autocomplete : null);
+                } else if (window.google && window.google.maps && window.google.maps.places) {
+                    autocompleteCtor = window.google.maps.places.Autocomplete;
+                }
+
+                if (!autocompleteCtor || addressAutocomplete) {
+                    return;
+                }
+
+                addressAutocomplete = new autocompleteCtor(compsMapSearchInput, {
+                    fields: ['formatted_address', 'geometry', 'name'],
+                    types: ['address']
+                });
+                addressAutocomplete.addListener('place_changed', () => {
+                    const place = addressAutocomplete.getPlace();
+                    if (!place || !place.geometry || !place.geometry.location) {
+                        return;
+                    }
+
+                    const lat = typeof place.geometry.location.lat === 'function'
+                        ? Number(place.geometry.location.lat())
+                        : Number(place.geometry.location.lat);
+                    const lng = typeof place.geometry.location.lng === 'function'
+                        ? Number(place.geometry.location.lng())
+                        : Number(place.geometry.location.lng);
+                    focusSearchLocation({ lat, lng }, String(place.formatted_address || place.name || compsMapSearchInput.value || '').trim());
+                });
+            }
+
             function renderMapMarkers(filtered) {
-                if (!mapInstance || !markerCtor || !window.google || !window.google.maps) {
+                if (!mapInstance || !window.google || !window.google.maps) {
                     return;
                 }
 
                 clearMapArtifacts();
+                setMapEmptyState(false);
                 const subjectLocation = getSubjectLocation();
                 const activeKey = activeCompKey;
                 const bounds = new window.google.maps.LatLngBounds();
 
-                subjectMarker = new markerCtor({
+                subjectMarker = createMapMarker({
                     map: mapInstance,
                     position: subjectLocation,
                     content: buildMarkerContent('SUBJECT', 'subject', false),
+                    label: 'SUBJECT',
+                    variant: 'subject',
+                    isActive: false,
                     title: detailData.address || 'Subject property',
                     zIndex: 300
                 });
-                subjectMarker.addListener('click', () => {
-                    openMarkerInfoWindow(subjectMarker, {
-                        address: detailData.address || 'Subject Property',
-                        propertyType: detailData.propertyDetails || 'Subject Property'
-                    }, true);
-                });
+                if (subjectMarker && typeof subjectMarker.addListener === 'function') {
+                    subjectMarker.addListener('click', () => {
+                        openMarkerInfoWindow(subjectMarker, {
+                            address: detailData.address || 'Subject Property',
+                            propertyType: detailData.propertyDetails || 'Subject Property'
+                        }, true);
+                    });
+                }
                 bounds.extend(subjectLocation);
 
                 const radiusMiles = inputNumber('comps-radius') || defaults.radius;
@@ -19858,20 +20298,28 @@ function initNavbarDateTime() {
 
                 filtered.forEach((comp, index) => {
                     const compKey = getCompKey(comp);
-                    const marker = new markerCtor({
+                    const marker = createMapMarker({
                         map: mapInstance,
                         position: { lat: comp.lat, lng: comp.lng },
                         content: buildMarkerContent(formatCompactCurrency(comp.price), comp.color, compKey === activeKey),
+                        label: formatCompactCurrency(comp.price),
+                        variant: comp.color,
+                        isActive: compKey === activeKey,
                         title: comp.address,
                         zIndex: compKey === activeKey ? 200 : 100
                     });
-                    marker.addListener('click', () => {
-                        activeCompKey = compKey;
-                        syncFocusCard(comp, index, lastFilteredPool);
-                        renderNearbyCards(lastTopResults, lastFilteredPool);
-                        renderMapMarkers(lastTopResults);
-                        openMarkerInfoWindow(marker, comp, false);
-                    });
+                    if (!marker) {
+                        return;
+                    }
+                    if (typeof marker.addListener === 'function') {
+                        marker.addListener('click', () => {
+                            activeCompKey = compKey;
+                            syncFocusCard(comp, index, lastFilteredPool);
+                            renderNearbyCards(lastTopResults, lastFilteredPool);
+                            renderMapMarkers(lastTopResults);
+                            openMarkerInfoWindow(marker, comp, false);
+                        });
+                    }
                     markerRegistry.set(compKey, marker);
                     bounds.extend({ lat: comp.lat, lng: comp.lng });
                 });
@@ -19915,8 +20363,9 @@ function initNavbarDateTime() {
                         renderNearbyCards(lastTopResults, lastFilteredPool);
                         renderMapMarkers(lastTopResults);
                         const marker = markerRegistry.get(compKey);
-                        if (marker && mapInstance) {
-                            mapInstance.panTo(marker.position);
+                        const markerPosition = getMarkerPosition(marker);
+                        if (markerPosition && mapInstance) {
+                            mapInstance.panTo(markerPosition);
                             openMarkerInfoWindow(marker, comp, false);
                         }
                     });
@@ -19951,13 +20400,7 @@ function initNavbarDateTime() {
             }
 
             async function refreshMap(filtered) {
-                const queryBase = filtered.length > 0
-                    ? filtered.map((comp) => comp.address).join(' OR ')
-                    : `real estate comps near ${detailData.address || 'California'}`;
-                const mapQuery = `${queryBase} near ${detailData.address || 'Santa Paula, CA'}`;
-                if (compsMapOpenLink) {
-                    compsMapOpenLink.href = buildGoogleMapsSearchUrl(mapQuery);
-                }
+                updateCompsMapOpenLink(lastSearchResult && lastSearchResult.label);
 
                 await ensureSubjectCoordinates();
                 const map = await ensureMapReady();
@@ -19966,6 +20409,9 @@ function initNavbarDateTime() {
                 }
                 setMapLayerMode(currentMapLayer);
                 renderMapMarkers(filtered);
+                if (lastSearchResult) {
+                    focusSearchLocation(lastSearchResult, lastSearchResult.label);
+                }
                 if (streetViewEnabled) {
                     setStreetViewMode(true);
                 }
@@ -20194,6 +20640,43 @@ function initNavbarDateTime() {
                 });
             }
 
+            if (compsMapSearchButton) {
+                compsMapSearchButton.addEventListener('click', async () => {
+                    try {
+                        await searchAddressOnMap(compsMapSearchInput ? compsMapSearchInput.value : '');
+                    } catch (error) {
+                        showDashboardToast('error', 'Address Search Failed', String(error && error.message || 'Google Maps could not search that address.'));
+                    }
+                });
+            }
+
+            if (compsMapSearchInput && compsMapSearchInput.dataset.bound !== 'true') {
+                compsMapSearchInput.dataset.bound = 'true';
+                compsMapSearchInput.value = String(detailData.compsSearchLabel || detailData.address || '').trim();
+                compsMapSearchInput.addEventListener('keydown', async (event) => {
+                    if (event.key !== 'Enter') {
+                        return;
+                    }
+                    event.preventDefault();
+                    try {
+                        await searchAddressOnMap(compsMapSearchInput.value);
+                    } catch (error) {
+                        showDashboardToast('error', 'Address Search Failed', String(error && error.message || 'Google Maps could not search that address.'));
+                    }
+                });
+            }
+
+            if (compsAerialViewVideo && compsAerialViewVideo.dataset.bound !== 'true') {
+                compsAerialViewVideo.dataset.bound = 'true';
+                compsAerialViewVideo.addEventListener('click', () => {
+                    if (compsAerialViewVideo.paused) {
+                        void compsAerialViewVideo.play().catch(() => {});
+                    } else {
+                        compsAerialViewVideo.pause();
+                    }
+                });
+            }
+
             applyBtn.addEventListener('click', () => {
                 renderResults().catch(() => {
                     setMapEmptyState(true, 'FAST could not refresh the interactive map, but the filtered comps list is still available.');
@@ -20211,6 +20694,16 @@ function initNavbarDateTime() {
             setMapLayerMode(currentMapLayer);
             setDrawMode('none');
             setStreetViewMode(false);
+            lastSearchResult = Number.isFinite(Number(detailData.compsSearchLat)) && Number.isFinite(Number(detailData.compsSearchLng))
+                ? {
+                    lat: Number(detailData.compsSearchLat),
+                    lng: Number(detailData.compsSearchLng),
+                    label: String(detailData.compsSearchLabel || detailData.address || 'Search result').trim() || 'Search result'
+                }
+                : null;
+            initCompsAddressAutocomplete().catch(() => {
+                updateCompsMapOpenLink();
+            });
             renderResults().catch(() => {
                 setMapEmptyState(true, 'FAST could not load the Google map, but the comps workspace is still available.');
             });
