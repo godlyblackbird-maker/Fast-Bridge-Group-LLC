@@ -19361,17 +19361,22 @@ function initNavbarDateTime() {
             }
 
             function setAerialViewState(options = {}) {
-                if (!compsAerialViewShell || !compsAerialViewStatus || !compsAerialViewMessage || !compsAerialViewVideo) {
+                if (!compsAerialViewShell || !compsAerialViewVideo) {
                     return;
                 }
 
                 const settings = options && typeof options === 'object' ? options : {};
-                const isVisible = Boolean(settings.visible);
                 const hasVideo = Boolean(settings.videoUrl);
+                const isVisible = Boolean(settings.visible) && hasVideo;
                 compsAerialViewShell.hidden = !isVisible;
                 compsAerialViewVideo.hidden = !hasVideo;
-                compsAerialViewStatus.hidden = !isVisible;
-                compsAerialViewMessage.textContent = String(settings.message || 'FAST is checking whether Google has a photorealistic aerial video for this address.').trim();
+
+                if (compsAerialViewStatus) {
+                    compsAerialViewStatus.hidden = true;
+                }
+                if (compsAerialViewMessage) {
+                    compsAerialViewMessage.textContent = String(settings.message || '').trim();
+                }
 
                 if (hasVideo) {
                     if (compsAerialViewVideo.src !== settings.videoUrl) {
