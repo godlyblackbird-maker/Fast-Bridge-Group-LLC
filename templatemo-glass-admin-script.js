@@ -19997,7 +19997,7 @@ function initNavbarDateTime() {
             }
 
             function setMapLayerMode(nextLayer) {
-                if (!['street', 'aerial', 'hybrid'].includes(nextLayer)) {
+                if (!['street', 'aerial', 'earth', 'hybrid'].includes(nextLayer)) {
                     return;
                 }
                 currentMapLayer = nextLayer;
@@ -20013,10 +20013,25 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const nextMapTypeId = currentMapLayer === 'aerial'
+                const nextMapTypeId = currentMapLayer === 'aerial' || currentMapLayer === 'earth'
                     ? 'satellite'
                     : (currentMapLayer === 'hybrid' ? 'hybrid' : 'roadmap');
                 mapInstance.setMapTypeId(nextMapTypeId);
+
+                if (currentMapLayer === 'earth' && typeof mapInstance.getZoom === 'function') {
+                    const currentZoomLevel = Number(mapInstance.getZoom()) || 0;
+                    if (currentZoomLevel < 18 && typeof mapInstance.setZoom === 'function') {
+                        mapInstance.setZoom(18);
+                    }
+                }
+
+                if (typeof mapInstance.setTilt === 'function') {
+                    mapInstance.setTilt(currentMapLayer === 'earth' ? 45 : 0);
+                }
+                if (typeof mapInstance.setHeading === 'function') {
+                    mapInstance.setHeading(0);
+                }
+
                 if (currentMapLayer === 'aerial') {
                     void showAerialViewForCurrentAddress();
                 }
