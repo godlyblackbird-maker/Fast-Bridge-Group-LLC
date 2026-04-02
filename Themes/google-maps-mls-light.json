@@ -177,11 +177,38 @@
     ]
   },
   {
-    "featureType": "transit",
-    "elementType": "all",
+    "featureType": "transit.line",
+    "elementType": "geometry",
     "stylers": [
       {
-        "visibility": "off"
+        "color": "#ff7a7a"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.line",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#ffb3b3"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#ff7a7a"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "color": "#ff7a7a"
       }
     ]
   },
