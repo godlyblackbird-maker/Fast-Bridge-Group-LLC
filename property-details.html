@@ -77,21 +77,8 @@
                         }
                     });
                 };
-
-                const themeLogoObserver = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        mutation.addedNodes.forEach((node) => {
-                            if (node && node.nodeType === 1) {
-                                applyThemeLogos(node);
-                            }
-                        });
-                    });
-                });
-
-                themeLogoObserver.observe(document.documentElement, { childList: true, subtree: true });
                 document.addEventListener('DOMContentLoaded', () => {
                     applyThemeLogos(document);
-                    themeLogoObserver.disconnect();
                 }, { once: true });
 
                 const settingsStore = readJson('dashboardSettingsByUser');
@@ -178,12 +165,17 @@
                                     <rect x="14" y="14" width="7" height="7" rx="1"/>
                                 </svg>
                                 Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="analytics.html" class="nav-link">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                                     <path d="M2 17l10 5 10-5"/>
                                     <path d="M2 12l10 5 10-5"/>
                                 </svg>
                                 Analytics
+                                <span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span>
                             </a>
                         </li>
                         <li class="nav-item">
