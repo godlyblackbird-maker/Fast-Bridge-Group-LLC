@@ -1559,6 +1559,47 @@
     box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.08), 0 0 30px rgba(255, 59, 189, 0.1);
 }
 
+[data-theme="cyberpunk"] .navbar {
+    border-radius: 28px;
+}
+
+[data-theme="cyberpunk"] .page-header,
+[data-theme="cyberpunk"] .card-header,
+[data-theme="cyberpunk"] .notes-widget-header,
+[data-theme="cyberpunk"] .deals-compact-header,
+[data-theme="cyberpunk"] .deals-import-modal-header,
+[data-theme="cyberpunk"] .analytics-my-file-header,
+[data-theme="cyberpunk"] .legal-page-header,
+[data-theme="cyberpunk"] .profile-modal-header,
+[data-theme="cyberpunk"] .navbar-right {
+    border-radius: 24px;
+    background:
+        linear-gradient(135deg, rgba(14, 7, 28, 0.82), rgba(34, 7, 58, 0.72));
+    box-shadow:
+        inset 0 0 0 1px rgba(66, 243, 255, 0.1),
+        0 0 18px rgba(66, 243, 255, 0.08),
+        0 0 28px rgba(255, 59, 189, 0.08);
+}
+
+[data-theme="cyberpunk"] .page-header,
+[data-theme="cyberpunk"] .card-header,
+[data-theme="cyberpunk"] .notes-widget-header,
+[data-theme="cyberpunk"] .deals-compact-header,
+[data-theme="cyberpunk"] .deals-import-modal-header,
+[data-theme="cyberpunk"] .analytics-my-file-header,
+[data-theme="cyberpunk"] .legal-page-header {
+    padding: 14px 18px;
+}
+
+[data-theme="cyberpunk"] .navbar-right {
+    padding: 8px;
+    border-radius: 999px;
+}
+
+[data-theme="cyberpunk"] .profile-modal-header {
+    border-radius: 28px;
+}
+
 [data-theme="cyberpunk"] body::before {
     content: '';
     position: fixed;
@@ -3243,6 +3284,8 @@ a {
     z-index: 100;
     transition: width var(--transition-normal), padding var(--transition-normal), transform var(--transition-normal), background var(--transition-normal), border-color var(--transition-normal);
     overflow-y: auto;
+    overflow-anchor: none;
+    scrollbar-gutter: stable;
 }
 
 /* Custom Scrollbar for Sidebar */
@@ -5161,13 +5204,17 @@ body.analytics-reboot .analytics-navbar .page-breadcrumb {
 body.analytics-reboot .analytics-navbar .navbar-right {
     flex: 0 1 420px;
     width: min(100%, 420px);
+    display: flex;
+    align-items: center;
     justify-content: flex-end;
     margin-left: auto;
     gap: 12px;
 }
 
 body.analytics-reboot .analytics-navbar .search-box {
-    flex: 1 1 auto;
+    flex: 0 0 280px;
+    width: 280px;
+    max-width: calc(100% - 60px);
     min-width: 0;
 }
 
@@ -5785,6 +5832,8 @@ body.analytics-reboot .analytics-my-file-count {
 
     body.analytics-reboot .analytics-navbar .search-box {
         flex: 1 1 auto;
+        width: auto;
+        max-width: none;
     }
 
     body.analytics-reboot .analytics-navbar,

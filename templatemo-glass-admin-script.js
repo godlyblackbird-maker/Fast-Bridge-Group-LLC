@@ -895,7 +895,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.3.6';
+                versionLabel.textContent = 'v1.3.7';
             });
     }
 
@@ -7010,11 +7010,15 @@ function initNavbarDateTime() {
                 window.cancelAnimationFrame(restoreFrameId);
             }
 
+            const previousScrollBehavior = sidebar.style.scrollBehavior;
+            sidebar.style.scrollBehavior = 'auto';
+            sidebar.scrollTop = storedScrollTop;
+
             restoreFrameId = window.requestAnimationFrame(() => {
-                sidebar.scrollTop = storedScrollTop;
-                restoreFrameId = window.requestAnimationFrame(() => {
+                if (Math.abs((sidebar.scrollTop || 0) - storedScrollTop) > 1) {
                     sidebar.scrollTop = storedScrollTop;
-                });
+                }
+                sidebar.style.scrollBehavior = previousScrollBehavior;
             });
         }
 
@@ -19376,8 +19380,10 @@ function initNavbarDateTime() {
             let lastSearchResult = null;
             let lastAutoSearchPropertyAddress = '';
             let earthMapElement = null;
+            let earthSubjectMarker = null;
             let earthReadyPromise = null;
             let earthLibraryPromise = null;
+            let earthMarkerCtor = null;
             let earthMapModeValue = 'HYBRID';
             let aerialViewLookupPromise = null;
             let aerialViewActiveAddress = '';
@@ -19424,6 +19430,58 @@ function initNavbarDateTime() {
                 earthMapElement.tilt = 67.5;
                 earthMapElement.heading = 18;
                 earthMapElement.mode = earthMapModeValue;
+                syncEarthSubjectMarker(getSubjectLocation());
+            }
+
+            function detachEarthMarker() {
+                if (!earthSubjectMarker) {
+                    return;
+                }
+
+                if (typeof earthSubjectMarker.remove === 'function') {
+                    earthSubjectMarker.remove();
+                } else if (earthSubjectMarker.parentNode && typeof earthSubjectMarker.parentNode.removeChild === 'function') {
+                    earthSubjectMarker.parentNode.removeChild(earthSubjectMarker);
+                }
+
+                earthSubjectMarker = null;
+            }
+
+            function syncEarthSubjectMarker(locationLike) {
+                if (!earthMapElement || !earthMarkerCtor) {
+                    return;
+                }
+
+                const lat = Number(locationLike && locationLike.lat);
+                const lng = Number(locationLike && locationLike.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return;
+                }
+
+                const markerPosition = {
+                    lat,
+                    lng,
+                    altitude: 0
+                };
+
+                if (!earthSubjectMarker) {
+                    earthSubjectMarker = new earthMarkerCtor({
+                        position: markerPosition,
+                        altitudeMode: 'CLAMP_TO_GROUND',
+                        extruded: true,
+                        drawsOccludedSegments: true,
+                        label: 'SUBJECT'
+                    });
+
+                    if (typeof earthMapElement.append === 'function') {
+                        earthMapElement.append(earthSubjectMarker);
+                    } else if (typeof earthMapElement.appendChild === 'function') {
+                        earthMapElement.appendChild(earthSubjectMarker);
+                    }
+                    return;
+                }
+
+                earthSubjectMarker.position = markerPosition;
             }
 
             async function ensureEarthReady() {
@@ -19451,6 +19509,7 @@ function initNavbarDateTime() {
                     earthLibraryPromise = earthLibraryPromise || window.google.maps.importLibrary('maps3d');
                     const earthLibrary = await earthLibraryPromise;
                     const Map3DElement = earthLibrary && earthLibrary.Map3DElement;
+                    earthMarkerCtor = earthLibrary && (earthLibrary.Marker3DInteractiveElement || earthLibrary.Marker3DElement);
                     const MapMode = earthLibrary && earthLibrary.MapMode;
                     if (!Map3DElement) {
                         throw new Error('Google Earth 3D library is unavailable for this map.');
@@ -19471,10 +19530,13 @@ function initNavbarDateTime() {
                     compsMapEarthCanvas.innerHTML = '';
                     compsMapEarthCanvas.appendChild(earthMapElement);
                     updateEarthCamera(getEarthFocusLocation());
+                    syncEarthSubjectMarker(getSubjectLocation());
                     return earthMapElement;
                 })().catch((error) => {
                     earthReadyPromise = null;
+                    detachEarthMarker();
                     earthMapElement = null;
+                    earthMarkerCtor = null;
                     setEarthViewState(false);
                     throw error;
                 });
@@ -20554,11 +20616,24 @@ function initNavbarDateTime() {
                 return String(value || '').trim().toLowerCase();
             }
 
+            function getCurrentCompsSubjectAddress() {
+                return String(
+                    detailData.address
+                    || detailData.propertyAddress
+                    || propertyAddress
+                    || ''
+                ).trim();
+            }
+
             async function maybeAutoSearchSubjectOnCompsOpen() {
-                const propertyAddress = String(detailData.address || '').trim();
+                const propertyAddress = getCurrentCompsSubjectAddress();
                 const normalizedPropertyAddress = normalizeAddressForAutoSearch(propertyAddress);
                 if (!normalizedPropertyAddress) {
                     return;
+                }
+
+                if (compsMapSearchInput && !String(compsMapSearchInput.value || '').trim()) {
+                    compsMapSearchInput.value = propertyAddress;
                 }
 
                 if (lastAutoSearchPropertyAddress === normalizedPropertyAddress) {
@@ -20575,6 +20650,9 @@ function initNavbarDateTime() {
                     await searchAddressOnMap(propertyAddress);
                     lastAutoSearchPropertyAddress = normalizedPropertyAddress;
                 } catch (error) {
+                    if (compsMapSearchInput) {
+                        compsMapSearchInput.value = propertyAddress;
+                    }
                     updateCompsMapOpenLink(propertyAddress);
                 }
             }
@@ -22794,9 +22872,12 @@ function initNavbarDateTime() {
                 setFieldValue('offer-type', profile.offerType);
                 setFieldValue('offer-appraisal', profile.appraisal);
                 setFieldValue('offer-inspection-period', profile.inspectionPeriod);
+                setFieldValue('offer-disclosures', profile.disclosures);
                 setFieldValue('offer-termite-inspection', profile.termiteInspection);
                 setFieldValue('offer-escrow-fees', profile.escrowFees);
                 setFieldValue('offer-title-fees', profile.titleFees);
+                setFieldValue('offer-city-transfer-tax', profile.cityTransferTax);
+                setFieldValue('offer-county-transfer-tax', profile.countyTransferTax);
                 setFieldValue('offer-escrow', profile.escrowCompany);
                 setFieldValue('offer-title-company', profile.titleCompany);
                 setFieldValue('offer-other-terms', profile.otherTermsSummary);
@@ -23011,6 +23092,7 @@ function initNavbarDateTime() {
                 const depositAmount = depositAmountValue ? (depositMode === 'Percentage' ? `${depositAmountValue}%` : depositAmountValue) : 'N/A';
                 const appraisal = getOfferSelectText('offer-appraisal') || 'N/A';
                 const inspection = getOfferSelectText('offer-inspection-period') || 'N/A';
+                const disclosures = getOfferSelectText('offer-disclosures') || 'N/A';
                 const termite = getOfferSelectText('offer-termite-inspection') || 'N/A';
                 const escrow = getOfferFieldValue('offer-escrow') || 'TBD';
                 const titleCompany = getOfferFieldValue('offer-title-company') || 'TBD';
@@ -23050,6 +23132,7 @@ function initNavbarDateTime() {
                         `• Close of escrow: ${closeEscrowDays}${/day/i.test(closeEscrowDays) ? '' : ' days'}`,
                         `• Deposit (${depositMode}): ${depositAmount}`,
                         `• Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite}`}`,
+                        `• Disclosures: ${disclosures}${/day/i.test(disclosures) ? '' : ' days'}`,
                         `• Escrow fees: ${escrowFees}`,
                         `• Title fees: ${titleFees}`,
                         `• Escrow: ${escrow}`,

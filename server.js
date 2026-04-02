@@ -3454,6 +3454,30 @@ function isProofOfFundsFileName(value) {
   return /(?:^|[^a-z0-9])(pof|proof\s*of\s*funds)(?:[^a-z0-9]|$)/i.test(String(value || '').trim());
 }
 
+const INVESTOR_ATTACHMENT_PACKAGE_FILE_RULES = Object.freeze({
+  Alex: Object.freeze({
+    excludeProofOfFunds: true
+  })
+});
+
+function getInvestorAttachmentPackageFileRules(folderName) {
+  const normalizedFolderName = String(folderName || '').trim();
+  return INVESTOR_ATTACHMENT_PACKAGE_FILE_RULES[normalizedFolderName] || null;
+}
+
+function shouldIncludeInvestorAttachmentFile(folderName, fileName) {
+  const rules = getInvestorAttachmentPackageFileRules(folderName);
+  if (!rules) {
+    return true;
+  }
+
+  if (rules.excludeProofOfFunds && isProofOfFundsFileName(fileName)) {
+    return false;
+  }
+
+  return true;
+}
+
 function isAllowedAgentWorkspaceDocumentExtension(extension) {
   return isAllowedInvestorAttachmentExtension(extension);
 }
@@ -3681,10 +3705,81 @@ function resolveInvestorAttachmentPath(relativePath) {
     return '';
   }
 
+  const packageRelativePath = path.relative(INVESTOR_ATTACHMENTS_ROOT, absolutePath);
+  const packageSegments = packageRelativePath.split(path.sep).filter(Boolean);
+  const packageFolderName = packageSegments[0] || '';
+  const packageFileName = packageSegments.length > 1 ? packageSegments[packageSegments.length - 1] : '';
+
+  if (!shouldIncludeInvestorAttachmentFile(packageFolderName, packageFileName)) {
+    return '';
+  }
+
   return absolutePath;
 }
 
 const INVESTOR_ATTACHMENT_PACKAGE_METADATA = {
+  Alex: {
+    label: 'Alex - Chapter One Holdings LLC',
+    offerProfile: {
+      entityValue: 'chapter-one-holdings-llc',
+      entityLabel: 'Chapter One Holdings LLC',
+      signerName: 'Alex Di Girgis',
+      depositMode: 'flat-fee',
+      depositAmount: '10000',
+      closeEscrowDays: '17',
+      closeEscrowNote: '17 days after acceptance',
+      offerType: 'cash',
+      appraisal: 'no-appraisal-contingencies',
+      inspectionPeriod: '5',
+      disclosures: '5',
+      termiteInspection: 'no-termite',
+      escrowFees: 'buyer',
+      titleFees: 'buyer',
+      cityTransferTax: 'seller',
+      countyTransferTax: 'seller',
+      escrowCompany: 'Clear Water Escrow - Rosalee Whitby',
+      titleCompany: "Lawyer's Title - Orange County - Liz Ochoa",
+      otherTermsSummary: 'Property to be delivered vacant at close of escrow.',
+      contingencySummary: '5 day inspection, 5 day disclosures, no appraisal contingency, no termite inspection, and buyer waives home warranty.',
+      closingCostSummary: 'Seller pays 3Q(1-6), if applicable, and 3Q(10-11). Buyer chooses and pays both sides for escrow with Clear Water Escrow - Rosalee Whitby and title with Lawyer\'s Title - Orange County - Liz Ochoa. Buyer waives home warranty.',
+      additionalTerms: [
+        'Buyer(s) are licensed brokers and licensed agents.',
+        'Buyer is a professional real estate investor who buys property at below-market prices for the purposes of resale for profit.',
+        'Buyer reserves the right to utilize any and all investment strategies to maximize profit, including buy and hold, fix and flip, resell as-is, or rent as-is.',
+        'Property to be delivered vacant at close of escrow.'
+      ],
+      customSections: [
+        {
+          heading: 'Contract Terms',
+          lines: [
+            'Buyer - Chapter signor is Alex Di Girgis.',
+            '3A. Price - all cash.',
+            '3B. COE - 17 days after acceptance.',
+            '3D(1). EMD - $10,000.',
+            '3L(3). Inspection - 5 days.',
+            '3N(1). Disclosures - 5 days.',
+            '3Q(1-6 if applicable) - Seller pays.',
+            '3Q(7) - Buyer chooses and pays both sides (Clear Water Escrow - Rosalee Whitby).',
+            '3Q(8) - Buyer chooses and pays both sides (Lawyer\'s Title - Orange County - Liz Ochoa).',
+            '3Q(10,11) - Seller pays.',
+            '3Q(18) - Buyer waives home warranty.'
+          ]
+        }
+      ],
+      assignmentVerbiage: 'Buyer(s) are licensed brokers, licensed agents. Buyer is a professional Real Estate Investor who buys property at below-market prices for the purposes of resale for profit. Buyer reserves the right to utilize any and all investment strategies to maximize their profit (i.e. buyhold, fix and flip, resell as-is, rent as-is, etc). Property to be delivered vacant at close of escrow.'
+    }
+  },
+  Kaylnn: {
+    label: 'Kalynn Brown - WH4, LLC',
+    offerProfile: {
+      entityValue: 'wh4-llc',
+      entityLabel: 'WH4, LLC',
+      signerName: 'Darin Puhl, as authorized agent',
+      recipientName: 'Kalynn Brown',
+      recipientEmail: 'kbrown@wedgewoodhomesrealty.com',
+      assignmentVerbiage: 'EMD to be fully refundable in the instance of seller/assignor non-performance including property not being delivered vacant, not having clear and marketable title, or not in similar condition as when this assignment was executed. Buyer will not assume any payoffs, liens, or assessments. Buyer to walk through on date of funding to verify occupancy status and condition. Any personal property remaining at the property at close of escrow is expressly abandoned by the seller and otherwise released to the buyer.'
+    }
+  },
   Brad: {
     label: 'Brad - Revive SO Cal LLC',
     offerProfile: {
@@ -3752,6 +3847,7 @@ function listInvestorAttachmentPackages() {
       const folderPath = path.join(INVESTOR_ATTACHMENTS_ROOT, folderName);
       const files = fs.readdirSync(folderPath, { withFileTypes: true })
         .filter((fileEntry) => fileEntry.isFile() && isAllowedInvestorAttachmentExtension(path.extname(fileEntry.name)))
+        .filter((fileEntry) => shouldIncludeInvestorAttachmentFile(folderName, fileEntry.name))
         .map((fileEntry) => ({
           name: fileEntry.name,
           relativePath: `Investors Attatchments/${folderName}/${fileEntry.name}`.replace(/\\/g, '/')
