@@ -4616,6 +4616,9 @@ app.get('/api/subscription/stripe-config', (req, res) => {
 });
 
 app.get('/api/maps/google-config', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+
   return res.json({
     success: true,
     enabled: Boolean(GOOGLE_MAPS_API_KEY),

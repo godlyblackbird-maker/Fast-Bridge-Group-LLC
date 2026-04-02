@@ -18930,21 +18930,50 @@ function initNavbarDateTime() {
             return String(detailData.address || fallbackAddress || 'California').trim() || 'California';
         }
 
-        function getGoogleMapsBrowserConfig() {
-            if (googleMapsBrowserConfigPromise) {
+        function getGoogleMapsBrowserConfig(options = {}) {
+            const settings = options && typeof options === 'object' ? options : {};
+            const forceRefresh = Boolean(settings.forceRefresh);
+            if (!forceRefresh && googleMapsBrowserConfigPromise) {
                 return googleMapsBrowserConfigPromise;
             }
 
-            googleMapsBrowserConfigPromise = fetch('/api/maps/google-config')
+            const requestUrl = forceRefresh
+                ? `/api/maps/google-config?ts=${Date.now()}`
+                : '/api/maps/google-config';
+
+            googleMapsBrowserConfigPromise = fetch(requestUrl, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            })
                 .then((response) => {
                     if (!response.ok) {
                         throw new Error('Google Maps config could not be loaded.');
                     }
                     return response.json();
                 })
-                .then((payload) => payload && typeof payload === 'object' ? payload : {});
+                .then((payload) => payload && typeof payload === 'object' ? payload : {})
+                .catch((error) => {
+                    googleMapsBrowserConfigPromise = null;
+                    throw error;
+                });
 
             return googleMapsBrowserConfigPromise;
+        }
+
+        async function resolveGoogleMapsBrowserConfig() {
+            const cachedConfig = await getGoogleMapsBrowserConfig().catch(() => null);
+            if (cachedConfig && cachedConfig.enabled && cachedConfig.apiKey) {
+                return cachedConfig;
+            }
+
+            const freshConfig = await getGoogleMapsBrowserConfig({ forceRefresh: true }).catch(() => null);
+            if (freshConfig && freshConfig.enabled && freshConfig.apiKey) {
+                return freshConfig;
+            }
+
+            return freshConfig || cachedConfig || {};
         }
 
         function loadGoogleMapsScript(apiKey) {
@@ -19837,7 +19866,7 @@ function initNavbarDateTime() {
                 }
 
                 mapReadyPromise = (async () => {
-                    const config = await getGoogleMapsBrowserConfig();
+                    const config = await resolveGoogleMapsBrowserConfig();
                     if (!config.enabled || !config.apiKey) {
                         throw new Error('Google Maps API key is not configured in the server environment.');
                     }
@@ -20214,7 +20243,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const config = await getGoogleMapsBrowserConfig();
+                const config = await resolveGoogleMapsBrowserConfig();
                 if (!config.enabled || !config.apiKey) {
                     return;
                 }
