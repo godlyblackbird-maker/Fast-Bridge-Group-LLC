@@ -78,6 +78,7 @@ let cachedS3Client = null;
 let cachedS3ClientKey = '';
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
+const mlsImportSpreadsheetClearedAtByUser = new Map();
 
 fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
 
@@ -1593,6 +1594,7 @@ function initializeDatabase() {
       message TEXT,
       page_count INTEGER DEFAULT 0,
       progress_percent INTEGER DEFAULT 0,
+      persisted_row_count INTEGER DEFAULT 0,
       started_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       completed_at INTEGER,
@@ -1603,6 +1605,11 @@ function initializeDatabase() {
       console.error('Error creating mls_import_runs table:', err);
     } else {
       console.log('MLS import runs table ready');
+      db.run('ALTER TABLE mls_import_runs ADD COLUMN persisted_row_count INTEGER DEFAULT 0', (alterError) => {
+        if (alterError && !String(alterError.message || '').includes('duplicate column name')) {
+          console.error('Error ensuring persisted_row_count on mls_import_runs:', alterError);
+        }
+      });
       db.run('CREATE INDEX IF NOT EXISTS idx_mls_import_runs_requester_updated ON mls_import_runs(requester_user_id, updated_at DESC)', () => {});
     }
   });
@@ -2191,7 +2198,75 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
 }
 
 async function clearMlsImportSpreadsheetRowsForUser(ownerUserId) {
-  await dbRun('DELETE FROM mls_import_rows WHERE owner_user_id = ?', [ownerUserId]);
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  const clearedAt = Date.now();
+
+  mlsImportSpreadsheetClearedAtByUser.set(normalizedOwnerUserId, clearedAt);
+  mlsImportPdfJobs.forEach((job, jobId) => {
+    if (Number(job && job.requesterId) === normalizedOwnerUserId) {
+      mlsImportPdfJobs.delete(jobId);
+    }
+  });
+
+  await dbRun('DELETE FROM mls_import_rows WHERE owner_user_id = ?', [normalizedOwnerUserId]);
+  await dbRun('DELETE FROM mls_import_runs WHERE requester_user_id = ?', [normalizedOwnerUserId]);
+}
+
+function wasMlsImportSpreadsheetClearedSince(ownerUserId, startedAt) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  const clearedAt = Number(mlsImportSpreadsheetClearedAtByUser.get(normalizedOwnerUserId)) || 0;
+  return Boolean(clearedAt && clearedAt >= (Number(startedAt) || 0));
+}
+
+function mapMlsImportPdfJobRecord(rowLike) {
+  if (!rowLike || typeof rowLike !== 'object') {
+    return null;
+  }
+
+  const status = String(rowLike.status || 'queued').trim() || 'queued';
+  const updatedAt = Number(rowLike.updated_at || rowLike.updatedAt) || Number(rowLike.started_at || rowLike.startedAt) || Date.now();
+
+  return {
+    id: String(rowLike.id || '').trim(),
+    requesterId: Number(rowLike.requester_user_id || rowLike.requesterId) || 0,
+    fileName: String(rowLike.file_name || rowLike.fileName || '').trim(),
+    status,
+    message: String(rowLike.message || '').trim(),
+    pageCount: Number(rowLike.page_count || rowLike.pageCount) || 0,
+    progressPercent: Math.max(0, Math.min(100, Number(rowLike.progress_percent || rowLike.progressPercent) || 0)),
+    persistedRowCount: Math.max(0, Number(rowLike.persisted_row_count || rowLike.persistedRowCount) || 0),
+    startedAt: Number(rowLike.started_at || rowLike.startedAt) || updatedAt,
+    updatedAt,
+    completedAt: Number(rowLike.completed_at || rowLike.completedAt) || null,
+    extracted: null,
+    error: String(rowLike.error || '').trim()
+  };
+}
+
+async function loadMlsImportPdfJobRecord(jobId) {
+  const normalizedJobId = String(jobId || '').trim();
+  if (!normalizedJobId) {
+    return null;
+  }
+
+  const row = await dbGet('SELECT * FROM mls_import_runs WHERE id = ?', [normalizedJobId]);
+  return mapMlsImportPdfJobRecord(row);
+}
+
+async function loadMlsImportPdfJobsForUser(ownerUserId, options = {}) {
+  const limit = Math.max(1, Math.min(Number(options.limit) || 25, 100));
+  const rows = await dbAll(
+    `SELECT id, requester_user_id, file_name, status, message, page_count, progress_percent, started_at, updated_at, completed_at, error
+     FROM mls_import_runs
+     WHERE requester_user_id = ?
+     ORDER BY updated_at DESC, started_at DESC, id DESC
+     LIMIT ?`,
+    [Number(ownerUserId) || 0, limit]
+  );
+
+  return Array.isArray(rows)
+    ? rows.map(mapMlsImportPdfJobRecord).filter(Boolean)
+    : [];
 }
 
 async function persistMlsImportPdfJobRecord(job) {
@@ -2208,11 +2283,12 @@ async function persistMlsImportPdfJobRecord(job) {
       message,
       page_count,
       progress_percent,
+      persisted_row_count,
       started_at,
       updated_at,
       completed_at,
       error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       requester_user_id = excluded.requester_user_id,
       file_name = excluded.file_name,
@@ -2220,6 +2296,7 @@ async function persistMlsImportPdfJobRecord(job) {
       message = excluded.message,
       page_count = excluded.page_count,
       progress_percent = excluded.progress_percent,
+      persisted_row_count = excluded.persisted_row_count,
       updated_at = excluded.updated_at,
       completed_at = excluded.completed_at,
       error = excluded.error`,
@@ -2231,6 +2308,7 @@ async function persistMlsImportPdfJobRecord(job) {
       String(job.message || '').trim(),
       Number(job.pageCount) || 0,
       Math.max(0, Math.min(100, Number(job.progressPercent) || 0)),
+      Math.max(0, Number(job.persistedRowCount) || 0),
       Number(job.startedAt) || Date.now(),
       Number(job.updatedAt) || Date.now(),
       String(job.status || '') === 'completed' || String(job.status || '') === 'failed' ? Number(job.updatedAt) || Date.now() : null,
@@ -5448,9 +5526,14 @@ function updateMlsImportPdfJob(jobId, patch) {
   return nextJob;
 }
 
-function getMlsImportPdfJob(jobId) {
+async function getMlsImportPdfJob(jobId) {
   cleanupExpiredMlsImportPdfJobs();
-  return mlsImportPdfJobs.get(jobId) || null;
+  const inMemoryJob = mlsImportPdfJobs.get(jobId) || null;
+  if (inMemoryJob) {
+    return inMemoryJob;
+  }
+
+  return loadMlsImportPdfJobRecord(jobId);
 }
 
 function serializeMlsImportPdfJob(job) {
@@ -6585,6 +6668,10 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
         try {
           const extracted = await extractMlsImportPdfFields(uploadedPath, {
             onProgress: (progress) => {
+              if (wasMlsImportSpreadsheetClearedSince(decoded.id, job.startedAt)) {
+                return;
+              }
+
               const nextJob = updateMlsImportPdfJob(job.id, {
                 status: 'running',
                 pageCount: Number(progress && progress.pageCount) || 0,
@@ -6598,6 +6685,10 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
               });
             }
           });
+
+          if (wasMlsImportSpreadsheetClearedSince(decoded.id, job.startedAt)) {
+            return;
+          }
 
           const finalPersistResult = await persistMlsImportSpreadsheetRowsForUser(decoded.id, Array.isArray(extracted && extracted.rows) ? extracted.rows : [], {
             importRunId: job.id,
@@ -6634,7 +6725,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
         }
       });
 
-      return res.status(202).json({ job: serializeMlsImportPdfJob(getMlsImportPdfJob(job.id)) });
+      return res.status(202).json({ job: serializeMlsImportPdfJob(await getMlsImportPdfJob(job.id)) });
     } catch (error) {
       console.error('Failed to start MLS import PDF extraction job:', error);
       if (req.file && req.file.path) {
@@ -6645,7 +6736,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
   });
 });
 
-app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', (req, res) => {
+app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => {
   const decoded = requireAdmin(req, res);
   if (!decoded) {
     return;
@@ -6656,9 +6747,9 @@ app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', (req, res) => {
     return res.status(400).json({ error: 'A valid job id is required.' });
   }
 
-  const job = getMlsImportPdfJob(jobId);
+  const job = await getMlsImportPdfJob(jobId);
   if (!job) {
-    return res.status(404).json({ error: 'The MLS PDF extraction job was not found or has expired.' });
+    return res.status(404).json({ error: 'The MLS PDF extraction job was not found.' });
   }
 
   if (Number(job.requesterId) > 0 && Number(decoded.id) !== Number(job.requesterId)) {
@@ -6666,6 +6757,22 @@ app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', (req, res) => {
   }
 
   return res.json({ job: serializeMlsImportPdfJob(job) });
+});
+
+app.get('/api/admin/mls-imports/extract-pdf-jobs', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const limit = Math.max(1, Math.min(Number.parseInt(String(req.query?.limit || '25'), 10) || 25, 100));
+    const jobs = await loadMlsImportPdfJobsForUser(decoded.id, { limit });
+    return res.json({ jobs: jobs.map((job) => serializeMlsImportPdfJob(job)) });
+  } catch (error) {
+    console.error('Failed to load MLS import PDF jobs:', error);
+    return res.status(500).json({ error: 'Failed to load MLS import PDF jobs.' });
+  }
 });
 
 app.get('/api/admin/mls-imports/rows', async (req, res) => {

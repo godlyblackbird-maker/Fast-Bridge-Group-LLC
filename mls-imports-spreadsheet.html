@@ -614,6 +614,123 @@
             color: var(--buyers-note);
         }
 
+        .buyers-sheet-recent-imports {
+            margin-top: 14px;
+            padding: 14px;
+            border: 1px solid var(--buyers-border);
+            border-radius: 18px;
+            background: var(--buyers-wrap-bg);
+        }
+
+        .buyers-sheet-recent-imports[hidden] {
+            display: none;
+        }
+
+        .buyers-sheet-recent-imports-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-recent-imports-title {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .buyers-sheet-recent-imports-note {
+            margin: 0;
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
+        .buyers-sheet-recent-imports-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .buyers-sheet-recent-import-item {
+            display: grid;
+            gap: 6px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--buyers-border);
+            background: color-mix(in srgb, var(--buyers-row-bg) 92%, rgb(var(--accent-rgb) / 0.08) 8%);
+        }
+
+        .buyers-sheet-recent-import-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-sheet-recent-import-file {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .buyers-sheet-recent-import-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--buyers-count-border);
+            background: var(--buyers-count-bg);
+            color: var(--buyers-count-text);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .buyers-sheet-recent-import-status[data-status="running"],
+        .buyers-sheet-recent-import-status[data-status="queued"] {
+            border-color: rgba(var(--accent-light-rgb), 0.42);
+            background: rgba(var(--accent-rgb), 0.18);
+        }
+
+        .buyers-sheet-recent-import-status[data-status="completed"] {
+            border-color: var(--buyers-success-border);
+            background: var(--buyers-success-bg);
+            color: var(--buyers-success-text);
+        }
+
+        .buyers-sheet-recent-import-status[data-status="failed"] {
+            border-color: rgba(248, 113, 113, 0.5);
+            background: rgba(248, 113, 113, 0.14);
+            color: #fecaca;
+        }
+
+        .buyers-sheet-recent-import-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
+        .buyers-sheet-recent-import-message {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .buyers-sheet-recent-import-empty {
+            margin: 0;
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
         @keyframes buyersSheetSpin {
             from {
                 transform: rotate(0deg);
@@ -912,6 +1029,16 @@
                             <div id="mls-imports-progress-meta" class="buyers-sheet-progress-meta">Waiting for PDF upload to start.</div>
                         </div>
                     </div>
+                    <section id="mls-imports-recent-imports" class="buyers-sheet-recent-imports" aria-live="polite">
+                        <div class="buyers-sheet-recent-imports-head">
+                            <div>
+                                <h3 class="buyers-sheet-recent-imports-title">Recent PDF Imports</h3>
+                                <p class="buyers-sheet-recent-imports-note">Recent extracted PDFs stay here until you click Clear All.</p>
+                            </div>
+                        </div>
+                        <div id="mls-imports-recent-imports-list" class="buyers-sheet-recent-imports-list"></div>
+                        <p id="mls-imports-recent-imports-empty" class="buyers-sheet-recent-import-empty">No PDFs have been extracted yet.</p>
+                    </section>
 
                     <div class="buyers-sheet-table-wrap">
                         <table class="buyers-sheet-table" id="mls-imports-sheet-table">
@@ -1045,6 +1172,7 @@
             const PHONE_COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetPhoneCopiedRows';
             const MY_AGENTS_STORAGE_KEY_BASE = 'myAgentsSheetRows';
             const ROWS_PAGE_SIZE = 150;
+            const JOB_HISTORY_LIMIT = 25;
 
             function safeReadJson(key) {
                 try {
@@ -1134,6 +1262,9 @@
             const progressPercent = document.getElementById('mls-imports-progress-percent');
             const progressFill = document.getElementById('mls-imports-progress-fill');
             const progressMeta = document.getElementById('mls-imports-progress-meta');
+            const recentImportsSection = document.getElementById('mls-imports-recent-imports');
+            const recentImportsList = document.getElementById('mls-imports-recent-imports-list');
+            const recentImportsEmpty = document.getElementById('mls-imports-recent-imports-empty');
             const emailModal = document.getElementById('mls-imports-email-modal');
             const emailForm = document.getElementById('mls-imports-email-form');
             const emailStatus = document.getElementById('mls-imports-email-status');
@@ -1158,6 +1289,8 @@
             let currentRowsPage = 1;
             let totalRowsCount = 0;
             let lastLoadedRows = [];
+            let recentPdfJobs = [];
+            const activeRecentJobPolls = new Map();
 
             function buildManualRowMatchKey() {
                 return `manual|${Date.now()}|${Math.random().toString(16).slice(2)}`;
@@ -1196,6 +1329,126 @@
                     throw new Error(payload && payload.error ? payload.error : 'The MLS spreadsheet request failed.');
                 }
                 return payload;
+            }
+
+            function formatRecentImportDate(value) {
+                const timestamp = Number(value) || 0;
+                if (!timestamp) {
+                    return 'Just now';
+                }
+
+                try {
+                    return new Date(timestamp).toLocaleString();
+                } catch (error) {
+                    return 'Just now';
+                }
+            }
+
+            function formatRecentImportStatus(value) {
+                const normalized = String(value || '').trim().toLowerCase();
+                if (!normalized) {
+                    return 'Queued';
+                }
+                return normalized.replace(/\b([a-z])/g, (match) => match.toUpperCase());
+            }
+
+            function renderRecentPdfJobs() {
+                if (!recentImportsSection || !recentImportsList || !recentImportsEmpty) {
+                    return;
+                }
+
+                recentImportsList.innerHTML = '';
+                const jobs = Array.isArray(recentPdfJobs) ? recentPdfJobs.filter(Boolean) : [];
+
+                recentImportsSection.hidden = false;
+                recentImportsEmpty.hidden = jobs.length > 0;
+
+                jobs.forEach((job) => {
+                    const item = document.createElement('article');
+                    item.className = 'buyers-sheet-recent-import-item';
+
+                    const top = document.createElement('div');
+                    top.className = 'buyers-sheet-recent-import-top';
+
+                    const file = document.createElement('div');
+                    file.className = 'buyers-sheet-recent-import-file';
+                    file.textContent = String(job.fileName || 'MLS import PDF').trim() || 'MLS import PDF';
+
+                    const status = document.createElement('span');
+                    status.className = 'buyers-sheet-recent-import-status';
+                    status.dataset.status = String(job.status || '').trim().toLowerCase() || 'queued';
+                    status.textContent = formatRecentImportStatus(job.status);
+
+                    top.appendChild(file);
+                    top.appendChild(status);
+
+                    const meta = document.createElement('div');
+                    meta.className = 'buyers-sheet-recent-import-meta';
+                    meta.innerHTML = `
+                        <span>${Math.max(0, Number(job.persistedRowCount) || 0)} row${Math.max(0, Number(job.persistedRowCount) || 0) === 1 ? '' : 's'} saved</span>
+                        <span>${Math.max(0, Number(job.pageCount) || 0)} page${Math.max(0, Number(job.pageCount) || 0) === 1 ? '' : 's'}</span>
+                        <span>Updated ${formatRecentImportDate(job.updatedAt || job.startedAt)}</span>
+                    `;
+
+                    const message = document.createElement('div');
+                    message.className = 'buyers-sheet-recent-import-message';
+                    message.textContent = String(job.error || job.message || '').trim() || 'Waiting for extraction details.';
+
+                    item.appendChild(top);
+                    item.appendChild(meta);
+                    item.appendChild(message);
+                    recentImportsList.appendChild(item);
+                });
+            }
+
+            async function syncRecentPdfJob(jobId) {
+                const normalizedJobId = String(jobId || '').trim();
+                if (!normalizedJobId || activeRecentJobPolls.has(normalizedJobId)) {
+                    return activeRecentJobPolls.get(normalizedJobId) || null;
+                }
+
+                const authToken = getAuthToken();
+                if (!authToken) {
+                    return null;
+                }
+
+                const pollPromise = (async () => {
+                    try {
+                        await pollPdfExtractionJob(normalizedJobId, authToken);
+                    } catch (error) {
+                        // Ignore here; the persisted history card will show the failure state.
+                    } finally {
+                        activeRecentJobPolls.delete(normalizedJobId);
+                        try {
+                            await fetchRecentPdfJobs({ syncRunningJobs: false });
+                            await fetchSpreadsheetRowsPage(1, { silent: true });
+                        } catch (refreshError) {
+                            // Ignore background refresh issues and leave the current UI intact.
+                        }
+                    }
+                })();
+
+                activeRecentJobPolls.set(normalizedJobId, pollPromise);
+                return pollPromise;
+            }
+
+            async function fetchRecentPdfJobs(options) {
+                const payload = await fetchJsonWithAuth(`/api/admin/mls-imports/extract-pdf-jobs?limit=${JOB_HISTORY_LIMIT}`);
+                recentPdfJobs = Array.isArray(payload && payload.jobs)
+                    ? payload.jobs.filter((job) => job && typeof job === 'object')
+                    : [];
+                renderRecentPdfJobs();
+
+                if (!options || options.syncRunningJobs !== false) {
+                    recentPdfJobs.forEach((job) => {
+                        const status = String(job && job.status || '').trim().toLowerCase();
+                        if (status === 'queued' || status === 'running') {
+                            void syncRecentPdfJob(job.id);
+                        }
+                    });
+                }
+
+                return recentPdfJobs;
             }
 
             function updateCount(totalCount) {
@@ -2211,7 +2464,9 @@
                 totalRowsCount = 0;
                 currentRowsPage = 1;
                 lastLoadedRows = [];
+                recentPdfJobs = [];
                 renderRows([]);
+                renderRecentPdfJobs();
                 updateCount(0);
                 updatePaginationUi();
             }
@@ -2539,6 +2794,7 @@
                     });
 
                     const startedJob = payload && payload.job && typeof payload.job === 'object' ? payload.job : {};
+                    await fetchRecentPdfJobs({ syncRunningJobs: false });
                     if (startedJob.message) {
                         setPdfProgressState(
                             startedJob.message,
@@ -2548,6 +2804,7 @@
                     }
 
                     const completedJob = await pollPdfExtractionJob(startedJob.id, authToken);
+                    await fetchRecentPdfJobs({ syncRunningJobs: false });
                     setPdfProgressState(
                         completedJob && completedJob.message ? completedJob.message : 'Finished parsing the PDF.',
                         100,
@@ -2576,6 +2833,7 @@
                     }
 
                     await fetchSpreadsheetRowsPage(1, { silent: true });
+                    await fetchRecentPdfJobs({ syncRunningJobs: false });
                     const pageCountMessage = extractedPageCount > 1
                         ? ` Parsed all ${extractedPageCount} pages.`
                         : extractedPageCount === 1
@@ -2721,7 +2979,11 @@
             });
 
             updatePaginationUi();
-            void fetchSpreadsheetRowsPage(1).catch((error) => {
+            renderRecentPdfJobs();
+            void Promise.all([
+                fetchSpreadsheetRowsPage(1),
+                fetchRecentPdfJobs()
+            ]).catch((error) => {
                 pageMeta.textContent = error && error.message ? error.message : 'Failed to load MLS spreadsheet rows.';
                 renderRows([]);
                 updateCount(0);
