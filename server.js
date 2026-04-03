@@ -5273,7 +5273,7 @@ function waitForMlsImportAnalysisTurn() {
 function sanitizeMlsImportAiRow(rowLike) {
   const source = rowLike && typeof rowLike === 'object' ? rowLike : {};
   const rawAddress = normalizePdfPropertyAddressValue(source.propertyAddress || source.address || source.property || '');
-  const normalizedAddress = extractPropertyAddressCandidateFromLine(rawAddress) || rawAddress;
+  const normalizedAddress = extractPropertyAddressCandidateFromLine(rawAddress);
   const normalizedName = formatPersonName(source.laName || source.agentName || source.listingAgent || source.name || '');
   const normalizedOfficePhone = extractPhoneNumber(source.loPhone || source.officePhone || source.brokerPhone || '');
   const normalizedOffersEmail = extractEmailAddress(source.offersEmail || source.offerEmail || source.email || '');
@@ -5332,7 +5332,9 @@ async function extractMlsImportRowsWithOpenAi(fullText, pageTexts, options = {})
     'Each object must represent one property listing explicitly present in the text.',
     'Use empty strings for missing fields.',
     'Do not invent listings or contact info.',
-    'Prefer listing agent contact details and offer submission email when present.'
+    'Prefer listing agent contact details and offer submission email when present.',
+    'propertyAddress must contain only the actual property address.',
+    'Never return driving directions, route text, freeway instructions, turn-by-turn notes, or destination phrases as propertyAddress.'
   ].join(' ');
 
   for (let index = 0; index < segments.length; index += 1) {
@@ -5810,11 +5812,11 @@ function isLikelyDirectionalInstructionAddressLine(value) {
     return false;
   }
 
-  if (/^\d{2,6}\s+f(?:ree|re)?way\b/.test(normalized)) {
+  if (/^\d{2,6}\s+(?:f(?:ree)?way|frwy|fwy|hwy|highway)\b/.test(normalized)) {
     return true;
   }
 
-  return /\b(?:get\s+off|take\s+(?:the\s+)?exit|turn|merge|keep\s+(?:left|right)|continue\s+(?:on|onto)|toward(?:s)?|ramp)\b/.test(normalized);
+  return /\b(?:get\s+off|take\s+(?:the\s+)?exit|turn|merge|keep\s+(?:left|right)|continue\s+(?:on|onto|straight)|toward(?:s)?|ramp|destination|make\s+a\s+(?:left|right)|left\s+on|right\s+on|head\s+(?:north|south|east|west)|go\s+(?:north|south|east|west)|(?:f(?:ree)?way|frwy|fwy|hwy|highway)\s+(?:north|south|east|west))\b/.test(normalized);
 }
 
 function extractPropertyAddressCandidateFromLine(line) {
