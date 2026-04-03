@@ -19383,6 +19383,7 @@ function initNavbarDateTime() {
             let earthSubjectMarker = null;
             let earthReadyPromise = null;
             let earthLibraryPromise = null;
+            let earthMarkerLibraryPromise = null;
             let earthMarkerCtor = null;
             let earthMapModeValue = 'HYBRID';
             let aerialViewLookupPromise = null;
@@ -19509,7 +19510,17 @@ function initNavbarDateTime() {
                     earthLibraryPromise = earthLibraryPromise || window.google.maps.importLibrary('maps3d');
                     const earthLibrary = await earthLibraryPromise;
                     const Map3DElement = earthLibrary && earthLibrary.Map3DElement;
-                    earthMarkerCtor = earthLibrary && (earthLibrary.Marker3DInteractiveElement || earthLibrary.Marker3DElement);
+                    let earthMarkerLibrary = null;
+                    try {
+                        earthMarkerLibraryPromise = earthMarkerLibraryPromise || window.google.maps.importLibrary('marker');
+                        earthMarkerLibrary = await earthMarkerLibraryPromise;
+                    } catch (markerError) {
+                        earthMarkerLibraryPromise = null;
+                        earthMarkerLibrary = null;
+                    }
+                    earthMarkerCtor = (window.google.maps.marker && (window.google.maps.marker.Marker3DElement || window.google.maps.marker.Marker3DInteractiveElement))
+                        || (earthMarkerLibrary && (earthMarkerLibrary.Marker3DElement || earthMarkerLibrary.Marker3DInteractiveElement))
+                        || null;
                     const MapMode = earthLibrary && earthLibrary.MapMode;
                     if (!Map3DElement) {
                         throw new Error('Google Earth 3D library is unavailable for this map.');
