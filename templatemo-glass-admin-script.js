@@ -254,14 +254,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return '';
         }
 
-        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
-            ? workspaceUserLike
-            : getWorkspaceUserContext();
-        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
-        const assignedToName = String(assignedTo.name || assignedTo.email || 'Unknown user').trim() || 'Unknown user';
-        const assignedTargetLabel = usersMatch(assignedTo, workspaceUser) || usersMatch(assignedTo, activeSessionUser)
-            ? 'You'
-            : assignedToName;
+        const assignedTargetLabel = String(assignedTo.name || 'Unknown user').trim() || 'Unknown user';
         const assignedAt = assignmentMeta.assignedAt ? new Date(assignmentMeta.assignedAt) : null;
         const assignedAtLabel = assignedAt && !Number.isNaN(assignedAt.getTime())
             ? assignedAt.toLocaleDateString()
