@@ -4539,6 +4539,54 @@ body.sidebar-collapsed .main-content {
     gap: 15px;
 }
 
+.mls-source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin: -8px 0 24px;
+    padding: 10px 14px;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--glass-shadow);
+}
+
+.mls-source-badge img {
+    display: block;
+    width: auto;
+    height: 34px;
+    object-fit: contain;
+}
+
+.mls-source-badge-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mls-source-badge-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+}
+
+.mls-source-badge-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.mls-source-disclaimer {
+    margin: -14px 0 24px;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+}
+
 .search-box {
     position: relative;
 }
@@ -14719,6 +14767,16 @@ body.analytics-reboot .analytics-my-file-count {
 
     .page-title-group {
         gap: 8px;
+    }
+
+    .mls-source-badge {
+        width: 100%;
+        margin-top: -2px;
+        margin-bottom: 20px;
+    }
+
+    .mls-source-badge img {
+        height: 30px;
     }
 
     .navbar-datetime {
