@@ -7256,6 +7256,128 @@ body.analytics-reboot .analytics-my-file-count {
     font-size: 12px;
 }
 
+.agent-contract-card {
+    grid-column: 1 / -1;
+}
+
+.agent-contract-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.agent-contract-toolbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.agent-contract-property-picker {
+    min-width: min(100%, 360px);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.agent-contract-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.agent-contract-legend-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.agent-contract-legend-chip-blue {
+    background: rgba(34, 211, 238, 0.14);
+    color: #67e8f9;
+}
+
+.agent-contract-legend-chip-green {
+    background: rgba(74, 222, 128, 0.14);
+    color: #86efac;
+}
+
+.agent-contract-legend-chip-red {
+    background: rgba(248, 113, 113, 0.14);
+    color: #fca5a5;
+}
+
+.agent-contract-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.agent-contract-section h4 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.agent-contract-grid {
+    gap: 12px;
+}
+
+.agent-contract-span-2 {
+    grid-column: 1 / -1;
+}
+
+.agent-contract-field-blue,
+.agent-contract-field-green,
+.agent-contract-field-red {
+    border-width: 1.5px;
+}
+
+.agent-contract-field-blue {
+    border-color: rgba(34, 211, 238, 0.34);
+    box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.08);
+}
+
+.agent-contract-field-green {
+    border-color: rgba(74, 222, 128, 0.34);
+    box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.08);
+}
+
+.agent-contract-field-red {
+    border-color: rgba(248, 113, 113, 0.34);
+    box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.08);
+    text-transform: uppercase;
+}
+
+.agent-contract-actions {
+    justify-content: flex-start;
+}
+
+@media (max-width: 900px) {
+    .agent-contract-card {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .agent-contract-toolbar {
+        align-items: stretch;
+    }
+
+    .agent-contract-property-picker {
+        min-width: 100%;
+    }
+}
+
 .outreach-input-grid {
     display: grid;
     grid-template-columns: 1fr;

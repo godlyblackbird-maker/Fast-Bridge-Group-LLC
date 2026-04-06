@@ -15781,6 +15781,678 @@ function initNavbarDateTime() {
         downloadPdfBtn.addEventListener('click', downloadAgreementPdf);
     }
 
+    function initAgentWorkspacePurchaseAgreement() {
+        const contractCard = document.getElementById('agent-contract-card');
+        if (!contractCard) {
+            return;
+        }
+
+        const propertySelect = document.getElementById('agent-contract-property-select');
+        const dateInput = document.getElementById('agent-contract-date');
+        const buyerInput = document.getElementById('agent-contract-buyer');
+        const sellerInput = document.getElementById('agent-contract-seller');
+        const apnInput = document.getElementById('agent-contract-apn');
+        const purchasePriceInput = document.getElementById('agent-contract-purchase-price');
+        const byInput = document.getElementById('agent-contract-by');
+        const nameInput = document.getElementById('agent-contract-name');
+        const titleInput = document.getElementById('agent-contract-title');
+        const companyInput = document.getElementById('agent-contract-company');
+        const assigneeInitialsInput = document.getElementById('agent-contract-assignee-initials');
+        const assignorInitialsInput = document.getElementById('agent-contract-assignor-initials');
+        const downloadButton = document.getElementById('agent-contract-download-btn');
+        const statusNote = document.getElementById('agent-contract-status');
+
+        if (!propertySelect || !dateInput || !buyerInput || !sellerInput || !apnInput || !purchasePriceInput || !byInput || !nameInput || !titleInput || !companyInput || !assigneeInitialsInput || !assignorInitialsInput || !downloadButton || !statusNote) {
+            return;
+        }
+
+        let pdfLibLoaderPromise = null;
+        const propertyEntries = new Map();
+        const templatePath = encodeURI('Contracts/Real Estate Purchase Agreement.pdf');
+        const pdfPageHeight = 792;
+        const screenToPdfScale = 2 / 3;
+        const assignmentDateRect = { x: 111, y: 223, w: 84, h: 24 };
+        const buyerLineRect = { x: 604, y: 223, w: 182, h: 24 };
+
+        const contractRects = {
+            page1: {
+                seller: { x: 165, y: 405, w: 102, h: 18 },
+                purchaseAgreementDate: { x: 341, y: 405, w: 75, h: 18 },
+                apn: { x: 272, y: 424, w: 126, h: 19 },
+                addressLineOne: { x: 601, y: 424, w: 236, h: 19 },
+                addressLineTwo: { x: 76, y: 444, w: 84, h: 19 },
+                totalPriceWords: { x: 383, y: 707, w: 290, h: 46 },
+                totalPriceAmount: { x: 54, y: 727, w: 89, h: 20 },
+                earnestMoneyDate: { x: 538, y: 970, w: 74, h: 19 }
+            },
+            page2: {
+                assigneeInitials: { x: 802, y: 55, w: 41, h: 18 },
+                assignorInitials: { x: 802, y: 76, w: 41, h: 18 }
+            },
+            page3: {
+                assigneeInitialsTop: { x: 798, y: 57, w: 49, h: 18 },
+                assignorInitialsTop: { x: 798, y: 77, w: 49, h: 18 },
+                assigneeInitialsBottom: { x: 715, y: 1069, w: 41, h: 18 }
+            },
+            page4: {
+                assignorInitials: { x: 706, y: 54, w: 49, h: 18 },
+                assigneeDate: { x: 125, y: 440, w: 73, h: 20 },
+                by: { x: 415, y: 476, w: 230, h: 19 },
+                name: { x: 339, y: 517, w: 98, h: 17 },
+                title: { x: 328, y: 539, w: 304, h: 19 },
+                company: { x: 352, y: 560, w: 181, h: 19 },
+                assignorDate: { x: 128, y: 560, w: 73, h: 20 }
+            },
+            page5: {
+                assigneeInitials: { x: 807, y: 55, w: 57, h: 18 },
+                assignorInitials: { x: 807, y: 76, w: 57, h: 18 }
+            }
+        };
+
+        function setStatus(message, tone) {
+            statusNote.textContent = message;
+            statusNote.dataset.tone = tone || '';
+        }
+
+        function cleanContractValue(value) {
+            return String(value || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function slugifyContractValue(value) {
+            return cleanContractValue(value)
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        function getTodayDateString() {
+            return new Date().toLocaleDateString('en-US');
+        }
+
+        function normalizeDateString(value) {
+            const rawValue = cleanContractValue(value);
+            if (!rawValue) {
+                return getTodayDateString();
+            }
+
+            const parsed = new Date(rawValue);
+            if (Number.isNaN(parsed.getTime())) {
+                return rawValue;
+            }
+
+            return parsed.toLocaleDateString('en-US');
+        }
+
+        function escapeRegex(value) {
+            return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function extractLabeledValue(source, label) {
+            const text = String(source || '');
+            if (!text || !label) {
+                return '';
+            }
+
+            const expression = new RegExp(`${escapeRegex(label)}\\s*:\\s*([^\\n\\r]+)`, 'i');
+            const match = text.match(expression);
+            return match ? cleanContractValue(match[1]) : '';
+        }
+
+        function firstNonEmptyValue(...values) {
+            for (const value of values) {
+                const normalized = cleanContractValue(value);
+                if (normalized) {
+                    return normalized;
+                }
+            }
+            return '';
+        }
+
+        function parseCurrencyNumber(value) {
+            const numeric = Number(String(value || '').replace(/,/g, '').replace(/[^0-9.]/g, ''));
+            return Number.isFinite(numeric) ? numeric : 0;
+        }
+
+        function formatCurrencyForInput(value) {
+            const numeric = parseCurrencyNumber(value);
+            if (numeric <= 0) {
+                return '';
+            }
+
+            return Math.round(numeric).toLocaleString('en-US');
+        }
+
+        function formatCurrencyForContract(value) {
+            const numeric = parseCurrencyNumber(value);
+            if (numeric <= 0) {
+                return '';
+            }
+
+            return `$${numeric.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
+        }
+
+        function numberToWords(value) {
+            const numeric = Math.round(parseCurrencyNumber(value));
+            if (!Number.isFinite(numeric) || numeric <= 0) {
+                return '';
+            }
+
+            const units = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const scales = ['', 'Thousand', 'Million', 'Billion'];
+
+            function chunkToWords(chunk) {
+                const words = [];
+                const hundreds = Math.floor(chunk / 100);
+                const remainder = chunk % 100;
+                const tenValue = Math.floor(remainder / 10);
+                const unitValue = remainder % 10;
+
+                if (hundreds > 0) {
+                    words.push(`${units[hundreds]} Hundred`);
+                }
+
+                if (remainder >= 10 && remainder < 20) {
+                    words.push(teens[remainder - 10]);
+                } else {
+                    if (tenValue > 1) {
+                        words.push(unitValue > 0 ? `${tens[tenValue]}-${units[unitValue]}` : tens[tenValue]);
+                    } else if (tenValue === 1) {
+                        words.push(teens[unitValue]);
+                    } else if (unitValue > 0) {
+                        words.push(units[unitValue]);
+                    }
+                }
+
+                return words.join(' ');
+            }
+
+            let remaining = numeric;
+            let scaleIndex = 0;
+            const parts = [];
+
+            while (remaining > 0) {
+                const chunk = remaining % 1000;
+                if (chunk > 0) {
+                    const chunkWords = chunkToWords(chunk);
+                    const scale = scales[scaleIndex];
+                    parts.unshift(scale ? `${chunkWords} ${scale}` : chunkWords);
+                }
+                remaining = Math.floor(remaining / 1000);
+                scaleIndex += 1;
+            }
+
+            return `${parts.join(' ')} Dollars`;
+        }
+
+        function toPdfRect(screenRect) {
+            return {
+                x: screenRect.x * screenToPdfScale,
+                y: pdfPageHeight - ((screenRect.y + screenRect.h) * screenToPdfScale),
+                width: screenRect.w * screenToPdfScale,
+                height: screenRect.h * screenToPdfScale
+            };
+        }
+
+        function fitSingleLine(font, text, width, initialSize, minSize) {
+            const safeText = String(text || '');
+            let fontSize = initialSize;
+            while (fontSize > minSize && font.widthOfTextAtSize(safeText, fontSize) > width) {
+                fontSize -= 0.4;
+            }
+            return Math.max(fontSize, minSize);
+        }
+
+        function splitWordsAcrossRects(font, text, rects, fontSize) {
+            const words = cleanContractValue(text).split(/\s+/).filter(Boolean);
+            const lines = [];
+            let wordIndex = 0;
+
+            rects.forEach((rect) => {
+                const maxWidth = Math.max(rect.width - 4, 8);
+                let line = '';
+
+                while (wordIndex < words.length) {
+                    const nextLine = line ? `${line} ${words[wordIndex]}` : words[wordIndex];
+                    if (font.widthOfTextAtSize(nextLine, fontSize) <= maxWidth) {
+                        line = nextLine;
+                        wordIndex += 1;
+                        continue;
+                    }
+
+                    if (!line) {
+                        let truncated = words[wordIndex];
+                        while (truncated.length > 1 && font.widthOfTextAtSize(`${truncated}...`, fontSize) > maxWidth) {
+                            truncated = truncated.slice(0, -1);
+                        }
+                        line = truncated.length < words[wordIndex].length ? `${truncated}...` : truncated;
+                        wordIndex += 1;
+                    }
+                    break;
+                }
+
+                lines.push(line);
+            });
+
+            if (wordIndex < words.length && lines.length) {
+                let combined = cleanContractValue(`${lines[lines.length - 1]} ${words.slice(wordIndex).join(' ')}`);
+                const rect = rects[rects.length - 1];
+                const maxWidth = Math.max(rect.width - 4, 8);
+                while (combined.length > 1 && font.widthOfTextAtSize(`${combined}...`, fontSize) > maxWidth) {
+                    combined = combined.slice(0, -1).trim();
+                }
+                lines[lines.length - 1] = combined ? `${combined}...` : '...';
+            }
+
+            return lines;
+        }
+
+        function drawSingleLineField(page, font, text, screenRect, options, PDFLib) {
+            const config = options && typeof options === 'object' ? options : {};
+            const pdfRect = toPdfRect(screenRect);
+            const safeText = cleanContractValue(text);
+            const paddingX = Number(config.paddingX || 2);
+            const paddingY = Number(config.paddingY || 1);
+            const initialSize = Number(config.fontSize || 12);
+            const minSize = Number(config.minSize || 8);
+            const background = config.background !== false;
+            const textWidth = Math.max(pdfRect.width - (paddingX * 2), 8);
+            const fontSize = fitSingleLine(font, safeText, textWidth, initialSize, minSize);
+
+            if (background) {
+                page.drawRectangle({
+                    x: Math.max(pdfRect.x - 1, 0),
+                    y: Math.max(pdfRect.y - 1, 0),
+                    width: pdfRect.width + 2,
+                    height: pdfRect.height + 2,
+                    color: PDFLib.rgb(1, 1, 1)
+                });
+            }
+
+            page.drawText(safeText, {
+                x: pdfRect.x + paddingX,
+                y: pdfRect.y + ((pdfRect.height - fontSize) / 2) + paddingY,
+                size: fontSize,
+                font,
+                color: PDFLib.rgb(0, 0, 0)
+            });
+        }
+
+        function drawMultiRectField(page, font, text, screenRects, options, PDFLib) {
+            const config = options && typeof options === 'object' ? options : {};
+            const rects = screenRects.map(toPdfRect);
+            const safeText = cleanContractValue(text);
+            const initialSize = Number(config.fontSize || 12);
+            const minSize = Number(config.minSize || 8);
+            const paddingX = Number(config.paddingX || 2);
+            let fontSize = initialSize;
+            let lines = [];
+
+            while (fontSize >= minSize) {
+                lines = splitWordsAcrossRects(font, safeText, rects, fontSize);
+                const fits = lines.every((line, index) => font.widthOfTextAtSize(String(line || ''), fontSize) <= Math.max(rects[index].width - (paddingX * 2), 8));
+                if (fits) {
+                    break;
+                }
+                fontSize -= 0.4;
+            }
+
+            rects.forEach((rect, index) => {
+                page.drawRectangle({
+                    x: Math.max(rect.x - 1, 0),
+                    y: Math.max(rect.y - 1, 0),
+                    width: rect.width + 2,
+                    height: rect.height + 2,
+                    color: PDFLib.rgb(1, 1, 1)
+                });
+
+                if (!lines[index]) {
+                    return;
+                }
+
+                page.drawText(lines[index], {
+                    x: rect.x + paddingX,
+                    y: rect.y + ((rect.height - fontSize) / 2) + 1,
+                    size: fontSize,
+                    font,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+            });
+        }
+
+        function inferBuyer(detail, snapshot, entry) {
+            const offerSummary = [detail && detail.offer, snapshot && snapshot.offer].filter(Boolean).join('\n');
+            return firstNonEmptyValue(
+                extractLabeledValue(offerSummary, 'Entity'),
+                snapshot && snapshot.buyer,
+                snapshot && snapshot.buyerName,
+                snapshot && snapshot.assigneeName,
+                snapshot && snapshot.assigneeCompany,
+                detail && detail.buyer,
+                detail && detail.buyerName,
+                detail && detail.assigneeName,
+                detail && detail.assigneeCompany,
+                entry && entry.assignmentRecord && entry.assignmentRecord.assignedTo && entry.assignmentRecord.assignedTo.name
+            );
+        }
+
+        function inferSeller(detail, snapshot) {
+            return firstNonEmptyValue(
+                snapshot && snapshot.sellerName,
+                snapshot && snapshot.ownerName,
+                snapshot && snapshot.owner,
+                detail && detail.sellerName,
+                detail && detail.ownerName,
+                detail && detail.owner
+            );
+        }
+
+        function inferApn(detail, snapshot) {
+            return firstNonEmptyValue(snapshot && snapshot.apn, detail && detail.apn);
+        }
+
+        function inferPurchasePrice(detail, snapshot) {
+            const offerSummary = [detail && detail.offer, snapshot && snapshot.offer].filter(Boolean).join('\n');
+            return firstNonEmptyValue(
+                extractLabeledValue(offerSummary, 'Purchase Price'),
+                snapshot && snapshot.purchasePrice,
+                detail && detail.purchasePrice,
+                snapshot && snapshot.listPrice,
+                detail && detail.listPrice
+            );
+        }
+
+        function inferPropertyAddress(detail, snapshot, entry) {
+            return firstNonEmptyValue(
+                entry && entry.address,
+                snapshot && snapshot.address,
+                snapshot && snapshot.propertyAddress,
+                detail && detail.address,
+                detail && detail.propertyAddress
+            );
+        }
+
+        function buildPropertyEntry(propertyKey, address, snapshot, source, assignmentRecord) {
+            return {
+                key: propertyKey,
+                address: cleanContractValue(address) || 'Property',
+                snapshot: snapshot && typeof snapshot === 'object' ? snapshot : {},
+                source: source || 'workspace',
+                assignmentRecord: assignmentRecord && typeof assignmentRecord === 'object' ? assignmentRecord : null
+            };
+        }
+
+        function collectPropertyEntries() {
+            propertyEntries.clear();
+
+            const workspaceUser = getWorkspaceUserContext();
+            const acceptedItems = getAcceptedOfferItemsForWorkspace(workspaceUser);
+            acceptedItems.forEach((item) => {
+                const snapshot = item && item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+                const address = firstNonEmptyValue(item && item.propertyAddress, snapshot.address, snapshot.propertyAddress);
+                const propertyKey = makePropertyStorageKey(item && (item.propertyKey || address));
+                if (!propertyKey) {
+                    return;
+                }
+
+                propertyEntries.set(propertyKey, buildPropertyEntry(propertyKey, address, snapshot, 'accepted', item && item.assignmentRecord));
+            });
+
+            const persistedDetail = getPersistedSelectedPropertyDetail();
+            if (persistedDetail && typeof persistedDetail === 'object') {
+                const address = firstNonEmptyValue(persistedDetail.address, persistedDetail.propertyAddress);
+                const propertyKey = makePropertyStorageKey(address);
+                if (propertyKey && !propertyEntries.has(propertyKey)) {
+                    propertyEntries.set(propertyKey, buildPropertyEntry(propertyKey, address, persistedDetail, 'selected', persistedDetail.propertyAssignment));
+                }
+            }
+
+            return persistedDetail;
+        }
+
+        function applySelectedProperty() {
+            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
+            const persistedDetail = getPersistedSelectedPropertyDetail();
+            const persistedKey = makePropertyStorageKey(persistedDetail && (persistedDetail.address || persistedDetail.propertyAddress));
+            const detail = selectedEntry && selectedEntry.source === 'selected'
+                ? (selectedEntry.snapshot || {})
+                : (selectedEntry && selectedEntry.key && selectedEntry.key === persistedKey && persistedDetail && typeof persistedDetail === 'object'
+                    ? persistedDetail
+                    : (selectedEntry ? (selectedEntry.snapshot || {}) : {}));
+            const snapshot = selectedEntry ? (selectedEntry.snapshot || {}) : {};
+
+            dateInput.value = getTodayDateString();
+            buyerInput.value = inferBuyer(detail, snapshot, selectedEntry);
+            sellerInput.value = inferSeller(detail, snapshot);
+            apnInput.value = inferApn(detail, snapshot);
+            purchasePriceInput.value = formatCurrencyForInput(inferPurchasePrice(detail, snapshot));
+
+            const missingAutoFields = [];
+            if (!cleanContractValue(buyerInput.value)) missingAutoFields.push('buyer');
+            if (!cleanContractValue(sellerInput.value)) missingAutoFields.push('seller');
+            if (!cleanContractValue(apnInput.value)) missingAutoFields.push('APN');
+            if (!cleanContractValue(purchasePriceInput.value)) missingAutoFields.push('purchase price');
+
+            if (!selectedEntry) {
+                setStatus('Manual entry mode is active. Enter the contract fields below, then download the PDF.', 'info');
+                return;
+            }
+
+            if (missingAutoFields.length) {
+                setStatus(`${selectedEntry.address} loaded. Enter the missing ${missingAutoFields.join(', ')} field${missingAutoFields.length === 1 ? '' : 's'} before downloading.`, 'warning');
+                return;
+            }
+
+            setStatus(`${selectedEntry.address} loaded. The blue contract fields were auto-filled from the property snapshot.`, 'success');
+        }
+
+        function refreshPropertyOptions() {
+            const persistedDetail = collectPropertyEntries();
+            const previousValue = propertySelect.value;
+            const persistedKey = makePropertyStorageKey(persistedDetail && (persistedDetail.address || persistedDetail.propertyAddress));
+            const options = Array.from(propertyEntries.values()).sort((left, right) => left.address.localeCompare(right.address));
+
+            propertySelect.innerHTML = '';
+
+            const manualOption = document.createElement('option');
+            manualOption.value = '';
+            manualOption.textContent = 'Manual Entry';
+            propertySelect.appendChild(manualOption);
+
+            options.forEach((entry) => {
+                const option = document.createElement('option');
+                option.value = entry.key;
+                option.textContent = entry.snapshot && entry.snapshot.apn
+                    ? `${entry.address} - APN ${entry.snapshot.apn}`
+                    : entry.address;
+                propertySelect.appendChild(option);
+            });
+
+            const nextValue = previousValue && propertyEntries.has(previousValue)
+                ? previousValue
+                : (persistedKey && propertyEntries.has(persistedKey) ? persistedKey : '');
+            propertySelect.value = nextValue;
+            applySelectedProperty();
+        }
+
+        function normalizeInitialsInput(input) {
+            input.value = String(input.value || '').replace(/[^a-z]/gi, '').toUpperCase().slice(0, 6);
+        }
+
+        function loadPdfLib() {
+            if (window.PDFLib && window.PDFLib.PDFDocument) {
+                return Promise.resolve(window.PDFLib);
+            }
+
+            if (pdfLibLoaderPromise) {
+                return pdfLibLoaderPromise;
+            }
+
+            pdfLibLoaderPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+                script.async = true;
+                script.onload = () => {
+                    if (window.PDFLib && window.PDFLib.PDFDocument) {
+                        resolve(window.PDFLib);
+                        return;
+                    }
+                    reject(new Error('pdf-lib did not initialize.'));
+                };
+                script.onerror = () => reject(new Error('Failed to load pdf-lib.'));
+                document.head.appendChild(script);
+            });
+
+            return pdfLibLoaderPromise;
+        }
+
+        function getTemplatePayload() {
+            return {
+                date: normalizeDateString(dateInput.value),
+                buyer: cleanContractValue(buyerInput.value),
+                seller: cleanContractValue(sellerInput.value),
+                apn: cleanContractValue(apnInput.value),
+                purchasePriceValue: cleanContractValue(purchasePriceInput.value),
+                by: cleanContractValue(byInput.value),
+                name: cleanContractValue(nameInput.value),
+                title: cleanContractValue(titleInput.value),
+                company: cleanContractValue(companyInput.value),
+                assigneeInitials: cleanContractValue(assigneeInitialsInput.value).toUpperCase(),
+                assignorInitials: cleanContractValue(assignorInitialsInput.value).toUpperCase()
+            };
+        }
+
+        function validateTemplatePayload(payload) {
+            const missing = [];
+            if (!payload.date) missing.push('date');
+            if (!payload.buyer) missing.push('buyer');
+            if (!payload.seller) missing.push('seller');
+            if (!payload.apn) missing.push('APN');
+            if (!parseCurrencyNumber(payload.purchasePriceValue)) missing.push('purchase price');
+            if (!payload.by) missing.push('By');
+            if (!payload.name) missing.push('Name');
+            if (!payload.title) missing.push('Title');
+            if (!payload.company) missing.push('Company');
+            if (!payload.assigneeInitials) missing.push('assignee initials');
+            if (!payload.assignorInitials) missing.push('assignor initials');
+            return missing;
+        }
+
+        function buildContractFileName() {
+            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
+            const address = selectedEntry ? selectedEntry.address : cleanContractValue(buyerInput.value) || 'purchase-agreement';
+            const slug = slugifyContractValue(address) || 'purchase-agreement';
+            return `${slug}-assignment-agreement.pdf`;
+        }
+
+        async function downloadFilledPurchaseAgreement() {
+            const payload = getTemplatePayload();
+            const missing = validateTemplatePayload(payload);
+
+            if (missing.length) {
+                showDashboardToast('error', 'Missing Contract Fields', `Add ${missing.join(', ')} before downloading the PDF.`);
+                setStatus(`Missing fields: ${missing.join(', ')}.`, 'error');
+                return;
+            }
+
+            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
+            const persistedDetail = getPersistedSelectedPropertyDetail();
+            const propertyAddress = inferPropertyAddress(
+                persistedDetail && typeof persistedDetail === 'object' ? persistedDetail : {},
+                selectedEntry ? selectedEntry.snapshot : {},
+                selectedEntry
+            );
+            const formattedPrice = formatCurrencyForContract(payload.purchasePriceValue);
+            const spelledOutPrice = numberToWords(payload.purchasePriceValue);
+
+            downloadButton.disabled = true;
+            setStatus('Building the filled purchase agreement PDF...', 'info');
+
+            try {
+                const PDFLib = await loadPdfLib();
+                const templateResponse = await fetch(templatePath);
+                if (!templateResponse.ok) {
+                    throw new Error('The purchase agreement template could not be loaded.');
+                }
+
+                const templateBytes = await templateResponse.arrayBuffer();
+                const pdfDoc = await PDFLib.PDFDocument.load(templateBytes);
+                const timesRoman = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRoman);
+                const timesBold = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesBold);
+                const helvetica = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                const helveticaBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                const pages = pdfDoc.getPages();
+
+                drawSingleLineField(pages[0], timesRoman, payload.date, assignmentDateRect, { fontSize: 14, minSize: 10 }, PDFLib);
+                drawSingleLineField(pages[0], timesBold, payload.buyer, buyerLineRect, { fontSize: 13, minSize: 8, paddingX: 1 }, PDFLib);
+                drawSingleLineField(pages[0], timesRoman, payload.seller, contractRects.page1.seller, { fontSize: 13, minSize: 9 }, PDFLib);
+                drawSingleLineField(pages[0], timesRoman, payload.date, contractRects.page1.purchaseAgreementDate, { fontSize: 13, minSize: 9 }, PDFLib);
+                drawSingleLineField(pages[0], timesRoman, payload.apn, contractRects.page1.apn, { fontSize: 13, minSize: 9 }, PDFLib);
+                drawMultiRectField(pages[0], timesRoman, propertyAddress, [contractRects.page1.addressLineOne, contractRects.page1.addressLineTwo], { fontSize: 12, minSize: 8 }, PDFLib);
+                drawSingleLineField(pages[0], timesBold, spelledOutPrice, contractRects.page1.totalPriceWords, { fontSize: 13, minSize: 8 }, PDFLib);
+                drawSingleLineField(pages[0], helveticaBold, `(${formattedPrice})`, contractRects.page1.totalPriceAmount, { fontSize: 12, minSize: 9 }, PDFLib);
+                drawSingleLineField(pages[0], timesRoman, payload.date, contractRects.page1.earnestMoneyDate, { fontSize: 13, minSize: 9 }, PDFLib);
+
+                drawSingleLineField(pages[1], helveticaBold, payload.assigneeInitials, contractRects.page2.assigneeInitials, { fontSize: 12, minSize: 10 }, PDFLib);
+                drawSingleLineField(pages[1], helveticaBold, payload.assignorInitials, contractRects.page2.assignorInitials, { fontSize: 12, minSize: 10 }, PDFLib);
+
+                drawSingleLineField(pages[2], helveticaBold, payload.assigneeInitials, contractRects.page3.assigneeInitialsTop, { fontSize: 12, minSize: 10 }, PDFLib);
+                drawSingleLineField(pages[2], helveticaBold, payload.assignorInitials, contractRects.page3.assignorInitialsTop, { fontSize: 12, minSize: 10 }, PDFLib);
+                drawSingleLineField(pages[2], helveticaBold, payload.assigneeInitials, contractRects.page3.assigneeInitialsBottom, { fontSize: 12, minSize: 10 }, PDFLib);
+
+                drawSingleLineField(pages[3], helveticaBold, payload.assignorInitials, contractRects.page4.assignorInitials, { fontSize: 12, minSize: 10 }, PDFLib);
+                drawSingleLineField(pages[3], timesRoman, payload.date, contractRects.page4.assigneeDate, { fontSize: 13, minSize: 9 }, PDFLib);
+                drawSingleLineField(pages[3], helvetica, payload.by, contractRects.page4.by, { fontSize: 13, minSize: 8 }, PDFLib);
+                drawSingleLineField(pages[3], helvetica, payload.name, contractRects.page4.name, { fontSize: 12, minSize: 8 }, PDFLib);
+                drawSingleLineField(pages[3], helvetica, payload.title, contractRects.page4.title, { fontSize: 12, minSize: 8 }, PDFLib);
+                drawSingleLineField(pages[3], helvetica, payload.company, contractRects.page4.company, { fontSize: 12, minSize: 8 }, PDFLib);
+                drawSingleLineField(pages[3], timesRoman, payload.date, contractRects.page4.assignorDate, { fontSize: 13, minSize: 9 }, PDFLib);
+
+                drawSingleLineField(pages[4], helveticaBold, payload.assigneeInitials, contractRects.page5.assigneeInitials, { fontSize: 12, minSize: 10 }, PDFLib);
+                drawSingleLineField(pages[4], helveticaBold, payload.assignorInitials, contractRects.page5.assignorInitials, { fontSize: 12, minSize: 10 }, PDFLib);
+
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = buildContractFileName();
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+
+                showDashboardToast('success', 'Contract Ready', 'The purchase agreement PDF was generated and downloaded.');
+                setStatus('The purchase agreement PDF was generated successfully.', 'success');
+            } catch (error) {
+                showDashboardToast('error', 'Contract Download Failed', error && error.message ? error.message : 'The purchase agreement PDF could not be generated.');
+                setStatus(error && error.message ? error.message : 'The purchase agreement PDF could not be generated.', 'error');
+            } finally {
+                downloadButton.disabled = false;
+            }
+        }
+
+        [assigneeInitialsInput, assignorInitialsInput].forEach((input) => {
+            input.addEventListener('input', () => normalizeInitialsInput(input));
+        });
+
+        purchasePriceInput.addEventListener('input', () => {
+            const digits = String(purchasePriceInput.value || '').replace(/[^0-9]/g, '');
+            purchasePriceInput.value = digits ? Number(digits).toLocaleString('en-US') : '';
+        });
+
+        propertySelect.addEventListener('change', applySelectedProperty);
+        downloadButton.addEventListener('click', downloadFilledPurchaseAgreement);
+        window.addEventListener('dashboard-data-updated', refreshPropertyOptions);
+
+        dateInput.value = getTodayDateString();
+        refreshPropertyOptions();
+    }
+
     async function initDealsPage() {
         const list = document.getElementById('deals-compact-list');
         const count = document.getElementById('deals-compact-count');
@@ -24873,6 +25545,7 @@ function initNavbarDateTime() {
             ['initPersonalOutreachWorkspace', initPersonalOutreachWorkspace],
             ['initOffersAcceptedWidget', initOffersAcceptedWidget],
             ['initNotesWidget', initNotesWidget],
+            ['initAgentWorkspacePurchaseAgreement', initAgentWorkspacePurchaseAgreement],
             ['initAgentWorkspaceEmailPrep', initAgentWorkspaceEmailPrep],
             ['initAdminOnlineUsersWidget', initAdminOnlineUsersWidget],
             ['initAdminAccessRequests', initAdminAccessRequests],
