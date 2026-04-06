@@ -14275,17 +14275,64 @@ function initNavbarDateTime() {
             }
 
             pagination.hidden = false;
-            for (let page = 1; page <= totalPages; page += 1) {
+            const createButton = (label, targetPage, options = {}) => {
                 const button = document.createElement('button');
                 button.type = 'button';
-                button.className = 'mls-page-btn' + (page === currentPage ? ' active' : '');
-                button.textContent = `Page ${page}`;
+                button.className = 'mls-page-btn' + (options.active ? ' active' : '') + (options.nav ? ' is-nav' : '');
+                button.textContent = label;
+                button.disabled = Boolean(options.disabled);
+                if (options.ariaLabel) {
+                    button.setAttribute('aria-label', options.ariaLabel);
+                }
                 button.addEventListener('click', () => {
-                    currentPage = page;
+                    if (button.disabled || targetPage === currentPage) {
+                        return;
+                    }
+                    currentPage = targetPage;
                     applyFiltersAndSort();
                 });
+                return button;
+            };
+
+            const appendEllipsis = () => {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'mls-pagination-ellipsis';
+                ellipsis.textContent = '...';
+                pagination.appendChild(ellipsis);
+            };
+
+            pagination.appendChild(createButton('Prev', Math.max(1, currentPage - 1), {
+                nav: true,
+                disabled: currentPage === 1,
+                ariaLabel: 'Go to previous page'
+            }));
+
+            const pagesToRender = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+            const visiblePages = Array.from(pagesToRender)
+                .filter(page => page >= 1 && page <= totalPages)
+                .sort((left, right) => left - right);
+
+            let lastPage = 0;
+            visiblePages.forEach((page) => {
+                if (page - lastPage > 1) {
+                    appendEllipsis();
+                }
+                const button = createButton(String(page), page, {
+                    active: page === currentPage,
+                    ariaLabel: `Go to page ${page}`
+                });
+                if (page === currentPage) {
+                    button.setAttribute('aria-current', 'page');
+                }
                 pagination.appendChild(button);
-            }
+                lastPage = page;
+            });
+
+            pagination.appendChild(createButton('Next', Math.min(totalPages, currentPage + 1), {
+                nav: true,
+                disabled: currentPage === totalPages,
+                ariaLabel: 'Go to next page'
+            }));
         }
 
         function applyFiltersAndSort() {
