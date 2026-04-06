@@ -4552,6 +4552,13 @@ body.sidebar-collapsed .main-content {
     box-shadow: var(--glass-shadow);
 }
 
+.mls-source-badge-logos {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
 .mls-source-badge img {
     display: block;
     width: auto;
