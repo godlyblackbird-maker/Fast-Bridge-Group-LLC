@@ -16381,10 +16381,11 @@ function initNavbarDateTime() {
 
                 const templateBytes = await templateResponse.arrayBuffer();
                 const pdfDoc = await PDFLib.PDFDocument.load(templateBytes);
-                const timesRoman = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesRoman);
-                const timesBold = await pdfDoc.embedFont(PDFLib.StandardFonts.TimesBold);
-                const helvetica = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-                const helveticaBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                const standardFonts = PDFLib.StandardFonts || {};
+                const timesRoman = await pdfDoc.embedFont(standardFonts.TimesRoman || 'Times-Roman');
+                const timesBold = await pdfDoc.embedFont(standardFonts.TimesBold || 'Times-Bold');
+                const helvetica = await pdfDoc.embedFont(standardFonts.Helvetica || 'Helvetica');
+                const helveticaBold = await pdfDoc.embedFont(standardFonts.HelveticaBold || 'Helvetica-Bold');
                 const pages = pdfDoc.getPages();
 
                 drawSingleLineField(pages[0], timesRoman, payload.date, assignmentDateRect, { fontSize: 14, minSize: 10 }, PDFLib);
