@@ -56,7 +56,6 @@ const PREMIUM_PRICE_CENTS = 9900;
 const PREMIUM_CURRENCY = 'USD';
 const AUTH_SESSION_TTL = '24h';
 const TWO_FACTOR_CHALLENGE_TTL = '10m';
-const DIRECT_MESSAGE_HISTORY_LIMIT = 100;
 const ONLINE_USER_ACTIVITY_WINDOW_MINUTES = 5;
 const TOTP_WINDOW = 1;
 const TOTP_PERIOD_SECONDS = 30;
@@ -5062,43 +5061,6 @@ function serializeMessageNotification(row, currentUserId) {
   };
 }
 
-async function trimDirectMessageConversationHistory(userIdA, userIdB) {
-  const firstUserId = Number(userIdA);
-  const secondUserId = Number(userIdB);
-
-  if (!Number.isInteger(firstUserId) || firstUserId <= 0 || !Number.isInteger(secondUserId) || secondUserId <= 0) {
-    return;
-  }
-
-  const countRow = await dbGet(
-    `SELECT COUNT(*) AS total
-     FROM user_messages
-     WHERE (sender_user_id = ? AND recipient_user_id = ?)
-        OR (sender_user_id = ? AND recipient_user_id = ?)`,
-    [firstUserId, secondUserId, secondUserId, firstUserId]
-  );
-
-  const totalMessages = Number(countRow && countRow.total) || 0;
-  const overflowCount = Math.max(0, totalMessages - DIRECT_MESSAGE_HISTORY_LIMIT);
-
-  if (overflowCount <= 0) {
-    return;
-  }
-
-  await dbRun(
-    `DELETE FROM user_messages
-     WHERE id IN (
-       SELECT id
-       FROM user_messages
-       WHERE (sender_user_id = ? AND recipient_user_id = ?)
-          OR (sender_user_id = ? AND recipient_user_id = ?)
-       ORDER BY datetime(created_at) ASC, id ASC
-       LIMIT ?
-     )`,
-    [firstUserId, secondUserId, secondUserId, firstUserId, overflowCount]
-  );
-}
-
 function normalizePdfExtractText(value) {
   return String(value || '')
     .replace(/\u00a0/g, ' ')
@@ -8345,8 +8307,6 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
       [currentUserId, otherUserId, body]
     );
 
-    await trimDirectMessageConversationHistory(currentUserId, otherUserId);
-
     const inserted = await dbGet(
       `SELECT id, sender_user_id, recipient_user_id, body, created_at, read_at
        FROM user_messages
@@ -8361,6 +8321,46 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
   } catch (error) {
     console.error('Send conversation message error:', error);
     return res.status(500).json({ error: 'Unable to send the message.' });
+  }
+});
+
+app.delete('/api/messages/conversations/:userId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentUserId = Number(decoded.id);
+  const otherUserId = Number.parseInt(String(req.params?.userId || ''), 10);
+
+  if (!Number.isInteger(currentUserId) || currentUserId <= 0 || !Number.isInteger(otherUserId) || otherUserId <= 0) {
+    return res.status(400).json({ error: 'Valid user ids are required.' });
+  }
+
+  if (currentUserId === otherUserId) {
+    return res.status(400).json({ error: 'Choose another user to clear a conversation.' });
+  }
+
+  try {
+    const otherUser = await dbGet('SELECT id FROM users WHERE id = ?', [otherUserId]);
+    if (!otherUser) {
+      return res.status(404).json({ error: 'Selected user was not found.' });
+    }
+
+    const result = await dbRun(
+      `DELETE FROM user_messages
+       WHERE (sender_user_id = ? AND recipient_user_id = ?)
+          OR (sender_user_id = ? AND recipient_user_id = ?)`,
+      [currentUserId, otherUserId, otherUserId, currentUserId]
+    );
+
+    return res.json({
+      success: true,
+      clearedCount: Number(result && result.changes) || 0
+    });
+  } catch (error) {
+    console.error('Clear conversation error:', error);
+    return res.status(500).json({ error: 'Unable to clear the conversation.' });
   }
 });
 

@@ -220,6 +220,22 @@
             backdrop-filter: blur(18px);
         }
 
+        .messages-chat-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .messages-chat-panel-head-copy {
+            min-width: 0;
+        }
+
+        .messages-chat-clear {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
         .messages-chat-users-head .card-title,
         .messages-chat-panel-head .card-title {
             color: #111827;
@@ -319,6 +335,7 @@
         }
 
         .messages-chat-user-preview {
+            line-clamp: 2;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -776,8 +793,11 @@
 
                     <section class="messages-chat-panel">
                         <div class="messages-chat-panel-head">
-                            <h3 id="messages-chat-panel-title" class="card-title">Choose a user</h3>
-                            <p id="messages-chat-panel-subtitle">Open a user from the left to see the conversation.</p>
+                            <div class="messages-chat-panel-head-copy">
+                                <h3 id="messages-chat-panel-title" class="card-title">Choose a user</h3>
+                                <p id="messages-chat-panel-subtitle">Open a user from the left to see the conversation.</p>
+                            </div>
+                            <button id="messages-chat-clear" type="button" class="card-btn messages-chat-clear" disabled>Clear conversation</button>
                         </div>
                         <div id="messages-chat-thread" class="messages-chat-thread">
                             <p class="messages-chat-placeholder">No conversation selected yet.</p>
@@ -922,6 +942,7 @@
             const form = document.getElementById('messages-chat-form');
             const input = document.getElementById('messages-chat-input');
             const sendButton = document.getElementById('messages-chat-send');
+            const clearConversationButton = document.getElementById('messages-chat-clear');
             const status = document.getElementById('messages-chat-status');
             const pendingShare = document.getElementById('messages-pending-share');
             const pendingShareTitle = document.getElementById('messages-pending-share-title');
@@ -1184,6 +1205,9 @@
                 if (sendButton) {
                     sendButton.disabled = !nextEnabled;
                 }
+                if (clearConversationButton) {
+                    clearConversationButton.disabled = !nextEnabled;
+                }
             }
 
             async function apiRequest(url, options) {
@@ -1393,6 +1417,39 @@
                 }
             }
 
+            async function clearConversation() {
+                if (!selectedUserId) {
+                    return;
+                }
+
+                const recipientName = selectedUserRecord && selectedUserRecord.name
+                    ? selectedUserRecord.name
+                    : 'this user';
+                const confirmed = window.confirm(`Clear your full conversation with ${recipientName}? This only happens when you choose it.`);
+                if (!confirmed) {
+                    return;
+                }
+
+                setChatStatus('Clearing conversation...', false);
+                setComposerEnabled(false);
+
+                try {
+                    await apiRequest(`/api/messages/conversations/${selectedUserId}`, {
+                        method: 'DELETE'
+                    });
+                    renderConversation([]);
+                    await loadUsers({ preserveSelection: true });
+                    setComposerEnabled(true);
+                    setChatStatus('Conversation cleared.', false);
+                    if (input) {
+                        input.focus();
+                    }
+                } catch (error) {
+                    setComposerEnabled(true);
+                    throw error;
+                }
+            }
+
             function startPolling() {
                 if (pollTimer) {
                     window.clearInterval(pollTimer);
@@ -1431,6 +1488,16 @@
                     if (event.key === 'Enter' && !event.shiftKey) {
                         event.preventDefault();
                         form && form.requestSubmit();
+                    }
+                });
+            }
+
+            if (clearConversationButton) {
+                clearConversationButton.addEventListener('click', async () => {
+                    try {
+                        await clearConversation();
+                    } catch (error) {
+                        setChatStatus(String(error && error.message || 'Unable to clear the conversation.'), true);
                     }
                 });
             }
