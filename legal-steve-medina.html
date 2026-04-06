@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steve Medina - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="Contact page for Steve Medina, CEO of FAST BRIDGE GROUP.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (error) { return {}; } };
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+                if (theme === 'system') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) theme = 'beach';
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+        <section class="legal-hero">
+            <div class="legal-eyebrow">CONTACT US</div>
+            <h1>Steve Medina</h1>
+            <p>Steve Medina serves as the CEO of FAST BRIDGE GROUP and leads company direction, strategic decisions, business growth priorities, and top-level relationship alignment.</p>
+        </section>
+        <nav class="legal-top-links" aria-label="Contact pages">
+            <a href="legal.html#legal-contact-us">Contact Us</a>
+            <a href="legal-steve-medina.html">Steve Medina</a>
+            <a href="legal-isaac-haro.html">Isaac Haro</a>
+            <a href="legal-loria-rigby.html">Loria Rigby</a>
+            <a href="legal-broker-information.html">Broker Information</a>
+        </nav>
+        <section class="legal-grid" aria-label="Steve Medina contact details">
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
+                <h2>CEO oversight</h2>
+                <p class="legal-card-lead">Use this page when the matter relates to leadership review, company direction, business partnerships, escalation-level decisions, or major operational priorities that need executive visibility.</p>
+                <ul class="legal-card-list">
+                    <li>Executive review of major workflow, growth, or platform-direction decisions.</li>
+                    <li>High-level partnership and business-development discussions.</li>
+                    <li>Escalations that need final leadership alignment across teams.</li>
+                </ul>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>When to reach out</h2>
+                <p>Contact Steve Medina when the issue is strategic rather than routine. If the question affects the company at a leadership, partnership, or direction-setting level, this is the right page to start from.</p>
+            </article>
+        </section>
+    </main>
+    <script src="templatemo-glass-admin-script.js"></script>
+</body>
+</html>

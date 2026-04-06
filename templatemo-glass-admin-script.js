@@ -7408,7 +7408,7 @@ function initNavbarDateTime() {
             const sessionsList = document.getElementById('security-sessions-list');
             const sessionsRefresh = document.getElementById('security-sessions-refresh');
 
-            if (!passwordSave || !passwordReset || !enable2fa || !app2fa || !setupKeyInput || !codeInput || !setupButton || !verifyButton || !twoFactorStatus || !sessionsStatus || !sessionsList || !sessionsRefresh) {
+            if (!passwordSave || !passwordReset || !enable2fa || !app2fa || !setupKeyInput || !codeInput || !setupButton || !verifyButton || !twoFactorStatus) {
                 return;
             }
 
@@ -7503,6 +7503,10 @@ function initNavbarDateTime() {
             };
 
             const loadSessions = async () => {
+                if (!sessionsStatus || !sessionsList) {
+                    return;
+                }
+
                 sessionsStatus.textContent = 'Loading active sessions for this account.';
                 sessionsList.innerHTML = '';
                 try {
@@ -7715,13 +7719,17 @@ function initNavbarDateTime() {
                 }
             });
 
-            sessionsRefresh.addEventListener('click', () => {
-                loadSessions();
-            });
+            if (sessionsRefresh) {
+                sessionsRefresh.addEventListener('click', () => {
+                    loadSessions();
+                });
+            }
 
             setPasswordStatus('Use at least 8 characters. Password changes apply immediately to this account.', false);
             loadTwoFactorSettings();
-            loadSessions();
+            if (sessionsStatus && sessionsList) {
+                loadSessions();
+            }
         }
 
         function initNotificationSettingsControls() {
