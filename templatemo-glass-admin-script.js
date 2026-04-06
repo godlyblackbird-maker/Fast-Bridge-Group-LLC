@@ -48,14 +48,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const SUBSCRIPTION_PLAN_KEY = 'subscriptionPlanByUser';
     const CLOSED_DEAL_INLINE_DOCUMENT_MAX_BYTES = 1024 * 1024;
     const LEGAL_FOOTER_LINKS = [
-        { id: 'mls-data-disclaimer', label: 'MLS Data Disclaimer' },
-        { id: 'idx-vow-disclaimer', label: 'IDX/VOW Disclaimer' },
-        { id: 'equal-housing', label: 'Equal Housing' },
-        { id: 'accuracy-liability', label: 'Accuracy & Liability' },
-        { id: 'copyright', label: 'Copyright' },
-        { id: 'privacy-policy', label: 'Privacy Policy' },
-        { id: 'terms-of-use', label: 'Terms of Use' },
-        { id: 'broker-information', label: 'Broker Information' }
+        { href: 'legal-mls-data-disclaimer.html', label: 'MLS Data Disclaimer' },
+        { href: 'legal-idx-vow-disclaimer.html', label: 'IDX/VOW Disclaimer' },
+        { href: 'legal-equal-housing.html', label: 'Equal Housing' },
+        { href: 'legal-accuracy-liability.html', label: 'Accuracy & Liability' },
+        { href: 'legal-copyright.html', label: 'Copyright' },
+        { href: 'legal-privacy-policy.html', label: 'Privacy Policy' },
+        { href: 'legal-terms-of-use.html', label: 'Terms of Use' },
+        { href: 'legal-broker-information.html', label: 'Broker Information' },
+        { href: 'legal-contact-us.html', label: 'Contact Us' }
     ];
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
@@ -416,7 +417,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function buildLegalFooterMarkup() {
         const year = new Date().getFullYear();
         const linksMarkup = LEGAL_FOOTER_LINKS.map((link) => {
-            return `<a class="site-legal-footer-link" href="legal.html#${link.id}">${link.label}</a>`;
+            return `<a class="site-legal-footer-link" href="${link.href}">${link.label}</a>`;
         }).join('<span class="site-legal-footer-separator" aria-hidden="true">|</span>');
 
         return `
