@@ -797,7 +797,7 @@
                                 <h3 id="messages-chat-panel-title" class="card-title">Choose a user</h3>
                                 <p id="messages-chat-panel-subtitle">Open a user from the left to see the conversation.</p>
                             </div>
-                            <button id="messages-chat-clear" type="button" class="card-btn messages-chat-clear" disabled>Clear conversation</button>
+                            <button id="messages-chat-clear" type="button" class="card-btn messages-chat-clear" disabled hidden aria-hidden="true">Clear conversation</button>
                         </div>
                         <div id="messages-chat-thread" class="messages-chat-thread">
                             <p class="messages-chat-placeholder">No conversation selected yet.</p>
@@ -1206,7 +1206,7 @@
                     sendButton.disabled = !nextEnabled;
                 }
                 if (clearConversationButton) {
-                    clearConversationButton.disabled = !nextEnabled;
+                    clearConversationButton.disabled = true;
                 }
             }
 
@@ -1418,36 +1418,7 @@
             }
 
             async function clearConversation() {
-                if (!selectedUserId) {
-                    return;
-                }
-
-                const recipientName = selectedUserRecord && selectedUserRecord.name
-                    ? selectedUserRecord.name
-                    : 'this user';
-                const confirmed = window.confirm(`Clear your full conversation with ${recipientName}? This only happens when you choose it.`);
-                if (!confirmed) {
-                    return;
-                }
-
-                setChatStatus('Clearing conversation...', false);
-                setComposerEnabled(false);
-
-                try {
-                    await apiRequest(`/api/messages/conversations/${selectedUserId}`, {
-                        method: 'DELETE'
-                    });
-                    renderConversation([]);
-                    await loadUsers({ preserveSelection: true });
-                    setComposerEnabled(true);
-                    setChatStatus('Conversation cleared.', false);
-                    if (input) {
-                        input.focus();
-                    }
-                } catch (error) {
-                    setComposerEnabled(true);
-                    throw error;
-                }
+                throw new Error('Conversations cannot be deleted.');
             }
 
             function startPolling() {
@@ -1493,6 +1464,8 @@
             }
 
             if (clearConversationButton) {
+                clearConversationButton.hidden = true;
+                clearConversationButton.setAttribute('aria-hidden', 'true');
                 clearConversationButton.addEventListener('click', async () => {
                     try {
                         await clearConversation();

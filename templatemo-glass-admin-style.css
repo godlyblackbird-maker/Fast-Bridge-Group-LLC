@@ -4607,6 +4607,14 @@ body.sidebar-collapsed .main-content {
     text-align: left;
 }
 
+.deals-page-main .deals-source-badge-row {
+    margin-top: 18px;
+}
+
+.deals-page-main .deals-source-disclaimer {
+    margin-top: -2px;
+}
+
 .search-box {
     position: relative;
 }

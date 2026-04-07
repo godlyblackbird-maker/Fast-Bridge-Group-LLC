@@ -6005,18 +6005,32 @@ function extractAgentNameFromPdfText(lines) {
 }
 
 function extractLaCellFromPdfText(lines) {
-  const labeledValue = extractPdfFieldByLabel(
+  const primaryLabeledValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*la cell\b/i, /^listing agent cell\b/i, /^la mobile\b/i, /^la phone\b/i, /^\d*\.?\s*la direct\b/i],
-    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone|la direct)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*la cell\b/i, /^listing agent cell\b/i, /^la mobile\b/i, /^la phone\b/i],
+    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractPhoneNumber(value))
     }
   );
-  const directPhone = extractPhoneNumber(labeledValue);
+  const directPhone = extractPhoneNumber(primaryLabeledValue);
   if (directPhone) {
     return directPhone;
+  }
+
+  const directLabelValue = extractPdfFieldByLabel(
+    lines,
+    [/^\d*\.?\s*la direct\b/i],
+    /^(?:\d*\.?\s*)?(?:la direct)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 4,
+      validate: (value) => Boolean(extractPhoneNumber(value))
+    }
+  );
+  const directFallbackPhone = extractPhoneNumber(directLabelValue);
+  if (directFallbackPhone) {
+    return directFallbackPhone;
   }
 
   const showContactType = extractPdfFieldByLabel(
@@ -6058,14 +6072,28 @@ function extractLoPhoneFromPdfText(lines) {
 function extractOffersEmailFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i, /^\d*\.?\s*la email\b/i],
-    /^(?:\d*\.?\s*)?(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers|la email)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i],
+    /^(?:\d*\.?\s*)?(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractEmailAddress(value))
     }
   );
-  return extractEmailAddress(labeledValue);
+  const offersEmail = extractEmailAddress(labeledValue);
+  if (offersEmail) {
+    return offersEmail;
+  }
+
+  const laEmailValue = extractPdfFieldByLabel(
+    lines,
+    [/^\d*\.?\s*la email\b/i],
+    /^(?:\d*\.?\s*)?(?:la email)\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 4,
+      validate: (value) => Boolean(extractEmailAddress(value))
+    }
+  );
+  return extractEmailAddress(laEmailValue);
 }
 
 function formatMlsStatusFieldValue(value) {
@@ -8347,20 +8375,10 @@ app.delete('/api/messages/conversations/:userId', async (req, res) => {
       return res.status(404).json({ error: 'Selected user was not found.' });
     }
 
-    const result = await dbRun(
-      `DELETE FROM user_messages
-       WHERE (sender_user_id = ? AND recipient_user_id = ?)
-          OR (sender_user_id = ? AND recipient_user_id = ?)`,
-      [currentUserId, otherUserId, otherUserId, currentUserId]
-    );
-
-    return res.json({
-      success: true,
-      clearedCount: Number(result && result.changes) || 0
-    });
+    return res.status(403).json({ error: 'Conversations cannot be deleted.' });
   } catch (error) {
-    console.error('Clear conversation error:', error);
-    return res.status(500).json({ error: 'Unable to clear the conversation.' });
+    console.error('Clear conversation block error:', error);
+    return res.status(500).json({ error: 'Unable to protect the conversation.' });
   }
 });
 
