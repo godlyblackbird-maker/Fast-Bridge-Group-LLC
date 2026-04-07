@@ -292,6 +292,11 @@ Database persistence behavior after this change:
 - If neither is set, the server falls back to the project-local `database.db`, which is fine for local development but not for restart-safe production hosting.
 - In production, the server now stops on startup if none of `DATABASE_PATH`, `RENDER_DISK_MOUNT_PATH`, `PERSISTENT_STORAGE_PATH`, or `DATA_DIR` is configured.
 
+S3 archive verification behavior after this change:
+- On startup, the server now runs a real S3 archive health check that writes, reads, and deletes a temporary object under `healthchecks/message-archive/`.
+- If that verification fails, the server logs the exact failure reason so you can fix bucket permissions, region mismatches, or endpoint problems.
+- While signed in as an admin, you can also call `/api/admin/storage-status?verify=1` to confirm both SQLite persistence status and live S3 archive access from the running environment.
+
 ⚠️ **IMPORTANT FOR PRODUCTION:**
 - Change `JWT_SECRET` to a long random string
 - Use environment variables for sensitive data

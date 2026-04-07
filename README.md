@@ -24,6 +24,22 @@ PERSISTENT_STORAGE_PATH=/var/data
 DATA_DIR=/var/data
 ```
 
+If you are using message archive recovery, also set your S3-compatible storage variables and verify them after deploy:
+
+```env
+AWS_S3_BUCKET=your-fast-bridge-uploads
+AWS_S3_REGION=us-west-1
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+# Optional for R2/MinIO/other S3-compatible providers:
+# AWS_S3_ENDPOINT=https://your-endpoint.example.com
+# AWS_S3_FORCE_PATH_STYLE=true
+```
+
+Admin runtime verification:
+- The server now runs an S3 archive health check on startup and logs whether put/get/delete verification passed.
+- An admin can also call `/api/admin/storage-status?verify=1` while signed in to confirm both persistent SQLite usage and live S3 archive access.
+
 ### 3️⃣ Open Dashboard
 ```
 http://localhost:3000

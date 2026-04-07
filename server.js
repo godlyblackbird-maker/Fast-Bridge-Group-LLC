@@ -76,6 +76,7 @@ let cachedTwilioClient = null;
 let cachedTwilioClientKey = '';
 let cachedS3Client = null;
 let cachedS3ClientKey = '';
+let latestS3ArchiveHealth = null;
 const USER_MESSAGE_EDIT_WINDOW_MS = 60 * 1000;
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
@@ -2504,6 +2505,116 @@ function getS3Client() {
   }
 
   return cachedS3Client;
+}
+
+function maskS3StorageConfig(config = getS3StorageConfig()) {
+  const endpoint = String(config?.endpoint || '').trim();
+  let endpointHost = '';
+
+  if (endpoint) {
+    try {
+      endpointHost = new URL(endpoint).host;
+    } catch (_error) {
+      endpointHost = endpoint;
+    }
+  }
+
+  return {
+    configured: isS3StorageConfigured(config),
+    region: String(config?.region || '').trim(),
+    bucket: String(config?.bucket || '').trim(),
+    endpointHost,
+    forcePathStyle: Boolean(config?.forcePathStyle),
+    hasAccessKeyId: Boolean(String(config?.accessKeyId || '').trim()),
+    hasSecretAccessKey: Boolean(String(config?.secretAccessKey || '').trim())
+  };
+}
+
+async function verifyS3ArchiveStorage() {
+  const startedAt = new Date().toISOString();
+  const s3Config = getS3StorageConfig();
+  const maskedConfig = maskS3StorageConfig(s3Config);
+  const s3Client = getS3Client();
+
+  if (!s3Client || !isS3StorageConfigured(s3Config)) {
+    const result = {
+      ok: false,
+      checkedAt: startedAt,
+      reason: 'S3 archive storage is not fully configured.',
+      config: maskedConfig
+    };
+    latestS3ArchiveHealth = result;
+    return result;
+  }
+
+  const healthKey = `healthchecks/message-archive/${Date.now()}-${crypto.randomUUID()}.json`;
+  const payload = {
+    scope: 'message-archive-healthcheck',
+    checkedAt: startedAt,
+    source: 'server-startup-or-admin-check'
+  };
+
+  try {
+    await s3Client.send(new PutObjectCommand({
+      Bucket: s3Config.bucket,
+      Key: healthKey,
+      Body: Buffer.from(JSON.stringify(payload), 'utf8'),
+      ContentType: 'application/json; charset=utf-8'
+    }));
+
+    const storedText = await readS3ObjectText(healthKey);
+    let parsed = null;
+    try {
+      parsed = storedText ? JSON.parse(storedText) : null;
+    } catch (_error) {
+      parsed = null;
+    }
+
+    if (!parsed || parsed.scope !== payload.scope) {
+      throw new Error('S3 health check object could not be read back correctly.');
+    }
+
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: s3Config.bucket,
+      Key: healthKey
+    }));
+
+    const result = {
+      ok: true,
+      checkedAt: startedAt,
+      reason: 'S3 archive storage passed put/get/delete verification.',
+      config: maskedConfig,
+      keyPrefix: 'healthchecks/message-archive/'
+    };
+    latestS3ArchiveHealth = result;
+    return result;
+  } catch (error) {
+    const result = {
+      ok: false,
+      checkedAt: startedAt,
+      reason: error && error.message ? error.message : 'S3 archive verification failed.',
+      config: maskedConfig,
+      keyPrefix: 'healthchecks/message-archive/'
+    };
+    latestS3ArchiveHealth = result;
+    return result;
+  }
+}
+
+async function runS3ArchiveStartupHealthCheck() {
+  const config = getS3StorageConfig();
+  if (!isS3StorageConfigured(config)) {
+    console.warn('S3 archive storage is not configured. Message archive recovery will stay disabled until AWS_S3_BUCKET and AWS_S3_REGION are set.');
+    return;
+  }
+
+  const result = await verifyS3ArchiveStorage();
+  if (result.ok) {
+    console.log(`S3 archive storage verified for bucket ${result.config.bucket} in ${result.config.region}.`);
+    return;
+  }
+
+  console.error('S3 archive storage check failed:', result.reason);
 }
 
 function buildUserMessageArchiveKey(messageLike) {
@@ -5664,6 +5775,47 @@ function requireAdmin(req, res) {
 
   return decoded;
 }
+
+app.get('/api/admin/storage-status', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const shouldVerify = /^(1|true|yes)$/i.test(String(req.query?.verify || '').trim());
+  const databasePath = path.resolve(DATABASE_FILE_PATH);
+  const usingFallbackDatabase = isUsingFallbackDatabasePath(DATABASE_FILE_PATH);
+  const persistentDatabaseConfigured = !usingFallbackDatabase;
+  const s3ConfigSummary = maskS3StorageConfig();
+
+  try {
+    const s3Archive = shouldVerify
+      ? await verifyS3ArchiveStorage()
+      : (latestS3ArchiveHealth || {
+          ok: false,
+          checkedAt: null,
+          reason: s3ConfigSummary.configured
+            ? 'S3 archive verification has not been run yet. Call this endpoint with ?verify=1.'
+            : 'S3 archive storage is not fully configured.',
+          config: s3ConfigSummary
+        });
+
+    return res.json({
+      success: true,
+      database: {
+        path: databasePath,
+        persistent: persistentDatabaseConfigured,
+        usingFallbackAppFile: usingFallbackDatabase,
+        production: isProductionEnvironment()
+      },
+      s3Archive
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: error && error.message ? error.message : 'Unable to load storage status.'
+    });
+  }
+});
 
 function normalizeApiTimestamp(value) {
   if (value === null || value === undefined) {
@@ -9991,6 +10143,10 @@ app.listen(PORT, () => {
 ║                  Running on port ${PORT}                      ║
 ╚════════════════════════════════════════════════════════════╝
   `);
+
+  runS3ArchiveStartupHealthCheck().catch((error) => {
+    console.error('S3 archive startup verification crashed:', error);
+  });
 });
 
 // Handle graceful shutdown
