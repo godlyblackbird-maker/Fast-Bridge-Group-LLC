@@ -5964,6 +5964,88 @@ function extractLaNameFromLine(line) {
   return isLikelyPersonName(candidate) ? candidate : '';
 }
 
+function isAgentOfficeContactPriorityBoundary(line) {
+  const normalizedLine = String(line || '').trim();
+  if (!normalizedLine) {
+    return false;
+  }
+
+  return /^(?:COMPARABLE INFORMATION|AGENT FULL\b|PUBLIC REMARKS\b|SHOWING INFORMATION\b|ROOM INFO\b|LISTING\b|EXTERIOR\b|INTERIOR\b|PROPERTY INFORMATION\b)/i.test(normalizedLine)
+    || /\bPrinted by\b/i.test(normalizedLine);
+}
+
+function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtractor) {
+  const normalizedLines = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+    : [];
+  if (normalizedLines.length === 0) {
+    return '';
+  }
+
+  const headerIndex = normalizedLines.findIndex((line) => /agent\s*\/\s*office\s+contact\s+priority/i.test(line));
+  if (headerIndex < 0) {
+    return '';
+  }
+
+  const labelSet = new Set(
+    (Array.isArray(expectedLabels) ? expectedLabels : [])
+      .map((label) => String(label || '').replace(/[^a-z0-9]+/gi, '').toLowerCase())
+      .filter(Boolean)
+  );
+  if (labelSet.size === 0) {
+    return '';
+  }
+
+  const extractValue = typeof valueExtractor === 'function'
+    ? valueExtractor
+    : (value) => String(value || '').trim();
+
+  const endIndex = Math.min(normalizedLines.length, headerIndex + 24);
+  for (let index = headerIndex + 1; index < endIndex; index += 1) {
+    const line = normalizedLines[index];
+    if (isAgentOfficeContactPriorityBoundary(line)) {
+      break;
+    }
+
+    const labelMatch = line.match(/^(?:\d+\.?\s*)?(co\s*la|la)\s*([a-z\s-]+?)\s*[:#-]?\s*(.*)$/i);
+    if (!labelMatch) {
+      continue;
+    }
+
+    const role = String(labelMatch[1] || '').replace(/\s+/g, '').toLowerCase();
+    if (role !== 'la') {
+      continue;
+    }
+
+    const normalizedLabel = String(labelMatch[2] || '').replace(/[^a-z0-9]+/gi, '').toLowerCase();
+    if (!labelSet.has(normalizedLabel)) {
+      continue;
+    }
+
+    const inlineValue = extractValue(labelMatch[3]);
+    if (inlineValue) {
+      return inlineValue;
+    }
+
+    for (let offset = 1; offset <= 2; offset += 1) {
+      const nextLine = String(normalizedLines[index + offset] || '').trim();
+      if (!nextLine || isAgentOfficeContactPriorityBoundary(nextLine)) {
+        break;
+      }
+      if (/^(?:\d+\.?\s*)?(?:co\s*la|la)\s*[a-z\s-]+?\s*[:#-]?/i.test(nextLine)) {
+        break;
+      }
+
+      const nextValue = extractValue(nextLine);
+      if (nextValue) {
+        return nextValue;
+      }
+    }
+  }
+
+  return '';
+}
+
 function extractAgentNameFromPdfText(lines) {
   const normalizedLines = Array.isArray(lines)
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
@@ -6007,8 +6089,8 @@ function extractAgentNameFromPdfText(lines) {
 function extractLaCellFromPdfText(lines) {
   const primaryLabeledValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*la cell\b/i, /^listing agent cell\b/i, /^la mobile\b/i, /^la phone\b/i],
-    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*la\s*cell\b/i, /^listing agent cell\b/i, /^la\s*mobile\b/i, /^la\s*phone\b/i],
+    /^(?:\d*\.?\s*)?(?:la\s*cell|listing agent cell|la\s*mobile|la\s*phone)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractPhoneNumber(value))
@@ -6021,8 +6103,8 @@ function extractLaCellFromPdfText(lines) {
 
   const directLabelValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*la direct\b/i],
-    /^(?:\d*\.?\s*)?(?:la direct)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*la\s*direct\b/i],
+    /^(?:\d*\.?\s*)?(?:la\s*direct)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractPhoneNumber(value))
@@ -6031,6 +6113,15 @@ function extractLaCellFromPdfText(lines) {
   const directFallbackPhone = extractPhoneNumber(directLabelValue);
   if (directFallbackPhone) {
     return directFallbackPhone;
+  }
+
+  const contactPriorityPhone = extractAgentOfficeContactPriorityValue(
+    lines,
+    ['cell', 'mobile', 'phone', 'direct', 'text', 'home'],
+    (value) => extractPhoneNumber(value)
+  );
+  if (contactPriorityPhone) {
+    return contactPriorityPhone;
   }
 
   const showContactType = extractPdfFieldByLabel(
@@ -6072,8 +6163,8 @@ function extractLoPhoneFromPdfText(lines) {
 function extractOffersEmailFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i],
-    /^(?:\d*\.?\s*)?(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*offers?\s*e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i],
+    /^(?:\d*\.?\s*)?(?:offers?\s*e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractEmailAddress(value))
@@ -6086,14 +6177,19 @@ function extractOffersEmailFromPdfText(lines) {
 
   const laEmailValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*la email\b/i],
-    /^(?:\d*\.?\s*)?(?:la email)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*la\s*e-?mail\b/i],
+    /^(?:\d*\.?\s*)?(?:la\s*e-?mail)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractEmailAddress(value))
     }
   );
-  return extractEmailAddress(laEmailValue);
+  const laEmail = extractEmailAddress(laEmailValue);
+  if (laEmail) {
+    return laEmail;
+  }
+
+  return extractAgentOfficeContactPriorityValue(lines, ['email'], (value) => extractEmailAddress(value));
 }
 
 function formatMlsStatusFieldValue(value) {
