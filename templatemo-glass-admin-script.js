@@ -85,6 +85,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         acquired: 'acquired',
         '100-closed-deal': 'acquired',
         'closed-deal': 'acquired',
+        'offer-accepted': 'offer-accepted',
+        '80-offer-accepted': 'offer-accepted',
         'in-negotiations': 'in-negotiations',
         '60-in-negotiations': 'in-negotiations',
         'contract-submitted': 'contract-submitted',
@@ -3811,6 +3813,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function formatAgentStatusLabel(value) {
         const labels = {
             acquired: '100% - Closed Deal',
+            'offer-accepted': '80% - Offer Accepted',
             'in-negotiations': '60% - In Negotiations',
             'contract-submitted': '50% - Contract Submitted',
             'back-up': '30% - Back Up',
@@ -3830,6 +3833,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     const AGENT_STATUS_OPTIONS = [
         { value: 'acquired', label: '100% - Closed Deal' },
+        { value: 'offer-accepted', label: '80% - Offer Accepted' },
         { value: 'in-negotiations', label: '60% - In Negotiations' },
         { value: 'contract-submitted', label: '50% - Contract Submitted' },
         { value: 'back-up', label: '30% - Back Up' },
