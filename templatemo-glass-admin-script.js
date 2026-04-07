@@ -1621,6 +1621,94 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     const propertyAssignmentsReady = fetchPropertyAssignmentsFromServer().catch(() => getGlobalObject(PROPERTY_ASSIGNMENTS_KEY));
 
+    function getDashboardAuthToken() {
+        return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    }
+
+    async function syncAgentPropertyMemoryToServer(detailLike, options) {
+        const config = options && typeof options === 'object' ? options : {};
+        const propertyDetail = detailLike && typeof detailLike === 'object' ? { ...detailLike } : null;
+        const propertyKey = makePropertyStorageKey(config.propertyKey || propertyDetail?.address || propertyDetail?.propertyAddress);
+        const token = getDashboardAuthToken();
+
+        if (!propertyKey || !token) {
+            return null;
+        }
+
+        const agentRecord = propertyDetail && propertyDetail.agentRecord && typeof propertyDetail.agentRecord === 'object'
+            ? propertyDetail.agentRecord
+            : {};
+        const hasAgentIdentity = Boolean(
+            String(agentRecord.name || '').trim()
+            || String(agentRecord.email || '').trim()
+            || String(agentRecord.phone || '').trim()
+            || String(agentRecord.brokerage || '').trim()
+        );
+        const ownerUser = mergeUserIdentityRecords(getWorkspaceUserContext(), getStoredCurrentUserIdentity());
+
+        const response = await fetch('/api/agent-property-memory', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                propertyKey,
+                detail: hasAgentIdentity ? propertyDetail : null,
+                ownerUser
+            })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(String(payload && payload.error || 'Unable to sync the cloud property memory.'));
+        }
+
+        if (config.broadcast !== false) {
+            window.dispatchEvent(new CustomEvent('agent-property-memory-updated', {
+                detail: {
+                    propertyKey,
+                    cleared: Boolean(payload && payload.cleared)
+                }
+            }));
+        }
+
+        return payload && (payload.item || payload);
+    }
+
+    async function fetchAgentPropertyMemoryFromServer(filters) {
+        const token = getDashboardAuthToken();
+        if (!token) {
+            throw new Error('Sign in again to load cloud property memory.');
+        }
+
+        const filterState = filters && typeof filters === 'object' ? filters : {};
+        const params = new URLSearchParams();
+        if (String(filterState.search || '').trim()) {
+            params.set('search', String(filterState.search || '').trim());
+        }
+        if (String(filterState.agent || '').trim()) {
+            params.set('agent', String(filterState.agent || '').trim());
+        }
+        if (String(filterState.status || '').trim()) {
+            params.set('status', String(filterState.status || '').trim());
+        }
+        params.set('limit', String(Number.parseInt(filterState.limit, 10) || 100));
+
+        const response = await fetch(`/api/agent-property-memory?${params.toString()}`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(String(payload && payload.error || 'Unable to load cloud property memory.'));
+        }
+
+        return payload;
+    }
+
     function persistSelectedPropertyDetail(detail) {
         const serializedDetail = JSON.stringify(detail && typeof detail === 'object' ? detail : null);
         let stored = false;
@@ -3835,7 +3923,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function formatAgentStatusLabel(value) {
         const labels = {
             acquired: '100% - Closed Deal',
-            'offer-accepted': '80% - Offer Accepted',
             'in-negotiations': '60% - In Negotiations',
             'contract-submitted': '50% - Contract Submitted',
             'back-up': '30% - Back Up',
@@ -3855,7 +3942,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     const AGENT_STATUS_OPTIONS = [
         { value: 'acquired', label: '100% - Closed Deal' },
-        { value: 'offer-accepted', label: '80% - Offer Accepted' },
         { value: 'in-negotiations', label: '60% - In Negotiations' },
         { value: 'contract-submitted', label: '50% - Contract Submitted' },
         { value: 'back-up', label: '30% - Back Up' },
@@ -4459,561 +4545,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         return candidates.find((candidate) => candidate && typeof candidate === 'object') || null;
-    }
-
-    function initOffersAcceptedWidget() {
-        const offersAcceptedList = document.getElementById('dashboard-offers-accepted-list');
-        if (!offersAcceptedList) {
-            return;
-        }
-
-        const backfillResult = backfillAcceptedOfferWorkspace();
-        const resyncButton = document.getElementById('offers-accepted-resync-btn');
-        const searchFilter = document.getElementById('offers-accepted-search-filter');
-        const scopeFilter = document.getElementById('offers-accepted-scope-filter');
-        const statusFilter = document.getElementById('offers-accepted-status-filter');
-
-        function hydrateStatusFilterOptions() {
-            if (!statusFilter) {
-                return;
-            }
-
-            const rawSelectedValue = String(statusFilter.value || 'offer-accepted').trim().toLowerCase();
-            const selectedValue = rawSelectedValue === 'all-statuses'
-                ? 'all-statuses'
-                : normalizeAgentStatusValue(rawSelectedValue || 'offer-accepted');
-            const staticOptions = [
-                { value: 'offer-accepted', label: formatAgentStatusLabel('offer-accepted') },
-                { value: 'all-statuses', label: 'All Agent Statuses' }
-            ];
-
-            statusFilter.innerHTML = '';
-            staticOptions.forEach((optionConfig) => {
-                const option = document.createElement('option');
-                option.value = optionConfig.value;
-                option.textContent = optionConfig.label;
-                statusFilter.appendChild(option);
-            });
-
-            AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
-                if (!optionConfig || optionConfig.value === 'offer-accepted') {
-                    return;
-                }
-
-                const option = document.createElement('option');
-                option.value = optionConfig.value;
-                option.textContent = optionConfig.label;
-                statusFilter.appendChild(option);
-            });
-
-            const hasSelectedOption = Array.from(statusFilter.options).some((option) => option.value === selectedValue);
-            statusFilter.value = hasSelectedOption ? selectedValue : 'offer-accepted';
-        }
-
-        hydrateStatusFilterOptions();
-
-        function buildStaleAcceptedAlertSnapshot(items, workspaceUser) {
-            const staleItems = Array.isArray(items)
-                ? items.filter((item) => item.needsFollowUp && (item.assignedToWorkspace || item.sourceInWorkspace))
-                : [];
-            const snapshot = staleItems
-                .map((item) => `${item.propertyKey}:${item.acceptedAt}`)
-                .sort()
-                .join('|');
-
-            return `${String(workspaceUser?.key || '').trim()}::${snapshot}`;
-        }
-
-        function maybeShowStaleAcceptedToast(allAcceptedItems, workspaceUser) {
-            const staleItems = Array.isArray(allAcceptedItems)
-                ? allAcceptedItems.filter((item) => item.needsFollowUp && (item.assignedToWorkspace || item.sourceInWorkspace))
-                : [];
-
-            if (!staleItems.length) {
-                return;
-            }
-
-            const nextSnapshot = buildStaleAcceptedAlertSnapshot(staleItems, workspaceUser);
-            let previousSnapshot = '';
-
-            try {
-                previousSnapshot = String(sessionStorage.getItem(ACCEPTED_OFFER_STALE_ALERT_SESSION_KEY) || '');
-            } catch (error) {
-                previousSnapshot = '';
-            }
-
-            if (previousSnapshot === nextSnapshot) {
-                return;
-            }
-
-            try {
-                sessionStorage.setItem(ACCEPTED_OFFER_STALE_ALERT_SESSION_KEY, nextSnapshot);
-            } catch (error) {
-                // Ignore session storage failures and still surface the alert once.
-            }
-
-            const oldestAcceptedAt = staleItems
-                .map((item) => Number(item.acceptedAt) || 0)
-                .filter((value) => value > 0)
-                .sort((left, right) => left - right)[0] || 0;
-
-            showDashboardToast('warning', 'Accepted Offers Need Follow-Up', `${staleItems.length} accepted ${staleItems.length === 1 ? 'property has' : 'properties have'} been sitting for ${ACCEPTED_OFFER_FOLLOW_UP_DAYS}+ days without a newer accepted update.`, {
-                persist: false,
-                playSound: false,
-                meta: oldestAcceptedAt > 0 ? `Oldest accepted ${new Date(oldestAcceptedAt).toLocaleDateString()}` : '',
-                items: staleItems.slice(0, 3).map((item) => ({
-                    label: item.propertyAddress,
-                    meta: item.acceptedAt > 0 ? new Date(item.acceptedAt).toLocaleDateString() : 'Accepted date unavailable'
-                }))
-            });
-        }
-
-        const emailPrepRecipientNameInput = document.getElementById('agent-workspace-recipient-name');
-        const emailPrepRecipientEmailInput = document.getElementById('agent-workspace-recipient-email');
-        const emailPrepCard = document.querySelector('[data-widget-id="agent-email-prep"]');
-        const canShareToEmailPrep = Boolean(emailPrepRecipientNameInput && emailPrepRecipientEmailInput && emailPrepCard);
-
-        function openAcceptedProperty(snapshot, propertyAddress, statusValue) {
-            const payload = withPropertyDetailOrigin(buildDashboardPropertyDetailFallback(propertyAddress, statusValue, snapshot), 'deals');
-            persistSelectedPropertyDetail(payload);
-            window.location.href = 'property-details.html';
-        }
-
-        async function updateAcceptedItemStatus(item, nextStatusValue) {
-
-            const workspaceUser = getWorkspaceUserContext();
-            const normalizedStatus = normalizeAgentStatusValue(nextStatusValue || 'none');
-            const propertyKey = makePropertyStorageKey(item && (item.propertyKey || item.propertyAddress));
-            const previousStatus = normalizeAgentStatusValue(item && item.statusValue || 'none');
-
-            if (!propertyKey) {
-                throw new Error('This property is missing a saved address key.');
-            }
-
-            const currentAssignment = getPropertyAssignmentRecord(propertyKey);
-            const assignmentRecord = item && item.assignmentRecord && typeof item.assignmentRecord === 'object'
-                ? item.assignmentRecord
-                : currentAssignment;
-            const assignedUser = assignmentRecord && assignmentRecord.assignedTo && typeof assignmentRecord.assignedTo === 'object'
-                ? assignmentRecord.assignedTo
-                : null;
-            const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
-            const snapshot = item && item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
-            const propertyAddress = String(snapshot.address || snapshot.propertyAddress || item.propertyAddress || 'Property').trim() || 'Property';
-            const nextDetail = {
-                ...snapshot,
-                address: propertyAddress,
-                propertyAddress,
-                piqAgentStatus: normalizedStatus,
-                agentRecord: {
-                    ...(snapshot.agentRecord && typeof snapshot.agentRecord === 'object' ? snapshot.agentRecord : {}),
-                    agentStatus: formatAgentStatusLabel(normalizedStatus)
-                }
-            };
-            syncAcceptedOfferTimestamp(nextDetail, normalizedStatus, previousStatus);
-
-            if (assignmentRecord) {
-                nextDetail.propertyAssignment = {
-                    assignedTo: assignmentRecord.assignedTo,
-                    assignedBy: assignmentRecord.assignedBy,
-                    assignedAt: assignmentRecord.assignedAt
-                };
-            }
-
-            setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, workspaceUser, propertyKey, normalizedStatus, { silent: true });
-
-            if (!usersMatch(activeSessionUser, workspaceUser)) {
-                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, activeSessionUser, propertyKey, normalizedStatus, { silent: true });
-            }
-
-            if (assignedUser && !usersMatch(assignedUser, workspaceUser)) {
-                setUserScopedPropertyStatus(PIQ_AGENT_STATUS_KEY, assignedUser, propertyKey, normalizedStatus, { silent: true });
-            }
-
-            if (assignmentRecord && typeof assignmentRecord === 'object') {
-                const snapshotBase = { ...nextDetail };
-                delete snapshotBase.propertyAssignment;
-
-                const nextAssignmentRecord = {
-                    ...assignmentRecord,
-                    propertySnapshot: {
-                        ...snapshotBase,
-                        propertyAssignment: {
-                            assignedTo: assignmentRecord.assignedTo,
-                            assignedBy: assignmentRecord.assignedBy,
-                            assignedAt: assignmentRecord.assignedAt
-                        }
-                    }
-                };
-
-                try {
-                    await setPropertyAssignmentRecord(propertyKey, nextAssignmentRecord);
-                } catch (error) {
-                    // Keep local status changes even if remote assignment sync fails.
-                }
-            }
-
-            ensurePropertyWorkspaceSnapshot(nextDetail, workspaceUser);
-
-            if (assignedUser && !usersMatch(assignedUser, workspaceUser)) {
-                ensurePropertyWorkspaceSnapshot(nextDetail, assignedUser);
-            }
-
-            if (!usersMatch(activeSessionUser, workspaceUser) && !usersMatch(activeSessionUser, assignedUser || {})) {
-                ensurePropertyWorkspaceSnapshot(nextDetail, activeSessionUser);
-            }
-
-            const selectedPropertyDetail = getPersistedSelectedPropertyDetail();
-            const selectedPropertyKey = makePropertyStorageKey(selectedPropertyDetail && (selectedPropertyDetail.address || selectedPropertyDetail.propertyAddress));
-            if (selectedPropertyKey && selectedPropertyKey === propertyKey) {
-                persistSelectedPropertyDetail(buildDashboardPropertyDetailFallback(propertyAddress, normalizedStatus, nextDetail));
-            }
-
-            window.dispatchEvent(new CustomEvent('property-assignment-updated', {
-                detail: {
-                    propertyKey
-                }
-            }));
-            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
-
-            return {
-                propertyAddress,
-                normalizedStatus
-            };
-        }
-
-        function getFilteredAcceptedItems(items) {
-            const acceptedItems = Array.isArray(items) ? [...items] : [];
-            const searchValue = String(searchFilter?.value || '').trim().toLowerCase();
-            const scopeValue = String(scopeFilter?.value || 'assigned-to-me').trim().toLowerCase();
-            const statusValue = String(statusFilter?.value || 'offer-accepted').trim().toLowerCase();
-
-            const scopedItems = acceptedItems.filter((item) => {
-                if (scopeValue === 'mine-only') {
-                    return Boolean(item.sourceInWorkspace);
-                }
-
-                if (scopeValue === 'assigned-to-me') {
-                    return Boolean(item.assignedToWorkspace || item.sourceInWorkspace);
-                }
-
-                if (scopeValue === 'assigned-to-other-users') {
-                    return Boolean(item.assignedToOtherUser);
-                }
-
-                if (scopeValue === 'all-assigned') {
-                    return Boolean(item.assignedToWorkspace || item.assignedToOtherUser);
-                }
-
-                if (scopeValue === 'all-visible') {
-                    return true;
-                }
-
-                return Boolean(item.assignedToWorkspace || item.sourceInWorkspace);
-            });
-
-            const statusItems = statusValue === 'all-statuses'
-                ? scopedItems
-                : scopedItems.filter((item) => normalizeAgentStatusValue(item.statusValue || 'none') === statusValue);
-
-            const searchedItems = searchValue
-                ? statusItems.filter((item) => {
-                    const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
-                    const assignedLabel = item.assignmentRecord
-                        ? buildAssignedByLabel(item.assignmentRecord)
-                        : '';
-                    const haystack = [
-                        item.propertyAddress,
-                        snapshot.marketInfo,
-                        snapshot.location,
-                        snapshot.areaLabel,
-                        snapshot.city,
-                        snapshot.zip,
-                        snapshot.listPrice,
-                        formatAgentStatusLabel(item.statusValue),
-                        assignedLabel
-                    ].join(' ').toLowerCase();
-                    return haystack.includes(searchValue);
-                })
-                : statusItems;
-
-            return searchedItems;
-        }
-
-        function render() {
-            const workspaceUser = getWorkspaceUserContext();
-            const allAcceptedItems = getAcceptedOfferItemsForWorkspace(workspaceUser);
-            const acceptedItems = getFilteredAcceptedItems(allAcceptedItems);
-
-            offersAcceptedList.innerHTML = '';
-
-            if (!acceptedItems.length) {
-                offersAcceptedList.innerHTML = '<p class="outreach-empty">No properties match these filters.</p>';
-                return;
-            }
-
-            acceptedItems.forEach((item) => {
-                const card = document.createElement('article');
-                card.className = 'agent-note-link agent-note-link-card';
-
-                const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
-                const acceptedTime = item.acceptedAt > 0
-                    ? new Date(item.acceptedAt).toLocaleDateString()
-                    : 'Recently updated';
-                const statusLabel = formatAgentStatusLabel(item.statusValue);
-                const locationLabel = String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '-').trim() || '-';
-                const priceLabel = String(snapshot.listPrice || '$0').trim() || '$0';
-                const assignedLabel = item.assignmentRecord
-                    ? buildAssignedByLabel(item.assignmentRecord)
-                    : 'Use house icon for property details';
-                const followUpLabel = item.needsFollowUp ? 'Needs follow-up' : '';
-
-                const head = document.createElement('div');
-                head.className = 'agent-note-link-head';
-
-                const acceptedLabel = document.createElement('span');
-                acceptedLabel.className = 'agent-note-link-agent';
-                acceptedLabel.textContent = statusLabel;
-
-                if (item.needsFollowUp) {
-                    const staleBadge = document.createElement('span');
-                    staleBadge.className = 'agent-note-stale-badge';
-                    staleBadge.textContent = `${ACCEPTED_OFFER_FOLLOW_UP_DAYS}+ days stale`;
-                    head.appendChild(staleBadge);
-                }
-
-                const timeText = document.createElement('span');
-                timeText.className = 'agent-note-link-time';
-                timeText.textContent = acceptedTime;
-
-                const addressText = document.createElement('p');
-                addressText.className = 'agent-note-link-address';
-                addressText.textContent = item.propertyAddress;
-
-                const statusText = document.createElement('p');
-                statusText.className = 'agent-note-link-status';
-                statusText.textContent = `Agent Status: ${statusLabel}`;
-
-                const bodyText = document.createElement('p');
-                bodyText.className = 'agent-note-link-body';
-                bodyText.textContent = [locationLabel, priceLabel, assignedLabel, followUpLabel].filter(Boolean).join(' • ');
-
-                const actions = document.createElement('div');
-                actions.className = 'agent-note-link-actions';
-
-                const statusEditButton = document.createElement('button');
-                statusEditButton.type = 'button';
-                statusEditButton.className = 'agent-note-share-btn agent-note-status-btn';
-                statusEditButton.setAttribute('aria-label', `Change agent status for ${item.propertyAddress}`);
-                statusEditButton.title = 'Change agent status';
-                statusEditButton.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 20h9"></path>
-                        <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                    </svg>
-                `;
-
-                const statusEditor = document.createElement('div');
-                statusEditor.className = 'agent-note-status-editor';
-                statusEditor.hidden = true;
-
-                const statusSelect = document.createElement('select');
-                statusSelect.className = 'form-input agent-note-status-select';
-                AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
-                    const option = document.createElement('option');
-                    option.value = optionConfig.value;
-                    option.textContent = optionConfig.label;
-                    statusSelect.appendChild(option);
-                });
-                statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'none');
-
-                const statusSaveButton = document.createElement('button');
-                statusSaveButton.type = 'button';
-                statusSaveButton.className = 'card-btn active';
-                statusSaveButton.textContent = 'Save';
-
-                const statusCancelButton = document.createElement('button');
-                statusCancelButton.type = 'button';
-                statusCancelButton.className = 'card-btn';
-                statusCancelButton.textContent = 'Cancel';
-
-                statusEditor.appendChild(statusSelect);
-                statusEditor.appendChild(statusSaveButton);
-                statusEditor.appendChild(statusCancelButton);
-
-                const propertyButton = document.createElement('button');
-                propertyButton.type = 'button';
-                propertyButton.className = 'agent-note-share-btn agent-note-property-btn';
-                propertyButton.setAttribute('aria-label', `Open property details for ${item.propertyAddress}`);
-                propertyButton.title = 'Open property details';
-                propertyButton.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M3 10.5 12 3l9 7.5"></path>
-                        <path d="M5.25 9.75V21h13.5V9.75"></path>
-                        <path d="M9.75 21v-6h4.5v6"></path>
-                    </svg>
-                `;
-
-                head.appendChild(acceptedLabel);
-                head.appendChild(timeText);
-
-                if (canShareToEmailPrep) {
-                    const shareButton = document.createElement('button');
-                    shareButton.type = 'button';
-                    shareButton.className = 'agent-note-share-btn';
-                    shareButton.setAttribute('aria-label', `Load ${item.propertyAddress} agent into Email Prep`);
-                    shareButton.title = 'Load agent into Email Prep';
-                    shareButton.innerHTML = `
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
-                            <path d="m4 7 8 6 8-6"></path>
-                        </svg>
-                    `;
-
-                    shareButton.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-
-                        const agentRecord = snapshot.agentRecord && typeof snapshot.agentRecord === 'object'
-                            ? snapshot.agentRecord
-                            : {};
-                        const recipientName = String(agentRecord.name || '').trim();
-                        const recipientEmail = String(agentRecord.email || '').trim();
-
-                        if (!recipientName && !recipientEmail) {
-                            showDashboardToast('error', 'Agent Missing', 'This accepted property does not have an agent name or email to send into Email Prep.');
-                            return;
-                        }
-
-                        window.dispatchEvent(new CustomEvent('agent-workspace-email-prefill', {
-                            detail: {
-                                recipientName,
-                                recipientEmail,
-                                propertyAddress: item.propertyAddress
-                            }
-                        }));
-                    });
-
-                    head.appendChild(shareButton);
-                }
-
-                const toggleStatusEditor = (isOpen) => {
-                    statusEditor.hidden = !isOpen;
-                    statusEditButton.classList.toggle('is-active', isOpen);
-                    if (isOpen) {
-                        statusSelect.focus();
-                    }
-                };
-
-                statusEditButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleStatusEditor(statusEditor.hidden);
-                });
-
-                statusCancelButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    statusSelect.value = normalizeAgentStatusValue(item.statusValue || 'none');
-                    toggleStatusEditor(false);
-                });
-
-                statusSaveButton.addEventListener('click', async (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-
-                    const nextStatus = normalizeAgentStatusValue(statusSelect.value || 'none');
-                    if (nextStatus === normalizeAgentStatusValue(item.statusValue || 'none')) {
-                        toggleStatusEditor(false);
-                        return;
-                    }
-
-                    statusSaveButton.disabled = true;
-                    statusCancelButton.disabled = true;
-                    statusSelect.disabled = true;
-
-                    try {
-                        const result = await updateAcceptedItemStatus(item, nextStatus);
-                        showDashboardToast('success', 'Agent Status Updated', result.normalizedStatus === 'offer-accepted'
-                            ? `${result.propertyAddress} stayed in the accepted-offer workspace.`
-                            : `${result.propertyAddress} moved to ${formatAgentStatusLabel(result.normalizedStatus)}.`);
-                    } catch (error) {
-                        showDashboardToast('error', 'Status Update Failed', error && error.message ? error.message : 'The agent status could not be updated from Agent Workspace.');
-                    } finally {
-                        statusSaveButton.disabled = false;
-                        statusCancelButton.disabled = false;
-                        statusSelect.disabled = false;
-                    }
-                });
-
-                propertyButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    openAcceptedProperty(snapshot, item.propertyAddress, item.statusValue);
-                });
-
-                actions.appendChild(statusEditButton);
-                actions.appendChild(propertyButton);
-                actions.appendChild(statusEditor);
-
-                card.appendChild(head);
-                card.appendChild(addressText);
-                card.appendChild(statusText);
-                card.appendChild(bodyText);
-                card.appendChild(actions);
-
-                offersAcceptedList.appendChild(card);
-            });
-
-            maybeShowStaleAcceptedToast(allAcceptedItems, workspaceUser);
-        }
-
-        if (scopeFilter) {
-            scopeFilter.addEventListener('change', render);
-        }
-
-        if (searchFilter) {
-            searchFilter.addEventListener('input', render);
-        }
-
-        if (statusFilter) {
-            statusFilter.addEventListener('change', render);
-        }
-
-
-        if (resyncButton) {
-            const workspaceUser = getWorkspaceUserContext();
-            const isAdminUser = String(workspaceUser.role || '').trim().toLowerCase() === 'admin';
-            resyncButton.hidden = !isAdminUser;
-
-            if (isAdminUser) {
-                resyncButton.addEventListener('click', () => {
-                    resyncButton.disabled = true;
-
-                    try {
-                        const manualBackfillResult = backfillAcceptedOfferWorkspace(workspaceUser, { force: true });
-                        render();
-                        window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
-                        showDashboardToast('success', 'Accepted Offers Resynced', manualBackfillResult.restoredCount > 0
-                            ? `${manualBackfillResult.restoredCount} accepted ${manualBackfillResult.restoredCount === 1 ? 'property was' : 'properties were'} synced into Agent Workspace.`
-                            : 'No missing accepted properties were found during the resync.');
-                    } finally {
-                        resyncButton.disabled = false;
-                    }
-                });
-            }
-        }
-        render();
-        window.addEventListener('storage', render);
-        window.addEventListener('dashboard-data-updated', render);
-        window.addEventListener('property-assignment-updated', render);
-        if (backfillResult.didRun && backfillResult.restoredCount > 0) {
-            showDashboardToast('success', 'Accepted Offers Restored', `${backfillResult.restoredCount} accepted ${backfillResult.restoredCount === 1 ? 'property was' : 'properties were'} restored into Agent Workspace.`);
-        }
-
-        if (backfillResult.didChange) {
-            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
-        }
     }
 
     function collectOfferTermsSentPropertyKeys(scopedStatuses, notes) {
@@ -11685,6 +11216,551 @@ function initNavbarDateTime() {
         });
 
         render();
+    }
+
+    function initAgentPropertyMemoryWidget() {
+        const list = document.getElementById('agent-cloud-memory-list');
+        const searchInput = document.getElementById('agent-cloud-memory-search');
+        const agentInput = document.getElementById('agent-cloud-memory-agent');
+        const statusSelect = document.getElementById('agent-cloud-memory-status');
+        const countBadge = document.getElementById('agent-cloud-memory-count');
+        const summary = document.getElementById('agent-cloud-memory-summary');
+        const refreshButton = document.getElementById('agent-cloud-memory-refresh-btn');
+        const copyButton = document.getElementById('agent-cloud-memory-copy-btn');
+
+        if (!list || !searchInput || !agentInput || !statusSelect || !countBadge || !summary || !refreshButton || !copyButton) {
+            return;
+        }
+
+        let latestItems = [];
+        let activeRequestId = 0;
+        let searchTimer = 0;
+
+        function hydrateStatusOptions() {
+            const previousValue = String(statusSelect.value || 'all-statuses').trim().toLowerCase() || 'all-statuses';
+            statusSelect.innerHTML = '';
+
+            const allOption = document.createElement('option');
+            allOption.value = 'all-statuses';
+            allOption.textContent = 'All Agent Statuses';
+            statusSelect.appendChild(allOption);
+
+            AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
+                if (!optionConfig || !optionConfig.value) {
+                    return;
+                }
+
+                const option = document.createElement('option');
+                option.value = optionConfig.value;
+                option.textContent = optionConfig.label;
+                statusSelect.appendChild(option);
+            });
+
+            const hasPreviousValue = Array.from(statusSelect.options).some((option) => option.value === previousValue);
+            statusSelect.value = hasPreviousValue ? previousValue : 'all-statuses';
+        }
+
+        function setSummary(message, isError = false) {
+            summary.textContent = message;
+            summary.dataset.state = isError ? 'error' : 'default';
+        }
+
+        async function copyText(text, successTitle, emptyMessage) {
+            const value = String(text || '').trim();
+            if (!value) {
+                showDashboardToast('error', 'Nothing To Copy', emptyMessage);
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(value);
+                } else {
+                    throw new Error('Clipboard unavailable');
+                }
+                showDashboardToast('success', successTitle, 'Copied to clipboard.');
+            } catch (error) {
+                showDashboardToast('error', 'Copy Failed', 'The clipboard could not be updated in this browser.');
+            }
+        }
+
+        function buildCopyPayload(item) {
+            const snapshot = item && item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+            return JSON.stringify(snapshot, null, 2);
+        }
+
+        function openPropertySnapshot(item) {
+            const snapshot = item && item.snapshot && typeof item.snapshot === 'object'
+                ? item.snapshot
+                : buildDashboardPropertyDetailFallback(item?.propertyAddress || 'Property', item?.statusValue || 'none', {});
+            persistSelectedPropertyDetail(withPropertyDetailOrigin(snapshot, 'deals'));
+            window.location.href = 'property-details.html';
+        }
+
+        function renderItems(items) {
+            latestItems = Array.isArray(items) ? items : [];
+            countBadge.textContent = `${latestItems.length} Rows`;
+            copyButton.disabled = latestItems.length === 0;
+            list.innerHTML = '';
+
+            if (!latestItems.length) {
+                list.innerHTML = '<p class="outreach-empty">No cloud property details match these filters yet.</p>';
+                return;
+            }
+
+            latestItems.forEach((item) => {
+                const article = document.createElement('article');
+                article.className = 'agent-note-link agent-note-link-card';
+
+                const snapshot = item && item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+                const head = document.createElement('div');
+                head.className = 'agent-note-link-head';
+
+                const agentLabel = document.createElement('span');
+                agentLabel.className = 'agent-note-link-agent';
+                agentLabel.textContent = String(item.agentName || item.agentEmail || 'Saved agent').trim() || 'Saved agent';
+
+                const timeText = document.createElement('span');
+                timeText.className = 'agent-note-link-time';
+                timeText.textContent = item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'Recently updated';
+
+                const addressText = document.createElement('p');
+                addressText.className = 'agent-note-link-address';
+                addressText.textContent = String(item.propertyAddress || snapshot.address || snapshot.propertyAddress || 'Property').trim() || 'Property';
+
+                const statusText = document.createElement('p');
+                statusText.className = 'agent-note-link-status';
+                statusText.textContent = `Agent Status: ${formatAgentStatusLabel(item.statusValue || snapshot.piqAgentStatus || 'none')}`;
+
+                const bodyText = document.createElement('p');
+                bodyText.className = 'agent-note-link-body';
+                bodyText.textContent = [
+                    String(item.agentEmail || snapshot.agentRecord?.email || '').trim(),
+                    String(snapshot.agentRecord?.brokerage || '').trim(),
+                    String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '').trim(),
+                    String(snapshot.listPrice || '').trim()
+                ].filter(Boolean).join(' • ');
+
+                const actions = document.createElement('div');
+                actions.className = 'agent-note-link-actions';
+
+                const copyItemButton = document.createElement('button');
+                copyItemButton.type = 'button';
+                copyItemButton.className = 'agent-note-share-btn';
+                copyItemButton.setAttribute('aria-label', `Copy property memory for ${addressText.textContent}`);
+                copyItemButton.title = 'Copy property JSON';
+                copyItemButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                `;
+                copyItemButton.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await copyText(buildCopyPayload(item), 'Property JSON Copied', 'No property detail payload was found for this item.');
+                });
+
+                const openButton = document.createElement('button');
+                openButton.type = 'button';
+                openButton.className = 'agent-note-share-btn agent-note-property-btn';
+                openButton.setAttribute('aria-label', `Open property details for ${addressText.textContent}`);
+                openButton.title = 'Open property details';
+                openButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 10.5 12 3l9 7.5"></path>
+                        <path d="M5.25 9.75V21h13.5V9.75"></path>
+                        <path d="M9.75 21v-6h4.5v6"></path>
+                    </svg>
+                `;
+                openButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openPropertySnapshot(item);
+                });
+
+                head.appendChild(agentLabel);
+                head.appendChild(timeText);
+                article.appendChild(head);
+                article.appendChild(addressText);
+                article.appendChild(statusText);
+                article.appendChild(bodyText);
+                actions.appendChild(copyItemButton);
+                actions.appendChild(openButton);
+                article.appendChild(actions);
+                list.appendChild(article);
+            });
+        }
+
+        function buildFilters() {
+            return {
+                search: String(searchInput.value || '').trim(),
+                agent: String(agentInput.value || '').trim(),
+                status: String(statusSelect.value || 'all-statuses').trim() || 'all-statuses',
+                limit: 120
+            };
+        }
+
+        async function loadItems(showLoading = false) {
+            const requestId = ++activeRequestId;
+            refreshButton.disabled = true;
+            if (showLoading) {
+                setSummary('Loading cloud property memory...');
+            }
+
+            try {
+                const payload = await fetchAgentPropertyMemoryFromServer(buildFilters());
+                if (requestId !== activeRequestId) {
+                    return;
+                }
+
+                const items = Array.isArray(payload && payload.items) ? payload.items : [];
+                renderItems(items);
+                setSummary(items.length
+                    ? `${items.length} cloud-saved property detail${items.length === 1 ? '' : 's'} matched your filters.`
+                    : 'No cloud property details match these filters yet.');
+            } catch (error) {
+                if (requestId !== activeRequestId) {
+                    return;
+                }
+
+                renderItems([]);
+                setSummary(error && error.message ? error.message : 'Unable to load cloud property memory.', true);
+            } finally {
+                if (requestId === activeRequestId) {
+                    refreshButton.disabled = false;
+                }
+            }
+        }
+
+        function scheduleReload() {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => {
+                void loadItems(false);
+            }, 220);
+        }
+
+        hydrateStatusOptions();
+        copyButton.disabled = true;
+        refreshButton.addEventListener('click', () => {
+            void loadItems(true);
+        });
+        copyButton.addEventListener('click', async () => {
+            const payload = latestItems.map((item) => item && item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {}).filter(Boolean);
+            await copyText(JSON.stringify(payload, null, 2), 'Filtered JSON Copied', 'There are no filtered property details to copy.');
+        });
+        searchInput.addEventListener('input', scheduleReload);
+        agentInput.addEventListener('input', scheduleReload);
+        statusSelect.addEventListener('change', () => {
+            void loadItems(false);
+        });
+        window.addEventListener('agent-property-memory-updated', () => {
+            void loadItems(false);
+        });
+
+        void loadItems(true);
+    }
+
+    function initAgentWorkspacePropertyFilter() {
+        const list = document.getElementById('agent-workspace-filter-list');
+        const searchInput = document.getElementById('agent-workspace-filter-search');
+        const sourceSelect = document.getElementById('agent-workspace-filter-source');
+        const assignmentSelect = document.getElementById('agent-workspace-filter-assignment');
+        const statusSelect = document.getElementById('agent-workspace-filter-status');
+        const countBadge = document.getElementById('agent-workspace-filter-count');
+        const summary = document.getElementById('agent-workspace-filter-summary');
+        const refreshButton = document.getElementById('agent-workspace-filter-refresh');
+
+        if (!list || !searchInput || !sourceSelect || !assignmentSelect || !statusSelect || !countBadge || !summary || !refreshButton) {
+            return;
+        }
+
+        let searchTimer = 0;
+        let currentItems = [];
+
+        function hydrateStatusOptions() {
+            const previousValue = String(statusSelect.value || 'all-statuses').trim().toLowerCase() || 'all-statuses';
+            statusSelect.innerHTML = '';
+
+            const allOption = document.createElement('option');
+            allOption.value = 'all-statuses';
+            allOption.textContent = 'All Agent Statuses';
+            statusSelect.appendChild(allOption);
+
+            AGENT_STATUS_OPTIONS.forEach((optionConfig) => {
+                if (!optionConfig || !optionConfig.value) {
+                    return;
+                }
+
+                const option = document.createElement('option');
+                option.value = optionConfig.value;
+                option.textContent = optionConfig.label;
+                statusSelect.appendChild(option);
+            });
+
+            const hasPreviousValue = Array.from(statusSelect.options).some((option) => option.value === previousValue);
+            statusSelect.value = hasPreviousValue ? previousValue : 'all-statuses';
+        }
+
+        function mergeFilterItem(existingItem, incomingItem, sourceKey) {
+            const nextItem = existingItem && typeof existingItem === 'object'
+                ? { ...existingItem }
+                : {
+                    propertyKey: incomingItem.propertyKey,
+                    propertyAddress: incomingItem.propertyAddress,
+                    snapshot: incomingItem.snapshot,
+                    statusValue: incomingItem.statusValue,
+                    statusLabel: incomingItem.statusLabel,
+                    assignmentRecord: incomingItem.assignmentRecord || null,
+                    assignmentSummary: incomingItem.assignmentSummary || '',
+                    locationLabel: incomingItem.locationLabel || '-',
+                    imageUrl: incomingItem.imageUrl || '',
+                    sources: {
+                        clicked: false,
+                        imported: false,
+                        assigned: false,
+                        current: false
+                    }
+                };
+
+            nextItem.snapshot = incomingItem.snapshot && typeof incomingItem.snapshot === 'object'
+                ? incomingItem.snapshot
+                : nextItem.snapshot;
+            nextItem.propertyAddress = String(incomingItem.propertyAddress || nextItem.propertyAddress || 'Property').trim() || 'Property';
+            nextItem.statusValue = normalizeAgentStatusValue(incomingItem.statusValue || nextItem.statusValue || 'none');
+            nextItem.statusLabel = formatAgentStatusLabel(nextItem.statusValue);
+            nextItem.assignmentRecord = incomingItem.assignmentRecord || nextItem.assignmentRecord || null;
+            nextItem.assignmentSummary = incomingItem.assignmentSummary || nextItem.assignmentSummary || '';
+            nextItem.locationLabel = String(incomingItem.locationLabel || nextItem.locationLabel || '-').trim() || '-';
+            nextItem.imageUrl = String(incomingItem.imageUrl || nextItem.imageUrl || '').trim();
+            nextItem.sources = {
+                clicked: Boolean(nextItem.sources && nextItem.sources.clicked),
+                imported: Boolean(nextItem.sources && nextItem.sources.imported),
+                assigned: Boolean(nextItem.sources && nextItem.sources.assigned),
+                current: Boolean(nextItem.sources && nextItem.sources.current)
+            };
+
+            if (sourceKey && Object.prototype.hasOwnProperty.call(nextItem.sources, sourceKey)) {
+                nextItem.sources[sourceKey] = true;
+            }
+
+            const workspaceUser = getWorkspaceUserContext();
+            const assignedUser = nextItem.assignmentRecord && nextItem.assignmentRecord.assignedTo && typeof nextItem.assignmentRecord.assignedTo === 'object'
+                ? nextItem.assignmentRecord.assignedTo
+                : null;
+
+            nextItem.assignmentState = !assignedUser
+                ? 'unassigned'
+                : (usersMatch(assignedUser, workspaceUser) ? 'assigned-to-me' : 'assigned-to-other');
+
+            return nextItem;
+        }
+
+        function collectItems() {
+            const workspaceUser = getWorkspaceUserContext();
+            const itemMap = new Map();
+
+            function addResolvedItem(rawItem, sourceKey) {
+                const resolvedItem = resolveDealWorkspaceState(rawItem, workspaceUser);
+                if (!resolvedItem || !resolvedItem.propertyKey) {
+                    return;
+                }
+
+                const existingItem = itemMap.get(resolvedItem.propertyKey);
+                itemMap.set(resolvedItem.propertyKey, mergeFilterItem(existingItem, resolvedItem, sourceKey));
+            }
+
+            getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key).forEach((item) => {
+                addResolvedItem(item, 'clicked');
+            });
+
+            getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key).forEach((item) => {
+                addResolvedItem(item, 'imported');
+            });
+
+            Object.values(getGlobalObject(PROPERTY_ASSIGNMENTS_KEY)).forEach((assignmentRecord) => {
+                if (!assignmentRecord || typeof assignmentRecord !== 'object') {
+                    return;
+                }
+
+                addResolvedItem({
+                    propertyKey: assignmentRecord.propertyKey,
+                    propertyAddress: assignmentRecord.propertyAddress,
+                    propertySnapshot: assignmentRecord.propertySnapshot || {},
+                    clickedAt: assignmentRecord.assignedAt || Date.now()
+                }, 'assigned');
+            });
+
+            const persistedDetail = getPersistedSelectedPropertyDetail();
+            if (persistedDetail && typeof persistedDetail === 'object') {
+                addResolvedItem({
+                    propertyKey: makePropertyStorageKey(persistedDetail.address || persistedDetail.propertyAddress),
+                    propertyAddress: persistedDetail.address || persistedDetail.propertyAddress,
+                    propertySnapshot: persistedDetail,
+                    clickedAt: Date.now()
+                }, 'current');
+            }
+
+            return Array.from(itemMap.values()).sort((left, right) => left.propertyAddress.localeCompare(right.propertyAddress));
+        }
+
+        function getFilteredItems() {
+            const searchValue = String(searchInput.value || '').trim().toLowerCase();
+            const sourceValue = String(sourceSelect.value || 'all').trim().toLowerCase();
+            const assignmentValue = String(assignmentSelect.value || 'all').trim().toLowerCase();
+            const statusValue = String(statusSelect.value || 'all-statuses').trim().toLowerCase();
+
+            return currentItems.filter((item) => {
+                if (sourceValue !== 'all' && !item.sources[sourceValue]) {
+                    return false;
+                }
+
+                if (assignmentValue !== 'all' && item.assignmentState !== assignmentValue) {
+                    return false;
+                }
+
+                if (statusValue !== 'all-statuses' && normalizeAgentStatusValue(item.statusValue || 'none') !== statusValue) {
+                    return false;
+                }
+
+                if (!searchValue) {
+                    return true;
+                }
+
+                const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+                const haystack = [
+                    item.propertyAddress,
+                    item.statusLabel,
+                    item.assignmentSummary,
+                    snapshot.apn,
+                    snapshot.mlsNumber,
+                    snapshot.marketInfo,
+                    snapshot.location,
+                    snapshot.areaLabel,
+                    snapshot.city,
+                    snapshot.zip,
+                    snapshot.listPrice,
+                    snapshot.publicComments,
+                    snapshot.agentComments,
+                    snapshot.propertyDetails,
+                    snapshot.agentRecord && snapshot.agentRecord.name,
+                    snapshot.agentRecord && snapshot.agentRecord.email,
+                    snapshot.agentRecord && snapshot.agentRecord.brokerage
+                ].join(' ').toLowerCase();
+
+                return haystack.includes(searchValue);
+            });
+        }
+
+        function buildSourcePills(item) {
+            const pills = [];
+            if (item.sources.clicked) pills.push('Clicked');
+            if (item.sources.imported) pills.push('Imported');
+            if (item.sources.assigned) pills.push('Assigned');
+            if (item.sources.current) pills.push('Current Detail');
+            return pills;
+        }
+
+        function renderItems(items) {
+            countBadge.textContent = `${items.length} Rows`;
+            list.innerHTML = '';
+
+            if (!items.length) {
+                list.innerHTML = '<p class="outreach-empty">No property details match these filters.</p>';
+                return;
+            }
+
+            items.forEach((item) => {
+                const article = document.createElement('article');
+                article.className = 'agent-note-link agent-note-link-card';
+
+                const head = document.createElement('div');
+                head.className = 'agent-note-link-head';
+
+                const title = document.createElement('span');
+                title.className = 'agent-note-link-agent';
+                title.textContent = item.propertyAddress;
+
+                const statusTime = document.createElement('span');
+                statusTime.className = 'agent-note-link-time';
+                statusTime.textContent = item.statusLabel;
+
+                const location = document.createElement('p');
+                location.className = 'agent-note-link-address';
+                location.textContent = [item.locationLabel, item.assignmentSummary || item.assignmentState.replace(/-/g, ' ')].filter(Boolean).join(' • ');
+
+                const meta = document.createElement('p');
+                meta.className = 'agent-note-link-status';
+                meta.textContent = `Agent Status: ${item.statusLabel}`;
+
+                const body = document.createElement('div');
+                body.className = 'agent-workspace-filter-pill-row';
+                buildSourcePills(item).forEach((pillLabel) => {
+                    const pill = document.createElement('span');
+                    pill.className = 'agent-workspace-filter-pill';
+                    pill.textContent = pillLabel;
+                    body.appendChild(pill);
+                });
+
+                const actions = document.createElement('div');
+                actions.className = 'agent-note-link-actions';
+
+                const openButton = document.createElement('button');
+                openButton.type = 'button';
+                openButton.className = 'agent-note-share-btn agent-note-property-btn';
+                openButton.setAttribute('aria-label', `Open property details for ${item.propertyAddress}`);
+                openButton.title = 'Open property details';
+                openButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 10.5 12 3l9 7.5"></path>
+                        <path d="M5.25 9.75V21h13.5V9.75"></path>
+                        <path d="M9.75 21v-6h4.5v6"></path>
+                    </svg>
+                `;
+                openButton.addEventListener('click', () => {
+                    persistSelectedPropertyDetail(withPropertyDetailOrigin(item.snapshot, 'deals'));
+                    window.location.href = 'property-details.html';
+                });
+
+                head.appendChild(title);
+                head.appendChild(statusTime);
+                article.appendChild(head);
+                article.appendChild(location);
+                article.appendChild(meta);
+                article.appendChild(body);
+                actions.appendChild(openButton);
+                article.appendChild(actions);
+                list.appendChild(article);
+            });
+        }
+
+        function render() {
+            const filteredItems = getFilteredItems();
+            renderItems(filteredItems);
+            summary.textContent = filteredItems.length
+                ? `${filteredItems.length} saved property detail${filteredItems.length === 1 ? '' : 's'} matched your filters.`
+                : 'No property details match these filters.';
+        }
+
+        function reload() {
+            currentItems = collectItems();
+            render();
+        }
+
+        hydrateStatusOptions();
+        refreshButton.addEventListener('click', reload);
+        searchInput.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(render, 180);
+        });
+        sourceSelect.addEventListener('change', render);
+        assignmentSelect.addEventListener('change', render);
+        statusSelect.addEventListener('change', render);
+        window.addEventListener('dashboard-data-updated', reload);
+        window.addEventListener('property-assignment-updated', reload);
+        window.addEventListener('storage', reload);
+
+        reload();
     }
 
     function initAgentWorkspaceEmailPrep() {
@@ -19389,10 +19465,16 @@ function initNavbarDateTime() {
             syncPropertyDetailIntoLocalDealCache([linkedDealPropertyKey, propertyKey], detailData, workspaceUser);
             linkedDealPropertyKey = propertyKey;
             syncCurrentAssignmentSnapshot();
+            syncAgentPropertyMemoryToServer(detailData).catch(() => {
+                // Keep local property detail changes even if cloud memory sync fails.
+            });
         }
 
         renderPropertyImages();
         renderPropertyListingLink();
+        syncAgentPropertyMemoryToServer(detailData).catch(() => {
+            // Ignore initial cloud backfill failures and keep the page interactive.
+        });
 
         if (imageTabButtons.length > 0 && imagePanels.length > 0) {
             let activeImageTabId = imageTabButtons.find((button) => button.classList.contains('active'))?.dataset.piqImageTab
@@ -19442,9 +19524,6 @@ function initNavbarDateTime() {
         const propertyAssigneeSelect = document.getElementById('property-assignee-select');
         const agentCurrentStatusEl = document.getElementById('agent-current-status');
         const offerNegotiatorEl = document.getElementById('offer-negotiator-name');
-        const offerAcceptedToggleButton = document.getElementById('property-offer-accepted-toggle');
-        const agentOffersAcceptedSection = document.getElementById('agent-offers-accepted-section');
-        const agentOffersAcceptedList = document.getElementById('agent-workspace-offers-accepted-list');
         const defaultAgentStatus = 'none';
 
         function buildPropertyDetailAssignedByLabel(item) {
@@ -19483,110 +19562,7 @@ function initNavbarDateTime() {
             offerNegotiatorEl.textContent = getOfferNegotiatorName(assignmentLike);
         }
 
-        function renderAgentWorkspaceAcceptedOffer() {
-            const normalizedStatus = normalizeAgentStatusValue(detailData.piqAgentStatus || defaultAgentStatus);
-            const isOfferAccepted = normalizedStatus === 'offer-accepted';
-            const normalizedPropertyKey = makePropertyStorageKey(propertyKey || detailData.address || detailData.propertyAddress);
-
-            if (offerAcceptedToggleButton) {
-                offerAcceptedToggleButton.checked = isOfferAccepted;
-                offerAcceptedToggleButton.setAttribute('aria-checked', isOfferAccepted ? 'true' : 'false');
-
-                if (!isOfferAccepted) {
-                    offerAcceptedToggleButton.dataset.restoreStatus = normalizedStatus;
-                }
-            }
-
-            if (agentOffersAcceptedSection) {
-                agentOffersAcceptedSection.hidden = !isOfferAccepted;
-            }
-
-            if (!agentOffersAcceptedList) {
-                return;
-            }
-
-            agentOffersAcceptedList.innerHTML = '';
-
-            if (!isOfferAccepted) {
-                agentOffersAcceptedList.innerHTML = '<p class="outreach-empty">No accepted offers in this tab yet.</p>';
-                return;
-            }
-
-            const sharedAcceptedItem = getAcceptedOfferItemsForWorkspace(workspaceUser).find((item) => item.propertyKey === normalizedPropertyKey) || null;
-            const currentAssignment = getPropertyAssignmentRecord(propertyKey);
-            const fallbackSnapshot = {
-                ...detailData,
-                propertyAssignment: currentAssignment?.assignedTo
-                    ? {
-                        assignedTo: currentAssignment.assignedTo,
-                        assignedBy: currentAssignment.assignedBy,
-                        assignedAt: currentAssignment.assignedAt
-                    }
-                    : detailData.propertyAssignment
-            };
-            const snapshot = sharedAcceptedItem?.snapshot && typeof sharedAcceptedItem.snapshot === 'object'
-                ? sharedAcceptedItem.snapshot
-                : fallbackSnapshot;
-            const assignmentRecord = sharedAcceptedItem?.assignmentRecord || currentAssignment || null;
-            const propertyAddress = String(sharedAcceptedItem?.propertyAddress || snapshot.address || snapshot.propertyAddress || 'Property').trim() || 'Property';
-            const acceptedAt = sharedAcceptedItem?.acceptedAt > 0
-                ? new Date(sharedAcceptedItem.acceptedAt).toLocaleDateString()
-                : (assignmentRecord?.assignedAt ? new Date(assignmentRecord.assignedAt).toLocaleDateString() : 'Recently updated');
-            const locationLabel = String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '-').trim() || '-';
-            const priceLabel = String(snapshot.listPrice || '$0').trim() || '$0';
-            const assignedLabel = assignmentRecord
-                ? buildPropertyDetailAssignedByLabel(assignmentRecord)
-                : 'Assigned user pending';
-
-            const entry = document.createElement('button');
-            entry.type = 'button';
-            entry.className = 'agent-note-link property-offer-accepted-entry';
-
-            const head = document.createElement('div');
-            head.className = 'agent-note-link-head';
-
-            const acceptedLabel = document.createElement('span');
-            acceptedLabel.className = 'agent-note-link-agent';
-            acceptedLabel.textContent = 'Accepted Offer';
-
-            const timeText = document.createElement('span');
-            timeText.className = 'agent-note-link-time';
-            timeText.textContent = acceptedAt;
-
-            const addressText = document.createElement('p');
-            addressText.className = 'agent-note-link-address';
-            addressText.textContent = propertyAddress;
-
-            const statusText = document.createElement('p');
-            statusText.className = 'agent-note-link-status';
-            statusText.textContent = `Agent Status: ${formatAgentStatusLabel(normalizedStatus)}`;
-
-            const bodyText = document.createElement('p');
-            bodyText.className = 'agent-note-link-body';
-            bodyText.textContent = `${locationLabel} • ${priceLabel} • ${assignedLabel}`;
-
-            head.appendChild(acceptedLabel);
-            head.appendChild(timeText);
-            entry.appendChild(head);
-            entry.appendChild(addressText);
-            entry.appendChild(statusText);
-            entry.appendChild(bodyText);
-            entry.addEventListener('click', () => {
-                persistSelectedPropertyDetail(buildDashboardPropertyDetailFallback(propertyAddress, normalizedStatus, snapshot));
-                activatePropertyTab('agent');
-            });
-            agentOffersAcceptedList.appendChild(entry);
-        }
-
         renderOfferNegotiator(persistedAssignment);
-        renderAgentWorkspaceAcceptedOffer();
-        window.addEventListener('dashboard-data-updated', renderAgentWorkspaceAcceptedOffer);
-        window.addEventListener('property-assignment-updated', (event) => {
-            const changedPropertyKey = makePropertyStorageKey(event && event.detail && event.detail.propertyKey || '');
-            if (!changedPropertyKey || changedPropertyKey === '*' || changedPropertyKey === makePropertyStorageKey(propertyKey)) {
-                renderAgentWorkspaceAcceptedOffer();
-            }
-        });
 
         function initAgentWorkspaceEditor() {
             const editButton = document.getElementById('agent-workspace-edit-btn');
@@ -19652,8 +19628,7 @@ function initNavbarDateTime() {
                 };
                 Object.assign(agentRecord, detailData.agentRecord);
                 applyAgentWorkspaceRecord(detailData.agentRecord);
-                localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
-                syncCurrentAssignmentSnapshot();
+                persistCurrentPropertyDetail();
                 setEditMode(false);
                 showDashboardToast('success', 'Agent Workspace Saved', 'Agent workspace details were updated for this property.');
             });
@@ -19691,28 +19666,6 @@ function initNavbarDateTime() {
         initAgentWorkspaceControls();
         initAgentWorkspaceEditor();
 
-        if (offerAcceptedToggleButton && piqAgentStatusSelect) {
-            offerAcceptedToggleButton.addEventListener('change', () => {
-                const currentStatus = normalizeAgentStatusValue(piqAgentStatusSelect.value || defaultAgentStatus);
-
-                if (!offerAcceptedToggleButton.checked || currentStatus === 'offer-accepted') {
-                    const restoreStatus = normalizeAgentStatusValue(offerAcceptedToggleButton.dataset.restoreStatus || defaultAgentStatus);
-                    piqAgentStatusSelect.value = Array.from(piqAgentStatusSelect.options).some((option) => option.value === restoreStatus)
-                        ? restoreStatus
-                        : defaultAgentStatus;
-                } else {
-                    offerAcceptedToggleButton.dataset.restoreStatus = currentStatus;
-                    piqAgentStatusSelect.value = 'offer-accepted';
-                }
-
-                piqAgentStatusSelect.dispatchEvent(new Event('change', { bubbles: true }));
-
-                if (normalizeAgentStatusValue(piqAgentStatusSelect.value || '') === 'offer-accepted') {
-                    activatePropertyTab('agent');
-                }
-            });
-        }
-
         if (piqAgentStatusSelect) {
             const persistedStatus = getPersistedPiqStatus();
             const savedStatus = normalizeAgentStatusValue(persistedStatus || detailData.piqAgentStatus || defaultAgentStatus);
@@ -19729,7 +19682,6 @@ function initNavbarDateTime() {
             syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
             persistSelectedPropertyDetail(detailData);
             syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
-            renderAgentWorkspaceAcceptedOffer();
 
             if (agentCurrentStatusEl) {
                 agentCurrentStatusEl.textContent = formatAgentStatusLabel(piqAgentStatusSelect.value || defaultAgentStatus);
@@ -19748,13 +19700,8 @@ function initNavbarDateTime() {
                 }
                 setPersistedPiqStatus(detailData.piqAgentStatus);
                 syncStatusAcrossPropertyNotes(detailData.piqAgentStatus);
-                persistSelectedPropertyDetail(detailData);
+                persistCurrentPropertyDetail();
                 syncAcceptedOfferWorkspaceTargets(detailData, workspaceUser);
-                if (detailData.piqAgentStatus === 'offer-accepted') {
-                    activatePropertyTab('agent');
-                }
-                syncCurrentAssignmentSnapshot();
-                renderAgentWorkspaceAcceptedOffer();
             });
         }
 
@@ -25663,7 +25610,8 @@ function initNavbarDateTime() {
             ['initDashboardChatGptWidget', initDashboardChatGptWidget],
             ['initDailyBibleVerseWidget', initDailyBibleVerseWidget],
             ['initPersonalOutreachWorkspace', initPersonalOutreachWorkspace],
-            ['initOffersAcceptedWidget', initOffersAcceptedWidget],
+            ['initAgentWorkspacePropertyFilter', initAgentWorkspacePropertyFilter],
+            ['initAgentPropertyMemoryWidget', initAgentPropertyMemoryWidget],
             ['initNotesWidget', initNotesWidget],
             ['initAgentWorkspacePurchaseAgreement', initAgentWorkspacePurchaseAgreement],
             ['initAgentWorkspaceEmailPrep', initAgentWorkspaceEmailPrep],

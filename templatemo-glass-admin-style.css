@@ -7403,22 +7403,22 @@ body.analytics-reboot .analytics-my-file-count {
     gap: 8px;
 }
 
-.offers-accepted-toolbar {
+.agent-cloud-memory-toolbar {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 10px;
     margin: 0 0 12px;
     align-items: end;
 }
 
-.offers-accepted-filter {
+.agent-cloud-memory-filter {
     display: flex;
     flex-direction: column;
     gap: 6px;
     min-width: 0;
 }
 
-.offers-accepted-filter span {
+.agent-cloud-memory-filter span {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.05em;
@@ -7426,15 +7426,68 @@ body.analytics-reboot .analytics-my-file-count {
     color: var(--text-muted);
 }
 
-.offers-accepted-toolbar .form-input,
-.offers-accepted-toolbar .card-btn {
-    min-height: 40px;
+.agent-cloud-memory-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
 }
 
-.offers-accepted-toolbar .card-btn[aria-pressed="true"] {
-    background: var(--glass-hover);
-    border-color: rgba(var(--accent-light-rgb), 0.72);
-    color: var(--text-primary);
+.agent-cloud-memory-summary[data-state="error"] {
+    color: #fca5a5;
+}
+
+.agent-workspace-filter-toolbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin: 0 0 12px;
+    align-items: end;
+}
+
+.agent-workspace-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.agent-workspace-filter-field span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.agent-workspace-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.agent-workspace-filter-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.agent-workspace-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--accent-rgb), 0.22);
+    background: rgba(var(--accent-light-rgb), 0.1);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .outreach-full-width {
@@ -16949,15 +17002,6 @@ body.analytics-reboot .analytics-my-file-count {
     font-weight: 600;
 }
 
-#agent-workspace-offers-accepted-list {
-    margin-top: 10px;
-}
-
-.property-offer-accepted-entry {
-    width: 100%;
-    text-align: left;
-}
-
 .piq-image-block {
     margin: 2px 0 12px;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -17927,8 +17971,20 @@ body.analytics-reboot .analytics-my-file-count {
         flex-direction: column;
     }
 
-    .offers-accepted-toolbar {
+    .agent-cloud-memory-toolbar {
         grid-template-columns: 1fr;
+    }
+
+    .agent-cloud-memory-actions {
+        align-items: stretch;
+    }
+
+    .agent-workspace-filter-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .agent-workspace-filter-actions {
+        align-items: stretch;
     }
 
     .agent-record-controls {

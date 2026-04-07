@@ -3202,6 +3202,168 @@ function normalizePropertyAssignmentKey(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+const AGENT_PROPERTY_STATUS_ALIASES = {
+  acquired: 'acquired',
+  '100-closed-deal': 'acquired',
+  'closed-deal': 'acquired',
+  'offer-accepted': 'offer-accepted',
+  '80-offer-accepted': 'offer-accepted',
+  'offer-terms-accepted': 'offer-accepted',
+  '80-offer-terms-accepted': 'offer-accepted',
+  'in-negotiations': 'in-negotiations',
+  '60-in-negotiations': 'in-negotiations',
+  'contract-submitted': 'contract-submitted',
+  '50-contract-submitted': 'contract-submitted',
+  'back-up': 'back-up',
+  '30-back-up': 'back-up',
+  'offer-terms-sent': 'offer-terms-sent',
+  '30-offer-terms-sent': 'offer-terms-sent',
+  'continue-to-follow': 'continue-to-follow',
+  '20-continue-to-follow': 'continue-to-follow',
+  'initial-contact-started': 'initial-contact-started',
+  '10-initial-contact-started': 'initial-contact-started',
+  'cancelled-fec': 'cancelled-fec',
+  '0-cancelled-fec': 'cancelled-fec',
+  'do-not-use': 'do-not-use',
+  '0-do-not-use': 'do-not-use',
+  none: 'none',
+  '0-none': 'none',
+  pass: 'pass',
+  '0-pass': 'pass',
+  'sold-others-close': 'sold-others-close',
+  '0-sold-others-close': 'sold-others-close'
+};
+
+function normalizeAgentPropertyStatus(value) {
+  const rawValue = String(value || '').trim().toLowerCase();
+  if (!rawValue) {
+    return 'none';
+  }
+
+  const normalizedKey = rawValue
+    .replace(/[%]/g, '')
+    .replace(/[|/()]+/g, ' ')
+    .replace(/_/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s+/g, '-');
+
+  return AGENT_PROPERTY_STATUS_ALIASES[normalizedKey] || AGENT_PROPERTY_STATUS_ALIASES[rawValue] || normalizedKey || 'none';
+}
+
+function normalizeAgentPropertyMemoryKey(agentLike) {
+  const email = normalizeKnownEmail(agentLike?.email || '');
+  if (email) {
+    return `email:${email}`;
+  }
+
+  const phone = String(agentLike?.phone || '').replace(/[^0-9]/g, '');
+  if (phone) {
+    return `phone:${phone}`;
+  }
+
+  const name = String(agentLike?.name || '').trim().toLowerCase();
+  const brokerage = String(agentLike?.brokerage || '').trim().toLowerCase();
+  const composite = [name, brokerage].filter(Boolean).join('|');
+  return composite ? `name:${composite}` : '';
+}
+
+function normalizeAgentPropertyMemoryRecord(propertyKey, detailLike, ownerUserLike, fallbackSavedBy) {
+  const normalizedPropertyKey = normalizePropertyAssignmentKey(propertyKey || detailLike?.address || detailLike?.propertyAddress);
+  if (!normalizedPropertyKey || !detailLike || typeof detailLike !== 'object') {
+    return null;
+  }
+
+  const snapshot = { ...detailLike };
+  const propertyAddress = String(snapshot.address || snapshot.propertyAddress || 'Property').trim() || 'Property';
+  const agentRecord = snapshot.agentRecord && typeof snapshot.agentRecord === 'object'
+    ? { ...snapshot.agentRecord }
+    : {};
+  const agentKey = normalizeAgentPropertyMemoryKey(agentRecord);
+
+  if (!agentKey) {
+    return null;
+  }
+
+  const ownerUser = normalizeAssignmentUser(ownerUserLike || fallbackSavedBy || {});
+  const savedBy = normalizeAssignmentUser(fallbackSavedBy || ownerUser || {});
+  const statusValue = normalizeAgentPropertyStatus(snapshot.piqAgentStatus || agentRecord.agentStatus || 'none');
+
+  snapshot.address = propertyAddress;
+  snapshot.propertyAddress = propertyAddress;
+  snapshot.piqAgentStatus = statusValue;
+  snapshot.agentRecord = {
+    ...agentRecord,
+    name: String(agentRecord.name || '').trim(),
+    email: normalizeKnownEmail(agentRecord.email || ''),
+    brokerage: String(agentRecord.brokerage || '').trim(),
+    agentStatus: String(agentRecord.agentStatus || statusValue).trim() || statusValue
+  };
+
+  return {
+    propertyKey: normalizedPropertyKey,
+    agentKey,
+    agentName: String(snapshot.agentRecord.name || '').trim(),
+    agentEmail: String(snapshot.agentRecord.email || '').trim(),
+    propertyAddress,
+    statusValue,
+    ownerUser,
+    savedBy,
+    snapshot,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function parseAgentPropertyMemoryRow(row) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  try {
+    const parsedPayload = JSON.parse(String(row.payload_json || '{}'));
+    const normalized = normalizeAgentPropertyMemoryRecord(row.property_key, parsedPayload.snapshot || parsedPayload.detail || parsedPayload, {
+      key: row.owner_user_key,
+      email: row.owner_user_email,
+      name: row.owner_user_name
+    }, parsedPayload.savedBy || {});
+
+    if (normalized) {
+      return {
+        ...normalized,
+        updatedAt: String(row.updated_at || normalized.updatedAt || '').trim() || normalized.updatedAt
+      };
+    }
+  } catch (error) {
+    // Fall through to the row-based fallback.
+  }
+
+  return {
+    propertyKey: normalizePropertyAssignmentKey(row.property_key),
+    agentKey: String(row.agent_key || '').trim(),
+    agentName: String(row.agent_name || '').trim(),
+    agentEmail: normalizeKnownEmail(row.agent_email || ''),
+    propertyAddress: String(row.property_address || 'Property').trim() || 'Property',
+    statusValue: normalizeAgentPropertyStatus(row.status_value || 'none'),
+    ownerUser: normalizeAssignmentUser({
+      key: row.owner_user_key,
+      email: row.owner_user_email,
+      name: row.owner_user_name
+    }),
+    savedBy: normalizeAssignmentUser({}),
+    snapshot: {
+      address: String(row.property_address || 'Property').trim() || 'Property',
+      propertyAddress: String(row.property_address || 'Property').trim() || 'Property',
+      piqAgentStatus: normalizeAgentPropertyStatus(row.status_value || 'none'),
+      agentRecord: {
+        name: String(row.agent_name || '').trim(),
+        email: normalizeKnownEmail(row.agent_email || '')
+      }
+    },
+    updatedAt: String(row.updated_at || '').trim()
+  };
+}
+
 function normalizePropertyAssignmentRecord(propertyKey, assignmentLike, fallbackAssignedBy) {
   const normalizedPropertyKey = normalizePropertyAssignmentKey(propertyKey || assignmentLike?.propertyKey);
   if (!normalizedPropertyKey || !assignmentLike || typeof assignmentLike !== 'object') {
@@ -5731,6 +5893,32 @@ function cleanupExpiredMlsImportPdfJobs() {
     const updatedAt = Number(job && job.updatedAt) || 0;
     if (!updatedAt || now - updatedAt > MLS_IMPORT_PDF_JOB_TTL_MS) {
       mlsImportPdfJobs.delete(jobId);
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS agent_property_memory (
+      property_key TEXT NOT NULL,
+      agent_key TEXT NOT NULL,
+      agent_name TEXT,
+      agent_email TEXT,
+      property_address TEXT NOT NULL,
+      status_value TEXT NOT NULL,
+      owner_user_key TEXT NOT NULL,
+      owner_user_email TEXT,
+      owner_user_name TEXT,
+      payload_json TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (property_key, agent_key, owner_user_key)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating agent_property_memory table:', err);
+    } else {
+      console.log('Agent property memory table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_agent_property_memory_owner_updated ON agent_property_memory(owner_user_key, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_agent_property_memory_agent_owner ON agent_property_memory(agent_key, owner_user_key)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_agent_property_memory_status_owner ON agent_property_memory(status_value, owner_user_key)', () => {});
     }
   });
 }
@@ -9317,6 +9505,179 @@ app.post('/api/property-assignments', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ error: 'Unable to save property assignment' });
+  }
+});
+
+app.get('/api/agent-property-memory', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const ownerUser = normalizeAssignmentUser(decoded);
+  const searchValue = String(req.query?.search || '').trim().toLowerCase();
+  const agentValue = String(req.query?.agent || '').trim().toLowerCase();
+  const requestedStatus = String(req.query?.status || 'all-statuses').trim().toLowerCase();
+  const normalizedStatus = requestedStatus === 'all-statuses'
+    ? 'all-statuses'
+    : normalizeAgentPropertyStatus(requestedStatus);
+  const requestedLimit = Number.parseInt(String(req.query?.limit || '100'), 10);
+  const limit = Number.isInteger(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 250)
+    : 100;
+
+  db.all(
+    `SELECT property_key, agent_key, agent_name, agent_email, property_address, status_value,
+            owner_user_key, owner_user_email, owner_user_name, payload_json, updated_at
+     FROM agent_property_memory
+     WHERE owner_user_key = ?
+     ORDER BY updated_at DESC`,
+    [ownerUser.key],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      const items = (rows || [])
+        .map((row) => parseAgentPropertyMemoryRow(row))
+        .filter((item) => {
+          if (!item || !item.propertyKey || !item.agentKey) {
+            return false;
+          }
+
+          if (normalizedStatus !== 'all-statuses' && item.statusValue !== normalizedStatus) {
+            return false;
+          }
+
+          if (agentValue) {
+            const agentHaystack = [
+              item.agentName,
+              item.agentEmail,
+              item.snapshot?.agentRecord?.brokerage
+            ].join(' ').toLowerCase();
+            if (!agentHaystack.includes(agentValue)) {
+              return false;
+            }
+          }
+
+          if (searchValue) {
+            const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+            const searchHaystack = [
+              item.propertyAddress,
+              item.statusValue,
+              snapshot.marketInfo,
+              snapshot.location,
+              snapshot.areaLabel,
+              snapshot.city,
+              snapshot.zip,
+              snapshot.apn,
+              snapshot.listPrice,
+              snapshot.mlsNumber,
+              snapshot.propertyDetails,
+              snapshot.agentComments,
+              snapshot.publicComments,
+              item.agentName,
+              item.agentEmail,
+              snapshot.agentRecord?.brokerage
+            ].join(' ').toLowerCase();
+            if (!searchHaystack.includes(searchValue)) {
+              return false;
+            }
+          }
+
+          return true;
+        })
+        .sort((left, right) => {
+          const leftTime = new Date(left.updatedAt || 0).getTime() || 0;
+          const rightTime = new Date(right.updatedAt || 0).getTime() || 0;
+          return rightTime - leftTime;
+        })
+        .slice(0, limit);
+
+      return res.json({
+        items,
+        count: items.length,
+        filters: {
+          search: searchValue,
+          agent: agentValue,
+          status: normalizedStatus,
+          limit
+        }
+      });
+    }
+  );
+});
+
+app.post('/api/agent-property-memory', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const ownerUser = normalizeAssignmentUser(req.body?.ownerUser || decoded);
+  const propertyKey = normalizePropertyAssignmentKey(req.body?.propertyKey || req.body?.detail?.address || req.body?.detail?.propertyAddress);
+  if (!propertyKey) {
+    return res.status(400).json({ error: 'Property key is required' });
+  }
+
+  const detail = req.body?.detail;
+
+  if (detail == null) {
+    try {
+      await dbRun('DELETE FROM agent_property_memory WHERE property_key = ? AND owner_user_key = ?', [propertyKey, ownerUser.key]);
+      return res.json({ success: true, propertyKey, cleared: true });
+    } catch (error) {
+      return res.status(500).json({ error: 'Unable to remove agent property memory' });
+    }
+  }
+
+  const normalizedRecord = normalizeAgentPropertyMemoryRecord(propertyKey, detail, ownerUser, decoded);
+  if (!normalizedRecord) {
+    try {
+      await dbRun('DELETE FROM agent_property_memory WHERE property_key = ? AND owner_user_key = ?', [propertyKey, ownerUser.key]);
+      return res.json({ success: true, propertyKey, cleared: true });
+    } catch (error) {
+      return res.status(500).json({ error: 'Unable to clear invalid agent property memory' });
+    }
+  }
+
+  try {
+    await dbRun('DELETE FROM agent_property_memory WHERE property_key = ? AND owner_user_key = ?', [normalizedRecord.propertyKey, normalizedRecord.ownerUser.key]);
+    await dbRun(
+      `INSERT INTO agent_property_memory (
+          property_key,
+          agent_key,
+          agent_name,
+          agent_email,
+          property_address,
+          status_value,
+          owner_user_key,
+          owner_user_email,
+          owner_user_name,
+          payload_json,
+          updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        normalizedRecord.propertyKey,
+        normalizedRecord.agentKey,
+        normalizedRecord.agentName,
+        normalizedRecord.agentEmail,
+        normalizedRecord.propertyAddress,
+        normalizedRecord.statusValue,
+        normalizedRecord.ownerUser.key,
+        normalizedRecord.ownerUser.email,
+        normalizedRecord.ownerUser.name,
+        JSON.stringify(normalizedRecord)
+      ]
+    );
+
+    return res.json({
+      success: true,
+      propertyKey: normalizedRecord.propertyKey,
+      item: normalizedRecord
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Unable to save agent property memory' });
   }
 });
 

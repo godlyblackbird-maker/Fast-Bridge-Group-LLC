@@ -803,7 +803,6 @@
                         <li>Kept Naked mode working when switching into Aerial so satellite viewing stays clean until the user changes back to a normal map layer.</li>
                         <li>Reset map styling correctly when users leave Naked mode and return to standard Street map viewing.</li>
                         <li>Aligned the Agent Workspace Agent Status filter with the same canonical status values used in Property Details so status filtering finally matches across both areas.</li>
-                        <li>Removed extra Offer Accepted widget controls that were adding noise without helping the workflow, leaving the panel cleaner and easier to scan.</li>
                     </ul>
                 </article>
 
@@ -836,7 +835,6 @@
                         <li>Fixed tab switching flicker and lag by stopping redundant re-activation work across Property Details, Settings, and image tab controls.</li>
                         <li>Made Digital E Card JPG downloads render at a fixed export size so browser zoom no longer changes the output dimensions.</li>
                         <li>Repaired the Digital E Card preview container by widening the panel, centering the preview in a stable stage, and cleaning up the internal card layout.</li>
-                        <li>Added the accepted-offers panel hookup on Agent Workspace so properties marked 80% - Offer Accepted surface in the workspace correctly.</li>
                         <li>Updated the Agent Workspace sidebar entry to use the new SVG symbol and narrowed the Legal Buildout contracts preview so it reads like a centered document.</li>
                     </ul>
                 </article>
@@ -851,7 +849,6 @@
                     </div>
                     <ul>
                         <li>Added hover previews on calendar days so users can read saved planner tasks without clicking into the date detail view.</li>
-                        <li>Fixed accepted-offer syncing so properties marked 80% - Offer Accepted appear in the Agent Workspace Offers Accepted widget with Property Details click-through intact.</li>
                         <li>Refined planner and calendar priority flags so the symbols read larger, cleaner, and more clearly inside the dashboard calendar workflow.</li>
                         <li>Added API-backed Daily Bible Verse loading with a local fallback so the dashboard can pull curated verses automatically.</li>
                         <li>Renamed the Property Details Agent tab label from Agent workspace to Agent for a cleaner, tighter tab row.</li>
@@ -940,8 +937,7 @@
                     </div>
                     <ul>
                         <li>Bumped the website build version to 1.2.8 across package metadata, lockfile metadata, fallback labels, and visible login and admin version badges.</li>
-                        <li>Added an Offers Accepted section in Agent Workspace so accepted properties are grouped in one place for follow-up.</li>
-                        <li>Added a share action on accepted properties that sends the saved listing agent directly into Agent Workspace Email Prep.</li>
+                        <li>Added a share action on saved properties that sends the listing agent directly into Agent Workspace Email Prep.</li>
                         <li>Made Property Details status changes refresh dashboard workspace data immediately when an offer becomes accepted.</li>
                         <li>Improved Analytics persistence so yearly goals and closed-deal drafts are less likely to be lost between refreshes.</li>
                         <li>Updated Analytics KPI counting so Offer Terms Sent stays in sync with the persisted PIQ agent status.</li>

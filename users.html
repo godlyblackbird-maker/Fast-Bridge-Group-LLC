@@ -327,51 +327,85 @@
             </nav>
 
             <section class="outreach-workspace-grid">
-                <div class="glass-card widget-card outreach-card" data-widget-id="offers-accepted" data-widget-title="Offers Accepted">
+                <div class="glass-card widget-card outreach-card" data-widget-id="agent-workspace-filter" data-widget-title="Filter">
                     <div class="card-header">
                         <div>
-                            <h2 class="card-title">Offer Accepted Widget</h2>
-                            <p class="card-subtitle">Properties marked as 80% - Offer Accepted in Property Details appear here for this user.</p>
+                            <h2 class="card-title">Filter</h2>
+                            <p class="card-subtitle">Search every saved property detail across clicked properties, imports, assignments, and the current detail state.</p>
                         </div>
-                        <button id="offers-accepted-resync-btn" class="card-btn" type="button" hidden>Resync Accepted</button>
                     </div>
-                    <div class="offers-accepted-toolbar">
-                        <label class="offers-accepted-filter outreach-full-width">
-                            <span>Search Properties</span>
-                            <input id="offers-accepted-search-filter" class="form-input" type="text" placeholder="Search address, status, assignee, location...">
+                    <div class="agent-workspace-filter-toolbar">
+                        <label class="agent-workspace-filter-field outreach-full-width">
+                            <span>Property Search</span>
+                            <input id="agent-workspace-filter-search" class="form-input" type="text" placeholder="Search address, APN, MLS, comments, city, brokerage...">
                         </label>
-                        <label class="offers-accepted-filter">
-                            <span>View</span>
-                            <select id="offers-accepted-scope-filter" class="form-input">
-                                <option value="mine-only">Mine Only</option>
-                                <option value="assigned-to-me" selected>Assigned to Me</option>
-                                <option value="assigned-to-other-users">Assigned to Other Users</option>
-                                <option value="all-assigned">All Assigned</option>
-                                <option value="all-visible">All Visible</option>
+                        <label class="agent-workspace-filter-field">
+                            <span>Source</span>
+                            <select id="agent-workspace-filter-source" class="form-input">
+                                <option value="all">All Sources</option>
+                                <option value="clicked">Clicked</option>
+                                <option value="imported">Imported</option>
+                                <option value="assigned">Assigned</option>
+                                <option value="current">Current Detail</option>
                             </select>
                         </label>
-                        <label class="offers-accepted-filter">
+                        <label class="agent-workspace-filter-field">
+                            <span>Assignment</span>
+                            <select id="agent-workspace-filter-assignment" class="form-input">
+                                <option value="all">All Assignment States</option>
+                                <option value="assigned-to-me">Assigned To Me</option>
+                                <option value="assigned-to-other">Assigned To Other User</option>
+                                <option value="unassigned">Unassigned</option>
+                            </select>
+                        </label>
+                        <label class="agent-workspace-filter-field">
                             <span>Agent Status</span>
-                            <select id="offers-accepted-status-filter" class="form-input">
-                                <option value="offer-accepted" selected>80% - Offer Accepted</option>
-                                <option value="acquired">100% - Closed Deal</option>
-                                <option value="in-negotiations">60% - In Negotiations</option>
-                                <option value="contract-submitted">50% - Contract Submitted</option>
-                                <option value="back-up">30% - Back Up</option>
-                                <option value="offer-terms-sent">30% - Offer Terms Sent</option>
-                                <option value="continue-to-follow">20% - Continue to Follow</option>
-                                <option value="initial-contact-started">10% - Initial Contact Started</option>
-                                <option value="cancelled-fec">0% - Cancelled FEC</option>
-                                <option value="do-not-use">0% - DO NOT USE</option>
-                                <option value="none">0% - None</option>
-                                <option value="pass">0% - Pass</option>
-                                <option value="sold-others-close">0% - Sold Others/Close</option>
+                            <select id="agent-workspace-filter-status" class="form-input">
                                 <option value="all-statuses">All Agent Statuses</option>
                             </select>
                         </label>
                     </div>
-                    <div id="dashboard-offers-accepted-list" class="agent-note-list agent-notes-dashboard-list">
-                        <p class="outreach-empty">No accepted offers yet.</p>
+                    <div class="agent-workspace-filter-actions">
+                        <span id="agent-workspace-filter-count" class="buyers-sheet-count">0 Rows</span>
+                        <button id="agent-workspace-filter-refresh" class="card-btn" type="button">Refresh</button>
+                    </div>
+                    <p id="agent-workspace-filter-summary" class="offer-docs-note">Loading saved property details...</p>
+                    <div id="agent-workspace-filter-list" class="agent-note-list agent-notes-dashboard-list">
+                        <p class="outreach-empty">No property details loaded yet.</p>
+                    </div>
+                </div>
+
+                <div class="glass-card widget-card outreach-card" data-widget-id="agent-property-memory" data-widget-title="Cloud Property Memory">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Cloud Property Memory</h2>
+                            <p class="card-subtitle">Remember property details by saved agent so you can pull filtered records from the cloud later.</p>
+                        </div>
+                    </div>
+                    <div class="agent-cloud-memory-toolbar">
+                        <label class="agent-cloud-memory-filter outreach-full-width">
+                            <span>Property Search</span>
+                            <input id="agent-cloud-memory-search" class="form-input" type="text" placeholder="Search address, city, APN, comments, MLS...">
+                        </label>
+                        <label class="agent-cloud-memory-filter">
+                            <span>Agent</span>
+                            <input id="agent-cloud-memory-agent" class="form-input" type="text" placeholder="Agent name, email, brokerage...">
+                        </label>
+                        <label class="agent-cloud-memory-filter">
+                            <span>Status</span>
+                            <select id="agent-cloud-memory-status" class="form-input">
+                                <option value="all-statuses">All Agent Statuses</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="agent-cloud-memory-actions">
+                        <span id="agent-cloud-memory-count" class="buyers-sheet-count">0 Rows</span>
+                        <button id="agent-cloud-memory-refresh-btn" class="card-btn" type="button">Refresh Cloud</button>
+                        <button id="agent-cloud-memory-copy-btn" class="card-btn" type="button">Copy Filtered JSON</button>
+                    </div>
+                    <p id="agent-cloud-memory-summary" class="offer-docs-note">Load cloud-saved property details by agent and status.</p>
+                    <div id="agent-cloud-memory-list" class="agent-note-list agent-notes-dashboard-list">
+                        <p class="outreach-empty">No cloud property details loaded yet.</p>
                     </div>
                 </div>
 
