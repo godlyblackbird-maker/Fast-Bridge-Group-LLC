@@ -11206,6 +11206,42 @@ function initNavbarDateTime() {
 
         let searchTimer = 0;
         let currentItems = [];
+        let pendingUploadPropertyItem = null;
+
+        const uploadInput = document.createElement('input');
+        uploadInput.type = 'file';
+        uploadInput.multiple = true;
+        uploadInput.hidden = true;
+        uploadInput.setAttribute('aria-hidden', 'true');
+        list.parentElement.appendChild(uploadInput);
+
+        uploadInput.addEventListener('change', async () => {
+            const files = Array.from(uploadInput.files || []);
+            const targetItem = pendingUploadPropertyItem;
+            uploadInput.value = '';
+            pendingUploadPropertyItem = null;
+
+            if (!files.length || !targetItem) {
+                return;
+            }
+
+            const propertyAddress = String(targetItem.propertyAddress || 'Property').trim() || 'Property';
+            const propertyKey = makePropertyStorageKey(targetItem.propertyKey || propertyAddress);
+            if (!propertyKey) {
+                showDashboardToast('error', 'Property Missing', 'FAST could not find a property key for these uploads.');
+                return;
+            }
+
+            try {
+                for (const file of files) {
+                    await uploadFileToCloudStorage('property-detail', propertyKey, file);
+                }
+
+                showDashboardToast('success', 'Property Documents Saved', `${files.length} file${files.length === 1 ? '' : 's'} uploaded for ${propertyAddress}. They will appear in Property Details.`);
+            } catch (error) {
+                showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'These property documents could not be uploaded.');
+            }
+        });
 
         function hydrateStatusOptions() {
             const previousValue = String(statusSelect.value || 'all-statuses').trim().toLowerCase() || 'all-statuses';
@@ -11434,6 +11470,45 @@ function initNavbarDateTime() {
                 const actions = document.createElement('div');
                 actions.className = 'agent-note-link-actions';
 
+                const uploadButton = document.createElement('button');
+                uploadButton.type = 'button';
+                uploadButton.className = 'agent-note-share-btn agent-note-document-btn';
+                uploadButton.setAttribute('aria-label', `Upload property documents for ${item.propertyAddress}`);
+                uploadButton.title = 'Upload property documents';
+                uploadButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.48-8.48"></path>
+                    </svg>
+                `;
+                uploadButton.addEventListener('click', () => {
+                    pendingUploadPropertyItem = item;
+                    uploadInput.click();
+                });
+
+                const sendToPrepButton = document.createElement('button');
+                sendToPrepButton.type = 'button';
+                sendToPrepButton.className = 'agent-note-share-btn agent-note-email-prep-btn';
+                sendToPrepButton.setAttribute('aria-label', `Load agent into Email Prep for ${item.propertyAddress}`);
+                sendToPrepButton.title = 'Send agent to Email Prep';
+                sendToPrepButton.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 19V5"></path>
+                        <path d="M7 10l5-5 5 5"></path>
+                        <path d="M5 19h14"></path>
+                    </svg>
+                `;
+                sendToPrepButton.addEventListener('click', () => {
+                    const snapshot = item.snapshot && typeof item.snapshot === 'object' ? item.snapshot : {};
+                    const agentRecord = snapshot.agentRecord && typeof snapshot.agentRecord === 'object' ? snapshot.agentRecord : {};
+                    window.dispatchEvent(new CustomEvent('agent-workspace-prefill-email-prep', {
+                        detail: {
+                            recipientName: String(agentRecord.name || '').trim(),
+                            recipientEmail: String(agentRecord.email || '').trim(),
+                            propertyAddress: item.propertyAddress
+                        }
+                    }));
+                });
+
                 const openButton = document.createElement('button');
                 openButton.type = 'button';
                 openButton.className = 'agent-note-share-btn agent-note-property-btn';
@@ -11457,6 +11532,8 @@ function initNavbarDateTime() {
                 article.appendChild(location);
                 article.appendChild(meta);
                 article.appendChild(body);
+                actions.appendChild(uploadButton);
+                actions.appendChild(sendToPrepButton);
                 actions.appendChild(openButton);
                 article.appendChild(actions);
                 list.appendChild(article);
@@ -12233,6 +12310,11 @@ function initNavbarDateTime() {
                 uploadInput.value = '';
                 showDashboardToast('error', 'Upload Failed', error.message || 'Unable to save the selected files.');
             }
+        });
+
+        window.addEventListener('agent-workspace-prefill-email-prep', (event) => {
+            const payload = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+            prefillRecipientForEmailPrep(payload);
         });
 
         window.addEventListener('dashboard-data-updated', () => {
@@ -18308,6 +18390,179 @@ function initNavbarDateTime() {
                 window.location.href = 'fbg-messages.html?shareProperty=1';
             });
         }
+
+        function initPropertyShareDocuments() {
+            const uploadButton = document.getElementById('property-share-upload-btn');
+            const uploadInput = document.getElementById('property-share-upload-input');
+            const libraryList = document.getElementById('property-share-library-list');
+            const libraryNote = document.getElementById('property-share-library-note');
+
+            if (!uploadButton || !uploadInput || !libraryList || !libraryNote) {
+                return;
+            }
+
+            const propertyAddress = String(detailData.address || detailData.propertyAddress || 'Property').trim() || 'Property';
+            const propertyKey = makePropertyStorageKey(propertyAddress);
+            const uploadScope = 'property-detail';
+            let propertyDocuments = [];
+
+            function renderEmptyLibrary(message = 'Use the paperclip to save files for this property.') {
+                libraryList.innerHTML = `
+                    <div class="offer-docs-empty">
+                        <div class="offer-docs-empty-copy">
+                            <strong>No property documents uploaded yet.</strong>
+                            <p>${message}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderDocuments() {
+                libraryList.innerHTML = '';
+
+                if (!propertyDocuments.length) {
+                    libraryNote.textContent = 'Upload deal docs for this property. FAST stores them with this user and property.';
+                    renderEmptyLibrary();
+                    return;
+                }
+
+                propertyDocuments.forEach((documentItem) => {
+                    const item = document.createElement('article');
+                    item.className = 'offer-doc-item property-share-doc-item';
+                    item.tabIndex = 0;
+                    item.setAttribute('role', 'button');
+                    item.setAttribute('aria-label', `Open ${documentItem.fileName || documentItem.label || 'property document'}`);
+
+                    const head = document.createElement('div');
+                    head.className = 'offer-doc-item-head';
+
+                    const titleWrap = document.createElement('div');
+                    const title = document.createElement('strong');
+                    title.textContent = documentItem.fileName || documentItem.label || 'Saved Document';
+                    const subtitle = document.createElement('p');
+                    subtitle.textContent = documentItem.updatedAt
+                        ? `Uploaded ${new Date(Number(documentItem.updatedAt) || Date.now()).toLocaleString()}`
+                        : 'Recently uploaded';
+                    titleWrap.appendChild(title);
+                    titleWrap.appendChild(subtitle);
+
+                    const meta = document.createElement('div');
+                    meta.className = 'offer-doc-meta';
+                    [
+                        formatFileSize(documentItem.fileSize),
+                        String(documentItem.fileType || '').replace(/^\./, '').toUpperCase() || 'FILE',
+                        documentItem.storage === 'cloud' ? 'Cloud' : ''
+                    ].filter(Boolean).forEach((value) => {
+                        const chip = document.createElement('span');
+                        chip.className = 'offer-doc-chip';
+                        chip.textContent = value;
+                        meta.appendChild(chip);
+                    });
+
+                    head.appendChild(titleWrap);
+                    head.appendChild(meta);
+                    item.appendChild(head);
+
+                    const openDocument = async () => {
+                        try {
+                            await openCloudStoredDocument(documentItem, false);
+                        } catch (error) {
+                            showDashboardToast('error', 'Open Failed', error && error.message ? error.message : 'The selected property document could not be opened.');
+                        }
+                    };
+
+                    item.addEventListener('click', () => {
+                        void openDocument();
+                    });
+                    item.addEventListener('keydown', (event) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') {
+                            return;
+                        }
+                        event.preventDefault();
+                        void openDocument();
+                    });
+
+                    libraryList.appendChild(item);
+                });
+
+                libraryNote.textContent = `${propertyDocuments.length} saved property document${propertyDocuments.length === 1 ? '' : 's'} for this user and address.`;
+            }
+
+            async function loadDocuments() {
+                libraryNote.textContent = 'Loading property documents...';
+                try {
+                    const token = getCloudUploadAuthToken();
+                    if (!token) {
+                        propertyDocuments = [];
+                        renderEmptyLibrary('Sign in again before loading property documents.');
+                        libraryNote.textContent = 'Sign in again before loading property documents.';
+                        return;
+                    }
+
+                    const response = await fetch(`/api/user-uploads?scope=${encodeURIComponent(uploadScope)}&contextKey=${encodeURIComponent(propertyKey)}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+
+                    let payload = null;
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = null;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(payload && payload.error ? payload.error : 'Property documents could not be loaded.');
+                    }
+
+                    propertyDocuments = Array.isArray(payload && payload.documents)
+                        ? payload.documents.map((documentItem) => buildCloudUploadDocument(documentItem, 'Property Document'))
+                        : [];
+                    renderDocuments();
+                } catch (error) {
+                    propertyDocuments = [];
+                    renderEmptyLibrary('Property documents could not be loaded right now.');
+                    libraryNote.textContent = error && error.message ? error.message : 'Property documents could not be loaded right now.';
+                }
+            }
+
+            uploadButton.addEventListener('click', () => {
+                uploadInput.click();
+            });
+
+            uploadInput.addEventListener('change', async () => {
+                const files = Array.from(uploadInput.files || []);
+                if (!files.length) {
+                    uploadInput.value = '';
+                    return;
+                }
+
+                libraryNote.textContent = `Uploading ${files.length} file${files.length === 1 ? '' : 's'}...`;
+
+                try {
+                    const uploadedDocuments = [];
+                    for (const file of files) {
+                        const uploadedDocument = await uploadFileToCloudStorage(uploadScope, propertyKey, file);
+                        uploadedDocuments.push(uploadedDocument);
+                    }
+
+                    propertyDocuments = uploadedDocuments.concat(propertyDocuments)
+                        .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0));
+                    renderDocuments();
+                    showDashboardToast('success', 'Property Documents Saved', `${uploadedDocuments.length} file${uploadedDocuments.length === 1 ? '' : 's'} uploaded for ${propertyAddress}.`);
+                } catch (error) {
+                    libraryNote.textContent = error && error.message ? error.message : 'The selected files could not be uploaded.';
+                    showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'The selected files could not be uploaded.');
+                } finally {
+                    uploadInput.value = '';
+                }
+            });
+
+            void loadDocuments();
+        }
+
+        initPropertyShareDocuments();
 
         renderPropertyDetailSnapshot();
 

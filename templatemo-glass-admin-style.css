@@ -8682,10 +8682,20 @@ body.analytics-reboot .analytics-my-file-count {
 .agent-note-link-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
     margin-top: 10px;
 }
 
+.agent-note-link-actions .agent-note-share-btn {
+    margin-left: 0;
+}
+
 .agent-note-property-btn {
+    border-color: rgba(var(--accent-rgb), 0.28);
+    color: var(--text-primary);
+}
+
+.agent-note-document-btn {
     border-color: rgba(var(--accent-rgb), 0.28);
     color: var(--text-primary);
 }
@@ -8698,6 +8708,8 @@ body.analytics-reboot .analytics-my-file-count {
 .agent-note-status-btn:hover,
 .agent-note-status-btn:focus-visible,
 .agent-note-status-btn.is-active,
+.agent-note-document-btn:hover,
+.agent-note-document-btn:focus-visible,
 .agent-note-property-btn:hover,
 .agent-note-property-btn:focus-visible {
     border-color: rgba(var(--accent-rgb), 0.48);
@@ -15527,6 +15539,14 @@ body.analytics-reboot .analytics-my-file-count {
     flex-wrap: wrap;
 }
 
+.property-share-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .property-detail-topbar h1 {
     margin: 0;
     font-size: 28px;
@@ -15535,6 +15555,84 @@ body.analytics-reboot .analytics-my-file-count {
 .property-share-message-btn {
     min-height: 40px;
     white-space: nowrap;
+}
+
+.property-share-upload-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--accent-light-rgb), 0.45);
+    background: rgba(15, 23, 42, 0.24);
+    color: rgb(var(--accent-light-rgb));
+    cursor: pointer;
+    box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.2);
+    transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.property-share-upload-btn:hover,
+.property-share-upload-btn:focus-visible {
+    border-color: rgba(var(--accent-light-rgb), 0.7);
+    background: rgba(var(--accent-light-rgb), 0.18);
+    color: #ecfdf5;
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.property-share-upload-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.property-share-library {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 4px;
+}
+
+.property-share-library-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.property-share-library-kicker {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.property-share-library-note {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.property-share-library-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.property-share-doc-item {
+    cursor: pointer;
+    transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.property-share-doc-item:hover,
+.property-share-doc-item:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(var(--accent-light-rgb), 0.38);
+    background: rgba(var(--accent-light-rgb), 0.08);
+    box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.16);
+    outline: none;
 }
 
 .property-back-link {
@@ -15575,8 +15673,12 @@ body.analytics-reboot .analytics-my-file-count {
         align-items: stretch;
     }
 
-    .property-share-message-btn {
+    .property-share-action-group {
         width: 100%;
+    }
+
+    .property-share-message-btn {
+        flex: 1 1 auto;
         justify-content: center;
     }
 }

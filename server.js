@@ -3648,7 +3648,7 @@ function getContentTypeForFileName(fileName, fallbackType = '') {
 
 function sanitizeUserUploadScope(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar', 'fbg-message'].includes(normalized)
+  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar', 'fbg-message', 'property-detail'].includes(normalized)
     ? normalized
     : '';
 }
@@ -9557,7 +9557,7 @@ app.post('/api/user-uploads', (req, res) => {
       const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(uploadedFile?.originalname || '').trim()));
       const extension = path.extname(fileName).toLowerCase();
 
-      if (!scope || !['closed-deal', 'offer-package', 'fbg-message'].includes(scope)) {
+      if (!scope || !['closed-deal', 'offer-package', 'fbg-message', 'property-detail'].includes(scope)) {
         return res.status(400).json({ error: 'A valid upload scope is required.' });
       }
 

@@ -346,9 +346,33 @@
                 <header class="property-detail-topbar glass-card">
                     <div class="property-detail-topbar-actions">
                         <a href="mls.html" class="property-back-link" aria-label="Back to MLS hot deals">Back to MLS</a>
-                        <button type="button" id="property-share-message-btn" class="card-btn active property-share-message-btn">Share In FBG</button>
+                        <div class="property-share-action-group">
+                            <button type="button" id="property-share-message-btn" class="card-btn active property-share-message-btn">Share In FBG</button>
+                            <button type="button" id="property-share-upload-btn" class="property-share-upload-btn" aria-label="Upload property documents" title="Upload property documents">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.48-8.48"></path>
+                                </svg>
+                            </button>
+                            <input id="property-share-upload-input" type="file" hidden multiple>
+                        </div>
                     </div>
                     <h1 id="property-address-title">Property Address</h1>
+                    <div class="property-share-library" id="property-share-library">
+                        <div class="property-share-library-head">
+                            <div>
+                                <p class="property-share-library-kicker">Property Documents</p>
+                                <p id="property-share-library-note" class="property-share-library-note">Upload deal docs for this property. FAST stores them with this user and property.</p>
+                            </div>
+                        </div>
+                        <div id="property-share-library-list" class="offer-docs-list property-share-library-list">
+                            <div class="offer-docs-empty">
+                                <div class="offer-docs-empty-copy">
+                                    <strong>No property documents uploaded yet.</strong>
+                                    <p>Use the paperclip to save files for this property.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </header>
 
         <section class="property-detail-grid">
@@ -387,6 +411,7 @@
                 <span>Agent Status</span>
                 <select id="piq-agent-status" class="form-input">
                     <option value="acquired">100% - Closed Deal</option>
+                    <option value="offer-accepted">80% - Offer Accepted</option>
                     <option value="in-negotiations">60% - In Negotiations</option>
                     <option value="contract-submitted">50% - Contract Submitted</option>
                     <option value="back-up">30% - Back Up</option>
