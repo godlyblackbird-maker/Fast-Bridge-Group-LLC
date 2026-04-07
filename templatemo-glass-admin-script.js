@@ -13,10 +13,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const AGENT_WORKSPACE_EMAIL_PREP_KEY = 'agentWorkspaceEmailPrepByUser';
     const IA_CALCULATOR_STATE_KEY = 'iaCalculatorStateByUser';
     const PIQ_AGENT_STATUS_KEY = 'piqAgentStatusByUser';
-    const ACCEPTED_OFFER_WORKSPACE_BACKFILL_KEY = 'acceptedOfferWorkspaceBackfillByUser';
-    const ACCEPTED_OFFER_WORKSPACE_BACKFILL_VERSION = 1;
-    const ACCEPTED_OFFER_FOLLOW_UP_DAYS = 7;
-    const ACCEPTED_OFFER_STALE_ALERT_SESSION_KEY = 'acceptedOfferStaleAlertSessionByUser';
     const CLOSED_DEALS_KEY = 'closedDealsByUser';
     const NOTIFICATION_HISTORY_KEY = 'dashboardNotificationHistoryByUser';
     const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
@@ -2325,50 +2321,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
     }
 
-    function normalizeAcceptedAtValue(value) {
-        const rawValue = String(value || '').trim();
-        if (!rawValue) {
-            return '';
-        }
-
-        const parsedValue = Date.parse(rawValue);
-        if (Number.isNaN(parsedValue)) {
-            return '';
-        }
-
-        return new Date(parsedValue).toISOString();
-    }
-
-    function syncAcceptedOfferTimestamp(detailLike, nextStatusValue, previousStatusValue) {
-        const detail = detailLike && typeof detailLike === 'object' ? detailLike : null;
-        if (!detail) {
-            return '';
-        }
-
-        const normalizedNextStatus = normalizeAgentStatusValue(nextStatusValue || detail.piqAgentStatus || 'none');
-        const normalizedPreviousStatus = normalizeAgentStatusValue(previousStatusValue || detail.piqAgentStatus || 'none');
-        const existingAcceptedAt = normalizeAcceptedAtValue(detail.acceptedAt);
-
-        if (normalizedNextStatus !== 'offer-accepted') {
-            if (existingAcceptedAt) {
-                detail.acceptedAt = existingAcceptedAt;
-            }
-            return existingAcceptedAt;
-        }
-
-        if (normalizedPreviousStatus !== 'offer-accepted' || !existingAcceptedAt) {
-            detail.acceptedAt = new Date().toISOString();
-            return detail.acceptedAt;
-        }
-
-        detail.acceptedAt = existingAcceptedAt;
-        return existingAcceptedAt;
-    }
-
-    function syncAcceptedOfferWorkspaceTargets(detailLike, workspaceUserLike) {
-        return;
-    }
-
     function getPersistedSelectedPropertyDetail() {
         const storageReaders = [
             () => localStorage.getItem('selectedPropertyDetail'),
@@ -3901,7 +3853,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         return {
             address,
-            acceptedAt: normalizeAcceptedAtValue(snapshot.acceptedAt),
             propertyImages,
             propertyDetails: String(snapshot.propertyDetails || '').trim(),
             listPrice: String(snapshot.listPrice || '$0').trim() || '$0',
@@ -3926,82 +3877,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             },
             offer: String(snapshot.offer || 'Offer tab content placeholder.').trim() || 'Offer tab content placeholder.'
         };
-    }
-
-    function getAcceptedOfferWorkspaceBackfillState(userLike) {
-        const normalizedUser = buildUserIdentity(userLike);
-        if (!normalizedUser.key) {
-            return {};
-        }
-
-        const state = getUserScopedObject(ACCEPTED_OFFER_WORKSPACE_BACKFILL_KEY, normalizedUser.key);
-        return state && typeof state === 'object' && !Array.isArray(state) ? state : {};
-    }
-
-    function markAcceptedOfferWorkspaceBackfillComplete(userLike) {
-        const normalizedUser = buildUserIdentity(userLike);
-        if (!normalizedUser.key) {
-            return;
-        }
-
-        const currentState = getAcceptedOfferWorkspaceBackfillState(normalizedUser);
-        setUserScopedObject(ACCEPTED_OFFER_WORKSPACE_BACKFILL_KEY, normalizedUser.key, {
-            ...currentState,
-            version: ACCEPTED_OFFER_WORKSPACE_BACKFILL_VERSION,
-            completedAt: Date.now()
-        }, { silent: true });
-    }
-
-    function getAcceptedOfferSnapshotCompleteness(snapshotLike) {
-        const snapshot = snapshotLike && typeof snapshotLike === 'object' ? snapshotLike : null;
-        if (!snapshot) {
-            return 0;
-        }
-
-        let score = 0;
-        const weightedKeys = [
-            'address',
-            'propertyAddress',
-            'propertyDetails',
-            'listPrice',
-            'marketInfo',
-            'statusLabel',
-            'areaLabel',
-            'city',
-            'county',
-            'piq',
-            'comps',
-            'ia',
-            'offer'
-        ];
-
-        weightedKeys.forEach((key) => {
-            if (String(snapshot[key] || '').trim()) {
-                score += 2;
-            }
-        });
-
-        if (Array.isArray(snapshot.propertyImages) && snapshot.propertyImages.some(Boolean)) {
-            score += 4;
-        }
-
-        if (snapshot.agentRecord && typeof snapshot.agentRecord === 'object') {
-            score += 2;
-        }
-
-        return score;
-    }
-
-    function backfillAcceptedOfferWorkspace() {
-        return {
-            didRun: false,
-            didChange: false,
-            restoredCount: 0
-        };
-    }
-
-    function getAcceptedOfferItemsForWorkspace() {
-        return [];
     }
 
     function getPropertySnapshotForWorkspace(propertyKey, workspaceUserLike) {
@@ -19340,7 +19215,6 @@ function initNavbarDateTime() {
             const hasSavedOption = Array.from(piqAgentStatusSelect.options).some(option => option.value === savedStatus);
             piqAgentStatusSelect.value = hasSavedOption ? savedStatus : defaultAgentStatus;
 
-            syncAcceptedOfferTimestamp(detailData, piqAgentStatusSelect.value || defaultAgentStatus, detailData.piqAgentStatus || defaultAgentStatus);
             detailData.piqAgentStatus = normalizeAgentStatusValue(piqAgentStatusSelect.value || defaultAgentStatus);
             detailData.agentRecord = {
                 ...(detailData.agentRecord || {}),
@@ -19355,9 +19229,7 @@ function initNavbarDateTime() {
             }
 
             piqAgentStatusSelect.addEventListener('change', () => {
-                const previousStatus = normalizeAgentStatusValue(detailData.piqAgentStatus || defaultAgentStatus);
                 detailData.piqAgentStatus = normalizeAgentStatusValue(piqAgentStatusSelect.value || defaultAgentStatus);
-                syncAcceptedOfferTimestamp(detailData, detailData.piqAgentStatus, previousStatus);
                 detailData.agentRecord = {
                     ...(detailData.agentRecord || {}),
                     agentStatus: formatAgentStatusLabel(detailData.piqAgentStatus)
