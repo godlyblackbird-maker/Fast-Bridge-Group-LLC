@@ -6444,6 +6444,29 @@ body.analytics-reboot .analytics-my-file-count {
     color: var(--text-primary);
 }
 
+.closed-deal-item-title-btn {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.closed-deal-item-title-btn:hover,
+.closed-deal-item-title-btn:focus-visible {
+    color: rgb(var(--accent-light-rgb));
+    text-decoration: underline;
+}
+
+.closed-deal-document-item {
+    cursor: pointer;
+}
+
+.closed-deal-document-item:focus-visible {
+    outline: 2px solid rgba(var(--accent-rgb), 0.45);
+    outline-offset: 2px;
+}
+
 .closed-deal-item-meta {
     margin: 0;
     color: var(--text-muted);

@@ -4070,6 +4070,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const closedDealsAuthToken = getCloudUploadAuthToken();
         const hasClosedDealsServerSync = Boolean(closedDealsAuthToken);
         let pendingUploads = [];
+        let closedDealUploadCache = [];
         let manualClosedDealsCache = getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
         let closedDealsServerLoaded = false;
         const NUMBERS_WINDOW_CONFIG = {
@@ -4175,6 +4176,43 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 console.error('Failed to load closed deals from server:', error);
             } finally {
                 closedDealsServerLoaded = true;
+                renderClosedDeals();
+            }
+        }
+
+        async function loadClosedDealUploadsFromServer() {
+            if (!hasClosedDealsServerSync) {
+                closedDealUploadCache = [];
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user-uploads?scope=closed-deal', {
+                    headers: {
+                        Authorization: `Bearer ${closedDealsAuthToken}`
+                    }
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (error) {
+                    payload = null;
+                }
+
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Failed to load retained analytics files.');
+                }
+
+                closedDealUploadCache = Array.isArray(payload && payload.documents)
+                    ? payload.documents.map((documentItem) => ({
+                        ...buildCloudUploadDocument(documentItem, 'Document'),
+                        contextKey: String(documentItem && documentItem.contextKey || '').trim()
+                    }))
+                    : [];
+            } catch (error) {
+                console.error('Failed to load retained closed-deal uploads:', error);
+            } finally {
                 renderClosedDeals();
             }
         }
@@ -4905,6 +4943,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         function createClosedDealDocumentCard(documentItem) {
             const documentCard = document.createElement('div');
             documentCard.className = 'closed-deal-document-item';
+            documentCard.tabIndex = 0;
+            documentCard.setAttribute('role', 'button');
+            documentCard.setAttribute('aria-label', `Open ${documentItem.fileName || documentItem.label || 'saved document'}`);
 
             const documentHead = document.createElement('div');
             documentHead.className = 'closed-deal-document-head';
@@ -4948,37 +4989,78 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             actions.appendChild(downloadButton);
             documentCard.appendChild(actions);
 
+            documentCard.addEventListener('click', async (event) => {
+                if (event.target instanceof HTMLElement && event.target.closest('button')) {
+                    return;
+                }
+                await openStoredClosedDealDocument(documentItem, false);
+            });
+
+            documentCard.addEventListener('keydown', async (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                    return;
+                }
+                event.preventDefault();
+                await openStoredClosedDealDocument(documentItem, false);
+            });
+
             return documentCard;
         }
 
+        async function openPrimaryFiledClosedDealDocument(deal) {
+            const documents = normalizeClosedDealDocuments({ documents: Array.isArray(deal && deal.documents) ? deal.documents : [] });
+            const firstDocument = documents[0] || null;
+
+            if (!firstDocument) {
+                showDashboardToast('error', 'No Files Found', 'This My File folder does not have a saved file to open.');
+                return;
+            }
+
+            await openStoredClosedDealDocument(firstDocument, false);
+        }
+
         async function removeFiledClosedDeal(deal) {
-            if (hasClosedDealsServerSync && deal && deal.manual) {
-                try {
-                    await removeManualClosedDeal(deal);
-                    renderClosedDeals();
-                    showDashboardToast('success', 'File Removed', 'The saved deal file was removed from My File.');
-                } catch (error) {
-                    showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The saved deal file could not be removed.');
-                }
+            const safeDeal = deal && typeof deal === 'object' ? deal : null;
+            if (!safeDeal) {
+                return;
+            }
+
+            const documents = normalizeClosedDealDocuments({ documents: Array.isArray(safeDeal.documents) ? safeDeal.documents : [] });
+            const documentCount = documents.length;
+            const deleteTargetLabel = String(safeDeal.title || 'this file group').trim() || 'this file group';
+            const confirmed = window.confirm(
+                `Delete ${deleteTargetLabel} from My File?${documentCount ? ` This will permanently remove ${documentCount} saved file${documentCount === 1 ? '' : 's'}.` : ''}`
+            );
+
+            if (!confirmed) {
                 return;
             }
 
             try {
-                await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
+                if (hasClosedDealsServerSync && safeDeal.manual) {
+                    await removeManualClosedDeal(safeDeal);
+                } else if (safeDeal.manual) {
+                    const nextItems = getManualClosedDeals().filter((item) => String(item && item.id || '') !== String(safeDeal.id || ''));
+                    setManualClosedDeals(nextItems);
+                }
+
+                if (documents.length) {
+                    await deleteClosedDealDocumentBlobs(documents);
+                }
+
+                if (hasClosedDealsServerSync) {
+                    await loadClosedDealUploadsFromServer();
+                } else if (documents.length) {
+                    const deletedIds = new Set(documents.map((documentItem) => String(documentItem && documentItem.id || '').trim()).filter(Boolean));
+                    closedDealUploadCache = closedDealUploadCache.filter((documentItem) => !deletedIds.has(String(documentItem && documentItem.id || '').trim()));
+                }
+
+                renderClosedDeals();
+                showDashboardToast('success', 'Folder Deleted', 'The selected My File folder and its saved files were removed.');
             } catch (error) {
-                showDashboardToast('error', 'Delete Failed', 'The saved closed-deal files could not be removed from browser storage.');
-                return;
+                console.error('Failed to delete My File entry:', error);
+                showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The selected My File folder could not be deleted.');
             }
-
-            const nextItems = getManualClosedDeals().filter((item) => {
-                const itemId = String(item && item.id || '');
-                const itemKey = makePropertyStorageKey(item && (item.title || item.propertyAddress || item.id));
-                return itemId !== String(deal.id || '') && itemKey !== String(deal.key || '');
-            });
-
-            setManualClosedDeals(nextItems);
-            renderClosedDeals();
-            showDashboardToast('success', 'File Removed', 'The saved deal file was removed from My File.');
         }
 
         function createClosedDealCard(deal, options = {}) {
@@ -4993,14 +5075,25 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const headMain = document.createElement('div');
             headMain.className = 'closed-deal-item-head-main';
 
-            const title = document.createElement('div');
+            const title = document.createElement(allowArchiveDelete ? 'button' : 'div');
             title.className = 'closed-deal-item-title';
             title.textContent = deal.title;
+
+            if (allowArchiveDelete) {
+                title.type = 'button';
+                title.classList.add('closed-deal-item-title-btn');
+                title.setAttribute('aria-label', `Open files for ${deal.title}`);
+                title.addEventListener('click', async () => {
+                    await openPrimaryFiledClosedDealDocument(deal);
+                });
+            }
 
             const source = document.createElement('span');
             source.className = `closed-deal-source ${deal.source}`;
             source.textContent = deal.source === 'mixed'
                 ? 'Auto + Manual'
+                : deal.source === 'retained'
+                    ? 'Retained Files'
                 : deal.source === 'manual'
                     ? 'Manual'
                     : 'Auto';
@@ -5014,7 +5107,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 archiveDeleteButton.type = 'button';
                 archiveDeleteButton.className = 'closed-deal-archive-delete-btn';
                 archiveDeleteButton.setAttribute('aria-label', `Delete ${deal.title} from My File`);
-                archiveDeleteButton.title = 'Delete from My File';
+                archiveDeleteButton.title = 'Delete folder from My File';
                 archiveDeleteButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
                 archiveDeleteButton.addEventListener('click', async () => {
                     await removeFiledClosedDeal(deal);
@@ -5068,17 +5161,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     if (hasClosedDealsServerSync) {
                         try {
                             await removeManualClosedDeal(deal);
+                            await loadClosedDealUploadsFromServer();
                             renderClosedDeals();
                         } catch (error) {
                             showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The closed-deal record could not be removed.');
                         }
-                        return;
-                    }
-
-                    try {
-                        await deleteClosedDealDocumentBlobs(Array.isArray(deal.documents) ? deal.documents : []);
-                    } catch (error) {
-                        showDashboardToast('error', 'Delete Failed', 'The closed-deal documents could not be removed from browser storage.');
                         return;
                     }
 
@@ -5151,7 +5238,50 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return Array.isArray(deal.documents) && deal.documents.length > 0;
             });
 
-            return [...manualFiledDeals, ...supplementalDeals]
+            const referencedUploadIds = new Set(
+                [...manualFiledDeals, ...supplementalDeals]
+                    .flatMap((deal) => Array.isArray(deal.documents) ? deal.documents : [])
+                    .map((documentItem) => String(documentItem && documentItem.id || '').trim())
+                    .filter(Boolean)
+            );
+            const retainedGroups = new Map();
+
+            closedDealUploadCache.forEach((documentItem) => {
+                const normalizedDocument = normalizeClosedDealDocuments({ documents: [documentItem] })[0];
+                if (!normalizedDocument) {
+                    return;
+                }
+
+                const documentId = String(normalizedDocument.id || '').trim();
+                if (documentId && referencedUploadIds.has(documentId)) {
+                    return;
+                }
+
+                const contextKey = String(documentItem && documentItem.contextKey || '').trim() || `upload-${documentId}`;
+                const existing = retainedGroups.get(contextKey);
+
+                if (existing) {
+                    existing.documents.push(normalizedDocument);
+                    existing.closeDate = Math.max(Number(existing.closeDate) || 0, Number(normalizedDocument.updatedAt) || Number(normalizedDocument.createdAt) || Date.now());
+                    return;
+                }
+
+                retainedGroups.set(contextKey, {
+                    id: `retained-${contextKey}`,
+                    key: `retained-${contextKey}`,
+                    title: 'Retained Analytics Files',
+                    closeDate: Number(normalizedDocument.updatedAt) || Number(normalizedDocument.createdAt) || Date.now(),
+                    note: 'These stored files are kept even if the closed-deal record is removed.',
+                    wholesaleFee: 0,
+                    earnedAmount: 0,
+                    documents: [normalizedDocument],
+                    source: 'retained',
+                    manual: false,
+                    createdAt: Number(normalizedDocument.createdAt) || Date.now()
+                });
+            });
+
+            return [...manualFiledDeals, ...supplementalDeals, ...Array.from(retainedGroups.values())]
                 .sort((left, right) => (Number(right.closeDate) || Date.parse(right.closeDate) || 0) - (Number(left.closeDate) || Date.parse(left.closeDate) || 0));
         }
 
@@ -5424,6 +5554,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                     await persistManualClosedDeal(closedDealRecord);
                     pendingUploads = [];
                     clearClosedDealDraft();
+                    await loadClosedDealUploadsFromServer();
                     dealNameInput.value = '';
                     if (dealWholesaleFeeInput) {
                         dealWholesaleFeeInput.value = '';
@@ -5477,7 +5608,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         renderClosedDeals();
-        void loadManualClosedDealsFromServer();
+        void Promise.allSettled([loadManualClosedDealsFromServer(), loadClosedDealUploadsFromServer()]);
         window.addEventListener('dashboard-data-updated', renderClosedDeals);
         window.addEventListener('storage', renderClosedDeals);
     }

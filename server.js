@@ -9526,7 +9526,8 @@ app.get('/api/user-uploads', async (req, res) => {
       return res.status(400).json({ error: 'A valid upload scope is required.' });
     }
 
-    const contextKey = sanitizeUserUploadContextKey(req.query?.contextKey || 'default', 'default');
+    const rawContextKey = String(req.query?.contextKey || '').trim();
+    const contextKey = rawContextKey ? sanitizeUserUploadContextKey(rawContextKey, 'default') : '';
     const rows = await listUserUploadsForOwner(Number(decoded.id) || 0, { scope, contextKey });
     return res.json({ documents: rows.map((row) => serializeUserUpload(row)).filter(Boolean) });
   } catch (error) {
@@ -9843,16 +9844,6 @@ app.delete('/api/closed-deals/:dealId', async (req, res) => {
     const deal = await getClosedDealForOwner(ownerUserId, req.params.dealId);
     if (!deal) {
       return res.status(404).json({ error: 'Closed deal not found.' });
-    }
-
-    for (const documentItem of normalizeClosedDealDocumentsForStorage(deal.documents)) {
-      if (documentItem.storage === 'cloud' && documentItem.id) {
-        const uploadRecord = await getUserUploadByIdForOwner(ownerUserId, documentItem.id);
-        if (uploadRecord) {
-          await deleteStoredUserUpload(uploadRecord);
-          await dbRun('DELETE FROM user_uploads WHERE id = ? AND owner_user_id = ?', [uploadRecord.id, ownerUserId]);
-        }
-      }
     }
 
     await dbRun('DELETE FROM closed_deals WHERE id = ? AND owner_user_id = ?', [deal.id, ownerUserId]);
