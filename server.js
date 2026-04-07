@@ -1634,6 +1634,9 @@ function initializeDatabase() {
       seller_name TEXT NOT NULL,
       seller_email TEXT NOT NULL,
       seller_phone TEXT,
+      sms_consent INTEGER DEFAULT 0,
+      sms_consent_text TEXT,
+      sms_consent_at DATETIME,
       property_address TEXT NOT NULL,
       property_city TEXT,
       property_state TEXT,
@@ -1656,6 +1659,10 @@ function initializeDatabase() {
       console.log('Property submissions table ready');
     }
   });
+
+  db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent INTEGER DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent_text TEXT`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent_at DATETIME`, () => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS smtp_requests (
@@ -5079,8 +5086,41 @@ const AGENT_WORKSPACE_DOCUMENT_CATEGORIES = Object.freeze({
   invoices: 'Invoices'
 });
 
+const ALLOWED_INVESTOR_ATTACHMENT_EXTENSIONS = Object.freeze([
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.txt',
+  '.bmp', '.svg', '.avif', '.heic', '.heif', '.jfif', '.tif', '.tiff'
+]);
+
 function isAllowedInvestorAttachmentExtension(extension) {
-  return ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.txt'].includes(String(extension || '').toLowerCase());
+  return ALLOWED_INVESTOR_ATTACHMENT_EXTENSIONS.includes(String(extension || '').toLowerCase());
+}
+
+function isAllowedInvestorAttachmentMimeType(mimeType) {
+  const normalized = String(mimeType || '').trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  if (normalized === 'application/pdf' || normalized === 'application/x-pdf') {
+    return true;
+  }
+
+  if (normalized.startsWith('image/')) {
+    return true;
+  }
+
+  return [
+    'text/plain',
+    'text/csv',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ].includes(normalized);
+}
+
+function isAllowedInvestorAttachmentFile(extension, mimeType = '') {
+  return isAllowedInvestorAttachmentExtension(extension) || isAllowedInvestorAttachmentMimeType(mimeType);
 }
 
 function isProofOfFundsFileName(value) {
@@ -9179,6 +9219,10 @@ app.post('/api/property-submissions', (req, res) => {
   const sellerName = String(req.body?.sellerName || '').trim();
   const sellerEmail = String(req.body?.sellerEmail || '').trim().toLowerCase();
   const sellerPhone = String(req.body?.sellerPhone || '').trim();
+  const smsConsent = req.body?.smsConsent === true || String(req.body?.smsConsent || '').trim().toLowerCase() === 'true';
+  const smsConsentText = smsConsent
+    ? 'By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for assistance.'
+    : '';
   const propertyAddress = String(req.body?.propertyAddress || '').trim();
   const propertyCity = String(req.body?.propertyCity || '').trim();
   const propertyState = String(req.body?.propertyState || '').trim();
@@ -9196,12 +9240,16 @@ app.post('/api/property-submissions', (req, res) => {
     .filter(Boolean)
     .slice(0, 20);
 
-  if (!sellerName || !sellerEmail || !propertyAddress) {
-    return res.status(400).json({ error: 'Seller name, seller email, and property address are required.' });
+  if (!sellerName || !sellerEmail || !sellerPhone || !propertyAddress) {
+    return res.status(400).json({ error: 'Seller name, seller email, seller phone, and property address are required.' });
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerEmail)) {
     return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+
+  if (!smsConsent) {
+    return res.status(400).json({ error: 'Explicit SMS consent is required for property inquiry messaging.' });
   }
 
   db.run(
@@ -9209,6 +9257,9 @@ app.post('/api/property-submissions', (req, res) => {
       seller_name,
       seller_email,
       seller_phone,
+      sms_consent,
+      sms_consent_text,
+      sms_consent_at,
       property_address,
       property_city,
       property_state,
@@ -9221,11 +9272,13 @@ app.post('/api/property-submissions', (req, res) => {
       timeline,
       condition_issues,
       issue_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
     [
       sellerName,
       sellerEmail,
       sellerPhone,
+      smsConsent ? 1 : 0,
+      smsConsentText,
       propertyAddress,
       propertyCity,
       propertyState,
@@ -9253,6 +9306,8 @@ app.post('/api/property-submissions', (req, res) => {
           sellerName,
           sellerEmail,
           sellerPhone,
+          smsConsent,
+          smsConsentText,
           propertyAddress,
           propertyCity,
           propertyState,
@@ -9284,6 +9339,9 @@ app.get('/api/property-submissions', (req, res) => {
       seller_name,
       seller_email,
       seller_phone,
+      sms_consent,
+      sms_consent_text,
+      sms_consent_at,
       property_address,
       property_city,
       property_state,
@@ -9321,6 +9379,9 @@ app.get('/api/property-submissions', (req, res) => {
               sellerName: String(row.seller_name || ''),
               sellerEmail: String(row.seller_email || ''),
               sellerPhone: String(row.seller_phone || ''),
+              smsConsent: Number(row.sms_consent || 0) === 1,
+              smsConsentText: String(row.sms_consent_text || ''),
+              smsConsentAt: row.sms_consent_at || null,
               propertyAddress: String(row.property_address || ''),
               propertyCity: String(row.property_city || ''),
               propertyState: String(row.property_state || ''),
@@ -9418,7 +9479,7 @@ app.post('/api/agent-workspace-documents', express.json({ limit: '20mb' }), (req
     }
 
     const extension = path.extname(fileName).toLowerCase();
-    if (!isAllowedAgentWorkspaceDocumentExtension(extension)) {
+    if (!isAllowedInvestorAttachmentFile(extension, req.body?.fileType || '')) {
       return res.status(400).json({ error: 'This file type is not allowed.' });
     }
 
@@ -9565,7 +9626,7 @@ app.post('/api/user-uploads', (req, res) => {
         return res.status(400).json({ error: 'A file is required.' });
       }
 
-      if (!isAllowedInvestorAttachmentExtension(extension)) {
+      if (!isAllowedInvestorAttachmentFile(extension, uploadedFile.mimetype || '')) {
         return res.status(400).json({ error: 'This file type is not allowed.' });
       }
 

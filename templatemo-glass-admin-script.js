@@ -640,7 +640,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             function syncFloatingState() {
                 const shouldFloat = window.scrollY > releaseThreshold;
                 uniqueButtons.forEach((button) => {
-                    button.classList.toggle('notification-following', shouldFloat);
+                    const isStickyAnalyticsTrigger = Boolean(button.closest('.analytics-navbar'));
+                    button.classList.toggle('notification-following', shouldFloat && !isStickyAnalyticsTrigger);
                 });
             }
 
@@ -11211,6 +11212,7 @@ function initNavbarDateTime() {
         const uploadInput = document.createElement('input');
         uploadInput.type = 'file';
         uploadInput.multiple = true;
+        uploadInput.accept = '.pdf,image/*';
         uploadInput.hidden = true;
         uploadInput.setAttribute('aria-hidden', 'true');
         list.parentElement.appendChild(uploadInput);

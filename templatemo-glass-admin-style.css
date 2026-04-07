@@ -5278,19 +5278,21 @@ body.analytics-reboot .analytics-navbar .page-breadcrumb {
 }
 
 body.analytics-reboot .analytics-navbar .navbar-right {
-    flex: 0 1 420px;
-    width: min(100%, 420px);
+    flex: 1 1 320px;
+    width: 100%;
+    max-width: 420px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     margin-left: auto;
     gap: 12px;
+    min-width: 0;
 }
 
 body.analytics-reboot .analytics-navbar .search-box {
-    flex: 0 0 280px;
-    width: 280px;
-    max-width: calc(100% - 60px);
+    flex: 1 1 0;
+    width: auto;
+    max-width: 100%;
     min-width: 0;
 }
 

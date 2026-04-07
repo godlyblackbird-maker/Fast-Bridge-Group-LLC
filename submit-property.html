@@ -562,6 +562,48 @@
             color: var(--submit-accent);
         }
 
+        .submit-consent-panel {
+            display: grid;
+            gap: 12px;
+            padding: 16px 18px;
+            border: 1px solid var(--submit-chip-border);
+            border-radius: 18px;
+            background: var(--submit-chip-bg);
+        }
+
+        .submit-consent-copy {
+            margin: 0;
+            color: var(--submit-copy);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .submit-consent-checkbox {
+            align-items: flex-start;
+        }
+
+        .submit-consent-checkbox span {
+            display: block;
+        }
+
+        .submit-consent-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            font-size: 13px;
+        }
+
+        .submit-consent-links a {
+            color: var(--submit-accent);
+            text-decoration: none;
+        }
+
+        .submit-consent-links a:hover,
+        .submit-consent-links a:focus-visible {
+            color: var(--submit-accent-strong);
+            text-decoration: underline;
+        }
+
         .submit-actions {
             display: flex;
             align-items: center;
@@ -785,7 +827,7 @@
                             </div>
                             <div class="submit-field">
                                 <label for="seller-phone">Phone</label>
-                                <input id="seller-phone" name="sellerPhone" type="tel" placeholder="(555) 555-5555">
+                                <input id="seller-phone" name="sellerPhone" type="tel" placeholder="(555) 555-5555" required>
                             </div>
                             <div class="submit-field">
                                 <label for="property-type">Property Type</label>
@@ -855,6 +897,19 @@
                             <div class="submit-field full-width">
                                 <label for="issue-notes">Tell Us More About The Property</label>
                                 <textarea id="issue-notes" name="issueNotes" placeholder="Add anything else we should know about the condition, occupancy, liens, timeline, or situation."></textarea>
+                            </div>
+                            <div class="submit-field full-width">
+                                <div class="submit-consent-panel">
+                                    <p class="submit-consent-copy">By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for assistance.</p>
+                                    <label class="submit-checkbox submit-consent-checkbox">
+                                        <input id="seller-sms-consent" name="smsConsent" type="checkbox" value="yes" required>
+                                        <span>I agree to receive SMS text messages from FAST BRIDGE GROUP LLC at the phone number provided for property inquiry and transaction-related communication.</span>
+                                    </label>
+                                    <div class="submit-consent-links" aria-label="SMS policy links">
+                                        <a href="legal-privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>
+                                        <a href="legal-terms-of-use.html" target="_blank" rel="noopener">Terms of Use</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="submit-actions">
@@ -987,6 +1042,7 @@
                     sellerName: String(formData.get('sellerName') || '').trim(),
                     sellerEmail: String(formData.get('sellerEmail') || '').trim(),
                     sellerPhone: String(formData.get('sellerPhone') || '').trim(),
+                    smsConsent: formData.get('smsConsent') === 'yes',
                     propertyAddress: String(formData.get('propertyAddress') || '').trim(),
                     propertyCity: String(formData.get('propertyCity') || '').trim(),
                     propertyState: String(formData.get('propertyState') || '').trim(),
@@ -1001,8 +1057,13 @@
                     issueNotes: String(formData.get('issueNotes') || '').trim()
                 };
 
-                if (!payload.sellerName || !payload.sellerEmail || !payload.propertyAddress) {
-                    setFeedback('Seller name, seller email, and property address are required.', 'error');
+                if (!payload.sellerName || !payload.sellerEmail || !payload.sellerPhone || !payload.propertyAddress) {
+                    setFeedback('Name, email, phone, and property address are required.', 'error');
+                    return;
+                }
+
+                if (!payload.smsConsent) {
+                    setFeedback('SMS consent is required before submitting this property inquiry.', 'error');
                     return;
                 }
 
