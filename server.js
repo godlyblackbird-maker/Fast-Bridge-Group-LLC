@@ -117,7 +117,7 @@ const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
 const CANONICAL_LORIA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('LORIA_BROKER_EMAIL') || 'loria.rigby@fastbridgegroupllc.com');
-const CANONICAL_LORIA_PASSWORD = String(process.env.LORIA_BROKER_PASSWORD || 'loriarigby').trim() || 'loriarigby';
+const CANONICAL_LORIA_PASSWORD = String(process.env.LORIA_BROKER_PASSWORD || 'Password123').trim() || 'Password123';
 const CANONICAL_LORIA_NAME = String(process.env.LORIA_BROKER_NAME || 'Loria Rigby').trim() || 'Loria Rigby';
 const CANONICAL_TEST_EMAIL = 'test@fastbridgegroupllc.com';
 const CANONICAL_TEST_PASSWORD = 'subzero';
@@ -3633,6 +3633,7 @@ async function syncLoriaBrokerAccount() {
   const canonicalEmail = CANONICAL_LORIA_EMAIL;
   const canonicalName = CANONICAL_LORIA_NAME;
   const canonicalPassword = CANONICAL_LORIA_PASSWORD;
+  const legacyEmails = [];
 
   try {
     const account = await dbGet(
@@ -3643,8 +3644,9 @@ async function syncLoriaBrokerAccount() {
       [canonicalEmail, canonicalName, canonicalEmail]
     );
 
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+
     if (!account) {
-      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, 'broker', canonicalEmail, '', '']
@@ -3655,12 +3657,31 @@ async function syncLoriaBrokerAccount() {
 
     const currentEmail = String(account.email || '').trim().toLowerCase();
     const currentSmtpUser = String(account.smtp_user || '').trim().toLowerCase();
+    const currentSmtpPass = String(account.smtp_pass || '').trim();
+    const currentSmtpSignature = String(account.smtp_signature || '').trim();
     const nextSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail ? canonicalEmail : account.smtp_user;
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, role = ?, smtp_user = ? WHERE id = ?',
-      [canonicalName, canonicalEmail, 'broker', nextSmtpUser, account.id]
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      [
+        canonicalName,
+        canonicalEmail,
+        hash,
+        'broker',
+        nextSmtpUser,
+        currentSmtpPass,
+        currentSmtpSignature,
+        account.id
+      ]
     );
+
+    await mergeLegacyConversationUsersIntoCanonicalAccount({
+      canonicalUserId: account.id,
+      canonicalEmail,
+      canonicalName,
+      legacyEmails,
+      logLabel: 'Loria broker account'
+    });
 
     console.log('Loria broker account synced');
   } catch (error) {
@@ -4593,7 +4614,7 @@ app.get('/auth/google/callback', async (req, res) => {
 });
 
 // Login endpoint
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -4601,6 +4622,11 @@ app.post('/api/login', (req, res) => {
   }
 
   const normalizedEmail = normalizeKnownEmail(email);
+
+  if (normalizedEmail === CANONICAL_LORIA_EMAIL) {
+    await syncLoriaBrokerAccount();
+  }
+
   db.get('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail], async (err, user) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
@@ -8982,7 +9008,7 @@ app.post('/api/send-agent-email', async (req, res) => {
 });
 
 // Get all users for authenticated UI selectors
-app.get('/api/users', (req, res) => {
+app.get('/api/users', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -8991,6 +9017,7 @@ app.get('/api/users', (req, res) => {
 
   try {
     jwt.verify(token, JWT_SECRET);
+    await syncLoriaBrokerAccount();
 
     db.all('SELECT id, name, email, role, created_at, last_login FROM users', (err, rows) => {
       if (err) {
