@@ -4775,15 +4775,184 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             try {
+                const localDeals = getManualClosedDeals();
                 const payload = await requestClosedDealsApi('/api/closed-deals', { method: 'GET' });
-                const deals = Array.isArray(payload && payload.deals) ? payload.deals : [];
-                setManualClosedDeals(deals);
+                const serverDeals = Array.isArray(payload && payload.deals) ? payload.deals : [];
+                const mergedDeals = await mergeLocalClosedDealsIntoServer(localDeals, serverDeals);
+                setManualClosedDeals(mergedDeals);
             } catch (error) {
                 console.error('Failed to load closed deals from server:', error);
             } finally {
                 closedDealsServerLoaded = true;
                 renderClosedDeals();
             }
+        }
+
+        async function saveClosedDealToServer(nextDeal) {
+            const normalizedDeal = nextDeal && typeof nextDeal === 'object' ? { ...nextDeal } : null;
+            if (!normalizedDeal || !normalizedDeal.id) {
+                throw new Error('The closed deal record could not be prepared for saving.');
+            }
+
+            const payload = await requestClosedDealsApi('/api/closed-deals', {
+                method: 'POST',
+                body: JSON.stringify(normalizedDeal)
+            });
+
+            return payload && payload.deal ? payload.deal : normalizedDeal;
+        }
+
+        function buildClosedDealDocumentMergeKey(documentItem) {
+            const item = documentItem && typeof documentItem === 'object' ? documentItem : {};
+            const storage = String(item.storage || '').trim().toLowerCase();
+            const id = String(item.id || '').trim();
+            if (storage === 'cloud' && id) {
+                return `cloud:${id}`;
+            }
+
+            const fileName = String(item.fileName || item.label || 'document').trim().toLowerCase();
+            const fileSize = Math.max(Number(item.fileSize) || 0, 0);
+            const createdAt = Number(item.createdAt) || Number(item.updatedAt) || 0;
+            return `${fileName}:${fileSize}:${createdAt}`;
+        }
+
+        function mergeClosedDealDocumentLists(primaryDocuments, secondaryDocuments) {
+            const merged = [];
+            const seen = new Set();
+
+            [
+                ...(Array.isArray(primaryDocuments) ? primaryDocuments : []),
+                ...(Array.isArray(secondaryDocuments) ? secondaryDocuments : [])
+            ].forEach((documentItem) => {
+                const normalized = normalizeClosedDealDocuments({ documents: [documentItem] })[0];
+                if (!normalized) {
+                    return;
+                }
+
+                const key = buildClosedDealDocumentMergeKey(normalized);
+                if (seen.has(key)) {
+                    return;
+                }
+
+                seen.add(key);
+                merged.push(normalized);
+            });
+
+            return merged;
+        }
+
+        async function resolveClosedDealDocumentBlob(documentItem) {
+            if (!documentItem || typeof documentItem !== 'object') {
+                return null;
+            }
+
+            if (documentItem.storage === 'inline-base64') {
+                return createBlobFromBase64(documentItem.contentBase64, documentItem.fileType);
+            }
+
+            if (documentItem.storage === 'indexeddb') {
+                return await getOfferDocumentBlob(documentItem.id);
+            }
+
+            return null;
+        }
+
+        async function migrateClosedDealDocumentsToCloud(documents, contextKey) {
+            const migrated = [];
+
+            for (const originalDocument of Array.isArray(documents) ? documents : []) {
+                const normalizedDocument = normalizeClosedDealDocuments({ documents: [originalDocument] })[0];
+                if (!normalizedDocument) {
+                    continue;
+                }
+
+                if (normalizedDocument.storage === 'cloud') {
+                    migrated.push(normalizedDocument);
+                    continue;
+                }
+
+                const blob = await resolveClosedDealDocumentBlob(normalizedDocument);
+                if (!blob) {
+                    continue;
+                }
+
+                const cloudDocument = await uploadFileToCloudStorage('closed-deal', contextKey, blob, normalizedDocument.fileName || normalizedDocument.label || 'Document');
+                migrated.push({
+                    ...cloudDocument,
+                    createdAt: normalizedDocument.createdAt || cloudDocument.createdAt,
+                    updatedAt: normalizedDocument.updatedAt || normalizedDocument.createdAt || cloudDocument.updatedAt
+                });
+            }
+
+            return migrated;
+        }
+
+        async function mergeLocalClosedDealsIntoServer(localDeals, serverDeals) {
+            const normalizedServerDeals = Array.isArray(serverDeals)
+                ? serverDeals.map((deal) => ({
+                    ...deal,
+                    documents: normalizeClosedDealDocuments(deal)
+                }))
+                : [];
+            const normalizedLocalDeals = Array.isArray(localDeals)
+                ? localDeals.map((deal) => ({
+                    ...deal,
+                    documents: normalizeClosedDealDocuments(deal)
+                }))
+                : [];
+
+            if (!normalizedLocalDeals.length) {
+                return normalizedServerDeals;
+            }
+
+            const serverById = new Map(
+                normalizedServerDeals
+                    .filter((deal) => String(deal && deal.id || '').trim())
+                    .map((deal) => [String(deal.id || '').trim(), deal])
+            );
+            const mergedById = new Map(serverById);
+
+            for (const localDeal of normalizedLocalDeals) {
+                const localDealId = String(localDeal && localDeal.id || '').trim();
+                if (!localDealId) {
+                    continue;
+                }
+
+                const matchingServerDeal = serverById.get(localDealId) || null;
+                const cloudDocuments = await migrateClosedDealDocumentsToCloud(localDeal.documents, localDealId);
+                const mergedDocuments = mergeClosedDealDocumentLists(cloudDocuments, matchingServerDeal?.documents);
+
+                const shouldSync = !matchingServerDeal
+                    || mergedDocuments.length !== normalizeClosedDealDocuments(matchingServerDeal).length
+                    || String(localDeal.title || '').trim() !== String(matchingServerDeal.title || '').trim()
+                    || String(localDeal.note || '').trim() !== String(matchingServerDeal.note || '').trim()
+                    || String(localDeal.closeDate || '').trim() !== String(matchingServerDeal.closeDate || '').trim()
+                    || Math.max(Number(localDeal.wholesaleFee) || 0, 0) !== Math.max(Number(matchingServerDeal.wholesaleFee) || 0, 0)
+                    || Math.max(Number(localDeal.earnedAmount) || 0, 0) !== Math.max(Number(matchingServerDeal.earnedAmount) || 0, 0);
+
+                const mergedDeal = {
+                    ...(matchingServerDeal || {}),
+                    ...localDeal,
+                    documents: mergedDocuments,
+                    createdAt: Number(localDeal.createdAt) || Number(matchingServerDeal?.createdAt) || Date.now()
+                };
+
+                if (shouldSync) {
+                    const savedDeal = await saveClosedDealToServer(mergedDeal);
+                    mergedById.set(localDealId, {
+                        ...savedDeal,
+                        documents: normalizeClosedDealDocuments(savedDeal)
+                    });
+                } else {
+                    mergedById.set(localDealId, mergedDeal);
+                }
+            }
+
+            return Array.from(mergedById.values()).sort((left, right) => {
+                const rightTimestamp = Number(right && right.updatedAt) || Number(right && right.createdAt) || Date.parse(String(right && right.closeDate || '')) || 0;
+                const leftTimestamp = Number(left && left.updatedAt) || Number(left && left.createdAt) || Date.parse(String(left && left.closeDate || '')) || 0;
+                return rightTimestamp - leftTimestamp;
+            });
         }
 
         async function persistManualClosedDeal(nextDeal) {
@@ -4793,11 +4962,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             if (hasClosedDealsServerSync) {
-                const payload = await requestClosedDealsApi('/api/closed-deals', {
-                    method: 'POST',
-                    body: JSON.stringify(normalizedDeal)
-                });
-                const savedDeal = payload && payload.deal ? payload.deal : normalizedDeal;
+                const savedDeal = await saveClosedDealToServer(normalizedDeal);
                 const nextItems = [
                     savedDeal,
                     ...getManualClosedDeals().filter((item) => String(item && item.id || '') !== String(savedDeal.id || ''))

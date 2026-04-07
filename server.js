@@ -8630,13 +8630,18 @@ app.post('/api/closed-deals', express.json({ limit: '2mb' }), async (req, res) =
     const wholesaleFee = Math.max(Number(req.body?.wholesaleFee) || 0, 0);
     const earnedAmount = Math.max(Number(req.body?.earnedAmount) || 0, 0);
     const note = String(req.body?.note || '').trim();
-    const documents = normalizeClosedDealDocumentsForStorage(req.body?.documents);
     const ownerUserId = Number(decoded.id) || 0;
     const timestamp = Date.now();
 
     if (!id || !title) {
       return res.status(400).json({ error: 'A closed deal id and title are required.' });
     }
+
+    const existingDeal = await getClosedDealForOwner(ownerUserId, id);
+    const incomingDocuments = normalizeClosedDealDocumentsForStorage(req.body?.documents);
+    const documents = incomingDocuments.length > 0
+      ? incomingDocuments
+      : normalizeClosedDealDocumentsForStorage(existingDeal?.documents);
 
     await dbRun(
       `INSERT INTO closed_deals (
@@ -8661,7 +8666,7 @@ app.post('/api/closed-deals', express.json({ limit: '2mb' }), async (req, res) =
         earnedAmount,
         note,
         JSON.stringify(documents),
-        Number(req.body?.createdAt) || timestamp,
+        Number(req.body?.createdAt) || Number(existingDeal?.createdAt) || timestamp,
         timestamp
       ]
     );

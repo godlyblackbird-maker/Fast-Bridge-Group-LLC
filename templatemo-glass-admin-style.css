@@ -10409,6 +10409,11 @@ body.analytics-reboot .analytics-my-file-count {
         0 0 0 1px rgba(var(--accent-rgb), 0.06);
 }
 
+.chatgpt-widget .card-header,
+.chatgpt-widget .chatgpt-form {
+    flex: 0 0 auto;
+}
+
 .chatgpt-widget::before {
     content: '';
     position: absolute;
@@ -10530,7 +10535,7 @@ body.analytics-reboot .analytics-my-file-count {
 
 .chatgpt-chat {
     position: relative;
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-height: 0;
     max-height: 100%;
     overflow-y: auto;
@@ -10575,6 +10580,7 @@ body.analytics-reboot .analytics-my-file-count {
     padding: 14px 16px;
     border-radius: 18px;
     max-width: 100%;
+    min-width: 0;
     overflow: hidden;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -10624,10 +10630,29 @@ body.analytics-reboot .analytics-my-file-count {
 .chatgpt-msg.assistant {
     align-self: flex-start;
     max-width: 90%;
+    max-height: min(420px, 60vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(148, 163, 184, 0.08));
     border: 1px solid rgba(255, 255, 255, 0.13);
     color: var(--text-secondary);
     box-shadow: 0 18px 26px -26px rgba(15, 23, 42, 0.9);
+}
+
+.chatgpt-msg.assistant::-webkit-scrollbar,
+.chatgpt-msg.user::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chatgpt-msg.assistant::-webkit-scrollbar-track,
+.chatgpt-msg.user::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chatgpt-msg.assistant::-webkit-scrollbar-thumb,
+.chatgpt-msg.user::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
 }
 
 .chatgpt-msg.assistant:hover {
