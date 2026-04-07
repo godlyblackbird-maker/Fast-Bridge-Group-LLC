@@ -431,6 +431,86 @@
             color: rgba(255, 255, 255, 0.78);
         }
 
+        .messages-chat-bubble.can-edit .messages-chat-bubble-edit {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+
+        .messages-chat-bubble.can-edit:hover .messages-chat-bubble-edit,
+        .messages-chat-bubble.can-edit:focus-within .messages-chat-bubble-edit {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .messages-chat-bubble-edit {
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            padding: 2px 8px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.82);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+        }
+
+        .messages-chat-bubble-edit:hover,
+        .messages-chat-bubble-edit:focus-visible {
+            background: rgba(15, 23, 42, 0.94);
+        }
+
+        .messages-chat-bubble-text {
+            white-space: pre-wrap;
+        }
+
+        .messages-chat-attachments {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .messages-chat-attachment {
+            display: grid;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .messages-chat-attachment.is-image {
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .messages-chat-attachment-preview {
+            display: block;
+            max-width: min(280px, 100%);
+            max-height: 220px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .messages-chat-attachment-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .messages-chat-attachment-link strong,
+        .messages-chat-attachment-link span {
+            display: block;
+        }
+
+        .messages-chat-attachment-link span {
+            margin-top: 4px;
+            font-size: 12px;
+            opacity: 0.78;
+        }
+
         .messages-chat-bubble.is-shared-property {
             max-width: min(84%, 560px);
             padding: 12px 14px 10px;
@@ -574,6 +654,145 @@
             border-top: 1px solid rgba(18, 28, 45, 0.08);
             background: rgba(248, 250, 252, 0.94);
             backdrop-filter: blur(18px);
+        }
+
+        .messages-editing-bar {
+            display: none;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 11px 13px;
+            border-radius: 16px;
+            border: 1px solid rgba(245, 158, 11, 0.22);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .messages-editing-bar.active {
+            display: grid;
+        }
+
+        .messages-editing-copy {
+            min-width: 0;
+        }
+
+        .messages-editing-label,
+        .messages-editing-meta {
+            margin: 0;
+        }
+
+        .messages-editing-label {
+            color: #b45309;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .messages-editing-meta {
+            margin-top: 4px;
+            color: #7c2d12;
+            font-size: 13px;
+        }
+
+        .messages-pending-attachments {
+            display: none;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .messages-pending-attachments.active {
+            display: flex;
+        }
+
+        .messages-pending-attachment-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 100%;
+            padding: 9px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(0, 122, 255, 0.16);
+            background: rgba(255, 255, 255, 0.96);
+            color: #111827;
+        }
+
+        .messages-pending-attachment-copy {
+            display: grid;
+            min-width: 0;
+        }
+
+        .messages-pending-attachment-name,
+        .messages-pending-attachment-meta {
+            margin: 0;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .messages-pending-attachment-name {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .messages-pending-attachment-meta {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .messages-pending-attachment-remove {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.08);
+            color: #475569;
+        }
+
+        .messages-composer-row {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 10px;
+            align-items: end;
+        }
+
+        .messages-chat-attach {
+            width: 48px;
+            height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: #ffffff;
+            color: #334155;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .messages-chat-attach svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .messages-chat-attach:hover:not(:disabled),
+        .messages-chat-attach:focus-visible:not(:disabled) {
+            transform: translateY(-1px);
+            border-color: rgba(0, 122, 255, 0.42);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.12), 0 14px 28px rgba(15, 23, 42, 0.12);
+        }
+
+        .messages-chat-attach:disabled {
+            opacity: 0.55;
+            box-shadow: none;
         }
 
         .messages-chat-form .outreach-textarea,
@@ -811,7 +1030,23 @@
                                 </div>
                                 <button id="messages-pending-share-clear" type="button" class="card-btn messages-pending-share-clear">Clear</button>
                             </div>
-                            <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
+                            <div id="messages-editing-bar" class="messages-editing-bar" aria-live="polite" hidden>
+                                <div class="messages-editing-copy">
+                                    <p class="messages-editing-label">Editing Message</p>
+                                    <p id="messages-editing-meta" class="messages-editing-meta">You have 1 minute from send time to update a message.</p>
+                                </div>
+                                <button id="messages-editing-cancel" type="button" class="card-btn">Cancel</button>
+                            </div>
+                            <div id="messages-pending-attachments" class="messages-pending-attachments" aria-live="polite" hidden></div>
+                            <div class="messages-composer-row">
+                                <button id="messages-chat-attach" type="button" class="card-btn messages-chat-attach" aria-label="Attach files" title="Attach files" disabled>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M21.44 11.05L12.25 20.24a6 6 0 0 1-8.49-8.49l9.9-9.9a4 4 0 1 1 5.66 5.66l-9.9 9.9a2 2 0 1 1-2.83-2.83l8.49-8.48"></path>
+                                    </svg>
+                                </button>
+                                <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
+                            </div>
+                            <input id="messages-chat-attachment-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.webp,.txt,image/*">
                             <div class="messages-chat-actions">
                                 <div id="messages-chat-status" class="messages-chat-status"></div>
                                 <button id="messages-chat-send" type="submit" class="card-btn active" aria-label="Send message" title="Send message" disabled>
@@ -942,12 +1177,18 @@
             const form = document.getElementById('messages-chat-form');
             const input = document.getElementById('messages-chat-input');
             const sendButton = document.getElementById('messages-chat-send');
+            const attachButton = document.getElementById('messages-chat-attach');
+            const attachmentInput = document.getElementById('messages-chat-attachment-input');
+            const editingBar = document.getElementById('messages-editing-bar');
+            const editingMeta = document.getElementById('messages-editing-meta');
+            const editingCancel = document.getElementById('messages-editing-cancel');
             const clearConversationButton = document.getElementById('messages-chat-clear');
             const status = document.getElementById('messages-chat-status');
             const pendingShare = document.getElementById('messages-pending-share');
             const pendingShareTitle = document.getElementById('messages-pending-share-title');
             const pendingShareMeta = document.getElementById('messages-pending-share-meta');
             const pendingShareClear = document.getElementById('messages-pending-share-clear');
+            const pendingAttachments = document.getElementById('messages-pending-attachments');
             const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             const MESSAGES_TIMEZONE = 'America/Los_Angeles';
             const messageDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -962,6 +1203,8 @@
             let usersCache = [];
             let pollTimer = null;
             let pendingSharedProperty = null;
+            let pendingAttachmentItems = [];
+            let editingMessageState = null;
 
             async function copyText(text) {
                 const value = String(text || '').trim();
@@ -1048,6 +1291,186 @@
                     return window.parseFastSharedPropertyMessage(value);
                 }
                 return null;
+            }
+
+            function parseMessageBundle(value) {
+                if (typeof window.parseFastMessageBundle === 'function') {
+                    return window.parseFastMessageBundle(value);
+                }
+                return null;
+            }
+
+            function formatEditDeadline(value) {
+                const date = parseMessageTimestamp(value);
+                if (!date) {
+                    return 'about 1 minute';
+                }
+
+                return messageDateTimeFormatter.format(date);
+            }
+
+            function getEditableMessageText(message) {
+                const body = String(message && message.body || '').trim();
+                const bundle = parseMessageBundle(body);
+                if (bundle) {
+                    return String(bundle.text || '').trim();
+                }
+
+                const shared = parseSharedPropertyMessage(body);
+                if (shared) {
+                    return String(shared.introMessage || '').trim();
+                }
+
+                return body;
+            }
+
+            function buildEditedMessageBody(message, nextText) {
+                const normalizedText = String(nextText || '').trim();
+                const body = String(message && message.body || '').trim();
+                const bundle = parseMessageBundle(body);
+                if (bundle && typeof window.buildFastMessageBundle === 'function') {
+                    return window.buildFastMessageBundle({
+                        text: normalizedText,
+                        sharedProperty: bundle.sharedProperty || null,
+                        attachments: bundle.attachments || [],
+                        senderLike: null
+                    });
+                }
+
+                const shared = parseSharedPropertyMessage(body);
+                if (shared && typeof window.buildFastSharedPropertyMessage === 'function') {
+                    return window.buildFastSharedPropertyMessage(shared.property, normalizedText, null);
+                }
+
+                return normalizedText;
+            }
+
+            function updateComposerModeUi() {
+                if (editingBar) {
+                    if (editingMessageState) {
+                        editingBar.classList.add('active');
+                        editingBar.removeAttribute('hidden');
+                    } else {
+                        editingBar.classList.remove('active');
+                        editingBar.setAttribute('hidden', 'hidden');
+                    }
+                }
+
+                if (editingMeta) {
+                    editingMeta.textContent = editingMessageState
+                        ? `Save before ${formatEditDeadline(editingMessageState.editWindowEndsAt)}.`
+                        : 'You have 1 minute from send time to update a message.';
+                }
+
+                if (attachButton) {
+                    attachButton.disabled = !selectedUserId || Boolean(editingMessageState);
+                }
+
+                if (sendButton) {
+                    sendButton.setAttribute('aria-label', editingMessageState ? 'Save edited message' : 'Send message');
+                    sendButton.setAttribute('title', editingMessageState ? 'Save edited message' : 'Send message');
+                }
+            }
+
+            function cancelMessageEdit(options) {
+                const config = options && typeof options === 'object' ? options : {};
+                editingMessageState = null;
+                updateComposerModeUi();
+                if (!config.preserveInput && input) {
+                    input.value = '';
+                }
+            }
+
+            function startEditingMessage(message) {
+                if (!message || !message.canEdit || message.direction !== 'outgoing' || !input) {
+                    return;
+                }
+
+                clearPendingSharedProperty();
+                pendingAttachmentItems = [];
+                renderPendingAttachments();
+
+                editingMessageState = {
+                    id: Number(message.id) || 0,
+                    body: String(message.body || '').trim(),
+                    editWindowEndsAt: message.editWindowEndsAt || '',
+                    message
+                };
+                input.value = getEditableMessageText(message);
+                updateComposerModeUi();
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+                setChatStatus('Editing message...', false);
+            }
+
+            function formatFileSize(bytes) {
+                const value = Math.max(Number(bytes) || 0, 0);
+                if (value >= 1024 * 1024) {
+                    return `${(value / (1024 * 1024)).toFixed(value >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+                }
+                if (value >= 1024) {
+                    return `${Math.round(value / 1024)} KB`;
+                }
+                return `${value} B`;
+            }
+
+            function isImageAttachment(attachment) {
+                return /^image\//i.test(String(attachment && attachment.fileType || '').trim())
+                    || /\.(png|jpe?g|gif|webp)$/i.test(String(attachment && attachment.fileName || '').trim());
+            }
+
+            function buildMessageAttachmentPayload(documentItem) {
+                const documentId = String(documentItem && documentItem.id || '').trim();
+                const basePath = `/api/messages/attachments/${encodeURIComponent(documentId)}/content`;
+                return {
+                    id: documentId,
+                    fileName: String(documentItem && documentItem.fileName || 'Attachment').trim() || 'Attachment',
+                    fileType: String(documentItem && documentItem.fileType || '').trim(),
+                    fileSize: Math.max(Number(documentItem && documentItem.fileSize) || 0, 0),
+                    contentPath: basePath,
+                    downloadPath: `${basePath}?download=1`,
+                    kind: /^image\//i.test(String(documentItem && documentItem.fileType || '')) ? 'image' : 'file'
+                };
+            }
+
+            function renderPendingAttachments() {
+                if (!pendingAttachments) {
+                    return;
+                }
+
+                pendingAttachments.innerHTML = '';
+                if (!pendingAttachmentItems.length) {
+                    pendingAttachments.classList.remove('active');
+                    pendingAttachments.setAttribute('hidden', 'hidden');
+                    return;
+                }
+
+                pendingAttachments.classList.add('active');
+                pendingAttachments.removeAttribute('hidden');
+
+                pendingAttachmentItems.forEach((attachment, index) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'messages-pending-attachment-chip';
+                    chip.innerHTML = `
+                        <div class="messages-pending-attachment-copy">
+                            <p class="messages-pending-attachment-name">${escapeHtml(attachment.fileName || 'Attachment')}</p>
+                            <p class="messages-pending-attachment-meta">${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` • ${escapeHtml(attachment.fileType)}` : ''}</p>
+                        </div>
+                    `;
+
+                    const removeButton = document.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.className = 'messages-pending-attachment-remove';
+                    removeButton.setAttribute('aria-label', `Remove ${attachment.fileName || 'attachment'}`);
+                    removeButton.textContent = '×';
+                    removeButton.addEventListener('click', () => {
+                        pendingAttachmentItems = pendingAttachmentItems.filter((_, pendingIndex) => pendingIndex !== index);
+                        renderPendingAttachments();
+                    });
+
+                    chip.appendChild(removeButton);
+                    pendingAttachments.appendChild(chip);
+                });
             }
 
             function openSharedPropertyDetail(messageBody) {
@@ -1141,6 +1564,72 @@
                 }
             }
 
+            async function uploadAttachmentFile(file) {
+                if (!authToken) {
+                    throw new Error('Sign in again before uploading attachments.');
+                }
+
+                const formData = new FormData();
+                formData.append('scope', 'fbg-message');
+                formData.append('contextKey', selectedUserId ? `conversation-${selectedUserId}` : 'draft');
+                formData.append('file', file);
+
+                const response = await fetch('/api/user-uploads', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Unable to upload the selected file.');
+                }
+
+                return buildMessageAttachmentPayload(payload && payload.document);
+            }
+
+            async function queueAttachmentFiles(fileList) {
+                const files = Array.from(fileList || []);
+                if (!files.length) {
+                    return;
+                }
+
+                if (!selectedUserId) {
+                    setChatStatus('Pick a teammate before attaching files.', true);
+                    return;
+                }
+
+                setChatStatus(files.length === 1 ? 'Uploading attachment...' : `Uploading ${files.length} attachments...`, false);
+                if (attachButton) {
+                    attachButton.disabled = true;
+                }
+                if (sendButton) {
+                    sendButton.disabled = true;
+                }
+
+                try {
+                    const uploadedAttachments = [];
+                    for (const file of files) {
+                        uploadedAttachments.push(await uploadAttachmentFile(file));
+                    }
+                    pendingAttachmentItems = [...pendingAttachmentItems, ...uploadedAttachments];
+                    renderPendingAttachments();
+                    setChatStatus(uploadedAttachments.length === 1 ? 'Attachment ready to send.' : `${uploadedAttachments.length} attachments ready to send.`, false);
+                } finally {
+                    if (attachButton) {
+                        attachButton.disabled = !selectedUserId;
+                    }
+                    if (sendButton) {
+                        sendButton.disabled = !selectedUserId;
+                    }
+                    if (attachmentInput) {
+                        attachmentInput.value = '';
+                    }
+                }
+            }
+
             function buildSharedPropertyCard(sharedMessage, messageBody) {
                 const property = sharedMessage && sharedMessage.property && typeof sharedMessage.property === 'object'
                     ? sharedMessage.property
@@ -1202,12 +1691,17 @@
                 if (input) {
                     input.disabled = !nextEnabled;
                 }
+                if (attachButton) {
+                    attachButton.disabled = !nextEnabled || Boolean(editingMessageState);
+                }
                 if (sendButton) {
                     sendButton.disabled = !nextEnabled;
                 }
                 if (clearConversationButton) {
                     clearConversationButton.disabled = true;
                 }
+
+                updateComposerModeUi();
             }
 
             async function apiRequest(url, options) {
@@ -1311,17 +1805,87 @@
                 items.forEach((message) => {
                     const article = document.createElement('article');
                     article.className = `messages-chat-bubble ${message.direction === 'outgoing' ? 'outgoing' : 'incoming'}`;
+                    if (message.direction === 'outgoing' && message.canEdit) {
+                        article.classList.add('can-edit');
+                        const editButton = document.createElement('button');
+                        editButton.type = 'button';
+                        editButton.className = 'messages-chat-bubble-edit';
+                        editButton.textContent = 'Edit?';
+                        editButton.addEventListener('click', () => {
+                            startEditingMessage(message);
+                        });
+                        article.appendChild(editButton);
+                    }
+                    const messageBundle = parseMessageBundle(message.body || '');
                     const sharedMessage = parseSharedPropertyMessage(message.body || '');
 
-                    if (sharedMessage) {
-                        article.classList.add('is-shared-property');
-                        article.appendChild(buildSharedPropertyCard(sharedMessage, message.body || ''));
+                    const appendMeta = () => {
                         const meta = document.createElement('div');
                         meta.className = 'messages-chat-bubble-meta';
-                        meta.textContent = formatDateTime(message.createdAt || '');
+                        meta.textContent = `${formatDateTime(message.createdAt || '')}${message.editedAt ? ' • edited' : ''}`;
                         article.appendChild(meta);
+                    };
+
+                    if (messageBundle) {
+                        if (messageBundle.text) {
+                            const textNode = document.createElement('div');
+                            textNode.className = 'messages-chat-bubble-text';
+                            textNode.textContent = messageBundle.text;
+                            article.appendChild(textNode);
+                        }
+
+                        if (messageBundle.sharedProperty) {
+                            article.classList.add('is-shared-property');
+                            article.appendChild(buildSharedPropertyCard({ property: messageBundle.sharedProperty, introMessage: '' }, message.body || ''));
+                        }
+
+                        if (Array.isArray(messageBundle.attachments) && messageBundle.attachments.length > 0) {
+                            const attachmentsWrap = document.createElement('div');
+                            attachmentsWrap.className = 'messages-chat-attachments';
+
+                            messageBundle.attachments.forEach((attachment) => {
+                                const item = document.createElement('div');
+                                item.className = `messages-chat-attachment ${isImageAttachment(attachment) ? 'is-image' : ''}`;
+
+                                if (isImageAttachment(attachment)) {
+                                    const previewLink = document.createElement('a');
+                                    previewLink.className = 'messages-chat-attachment-link';
+                                    previewLink.href = attachment.contentPath;
+                                    previewLink.target = '_blank';
+                                    previewLink.rel = 'noopener noreferrer';
+
+                                    const image = document.createElement('img');
+                                    image.className = 'messages-chat-attachment-preview';
+                                    image.src = attachment.contentPath;
+                                    image.alt = attachment.fileName || 'Attachment preview';
+                                    previewLink.appendChild(image);
+                                    item.appendChild(previewLink);
+                                }
+
+                                const link = document.createElement('a');
+                                link.className = 'messages-chat-attachment-link';
+                                link.href = attachment.downloadPath || attachment.contentPath;
+                                link.target = '_blank';
+                                link.rel = 'noopener noreferrer';
+                                link.innerHTML = `<strong>${escapeHtml(attachment.fileName || 'Attachment')}</strong><span>${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` • ${escapeHtml(attachment.fileType)}` : ''}</span>`;
+                                item.appendChild(link);
+                                attachmentsWrap.appendChild(item);
+                            });
+
+                            article.appendChild(attachmentsWrap);
+                        }
+
+                        appendMeta();
+                    } else if (sharedMessage) {
+                        article.classList.add('is-shared-property');
+                        article.appendChild(buildSharedPropertyCard(sharedMessage, message.body || ''));
+                        appendMeta();
                     } else {
-                        article.innerHTML = `${escapeHtml(message.body || '')}<div class="messages-chat-bubble-meta">${escapeHtml(formatDateTime(message.createdAt || ''))}</div>`;
+                        const textNode = document.createElement('div');
+                        textNode.className = 'messages-chat-bubble-text';
+                        textNode.textContent = message.body || '';
+                        article.appendChild(textNode);
+                        appendMeta();
                     }
                     thread.appendChild(article);
                 });
@@ -1353,6 +1917,15 @@
                     return;
                 }
 
+                if (selectedUserId && Number(selectedUserId) !== normalizedUserId && pendingAttachmentItems.length > 0) {
+                    pendingAttachmentItems = [];
+                    renderPendingAttachments();
+                }
+
+                if (selectedUserId && Number(selectedUserId) !== normalizedUserId) {
+                    cancelMessageEdit({ preserveInput: false });
+                }
+
                 selectedUserId = normalizedUserId;
                 if (!config.suppressUserReload) {
                     renderUsers(usersCache);
@@ -1373,6 +1946,9 @@
 
                 setComposerEnabled(true);
                 renderConversation(payload.messages || []);
+                if (editingMessageState && !Array.isArray(payload.messages || []).some((message) => Number(message.id) === Number(editingMessageState.id) && message.canEdit)) {
+                    cancelMessageEdit({ preserveInput: false });
+                }
                 setChatStatus('', false);
                 await loadUsers({ preserveSelection: true });
 
@@ -1386,34 +1962,68 @@
                     return;
                 }
 
+                const isEditing = Boolean(editingMessageState && editingMessageState.id);
                 const hadPendingProperty = Boolean(pendingSharedProperty);
+                const hasPendingAttachments = pendingAttachmentItems.length > 0;
                 const noteBody = String(input.value || '').trim();
-                const body = hadPendingProperty && typeof window.buildFastSharedPropertyMessage === 'function'
-                    ? window.buildFastSharedPropertyMessage(pendingSharedProperty, noteBody, null)
-                    : noteBody;
+                let body = noteBody;
+
+                if (isEditing) {
+                    body = buildEditedMessageBody(editingMessageState.message, noteBody);
+                } else if ((hadPendingProperty || hasPendingAttachments) && typeof window.buildFastMessageBundle === 'function') {
+                    body = window.buildFastMessageBundle({
+                        text: noteBody,
+                        sharedProperty: hadPendingProperty ? pendingSharedProperty : null,
+                        attachments: hasPendingAttachments ? pendingAttachmentItems : [],
+                        senderLike: null
+                    });
+                } else if (hadPendingProperty && typeof window.buildFastSharedPropertyMessage === 'function') {
+                    body = window.buildFastSharedPropertyMessage(pendingSharedProperty, noteBody, null);
+                }
+
                 if (!body) {
-                    setChatStatus('Type a message or attach a property before sending.', true);
+                    setChatStatus(isEditing ? 'Type the updated message before saving.' : 'Type a message, add an attachment, or attach a property before sending.', true);
                     return;
                 }
 
-                setChatStatus(hadPendingProperty ? 'Sending property link...' : 'Sending message...', false);
+                setChatStatus(isEditing ? 'Saving edit...' : 'Sending message...', false);
                 if (sendButton) {
                     sendButton.disabled = true;
                 }
+                if (attachButton) {
+                    attachButton.disabled = true;
+                }
 
                 try {
-                    await apiRequest(`/api/messages/conversations/${selectedUserId}`, {
-                        method: 'POST',
-                        body: JSON.stringify({ body })
-                    });
+                    if (isEditing) {
+                        await apiRequest(`/api/messages/conversations/${selectedUserId}/messages/${editingMessageState.id}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ body })
+                        });
+                    } else {
+                        await apiRequest(`/api/messages/conversations/${selectedUserId}`, {
+                            method: 'POST',
+                            body: JSON.stringify({ body })
+                        });
+                    }
                     input.value = '';
-                    clearPendingSharedProperty();
+                    if (isEditing) {
+                        cancelMessageEdit({ preserveInput: false });
+                    } else {
+                        clearPendingSharedProperty();
+                        pendingAttachmentItems = [];
+                        renderPendingAttachments();
+                    }
                     await openConversation(selectedUserId, { focusInput: true });
-                    setChatStatus(hadPendingProperty ? 'Property link sent.' : 'Message sent.', false);
+                    setChatStatus(isEditing ? 'Message updated.' : 'Message sent.', false);
                 } finally {
                     if (sendButton) {
                         sendButton.disabled = false;
                     }
+                    if (attachButton) {
+                        attachButton.disabled = Boolean(editingMessageState);
+                    }
+                    updateComposerModeUi();
                 }
             }
 
@@ -1463,6 +2073,20 @@
                 });
             }
 
+            if (attachButton && attachmentInput) {
+                attachButton.addEventListener('click', () => {
+                    attachmentInput.click();
+                });
+
+                attachmentInput.addEventListener('change', async () => {
+                    try {
+                        await queueAttachmentFiles(attachmentInput.files);
+                    } catch (error) {
+                        setChatStatus(String(error && error.message || 'Unable to upload the selected files.'), true);
+                    }
+                });
+            }
+
             if (clearConversationButton) {
                 clearConversationButton.hidden = true;
                 clearConversationButton.setAttribute('aria-hidden', 'true');
@@ -1472,6 +2096,13 @@
                     } catch (error) {
                         setChatStatus(String(error && error.message || 'Unable to clear the conversation.'), true);
                     }
+                });
+            }
+
+            if (editingCancel) {
+                editingCancel.addEventListener('click', () => {
+                    cancelMessageEdit({ preserveInput: false });
+                    setChatStatus('', false);
                 });
             }
 
@@ -1492,6 +2123,8 @@
             }
 
             syncPendingSharedPropertyFromUrl();
+            renderPendingAttachments();
+            updateComposerModeUi();
 
             if (pendingShareClear) {
                 pendingShareClear.addEventListener('click', () => {

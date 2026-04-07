@@ -75,6 +75,7 @@ let cachedTwilioClient = null;
 let cachedTwilioClientKey = '';
 let cachedS3Client = null;
 let cachedS3ClientKey = '';
+const USER_MESSAGE_EDIT_WINDOW_MS = 60 * 1000;
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
 const mlsImportSpreadsheetClearedAtByUser = new Map();
@@ -1691,6 +1692,7 @@ function initializeDatabase() {
       console.error('Error creating user_messages table:', err);
     } else {
       console.log('User messages table ready');
+      db.run(`ALTER TABLE user_messages ADD COLUMN edited_at DATETIME`, () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_pair_created ON user_messages(sender_user_id, recipient_user_id, created_at)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_recipient_read ON user_messages(recipient_user_id, read_at)', () => {});
     }
@@ -2435,6 +2437,48 @@ function getS3Client() {
   return cachedS3Client;
 }
 
+function buildUserMessageArchiveKey(messageLike) {
+  const messageId = Number(messageLike?.id) || 0;
+  const senderUserId = Number(messageLike?.sender_user_id || messageLike?.senderUserId) || 0;
+  const recipientUserId = Number(messageLike?.recipient_user_id || messageLike?.recipientUserId) || 0;
+  const createdAtValue = String(messageLike?.created_at || messageLike?.createdAt || '').trim();
+  const createdAt = createdAtValue || new Date().toISOString();
+  const safeCreatedAt = createdAt
+    .replace(/[:.]/g, '-')
+    .replace(/\s+/g, 'T')
+    .replace(/[^0-9A-Za-zTZ_-]/g, '');
+  const pairKey = [senderUserId, recipientUserId].sort((left, right) => left - right).join('-');
+  return `message-archive/pair-${pairKey}/${safeCreatedAt}__msg-${messageId}.json`;
+}
+
+async function archiveUserMessageToS3(messageLike) {
+  const s3Client = getS3Client();
+  const s3Config = getS3StorageConfig();
+  if (!s3Client || !isS3StorageConfigured(s3Config)) {
+    return false;
+  }
+
+  const payload = {
+    id: Number(messageLike?.id) || 0,
+    senderUserId: Number(messageLike?.sender_user_id || messageLike?.senderUserId) || 0,
+    recipientUserId: Number(messageLike?.recipient_user_id || messageLike?.recipientUserId) || 0,
+    body: String(messageLike?.body || ''),
+    createdAt: String(messageLike?.created_at || messageLike?.createdAt || new Date().toISOString()),
+    readAt: messageLike?.read_at || messageLike?.readAt || null,
+    archivedAt: new Date().toISOString(),
+    source: 'user_messages'
+  };
+
+  await s3Client.send(new PutObjectCommand({
+    Bucket: s3Config.bucket,
+    Key: buildUserMessageArchiveKey(messageLike),
+    Body: Buffer.from(JSON.stringify(payload, null, 2), 'utf8'),
+    ContentType: 'application/json; charset=utf-8'
+  }));
+
+  return true;
+}
+
 function getContentTypeForFileName(fileName, fallbackType = '') {
   const normalizedFallback = String(fallbackType || '').trim();
   if (normalizedFallback) {
@@ -2458,7 +2502,7 @@ function getContentTypeForFileName(fileName, fallbackType = '') {
 
 function sanitizeUserUploadScope(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar'].includes(normalized)
+  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar', 'fbg-message'].includes(normalized)
     ? normalized
     : '';
 }
@@ -2470,6 +2514,15 @@ function buildProfileAvatarContentPath(documentId) {
   }
 
   return `/api/profile/avatar/content/${encodeURIComponent(normalizedDocumentId)}`;
+}
+
+function buildUserUploadContentPath(documentId, download = false) {
+  const normalizedDocumentId = String(documentId || '').trim();
+  if (!normalizedDocumentId) {
+    return '';
+  }
+
+  return `/api/user-uploads/${encodeURIComponent(normalizedDocumentId)}/content?download=${download ? '1' : '0'}`;
 }
 
 function sanitizeUserUploadContextKey(value, fallback = 'default') {
@@ -2664,10 +2717,29 @@ function normalizeClosedDealDocumentsForStorage(documents) {
         ? String(documentItem.storage).trim()
         : 'cloud',
       contentBase64: String(documentItem?.contentBase64 || '').trim(),
+      contentPath: String(documentItem?.contentPath || '').trim(),
+      downloadPath: String(documentItem?.downloadPath || '').trim(),
       createdAt: Number(documentItem?.createdAt) || Date.now(),
       updatedAt: Number(documentItem?.updatedAt) || Number(documentItem?.createdAt) || Date.now()
     }))
     .filter((documentItem) => documentItem.id && (documentItem.storage !== 'inline-base64' || documentItem.contentBase64));
+}
+
+function hydrateClosedDealDocument(documentItem) {
+  const normalized = normalizeClosedDealDocumentsForStorage([documentItem])[0];
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.storage === 'cloud' && normalized.id) {
+    return {
+      ...normalized,
+      contentPath: normalized.contentPath || buildUserUploadContentPath(normalized.id, false),
+      downloadPath: normalized.downloadPath || buildUserUploadContentPath(normalized.id, true)
+    };
+  }
+
+  return normalized;
 }
 
 function serializeClosedDealRow(row) {
@@ -2677,7 +2749,9 @@ function serializeClosedDealRow(row) {
 
   let documents = [];
   try {
-    documents = normalizeClosedDealDocumentsForStorage(JSON.parse(String(row.documents_json || '[]')));
+    documents = normalizeClosedDealDocumentsForStorage(JSON.parse(String(row.documents_json || '[]')))
+      .map((documentItem) => hydrateClosedDealDocument(documentItem))
+      .filter(Boolean);
   } catch (error) {
     documents = [];
   }
@@ -2730,6 +2804,8 @@ function serializeUserUpload(row) {
     fileSize: Math.max(Number(row.file_size) || 0, 0),
     fileType: String(row.file_type || '').trim() || getContentTypeForFileName(row.original_file_name),
     storage: String(row.storage_provider || '').trim().toLowerCase() === 's3' ? 'cloud' : 'local',
+    contentPath: buildUserUploadContentPath(row.id, false),
+    downloadPath: buildUserUploadContentPath(row.id, true),
     createdAt: Number(row.created_at) || Date.now(),
     updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
   };
@@ -3208,9 +3284,85 @@ async function syncIsaacAdminAccount() {
       ]
     );
 
+    await mergeLegacyConversationUsersIntoCanonicalAccount({
+      canonicalUserId: account.id,
+      canonicalEmail,
+      canonicalName,
+      legacyEmails,
+      logLabel: 'Isaac admin account'
+    });
+
     console.log('Isaac admin account synced');
   } catch (error) {
     console.error('Failed to sync Isaac admin account:', error);
+  }
+}
+
+async function mergeLegacyConversationUsersIntoCanonicalAccount({ canonicalUserId, canonicalEmail, canonicalName, legacyEmails, logLabel }) {
+  const primaryUserId = Number(canonicalUserId);
+  if (!Number.isInteger(primaryUserId) || primaryUserId <= 0) {
+    return;
+  }
+
+  const normalizedCanonicalEmail = normalizeKnownEmail(canonicalEmail);
+  const normalizedLegacyEmails = Array.isArray(legacyEmails)
+    ? legacyEmails.map((email) => normalizeKnownEmail(email)).filter(Boolean)
+    : [];
+  const candidateEmails = Array.from(new Set([normalizedCanonicalEmail, ...normalizedLegacyEmails].filter(Boolean)));
+  const normalizedCanonicalName = String(canonicalName || '').trim().toLowerCase();
+
+  if (candidateEmails.length === 0 && !normalizedCanonicalName) {
+    return;
+  }
+
+  const emailPlaceholders = candidateEmails.map(() => '?').join(', ');
+  const conditions = [];
+  const params = [primaryUserId];
+
+  if (candidateEmails.length > 0) {
+    conditions.push(`LOWER(email) IN (${emailPlaceholders})`);
+    params.push(...candidateEmails);
+  }
+
+  if (normalizedCanonicalName) {
+    conditions.push('LOWER(name) = ?');
+    params.push(normalizedCanonicalName);
+  }
+
+  if (conditions.length === 0) {
+    return;
+  }
+
+  try {
+    const duplicateUsers = await dbAll(
+      `SELECT id, email, name
+       FROM users
+       WHERE id != ?
+         AND (${conditions.join(' OR ')})
+       ORDER BY id ASC`,
+      params
+    );
+
+    if (!Array.isArray(duplicateUsers) || duplicateUsers.length === 0) {
+      return;
+    }
+
+    const duplicateIds = duplicateUsers
+      .map((user) => Number(user && user.id))
+      .filter((id) => Number.isInteger(id) && id > 0 && id !== primaryUserId);
+
+    if (duplicateIds.length === 0) {
+      return;
+    }
+
+    for (const duplicateId of duplicateIds) {
+      await dbRun('UPDATE user_messages SET sender_user_id = ? WHERE sender_user_id = ?', [primaryUserId, duplicateId]);
+      await dbRun('UPDATE user_messages SET recipient_user_id = ? WHERE recipient_user_id = ?', [primaryUserId, duplicateId]);
+    }
+
+    console.log(`${logLabel || 'Canonical'} message history merged from legacy user ids: ${duplicateIds.join(', ')}`);
+  } catch (error) {
+    console.error(`Failed to merge ${logLabel || 'canonical'} legacy conversations:`, error);
   }
 }
 
@@ -3266,6 +3418,14 @@ async function syncSteveAdminAccount() {
       ]
     );
 
+    await mergeLegacyConversationUsersIntoCanonicalAccount({
+      canonicalUserId: account.id,
+      canonicalEmail,
+      canonicalName,
+      legacyEmails,
+      logLabel: 'Steve admin account'
+    });
+
     console.log('Steve admin account synced');
   } catch (error) {
     console.error('Failed to sync Steve admin account:', error);
@@ -3304,7 +3464,6 @@ async function syncPublicTestAccount() {
       );
       console.log('Public test account synced');
     }
-
     if (userId) {
       await saveUserSecuritySettings(userId, {
         enabled: false,
@@ -5066,13 +5225,26 @@ function serializeUserMessage(row, currentUserId) {
   const senderUserId = Number(row.sender_user_id);
   const recipientUserId = Number(row.recipient_user_id);
   const activeUserId = Number(currentUserId);
+  const createdAt = normalizeApiTimestamp(row.created_at);
+  const editedAt = normalizeApiTimestamp(row.edited_at);
+  const createdDate = createdAt ? new Date(createdAt) : null;
+  const editWindowEndsAt = createdDate && !Number.isNaN(createdDate.getTime())
+    ? new Date(createdDate.getTime() + USER_MESSAGE_EDIT_WINDOW_MS).toISOString()
+    : null;
+  const canEdit = senderUserId === activeUserId
+    && createdDate instanceof Date
+    && !Number.isNaN(createdDate.getTime())
+    && (Date.now() - createdDate.getTime()) <= USER_MESSAGE_EDIT_WINDOW_MS;
 
   return {
     id: Number(row.id),
     senderUserId,
     recipientUserId,
     body: String(row.body || '').trim(),
-    createdAt: normalizeApiTimestamp(row.created_at),
+    createdAt,
+    editedAt,
+    editWindowEndsAt,
+    canEdit,
     readAt: normalizeApiTimestamp(row.read_at),
     direction: senderUserId === activeUserId ? 'outgoing' : 'incoming'
   };
@@ -7886,7 +8058,7 @@ app.post('/api/user-uploads', (req, res) => {
       const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(uploadedFile?.originalname || '').trim()));
       const extension = path.extname(fileName).toLowerCase();
 
-      if (!scope || !['closed-deal', 'offer-package'].includes(scope)) {
+      if (!scope || !['closed-deal', 'offer-package', 'fbg-message'].includes(scope)) {
         return res.status(400).json({ error: 'A valid upload scope is required.' });
       }
 
@@ -8612,7 +8784,7 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
     );
 
     const rows = await dbAll(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, read_at
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
        FROM user_messages
        WHERE (sender_user_id = ? AND recipient_user_id = ?)
           OR (sender_user_id = ? AND recipient_user_id = ?)
@@ -8673,11 +8845,17 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
     );
 
     const inserted = await dbGet(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, read_at
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
        FROM user_messages
        WHERE id = ?`,
       [result.lastID]
     );
+
+    try {
+      await archiveUserMessageToS3(inserted);
+    } catch (archiveError) {
+      console.error('Failed to archive user message to S3:', archiveError);
+    }
 
     return res.json({
       success: true,
@@ -8686,6 +8864,124 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
   } catch (error) {
     console.error('Send conversation message error:', error);
     return res.status(500).json({ error: 'Unable to send the message.' });
+  }
+});
+
+app.patch('/api/messages/conversations/:userId/messages/:messageId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentUserId = Number(decoded.id);
+  const otherUserId = Number.parseInt(String(req.params?.userId || ''), 10);
+  const messageId = Number.parseInt(String(req.params?.messageId || ''), 10);
+  const body = String(req.body?.body || '').trim();
+
+  if (!Number.isInteger(currentUserId) || currentUserId <= 0 || !Number.isInteger(otherUserId) || otherUserId <= 0 || !Number.isInteger(messageId) || messageId <= 0) {
+    return res.status(400).json({ error: 'Valid user ids and message id are required.' });
+  }
+
+  if (!body) {
+    return res.status(400).json({ error: 'Message text is required.' });
+  }
+
+  if (body.length > 20000) {
+    return res.status(400).json({ error: 'Keep messages under 20000 characters.' });
+  }
+
+  try {
+    const existingMessage = await dbGet(
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+         FROM user_messages
+        WHERE id = ?
+          AND sender_user_id = ?
+          AND recipient_user_id = ?`,
+      [messageId, currentUserId, otherUserId]
+    );
+
+    if (!existingMessage) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    const createdAtDate = new Date(String(existingMessage.created_at || '').replace(' ', 'T') + (String(existingMessage.created_at || '').includes('T') ? '' : 'Z'));
+    if (Number.isNaN(createdAtDate.getTime()) || (Date.now() - createdAtDate.getTime()) > USER_MESSAGE_EDIT_WINDOW_MS) {
+      return res.status(403).json({ error: 'Messages can only be edited within 1 minute of sending.' });
+    }
+
+    await dbRun(
+      `UPDATE user_messages
+          SET body = ?,
+              edited_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND sender_user_id = ?
+          AND recipient_user_id = ?`,
+      [body, messageId, currentUserId, otherUserId]
+    );
+
+    const updated = await dbGet(
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+         FROM user_messages
+        WHERE id = ?`,
+      [messageId]
+    );
+
+    return res.json({
+      success: true,
+      message: serializeUserMessage(updated, currentUserId)
+    });
+  } catch (error) {
+    console.error('Edit conversation message error:', error);
+    return res.status(500).json({ error: 'Unable to edit the message.' });
+  }
+});
+
+app.get('/api/messages/attachments/:documentId/content', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const currentUserId = Number(decoded.id);
+    const documentId = String(req.params?.documentId || '').trim();
+    if (!Number.isInteger(currentUserId) || currentUserId <= 0 || !documentId) {
+      return res.status(400).json({ error: 'A valid attachment id is required.' });
+    }
+
+    const uploadRecord = await dbGet(
+      `SELECT *
+         FROM user_uploads
+        WHERE id = ? AND scope = 'fbg-message'`,
+      [documentId]
+    );
+
+    if (!uploadRecord) {
+      return res.status(404).json({ error: 'Attachment not found.' });
+    }
+
+    const relatedMessage = await dbGet(
+      `SELECT id
+         FROM user_messages
+        WHERE (sender_user_id = ? OR recipient_user_id = ?)
+          AND body LIKE ?
+        LIMIT 1`,
+      [currentUserId, currentUserId, `%${documentId}%`]
+    );
+
+    if (!relatedMessage) {
+      return res.status(403).json({ error: 'You do not have access to this attachment.' });
+    }
+
+    const download = String(req.query?.download || '').trim() === '1';
+    const fileName = String(uploadRecord.original_file_name || 'attachment').trim() || 'attachment';
+    res.setHeader('Content-Type', getContentTypeForFileName(fileName, uploadRecord.file_type));
+    res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="${fileName.replace(/"/g, '')}"`);
+    await streamStoredUserUploadToResponse(uploadRecord, res);
+    return;
+  } catch (error) {
+    console.error('Failed to stream message attachment:', error);
+    return res.status(500).json({ error: 'Failed to open the requested attachment.' });
   }
 });
 

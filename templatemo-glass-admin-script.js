@@ -23,6 +23,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const MESSAGE_NOTIFICATION_STATE_KEY = 'dashboardMessageNotificationStateByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
     const FAST_SHARED_PROPERTY_MESSAGE_MARKER = '[FAST_SHARED_PROPERTY_V1]';
+    const FAST_MESSAGE_BUNDLE_MARKER = '[FAST_MESSAGE_BUNDLE_V1]';
     const MAX_NOTIFICATION_HISTORY_ITEMS = 20;
     const MESSAGE_NOTIFICATION_POLL_MS = 15000;
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
@@ -1798,6 +1799,97 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return `${FAST_SHARED_PROPERTY_MESSAGE_MARKER}\n${JSON.stringify(payload)}`;
     }
 
+    function buildFastMessageBundle({ text, sharedProperty, attachments, senderLike }) {
+        const normalizedText = sanitizeSharedPropertyText(text, 4000);
+        const sender = buildUserIdentity(senderLike || getWorkspaceUserContext());
+        const propertySnapshot = sharedProperty ? createShareablePropertyDetailSnapshot(sharedProperty) : null;
+        const normalizedAttachments = Array.isArray(attachments)
+            ? attachments.map((attachment) => ({
+                id: sanitizeSharedPropertyText(attachment && attachment.id, 120),
+                fileName: sanitizeSharedPropertyText(attachment && attachment.fileName, 220),
+                fileType: sanitizeSharedPropertyText(attachment && attachment.fileType, 160),
+                fileSize: Math.max(Number(attachment && attachment.fileSize) || 0, 0),
+                contentPath: sanitizeSharedPropertyText(attachment && attachment.contentPath, 500),
+                downloadPath: sanitizeSharedPropertyText(attachment && attachment.downloadPath, 500),
+                kind: sanitizeSharedPropertyText(attachment && attachment.kind, 40)
+            })).filter((attachment) => attachment.id && attachment.fileName && attachment.contentPath)
+            : [];
+
+        return `${FAST_MESSAGE_BUNDLE_MARKER}\n${JSON.stringify({
+            version: 1,
+            type: 'message-bundle',
+            sentAt: new Date().toISOString(),
+            sender: {
+                name: sanitizeSharedPropertyText(sender && sender.name, 120),
+                email: sanitizeSharedPropertyText(sender && sender.email, 160)
+            },
+            text: normalizedText,
+            sharedProperty: propertySnapshot,
+            attachments: normalizedAttachments
+        })}`;
+    }
+
+    function parseFastMessageBundle(body) {
+        const rawBody = String(body || '').trim();
+        if (!rawBody.startsWith(FAST_MESSAGE_BUNDLE_MARKER)) {
+            return null;
+        }
+
+        const serializedPayload = rawBody.slice(FAST_MESSAGE_BUNDLE_MARKER.length).trim();
+        if (!serializedPayload) {
+            return null;
+        }
+
+        try {
+            const parsedPayload = JSON.parse(serializedPayload);
+            if (!parsedPayload || typeof parsedPayload !== 'object' || parsedPayload.type !== 'message-bundle') {
+                return null;
+            }
+
+            const sharedProperty = parsedPayload.sharedProperty
+                ? createShareablePropertyDetailSnapshot(parsedPayload.sharedProperty)
+                : null;
+            const text = sanitizeSharedPropertyText(parsedPayload.text, 4000);
+            const attachments = Array.isArray(parsedPayload.attachments)
+                ? parsedPayload.attachments.map((attachment) => ({
+                    id: sanitizeSharedPropertyText(attachment && attachment.id, 120),
+                    fileName: sanitizeSharedPropertyText(attachment && attachment.fileName, 220),
+                    fileType: sanitizeSharedPropertyText(attachment && attachment.fileType, 160),
+                    fileSize: Math.max(Number(attachment && attachment.fileSize) || 0, 0),
+                    contentPath: sanitizeSharedPropertyText(attachment && attachment.contentPath, 500),
+                    downloadPath: sanitizeSharedPropertyText(attachment && attachment.downloadPath, 500),
+                    kind: sanitizeSharedPropertyText(attachment && attachment.kind, 40)
+                })).filter((attachment) => attachment.id && attachment.fileName && attachment.contentPath)
+                : [];
+            const address = sharedProperty
+                ? sanitizeSharedPropertyText(sharedProperty.address || sharedProperty.propertyCover || 'Shared property', 180) || 'Shared property'
+                : '';
+            const previewParts = [];
+
+            if (sharedProperty) {
+                previewParts.push(`Shared property: ${address}`);
+            }
+            if (attachments.length > 0) {
+                previewParts.push(`${attachments.length} attachment${attachments.length === 1 ? '' : 's'}`);
+            }
+            if (text) {
+                previewParts.push(sanitizeSharedPropertyText(text, 90));
+            }
+
+            return {
+                version: Number(parsedPayload.version) || 1,
+                type: 'message-bundle',
+                sentAt: sanitizeSharedPropertyText(parsedPayload.sentAt, 80),
+                text,
+                sharedProperty,
+                attachments,
+                previewText: previewParts.filter(Boolean).join(' - ') || 'Sent an attachment'
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
     function parseFastSharedPropertyMessage(body) {
         const rawBody = String(body || '').trim();
         if (!rawBody.startsWith(FAST_SHARED_PROPERTY_MESSAGE_MARKER)) {
@@ -1843,6 +1935,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     }
 
     function getFastMessagePreviewText(body, fallbackText) {
+        const messageBundle = parseFastMessageBundle(body);
+        if (messageBundle) {
+            return messageBundle.previewText;
+        }
+
         const sharedPropertyMessage = parseFastSharedPropertyMessage(body);
         if (sharedPropertyMessage) {
             return sharedPropertyMessage.previewText;
@@ -1851,6 +1948,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return sanitizeSharedPropertyText(body || fallbackText || '', 220);
     }
 
+    window.buildFastMessageBundle = buildFastMessageBundle;
+    window.parseFastMessageBundle = parseFastMessageBundle;
     window.buildFastSharedPropertyMessage = buildFastSharedPropertyMessage;
     window.parseFastSharedPropertyMessage = parseFastSharedPropertyMessage;
     window.getFastMessagePreviewText = getFastMessagePreviewText;
@@ -3514,6 +3613,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             fileSize: Math.max(Number(safeDocument.fileSize) || 0, 0),
             fileType: String(safeDocument.fileType || '').trim(),
             storage: 'cloud',
+            contentPath: String(safeDocument.contentPath || '').trim(),
+            downloadPath: String(safeDocument.downloadPath || '').trim(),
             createdAt: Number(safeDocument.createdAt) || Date.now(),
             updatedAt: Number(safeDocument.updatedAt) || Number(safeDocument.createdAt) || Date.now()
         };
@@ -3558,7 +3659,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             throw new Error('Sign in is required before opening cloud files.');
         }
 
-        const response = await fetch(`/api/user-uploads/${encodeURIComponent(String(documentItem && documentItem.id || '').trim())}/content?download=${download ? '1' : '0'}`, {
+        const explicitPath = String(
+            download
+                ? (documentItem && (documentItem.downloadPath || documentItem.contentPath))
+                : (documentItem && (documentItem.contentPath || documentItem.downloadPath))
+            || ''
+        ).trim();
+        const requestPath = explicitPath || `/api/user-uploads/${encodeURIComponent(String(documentItem && documentItem.id || '').trim())}/content?download=${download ? '1' : '0'}`;
+
+        const response = await fetch(requestPath, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -5422,17 +5531,30 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             return item.documents
-                .map((documentItem) => ({
-                    id: String(documentItem && documentItem.id || ''),
-                    fileName: String(documentItem && (documentItem.fileName || documentItem.label) || 'Document').trim() || 'Document',
-                    label: String(documentItem && (documentItem.label || documentItem.fileName) || 'Document').trim() || 'Document',
-                    fileSize: Math.max(Number(documentItem && documentItem.fileSize) || 0, 0),
-                    fileType: String(documentItem && documentItem.fileType || '').trim(),
-                    storage: String(documentItem && documentItem.storage || 'indexeddb').trim() || 'indexeddb',
-                    contentBase64: String(documentItem && documentItem.contentBase64 || '').trim(),
-                    createdAt: Number(documentItem && documentItem.createdAt) || Date.now(),
-                    updatedAt: Number(documentItem && documentItem.updatedAt) || Number(documentItem && documentItem.createdAt) || Date.now()
-                }))
+                .map((documentItem) => {
+                    const id = String(documentItem && documentItem.id || '').trim();
+                    const storage = String(documentItem && documentItem.storage || 'indexeddb').trim() || 'indexeddb';
+                    const defaultContentPath = storage === 'cloud' && id
+                        ? `/api/user-uploads/${encodeURIComponent(id)}/content?download=0`
+                        : '';
+                    const defaultDownloadPath = storage === 'cloud' && id
+                        ? `/api/user-uploads/${encodeURIComponent(id)}/content?download=1`
+                        : '';
+
+                    return {
+                        id,
+                        fileName: String(documentItem && (documentItem.fileName || documentItem.label) || 'Document').trim() || 'Document',
+                        label: String(documentItem && (documentItem.label || documentItem.fileName) || 'Document').trim() || 'Document',
+                        fileSize: Math.max(Number(documentItem && documentItem.fileSize) || 0, 0),
+                        fileType: String(documentItem && documentItem.fileType || '').trim(),
+                        storage,
+                        contentBase64: String(documentItem && documentItem.contentBase64 || '').trim(),
+                        contentPath: String(documentItem && documentItem.contentPath || defaultContentPath).trim(),
+                        downloadPath: String(documentItem && documentItem.downloadPath || defaultDownloadPath).trim(),
+                        createdAt: Number(documentItem && documentItem.createdAt) || Date.now(),
+                        updatedAt: Number(documentItem && documentItem.updatedAt) || Number(documentItem && documentItem.createdAt) || Date.now()
+                    };
+                })
                 .filter((documentItem) => documentItem.id && (documentItem.storage !== 'inline-base64' || documentItem.contentBase64));
         }
 
@@ -5440,10 +5562,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const fileName = String(file && file.name || 'Document').trim() || 'Document';
             const fileSize = Math.max(Number(file && file.size) || 0, 0);
             const fileType = String(file && file.type || '').trim() || 'File';
+            const canUseCloudStorage = Boolean(closedDealsAuthToken);
 
-            try {
+            if (canUseCloudStorage) {
                 return await uploadFileToCloudStorage('closed-deal', ensureClosedDealDraftId(), file, fileName);
-            } catch (cloudError) {
             }
 
             const documentId = `closed-deal-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
@@ -5701,9 +5823,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             documentHead.className = 'closed-deal-document-head';
 
             const copy = document.createElement('div');
-            const name = document.createElement('strong');
+            const name = document.createElement('button');
+            name.type = 'button';
             name.className = 'closed-deal-document-name';
             name.textContent = documentItem.fileName || documentItem.label || 'Saved Document';
+            name.addEventListener('click', async () => {
+                await openStoredClosedDealDocument(documentItem, false);
+            });
             const meta = document.createElement('span');
             meta.className = 'closed-deal-document-meta';
             meta.textContent = [formatFileSize(documentItem.fileSize), documentItem.fileType || 'File'].filter(Boolean).join(' • ');
@@ -8683,6 +8809,15 @@ function initNavbarDateTime() {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'calendar-day';
+            const plannerItems = getPlannerItemsForDate(date);
+            const accessiblePreviewLabel = getCalendarPreviewLabel(plannerItems);
+
+            if (accessiblePreviewLabel) {
+                button.setAttribute('aria-label', `${formatDateHeading(date)}. ${accessiblePreviewLabel}`);
+            } else {
+                button.setAttribute('aria-label', formatDateHeading(date));
+            }
+
             if (!inCurrentMonth) {
                 button.classList.add('other-month');
             }
@@ -8696,7 +8831,6 @@ function initNavbarDateTime() {
                 button.classList.add('selected');
             }
 
-            const plannerItems = getPlannerItemsForDate(date);
             if (plannerItems.length > 0) {
                 button.classList.add('has-event');
                 const dayPriority = getCalendarDayPriority(plannerItems);
@@ -8712,39 +8846,24 @@ function initNavbarDateTime() {
                 previewTitle.textContent = `${plannerItems.length} task${plannerItems.length === 1 ? '' : 's'}`;
                 preview.appendChild(previewTitle);
 
-                const previewList = document.createElement('div');
+                const previewList = document.createElement('ul');
                 previewList.className = 'calendar-day-preview-list';
 
-                plannerItems.slice(0, 3).forEach((item) => {
-                    const previewItem = document.createElement('p');
+                plannerItems.forEach((item) => {
+                    const previewItem = document.createElement('li');
                     previewItem.className = `calendar-day-preview-item${item && item.completed ? ' is-complete' : ''}`;
                     previewItem.textContent = String(item && item.title || 'Task').trim() || 'Task';
                     previewList.appendChild(previewItem);
                 });
 
-                if (plannerItems.length > 3) {
-                    const previewMore = document.createElement('p');
-                    previewMore.className = 'calendar-day-preview-more';
-                    previewMore.textContent = `+${plannerItems.length - 3} more`;
-                    previewList.appendChild(previewMore);
-                }
-
                 preview.appendChild(previewList);
                 button.appendChild(preview);
-                button.setAttribute('title', getCalendarPreviewLabel(plannerItems));
             }
 
             const dayNumber = document.createElement('span');
             dayNumber.className = 'calendar-day-number';
             dayNumber.textContent = String(date.getDate());
             button.appendChild(dayNumber);
-
-            if (plannerItems.length > 0) {
-                const count = document.createElement('span');
-                count.className = 'calendar-event-count';
-                count.textContent = String(plannerItems.length);
-                button.appendChild(count);
-            }
 
             button.addEventListener('click', () => {
                 if (!inCurrentMonth) {

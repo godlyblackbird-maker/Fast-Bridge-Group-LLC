@@ -6327,9 +6327,19 @@ body.analytics-reboot .analytics-my-file-count {
 .closed-deals-doc-name,
 .closed-deal-document-name {
     display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--text-primary);
     font-size: 13px;
     font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.closed-deal-document-name:hover,
+.closed-deal-document-name:focus-visible {
+    text-decoration: underline;
 }
 
 .closed-deals-doc-meta,
@@ -7184,6 +7194,7 @@ body.analytics-reboot .analytics-my-file-count {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-height: 0;
 }
 
 .daily-verse-widget {
@@ -10137,8 +10148,12 @@ body.analytics-reboot .analytics-my-file-count {
 
 .calendar-stage {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     min-height: 420px;
+}
+
+.calendar-widget {
+    overflow: visible;
 }
 
 .calendar-layout {
@@ -10462,11 +10477,13 @@ body.analytics-reboot .analytics-my-file-count {
 
 .chatgpt-chat {
     position: relative;
-    flex: 1 1 auto;
-    min-height: 340px;
+    flex: 1 1 0;
+    min-height: 0;
     max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 18px;
     padding: 10px;
@@ -10734,6 +10751,7 @@ body.analytics-reboot .analytics-my-file-count {
 .calendar-view-month {
     position: relative;
     z-index: 2;
+    overflow: visible;
 }
 
 .calendar-view-detail {
@@ -10754,6 +10772,10 @@ body.analytics-reboot .analytics-my-file-count {
     transform: translateX(-6%);
 }
 
+.calendar-stage.detail-open {
+    overflow: hidden;
+}
+
 .calendar-stage.detail-open .calendar-view-detail {
     opacity: 1;
     pointer-events: auto;
@@ -10766,6 +10788,7 @@ body.analytics-reboot .analytics-my-file-count {
     gap: 10px;
     text-align: center;
     padding-right: 10px;
+    overflow: visible;
 }
 
 .calendar-grid-month {
@@ -11028,12 +11051,13 @@ body.analytics-reboot .analytics-my-file-count {
 }
 
 .calendar-day-preview-list {
+    margin: 0;
+    padding-left: 18px;
     display: grid;
     gap: 6px;
 }
 
-.calendar-day-preview-item,
-.calendar-day-preview-more {
+.calendar-day-preview-item {
     margin: 0;
     font-size: 12px;
     line-height: 1.4;
@@ -11044,13 +11068,13 @@ body.analytics-reboot .analytics-my-file-count {
     color: rgba(248, 250, 252, 0.96);
 }
 
+.calendar-day-preview-item::marker {
+    color: rgba(255, 255, 255, 0.78);
+}
+
 .calendar-day-preview-item.is-complete {
     color: rgba(148, 163, 184, 0.94);
     text-decoration: line-through;
-}
-
-.calendar-day-preview-more {
-    color: rgba(255, 255, 255, 0.7);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -14901,7 +14925,7 @@ body.analytics-reboot .analytics-my-file-count {
     }
 
     .chatgpt-chat {
-        min-height: 300px;
+        min-height: 0;
     }
     
     .navbar {
