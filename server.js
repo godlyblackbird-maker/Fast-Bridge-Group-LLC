@@ -10,7 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { Worker } = require('worker_threads');
-const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
 require('dotenv').config();
 
@@ -171,6 +171,24 @@ function ensureDatabaseStorageReady(databaseFilePath) {
   }
 
   return resolvedPath;
+}
+
+function isUsingFallbackDatabasePath(databaseFilePath) {
+  const explicitPath = getFirstConfiguredEnvValue('DATABASE_PATH', 'SQLITE_DATABASE_PATH', 'SQLITE_DB_PATH');
+  if (explicitPath) {
+    return false;
+  }
+
+  const persistentRoot = getFirstConfiguredEnvValue('RENDER_DISK_MOUNT_PATH', 'PERSISTENT_STORAGE_PATH', 'DATA_DIR');
+  if (persistentRoot) {
+    return false;
+  }
+
+  return path.resolve(databaseFilePath) === path.resolve(path.join(__dirname, DATABASE_FILENAME));
+}
+
+function isProductionEnvironment() {
+  return String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production';
 }
 
 function normalizeKnownEmail(email) {
@@ -1508,6 +1526,14 @@ app.post('/api/import-listing-preview', async (req, res) => {
 
 const DATABASE_FILE_PATH = ensureDatabaseStorageReady(resolveDatabaseFilePath());
 
+if (isUsingFallbackDatabasePath(DATABASE_FILE_PATH)) {
+  console.warn('SQLite is using the app directory fallback path. Configure DATABASE_PATH or a persistent storage mount to prevent message history loss on redeploys.');
+
+  if (isProductionEnvironment()) {
+    throw new Error('Production requires persistent SQLite storage. Set DATABASE_PATH, RENDER_DISK_MOUNT_PATH, PERSISTENT_STORAGE_PATH, or DATA_DIR.');
+  }
+}
+
 // Database connection
 const db = new sqlite3.Database(DATABASE_FILE_PATH, (err) => {
   if (err) {
@@ -2499,6 +2525,7 @@ async function archiveUserMessageToS3(messageLike) {
     recipientUserId: Number(messageLike?.recipient_user_id || messageLike?.recipientUserId) || 0,
     body: String(messageLike?.body || ''),
     createdAt: String(messageLike?.created_at || messageLike?.createdAt || new Date().toISOString()),
+    editedAt: messageLike?.edited_at || messageLike?.editedAt || null,
     readAt: messageLike?.read_at || messageLike?.readAt || null,
     archivedAt: new Date().toISOString(),
     source: 'user_messages'
@@ -2512,6 +2539,192 @@ async function archiveUserMessageToS3(messageLike) {
   }));
 
   return true;
+}
+
+function buildUserMessageArchivePrefix(userAId, userBId) {
+  const pairKey = [Number(userAId) || 0, Number(userBId) || 0].sort((left, right) => left - right).join('-');
+  return `message-archive/pair-${pairKey}/`;
+}
+
+async function readS3ObjectText(storageKey) {
+  const s3Client = getS3Client();
+  const s3Config = getS3StorageConfig();
+  if (!s3Client || !isS3StorageConfigured(s3Config) || !storageKey) {
+    return '';
+  }
+
+  const response = await s3Client.send(new GetObjectCommand({
+    Bucket: s3Config.bucket,
+    Key: storageKey
+  }));
+
+  if (!response?.Body) {
+    return '';
+  }
+
+  const chunks = [];
+  for await (const chunk of response.Body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function listS3Keys(prefix) {
+  const s3Client = getS3Client();
+  const s3Config = getS3StorageConfig();
+  if (!s3Client || !isS3StorageConfigured(s3Config) || !prefix) {
+    return [];
+  }
+
+  const keys = [];
+  let continuationToken = undefined;
+
+  do {
+    const response = await s3Client.send(new ListObjectsV2Command({
+      Bucket: s3Config.bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken
+    }));
+
+    (Array.isArray(response?.Contents) ? response.Contents : []).forEach((entry) => {
+      const key = String(entry?.Key || '').trim();
+      if (key) {
+        keys.push(key);
+      }
+    });
+
+    continuationToken = response?.IsTruncated ? response?.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return keys;
+}
+
+function normalizeArchivedUserMessage(messageLike) {
+  const senderUserId = Number(messageLike?.senderUserId || messageLike?.sender_user_id) || 0;
+  const recipientUserId = Number(messageLike?.recipientUserId || messageLike?.recipient_user_id) || 0;
+  const body = String(messageLike?.body || '').trim();
+  const createdAt = normalizeApiTimestamp(messageLike?.createdAt || messageLike?.created_at || '');
+  const editedAt = normalizeApiTimestamp(messageLike?.editedAt || messageLike?.edited_at || '');
+  const readAt = normalizeApiTimestamp(messageLike?.readAt || messageLike?.read_at || '');
+
+  if (!senderUserId || !recipientUserId || !body || !createdAt) {
+    return null;
+  }
+
+  return {
+    id: Number(messageLike?.id) || 0,
+    senderUserId,
+    recipientUserId,
+    body,
+    createdAt,
+    editedAt,
+    readAt
+  };
+}
+
+async function listArchivedUserMessagesForPair(userAId, userBId) {
+  const prefix = buildUserMessageArchivePrefix(userAId, userBId);
+  const keys = await listS3Keys(prefix);
+  const messages = [];
+
+  for (const key of keys) {
+    try {
+      const rawText = await readS3ObjectText(key);
+      if (!rawText) {
+        continue;
+      }
+
+      const parsed = JSON.parse(rawText);
+      const normalized = normalizeArchivedUserMessage(parsed);
+      if (!normalized) {
+        continue;
+      }
+
+      const matchesPair = (
+        (normalized.senderUserId === Number(userAId) && normalized.recipientUserId === Number(userBId))
+        || (normalized.senderUserId === Number(userBId) && normalized.recipientUserId === Number(userAId))
+      );
+
+      if (matchesPair) {
+        messages.push(normalized);
+      }
+    } catch (error) {
+      console.error('Failed to read archived user message:', key, error);
+    }
+  }
+
+  return messages.sort((left, right) => {
+    const leftTime = Date.parse(left.createdAt || '') || 0;
+    const rightTime = Date.parse(right.createdAt || '') || 0;
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+    return (left.id || 0) - (right.id || 0);
+  });
+}
+
+async function restoreArchivedMessagesForPair(userAId, userBId) {
+  const archivedMessages = await listArchivedUserMessagesForPair(userAId, userBId);
+  if (!archivedMessages.length) {
+    return { restoredCount: 0, archivedCount: 0 };
+  }
+
+  const existingRows = await dbAll(
+    `SELECT sender_user_id, recipient_user_id, body, created_at
+       FROM user_messages
+      WHERE (sender_user_id = ? AND recipient_user_id = ?)
+         OR (sender_user_id = ? AND recipient_user_id = ?)`,
+    [userAId, userBId, userBId, userAId]
+  );
+
+  const existingSignatures = new Set(
+    existingRows.map((row) => {
+      const createdAt = normalizeApiTimestamp(row?.created_at || '');
+      return [
+        Number(row?.sender_user_id) || 0,
+        Number(row?.recipient_user_id) || 0,
+        String(row?.body || '').trim(),
+        createdAt
+      ].join('|');
+    })
+  );
+
+  let restoredCount = 0;
+
+  for (const message of archivedMessages) {
+    const signature = [
+      message.senderUserId,
+      message.recipientUserId,
+      message.body,
+      message.createdAt
+    ].join('|');
+
+    if (existingSignatures.has(signature)) {
+      continue;
+    }
+
+    await dbRun(
+      `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        message.senderUserId,
+        message.recipientUserId,
+        message.body,
+        message.createdAt,
+        message.editedAt || null,
+        message.readAt || null
+      ]
+    );
+
+    existingSignatures.add(signature);
+    restoredCount += 1;
+  }
+
+  return {
+    restoredCount,
+    archivedCount: archivedMessages.length
+  };
 }
 
 function getContentTypeForFileName(fileName, fallbackType = '') {
@@ -9130,7 +9343,7 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
       [otherUserId, currentUserId]
     );
 
-    const rows = await dbAll(
+    let rows = await dbAll(
       `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
        FROM user_messages
        WHERE (sender_user_id = ? AND recipient_user_id = ?)
@@ -9138,6 +9351,29 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
        ORDER BY datetime(created_at) ASC, id ASC`,
       [currentUserId, otherUserId, otherUserId, currentUserId]
     );
+
+    if (!rows.length && isS3StorageConfigured()) {
+      const restoreResult = await restoreArchivedMessagesForPair(currentUserId, otherUserId);
+      if (restoreResult.restoredCount > 0) {
+        await dbRun(
+          `UPDATE user_messages
+           SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+           WHERE sender_user_id = ?
+             AND recipient_user_id = ?
+             AND read_at IS NULL`,
+          [otherUserId, currentUserId]
+        );
+
+        rows = await dbAll(
+          `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+           FROM user_messages
+           WHERE (sender_user_id = ? AND recipient_user_id = ?)
+              OR (sender_user_id = ? AND recipient_user_id = ?)
+           ORDER BY datetime(created_at) ASC, id ASC`,
+          [currentUserId, otherUserId, otherUserId, currentUserId]
+        );
+      }
+    }
 
     return res.json({
       success: true,
@@ -9272,6 +9508,8 @@ app.patch('/api/messages/conversations/:userId/messages/:messageId', async (req,
         WHERE id = ?`,
       [messageId]
     );
+
+    await archiveUserMessageToS3(updated);
 
     return res.json({
       success: true,

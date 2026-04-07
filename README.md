@@ -12,6 +12,18 @@ npm install
 npm start
 ```
 
+If you are running this in production, set one of these before starting the server so SQLite uses persistent storage instead of the app folder:
+
+```env
+DATABASE_PATH=/var/data/database.db
+# or
+RENDER_DISK_MOUNT_PATH=/var/data
+# or
+PERSISTENT_STORAGE_PATH=/var/data
+# or
+DATA_DIR=/var/data
+```
+
 ### 3️⃣ Open Dashboard
 ```
 http://localhost:3000
@@ -117,6 +129,7 @@ This account is automatically created when the server starts for the first time.
 ## Development Notes
 
 - **Database:** SQLite (file-based, portable)
+- **Production database path:** Required. The server now refuses to boot in production unless `DATABASE_PATH`, `RENDER_DISK_MOUNT_PATH`, `PERSISTENT_STORAGE_PATH`, or `DATA_DIR` points to persistent storage.
 - **Port:** 3000 (configurable in `.env`)
 - **JWT Secret:** Change in production!
 - **AI Model:** Set `OPENAI_MODEL` in `.env` if you want something other than `gpt-5-nano`

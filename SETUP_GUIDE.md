@@ -290,6 +290,7 @@ Database persistence behavior after this change:
 - If `DATABASE_PATH` is set, the server reads and writes SQLite there.
 - If only `RENDER_DISK_MOUNT_PATH` (or another supported data-dir variable) is set, the server stores `database.db` inside that directory.
 - If neither is set, the server falls back to the project-local `database.db`, which is fine for local development but not for restart-safe production hosting.
+- In production, the server now stops on startup if none of `DATABASE_PATH`, `RENDER_DISK_MOUNT_PATH`, `PERSISTENT_STORAGE_PATH`, or `DATA_DIR` is configured.
 
 ⚠️ **IMPORTANT FOR PRODUCTION:**
 - Change `JWT_SECRET` to a long random string
