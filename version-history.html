@@ -724,16 +724,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.3.7</span>
-                    <span>Google Earth subject pin added</span>
-                    <span>Analytics header scroll sizing fixed</span>
-                    <span>Cyberpunk headers rounded site-wide</span>
+                    <span>Newest build: 1.3.8</span>
+                    <span>MLS PDF contact priority parsing tightened</span>
+                    <span>Route-style fake addresses rejected</span>
+                    <span>Admin-created broker persistence hardened</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>20</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.7, including the full 1.2.3 to 1.3.7 release sequence.</span>
+                    <strong>21</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.8, including the full 1.2.3 to 1.3.8 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -745,23 +745,23 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.3.7</h2>
-                <p>This release tightens up the UI polish around navigation and map context by making the subject property easier to locate in Google Earth, stabilizing the Analytics sticky header, and giving cyberpunk mode the same rounded header treatment used by the cleaner analytics shell.</p>
+                <h2>Version 1.3.8</h2>
+                <p>This release hardens the MLS PDF importer and backend persistence by stopping route text from being treated as property addresses, making CONTACT PRIORITY extraction more reliable, and adding safer database-path handling so admin-created broker accounts are less likely to disappear after a restart.</p>
                 <div class="version-history-meta">
-                    <span>April 2, 2026</span>
-                    <span>Earth map clarity</span>
-                    <span>Header polish pass</span>
-                    <span>Version 1.3.7</span>
+                    <span>April 6, 2026</span>
+                    <span>MLS import hardening</span>
+                    <span>Persistence safeguards</span>
+                    <span>Version 1.3.8</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Added a real subject-property marker in the Google Earth view so the map no longer drops users near the parcel without clearly showing which property is the target.</li>
-                    <li>Kept the Earth subject marker synced to the active property coordinates whenever the Earth camera refreshes, so the pin stays locked to the property instead of drifting with search focus.</li>
-                    <li>Fixed the Analytics sticky header search bar so it keeps a stable size while scrolling and no longer stretches toward the notification bell.</li>
-                    <li>Rounded the major cyberpunk-mode header containers across navbars, card headers, modal headers, and compact workspace headers so they match the softer analytics-style shell.</li>
-                    <li>Cleaned up header presentation across recent UI touchpoints so the app feels more consistent when switching themes and moving between pages.</li>
+                    <li>Stopped MLS PDF imports from treating route-style turn-by-turn text like real listing addresses, including freeway-hop strings such as off-road and repeated to-road direction chains.</li>
+                    <li>Made AGENT / OFFICE CONTACT PRIORITY parsing role-aware so LA fields and numbered LO PHONE entries can be pulled more reliably from the highlighted contact block.</li>
+                    <li>Added fallback normalization so LA EMAIL can populate Offers Email and LA DIRECT can backfill LA Cell when those are the only reliable values present in the PDF.</li>
+                    <li>Added configurable SQLite database path support so deployed environments can keep admin-created accounts on persistent storage instead of relying on a fragile default local file path.</li>
+                    <li>Restored and safeguarded the Loria Rigby broker account path with startup sync coverage so the canonical broker record can be recreated consistently when the environment is configured correctly.</li>
                 </ul>
             </div>
         </section>
@@ -773,6 +773,23 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.3.7</h2>
+                            <span class="version-date">April 2, 2026</span>
+                        </div>
+                        <span class="version-chip">1.3.7</span>
+                    </div>
+                    <ul>
+                        <li>Added a real subject-property marker in the Google Earth view so the map no longer drops users near the parcel without clearly showing which property is the target.</li>
+                        <li>Kept the Earth subject marker synced to the active property coordinates whenever the Earth camera refreshes, so the pin stays locked to the property instead of drifting with search focus.</li>
+                        <li>Fixed the Analytics sticky header search bar so it keeps a stable size while scrolling and no longer stretches toward the notification bell.</li>
+                        <li>Rounded the major cyberpunk-mode header containers across navbars, card headers, modal headers, and compact workspace headers so they match the softer analytics-style shell.</li>
+                        <li>Cleaned up header presentation across recent UI touchpoints so the app feels more consistent when switching themes and moving between pages.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>
