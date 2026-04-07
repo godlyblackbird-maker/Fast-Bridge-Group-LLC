@@ -1,0 +1,78 @@
+services:
+  - type: web
+    name: fast-bridge-group-dashboard
+    runtime: node
+    plan: starter
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/build-version
+    disk:
+      name: fast-bridge-group-data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /var/data/database.db
+      - key: RENDER_DISK_MOUNT_PATH
+        value: /var/data
+      - key: MESSAGE_DATABASE_URL
+        sync: false
+      - key: MESSAGE_DATABASE_SSL
+        value: true
+      - key: JWT_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5-nano
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: AWS_S3_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_ENDPOINT
+        sync: false
+      - key: AWS_S3_FORCE_PATH_STYLE
+        sync: false
+      - key: SQLITE_BACKUP_INTERVAL_HOURS
+        value: 12
+      - key: SQLITE_BACKUP_S3_PREFIX
+        value: database-backups/sqlite
+      - key: STEVE_SMTP_USER
+        sync: false
+      - key: STEVE_SMTP_PASS
+        sync: false
+      - key: STEVE_SMTP_SIGNATURE
+        sync: false
+      - key: ISAAC_SMTP_USER
+        sync: false
+      - key: ISAAC_SMTP_PASS
+        sync: false
+      - key: ISAAC_SMTP_SIGNATURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: LEAD_NOTIFY_EMAIL
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: TWILIO_MESSAGING_SERVICE_SID
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
