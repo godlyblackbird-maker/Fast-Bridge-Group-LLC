@@ -1049,9 +1049,9 @@
                                     <th>LA Name</th>
                                     <th>LO Phone</th>
                                     <th>Offers Email</th>
-                                    <th>LA Cell</th>
                                     <th>LA Direct</th>
                                     <th>LA Email</th>
+                                        <th>LA Cell</th>
                                     <th>Status</th>
                                     <th>PDF File</th>
                                     <th>Copy</th>
@@ -1907,9 +1907,9 @@
                     laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
                     loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
                     offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
-                    laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                    laDirect: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
-                    laEmail: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
+                    laDirect: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                    laEmail: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                    laCell: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
                     status: cells[8] ? normalizeSpreadsheetStatusLabel(cells[8].textContent) : '',
                     pdfFile: cells[9] ? normalizeCellValue(cells[9].textContent) : ''
                 };
@@ -2350,7 +2350,7 @@
                 const tr = document.createElement('tr');
                 tr.dataset.rowId = normalizedRow.id ? String(normalizedRow.id) : '';
                 tr.dataset.matchKey = normalizedRow.matchKey || buildManualRowMatchKey();
-                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'laDirect', 'laEmail', 'status', 'pdfFile'].forEach((key) => {
+                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laDirect', 'laEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
                     tr.appendChild(createCell(normalizedRow[key] || '', key));
                 });
                 tr.appendChild(createCopyCell());
@@ -2368,7 +2368,7 @@
             }
 
             function isMeaningfulRow(row) {
-                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'laDirect', 'laEmail', 'status', 'pdfFile']
+                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laDirect', 'laEmail', 'laCell', 'status', 'pdfFile']
                     .some((key) => String(row && row[key] || '').trim().length > 0);
             }
 
@@ -2383,9 +2383,9 @@
                         laName: cells[2] ? normalizeCellValue(cells[2].textContent) : '',
                         loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
                         offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
-                        laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                        laDirect: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
-                        laEmail: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
+                        laDirect: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
+                        laEmail: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                        laCell: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
                         status: cells[8] ? normalizeSpreadsheetStatusLabel(cells[8].textContent) : '',
                         pdfFile: cells[9] ? normalizeCellValue(cells[9].textContent) : ''
                     };
@@ -2671,7 +2671,7 @@
                     return;
                 }
 
-                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'LA Direct', 'LA Email', 'Status', 'PDF File'];
+                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Direct', 'LA Email', 'LA Cell', 'Status', 'PDF File'];
                 const lines = [headers.join(',')];
 
                 rows.forEach((row) => {
@@ -2681,9 +2681,9 @@
                         row.laName,
                         row.loPhone,
                         row.offersEmail,
-                        row.laCell,
                         row.laDirect,
                         row.laEmail,
+                        row.laCell,
                         row.status,
                         row.pdfFile
                     ].map(escapeCsvValue).join(','));
