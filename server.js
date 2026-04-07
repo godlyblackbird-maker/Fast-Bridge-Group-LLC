@@ -6079,6 +6079,46 @@ function isAgentOfficeContactPriorityBoundary(line) {
     || /\bPrinted by\b/i.test(normalizedLine);
 }
 
+function extractInlineContactPriorityValue(lines, expectedLabels, valueExtractor) {
+  const normalizedLines = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+    : [];
+  const labelVariants = Array.from(new Set((Array.isArray(expectedLabels) ? expectedLabels : [])
+    .map((label) => String(label || '').trim())
+    .filter(Boolean)));
+  const extractValue = typeof valueExtractor === 'function'
+    ? valueExtractor
+    : (value) => String(value || '').trim();
+
+  if (normalizedLines.length === 0 || labelVariants.length === 0) {
+    return '';
+  }
+
+  const escapedVariants = labelVariants
+    .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .map((label) => label.replace(/\s+/g, '[\\s.-]*'));
+  const labelPattern = escapedVariants.join('|');
+  const numberedLaPrefix = '(?:\\d+\\s*[.)-]?\\s*)?l\\.?\\s*a\\.?\\s*';
+
+  for (const line of normalizedLines) {
+    if (!/contact\s+priority|la\s*direct|la\s*e[\s-]*mail/i.test(line)) {
+      continue;
+    }
+
+    const match = line.match(new RegExp(`(?:^|\\b)${numberedLaPrefix}(?:${labelPattern})\\s*[:#-]?\\s*(.+?)(?=(?:\\s+${numberedLaPrefix}(?:${labelPattern})\\s*[:#-]?)|$)`, 'i'));
+    if (!match || !match[1]) {
+      continue;
+    }
+
+    const extracted = extractValue(match[1]);
+    if (extracted) {
+      return String(extracted || '').trim();
+    }
+  }
+
+  return '';
+}
+
 function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtractor) {
   const normalizedLines = Array.isArray(lines)
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
@@ -6087,9 +6127,9 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
     return '';
   }
 
-  const headerIndex = normalizedLines.findIndex((line) => /agent\s*\/\s*office\s+contact\s+priority/i.test(line));
+  const headerIndex = normalizedLines.findIndex((line) => /(?:agent\s*\/\s*office\s+)?contact\s+priority/i.test(line));
   if (headerIndex < 0) {
-    return '';
+    return extractInlineContactPriorityValue(normalizedLines, expectedLabels, valueExtractor);
   }
 
   const labelSet = new Set(
@@ -6105,6 +6145,15 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
     ? valueExtractor
     : (value) => String(value || '').trim();
 
+  const inlinePriorityValue = extractInlineContactPriorityValue(
+    normalizedLines.slice(headerIndex, Math.min(normalizedLines.length, headerIndex + 8)),
+    Array.from(labelSet.values()),
+    extractValue
+  );
+  if (inlinePriorityValue) {
+    return inlinePriorityValue;
+  }
+
   const endIndex = Math.min(normalizedLines.length, headerIndex + 24);
   for (let index = headerIndex + 1; index < endIndex; index += 1) {
     const line = normalizedLines[index];
@@ -6112,7 +6161,7 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
       break;
     }
 
-    const labelMatch = line.match(/^(?:\d+\.?\s*)?(co\s*la|la)\s*([a-z\s-]+?)\s*[:#-]?\s*(.*)$/i);
+    const labelMatch = line.match(/^(?:\d+\s*[.)-]?\s*)?(co\s*la|la)\s*([a-z\s-]+?)\s*[:#-]?\s*(.*)$/i);
     if (!labelMatch) {
       continue;
     }
