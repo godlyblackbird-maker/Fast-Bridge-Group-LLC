@@ -10246,11 +10246,15 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
     let rows = await listConversationMessages(currentUserId, otherUserId);
 
     if (!rows.length && isS3StorageConfigured()) {
-      const restoreResult = await restoreArchivedMessagesForPair(currentUserId, otherUserId);
-      if (restoreResult.restoredCount > 0) {
-        await markConversationMessagesRead(otherUserId, currentUserId);
+      try {
+        const restoreResult = await restoreArchivedMessagesForPair(currentUserId, otherUserId);
+        if (restoreResult.restoredCount > 0) {
+          await markConversationMessagesRead(otherUserId, currentUserId);
 
-        rows = await listConversationMessages(currentUserId, otherUserId);
+          rows = await listConversationMessages(currentUserId, otherUserId);
+        }
+      } catch (restoreError) {
+        console.error('Skipped archived message restore for conversation because S3 recovery is unavailable:', restoreError);
       }
     }
 
