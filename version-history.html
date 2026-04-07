@@ -725,9 +725,9 @@
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
                     <span>Newest build: 1.3.8</span>
-                    <span>MLS PDF contact priority parsing tightened</span>
-                    <span>Route-style fake addresses rejected</span>
-                    <span>Admin-created broker persistence hardened</span>
+                    <span>Messaging persistence hardened</span>
+                    <span>MLS spreadsheet template controls expanded</span>
+                    <span>Live HTML update caching disabled</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
@@ -746,22 +746,25 @@
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
                 <h2>Version 1.3.8</h2>
-                <p>This release hardens the MLS PDF importer and backend persistence by stopping route text from being treated as property addresses, making CONTACT PRIORITY extraction more reliable, and adding safer database-path handling so admin-created broker accounts are less likely to disappear after a restart.</p>
+                <p>This release hardens message history and deployment freshness by protecting SQLite persistence, restoring archived conversations when the local message table comes back empty, expanding MLS spreadsheet outreach controls, and preventing stale cached HTML from hiding current UI updates.</p>
                 <div class="version-history-meta">
-                    <span>April 6, 2026</span>
-                    <span>MLS import hardening</span>
-                    <span>Persistence safeguards</span>
+                    <span>April 7, 2026</span>
+                    <span>Message recovery</span>
+                    <span>MLS workflow polish</span>
+                    <span>Cache-control fix</span>
                     <span>Version 1.3.8</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Stopped MLS PDF imports from treating route-style turn-by-turn text like real listing addresses, including freeway-hop strings such as off-road and repeated to-road direction chains.</li>
-                    <li>Made AGENT / OFFICE CONTACT PRIORITY parsing role-aware so LA fields and numbered LO PHONE entries can be pulled more reliably from the highlighted contact block.</li>
-                    <li>Added fallback normalization so LA EMAIL can populate Offers Email and LA DIRECT can backfill LA Cell when those are the only reliable values present in the PDF.</li>
-                    <li>Added configurable SQLite database path support so deployed environments can keep admin-created accounts on persistent storage instead of relying on a fragile default local file path.</li>
-                    <li>Restored and safeguarded the Loria Rigby broker account path with startup sync coverage so the canonical broker record can be recreated consistently when the environment is configured correctly.</li>
+                    <li>Added persistent SQLite storage safeguards so production now requires a real database path or mounted data directory instead of silently relying on a fragile app-folder database file.</li>
+                    <li>Added archived message recovery so conversations can be restored from S3-backed message history when the local <code>user_messages</code> table comes back empty after a restart or redeploy.</li>
+                    <li>Updated message archiving to keep edited conversation content in sync and reduced the risk of users thinking message history was randomly disappearing.</li>
+                    <li>Expanded MLS Spreadsheet Copy Templates so the <code>Closed</code> status can be selected and edited directly in the template manager.</li>
+                    <li>Kept the MLS spreadsheet field order consistent with <code>LA Email</code> shown before <code>LA Cell</code> across the table, row parsing, and CSV export logic.</li>
+                    <li>Fixed dashboard ChatGPT widget scrolling by removing the nested assistant-bubble scroll trap so longer replies can be read normally inside the main chat pane.</li>
+                    <li>Disabled HTML page caching at the server layer so live updates like the MLS spreadsheet layout and version history changes stop getting masked by stale cached pages.</li>
                 </ul>
             </div>
         </section>
