@@ -12,6 +12,13 @@ const crypto = require('crypto');
 const { Worker } = require('worker_threads');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
+let PostgresPool = null;
+try {
+  ({ Pool: PostgresPool } = require('pg'));
+} catch (error) {
+  PostgresPool = null;
+}
+
 require('dotenv').config();
 
 const { sendNewLeadEmail, sendAgentEmail } = require('./sendEmail.js/sendEmail');
@@ -62,6 +69,13 @@ const TOTP_PERIOD_SECONDS = 30;
 const TOTP_DIGITS = 6;
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 const DATABASE_FILENAME = 'database.db';
+const MESSAGE_POSTGRES_DEFAULT_POOL_SIZE = 10;
+const SQLITE_BACKUP_TEMP_DIR = path.join(__dirname, 'temp', 'sqlite-backups');
+const SQLITE_BACKUP_DEFAULT_INTERVAL_HOURS = 12;
+const SQLITE_BACKUP_INTERVAL_HOURS = Math.max(1, Number.parseInt(String(process.env.SQLITE_BACKUP_INTERVAL_HOURS || SQLITE_BACKUP_DEFAULT_INTERVAL_HOURS), 10) || SQLITE_BACKUP_DEFAULT_INTERVAL_HOURS);
+const SQLITE_BACKUP_INTERVAL_MS = SQLITE_BACKUP_INTERVAL_HOURS * 60 * 60 * 1000;
+const SQLITE_BACKUP_STARTUP_DELAY_MS = Math.max(15 * 1000, Number.parseInt(String(process.env.SQLITE_BACKUP_STARTUP_DELAY_MS || 2 * 60 * 1000), 10) || (2 * 60 * 1000));
+const SQLITE_BACKUP_S3_PREFIX = String(process.env.SQLITE_BACKUP_S3_PREFIX || 'database-backups/sqlite').trim().replace(/\/+$/g, '');
 const MLS_IMPORT_PDF_BODY_LIMIT = '260mb';
 const MLS_IMPORT_PDF_MAX_BYTES = 180 * 1024 * 1024;
 const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
@@ -76,13 +90,25 @@ let cachedTwilioClient = null;
 let cachedTwilioClientKey = '';
 let cachedS3Client = null;
 let cachedS3ClientKey = '';
+let userMessageStorePool = null;
+let latestUserMessageStoreHealth = {
+  configured: false,
+  available: false,
+  dialect: 'sqlite',
+  checkedAt: null,
+  reason: 'PostgreSQL message store is not configured.'
+};
 let latestS3ArchiveHealth = null;
+let latestSqliteBackupHealth = null;
+let sqliteBackupTimer = null;
+let sqliteBackupInFlight = null;
 const USER_MESSAGE_EDIT_WINDOW_MS = 60 * 1000;
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
 const mlsImportSpreadsheetClearedAtByUser = new Map();
 
 fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
+fs.mkdirSync(SQLITE_BACKUP_TEMP_DIR, { recursive: true });
 
 const mlsImportPdfUpload = multer({
   storage: multer.diskStorage({
@@ -117,6 +143,12 @@ const userUploadMemory = multer({
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
+const LEGACY_EMAIL_ALIASES = new Map([
+  ['isaacs.hesed@gmail.com', CANONICAL_ISAAC_EMAIL],
+  ['isaacs.hesed@fastbridgegroup.com', CANONICAL_ISAAC_EMAIL],
+  ['medinafbg@gmail.com', CANONICAL_STEVE_EMAIL],
+  ['medinastj@gmail.com', CANONICAL_STEVE_EMAIL]
+]);
 const CANONICAL_LORIA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('LORIA_BROKER_EMAIL') || 'loria.rigby@fastbridgegroupllc.com');
 const CANONICAL_LORIA_PASSWORD = String(process.env.LORIA_BROKER_PASSWORD || 'Password123').trim() || 'Password123';
 const CANONICAL_LORIA_NAME = String(process.env.LORIA_BROKER_NAME || 'Loria Rigby').trim() || 'Loria Rigby';
@@ -126,13 +158,6 @@ const CANONICAL_TEST_NAME = 'Test';
 const ADMIN_CANONICAL_EMAILS = new Set([
   CANONICAL_ISAAC_EMAIL,
   CANONICAL_STEVE_EMAIL
-]);
-
-const LEGACY_EMAIL_ALIASES = new Map([
-  ['isaacs.hesed@gmail.com', CANONICAL_ISAAC_EMAIL],
-  ['isaacs.hesed@fastbridgegroup.com', CANONICAL_ISAAC_EMAIL],
-  ['medinafbg@gmail.com', CANONICAL_STEVE_EMAIL],
-  ['medinastj@gmail.com', CANONICAL_STEVE_EMAIL]
 ]);
 
 function getFirstConfiguredEnvValue(...names) {
@@ -2446,6 +2471,593 @@ function dbAll(sql, params) {
   });
 }
 
+function isTruthyEnvironmentValue(value) {
+  return /^(1|true|yes|on|required)$/i.test(String(value || '').trim());
+}
+
+function isFalsyEnvironmentValue(value) {
+  return /^(0|false|no|off|disable|disabled)$/i.test(String(value || '').trim());
+}
+
+function getPostgresMessageStoreConfig() {
+  const connectionString = getFirstConfiguredEnvValue(
+    'MESSAGE_DATABASE_URL',
+    'MESSAGE_POSTGRES_URL',
+    'POSTGRES_URL',
+    'DATABASE_URL'
+  );
+  const host = getFirstConfiguredEnvValue('MESSAGE_PGHOST', 'PGHOST');
+  const portRaw = getFirstConfiguredEnvValue('MESSAGE_PGPORT', 'PGPORT');
+  const user = getFirstConfiguredEnvValue('MESSAGE_PGUSER', 'PGUSER');
+  const password = getFirstConfiguredEnvValue('MESSAGE_PGPASSWORD', 'PGPASSWORD');
+  const database = getFirstConfiguredEnvValue('MESSAGE_PGDATABASE', 'PGDATABASE');
+
+  const hasDiscreteConfig = Boolean(host && user && database);
+  if (!connectionString && !hasDiscreteConfig) {
+    return null;
+  }
+
+  const explicitSslSetting = getFirstConfiguredEnvValue('MESSAGE_DATABASE_SSL', 'MESSAGE_PGSSL', 'PGSSLMODE', 'PGSSL');
+  const useSsl = explicitSslSetting
+    ? !isFalsyEnvironmentValue(explicitSslSetting)
+    : false;
+  const poolSize = Math.max(
+    1,
+    Number.parseInt(String(getFirstConfiguredEnvValue('MESSAGE_PG_POOL_SIZE') || MESSAGE_POSTGRES_DEFAULT_POOL_SIZE), 10) || MESSAGE_POSTGRES_DEFAULT_POOL_SIZE
+  );
+
+  const config = {
+    max: poolSize,
+    idleTimeoutMillis: 30 * 1000,
+    connectionTimeoutMillis: 10 * 1000
+  };
+
+  if (connectionString) {
+    config.connectionString = connectionString;
+  } else {
+    config.host = host;
+    config.port = Math.max(1, Number.parseInt(String(portRaw || '5432'), 10) || 5432);
+    config.user = user;
+    config.password = password;
+    config.database = database;
+  }
+
+  if (useSsl) {
+    config.ssl = { rejectUnauthorized: false };
+  }
+
+  return config;
+}
+
+function isPostgresMessageStoreEnabled() {
+  return Boolean(userMessageStorePool);
+}
+
+function buildUserMessageStoreStatus() {
+  return {
+    configured: Boolean(latestUserMessageStoreHealth?.configured),
+    available: Boolean(latestUserMessageStoreHealth?.available),
+    dialect: isPostgresMessageStoreEnabled() ? 'postgres' : 'sqlite',
+    checkedAt: latestUserMessageStoreHealth?.checkedAt || null,
+    reason: latestUserMessageStoreHealth?.reason || null
+  };
+}
+
+async function syncSqliteUserMessagesToPostgres(pool) {
+  const existingCountResult = await pool.query('SELECT COUNT(*)::int AS row_count FROM user_messages');
+  const existingCount = Number(existingCountResult.rows?.[0]?.row_count) || 0;
+  if (existingCount > 0) {
+    return { migrated: 0, skipped: true };
+  }
+
+  const sqliteRows = await dbAll(
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+       FROM user_messages
+      ORDER BY id ASC`,
+    []
+  );
+
+  for (const row of sqliteRows) {
+    await pool.query(
+      `INSERT INTO user_messages (id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO UPDATE SET
+         sender_user_id = EXCLUDED.sender_user_id,
+         recipient_user_id = EXCLUDED.recipient_user_id,
+         body = EXCLUDED.body,
+         created_at = EXCLUDED.created_at,
+         edited_at = EXCLUDED.edited_at,
+         read_at = EXCLUDED.read_at`,
+      [
+        Number(row.id) || 0,
+        Number(row.sender_user_id) || 0,
+        Number(row.recipient_user_id) || 0,
+        String(row.body || ''),
+        normalizeApiTimestamp(row.created_at) || new Date().toISOString(),
+        normalizeApiTimestamp(row.edited_at),
+        normalizeApiTimestamp(row.read_at)
+      ]
+    );
+  }
+
+  await pool.query(
+    `SELECT setval(
+       pg_get_serial_sequence('user_messages', 'id'),
+       GREATEST((SELECT COALESCE(MAX(id), 1) FROM user_messages), 1),
+       true
+     )`
+  );
+
+  return { migrated: sqliteRows.length, skipped: false };
+}
+
+async function initializePostgresMessageStore() {
+  const postgresConfig = getPostgresMessageStoreConfig();
+  if (!postgresConfig) {
+    latestUserMessageStoreHealth = {
+      configured: false,
+      available: false,
+      dialect: 'sqlite',
+      checkedAt: new Date().toISOString(),
+      reason: 'PostgreSQL message store is not configured.'
+    };
+    return;
+  }
+
+  if (!PostgresPool) {
+    latestUserMessageStoreHealth = {
+      configured: true,
+      available: false,
+      dialect: 'sqlite',
+      checkedAt: new Date().toISOString(),
+      reason: 'The pg package is not installed.'
+    };
+    console.error('PostgreSQL message store is configured, but the pg package is not installed. Falling back to SQLite for messages.');
+    return;
+  }
+
+  const pool = new PostgresPool(postgresConfig);
+
+  try {
+    await pool.query('SELECT NOW()');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_messages (
+        id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+        sender_user_id INTEGER NOT NULL,
+        recipient_user_id INTEGER NOT NULL,
+        body TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        read_at TIMESTAMPTZ,
+        edited_at TIMESTAMPTZ
+      )
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_user_messages_pair_created ON user_messages(sender_user_id, recipient_user_id, created_at)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_user_messages_recipient_read ON user_messages(recipient_user_id, read_at)');
+
+    const migrationResult = await syncSqliteUserMessagesToPostgres(pool);
+    userMessageStorePool = pool;
+    latestUserMessageStoreHealth = {
+      configured: true,
+      available: true,
+      dialect: 'postgres',
+      checkedAt: new Date().toISOString(),
+      reason: migrationResult.skipped
+        ? 'PostgreSQL message store is active.'
+        : `PostgreSQL message store is active. Migrated ${migrationResult.migrated} existing SQLite message(s).`
+    };
+    console.log(latestUserMessageStoreHealth.reason);
+  } catch (error) {
+    latestUserMessageStoreHealth = {
+      configured: true,
+      available: false,
+      dialect: 'sqlite',
+      checkedAt: new Date().toISOString(),
+      reason: error && error.message ? error.message : 'Failed to initialize PostgreSQL message store.'
+    };
+    console.error('Failed to initialize PostgreSQL message store. Falling back to SQLite for messages:', error);
+    try {
+      await pool.end();
+    } catch (shutdownError) {
+      console.error('Failed to close PostgreSQL message store pool after initialization failure:', shutdownError);
+    }
+    userMessageStorePool = null;
+  }
+}
+
+async function loadUsersByIds(userIds) {
+  const uniqueIds = Array.from(new Set((Array.isArray(userIds) ? userIds : [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0)));
+  if (!uniqueIds.length) {
+    return [];
+  }
+
+  const placeholders = uniqueIds.map(() => '?').join(', ');
+  return dbAll(
+    `SELECT id, name, email, role, last_login
+       FROM users
+      WHERE id IN (${placeholders})`,
+    uniqueIds
+  );
+}
+
+async function listMessageUsers(currentUserId) {
+  if (!isPostgresMessageStoreEnabled()) {
+    return dbAll(
+      `SELECT
+          u.id,
+          u.name,
+          u.email,
+          u.role,
+          u.last_login,
+          (
+            SELECT m.body
+            FROM user_messages m
+            WHERE (m.sender_user_id = ? AND m.recipient_user_id = u.id)
+               OR (m.sender_user_id = u.id AND m.recipient_user_id = ?)
+            ORDER BY datetime(m.created_at) DESC, m.id DESC
+            LIMIT 1
+          ) AS last_message,
+          (
+            SELECT m.created_at
+            FROM user_messages m
+            WHERE (m.sender_user_id = ? AND m.recipient_user_id = u.id)
+               OR (m.sender_user_id = u.id AND m.recipient_user_id = ?)
+            ORDER BY datetime(m.created_at) DESC, m.id DESC
+            LIMIT 1
+          ) AS last_message_at,
+          (
+            SELECT COUNT(*)
+            FROM user_messages m
+            WHERE m.sender_user_id = u.id
+              AND m.recipient_user_id = ?
+              AND m.read_at IS NULL
+          ) AS unread_count
+       FROM users u
+       WHERE u.id != ?
+       ORDER BY
+         CASE WHEN last_message_at IS NULL THEN 1 ELSE 0 END,
+         datetime(last_message_at) DESC,
+         LOWER(u.name) ASC`,
+      [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId]
+    );
+  }
+
+  const [users, lastMessageResult, unreadResult] = await Promise.all([
+    dbAll(
+      `SELECT id, name, email, role, last_login
+         FROM users
+        WHERE id != ?`,
+      [currentUserId]
+    ),
+    userMessageStorePool.query(
+      `WITH ranked_messages AS (
+         SELECT
+           CASE
+             WHEN sender_user_id = $1 THEN recipient_user_id
+             ELSE sender_user_id
+           END AS counterparty_user_id,
+           body,
+           created_at,
+           id,
+           ROW_NUMBER() OVER (
+             PARTITION BY CASE
+               WHEN sender_user_id = $1 THEN recipient_user_id
+               ELSE sender_user_id
+             END
+             ORDER BY created_at DESC, id DESC
+           ) AS row_rank
+         FROM user_messages
+         WHERE sender_user_id = $1 OR recipient_user_id = $1
+       )
+       SELECT counterparty_user_id, body AS last_message, created_at AS last_message_at
+         FROM ranked_messages
+        WHERE row_rank = 1`,
+      [currentUserId]
+    ),
+    userMessageStorePool.query(
+      `SELECT sender_user_id AS counterparty_user_id, COUNT(*)::int AS unread_count
+         FROM user_messages
+        WHERE recipient_user_id = $1
+          AND read_at IS NULL
+        GROUP BY sender_user_id`,
+      [currentUserId]
+    )
+  ]);
+
+  const lastMessageByUserId = new Map();
+  for (const row of lastMessageResult.rows || []) {
+    lastMessageByUserId.set(Number(row.counterparty_user_id), row);
+  }
+
+  const unreadByUserId = new Map();
+  for (const row of unreadResult.rows || []) {
+    unreadByUserId.set(Number(row.counterparty_user_id), Number(row.unread_count) || 0);
+  }
+
+  return users
+    .map((user) => {
+      const summary = lastMessageByUserId.get(Number(user.id)) || null;
+      return {
+        ...user,
+        last_message: summary ? String(summary.last_message || '') : null,
+        last_message_at: summary ? summary.last_message_at : null,
+        unread_count: unreadByUserId.get(Number(user.id)) || 0
+      };
+    })
+    .sort((left, right) => {
+      const leftTime = Date.parse(normalizeApiTimestamp(left.last_message_at) || '') || 0;
+      const rightTime = Date.parse(normalizeApiTimestamp(right.last_message_at) || '') || 0;
+      if (!leftTime && rightTime) return 1;
+      if (leftTime && !rightTime) return -1;
+      if (leftTime !== rightTime) return rightTime - leftTime;
+      return String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' });
+    });
+}
+
+async function markConversationMessagesRead(senderUserId, recipientUserId) {
+  if (isPostgresMessageStoreEnabled()) {
+    await userMessageStorePool.query(
+      `UPDATE user_messages
+          SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+        WHERE sender_user_id = $1
+          AND recipient_user_id = $2
+          AND read_at IS NULL`,
+      [senderUserId, recipientUserId]
+    );
+    return;
+  }
+
+  await dbRun(
+    `UPDATE user_messages
+        SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+      WHERE sender_user_id = ?
+        AND recipient_user_id = ?
+        AND read_at IS NULL`,
+    [senderUserId, recipientUserId]
+  );
+}
+
+async function listConversationMessages(userAId, userBId) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+         FROM user_messages
+        WHERE (sender_user_id = $1 AND recipient_user_id = $2)
+           OR (sender_user_id = $2 AND recipient_user_id = $1)
+        ORDER BY created_at ASC, id ASC`,
+      [userAId, userBId]
+    );
+    return result.rows || [];
+  }
+
+  return dbAll(
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+       FROM user_messages
+      WHERE (sender_user_id = ? AND recipient_user_id = ?)
+         OR (sender_user_id = ? AND recipient_user_id = ?)
+      ORDER BY datetime(created_at) ASC, id ASC`,
+    [userAId, userBId, userBId, userAId]
+  );
+}
+
+async function createUserMessageRecord({ senderUserId, recipientUserId, body, createdAt = null, editedAt = null, readAt = null }) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
+       VALUES ($1, $2, $3, COALESCE($4::timestamptz, CURRENT_TIMESTAMP), $5::timestamptz, $6::timestamptz)
+       RETURNING id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at`,
+      [senderUserId, recipientUserId, body, createdAt, editedAt, readAt]
+    );
+    return result.rows?.[0] || null;
+  }
+
+  const result = await dbRun(
+    `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
+     VALUES (?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?)`,
+    [senderUserId, recipientUserId, body, createdAt, editedAt, readAt]
+  );
+  return dbGet(
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+       FROM user_messages
+      WHERE id = ?`,
+    [result.lastID]
+  );
+}
+
+async function getUserMessageById(messageId) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+         FROM user_messages
+        WHERE id = $1`,
+      [messageId]
+    );
+    return result.rows?.[0] || null;
+  }
+
+  return dbGet(
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+       FROM user_messages
+      WHERE id = ?`,
+    [messageId]
+  );
+}
+
+async function getOwnedUserMessage(messageId, senderUserId, recipientUserId) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+         FROM user_messages
+        WHERE id = $1
+          AND sender_user_id = $2
+          AND recipient_user_id = $3`,
+      [messageId, senderUserId, recipientUserId]
+    );
+    return result.rows?.[0] || null;
+  }
+
+  return dbGet(
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+       FROM user_messages
+      WHERE id = ?
+        AND sender_user_id = ?
+        AND recipient_user_id = ?`,
+    [messageId, senderUserId, recipientUserId]
+  );
+}
+
+async function updateOwnedUserMessageBody(messageId, senderUserId, recipientUserId, body) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `UPDATE user_messages
+          SET body = $1,
+              edited_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+          AND sender_user_id = $3
+          AND recipient_user_id = $4
+      RETURNING id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at`,
+      [body, messageId, senderUserId, recipientUserId]
+    );
+    return result.rows?.[0] || null;
+  }
+
+  await dbRun(
+    `UPDATE user_messages
+        SET body = ?,
+            edited_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND sender_user_id = ?
+        AND recipient_user_id = ?`,
+    [body, messageId, senderUserId, recipientUserId]
+  );
+  return getUserMessageById(messageId);
+}
+
+async function reassignUserMessages(previousUserId, nextUserId) {
+  if (isPostgresMessageStoreEnabled()) {
+    await userMessageStorePool.query('UPDATE user_messages SET sender_user_id = $1 WHERE sender_user_id = $2', [nextUserId, previousUserId]);
+    await userMessageStorePool.query('UPDATE user_messages SET recipient_user_id = $1 WHERE recipient_user_id = $2', [nextUserId, previousUserId]);
+    return;
+  }
+
+  await dbRun('UPDATE user_messages SET sender_user_id = ? WHERE sender_user_id = ?', [nextUserId, previousUserId]);
+  await dbRun('UPDATE user_messages SET recipient_user_id = ? WHERE recipient_user_id = ?', [nextUserId, previousUserId]);
+}
+
+async function listExistingMessageSignaturesForPair(userAId, userBId) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `SELECT sender_user_id, recipient_user_id, body, created_at
+         FROM user_messages
+        WHERE (sender_user_id = $1 AND recipient_user_id = $2)
+           OR (sender_user_id = $2 AND recipient_user_id = $1)`,
+      [userAId, userBId]
+    );
+    return result.rows || [];
+  }
+
+  return dbAll(
+    `SELECT sender_user_id, recipient_user_id, body, created_at
+       FROM user_messages
+      WHERE (sender_user_id = ? AND recipient_user_id = ?)
+         OR (sender_user_id = ? AND recipient_user_id = ?)`,
+    [userAId, userBId, userBId, userAId]
+  );
+}
+
+async function findAccessibleMessageAttachment(currentUserId, documentId) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `SELECT id
+         FROM user_messages
+        WHERE (sender_user_id = $1 OR recipient_user_id = $1)
+          AND body LIKE $2
+        LIMIT 1`,
+      [currentUserId, `%${documentId}%`]
+    );
+    return result.rows?.[0] || null;
+  }
+
+  return dbGet(
+    `SELECT id
+       FROM user_messages
+      WHERE (sender_user_id = ? OR recipient_user_id = ?)
+        AND body LIKE ?
+      LIMIT 1`,
+    [currentUserId, currentUserId, `%${documentId}%`]
+  );
+}
+
+async function getLatestIncomingMessageId(currentUserId) {
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `SELECT COALESCE(MAX(id), 0) AS latest_incoming_message_id
+         FROM user_messages
+        WHERE recipient_user_id = $1`,
+      [currentUserId]
+    );
+    return Number(result.rows?.[0]?.latest_incoming_message_id) || 0;
+  }
+
+  const row = await dbGet(
+    `SELECT MAX(id) AS latest_incoming_message_id
+       FROM user_messages
+      WHERE recipient_user_id = ?`,
+    [currentUserId]
+  );
+  return Number(row?.latest_incoming_message_id) || 0;
+}
+
+async function listUnreadMessageNotifications(currentUserId, afterId) {
+  if (!isPostgresMessageStoreEnabled()) {
+    return dbAll(
+      `SELECT
+          m.id,
+          m.sender_user_id,
+          m.recipient_user_id,
+          m.body,
+          m.created_at,
+          m.read_at,
+          sender.id AS sender_id,
+          sender.name AS sender_name,
+          sender.email AS sender_email,
+          sender.role AS sender_role
+       FROM user_messages m
+       INNER JOIN users sender ON sender.id = m.sender_user_id
+       WHERE m.recipient_user_id = ?
+         AND m.read_at IS NULL
+         AND m.id > ?
+       ORDER BY m.id ASC`,
+      [currentUserId, afterId]
+    );
+  }
+
+  const result = await userMessageStorePool.query(
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, read_at
+       FROM user_messages
+      WHERE recipient_user_id = $1
+        AND read_at IS NULL
+        AND id > $2
+      ORDER BY id ASC`,
+    [currentUserId, afterId]
+  );
+  const rows = result.rows || [];
+  const senderRows = await loadUsersByIds(rows.map((row) => row.sender_user_id));
+  const senderById = new Map(senderRows.map((row) => [Number(row.id), row]));
+
+  return rows.map((row) => {
+    const sender = senderById.get(Number(row.sender_user_id)) || null;
+    return {
+      ...row,
+      sender_id: sender ? Number(sender.id) : Number(row.sender_user_id) || 0,
+      sender_name: sender ? sender.name : 'User',
+      sender_email: sender ? sender.email : '',
+      sender_role: sender ? sender.role : ''
+    };
+  });
+}
+
 function getS3StorageConfig() {
   const region = getFirstConfiguredEnvValue('AWS_S3_REGION', 'S3_REGION', 'AWS_REGION', 'AWS_DEFAULT_REGION');
   const bucket = getFirstConfiguredEnvValue('AWS_S3_BUCKET', 'S3_BUCKET', 'AWS_BUCKET_NAME');
@@ -2528,6 +3140,170 @@ function maskS3StorageConfig(config = getS3StorageConfig()) {
     hasAccessKeyId: Boolean(String(config?.accessKeyId || '').trim()),
     hasSecretAccessKey: Boolean(String(config?.secretAccessKey || '').trim())
   };
+}
+
+function buildSqliteBackupStorageStatus() {
+  return {
+    enabled: isS3StorageConfigured() && Boolean(SQLITE_BACKUP_S3_PREFIX),
+    intervalHours: SQLITE_BACKUP_INTERVAL_HOURS,
+    intervalMs: SQLITE_BACKUP_INTERVAL_MS,
+    startupDelayMs: SQLITE_BACKUP_STARTUP_DELAY_MS,
+    prefix: SQLITE_BACKUP_S3_PREFIX,
+    lastRun: latestSqliteBackupHealth
+  };
+}
+
+function buildSqliteBackupKey(isoTimestamp) {
+  const safeTimestamp = String(isoTimestamp || new Date().toISOString())
+    .replace(/[:.]/g, '-')
+    .replace(/[^0-9A-Za-zTZ_-]/g, '');
+  return `${SQLITE_BACKUP_S3_PREFIX}/${safeTimestamp}__database.db`;
+}
+
+function escapeSqliteLiteral(value) {
+  return String(value || '').replace(/'/g, "''");
+}
+
+async function createSqliteBackupSnapshot(snapshotPath) {
+  const escapedSnapshotPath = escapeSqliteLiteral(path.resolve(snapshotPath));
+
+  if (fs.existsSync(snapshotPath)) {
+    fs.unlinkSync(snapshotPath);
+  }
+
+  try {
+    await dbRun('PRAGMA wal_checkpoint(FULL)', []);
+  } catch (_error) {
+    // Ignore checkpoint failures and still try to generate a snapshot.
+  }
+
+  await dbRun(`VACUUM INTO '${escapedSnapshotPath}'`, []);
+  return snapshotPath;
+}
+
+async function runSqliteBackupToS3(trigger = 'scheduled') {
+  if (sqliteBackupInFlight) {
+    return sqliteBackupInFlight;
+  }
+
+  sqliteBackupInFlight = (async () => {
+    const startedAt = new Date().toISOString();
+    const s3Config = getS3StorageConfig();
+    const maskedConfig = maskS3StorageConfig(s3Config);
+    const s3Client = getS3Client();
+
+    if (!s3Client || !isS3StorageConfigured(s3Config) || !SQLITE_BACKUP_S3_PREFIX) {
+      const result = {
+        ok: false,
+        trigger,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        reason: 'SQLite backup schedule is disabled because S3 storage is not fully configured.',
+        config: maskedConfig,
+        keyPrefix: SQLITE_BACKUP_S3_PREFIX
+      };
+      latestSqliteBackupHealth = result;
+      return result;
+    }
+
+    const snapshotPath = path.join(SQLITE_BACKUP_TEMP_DIR, `${Date.now()}-${crypto.randomUUID()}-database.db`);
+    const storageKey = buildSqliteBackupKey(startedAt);
+
+    try {
+      await createSqliteBackupSnapshot(snapshotPath);
+      const snapshotBuffer = fs.readFileSync(snapshotPath);
+      const stats = fs.statSync(snapshotPath);
+
+      await s3Client.send(new PutObjectCommand({
+        Bucket: s3Config.bucket,
+        Key: storageKey,
+        Body: snapshotBuffer,
+        ContentType: 'application/vnd.sqlite3',
+        Metadata: {
+          source: 'fast-bridge-group-sqlite-backup',
+          database: DATABASE_FILENAME,
+          createdat: startedAt,
+          trigger: String(trigger || 'scheduled')
+        }
+      }));
+
+      const result = {
+        ok: true,
+        trigger,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        reason: 'SQLite backup uploaded to S3 successfully.',
+        config: maskedConfig,
+        key: storageKey,
+        keyPrefix: SQLITE_BACKUP_S3_PREFIX,
+        bytes: Number(stats.size) || snapshotBuffer.length
+      };
+      latestSqliteBackupHealth = result;
+      return result;
+    } catch (error) {
+      const result = {
+        ok: false,
+        trigger,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        reason: error && error.message ? error.message : 'SQLite backup upload failed.',
+        config: maskedConfig,
+        key: storageKey,
+        keyPrefix: SQLITE_BACKUP_S3_PREFIX
+      };
+      latestSqliteBackupHealth = result;
+      return result;
+    } finally {
+      if (fs.existsSync(snapshotPath)) {
+        try {
+          fs.unlinkSync(snapshotPath);
+        } catch (_error) {
+          // Ignore cleanup failures for temp snapshots.
+        }
+      }
+      sqliteBackupInFlight = null;
+    }
+  })();
+
+  return sqliteBackupInFlight;
+}
+
+function scheduleSqliteBackupToS3() {
+  if (sqliteBackupTimer || !isS3StorageConfigured() || !SQLITE_BACKUP_S3_PREFIX) {
+    return;
+  }
+
+  setTimeout(() => {
+    runSqliteBackupToS3('startup-delay')
+      .then((result) => {
+        if (result.ok) {
+          console.log(`SQLite backup uploaded to S3: ${result.key}`);
+        } else {
+          console.error('SQLite backup startup run failed:', result.reason);
+        }
+      })
+      .catch((error) => {
+        console.error('SQLite backup startup run crashed:', error);
+      });
+  }, SQLITE_BACKUP_STARTUP_DELAY_MS).unref?.();
+
+  sqliteBackupTimer = setInterval(() => {
+    runSqliteBackupToS3('interval')
+      .then((result) => {
+        if (result.ok) {
+          console.log(`SQLite backup uploaded to S3: ${result.key}`);
+        } else {
+          console.error('SQLite backup scheduled run failed:', result.reason);
+        }
+      })
+      .catch((error) => {
+        console.error('SQLite backup scheduled run crashed:', error);
+      });
+  }, SQLITE_BACKUP_INTERVAL_MS);
+
+  if (sqliteBackupTimer && typeof sqliteBackupTimer.unref === 'function') {
+    sqliteBackupTimer.unref();
+  }
 }
 
 async function verifyS3ArchiveStorage() {
@@ -2617,11 +3393,24 @@ async function runS3ArchiveStartupHealthCheck() {
   console.error('S3 archive storage check failed:', result.reason);
 }
 
+function initializeS3BackupsAndHealthChecks() {
+  runS3ArchiveStartupHealthCheck().catch((error) => {
+    console.error('S3 archive startup verification crashed:', error);
+  });
+
+  if (isS3StorageConfigured() && SQLITE_BACKUP_S3_PREFIX) {
+    scheduleSqliteBackupToS3();
+    console.log(`SQLite backup scheduler enabled: every ${SQLITE_BACKUP_INTERVAL_HOURS} hour(s) to ${SQLITE_BACKUP_S3_PREFIX}`);
+  } else {
+    console.warn('SQLite backup scheduler is disabled because S3 storage is not fully configured.');
+  }
+}
+
 function buildUserMessageArchiveKey(messageLike) {
   const messageId = Number(messageLike?.id) || 0;
   const senderUserId = Number(messageLike?.sender_user_id || messageLike?.senderUserId) || 0;
   const recipientUserId = Number(messageLike?.recipient_user_id || messageLike?.recipientUserId) || 0;
-  const createdAtValue = String(messageLike?.created_at || messageLike?.createdAt || '').trim();
+  const createdAtValue = normalizeApiTimestamp(messageLike?.created_at || messageLike?.createdAt || '') || '';
   const createdAt = createdAtValue || new Date().toISOString();
   const safeCreatedAt = createdAt
     .replace(/[:.]/g, '-')
@@ -2643,9 +3432,9 @@ async function archiveUserMessageToS3(messageLike) {
     senderUserId: Number(messageLike?.sender_user_id || messageLike?.senderUserId) || 0,
     recipientUserId: Number(messageLike?.recipient_user_id || messageLike?.recipientUserId) || 0,
     body: String(messageLike?.body || ''),
-    createdAt: String(messageLike?.created_at || messageLike?.createdAt || new Date().toISOString()),
-    editedAt: messageLike?.edited_at || messageLike?.editedAt || null,
-    readAt: messageLike?.read_at || messageLike?.readAt || null,
+    createdAt: normalizeApiTimestamp(messageLike?.created_at || messageLike?.createdAt || new Date().toISOString()),
+    editedAt: normalizeApiTimestamp(messageLike?.edited_at || messageLike?.editedAt || null),
+    readAt: normalizeApiTimestamp(messageLike?.read_at || messageLike?.readAt || null),
     archivedAt: new Date().toISOString(),
     source: 'user_messages'
   };
@@ -2789,13 +3578,7 @@ async function restoreArchivedMessagesForPair(userAId, userBId) {
     return { restoredCount: 0, archivedCount: 0 };
   }
 
-  const existingRows = await dbAll(
-    `SELECT sender_user_id, recipient_user_id, body, created_at
-       FROM user_messages
-      WHERE (sender_user_id = ? AND recipient_user_id = ?)
-         OR (sender_user_id = ? AND recipient_user_id = ?)`,
-    [userAId, userBId, userBId, userAId]
-  );
+  const existingRows = await listExistingMessageSignaturesForPair(userAId, userBId);
 
   const existingSignatures = new Set(
     existingRows.map((row) => {
@@ -2823,18 +3606,14 @@ async function restoreArchivedMessagesForPair(userAId, userBId) {
       continue;
     }
 
-    await dbRun(
-      `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        message.senderUserId,
-        message.recipientUserId,
-        message.body,
-        message.createdAt,
-        message.editedAt || null,
-        message.readAt || null
-      ]
-    );
+    await createUserMessageRecord({
+      senderUserId: message.senderUserId,
+      recipientUserId: message.recipientUserId,
+      body: message.body,
+      createdAt: message.createdAt,
+      editedAt: message.editedAt || null,
+      readAt: message.readAt || null
+    });
 
     existingSignatures.add(signature);
     restoredCount += 1;
@@ -3881,8 +4660,7 @@ async function mergeLegacyConversationUsersIntoCanonicalAccount({ canonicalUserI
     }
 
     for (const duplicateId of duplicateIds) {
-      await dbRun('UPDATE user_messages SET sender_user_id = ? WHERE sender_user_id = ?', [primaryUserId, duplicateId]);
-      await dbRun('UPDATE user_messages SET recipient_user_id = ? WHERE recipient_user_id = ?', [primaryUserId, duplicateId]);
+      await reassignUserMessages(duplicateId, primaryUserId);
     }
 
     console.log(`${logLabel || 'Canonical'} message history merged from legacy user ids: ${duplicateIds.join(', ')}`);
@@ -5783,6 +6561,7 @@ app.get('/api/admin/storage-status', async (req, res) => {
   }
 
   const shouldVerify = /^(1|true|yes)$/i.test(String(req.query?.verify || '').trim());
+  const shouldRunBackup = /^(1|true|yes)$/i.test(String(req.query?.backup || '').trim());
   const databasePath = path.resolve(DATABASE_FILE_PATH);
   const usingFallbackDatabase = isUsingFallbackDatabasePath(DATABASE_FILE_PATH);
   const persistentDatabaseConfigured = !usingFallbackDatabase;
@@ -5799,6 +6578,9 @@ app.get('/api/admin/storage-status', async (req, res) => {
             : 'S3 archive storage is not fully configured.',
           config: s3ConfigSummary
         });
+    const sqliteBackup = shouldRunBackup
+      ? await runSqliteBackupToS3('admin-endpoint')
+      : buildSqliteBackupStorageStatus();
 
     return res.json({
       success: true,
@@ -5808,7 +6590,9 @@ app.get('/api/admin/storage-status', async (req, res) => {
         usingFallbackAppFile: usingFallbackDatabase,
         production: isProductionEnvironment()
       },
-      s3Archive
+      messageStore: buildUserMessageStoreStatus(),
+      s3Archive,
+      sqliteBackup
     });
   } catch (error) {
     return res.status(500).json({
@@ -9416,44 +10200,7 @@ app.get('/api/messages/users', async (req, res) => {
   }
 
   try {
-    const users = await dbAll(
-      `SELECT
-          u.id,
-          u.name,
-          u.email,
-          u.role,
-          u.last_login,
-          (
-            SELECT m.body
-            FROM user_messages m
-            WHERE (m.sender_user_id = ? AND m.recipient_user_id = u.id)
-               OR (m.sender_user_id = u.id AND m.recipient_user_id = ?)
-            ORDER BY datetime(m.created_at) DESC, m.id DESC
-            LIMIT 1
-          ) AS last_message,
-          (
-            SELECT m.created_at
-            FROM user_messages m
-            WHERE (m.sender_user_id = ? AND m.recipient_user_id = u.id)
-               OR (m.sender_user_id = u.id AND m.recipient_user_id = ?)
-            ORDER BY datetime(m.created_at) DESC, m.id DESC
-            LIMIT 1
-          ) AS last_message_at,
-          (
-            SELECT COUNT(*)
-            FROM user_messages m
-            WHERE m.sender_user_id = u.id
-              AND m.recipient_user_id = ?
-              AND m.read_at IS NULL
-          ) AS unread_count
-       FROM users u
-       WHERE u.id != ?
-       ORDER BY
-         CASE WHEN last_message_at IS NULL THEN 1 ELSE 0 END,
-         datetime(last_message_at) DESC,
-         LOWER(u.name) ASC`,
-      [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId]
-    );
+    const users = await listMessageUsers(currentUserId);
 
     return res.json({
       success: true,
@@ -9494,44 +10241,16 @@ app.get('/api/messages/conversations/:userId', async (req, res) => {
       return res.status(404).json({ error: 'Selected user was not found.' });
     }
 
-    await dbRun(
-      `UPDATE user_messages
-       SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
-       WHERE sender_user_id = ?
-         AND recipient_user_id = ?
-         AND read_at IS NULL`,
-      [otherUserId, currentUserId]
-    );
+    await markConversationMessagesRead(otherUserId, currentUserId);
 
-    let rows = await dbAll(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
-       FROM user_messages
-       WHERE (sender_user_id = ? AND recipient_user_id = ?)
-          OR (sender_user_id = ? AND recipient_user_id = ?)
-       ORDER BY datetime(created_at) ASC, id ASC`,
-      [currentUserId, otherUserId, otherUserId, currentUserId]
-    );
+    let rows = await listConversationMessages(currentUserId, otherUserId);
 
     if (!rows.length && isS3StorageConfigured()) {
       const restoreResult = await restoreArchivedMessagesForPair(currentUserId, otherUserId);
       if (restoreResult.restoredCount > 0) {
-        await dbRun(
-          `UPDATE user_messages
-           SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
-           WHERE sender_user_id = ?
-             AND recipient_user_id = ?
-             AND read_at IS NULL`,
-          [otherUserId, currentUserId]
-        );
+        await markConversationMessagesRead(otherUserId, currentUserId);
 
-        rows = await dbAll(
-          `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
-           FROM user_messages
-           WHERE (sender_user_id = ? AND recipient_user_id = ?)
-              OR (sender_user_id = ? AND recipient_user_id = ?)
-           ORDER BY datetime(created_at) ASC, id ASC`,
-          [currentUserId, otherUserId, otherUserId, currentUserId]
-        );
+        rows = await listConversationMessages(currentUserId, otherUserId);
       }
     }
 
@@ -9581,18 +10300,11 @@ app.post('/api/messages/conversations/:userId', async (req, res) => {
       return res.status(404).json({ error: 'Selected user was not found.' });
     }
 
-    const result = await dbRun(
-      `INSERT INTO user_messages (sender_user_id, recipient_user_id, body)
-       VALUES (?, ?, ?)`,
-      [currentUserId, otherUserId, body]
-    );
-
-    const inserted = await dbGet(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
-       FROM user_messages
-       WHERE id = ?`,
-      [result.lastID]
-    );
+    const inserted = await createUserMessageRecord({
+      senderUserId: currentUserId,
+      recipientUserId: otherUserId,
+      body
+    });
 
     try {
       await archiveUserMessageToS3(inserted);
@@ -9634,40 +10346,19 @@ app.patch('/api/messages/conversations/:userId/messages/:messageId', async (req,
   }
 
   try {
-    const existingMessage = await dbGet(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
-         FROM user_messages
-        WHERE id = ?
-          AND sender_user_id = ?
-          AND recipient_user_id = ?`,
-      [messageId, currentUserId, otherUserId]
-    );
+    const existingMessage = await getOwnedUserMessage(messageId, currentUserId, otherUserId);
 
     if (!existingMessage) {
       return res.status(404).json({ error: 'Message not found.' });
     }
 
-    const createdAtDate = new Date(String(existingMessage.created_at || '').replace(' ', 'T') + (String(existingMessage.created_at || '').includes('T') ? '' : 'Z'));
+    const normalizedCreatedAt = normalizeApiTimestamp(existingMessage.created_at);
+    const createdAtDate = normalizedCreatedAt ? new Date(normalizedCreatedAt) : new Date(Number.NaN);
     if (Number.isNaN(createdAtDate.getTime()) || (Date.now() - createdAtDate.getTime()) > USER_MESSAGE_EDIT_WINDOW_MS) {
       return res.status(403).json({ error: 'Messages can only be edited within 1 minute of sending.' });
     }
 
-    await dbRun(
-      `UPDATE user_messages
-          SET body = ?,
-              edited_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-          AND sender_user_id = ?
-          AND recipient_user_id = ?`,
-      [body, messageId, currentUserId, otherUserId]
-    );
-
-    const updated = await dbGet(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
-         FROM user_messages
-        WHERE id = ?`,
-      [messageId]
-    );
+    const updated = await updateOwnedUserMessageBody(messageId, currentUserId, otherUserId, body);
 
     await archiveUserMessageToS3(updated);
 
@@ -9705,14 +10396,7 @@ app.get('/api/messages/attachments/:documentId/content', async (req, res) => {
       return res.status(404).json({ error: 'Attachment not found.' });
     }
 
-    const relatedMessage = await dbGet(
-      `SELECT id
-         FROM user_messages
-        WHERE (sender_user_id = ? OR recipient_user_id = ?)
-          AND body LIKE ?
-        LIMIT 1`,
-      [currentUserId, currentUserId, `%${documentId}%`]
-    );
+    const relatedMessage = await findAccessibleMessageAttachment(currentUserId, documentId);
 
     if (!relatedMessage) {
       return res.status(403).json({ error: 'You do not have access to this attachment.' });
@@ -9776,13 +10460,7 @@ app.get('/api/messages/notifications', async (req, res) => {
   }
 
   try {
-    const highestRow = await dbGet(
-      `SELECT MAX(id) AS latest_incoming_message_id
-       FROM user_messages
-       WHERE recipient_user_id = ?`,
-      [currentUserId]
-    );
-    const latestIncomingMessageId = Number(highestRow?.latest_incoming_message_id) || 0;
+    const latestIncomingMessageId = await getLatestIncomingMessageId(currentUserId);
 
     if (!seeded) {
       return res.json({
@@ -9793,26 +10471,7 @@ app.get('/api/messages/notifications', async (req, res) => {
       });
     }
 
-    const rows = await dbAll(
-      `SELECT
-          m.id,
-          m.sender_user_id,
-          m.recipient_user_id,
-          m.body,
-          m.created_at,
-          m.read_at,
-          sender.id AS sender_id,
-          sender.name AS sender_name,
-          sender.email AS sender_email,
-          sender.role AS sender_role
-       FROM user_messages m
-       INNER JOIN users sender ON sender.id = m.sender_user_id
-       WHERE m.recipient_user_id = ?
-         AND m.read_at IS NULL
-         AND m.id > ?
-       ORDER BY m.id ASC`,
-      [currentUserId, safeAfterId]
-    );
+    const rows = await listUnreadMessageNotifications(currentUserId, safeAfterId);
 
     return res.json({
       success: true,
@@ -10136,21 +10795,38 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`
+async function startServer() {
+  await initializePostgresMessageStore();
+
+  app.listen(PORT, () => {
+    console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║     FAST BRIDGE GROUP Dashboard - Secure Server              ║
 ║                  Running on port ${PORT}                      ║
 ╚════════════════════════════════════════════════════════════╝
   `);
 
-  runS3ArchiveStartupHealthCheck().catch((error) => {
-    console.error('S3 archive startup verification crashed:', error);
+    initializeS3BackupsAndHealthChecks();
   });
+}
+
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
+  try {
+    if (userMessageStorePool) {
+      await userMessageStorePool.end();
+      userMessageStorePool = null;
+      console.log('PostgreSQL message store connection closed');
+    }
+  } catch (error) {
+    console.error('Failed to close PostgreSQL message store connection:', error);
+  }
+
   db.close(() => {
     console.log('\nDatabase connection closed');
     process.exit(0);

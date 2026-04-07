@@ -230,6 +230,8 @@ Google Cloud note for the comps workspace:
 - **AWS_S3_FORCE_PATH_STYLE / S3_FORCE_PATH_STYLE:** Optional `true`/`1` if your provider requires path-style S3 URLs
 - **DATABASE_PATH / SQLITE_DATABASE_PATH / SQLITE_DB_PATH:** Optional absolute path for the SQLite database file
 - **RENDER_DISK_MOUNT_PATH / PERSISTENT_STORAGE_PATH / DATA_DIR:** Optional persistent directory. When set, the app stores `database.db` there automatically
+- **MESSAGE_DATABASE_URL / MESSAGE_POSTGRES_URL / POSTGRES_URL / DATABASE_URL:** Optional PostgreSQL connection string used only for `user_messages`
+- **MESSAGE_DATABASE_SSL / MESSAGE_PGSSL / PGSSLMODE / PGSSL:** Optional SSL toggle for the PostgreSQL message store
 - **LORIA_BROKER_EMAIL / LORIA_BROKER_PASSWORD / LORIA_BROKER_NAME:** Optional canonical broker account values used to restore the Loria Rigby account on startup
 
 Example Twilio block for `.env`:
@@ -292,10 +294,23 @@ Database persistence behavior after this change:
 - If neither is set, the server falls back to the project-local `database.db`, which is fine for local development but not for restart-safe production hosting.
 - In production, the server now stops on startup if none of `DATABASE_PATH`, `RENDER_DISK_MOUNT_PATH`, `PERSISTENT_STORAGE_PATH`, or `DATA_DIR` is configured.
 
+PostgreSQL message store behavior after this change:
+- If `MESSAGE_DATABASE_URL` or equivalent Postgres env vars are set, the app stores `user_messages` in PostgreSQL instead of SQLite.
+- On first successful PostgreSQL startup, the server copies existing SQLite `user_messages` rows into PostgreSQL so the inbox keeps prior history.
+- The rest of the application stays on SQLite for now, so keep the persistent SQLite disk configured even when PostgreSQL is enabled for messages.
+- While signed in as an admin, call `/api/admin/storage-status` to confirm whether the active `messageStore.dialect` is `postgres` or `sqlite`.
+
 S3 archive verification behavior after this change:
 - On startup, the server now runs a real S3 archive health check that writes, reads, and deletes a temporary object under `healthchecks/message-archive/`.
 - If that verification fails, the server logs the exact failure reason so you can fix bucket permissions, region mismatches, or endpoint problems.
-- While signed in as an admin, you can also call `/api/admin/storage-status?verify=1` to confirm both SQLite persistence status and live S3 archive access from the running environment.
+- While signed in as an admin, you can also call `/api/admin/storage-status?verify=1` to confirm SQLite persistence status, message-store status, and live S3 archive access from the running environment.
+
+Scheduled SQLite backup behavior after this change:
+- The server now creates a SQLite snapshot and uploads it to S3 on a schedule, defaulting to once every 12 hours.
+- Backup objects are stored under `database-backups/sqlite/` unless you override the prefix with `SQLITE_BACKUP_S3_PREFIX`.
+- The first scheduled backup waits briefly after boot so the app can finish startup work before creating the snapshot.
+- While signed in as an admin, you can call `/api/admin/storage-status?backup=1` to trigger a live backup run and inspect the latest backup result.
+- You can change the cadence with `SQLITE_BACKUP_INTERVAL_HOURS` if you want one backup per day or several per day.
 
 ⚠️ **IMPORTANT FOR PRODUCTION:**
 - Change `JWT_SECRET` to a long random string

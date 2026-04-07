@@ -36,9 +36,28 @@ AWS_SECRET_ACCESS_KEY=your_secret_access_key
 # AWS_S3_FORCE_PATH_STYLE=true
 ```
 
+If you want direct PostgreSQL persistence for inbox messages, set a Postgres connection for the message store. The rest of the app can stay on SQLite:
+
+```env
+MESSAGE_DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+# Optional SSL toggle if your provider needs it explicitly
+# MESSAGE_DATABASE_SSL=true
+```
+
 Admin runtime verification:
 - The server now runs an S3 archive health check on startup and logs whether put/get/delete verification passed.
-- An admin can also call `/api/admin/storage-status?verify=1` while signed in to confirm both persistent SQLite usage and live S3 archive access.
+- The server now also schedules SQLite backups to S3 every 12 hours by default.
+- An admin can call `/api/admin/storage-status?verify=1` while signed in to confirm SQLite persistence, the active message store dialect, and live S3 archive access.
+- An admin can call `/api/admin/storage-status?backup=1` while signed in to trigger a live SQLite backup run and inspect the latest backup result.
+
+Optional SQLite backup tuning:
+
+```env
+SQLITE_BACKUP_INTERVAL_HOURS=12
+SQLITE_BACKUP_S3_PREFIX=database-backups/sqlite
+# Optional startup delay before the first backup attempt
+# SQLITE_BACKUP_STARTUP_DELAY_MS=120000
+```
 
 ### 3️⃣ Open Dashboard
 ```
