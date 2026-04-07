@@ -502,7 +502,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         closeButton.type = 'button';
         closeButton.className = 'dashboard-toast-close';
         closeButton.setAttribute('aria-label', 'Dismiss notification');
-        closeButton.textContent = '+�';
+            closeButton.textContent = '×';
         head.appendChild(closeButton);
         toast.appendChild(head);
 
@@ -675,7 +675,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                             <h2 class="notification-center-title">Notification Center</h2>
                             <p class="notification-center-subtitle">Last 20 notifications saved for this user.</p>
                         </div>
-                        <button type="button" class="notification-center-close" id="notification-center-close" aria-label="Close notification center">+�</button>
+                        <button type="button" class="notification-center-close" id="notification-center-close" aria-label="Close notification center">×</button>
                     </div>
                     <div class="notification-center-toolbar">
                         <span class="notification-center-count" id="notification-center-count">0 saved</span>
@@ -4565,7 +4565,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             if (numbersGoalDisplayEl) {
                 if (dailyGoal > 0) {
                     const daysCovered = totalEarned > 0 ? (totalEarned / dailyGoal) : 0;
-                    numbersGoalDisplayEl.textContent = `Year goal: ${formatClosedDealMoney(dailyGoal)} G�� ${label.charAt(0).toUpperCase() + label.slice(1)} covers ${daysCovered.toFixed(1)} goal day${daysCovered === 1 ? '' : 's'}`;
+                    numbersGoalDisplayEl.textContent = `Year goal: ${formatClosedDealMoney(dailyGoal)} • ${label.charAt(0).toUpperCase() + label.slice(1)} covers ${daysCovered.toFixed(1)} goal day${daysCovered === 1 ? '' : 's'}`;
                 } else {
                         numbersGoalDisplayEl.textContent = 'Set your yearly numer goal.';
                 }
@@ -4711,7 +4711,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 name.textContent = fileItem.fileName || fileItem.label || 'Selected Document';
                 const meta = document.createElement('span');
                 meta.className = 'closed-deals-doc-meta';
-                meta.textContent = [formatFileSize(fileItem.fileSize), fileItem.fileType || 'File'].filter(Boolean).join(' G�� ');
+                meta.textContent = [formatFileSize(fileItem.fileSize), fileItem.fileType || 'File'].filter(Boolean).join(' • ');
                 copy.appendChild(name);
                 copy.appendChild(meta);
 
@@ -4919,7 +4919,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
             const meta = document.createElement('span');
             meta.className = 'closed-deal-document-meta';
-            meta.textContent = [formatFileSize(documentItem.fileSize), documentItem.fileType || 'File'].filter(Boolean).join(' G�� ');
+            meta.textContent = [formatFileSize(documentItem.fileSize), documentItem.fileType || 'File'].filter(Boolean).join(' • ');
             copy.appendChild(name);
             copy.appendChild(meta);
             documentHead.appendChild(copy);
@@ -5177,7 +5177,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const numbersWindowLabel = (NUMBERS_WINDOW_CONFIG[activeNumbersWindow] || NUMBERS_WINDOW_CONFIG.all).label;
 
             closedDealsValueEl.textContent = String(combinedDeals.length);
-            closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} G�� ${manualDeals.length} manual G�� ${formatClosedDealMoney(combinedTotals.earnedAmount)} earned`;
+            closedDealsChangeEl.textContent = `${autoDeals.length} auto closed deal${autoDeals.length === 1 ? '' : 's'} • ${manualDeals.length} manual • ${formatClosedDealMoney(combinedTotals.earnedAmount)} earned`;
 
             if (numbersTotalEl) {
                 numbersTotalEl.textContent = formatClosedDealMoney(numbersWindowTotal);
@@ -5196,7 +5196,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             if (myFileCountEl) {
-                myFileCountEl.textContent = `${filedDeals.length} saved deal${filedDeals.length === 1 ? '' : 's'} G�� ${filedDocumentCount} doc${filedDocumentCount === 1 ? '' : 's'}`;
+                myFileCountEl.textContent = `${filedDeals.length} saved deal${filedDeals.length === 1 ? '' : 's'} • ${filedDocumentCount} doc${filedDocumentCount === 1 ? '' : 's'}`;
             }
 
             renderClosedDealList(listEl, combinedDeals, {
@@ -6754,7 +6754,7 @@ function initNavbarDateTime() {
                         if (!session.active && session.revokedAt) {
                             meta.push(`Revoked ${formatSessionTime(session.revokedAt)}`);
                         }
-                        desc.textContent = meta.join(' G�� ');
+                        desc.textContent = meta.join(' • ');
 
                         label.appendChild(title);
                         label.appendChild(desc);
@@ -8452,12 +8452,12 @@ function initNavbarDateTime() {
                 response: fmt([
                     'Structuring a strong first offer comes down to three pillars: <strong>pricing discipline, term clarity, and proof of strength.</strong>',
                     [
-                        '<strong>Anchor on ARV minus repairs minus profit margin.</strong> Do not guess G�� pull closed comps within the last 120 days, same bed/bath, within half a mile. Your max allowable offer (MAO) = ARV +� 0.70 G�� estimated repairs.',
-                        '<strong>Set your escrow timeline to 21G��30 days</strong> unless the seller signals a different preference. Shorter close is often valued as highly as price.',
-                        '<strong>Lead with clean terms.</strong> A non-contingent or inspection-only offer (with a short window like 7G��10 days) reads as more serious than a heavily contingent one.',
-                        '<strong>Include proof of funds</strong> G�� a bank statement or LOC letter. Agents often show this to listing agents before price is even discussed.',
+                        '<strong>Anchor on ARV minus repairs minus profit margin.</strong> Do not guess - pull closed comps within the last 120 days, same bed/bath, within half a mile. Your max allowable offer (MAO) = ARV × 0.70 - estimated repairs.',
+                        '<strong>Set your escrow timeline to 21-30 days</strong> unless the seller signals a different preference. Shorter close is often valued as highly as price.',
+                        '<strong>Lead with clean terms.</strong> A non-contingent or inspection-only offer (with a short window like 7-10 days) reads as more serious than a heavily contingent one.',
+                        '<strong>Include proof of funds</strong> - a bank statement or LOC letter. Agents often show this to listing agents before price is even discussed.',
                         '<strong>Write a personal letter if it is an off-market deal.</strong> Seller motivation matters. Addressing their timeline, remaining belongings, or moving situation can win a deal at equal price.',
-                        '<strong>Leave room to negotiate.</strong> Start 5G��8% below your walk-away number so you have room to counter without giving away margin.',
+                        '<strong>Leave room to negotiate.</strong> Start 5-8% below your walk-away number so you have room to counter without giving away margin.',
                     ],
                     'After submitting, follow up with the listing agent within 24 hours. Confirm receipt, reiterate your ability to close, and ask if there are any terms that could make the offer more attractive. That one call wins more deals than most investors realize.',
                 ])
@@ -8468,30 +8468,30 @@ function initNavbarDateTime() {
                     'Running accurate comps is the single most important skill in residential investing. Here is a reliable framework:',
                     [
                         '<strong>Start tight, then expand.</strong> Search within 0.25 miles first. If fewer than 3 sold comps appear, expand to 0.5 miles. Beyond that, you need to start adjusting for neighborhood variance.',
-                        '<strong>Filter to the last 90G��180 days.</strong> In fast-moving markets use 60 days. In slow markets you may need 12 months G�� but discount older comps at 0.5% per month of age.',
+                        '<strong>Filter to the last 90-180 days.</strong> In fast-moving markets use 60 days. In slow markets you may need 12 months - but discount older comps at 0.5% per month of age.',
                         '<strong>Match bed/bath count and property type</strong> (SFR vs. condo vs. townhome). Never mix attached and detached.',
                         '<strong>Square footage within 20% is the rule.</strong> Apply a price-per-sqft adjustment for anything outside that range.',
-                        '<strong>Condition matters.</strong> Compare renovated-to-subject. If your subject is a dated interior and comps are fully upgraded, discount ARV by 5G��10% unless you plan a full remodel.',
-                        '<strong>Garage, lot size, and pool</strong> can each shift value by $10KG��$40K depending on the market. Account for them explicitly.',
+                        '<strong>Condition matters.</strong> Compare renovated-to-subject. If your subject is a dated interior and comps are fully upgraded, discount ARV by 5-10% unless you plan a full remodel.',
+                        '<strong>Garage, lot size, and pool</strong> can each shift value by $10K-$40K depending on the market. Account for them explicitly.',
                     ],
-                    'Once you have 3G��5 solid comps, calculate a price per sqft range. Weight the most similar comp at 40%, the next two at 25% each, and the outlier at 10%. This gives you a defensible ARV you can show lenders or partners.',
+                    'Once you have 3-5 solid comps, calculate a price per sqft range. Weight the most similar comp at 40%, the next two at 25% each, and the outlier at 10%. This gives you a defensible ARV you can show lenders or partners.',
                 ])
             },
             {
                 patterns: [/agent.*(call|script|questions|talk|contact|outreach)|call script|what (should|to) (ask|say|tell)|listing agent|buyer.?s agent/i],
                 response: fmt([
                     'A great agent call is an intelligence-gathering mission, not a sales pitch. Go in with your questions ready and let them talk.',
-                    '<strong>Opening:</strong> "Hi [Name], I am a local investor interested in [Address]. I have reviewed the listing G�� do you have 3 minutes?" This respects their time and positions you as prepared.',
+                    '<strong>Opening:</strong> "Hi [Name], I am a local investor interested in [Address]. I have reviewed the listing - do you have 3 minutes?" This respects their time and positions you as prepared.',
                     '<strong>Key questions to work through:</strong>',
                     [
-                        '<strong>Seller motivation & timeline:</strong> "What is driving the seller\'s timeline?" G�� relocation, estate, financial pressure, or just testing the market each tells you something different.',
+                        '<strong>Seller motivation & timeline:</strong> "What is driving the seller\'s timeline?" - relocation, estate, financial pressure, or just testing the market each tells you something different.',
                         '<strong>Days on market & prior activity:</strong> "Have there been other offers?" If yes: "What kept those from closing?" This is gold.',
                         '<strong>Known repairs or disclosures:</strong> "Is the seller aware of any deferred maintenance or open permits?" Agents must disclose material facts.',
                         '<strong>Seller preferences on terms:</strong> "Does the seller have a preferred close date or specific terms in mind?" Aligning on terms can close a deal before price is even discussed.',
                         '<strong>Price flexibility:</strong> "Is the seller firm on price, or open to reasonable offers?" This is a soft read on negotiating room.',
                         '<strong>Disclosure package:</strong> "Can you send over disclosures and the preliminary title report today?" Speed signals seriousness.',
                     ],
-                    'Close with: "I plan to submit an offer by [date]. Is there anything else I should know that would help me write a strong, clean offer?" G�� this one sentence tells the agent you are committed and invites them to coach you toward a win.',
+                    'Close with: "I plan to submit an offer by [date]. Is there anything else I should know that would help me write a strong, clean offer?" - this one sentence tells the agent you are committed and invites them to coach you toward a win.',
                 ])
             },
             {
@@ -8499,27 +8499,27 @@ function initNavbarDateTime() {
                 response: fmt([
                     'Negotiation in real estate is more about terms and psychology than raw price. Here is how experienced investors approach it:',
                     [
-                        '<strong>Trade terms before dollars.</strong> A shorter inspection window, rent-back for the seller, or flexible possession date can be worth $5KG��$15K to motivated sellers G�� at zero cost to you.',
+                        '<strong>Trade terms before dollars.</strong> A shorter inspection window, rent-back for the seller, or flexible possession date can be worth $5K-$15K to motivated sellers - at zero cost to you.',
                         '<strong>Respond to counters quickly.</strong> Speed signals seriousness. A same-day counter keeps momentum; a 3-day delay lets doubt creep in.',
-                        '<strong>Never counter at your max.</strong> Always hold $2KG��$5K in reserve. If you are at your walk-away number and still $10K apart, sharpen pencil on repair credits instead of post-close price.',
+                        '<strong>Never counter at your max.</strong> Always hold $2K-$5K in reserve. If you are at your walk-away number and still $10K apart, sharpen pencil on repair credits instead of post-close price.',
                         '<strong>Repair credits over price reductions.</strong> A $5K repair credit costs you $5K. A $5K price reduction costs you $5K now but also builds into your comps, title, and potentially property taxes.',
-                        '<strong>The "final best" move.</strong> After 2G��3 rounds, send a brief, direct note: "We have simplified our offer as much as we can while keeping the deal viable for us. [Price] is our best and final G�� all cash, [close date], no further contingencies." Certainty often closes deals.',
+                        '<strong>The "final best" move.</strong> After 2-3 rounds, send a brief, direct note: "We have simplified our offer as much as we can while keeping the deal viable for us. [Price] is our best and final - all cash, [close date], no further contingencies." Certainty often closes deals.',
                         '<strong>Know your MAO and walk away from it.</strong> Every dollar above your number is borrowed from your profit. Discipline here separates investors from collectors.',
                     ],
-                    'If a deal falls apart, ask the agent to keep you as a backup. Roughly 15G��20% of accepted offers fall out of escrow G�� being the first call when that happens costs nothing and wins deals.',
+                    'If a deal falls apart, ask the agent to keep you as a backup. Roughly 15-20% of accepted offers fall out of escrow - being the first call when that happens costs nothing and wins deals.',
                 ])
             },
             {
                 patterns: [/inspection|due diligence|repair estimate|contractor|scope of work|rehab cost|budget|fix.?up|renovation/i],
                 response: fmt([
-                    'Inspection and due diligence is where deals are made or lost. Do not rush this phase G�� it is your last clean window to confirm your numbers.',
+                    'Inspection and due diligence is where deals are made or lost. Do not rush this phase - it is your last clean window to confirm your numbers.',
                     [
                         '<strong>Order inspection within 48 hours of acceptance.</strong> Use a licensed inspector you trust, not the cheapest one. A missed foundation issue or unpermitted addition can destroy a deal post-close.',
                         '<strong>Attend the inspection in person.</strong> Your inspector works for you. Walking the property together turns a 30-page report into a prioritized repair list.',
                         '<strong>Separate cosmetic from structural.</strong> Roofs, foundations, HVAC, electrical panels, and plumbing are cash-intensive. Paint, flooring, and fixtures are not. Price your offer around the former.',
                         '<strong>Get a contractor walkthrough before end of contingency.</strong> Ideally, bring your contractor for 30 minutes on-site and get a rough scope. Experienced investors do not rely on inspector estimates for repair budgets.',
                         '<strong>Request a repair credit for anything discovered.</strong> Even in as-is deals you can renegotiate based on inspection findings. Be specific: itemize the issues by category and present a contractor quote.',
-                        '<strong>Check permits and title simultaneously.</strong> Open permits, unpermitted additions, or title clouds found during due diligence can be deal-killers G�� or bargaining chips.',
+                        '<strong>Check permits and title simultaneously.</strong> Open permits, unpermitted additions, or title clouds found during due diligence can be deal-killers - or bargaining chips.',
                     ],
                     'A solid due diligence checklist: inspection report, contractor scope + budget, title report review, HOA docs (if applicable), utility bills, and a quick rent or resale market check. Do not close until all five are green.',
                 ])
@@ -8527,11 +8527,11 @@ function initNavbarDateTime() {
             {
                 patterns: [/exit strategy|flip|rental|hold|brrrr|wholesale|assign|exit|buy.?and.?hold|cash flow|roi|return/i],
                 response: fmt([
-                    'Choosing the right exit strategy before you make an offer is critical G�� your numbers, financing, and target price all change depending on the exit.',
+                    'Choosing the right exit strategy before you make an offer is critical - your numbers, financing, and target price all change depending on the exit.',
                     [
-                        '<strong>Fix & Flip:</strong> Target 70% ARV rule or tighter. Account for holding costs (financing, taxes, insurance, utilities) at 1G��2% of purchase price per month. Plan your sale price conservatively G�� usually 3G��5% below top-of-market comp to sell in 30 days.',
-                        '<strong>Buy & Hold / Rental:</strong> Run the 1% rule as a quick filter (monthly rent G�� 1% of all-in cost). Then stress-test with Cap Rate, cash-on-cash return, and DSCR if using financing. Budget 10% vacancy, 10% management, and 10% maintenance annually.',
-                        '<strong>BRRRR:</strong> Buy, Rehab, Rent, Refinance, Repeat. The number that matters most is the after-repair value G�� your cash-out refi is capped at 70G��75% LTV. Model the refi carefully before buying.',
+                        '<strong>Fix & Flip:</strong> Target 70% ARV rule or tighter. Account for holding costs (financing, taxes, insurance, utilities) at 1-2% of purchase price per month. Plan your sale price conservatively - usually 3-5% below top-of-market comp to sell in 30 days.',
+                        '<strong>Buy & Hold / Rental:</strong> Run the 1% rule as a quick filter (monthly rent >= 1% of all-in cost). Then stress-test with Cap Rate, cash-on-cash return, and DSCR if using financing. Budget 10% vacancy, 10% management, and 10% maintenance annually.',
+                        '<strong>BRRRR:</strong> Buy, Rehab, Rent, Refinance, Repeat. The number that matters most is the after-repair value - your cash-out refi is capped at 70-75% LTV. Model the refi carefully before buying.',
                         '<strong>Wholesale / Assignment:</strong> Find the spread between your contracted price and what an end buyer will pay. Know your buyer list and their buy criteria before you lock up deals.',
                         '<strong>Subject-To or Seller Finance:</strong> Powerful tools for off-market deals where sellers have equity but do not want a lump sum. Structure wraparound or installment terms around their existing mortgage if applicable.',
                     ],
@@ -8543,14 +8543,14 @@ function initNavbarDateTime() {
                 response: fmt([
                     'Financing strategy can make or break a deal\'s profitability. Here is how to think through it:',
                     [
-                        '<strong>Hard Money:</strong> Fast, asset-based, typically 70G��80% LTV on ARV. Expect 10G��13% interest + 2G��4 points. Use for short-term flips where speed beats cost.',
-                        '<strong>DSCR Loans:</strong> Qualify based on property income, not personal income. Great for buy-and-hold investors with multiple properties. Rates run 1G��2% above conventional.',
+                        '<strong>Hard Money:</strong> Fast, asset-based, typically 70-80% LTV on ARV. Expect 10-13% interest + 2-4 points. Use for short-term flips where speed beats cost.',
+                        '<strong>DSCR Loans:</strong> Qualify based on property income, not personal income. Great for buy-and-hold investors with multiple properties. Rates run 1-2% above conventional.',
                         '<strong>Private Money:</strong> Cheapest and most flexible option when you have it. Build relationships with private lenders by showing a clear track record and presenting deals with full pro formas.',
                         '<strong>Conventional / Portfolio Loans:</strong> Best rates but slower and harder to qualify for on investment properties. Use for stabilized rentals after a BRRRR refi.',
                         '<strong>Line of Credit / HELOC:</strong> Bridge financing using equity in existing properties. Useful for down payments or funding short rehabs.',
-                        '<strong>Points vs. Rate tradeoff:</strong> On a 6-month flip, paying 2 extra points to drop the rate 1.5% rarely pencils. Run the math G�� total interest cost, not monthly payment, is what matters.',
+                        '<strong>Points vs. Rate tradeoff:</strong> On a 6-month flip, paying 2 extra points to drop the rate 1.5% rarely pencils. Run the math - total interest cost, not monthly payment, is what matters.',
                     ],
-                    'Always get two competing lender quotes. Lenders know you are shopping and will sharpen their terms. Even 0.5% difference in rate or 1 point saved on a $400K loan is $2,000G��$4,000 in your pocket.',
+                    'Always get two competing lender quotes. Lenders know you are shopping and will sharpen their terms. Even 0.5% difference in rate or 1 point saved on a $400K loan is $2,000-$4,000 in your pocket.',
                 ])
             },
             {
@@ -8559,12 +8559,12 @@ function initNavbarDateTime() {
                     'A clean deal analysis covers five numbers. If any one of them is a guess, your whole model is at risk.',
                     [
                         '<strong>1. ARV (After-Repair Value):</strong> Pulled from closed comps, not Zestimates. This is your ceiling.',
-                        '<strong>2. All-in Acquisition Cost:</strong> Purchase price + closing costs (2G��3%) + financing fees.',
-                        '<strong>3. Rehab Budget:</strong> Contractor scope, line-item. Add a 10G��15% contingency for surprises.',
-                        '<strong>4. Holding Costs:</strong> Monthly financing cost +� projected hold period + taxes + insurance + utilities.',
-                        '<strong>5. Net Profit / Cash-on-Cash Return:</strong> For flips: Sale price G�� agent commission (5G��6%) G�� all-in cost. For rentals: Annual net operating income / total cash invested.',
+                        '<strong>2. All-in Acquisition Cost:</strong> Purchase price + closing costs (2-3%) + financing fees.',
+                        '<strong>3. Rehab Budget:</strong> Contractor scope, line-item. Add a 10-15% contingency for surprises.',
+                        '<strong>4. Holding Costs:</strong> Monthly financing cost × projected hold period + taxes + insurance + utilities.',
+                        '<strong>5. Net Profit / Cash-on-Cash Return:</strong> For flips: Sale price - agent commission (5-6%) - all-in cost. For rentals: Annual net operating income / total cash invested.',
                     ],
-                    'A healthy flip in most markets targets a minimum $40KG��$50K net profit or 20% ROI, whichever is higher. Below that, you are one contractor delay or slow market away from breaking even. On rentals, 8G��10% cash-on-cash return is considered solid. Under 6%, the risk-reward may not justify locking up capital.',
+                    'A healthy flip in most markets targets a minimum $40K-$50K net profit or 20% ROI, whichever is higher. Below that, you are one contractor delay or slow market away from breaking even. On rentals, 8-10% cash-on-cash return is considered solid. Under 6%, the risk-reward may not justify locking up capital.',
                 ])
             },
             {
@@ -8575,7 +8575,7 @@ function initNavbarDateTime() {
                         '<strong>Supply & demand signals:</strong> Days on market trending down = more demand than supply. Inventory below 2 months = seller\'s market. Both are good for appreciation but tough on acquisition price.',
                         '<strong>Population and job growth:</strong> Markets with 2%+ annual population growth and net migration from higher-cost metros tend to sustain rent and price appreciation. Check Census and Bureau of Labor Statistics data.',
                         '<strong>Rent-to-price ratios:</strong> The higher the gross rent multiplier, the harder it is to cash flow. Markets in the Sun Belt and Midwest often pencil better for rental yield than coastal metros.',
-                        '<strong>Crime and school ratings:</strong> These are the two biggest drivers of long-term exit value. "B" neighborhoods G�� not warzone, not luxury G�� typically offer the best balanced returns for investors.',
+                        '<strong>Crime and school ratings:</strong> These are the two biggest drivers of long-term exit value. "B" neighborhoods - not warzone, not luxury - typically offer the best balanced returns for investors.',
                         '<strong>Landlord-friendly laws:</strong> Understand eviction timelines and rent control rules in your target market. A 12-month eviction process in a high-rent-control city can wipe out a year of cash flow.',
                     ],
                     'If you are investing out of state, build a local team first: a property manager, a contractor, and a deal-savvy agent. The market means nothing without boots on the ground you trust.',
@@ -8592,21 +8592,21 @@ function initNavbarDateTime() {
                         '<strong>Track your conversion rates.</strong> If you know that 1 in 20 leads becomes an offer and 1 in 5 offers closes, you know exactly how much lead volume you need to hit your acquisition goals.',
                         '<strong>Agent Notes on this dashboard</strong> connects your properties to your call outcomes. Use it after every agent conversation so your pipeline has context, not just addresses.',
                     ],
-                    'One disciplined follow-up with a seller who said "not yet" six months ago regularly produces the best deals at the best prices. Time softens asking prices and builds trust G�� use both.',
+                    'One disciplined follow-up with a seller who said "not yet" six months ago regularly produces the best deals at the best prices. Time softens asking prices and builds trust - use both.',
                 ])
             },
             {
                 patterns: [/tax|depreciation|1031|capital gain|cost segregation|deduction|write.?off|llc|entity|structure/i],
                 response: fmt([
-                    'Tax strategy is one of the highest-leverage tools in real estate investing G�� but always verify specifics with a CPA who specializes in real estate.',
+                    'Tax strategy is one of the highest-leverage tools in real estate investing - but always verify specifics with a CPA who specializes in real estate.',
                     [
                         '<strong>Depreciation:</strong> Residential rental properties depreciate over 27.5 years. On a $300K building value (excluding land) that is ~$10,900/year in paper losses, which offsets rental income.',
-                        '<strong>Cost Segregation:</strong> Accelerates depreciation on components (appliances, flooring, fixtures) to 5G��7 years instead of 27.5. Can generate $30KG��$80K in first-year deductions on a rehab. Worth the study cost on any property over $500K all-in.',
+                        '<strong>Cost Segregation:</strong> Accelerates depreciation on components (appliances, flooring, fixtures) to 5-7 years instead of 27.5. Can generate $30K-$80K in first-year deductions on a rehab. Worth the study cost on any property over $500K all-in.',
                         '<strong>1031 Exchange:</strong> Defer capital gains indefinitely by rolling proceeds into a like-kind property within 180 days (45-day identification window applies). Must use a qualified intermediary.',
                         '<strong>LLC Structure:</strong> Most investors hold rentals in LLCs for liability protection. Talk to an attorney about series LLCs or holdings structures across markets.',
-                        '<strong>Short-Term Rental exception:</strong> If you materially participate in an STR and it qualifies, losses may offset W-2 income G�� a powerful benefit not available with long-term rentals unless you qualify as a Real Estate Professional.',
+                        '<strong>Short-Term Rental exception:</strong> If you materially participate in an STR and it qualifies, losses may offset W-2 income - a powerful benefit not available with long-term rentals unless you qualify as a Real Estate Professional.',
                     ],
-                    'Work with a CPA who owns investment real estate, not just one who files returns. The difference in tax strategy between those two is often $10KG��$30K per year.',
+                    'Work with a CPA who owns investment real estate, not just one who files returns. The difference in tax strategy between those two is often $10K-$30K per year.',
                 ])
             },
             {
@@ -8626,7 +8626,7 @@ function initNavbarDateTime() {
                         'Market selection and pipeline management',
                         'Tax strategy basics (depreciation, 1031, LLC)',
                     ],
-                    'Ask me anything G�� the more specific your question, the more useful my answer will be.',
+                    'Ask me anything - the more specific your question, the more useful my answer will be.',
                 ])
             },
         ];
@@ -8667,7 +8667,7 @@ function initNavbarDateTime() {
             return fmt([
                 'That is a great question. While I did not find an exact match in my knowledge base, here are some suggestions:',
                 [
-                    'Try rephrasing with more specific terms G�� e.g., "How do I evaluate comps?" or "What should I ask a listing agent on the first call?"',
+                    'Try rephrasing with more specific terms - e.g., "How do I evaluate comps?" or "What should I ask a listing agent on the first call?"',
                     'I cover: offers, ARV & comps, agent calls, negotiation, inspections, exit strategies, financing, deal analysis, market selection, pipeline, and tax basics.',
                     'If your question is highly specific to a market or deal, consider cross-referencing with your local MLS data or a trusted local agent.'
                 ],
@@ -10332,7 +10332,7 @@ function initNavbarDateTime() {
             const activeNotes = getActiveNotes(data);
             const deletedNotes = getDeletedNotes(data);
             notesSubtitle.textContent = `${activeNotes.length} note${activeNotes.length === 1 ? '' : 's'}`;
-            folderSummary.textContent = `${activeNotes.length} active G�� ${deletedNotes.length} in trash`;
+            folderSummary.textContent = `${activeNotes.length} active • ${deletedNotes.length} in trash`;
             activeFolderLabel.textContent = searchQuery ? 'Search Results' : getSelectedFolderDisplayName(data);
             countSummary.textContent = isTrashView()
                 ? `${visibleNotes.length} deleted note${visibleNotes.length === 1 ? '' : 's'}`
@@ -10728,7 +10728,7 @@ function initNavbarDateTime() {
         });
 
         checklistToolButton.addEventListener('click', () => {
-            insertBodyText('G�� ');
+            insertBodyText('• ');
         });
 
         gridToolButton.addEventListener('click', () => {
@@ -10895,7 +10895,7 @@ function initNavbarDateTime() {
                     String(snapshot.agentRecord?.brokerage || '').trim(),
                     String(snapshot.marketInfo || snapshot.location || snapshot.areaLabel || '').trim(),
                     String(snapshot.listPrice || '').trim()
-                ].filter(Boolean).join(' G�� ');
+                ].filter(Boolean).join(' • ');
 
                 const actions = document.createElement('div');
                 actions.className = 'agent-note-link-actions';
@@ -11281,7 +11281,7 @@ function initNavbarDateTime() {
 
                 const location = document.createElement('p');
                 location.className = 'agent-note-link-address';
-                location.textContent = [item.locationLabel, item.assignmentSummary || item.assignmentState.replace(/-/g, ' ')].filter(Boolean).join(' G�� ');
+                location.textContent = [item.locationLabel, item.assignmentSummary || item.assignmentState.replace(/-/g, ' ')].filter(Boolean).join(' • ');
 
                 const meta = document.createElement('p');
                 meta.className = 'agent-note-link-status';
@@ -12517,7 +12517,7 @@ function initNavbarDateTime() {
                     .map((session) => {
                         const agent = escapeOnlineUserText(session.userAgent || 'Unknown device');
                         const ip = escapeOnlineUserText(session.ipAddress || 'No IP');
-                        return `<p class="outreach-owner">${agent} G�� ${ip} G�� Last seen ${escapeOnlineUserText(formatOnlineTime(session.lastSeenAt))}</p>`;
+                        return `<p class="outreach-owner">${agent} • ${ip} • Last seen ${escapeOnlineUserText(formatOnlineTime(session.lastSeenAt))}</p>`;
                     })
                     .join('');
                 const extraSessions = Math.max((Number(user.sessionCount) || 0) - 3, 0);
@@ -12528,7 +12528,7 @@ function initNavbarDateTime() {
                         <span class="outreach-status published">${escapeOnlineUserText(formatUserRoleLabel(user.role))}</span>
                     </div>
                     <p class="outreach-item-body">${escapeOnlineUserText(user.email || 'No email')}</p>
-                    <p class="outreach-owner">${escapeOnlineUserText(String(user.sessionCount || 0))} active device${Number(user.sessionCount) === 1 ? '' : 's'} G�� Last seen ${escapeOnlineUserText(formatOnlineTime(user.lastSeenAt))}</p>
+                    <p class="outreach-owner">${escapeOnlineUserText(String(user.sessionCount || 0))} active device${Number(user.sessionCount) === 1 ? '' : 's'} • Last seen ${escapeOnlineUserText(formatOnlineTime(user.lastSeenAt))}</p>
                     ${sessionPreview}
                     ${extraSessions > 0 ? `<p class="outreach-owner">+${extraSessions} more active session${extraSessions === 1 ? '' : 's'}</p>` : ''}
                 `;
@@ -12738,7 +12738,7 @@ function initNavbarDateTime() {
                     .filter(Boolean)
                     .join(', ');
                 const issues = Array.isArray(item.conditionIssues) && item.conditionIssues.length > 0
-                    ? item.conditionIssues.map((issue) => escapeSubmissionText(issue)).join(' G�� ')
+                    ? item.conditionIssues.map((issue) => escapeSubmissionText(issue)).join(' • ')
                     : 'No condition issues selected';
 
                 row.innerHTML = `
@@ -13195,7 +13195,7 @@ function initNavbarDateTime() {
                 const deleteButton = document.createElement('button');
                 deleteButton.type = 'button';
                 deleteButton.className = 'planner-delete-btn';
-                deleteButton.textContent = '+�';
+                deleteButton.textContent = '×';
                 deleteButton.setAttribute('aria-label', 'Delete task');
                 deleteButton.addEventListener('click', () => {
                     const updated = getItems().filter(entry => entry.id !== item.id);
@@ -13288,7 +13288,7 @@ function initNavbarDateTime() {
             renderItems();
             showDashboardToast('success', 'Added To Planner', dueDate ? 'Task saved with a reminder in your planner widget.' : 'Task saved in your planner widget.', {
                 eyebrow: 'Planner updated',
-                meta: dueDate ? `${formatPlannerDateLabel(dueDate)} G�� ${getPlannerReminderLabel(reminderLead)}` : 'No due date set'
+                meta: dueDate ? `${formatPlannerDateLabel(dueDate)} • ${getPlannerReminderLabel(reminderLead)}` : 'No due date set'
             });
 
             if (dueDate && getPlannerNotificationSettings().desktop && 'Notification' in window && Notification.permission === 'default') {
@@ -13635,7 +13635,7 @@ function initNavbarDateTime() {
                 eyebrow: 'MLS alert',
                 meta: 'Prepared for live MLS feed updates and routing to agents or associates.',
                 items: freshListings.slice(0, 3).map(item => ({
-                    label: `${item.title} G�� ${item.price}`,
+                    label: `${item.title} • ${item.price}`,
                     meta: item.location
                 })),
                 duration: 9000,
@@ -13923,10 +13923,10 @@ function initNavbarDateTime() {
             const priceText = parseMetricText(card, 0, '$0');
             const bedsText = parseMetricText(card, 1, '0 Beds').replace('Beds', 'Br').trim();
             const bathsText = parseMetricText(card, 2, '0 Baths').replace('Baths', 'Ba').trim();
-            const areaText = parseMetricText(card, 3, '0 sqft').replace('sqft', 'ft-�').trim();
+            const areaText = parseMetricText(card, 3, '0 sqft').replace('sqft', 'sqft').trim();
             const titleText = card.querySelector('h3')?.textContent?.trim() || parseAddress(card);
             const locationText = card.querySelector('.mls-location')?.textContent?.trim() || '';
-            const locationParts = locationText.split('-+').map(part => part.trim()).filter(Boolean);
+            const locationParts = locationText.split('•').map(part => part.trim()).filter(Boolean);
             const cityStateLabel = locationParts[0] || '';
             const countyLabel = locationParts[1] || '';
             const cityLabel = cityStateLabel.split(',')[0]?.trim() || '';
@@ -13947,7 +13947,7 @@ function initNavbarDateTime() {
             const propertyPayload = {
                 address: parseAddress(card),
                 propertyImages,
-                propertyDetails: `Single Family / ${bedsText} / ${bathsText} / 3 Gar / 1978 / ${areaText} / 170,320 ft-� / Pool: None`,
+                propertyDetails: `Single Family / ${bedsText} / ${bathsText} / 3 Gar / 1978 / ${areaText} / 170,320 sqft / Pool: None`,
                 listPrice: priceText,
                 propensity: Math.max(1, Math.min(10, Math.round(roi))),
                 moderatePain: 'Moderate Pain',
@@ -14383,19 +14383,19 @@ function initNavbarDateTime() {
                 title: 'WE WANT YOUR HOME!',
                 body: [
                     'CASH BUYER LOOKING FOR FIXER PROPERTIES',
-                    '=��� Areas of Interest',
+                    '• Areas of Interest',
                     'Los Angeles County',
                     'Orange County',
                     'Riverside County',
                     'San Bernardino County',
                     '',
-                    '=��� Purchase Range:',
+                    '• Purchase Range:',
                     '$300,000 up to $1,000,000+ depending on the area and condition.',
-                    'G�� Distressed properties',
-                    'G�� Fixers / heavy rehab',
+                    '• Distressed properties',
+                    '• Fixers / heavy rehab',
                     'Probate or inherited homes',
                     'Properties with problem tenants',
-                    'G�� Off-market opportunities'
+                    '• Off-market opportunities'
                 ].join('\n')
             }
         };
@@ -17372,7 +17372,7 @@ function initNavbarDateTime() {
                     <div class="deals-compact-main">
                         <p class="deals-compact-address">${String(resolvedState.propertyAddress || item.address || 'Property')}</p>
                         <p class="deals-compact-meta">${String(item.location || resolvedState.locationLabel || '-')}
-                        <span>G��</span> ${String(item.price || '$0')} <span>G��</span> ${String(item.beds || '0 Beds')} <span>G��</span> ${String(item.baths || '0 Baths')} <span>G��</span> ${String(item.area || '0 sqft')}</p>
+                        <span>•</span> ${String(item.price || '$0')} <span>•</span> ${String(item.beds || '0 Beds')} <span>•</span> ${String(item.baths || '0 Baths')} <span>•</span> ${String(item.area || '0 sqft')}</p>
                         ${resolvedState.assignmentSummary ? `<p class="deals-assigned-by"><strong>${resolvedState.assignmentSummary}</strong></p>` : ''}
                     </div>
                     <div class="deals-compact-side">
@@ -17471,7 +17471,7 @@ function initNavbarDateTime() {
                     <div class="deals-compact-main">
                         <p class="deals-compact-address">${String(resolvedState.propertyAddress || item.address || 'Property')}</p>
                         <p class="deals-compact-meta">${String(item.location || resolvedState.locationLabel || '-')}
-                        <span>G��</span> ${String(item.price || '$0')} <span>G��</span> ${String(item.beds || '0 Beds')} <span>G��</span> ${String(item.baths || '0 Baths')} <span>G��</span> ${String(item.area || '0 sqft')}</p>
+                        <span>•</span> ${String(item.price || '$0')} <span>•</span> ${String(item.beds || '0 Beds')} <span>•</span> ${String(item.baths || '0 Baths')} <span>•</span> ${String(item.area || '0 sqft')}</p>
                         ${resolvedState.assignmentSummary ? `<p class="deals-assigned-by"><strong>${resolvedState.assignmentSummary}</strong></p>` : ''}
                     </div>
                     <div class="deals-compact-side">
@@ -17599,7 +17599,7 @@ function initNavbarDateTime() {
                 'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=80',
                 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=1200&q=80'
             ],
-            propertyDetails: 'Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 ft-� / 170,320 ft-� / Pool: None',
+            propertyDetails: 'Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 sqft / 170,320 sqft / Pool: None',
             listPrice: '$780,000',
             propensity: 8,
             moderatePain: 'Moderate Pain',
@@ -17636,7 +17636,7 @@ function initNavbarDateTime() {
             associationDues: '-',
             commonWalls: '-',
             garageCount: '3',
-            lotSize: '170,320 ft-�',
+            lotSize: '170,320 sqft',
             yearBuilt: '1978',
             lockboxType: '-',
             occupied: '-',
@@ -18074,7 +18074,7 @@ function initNavbarDateTime() {
                     if (index < nextLinks.length - 1) {
                         const separator = document.createElement('span');
                         separator.className = 'property-link-import-empty';
-                        separator.textContent = 'G��';
+                        separator.textContent = '•';
                         sourceLinksEl.appendChild(separator);
                     }
                 });
@@ -18290,7 +18290,7 @@ function initNavbarDateTime() {
 
                 return stringValue
                     .replace(/\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?\.?/g, match => formatCalculatorNumber(match))
-                    .replace(/\*/g, '+�')
+                    .replace(/\*/g, '×')
                     .replace(/\//g, '++');
             }
 
@@ -18561,8 +18561,8 @@ function initNavbarDateTime() {
                 : 'Single Family';
             const beds = normalizeImportedMetric(listing.beds, 'Beds', '0 Beds').replace('Beds', 'Br').trim();
             const baths = normalizeImportedMetric(listing.baths, 'Baths', '0 Baths').replace('Baths', 'Ba').trim();
-            const area = normalizeImportedMetric(listing.area, 'sqft', '0 sqft').replace('sqft', 'ft-�').trim();
-            const lotSize = normalizeImportedMetric(listing.lotSize, 'sqft', detailData.lotSize || 'Lot Size TBD').replace('sqft', 'ft-�').trim();
+            const area = normalizeImportedMetric(listing.area, 'sqft', '0 sqft').replace('sqft', 'sqft').trim();
+            const lotSize = normalizeImportedMetric(listing.lotSize, 'sqft', detailData.lotSize || 'Lot Size TBD').replace('sqft', 'sqft').trim();
             const garageCount = String(detailData.garageCount || '0').trim() || '0';
             const yearBuilt = normalizeImportedYear(listing.yearBuilt, detailData.yearBuilt || '-');
             return `${summaryType} / ${beds} / ${baths} / ${garageCount} Gar / ${yearBuilt} / ${area} / ${lotSize} / Pool: Unknown`;
@@ -18607,7 +18607,7 @@ function initNavbarDateTime() {
             }
 
             if (listing.beds) {
-                detailData.compData = `Imported listing G�� ${String(listing.beds).trim()} G�� ${String(listing.baths || '').trim() || 'Baths TBD'} G�� ${String(listing.area || '').trim() || 'Area TBD'}`;
+                detailData.compData = `Imported listing • ${String(listing.beds).trim()} • ${String(listing.baths || '').trim() || 'Baths TBD'} • ${String(listing.area || '').trim() || 'Area TBD'}`;
             }
 
             if (listing.lotSize) {
@@ -23496,32 +23496,32 @@ function initNavbarDateTime() {
                     const offerSummaryLines = [
                         '',
                         'Offer Summary',
-                        `G�� Sender: ${senderName || 'FAST BRIDGE GROUP'}`,
-                        `G�� Recipient: ${recipientName || recipientEmail || 'Listing Agent'}`,
-                        `G�� Offer type: ${offerType}`,
-                        `G�� Purchase price: ${purchasePrice}`,
-                        `G�� Close of escrow: ${closeEscrowDays}${/day/i.test(closeEscrowDays) ? '' : ' days'}`,
-                        `G�� Deposit (${depositMode}): ${depositAmount}`,
-                        `G�� Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite}`}`,
-                        `G�� Disclosures: ${disclosures}${/day/i.test(disclosures) ? '' : ' days'}`,
-                        `G�� Escrow fees: ${escrowFees}`,
-                        `G�� Title fees: ${titleFees}`,
-                        `G�� Escrow: ${escrow}`,
-                        `G�� Title company: ${titleCompany}`,
-                        investorProfile?.closingCostSummary ? `G�� Closing costs: ${investorProfile.closingCostSummary}` : '',
-                        `G�� Additional terms: ${otherTerms}`,
-                        `G�� Buyer / vesting: ${entityText}`,
-                        `G�� ${signerLabel}: ${signerName}`,
+                        `• Sender: ${senderName || 'FAST BRIDGE GROUP'}`,
+                        `• Recipient: ${recipientName || recipientEmail || 'Listing Agent'}`,
+                        `• Offer type: ${offerType}`,
+                        `• Purchase price: ${purchasePrice}`,
+                        `• Close of escrow: ${closeEscrowDays}${/day/i.test(closeEscrowDays) ? '' : ' days'}`,
+                        `• Deposit (${depositMode}): ${depositAmount}`,
+                        `• Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite}`}`,
+                        `• Disclosures: ${disclosures}${/day/i.test(disclosures) ? '' : ' days'}`,
+                        `• Escrow fees: ${escrowFees}`,
+                        `• Title fees: ${titleFees}`,
+                        `• Escrow: ${escrow}`,
+                        `• Title company: ${titleCompany}`,
+                        investorProfile?.closingCostSummary ? `• Closing costs: ${investorProfile.closingCostSummary}` : '',
+                        `• Additional terms: ${otherTerms}`,
+                        `• Buyer / vesting: ${entityText}`,
+                        `• ${signerLabel}: ${signerName}`,
                         sellerCompEnabled
-                            ? `G�� Seller compensation: ${sellerCompPercent ? `${sellerCompPercent}%` : ''}${sellerCompPercent && sellerCompAmount ? ' | ' : ''}${sellerCompAmount ? `$${sellerCompAmount}` : ''}`
-                            : 'G�� Seller compensation: Not included'
+                            ? `• Seller compensation: ${sellerCompPercent ? `${sellerCompPercent}%` : ''}${sellerCompPercent && sellerCompAmount ? ' | ' : ''}${sellerCompAmount ? `$${sellerCompAmount}` : ''}`
+                            : '• Seller compensation: Not included'
                     ].filter(Boolean);
                     lines.push(...offerSummaryLines);
 
                     if (investorAdditionalTerms.length > 0) {
                         lines.push('', 'Investor Specific Terms');
                         investorAdditionalTerms.forEach((term) => {
-                            lines.push(`G�� ${term}`);
+                            lines.push(`• ${term}`);
                         });
                     }
 
@@ -23536,28 +23536,28 @@ function initNavbarDateTime() {
 
                         lines.push('', sectionHeading);
                         sectionLines.forEach((line) => {
-                            lines.push(`G�� ${line}`);
+                            lines.push(`• ${line}`);
                         });
                     });
 
                     lines.push(
                         '',
                         'Assignment / Contract Verbiage',
-                        `Gǣ${assignmentVerbiage.replace(/^Gǣ|Gǥ$/g, '')}Gǥ`
+                        `"${assignmentVerbiage.replace(/^[“”"]+|[“”"]+$/g, '')}"`
                     );
                 }
 
                 if (documents.linked.length > 0) {
                     lines.push('', 'Linked Documents');
                     documents.linked.forEach(item => {
-                        lines.push(`G�� ${item.label}: ${item.url}`);
+                        lines.push(`• ${item.label}: ${item.url}`);
                     });
                 }
 
                 if (documents.uploads.length > 0) {
                     lines.push('', 'Files Prepared For Attachment');
                     documents.uploads.forEach(item => {
-                        lines.push(`G�� ${item.fileName || item.label}`);
+                        lines.push(`• ${item.fileName || item.label}`);
                     });
                     lines.push('Please manually attach the uploaded files from the Offer Documents section after the draft opens.');
                 }
@@ -23818,7 +23818,7 @@ function initNavbarDateTime() {
                         showDashboardToast('error', 'Send Failed', result.error || 'Could not send email.');
                     }
                 } catch (err) {
-                    showDashboardToast('error', 'Send Failed', err && err.message ? err.message : 'Network error G�� check your server connection.');
+                    showDashboardToast('error', 'Send Failed', err && err.message ? err.message : 'Network error - check your server connection.');
                 } finally {
                     sendAgentButton.disabled = false;
                     sendAgentButton.textContent = 'Send To Agent';
@@ -23843,11 +23843,11 @@ function initNavbarDateTime() {
                 }
             });
 
-            // G��G�� Toolbar wiring G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��
+            // Toolbar wiring
             const toolbarEl = document.getElementById('offer-email-toolbar');
             const textColorInputEl = document.getElementById('offer-email-text-color');
             if (toolbarEl) {
-                // B / I / U / Bullets / Clear G�� use mousedown to keep editor selection intact
+                // B / I / U / Bullets / Clear - use mousedown to keep editor selection intact
                 toolbarEl.querySelectorAll('[data-command]').forEach(function (btn) {
                     btn.addEventListener('mousedown', function (e) {
                         e.preventDefault();
