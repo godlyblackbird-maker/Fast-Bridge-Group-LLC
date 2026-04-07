@@ -11017,6 +11017,44 @@ function initNavbarDateTime() {
         void loadItems(true);
     }
 
+    function removeLegacyAcceptedOfferWorkspaceWidget() {
+        const pageName = String(window.location.pathname || '').split('/').pop().toLowerCase();
+        const workspaceGrid = document.querySelector('.outreach-workspace-grid');
+
+        if (pageName !== 'users.html' || !workspaceGrid) {
+            return;
+        }
+
+        const legacyTextFragments = [
+            'offer accepted widget',
+            'properties marked as 80% - offer accepted in property details appear here for this user.',
+            'resync accepted'
+        ];
+
+        const legacyCards = Array.from(workspaceGrid.querySelectorAll('.glass-card, .widget-card, .outreach-card, section, article, div')).filter((element) => {
+            const text = String(element.textContent || '').trim().toLowerCase();
+            if (!text) {
+                return false;
+            }
+
+            if (legacyTextFragments.some((fragment) => text.includes(fragment))) {
+                return true;
+            }
+
+            return text.includes('assigned to me')
+                && text.includes('agent status')
+                && text.includes('80% - offer accepted')
+                && text.includes('search properties');
+        });
+
+        legacyCards.forEach((card) => {
+            const removableContainer = card.closest('.glass-card, .widget-card, .outreach-card') || card;
+            if (removableContainer && removableContainer.parentNode === workspaceGrid) {
+                removableContainer.remove();
+            }
+        });
+    }
+
     function initAgentWorkspacePropertyFilter() {
         const list = document.getElementById('agent-workspace-filter-list');
         const searchInput = document.getElementById('agent-workspace-filter-search');
@@ -25144,6 +25182,7 @@ function initNavbarDateTime() {
             ['initDashboardChatGptWidget', initDashboardChatGptWidget],
             ['initDailyBibleVerseWidget', initDailyBibleVerseWidget],
             ['initPersonalOutreachWorkspace', initPersonalOutreachWorkspace],
+            ['removeLegacyAcceptedOfferWorkspaceWidget', removeLegacyAcceptedOfferWorkspaceWidget],
             ['initAgentWorkspacePropertyFilter', initAgentWorkspacePropertyFilter],
             ['initAgentPropertyMemoryWidget', initAgentPropertyMemoryWidget],
             ['initNotesWidget', initNotesWidget],
