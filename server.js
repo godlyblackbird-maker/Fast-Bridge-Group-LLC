@@ -6007,8 +6007,8 @@ function extractAgentNameFromPdfText(lines) {
 function extractLaCellFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*la cell\b/i, /^listing agent cell\b/i, /^la mobile\b/i, /^la phone\b/i],
-    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*la cell\b/i, /^listing agent cell\b/i, /^la mobile\b/i, /^la phone\b/i, /^\d*\.?\s*la direct\b/i],
+    /^(?:\d*\.?\s*)?(?:la cell|listing agent cell|la mobile|la phone|la direct)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractPhoneNumber(value))
@@ -6058,8 +6058,8 @@ function extractLoPhoneFromPdfText(lines) {
 function extractOffersEmailFromPdfText(lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i],
-    /^(?:\d*\.?\s*)?(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers)\s*[:#-]?\s*(.+)$/i,
+    [/^\d*\.?\s*offers?\s+e-?mail\b/i, /^submit offers(?: to)?\b/i, /^offer instructions\b/i, /^e-?mail for offers\b/i, /^\d*\.?\s*la email\b/i],
+    /^(?:\d*\.?\s*)?(?:offers?\s+e-?mail|submit offers(?: to)?|offer instructions|e-?mail for offers|la email)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractEmailAddress(value))
