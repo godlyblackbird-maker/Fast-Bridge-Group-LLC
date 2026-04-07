@@ -223,7 +223,7 @@
     background: url("Themes/Wallpaper Beach Mode.jpg") no-repeat center center;
     background-size: cover;
     opacity: 0.72;
-    filter: saturate(1.02) contrast(1.01);
+    filter: blur(1.2px) saturate(1.02) contrast(1.01);
     transform: none;
     pointer-events: none;
     z-index: -1;
