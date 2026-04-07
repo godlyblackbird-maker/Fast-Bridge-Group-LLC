@@ -283,7 +283,7 @@
 
         .buyers-sheet-table {
             width: max-content;
-            min-width: 1460px;
+            min-width: 1760px;
             max-width: none;
             border-collapse: collapse;
         }
@@ -1000,7 +1000,7 @@
                     <div class="buyers-sheet-header">
                         <div>
                             <h2 class="card-title">MLS Spreadsheet</h2>
-                            <p class="card-subtitle">Upload an MLS PDF and extract only the property address, LA name, LO phone, offers email, and LA cell into this admin-only sheet.</p>
+                            <p class="card-subtitle">Upload an MLS PDF and extract the property address, LA name, LO phone, offers email, LA cell, LA direct, and LA email into this admin-only sheet.</p>
                         </div>
                         <div class="buyers-sheet-actions">
                             <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
@@ -1015,7 +1015,7 @@
                         </div>
                     </div>
 
-                    <p class="buyers-sheet-note">PDF upload extracts only: Property Address, LA Name, LO Phone, Offers Email, and LA Cell.</p>
+                    <p class="buyers-sheet-note">PDF upload extracts only: Property Address, LA Name, LO Phone, Offers Email, LA Cell, LA Direct, and LA Email.</p>
                     <div id="mls-imports-progress" class="buyers-sheet-progress" hidden aria-live="polite">
                         <span class="buyers-sheet-progress-spinner" aria-hidden="true"></span>
                         <div class="buyers-sheet-progress-copy">
@@ -1050,6 +1050,8 @@
                                     <th>LO Phone</th>
                                     <th>Offers Email</th>
                                     <th>LA Cell</th>
+                                    <th>LA Direct</th>
+                                    <th>LA Email</th>
                                     <th>Status</th>
                                     <th>PDF File</th>
                                     <th>Copy</th>
@@ -1306,6 +1308,8 @@
                     loPhone: normalizeCellValue(row && row.loPhone),
                     offersEmail: normalizeCellValue(row && row.offersEmail),
                     laCell: normalizeCellValue(row && row.laCell),
+                    laDirect: normalizeCellValue(row && row.laDirect),
+                    laEmail: normalizeCellValue(row && row.laEmail),
                     status: normalizeSpreadsheetStatusLabel(row && row.status),
                     pdfFile: normalizeCellValue(row && row.pdfFile)
                 };
@@ -1758,7 +1762,7 @@
             }
 
             function isPhoneFieldKey(key) {
-                return key === 'loPhone' || key === 'laCell';
+                return key === 'loPhone' || key === 'laCell' || key === 'laDirect';
             }
 
             function getAgentFirstName(value) {
@@ -1904,8 +1908,10 @@
                     loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
                     offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
                     laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                    status: cells[6] ? normalizeSpreadsheetStatusLabel(cells[6].textContent) : '',
-                    pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                    laDirect: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                    laEmail: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
+                    status: cells[8] ? normalizeSpreadsheetStatusLabel(cells[8].textContent) : '',
+                    pdfFile: cells[9] ? normalizeCellValue(cells[9].textContent) : ''
                 };
             }
 
@@ -1917,7 +1923,9 @@
                     normalizeCellValue(source.status).toLowerCase(),
                     normalizeCellValue(source.pdfFile).toLowerCase(),
                     normalizeCellValue(source.offersEmail).toLowerCase(),
-                    normalizeCellValue(source.laCell).toLowerCase()
+                    normalizeCellValue(source.laCell).toLowerCase(),
+                    normalizeCellValue(source.laDirect).toLowerCase(),
+                    normalizeCellValue(source.laEmail).toLowerCase()
                 ].join('|');
             }
 
@@ -1948,6 +1956,7 @@
                     normalizeCellValue(source.propertyAddress).toLowerCase(),
                     normalizeCellValue(source.laName).toLowerCase(),
                     normalizeCellValue(source.offersEmail).toLowerCase(),
+                    normalizeCellValue(source.laEmail).toLowerCase(),
                     normalizeCellValue(source.pdfFile).toLowerCase(),
                     normalizedKey.toLowerCase(),
                     normalizeCellValue(source[normalizedKey]).toLowerCase()
@@ -2341,7 +2350,7 @@
                 const tr = document.createElement('tr');
                 tr.dataset.rowId = normalizedRow.id ? String(normalizedRow.id) : '';
                 tr.dataset.matchKey = normalizedRow.matchKey || buildManualRowMatchKey();
-                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile'].forEach((key) => {
+                ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'laDirect', 'laEmail', 'status', 'pdfFile'].forEach((key) => {
                     tr.appendChild(createCell(normalizedRow[key] || '', key));
                 });
                 tr.appendChild(createCopyCell());
@@ -2359,7 +2368,7 @@
             }
 
             function isMeaningfulRow(row) {
-                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'status', 'pdfFile']
+                return ['importDate', 'propertyAddress', 'laName', 'loPhone', 'offersEmail', 'laCell', 'laDirect', 'laEmail', 'status', 'pdfFile']
                     .some((key) => String(row && row[key] || '').trim().length > 0);
             }
 
@@ -2375,8 +2384,10 @@
                         loPhone: cells[3] ? normalizeCellValue(cells[3].textContent) : '',
                         offersEmail: cells[4] ? normalizeCellValue(cells[4].textContent) : '',
                         laCell: cells[5] ? normalizeCellValue(cells[5].textContent) : '',
-                        status: cells[6] ? normalizeSpreadsheetStatusLabel(cells[6].textContent) : '',
-                        pdfFile: cells[7] ? normalizeCellValue(cells[7].textContent) : ''
+                        laDirect: cells[6] ? normalizeCellValue(cells[6].textContent) : '',
+                        laEmail: cells[7] ? normalizeCellValue(cells[7].textContent) : '',
+                        status: cells[8] ? normalizeSpreadsheetStatusLabel(cells[8].textContent) : '',
+                        pdfFile: cells[9] ? normalizeCellValue(cells[9].textContent) : ''
                     };
                 });
             }
@@ -2390,12 +2401,16 @@
                 const targetAddress = normalizeImportMatchValue(row && row.propertyAddress);
                 const targetEmail = normalizeImportMatchValue(row && row.offersEmail);
                 const targetCell = normalizeImportMatchValue(row && row.laCell);
+                const targetDirect = normalizeImportMatchValue(row && row.laDirect);
+                const targetLaEmail = normalizeImportMatchValue(row && row.laEmail);
 
                 return (Array.isArray(rows) ? rows : []).findIndex((candidate) => {
                     const candidatePdfFile = normalizeImportMatchValue(candidate && candidate.pdfFile);
                     const candidateAddress = normalizeImportMatchValue(candidate && candidate.propertyAddress);
                     const candidateEmail = normalizeImportMatchValue(candidate && candidate.offersEmail);
                     const candidateCell = normalizeImportMatchValue(candidate && candidate.laCell);
+                    const candidateDirect = normalizeImportMatchValue(candidate && candidate.laDirect);
+                    const candidateLaEmail = normalizeImportMatchValue(candidate && candidate.laEmail);
 
                     if (targetPdfFile && candidatePdfFile && targetPdfFile === candidatePdfFile && targetAddress && candidateAddress && targetAddress === candidateAddress) {
                         return true;
@@ -2410,6 +2425,14 @@
                     }
 
                     if (targetAddress && targetCell && candidateAddress === targetAddress && candidateCell === targetCell) {
+                        return true;
+                    }
+
+                    if (targetAddress && targetDirect && candidateAddress === targetAddress && candidateDirect === targetDirect) {
+                        return true;
+                    }
+
+                    if (targetAddress && targetLaEmail && candidateAddress === targetAddress && candidateLaEmail === targetLaEmail) {
                         return true;
                     }
 
@@ -2479,6 +2502,8 @@
                     loPhone: normalizeCellValue(row && row.loPhone),
                     offersEmail: normalizeCellValue(row && row.offersEmail),
                     laCell: normalizeCellValue(row && row.laCell),
+                    laDirect: normalizeCellValue(row && row.laDirect),
+                    laEmail: normalizeCellValue(row && row.laEmail),
                     status: normalizeSpreadsheetStatusLabel(row && row.status),
                     pdfFile: normalizeCellValue(row && row.pdfFile)
                 };
@@ -2490,6 +2515,8 @@
                     normalizeCellValue(row && row.laName).toLowerCase(),
                     normalizeCellValue(row && row.offersEmail).toLowerCase(),
                     normalizeCellValue(row && row.laCell).toLowerCase(),
+                    normalizeCellValue(row && row.laDirect).toLowerCase(),
+                    normalizeCellValue(row && row.laEmail).toLowerCase(),
                     normalizeCellValue(row && row.pdfFile).toLowerCase()
                 ].join('|');
             }
@@ -2531,12 +2558,16 @@
                 const targetOffersEmail = normalizeMatchValue(nextRow && nextRow.offersEmail);
                 const targetLoPhone = normalizePhoneMatchValue(nextRow && nextRow.loPhone);
                 const targetLaCell = normalizePhoneMatchValue(nextRow && nextRow.laCell);
+                const targetLaDirect = normalizePhoneMatchValue(nextRow && nextRow.laDirect);
+                const targetLaEmail = normalizeMatchValue(nextRow && nextRow.laEmail);
 
                 return (Array.isArray(rows) ? rows : []).findIndex((candidate) => {
                     const candidateName = normalizeMatchValue(candidate && candidate.laName);
                     const candidateOffersEmail = normalizeMatchValue(candidate && candidate.offersEmail);
                     const candidateLoPhone = normalizePhoneMatchValue(candidate && candidate.loPhone);
                     const candidateLaCell = normalizePhoneMatchValue(candidate && candidate.laCell);
+                    const candidateLaDirect = normalizePhoneMatchValue(candidate && candidate.laDirect);
+                    const candidateLaEmail = normalizeMatchValue(candidate && candidate.laEmail);
 
                     if (targetName && candidateName && targetName === candidateName) {
                         return true;
@@ -2546,11 +2577,19 @@
                         return true;
                     }
 
+                    if (targetLaEmail && candidateLaEmail && targetLaEmail === candidateLaEmail) {
+                        return true;
+                    }
+
                     if (targetLoPhone && (targetLoPhone === candidateLoPhone || targetLoPhone === candidateLaCell)) {
                         return true;
                     }
 
-                    if (targetLaCell && (targetLaCell === candidateLoPhone || targetLaCell === candidateLaCell)) {
+                    if (targetLaCell && (targetLaCell === candidateLoPhone || targetLaCell === candidateLaCell || targetLaCell === candidateLaDirect)) {
+                        return true;
+                    }
+
+                    if (targetLaDirect && (targetLaDirect === candidateLoPhone || targetLaDirect === candidateLaCell || targetLaDirect === candidateLaDirect)) {
                         return true;
                     }
 
@@ -2569,6 +2608,8 @@
                     loPhone: mergeUniqueFieldValues(currentRow.loPhone, incomingRow.loPhone),
                     offersEmail: mergeUniqueFieldValues(currentRow.offersEmail, incomingRow.offersEmail),
                     laCell: mergeUniqueFieldValues(currentRow.laCell, incomingRow.laCell),
+                    laDirect: mergeUniqueFieldValues(currentRow.laDirect, incomingRow.laDirect),
+                    laEmail: mergeUniqueFieldValues(currentRow.laEmail, incomingRow.laEmail),
                     status: mergeUniqueFieldValues(currentRow.status, incomingRow.status),
                     pdfFile: mergeUniqueFieldValues(currentRow.pdfFile, incomingRow.pdfFile)
                 };
@@ -2630,7 +2671,7 @@
                     return;
                 }
 
-                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'Status', 'PDF File'];
+                const headers = ['Import Date', 'Property Address', 'LA Name', 'LO Phone', 'Offers Email', 'LA Cell', 'LA Direct', 'LA Email', 'Status', 'PDF File'];
                 const lines = [headers.join(',')];
 
                 rows.forEach((row) => {
@@ -2641,6 +2682,8 @@
                         row.loPhone,
                         row.offersEmail,
                         row.laCell,
+                        row.laDirect,
+                        row.laEmail,
                         row.status,
                         row.pdfFile
                     ].map(escapeCsvValue).join(','));
@@ -2736,6 +2779,8 @@
                         loPhone: '',
                         offersEmail: '',
                         laCell: '',
+                        laDirect: '',
+                        laEmail: '',
                         status: '',
                         pdfFile: ''
                     };
@@ -2823,10 +2868,12 @@
                             loPhone: normalizeCellValue(row && row.loPhone),
                             offersEmail: normalizeCellValue(row && row.offersEmail),
                             laCell: normalizeCellValue(row && row.laCell),
+                            laDirect: normalizeCellValue(row && row.laDirect),
+                            laEmail: normalizeCellValue(row && row.laEmail),
                             status: normalizeSpreadsheetStatusLabel(row && row.status),
                             pdfFile: normalizeCellValue(payload.fileName || file.name || '')
                         }))
-                        .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell].some((value) => String(value || '').trim()));
+                        .filter((row) => [row.propertyAddress, row.laName, row.loPhone, row.offersEmail, row.laCell, row.laDirect, row.laEmail].some((value) => String(value || '').trim()));
 
                     if (normalizedRows.length === 0) {
                         throw new Error('The PDF was read, but no MLS contact rows could be extracted from it.');

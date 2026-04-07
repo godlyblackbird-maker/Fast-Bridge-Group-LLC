@@ -1625,6 +1625,8 @@ function initializeDatabase() {
       lo_phone TEXT,
       offers_email TEXT,
       la_cell TEXT,
+      la_direct TEXT,
+      la_email TEXT,
       status TEXT,
       pdf_file TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -1636,6 +1638,16 @@ function initializeDatabase() {
       console.error('Error creating mls_import_rows table:', err);
     } else {
       console.log('MLS import rows table ready');
+      db.run('ALTER TABLE mls_import_rows ADD COLUMN la_direct TEXT', (alterError) => {
+        if (alterError && !String(alterError.message || '').includes('duplicate column name')) {
+          console.error('Error ensuring la_direct on mls_import_rows:', alterError);
+        }
+      });
+      db.run('ALTER TABLE mls_import_rows ADD COLUMN la_email TEXT', (alterError) => {
+        if (alterError && !String(alterError.message || '').includes('duplicate column name')) {
+          console.error('Error ensuring la_email on mls_import_rows:', alterError);
+        }
+      });
       db.run('CREATE INDEX IF NOT EXISTS idx_mls_import_rows_owner_updated ON mls_import_rows(owner_user_id, updated_at DESC, id DESC)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_mls_import_rows_run ON mls_import_rows(import_run_id)', () => {});
     }
@@ -1922,6 +1934,8 @@ function hasMeaningfulMlsImportSpreadsheetRow(rowLike) {
     row.loPhone,
     row.offersEmail,
     row.laCell,
+    row.laDirect,
+    row.laEmail,
     row.status,
     row.pdfFile
   ].some((value) => Boolean(normalizeMlsImportSpreadsheetValue(value)));
@@ -1938,6 +1952,8 @@ function normalizeMlsImportSpreadsheetRow(rowLike, defaults = {}) {
     loPhone: normalizeMlsImportSpreadsheetValue(row.loPhone || defaults.loPhone),
     offersEmail: normalizeMlsImportSpreadsheetValue(row.offersEmail || defaults.offersEmail),
     laCell: normalizeMlsImportSpreadsheetValue(row.laCell || defaults.laCell),
+    laDirect: normalizeMlsImportSpreadsheetValue(row.laDirect || defaults.laDirect),
+    laEmail: normalizeMlsImportSpreadsheetValue(row.laEmail || defaults.laEmail),
     status: normalizeMlsImportStatusLabel(row.status || defaults.status),
     pdfFile: normalizeMlsImportSpreadsheetValue(row.pdfFile || defaults.pdfFile)
   };
@@ -1948,10 +1964,12 @@ function createMlsImportSpreadsheetMatchKey(rowLike) {
   const propertyAddressKey = createMlsImportAddressMergeKey(row.propertyAddress);
   const offersEmailKey = row.offersEmail.toLowerCase();
   const laCellKey = row.laCell.toLowerCase();
+  const laDirectKey = row.laDirect.toLowerCase();
+  const laEmailKey = row.laEmail.toLowerCase();
   const loPhoneKey = row.loPhone.toLowerCase();
 
   if (propertyAddressKey) {
-    return [propertyAddressKey, offersEmailKey, laCellKey, loPhoneKey].join('|');
+    return [propertyAddressKey, offersEmailKey, laCellKey, laDirectKey, laEmailKey, loPhoneKey].join('|');
   }
 
   return row.matchKey || `manual|${crypto.randomUUID()}`;
@@ -1970,6 +1988,8 @@ function mergeMlsImportSpreadsheetRows(previousRowLike, nextRowLike, defaults = 
     loPhone: mergeMlsImportRowValues(previousRow.loPhone, nextRow.loPhone),
     offersEmail: mergeMlsImportRowValues(previousRow.offersEmail, nextRow.offersEmail),
     laCell: mergeMlsImportRowValues(previousRow.laCell, nextRow.laCell),
+    laDirect: mergeMlsImportRowValues(previousRow.laDirect, nextRow.laDirect),
+    laEmail: mergeMlsImportRowValues(previousRow.laEmail, nextRow.laEmail),
     status: mergeMlsImportRowValues(previousRow.status, nextRow.status),
     pdfFile: nextRow.pdfFile || previousRow.pdfFile
   };
@@ -1986,6 +2006,8 @@ function mapMlsImportSpreadsheetRowRecord(rowLike) {
     loPhone: normalizeMlsImportSpreadsheetValue(row.lo_phone || row.loPhone),
     offersEmail: normalizeMlsImportSpreadsheetValue(row.offers_email || row.offersEmail),
     laCell: normalizeMlsImportSpreadsheetValue(row.la_cell || row.laCell),
+    laDirect: normalizeMlsImportSpreadsheetValue(row.la_direct || row.laDirect),
+    laEmail: normalizeMlsImportSpreadsheetValue(row.la_email || row.laEmail),
     status: normalizeMlsImportStatusLabel(row.status),
     pdfFile: normalizeMlsImportSpreadsheetValue(row.pdf_file || row.pdfFile)
   };
@@ -2001,7 +2023,7 @@ async function loadMlsImportSpreadsheetRowsForUser(ownerUserId, options = {}) {
   const offset = Math.max(0, Number(options.offset) || 0);
   const [rows, totalCount] = await Promise.all([
     dbAll(
-      `SELECT id, match_key, import_date, property_address, la_name, lo_phone, offers_email, la_cell, status, pdf_file
+      `SELECT id, match_key, import_date, property_address, la_name, lo_phone, offers_email, la_cell, la_direct, la_email, status, pdf_file
        FROM mls_import_rows
        WHERE owner_user_id = ?
        ORDER BY datetime(updated_at) DESC, id DESC
@@ -2088,6 +2110,8 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
                lo_phone = ?,
                offers_email = ?,
                la_cell = ?,
+                 la_direct = ?,
+                 la_email = ?,
                status = ?,
                pdf_file = ?,
                updated_at = CURRENT_TIMESTAMP
@@ -2101,6 +2125,8 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
             mergedRow.loPhone,
             mergedRow.offersEmail,
             mergedRow.laCell,
+            mergedRow.laDirect,
+            mergedRow.laEmail,
             mergedRow.status,
             desiredPdfFile,
             normalizedRow.id,
@@ -2129,6 +2155,8 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
                lo_phone = ?,
                offers_email = ?,
                la_cell = ?,
+                 la_direct = ?,
+                 la_email = ?,
                status = ?,
                pdf_file = ?,
                updated_at = CURRENT_TIMESTAMP
@@ -2142,6 +2170,8 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
             mergedRow.loPhone,
             mergedRow.offersEmail,
             mergedRow.laCell,
+            mergedRow.laDirect,
+            mergedRow.laEmail,
             mergedRow.status,
             desiredPdfFile,
             existingByMatchKey.id
@@ -2161,9 +2191,11 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
             lo_phone,
             offers_email,
             la_cell,
+            la_direct,
+            la_email,
             status,
             pdf_file
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             normalizedOwnerUserId,
             importRunId,
@@ -2174,6 +2206,8 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
             normalizedRow.loPhone,
             normalizedRow.offersEmail,
             normalizedRow.laCell,
+            normalizedRow.laDirect,
+            normalizedRow.laEmail,
             normalizedRow.status,
             desiredPdfFile
           ]
@@ -5318,6 +5352,8 @@ function sanitizeMlsImportAiRow(rowLike) {
   const normalizedOfficePhone = extractPhoneNumber(source.loPhone || source.officePhone || source.brokerPhone || '');
   const normalizedOffersEmail = extractEmailAddress(source.offersEmail || source.offerEmail || source.email || '');
   const normalizedLaCell = extractPhoneNumber(source.laCell || source.agentCell || source.mobile || source.phone || '');
+  const normalizedLaDirect = extractPhoneNumber(source.laDirect || source.directPhone || source.directLine || source.agentDirect || source.listingAgentDirect || '');
+  const normalizedLaEmail = extractEmailAddress(source.laEmail || source.agentEmail || source.listingAgentEmail || source.directEmail || '');
   const normalizedStatus = formatMlsStatusFieldValue(source.status || source.listingStatus || '');
 
   return normalizeMlsImportRow({
@@ -5326,6 +5362,8 @@ function sanitizeMlsImportAiRow(rowLike) {
     loPhone: normalizedOfficePhone,
     offersEmail: normalizedOffersEmail,
     laCell: normalizedLaCell,
+    laDirect: normalizedLaDirect,
+    laEmail: normalizedLaEmail,
     status: normalizedStatus
   });
 }
@@ -5333,7 +5371,7 @@ function sanitizeMlsImportAiRow(rowLike) {
 function isUsefulMlsImportRow(rowLike) {
   const row = normalizeMlsImportRow(rowLike);
   const hasAddress = Boolean(row.propertyAddress);
-  const hasContact = Boolean(row.laName || row.loPhone || row.offersEmail || row.laCell);
+  const hasContact = Boolean(row.laName || row.loPhone || row.offersEmail || row.laCell || row.laDirect || row.laEmail);
   return hasAddress && hasContact;
 }
 
@@ -5368,7 +5406,7 @@ async function extractMlsImportRowsWithOpenAi(fullText, pageTexts, options = {})
   const systemPrompt = [
     'You extract MLS spreadsheet rows from PDF text.',
     'Return only valid JSON.',
-    'Output a JSON array of objects with exactly these keys: propertyAddress, laName, loPhone, offersEmail, laCell, status.',
+    'Output a JSON array of objects with exactly these keys: propertyAddress, laName, loPhone, offersEmail, laCell, laDirect, laEmail, status.',
     'Each object must represent one property listing explicitly present in the text.',
     'Use empty strings for missing fields.',
     'Do not invent listings or contact info.',
@@ -5694,6 +5732,73 @@ function extractPdfFieldByLabel(lines, labels, valuePattern, options = {}) {
         if (isValid(transformedLine, { sourceLine: nextLine, lineIndex: index + offset, offset })) {
           return String(transformedLine || '').trim();
         }
+      }
+    }
+  }
+
+  return '';
+}
+
+function normalizePdfLabelKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function extractPdfFieldByDeepLabelSearch(lines, labels, valueExtractor, options = {}) {
+  const sourceLines = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+    : [];
+  const labelKeys = Array.from(new Set((Array.isArray(labels) ? labels : [])
+    .map((label) => normalizePdfLabelKey(label))
+    .filter(Boolean)));
+  const lookahead = Math.max(1, Math.min(Number(options.lookahead) || 3, 6));
+  const extractValue = typeof valueExtractor === 'function'
+    ? valueExtractor
+    : (value) => String(value || '').trim();
+  const isBoundary = typeof options.isBoundary === 'function'
+    ? options.isBoundary
+    : (line) => /^(?:\d+\.?\s*)?(?:co\s*la|la|lo|listing|list|show|offers?|email|direct|phone|mobile|cell)\b/i.test(String(line || '').trim());
+
+  if (sourceLines.length === 0 || labelKeys.length === 0) {
+    return '';
+  }
+
+  for (let index = 0; index < sourceLines.length; index += 1) {
+    const line = sourceLines[index];
+    const lineKey = normalizePdfLabelKey(line);
+    if (!lineKey) {
+      continue;
+    }
+
+    const hasMatchingLabel = labelKeys.some((labelKey) => lineKey.includes(labelKey));
+    if (!hasMatchingLabel) {
+      continue;
+    }
+
+    const inlineValue = extractValue(line);
+    if (inlineValue) {
+      return String(inlineValue || '').trim();
+    }
+
+    for (let offset = 1; offset <= lookahead; offset += 1) {
+      const nextLine = String(sourceLines[index + offset] || '').trim();
+      if (!nextLine) {
+        continue;
+      }
+
+      const nextLineKey = normalizePdfLabelKey(nextLine);
+      if (labelKeys.some((labelKey) => nextLineKey.includes(labelKey))) {
+        continue;
+      }
+
+      if (isBoundary(nextLine)) {
+        break;
+      }
+
+      const nextValue = extractValue(nextLine);
+      if (nextValue) {
+        return String(nextValue || '').trim();
       }
     }
   }
@@ -6101,23 +6206,9 @@ function extractLaCellFromPdfText(lines) {
     return directPhone;
   }
 
-  const directLabelValue = extractPdfFieldByLabel(
-    lines,
-    [/^\d*\.?\s*la\s*direct\b/i],
-    /^(?:\d*\.?\s*)?(?:la\s*direct)\s*[:#-]?\s*(.+)$/i,
-    {
-      lookahead: 4,
-      validate: (value) => Boolean(extractPhoneNumber(value))
-    }
-  );
-  const directFallbackPhone = extractPhoneNumber(directLabelValue);
-  if (directFallbackPhone) {
-    return directFallbackPhone;
-  }
-
   const contactPriorityPhone = extractAgentOfficeContactPriorityValue(
     lines,
-    ['cell', 'mobile', 'phone', 'direct', 'text', 'home'],
+    ['cell', 'mobile', 'phone', 'text', 'home'],
     (value) => extractPhoneNumber(value)
   );
   if (contactPriorityPhone) {
@@ -6145,6 +6236,55 @@ function extractLaCellFromPdfText(lines) {
   }
 
   return '';
+}
+
+function extractLaDirectFromPdfText(lines) {
+  const directLabelValue = extractPdfFieldByLabel(
+    lines,
+    [
+      /^\d*\.?\s*l\.?\s*a\.?\s*direct(?:\s+(?:phone|line|ph))?\b/i,
+      /^\d*\.?\s*(?:listing|list)\s*agent\s*direct(?:\s+(?:phone|line|ph))?\b/i,
+      /^\d*\.?\s*direct\s*(?:line|phone|ph)\b/i
+    ],
+    /^(?:\d*\.?\s*)?(?:l\.?\s*a\.?\s*direct(?:\s+(?:phone|line|ph))?|(?:listing|list)\s*agent\s*direct(?:\s+(?:phone|line|ph))?|direct\s*(?:line|phone|ph))\s*[:#-]?\s*(.+)$/i,
+    {
+      lookahead: 4,
+      validate: (value) => Boolean(extractPhoneNumber(value))
+    }
+  );
+  const directPhone = extractPhoneNumber(directLabelValue);
+  if (directPhone) {
+    return directPhone;
+  }
+
+  const deepDirectPhone = extractPdfFieldByDeepLabelSearch(
+    lines,
+    [
+      'la direct',
+      'l a direct',
+      'ladirect',
+      'la direct phone',
+      'la direct line',
+      'listing agent direct',
+      'list agent direct',
+      'listingagentdirect',
+      'listagentdirect',
+      'direct line',
+      'direct phone',
+      'directline',
+      'directphone'
+    ],
+    (value) => extractPhoneNumber(value),
+    {
+      lookahead: 4,
+      isBoundary: (line) => /^(?:\d+\.?\s*)?(?:co\s*la|la|lo|listing|list|show|offers?|submit offers|offer instructions)\b/i.test(String(line || '').trim())
+    }
+  );
+  if (deepDirectPhone) {
+    return deepDirectPhone;
+  }
+
+  return extractAgentOfficeContactPriorityValue(lines, ['direct', 'directphone', 'directline', 'officephone'], (value) => extractPhoneNumber(value));
 }
 
 function extractLoPhoneFromPdfText(lines) {
@@ -6175,10 +6315,19 @@ function extractOffersEmailFromPdfText(lines) {
     return offersEmail;
   }
 
+  return '';
+}
+
+function extractLaEmailFromPdfText(lines) {
   const laEmailValue = extractPdfFieldByLabel(
     lines,
-    [/^\d*\.?\s*la\s*e-?mail\b/i],
-    /^(?:\d*\.?\s*)?(?:la\s*e-?mail)\s*[:#-]?\s*(.+)$/i,
+    [
+      /^\d*\.?\s*l\.?\s*a\.?\s*e[\s-]*mail\b/i,
+      /^\d*\.?\s*(?:listing|list)\s*agent\s*e[\s-]*mail\b/i,
+      /^\d*\.?\s*agent\s*e[\s-]*mail\b/i,
+      /^\d*\.?\s*direct\s*e[\s-]*mail\b/i
+    ],
+    /^(?:\d*\.?\s*)?(?:l\.?\s*a\.?\s*e[\s-]*mail|(?:listing|list)\s*agent\s*e[\s-]*mail|agent\s*e[\s-]*mail|direct\s*e[\s-]*mail)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 4,
       validate: (value) => Boolean(extractEmailAddress(value))
@@ -6189,7 +6338,36 @@ function extractOffersEmailFromPdfText(lines) {
     return laEmail;
   }
 
-  return extractAgentOfficeContactPriorityValue(lines, ['email'], (value) => extractEmailAddress(value));
+  const deepLaEmail = extractPdfFieldByDeepLabelSearch(
+    lines,
+    [
+      'la email',
+      'l a email',
+      'la e mail',
+      'la e-mail',
+      'laemail',
+      'laemailaddress',
+      'listing agent email',
+      'list agent email',
+      'listingagentemail',
+      'listagentemail',
+      'agent email',
+      'agentemail',
+      'direct email',
+      'directemail',
+      'email address'
+    ],
+    (value) => extractEmailAddress(value),
+    {
+      lookahead: 4,
+      isBoundary: (line) => /^(?:\d+\.?\s*)?(?:co\s*la|la|lo|listing|list|show|offers?|submit offers|offer instructions)\b/i.test(String(line || '').trim())
+    }
+  );
+  if (deepLaEmail) {
+    return deepLaEmail;
+  }
+
+  return extractAgentOfficeContactPriorityValue(lines, ['email', 'emailaddress', 'emailaddr', 'directemail'], (value) => extractEmailAddress(value));
 }
 
 function formatMlsStatusFieldValue(value) {
@@ -6334,6 +6512,8 @@ function extractMlsImportRowFromText(text) {
     loPhone: extractLoPhoneFromPdfText(lines),
     offersEmail: extractOffersEmailFromPdfText(lines),
     laCell: extractLaCellFromPdfText(lines),
+    laDirect: extractLaDirectFromPdfText(lines),
+    laEmail: extractLaEmailFromPdfText(lines),
     status: extractMlsStatusFromPdfText(normalizedText, lines)
   };
 
@@ -6408,6 +6588,8 @@ function normalizeMlsImportRow(row) {
     loPhone: String(source.loPhone || '').trim(),
     offersEmail: String(source.offersEmail || '').trim(),
     laCell: String(source.laCell || '').trim(),
+    laDirect: String(source.laDirect || '').trim(),
+    laEmail: String(source.laEmail || '').trim(),
     status: normalizeMlsImportStatusLabel(source.status || '')
   };
 }
@@ -6455,13 +6637,13 @@ function shouldMergeMlsImportRows(previousRow, nextRow) {
   }
 
   if (previousAddress && !nextAddress) {
-    const previousMissingContact = !previousRow.laName || !previousRow.loPhone || !previousRow.offersEmail || !previousRow.laCell || !previousRow.status;
-    const nextHasSupplementalValue = Boolean(nextRow.laName || nextRow.loPhone || nextRow.offersEmail || nextRow.laCell || nextRow.status);
+    const previousMissingContact = !previousRow.laName || !previousRow.loPhone || !previousRow.offersEmail || !previousRow.laCell || !previousRow.laDirect || !previousRow.laEmail || !previousRow.status;
+    const nextHasSupplementalValue = Boolean(nextRow.laName || nextRow.loPhone || nextRow.offersEmail || nextRow.laCell || nextRow.laDirect || nextRow.laEmail || nextRow.status);
     return previousMissingContact && nextHasSupplementalValue;
   }
 
   if (!previousAddress && nextAddress) {
-    const previousHasSupplementalValue = Boolean(previousRow.laName || previousRow.loPhone || previousRow.offersEmail || previousRow.laCell || previousRow.status);
+    const previousHasSupplementalValue = Boolean(previousRow.laName || previousRow.loPhone || previousRow.offersEmail || previousRow.laCell || previousRow.laDirect || previousRow.laEmail || previousRow.status);
     return previousHasSupplementalValue;
   }
 
@@ -6490,6 +6672,8 @@ function mergeMlsImportRows(rows) {
       loPhone: mergeMlsImportRowValues(previousRow.loPhone, normalizedRow.loPhone),
       offersEmail: mergeMlsImportRowValues(previousRow.offersEmail, normalizedRow.offersEmail),
       laCell: mergeMlsImportRowValues(previousRow.laCell, normalizedRow.laCell),
+      laDirect: mergeMlsImportRowValues(previousRow.laDirect, normalizedRow.laDirect),
+      laEmail: mergeMlsImportRowValues(previousRow.laEmail, normalizedRow.laEmail),
       status: String(normalizedRow.status || previousRow.status || '').trim()
     };
 
@@ -6515,6 +6699,8 @@ function dedupeMlsImportRows(rows) {
       normalizedRow.loPhone.toLowerCase(),
       normalizedRow.offersEmail.toLowerCase(),
       normalizedRow.laCell.toLowerCase(),
+      normalizedRow.laDirect.toLowerCase(),
+      normalizedRow.laEmail.toLowerCase(),
       normalizedRow.status.toLowerCase()
     ].join('|');
 
@@ -6544,6 +6730,8 @@ function mergeMlsImportRowObjects(previousRow, nextRow) {
     loPhone: mergeMlsImportRowValues(previous.loPhone, next.loPhone),
     offersEmail: mergeMlsImportRowValues(previous.offersEmail, next.offersEmail),
     laCell: mergeMlsImportRowValues(previous.laCell, next.laCell),
+    laDirect: mergeMlsImportRowValues(previous.laDirect, next.laDirect),
+    laEmail: mergeMlsImportRowValues(previous.laEmail, next.laEmail),
     status: mergeMlsImportRowValues(previous.status, next.status)
   };
 }
@@ -6579,6 +6767,8 @@ function consolidateMlsImportRows(rows) {
       normalizedRow.loPhone.toLowerCase(),
       normalizedRow.offersEmail.toLowerCase(),
       normalizedRow.laCell.toLowerCase(),
+      normalizedRow.laDirect.toLowerCase(),
+      normalizedRow.laEmail.toLowerCase(),
       normalizedRow.status.toLowerCase()
     ].join('|');
 
@@ -6699,6 +6889,8 @@ async function extractMlsImportPdfFields(pdfSource) {
     loPhone: String(primaryRow.loPhone || '').trim(),
     offersEmail: String(primaryRow.offersEmail || '').trim(),
     laCell: String(primaryRow.laCell || '').trim(),
+    laDirect: String(primaryRow.laDirect || '').trim(),
+    laEmail: String(primaryRow.laEmail || '').trim(),
     status: String(primaryRow.status || '').trim(),
     rows: mergedRows.length > 0 ? mergedRows : (Object.values(fallbackRow).some(Boolean) ? [fallbackRow] : [])
   };
