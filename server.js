@@ -61,6 +61,7 @@ const TOTP_WINDOW = 1;
 const TOTP_PERIOD_SECONDS = 30;
 const TOTP_DIGITS = 6;
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+const DATABASE_FILENAME = 'database.db';
 const MLS_IMPORT_PDF_BODY_LIMIT = '260mb';
 const MLS_IMPORT_PDF_MAX_BYTES = 180 * 1024 * 1024;
 const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
@@ -115,6 +116,9 @@ const userUploadMemory = multer({
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
+const CANONICAL_LORIA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('LORIA_BROKER_EMAIL') || 'loria.rigby@fastbridgegroupllc.com');
+const CANONICAL_LORIA_PASSWORD = String(process.env.LORIA_BROKER_PASSWORD || 'loriarigby').trim() || 'loriarigby';
+const CANONICAL_LORIA_NAME = String(process.env.LORIA_BROKER_NAME || 'Loria Rigby').trim() || 'Loria Rigby';
 const CANONICAL_TEST_EMAIL = 'test@fastbridgegroupllc.com';
 const CANONICAL_TEST_PASSWORD = 'subzero';
 const CANONICAL_TEST_NAME = 'Test';
@@ -139,6 +143,34 @@ function getFirstConfiguredEnvValue(...names) {
   }
 
   return '';
+}
+
+function resolveDatabaseFilePath() {
+  const explicitPath = getFirstConfiguredEnvValue('DATABASE_PATH', 'SQLITE_DATABASE_PATH', 'SQLITE_DB_PATH');
+  if (explicitPath) {
+    return path.resolve(explicitPath);
+  }
+
+  const persistentRoot = getFirstConfiguredEnvValue('RENDER_DISK_MOUNT_PATH', 'PERSISTENT_STORAGE_PATH', 'DATA_DIR');
+  if (persistentRoot) {
+    return path.join(path.resolve(persistentRoot), DATABASE_FILENAME);
+  }
+
+  return path.join(__dirname, DATABASE_FILENAME);
+}
+
+function ensureDatabaseStorageReady(databaseFilePath) {
+  const resolvedPath = path.resolve(databaseFilePath);
+  const resolvedDir = path.dirname(resolvedPath);
+  const legacyPath = path.join(__dirname, DATABASE_FILENAME);
+
+  fs.mkdirSync(resolvedDir, { recursive: true });
+
+  if (resolvedPath !== legacyPath && !fs.existsSync(resolvedPath) && fs.existsSync(legacyPath)) {
+    fs.copyFileSync(legacyPath, resolvedPath);
+  }
+
+  return resolvedPath;
 }
 
 function normalizeKnownEmail(email) {
@@ -1474,12 +1506,14 @@ app.post('/api/import-listing-preview', async (req, res) => {
   }
 });
 
+const DATABASE_FILE_PATH = ensureDatabaseStorageReady(resolveDatabaseFilePath());
+
 // Database connection
-const db = new sqlite3.Database('./database.db', (err) => {
+const db = new sqlite3.Database(DATABASE_FILE_PATH, (err) => {
   if (err) {
     console.error('Error opening database:', err);
   } else {
-    console.log('Connected to SQLite database');
+    console.log('Connected to SQLite database:', DATABASE_FILE_PATH);
     initializeDatabase();
   }
 });
@@ -1510,6 +1544,7 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN avatar_upload_id TEXT`, () => {});
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
+      syncLoriaBrokerAccount();
       syncPublicTestAccount();
     }
   });
@@ -3429,6 +3464,45 @@ async function syncSteveAdminAccount() {
     console.log('Steve admin account synced');
   } catch (error) {
     console.error('Failed to sync Steve admin account:', error);
+  }
+}
+
+async function syncLoriaBrokerAccount() {
+  const canonicalEmail = CANONICAL_LORIA_EMAIL;
+  const canonicalName = CANONICAL_LORIA_NAME;
+  const canonicalPassword = CANONICAL_LORIA_PASSWORD;
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) = ?
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
+      [canonicalEmail, canonicalName, canonicalEmail]
+    );
+
+    if (!account) {
+      const hash = await bcrypt.hash(canonicalPassword, 10);
+      await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'broker', canonicalEmail, '', '']
+      );
+      console.log('Loria broker account created/synced');
+      return;
+    }
+
+    const currentEmail = String(account.email || '').trim().toLowerCase();
+    const currentSmtpUser = String(account.smtp_user || '').trim().toLowerCase();
+    const nextSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail ? canonicalEmail : account.smtp_user;
+
+    await dbRun(
+      'UPDATE users SET name = ?, email = ?, role = ?, smtp_user = ? WHERE id = ?',
+      [canonicalName, canonicalEmail, 'broker', nextSmtpUser, account.id]
+    );
+
+    console.log('Loria broker account synced');
+  } catch (error) {
+    console.error('Failed to sync Loria broker account:', error);
   }
 }
 
@@ -6138,7 +6212,19 @@ function isLikelyDirectionalInstructionAddressLine(value) {
     return true;
   }
 
-  return /\b(?:get\s+off|take\s+(?:the\s+)?exit|turn|merge|keep\s+(?:left|right)|continue\s+(?:on|onto|straight)|toward(?:s)?|ramp|destination|make\s+a\s+(?:left|right)|left\s+on|right\s+on|head\s+(?:north|south|east|west)|go\s+(?:north|south|east|west)|(?:f(?:ree)?way|frwy|fwy|hwy|highway)\s+(?:north|south|east|west))\b/.test(normalized);
+  if (/^\d{2,6}\s+off\s+[a-z]/.test(normalized)) {
+    return true;
+  }
+
+  if (/\bto\s+[a-z0-9.'#&\-/]+(?:\s+[a-z0-9.'#&\-/]+){0,4}\s+(?:street|st|avenue|ave|boulevard|blvd|drive|dr|road|rd|court|ct|lane|ln|place|pl|terrace|ter|circle|cir|parkway|pkwy|highway|hwy|way|trail|trl)\b/i.test(normalized)) {
+    return true;
+  }
+
+  if ((normalized.match(/\bto\b/g) || []).length >= 2) {
+    return true;
+  }
+
+  return /\b(?:get\s+off|off\s+[a-z]|take\s+(?:the\s+)?exit|turn|merge|keep\s+(?:left|right)|continue\s+(?:on|onto|straight)|toward(?:s)?|ramp|destination|make\s+a\s+(?:left|right)|left\s+on|right\s+on|head\s+(?:north|south|east|west)|go\s+(?:north|south|east|west)|(?:f(?:ree)?way|frwy|fwy|hwy|highway)\s+(?:north|south|east|west))\b/.test(normalized);
 }
 
 function extractPropertyAddressCandidateFromLine(line) {
@@ -6251,10 +6337,17 @@ function isAgentOfficeContactPriorityBoundary(line) {
     || /\bPrinted by\b/i.test(normalizedLine);
 }
 
-function extractInlineContactPriorityValue(lines, expectedLabels, valueExtractor) {
+function normalizeContactPriorityRoleToken(value) {
+  return String(value || '').replace(/[^a-z0-9]+/gi, '').toLowerCase();
+}
+
+function extractInlineContactPriorityValue(lines, expectedRoles, expectedLabels, valueExtractor) {
   const normalizedLines = Array.isArray(lines)
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
     : [];
+  const roleVariants = Array.from(new Set((Array.isArray(expectedRoles) ? expectedRoles : [])
+    .map((role) => normalizeContactPriorityRoleToken(role))
+    .filter(Boolean)));
   const labelVariants = Array.from(new Set((Array.isArray(expectedLabels) ? expectedLabels : [])
     .map((label) => String(label || '').trim())
     .filter(Boolean)));
@@ -6262,22 +6355,29 @@ function extractInlineContactPriorityValue(lines, expectedLabels, valueExtractor
     ? valueExtractor
     : (value) => String(value || '').trim();
 
-  if (normalizedLines.length === 0 || labelVariants.length === 0) {
+  if (normalizedLines.length === 0 || roleVariants.length === 0 || labelVariants.length === 0) {
     return '';
   }
 
+  const escapedRoles = roleVariants
+    .map((role) => role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .map((role) => role.replace(/\s+/g, '[\\s.-]*'));
   const escapedVariants = labelVariants
     .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .map((label) => label.replace(/\s+/g, '[\\s.-]*'));
+  const rolePattern = escapedRoles.join('|');
   const labelPattern = escapedVariants.join('|');
-  const numberedLaPrefix = '(?:\\d+\\s*[.)-]?\\s*)?l\\.?\\s*a\\.?\\s*';
+  const numberedRolePrefix = `(?:\\d+\\s*[.)-]?\\s*)?(?:${rolePattern})\\s*`;
+  const fieldPattern = `(?:^|\\b)${numberedRolePrefix}(?:${labelPattern})\\s*[:#-]?\\s*(.+?)(?=(?:\\s+${numberedRolePrefix}(?:${labelPattern})\\s*[:#-]?)|$)`;
+  const fieldRegex = new RegExp(fieldPattern, 'i');
+  const lineQualifier = new RegExp(`contact\\s+priority|(?:^|\\b)(?:\\d+\\s*[.)-]?\\s*)?(?:${rolePattern})`, 'i');
 
   for (const line of normalizedLines) {
-    if (!/contact\s+priority|la\s*direct|la\s*e[\s-]*mail/i.test(line)) {
+    if (!lineQualifier.test(line)) {
       continue;
     }
 
-    const match = line.match(new RegExp(`(?:^|\\b)${numberedLaPrefix}(?:${labelPattern})\\s*[:#-]?\\s*(.+?)(?=(?:\\s+${numberedLaPrefix}(?:${labelPattern})\\s*[:#-]?)|$)`, 'i'));
+    const match = line.match(fieldRegex);
     if (!match || !match[1]) {
       continue;
     }
@@ -6291,7 +6391,7 @@ function extractInlineContactPriorityValue(lines, expectedLabels, valueExtractor
   return '';
 }
 
-function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtractor) {
+function extractContactPriorityValueForRoles(lines, expectedRoles, expectedLabels, valueExtractor) {
   const normalizedLines = Array.isArray(lines)
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
     : [];
@@ -6299,9 +6399,16 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
     return '';
   }
 
+  const normalizedRoles = Array.from(new Set((Array.isArray(expectedRoles) ? expectedRoles : [])
+    .map((role) => normalizeContactPriorityRoleToken(role))
+    .filter(Boolean)));
+  if (normalizedRoles.length === 0) {
+    return '';
+  }
+
   const headerIndex = normalizedLines.findIndex((line) => /(?:agent\s*\/\s*office\s+)?contact\s+priority/i.test(line));
   if (headerIndex < 0) {
-    return extractInlineContactPriorityValue(normalizedLines, expectedLabels, valueExtractor);
+    return extractInlineContactPriorityValue(normalizedLines, normalizedRoles, expectedLabels, valueExtractor);
   }
 
   const labelSet = new Set(
@@ -6319,6 +6426,7 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
 
   const inlinePriorityValue = extractInlineContactPriorityValue(
     normalizedLines.slice(headerIndex, Math.min(normalizedLines.length, headerIndex + 8)),
+    normalizedRoles,
     Array.from(labelSet.values()),
     extractValue
   );
@@ -6333,13 +6441,13 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
       break;
     }
 
-    const labelMatch = line.match(/^(?:\d+\s*[.)-]?\s*)?(co\s*la|la)\s*([a-z\s-]+?)\s*[:#-]?\s*(.*)$/i);
+    const labelMatch = line.match(/^(?:\d+\s*[.)-]?\s*)?(co\s*la|la|lo)\s*([a-z\s-]+?)\s*[:#-]?\s*(.*)$/i);
     if (!labelMatch) {
       continue;
     }
 
-    const role = String(labelMatch[1] || '').replace(/\s+/g, '').toLowerCase();
-    if (role !== 'la') {
+    const role = normalizeContactPriorityRoleToken(labelMatch[1]);
+    if (!normalizedRoles.includes(role)) {
       continue;
     }
 
@@ -6358,7 +6466,7 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
       if (!nextLine || isAgentOfficeContactPriorityBoundary(nextLine)) {
         break;
       }
-      if (/^(?:\d+\.?\s*)?(?:co\s*la|la)\s*[a-z\s-]+?\s*[:#-]?/i.test(nextLine)) {
+      if (/^(?:\d+\.?\s*)?(?:co\s*la|la|lo)\s*[a-z\s-]+?\s*[:#-]?/i.test(nextLine)) {
         break;
       }
 
@@ -6370,6 +6478,14 @@ function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtr
   }
 
   return '';
+}
+
+function extractAgentOfficeContactPriorityValue(lines, expectedLabels, valueExtractor) {
+  return extractContactPriorityValueForRoles(lines, ['la'], expectedLabels, valueExtractor);
+}
+
+function extractListingOfficeContactPriorityValue(lines, expectedLabels, valueExtractor) {
+  return extractContactPriorityValueForRoles(lines, ['lo'], expectedLabels, valueExtractor);
 }
 
 function extractAgentNameFromPdfText(lines) {
@@ -6429,7 +6545,7 @@ function extractLaCellFromPdfText(lines) {
 
   const contactPriorityPhone = extractAgentOfficeContactPriorityValue(
     lines,
-    ['cell', 'mobile', 'phone', 'text', 'home'],
+    ['cell', 'mobile', 'phone', 'text', 'home', 'direct', 'directphone', 'directline'],
     (value) => extractPhoneNumber(value)
   );
   if (contactPriorityPhone) {
@@ -6518,7 +6634,12 @@ function extractLoPhoneFromPdfText(lines) {
       validate: (value) => Boolean(extractPhoneNumber(value))
     }
   );
-  return extractPhoneNumber(labeledValue);
+  const loPhone = extractPhoneNumber(labeledValue);
+  if (loPhone) {
+    return loPhone;
+  }
+
+  return extractListingOfficeContactPriorityValue(lines, ['phone', 'officephone', 'brokerphone'], (value) => extractPhoneNumber(value));
 }
 
 function extractOffersEmailFromPdfText(lines) {
@@ -6536,7 +6657,7 @@ function extractOffersEmailFromPdfText(lines) {
     return offersEmail;
   }
 
-  return '';
+  return extractAgentOfficeContactPriorityValue(lines, ['email', 'emailaddress', 'emailaddr', 'directemail'], (value) => extractEmailAddress(value));
 }
 
 function extractLaEmailFromPdfText(lines) {
@@ -6803,7 +6924,7 @@ function splitMlsImportTextIntoBlocks(text) {
 
 function normalizeMlsImportRow(row) {
   const source = row && typeof row === 'object' ? row : {};
-  return {
+  const normalizedRow = {
     propertyAddress: String(source.propertyAddress || '').trim(),
     laName: String(source.laName || '').trim(),
     loPhone: String(source.loPhone || '').trim(),
@@ -6813,6 +6934,16 @@ function normalizeMlsImportRow(row) {
     laEmail: String(source.laEmail || '').trim(),
     status: normalizeMlsImportStatusLabel(source.status || '')
   };
+
+  if (!normalizedRow.offersEmail && normalizedRow.laEmail) {
+    normalizedRow.offersEmail = normalizedRow.laEmail;
+  }
+
+  if (!normalizedRow.laCell && normalizedRow.laDirect) {
+    normalizedRow.laCell = normalizedRow.laDirect;
+  }
+
+  return normalizedRow;
 }
 
 function countMlsImportRowValues(row) {

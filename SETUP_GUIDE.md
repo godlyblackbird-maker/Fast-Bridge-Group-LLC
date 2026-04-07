@@ -228,6 +228,9 @@ Google Cloud note for the comps workspace:
 - **AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY:** Access keys for S3 if the host is not already using an AWS IAM role
 - **AWS_S3_ENDPOINT / S3_ENDPOINT:** Optional custom endpoint for S3-compatible storage
 - **AWS_S3_FORCE_PATH_STYLE / S3_FORCE_PATH_STYLE:** Optional `true`/`1` if your provider requires path-style S3 URLs
+- **DATABASE_PATH / SQLITE_DATABASE_PATH / SQLITE_DB_PATH:** Optional absolute path for the SQLite database file
+- **RENDER_DISK_MOUNT_PATH / PERSISTENT_STORAGE_PATH / DATA_DIR:** Optional persistent directory. When set, the app stores `database.db` there automatically
+- **LORIA_BROKER_EMAIL / LORIA_BROKER_PASSWORD / LORIA_BROKER_NAME:** Optional canonical broker account values used to restore the Loria Rigby account on startup
 
 Example Twilio block for `.env`:
 ```env
@@ -261,6 +264,7 @@ On Render, add these in the service dashboard under Environment:
 - `JWT_SECRET`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
+- `DATABASE_PATH` pointing at your persistent disk, for example `/var/data/database.db`
 - `STEVE_SMTP_USER`
 - `STEVE_SMTP_PASS`
 - `STEVE_SMTP_SIGNATURE` if you want a default signature
@@ -281,6 +285,11 @@ Steve email behavior after this change:
 - If Steve saved Gmail settings in Profile, those are used first.
 - If not, the app falls back to `STEVE_SMTP_USER` and `STEVE_SMTP_PASS` from Render.
 - The same fallback pattern also works for Isaac if you set the `ISAAC_SMTP_*` variables.
+
+Database persistence behavior after this change:
+- If `DATABASE_PATH` is set, the server reads and writes SQLite there.
+- If only `RENDER_DISK_MOUNT_PATH` (or another supported data-dir variable) is set, the server stores `database.db` inside that directory.
+- If neither is set, the server falls back to the project-local `database.db`, which is fine for local development but not for restart-safe production hosting.
 
 ⚠️ **IMPORTANT FOR PRODUCTION:**
 - Change `JWT_SECRET` to a long random string
