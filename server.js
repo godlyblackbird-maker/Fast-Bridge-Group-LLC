@@ -1397,7 +1397,15 @@ function rejectTestUserWriteAccess(req, res, next) {
 }
 
 app.use(rejectTestUserWriteAccess);
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname), {
+  setHeaders(res, filePath) {
+    if (String(path.extname(filePath) || '').toLowerCase() === '.html') {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 app.post('/api/import-listing-by-address', async (req, res) => {
   const rawAddress = String(req.body?.address || '').trim();
