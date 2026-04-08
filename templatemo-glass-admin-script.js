@@ -10,6 +10,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const DEALS_CLICKED_KEY = 'clickedDealsByUser';
     const IMPORTED_PROPERTIES_KEY = 'importedPropertiesByUser';
     const OFFER_DOCUMENTS_KEY = 'offerDocumentsByUser';
+    const PROPERTY_DETAIL_DOCUMENTS_KEY = 'propertyDetailDocumentsByUser';
     const AGENT_WORKSPACE_EMAIL_PREP_KEY = 'agentWorkspaceEmailPrepByUser';
     const IA_CALCULATOR_STATE_KEY = 'iaCalculatorStateByUser';
     const PIQ_AGENT_STATUS_KEY = 'piqAgentStatusByUser';
@@ -2150,7 +2151,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
         const compactBeds = normalizeSummaryMetric(summaryParts[1], '').replace(/\bbr\b/i, 'Beds') || '0 Beds';
         const compactBaths = normalizeSummaryMetric(summaryParts[2], '').replace(/\bba\b/i, 'Baths') || '0 Baths';
-        const compactArea = normalizeSummaryMetric(summaryParts[5], '').replace(/ft-�/gi, 'sqft') || '0 sqft';
+        const compactArea = normalizePropertyDetailDisplayText(normalizeSummaryMetric(summaryParts[5], '')) || '0 sqft';
         const compactStatus = String(detail.statusLabel || 'Active').trim().toLowerCase().replace(/\s+/g, '-');
         const compactLocation = String(detail.areaLabel || detail.city || detail.county || detail.marketInfo || '').trim() || '-';
         const compactImageUrl = String((Array.isArray(detail.propertyImages) ? detail.propertyImages[0] : '') || detail.imageUrl || '').trim();
@@ -2260,7 +2261,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         };
         const compactBeds = normalizeSummaryMetric(summaryParts[1], '').replace(/\bbr\b/i, 'Beds') || '0 Beds';
         const compactBaths = normalizeSummaryMetric(summaryParts[2], '').replace(/\bba\b/i, 'Baths') || '0 Baths';
-        const compactArea = normalizeSummaryMetric(summaryParts[5], '').replace(/ft-�/gi, 'sqft') || '0 sqft';
+        const compactArea = normalizePropertyDetailDisplayText(normalizeSummaryMetric(summaryParts[5], '')) || '0 sqft';
         const compactStatus = String(detail.statusLabel || 'Active').trim().toLowerCase().replace(/\s+/g, '-');
         const compactLocation = String(detail.areaLabel || detail.city || detail.county || detail.marketInfo || '').trim() || '-';
         const compactImageUrl = String((Array.isArray(detail.propertyImages) ? detail.propertyImages[0] : '') || detail.imageUrl || '').trim();
@@ -6534,7 +6535,82 @@ function initNavbarDateTime() {
     // Smooth Page Transitions
     // ============================================
     function initPageTransitions() {
-        // Disabled to prevent full-screen fade during sidebar/page navigation.
+        const root = document.documentElement;
+        if (!root || root.dataset.pageTransitionsBound === 'true') {
+            if (root) {
+                root.setAttribute('data-ui-ready', 'true');
+            }
+            return;
+        }
+
+        root.dataset.pageTransitionsBound = 'true';
+
+        const markUiReady = () => {
+            root.removeAttribute('data-page-nav');
+            root.setAttribute('data-ui-ready', 'true');
+        };
+
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(markUiReady);
+            });
+        } else {
+            window.setTimeout(markUiReady, 0);
+        }
+
+        const isInternalNavigationLink = (link) => {
+            if (!(link instanceof HTMLAnchorElement)) {
+                return false;
+            }
+
+            const rawHref = String(link.getAttribute('href') || '').trim();
+            if (!rawHref || rawHref.startsWith('#') || link.hasAttribute('download')) {
+                return false;
+            }
+
+            const target = String(link.getAttribute('target') || '').trim().toLowerCase();
+            if (target && target !== '_self') {
+                return false;
+            }
+
+            try {
+                const resolvedUrl = new URL(link.href, window.location.href);
+                const currentUrl = new URL(window.location.href);
+                if (resolvedUrl.origin !== currentUrl.origin) {
+                    return false;
+                }
+
+                const resolvedPath = resolvedUrl.pathname.replace(/\/+$/, '');
+                const currentPath = currentUrl.pathname.replace(/\/+$/, '');
+                return resolvedPath !== currentPath || resolvedUrl.search !== currentUrl.search;
+            } catch (error) {
+                return false;
+            }
+        };
+
+        document.addEventListener('click', (event) => {
+            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+            }
+
+            const link = event.target && typeof event.target.closest === 'function'
+                ? event.target.closest('a[href]')
+                : null;
+
+            if (!isInternalNavigationLink(link)) {
+                return;
+            }
+
+            root.setAttribute('data-page-nav', 'pending');
+        }, true);
+
+        window.addEventListener('beforeunload', () => {
+            root.setAttribute('data-page-nav', 'pending');
+        });
+
+        window.addEventListener('pageshow', () => {
+            markUiReady();
+        });
     }
 
     // ============================================
@@ -16996,6 +17072,14 @@ function initNavbarDateTime() {
             return raw || 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80';
         }
 
+        function normalizePropertyDetailDisplayText(value) {
+            return String(value || '')
+                .replace(/ft-�/gi, 'sqft')
+                .replace(/�/g, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+        }
+
         function createImportedPropertyRecord(formData) {
             const address = String(formData.get('address') || '').trim();
             const location = String(formData.get('location') || '').trim();
@@ -17021,7 +17105,7 @@ function initNavbarDateTime() {
             const propertySnapshot = {
                 address,
                 propertyImages: [imageUrl],
-                propertyDetails: `Single Family / ${beds.replace('Beds', 'Br').trim()} / ${baths.replace('Baths', 'Ba').trim()} / ${garageCount} Gar / ${yearBuilt} / ${area.replace('sqft', 'ft-�').trim()} / ${lotSize.replace('sqft', 'ft-�').trim()} / Pool: Unknown`,
+                propertyDetails: `Single Family / ${beds.replace('Beds', 'Br').trim()} / ${baths.replace('Baths', 'Ba').trim()} / ${garageCount} Gar / ${yearBuilt} / ${area.replace('sqft', 'sqft').trim()} / ${lotSize.replace('sqft', 'sqft').trim()} / Pool: Unknown`,
                 listPrice: price,
                 propensity: Math.max(1, Math.min(10, Math.round(Number.isFinite(roi) ? roi : 6))),
                 moderatePain: 'Imported Listing',
@@ -17892,6 +17976,17 @@ function initNavbarDateTime() {
             }
             : defaultDetailData;
 
+        detailData.propertyDetails = normalizePropertyDetailDisplayText(detailData.propertyDetails || defaultDetailData.propertyDetails);
+        detailData.marketInfo = normalizePropertyDetailDisplayText(detailData.marketInfo || defaultDetailData.marketInfo);
+        detailData.lotSize = normalizePropertyDetailDisplayText(detailData.lotSize || defaultDetailData.lotSize);
+        detailData.areaLabel = normalizePropertyDetailDisplayText(detailData.areaLabel || defaultDetailData.areaLabel);
+
+        try {
+            localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
+        } catch (error) {
+            // Ignore storage write failures while normalizing persisted property detail text.
+        }
+
         const propertyBackLink = document.querySelector('.property-back-link');
         const mlsNavLink = document.querySelector('.sidebar .nav-link[href="mls.html"], .sidebar .nav-link[href="/mls.html"]');
         const dealsNavLink = document.querySelector('.sidebar .nav-link[href="deals.html"], .sidebar .nav-link[href="/deals.html"]');
@@ -18408,6 +18503,32 @@ function initNavbarDateTime() {
             const uploadScope = 'property-detail';
             let propertyDocuments = [];
 
+            function getPropertyDetailDocuments() {
+                return getUserScopedItems(PROPERTY_DETAIL_DOCUMENTS_KEY, workspaceUser.key)
+                    .filter(item => String(item.propertyKey || '').trim().toLowerCase() === propertyKey)
+                    .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0));
+            }
+
+            function setPropertyDetailDocuments(nextDocuments) {
+                const otherDocuments = getUserScopedItems(PROPERTY_DETAIL_DOCUMENTS_KEY, workspaceUser.key)
+                    .filter(item => String(item.propertyKey || '').trim().toLowerCase() !== propertyKey);
+                setUserScopedItems(PROPERTY_DETAIL_DOCUMENTS_KEY, workspaceUser.key, [...otherDocuments, ...nextDocuments]);
+            }
+
+            function mergePropertyDetailDocuments(cloudDocuments, localDocuments) {
+                const merged = [];
+                const seenIds = new Set();
+                [...(Array.isArray(cloudDocuments) ? cloudDocuments : []), ...(Array.isArray(localDocuments) ? localDocuments : [])].forEach((documentItem) => {
+                    const documentId = String(documentItem && documentItem.id || '').trim();
+                    if (!documentId || seenIds.has(documentId)) {
+                        return;
+                    }
+                    seenIds.add(documentId);
+                    merged.push(documentItem);
+                });
+                return merged.sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0));
+            }
+
             function renderEmptyLibrary(message = 'Use the paperclip to save files for this property.') {
                 libraryList.innerHTML = `
                     <div class="offer-docs-empty">
@@ -18453,7 +18574,7 @@ function initNavbarDateTime() {
                     [
                         formatFileSize(documentItem.fileSize),
                         String(documentItem.fileType || '').replace(/^\./, '').toUpperCase() || 'FILE',
-                        documentItem.storage === 'cloud' ? 'Cloud' : ''
+                        documentItem.storage === 'cloud' ? 'Cloud' : (documentItem.storage === 'indexeddb' ? 'Browser' : '')
                     ].filter(Boolean).forEach((value) => {
                         const chip = document.createElement('span');
                         chip.className = 'offer-doc-chip';
@@ -18467,6 +18588,22 @@ function initNavbarDateTime() {
 
                     const openDocument = async () => {
                         try {
+                            if (documentItem.storage === 'indexeddb') {
+                                const blob = await getOfferDocumentBlob(documentItem.id);
+                                if (!blob) {
+                                    throw new Error('This browser-stored property document is no longer available.');
+                                }
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.target = '_blank';
+                                link.rel = 'noopener';
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+                                return;
+                            }
                             await openCloudStoredDocument(documentItem, false);
                         } catch (error) {
                             showDashboardToast('error', 'Open Failed', error && error.message ? error.message : 'The selected property document could not be opened.');
@@ -18518,12 +18655,19 @@ function initNavbarDateTime() {
                         throw new Error(payload && payload.error ? payload.error : 'Property documents could not be loaded.');
                     }
 
-                    propertyDocuments = Array.isArray(payload && payload.documents)
+                    const cloudDocuments = Array.isArray(payload && payload.documents)
                         ? payload.documents.map((documentItem) => buildCloudUploadDocument(documentItem, 'Property Document'))
                         : [];
+                    const localDocuments = getPropertyDetailDocuments();
+                    propertyDocuments = mergePropertyDetailDocuments(cloudDocuments, localDocuments);
                     renderDocuments();
                 } catch (error) {
-                    propertyDocuments = [];
+                    propertyDocuments = getPropertyDetailDocuments();
+                    if (propertyDocuments.length > 0) {
+                        renderDocuments();
+                        libraryNote.textContent = 'Cloud property documents could not be loaded, but browser-saved files are still available here.';
+                        return;
+                    }
                     renderEmptyLibrary('Property documents could not be loaded right now.');
                     libraryNote.textContent = error && error.message ? error.message : 'Property documents could not be loaded right now.';
                 }
@@ -18545,12 +18689,41 @@ function initNavbarDateTime() {
                 try {
                     const uploadedDocuments = [];
                     for (const file of files) {
-                        const uploadedDocument = await uploadFileToCloudStorage(uploadScope, propertyKey, file);
+                        let uploadedDocument = null;
+
+                        try {
+                            uploadedDocument = await uploadFileToCloudStorage(uploadScope, propertyKey, file);
+                        } catch (cloudError) {
+                            const documentId = `property-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+                            await putOfferDocumentBlob(documentId, file);
+                            uploadedDocument = {
+                                id: documentId,
+                                label: file.name,
+                                fileName: file.name,
+                                fileSize: file.size,
+                                fileType: file.type || 'File',
+                                storage: 'indexeddb',
+                                createdAt: Date.now(),
+                                updatedAt: Date.now(),
+                                propertyKey
+                            };
+                        }
+
+                        uploadedDocument = {
+                            ...uploadedDocument,
+                            propertyKey,
+                            label: file.name,
+                            fileName: file.name,
+                            fileSize: file.size,
+                            fileType: file.type || uploadedDocument.fileType || 'File',
+                            updatedAt: Number(uploadedDocument.updatedAt) || Date.now()
+                        };
                         uploadedDocuments.push(uploadedDocument);
                     }
 
-                    propertyDocuments = uploadedDocuments.concat(propertyDocuments)
-                        .sort((left, right) => (Number(right.updatedAt) || 0) - (Number(left.updatedAt) || 0));
+                    const localDocuments = mergePropertyDetailDocuments(uploadedDocuments.filter((item) => item.storage === 'indexeddb'), getPropertyDetailDocuments());
+                    setPropertyDetailDocuments(localDocuments);
+                    propertyDocuments = mergePropertyDetailDocuments(uploadedDocuments, propertyDocuments);
                     renderDocuments();
                     showDashboardToast('success', 'Property Documents Saved', `${uploadedDocuments.length} file${uploadedDocuments.length === 1 ? '' : 's'} uploaded for ${propertyAddress}.`);
                 } catch (error) {
@@ -21173,7 +21346,7 @@ function initNavbarDateTime() {
                 }
 
                 const subjectPrice = parseCurrencyAmount(detailData.listPrice);
-                const subjectSqftMatch = String(detailData.propertyDetails || '').match(/([\d,]+)\s*ft-�/i);
+                const subjectSqftMatch = String(detailData.propertyDetails || '').match(/([\d,]+)\s*sqft/i);
                 const subjectSqft = subjectSqftMatch ? Number(String(subjectSqftMatch[1]).replace(/,/g, '')) : 0;
                 const subjectPpsf = subjectSqft > 0 ? Math.round(subjectPrice / subjectSqft) : 0;
 

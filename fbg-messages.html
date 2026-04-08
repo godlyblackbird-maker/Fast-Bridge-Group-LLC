@@ -1046,7 +1046,7 @@
                                 </button>
                                 <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
                             </div>
-                            <input id="messages-chat-attachment-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.webp,.txt,image/*">
+                            <input id="messages-chat-attachment-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.gif,.webp,.bmp,.svg,.avif,.heic,.heif,.jfif,.tif,.tiff,image/*">
                             <div class="messages-chat-actions">
                                 <div id="messages-chat-status" class="messages-chat-status"></div>
                                 <button id="messages-chat-send" type="submit" class="card-btn active" aria-label="Send message" title="Send message" disabled>
@@ -1345,6 +1345,10 @@
                 return normalizedText;
             }
 
+            function canQueueAttachments() {
+                return Boolean(authToken) && usersCache.length > 0 && !editingMessageState;
+            }
+
             function updateComposerModeUi() {
                 if (editingBar) {
                     if (editingMessageState) {
@@ -1363,7 +1367,7 @@
                 }
 
                 if (attachButton) {
-                    attachButton.disabled = !selectedUserId || Boolean(editingMessageState);
+                    attachButton.disabled = !canQueueAttachments();
                 }
 
                 if (sendButton) {
@@ -1416,7 +1420,7 @@
 
             function isImageAttachment(attachment) {
                 return /^image\//i.test(String(attachment && attachment.fileType || '').trim())
-                    || /\.(png|jpe?g|gif|webp)$/i.test(String(attachment && attachment.fileName || '').trim());
+                    || /\.(png|jpe?g|gif|webp|bmp|svg|avif|heic|heif|jfif|tiff?)$/i.test(String(attachment && attachment.fileName || '').trim());
             }
 
             function buildMessageAttachmentPayload(documentItem) {
@@ -1596,11 +1600,6 @@
                     return;
                 }
 
-                if (!selectedUserId) {
-                    setChatStatus('Pick a teammate before attaching files.', true);
-                    return;
-                }
-
                 setChatStatus(files.length === 1 ? 'Uploading attachment...' : `Uploading ${files.length} attachments...`, false);
                 if (attachButton) {
                     attachButton.disabled = true;
@@ -1616,10 +1615,14 @@
                     }
                     pendingAttachmentItems = [...pendingAttachmentItems, ...uploadedAttachments];
                     renderPendingAttachments();
-                    setChatStatus(uploadedAttachments.length === 1 ? 'Attachment ready to send.' : `${uploadedAttachments.length} attachments ready to send.`, false);
+                    if (selectedUserId) {
+                        setChatStatus(uploadedAttachments.length === 1 ? 'Attachment ready to send.' : `${uploadedAttachments.length} attachments ready to send.`, false);
+                    } else {
+                        setChatStatus(uploadedAttachments.length === 1 ? 'Attachment ready. Pick a teammate and press send.' : `${uploadedAttachments.length} attachments ready. Pick a teammate and press send.`, false);
+                    }
                 } finally {
                     if (attachButton) {
-                        attachButton.disabled = !selectedUserId;
+                        attachButton.disabled = !canQueueAttachments();
                     }
                     if (sendButton) {
                         sendButton.disabled = !selectedUserId;
@@ -1692,7 +1695,7 @@
                     input.disabled = !nextEnabled;
                 }
                 if (attachButton) {
-                    attachButton.disabled = !nextEnabled || Boolean(editingMessageState);
+                    attachButton.disabled = !nextEnabled || !canQueueAttachments();
                 }
                 if (sendButton) {
                     sendButton.disabled = !nextEnabled;

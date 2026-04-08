@@ -3166,6 +3166,20 @@ html {
     scroll-behavior: smooth;
 }
 
+html:not([data-ui-ready="true"]) {
+    scroll-behavior: auto;
+}
+
+html:not([data-ui-ready="true"]) *,
+html:not([data-ui-ready="true"]) *::before,
+html:not([data-ui-ready="true"]) *::after,
+html[data-page-nav="pending"] *,
+html[data-page-nav="pending"] *::before,
+html[data-page-nav="pending"] *::after {
+    transition: none !important;
+    animation: none !important;
+}
+
 body {
     font-family: 'Outfit', sans-serif;
     background: var(--bg-dark);
@@ -7275,7 +7289,7 @@ body.analytics-reboot .analytics-my-file-count {
 
 .bottom-grid .calendar-widget,
 .bottom-grid .chatgpt-widget {
-    min-height: clamp(520px, 62vh, 680px);
+    min-height: clamp(560px, 68vh, 760px);
 }
 
 .bottom-grid .widget-card .card-header,
@@ -7492,6 +7506,44 @@ body.analytics-reboot .analytics-my-file-count {
     align-items: center;
     gap: 10px;
     margin-bottom: 8px;
+}
+
+[data-widget-id="agent-workspace-filter"] {
+    display: flex;
+    flex-direction: column;
+    min-height: clamp(520px, 62vh, 720px);
+    max-height: calc(100vh - 150px);
+}
+
+[data-widget-id="agent-workspace-filter"] .card-header,
+[data-widget-id="agent-workspace-filter"] .agent-workspace-filter-toolbar,
+[data-widget-id="agent-workspace-filter"] .agent-workspace-filter-actions,
+[data-widget-id="agent-workspace-filter"] .offer-docs-note {
+    flex: 0 0 auto;
+}
+
+#agent-workspace-filter-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding-right: 4px;
+}
+
+#agent-workspace-filter-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#agent-workspace-filter-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 999px;
+}
+
+#agent-workspace-filter-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(var(--accent-light-rgb), 0.5), rgba(var(--accent-rgb), 0.4));
+    border-radius: 999px;
 }
 
 .agent-workspace-filter-pill-row {
@@ -10573,6 +10625,7 @@ body.analytics-reboot .analytics-my-file-count {
 .chatgpt-chat {
     position: relative;
     flex: 1 1 auto;
+    flex-basis: clamp(280px, 42vh, 460px);
     min-height: 0;
     max-height: 100%;
     overflow-y: auto;
@@ -10667,6 +10720,10 @@ body.analytics-reboot .analytics-my-file-count {
 .chatgpt-msg.assistant {
     align-self: flex-start;
     max-width: 90%;
+    max-height: clamp(220px, 40vh, 460px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(148, 163, 184, 0.08));
     border: 1px solid rgba(255, 255, 255, 0.13);
     color: var(--text-secondary);
@@ -18762,7 +18819,7 @@ select.form-input option:checked,
 }
 
 .glass-card {
-    animation: fadeInUp 0.6s ease-out backwards;
+    animation: none;
 }
 
 .stats-grid .glass-card:nth-child(1) { animation-delay: 0.1s; }
@@ -18779,5 +18836,5 @@ select.form-input option:checked,
 .bottom-grid .glass-card:nth-child(3) { animation-delay: 1s; }
 
 .login-card {
-    animation: fadeInUp 0.6s ease-out;
+    animation: none;
 }

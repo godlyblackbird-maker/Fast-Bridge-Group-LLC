@@ -3650,6 +3650,13 @@ function getContentTypeForFileName(fileName, fallbackType = '') {
   if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
   if (extension === '.gif') return 'image/gif';
   if (extension === '.webp') return 'image/webp';
+  if (extension === '.bmp') return 'image/bmp';
+  if (extension === '.svg') return 'image/svg+xml';
+  if (extension === '.avif') return 'image/avif';
+  if (extension === '.heic') return 'image/heic';
+  if (extension === '.heif') return 'image/heif';
+  if (extension === '.jfif') return 'image/jpeg';
+  if (extension === '.tif' || extension === '.tiff') return 'image/tiff';
   return 'application/octet-stream';
 }
 
