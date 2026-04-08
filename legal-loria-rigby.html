@@ -40,6 +40,114 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .legal-loria-profile-card {
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .legal-loria-profile-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+            min-height: 100%;
+        }
+
+        .legal-loria-profile-media {
+            position: relative;
+            min-height: 420px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.22));
+        }
+
+        .legal-loria-profile-media img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+            object-fit: cover;
+            object-position: center top;
+        }
+
+        .legal-loria-profile-copy {
+            display: grid;
+            align-content: center;
+            gap: 14px;
+            padding: 28px;
+        }
+
+        .legal-loria-profile-kicker {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-rgb), 0.18);
+            background: rgba(var(--accent-light-rgb), 0.1);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .legal-loria-profile-copy h2 {
+            margin-bottom: 0;
+        }
+
+        .legal-loria-profile-copy p {
+            margin: 0;
+        }
+
+        .legal-loria-gallery-card {
+            display: grid;
+            gap: 18px;
+        }
+
+        .legal-loria-gallery {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .legal-loria-gallery-figure {
+            margin: 0;
+            overflow: hidden;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+
+        .legal-loria-gallery-figure img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            object-fit: cover;
+            object-position: center top;
+        }
+
+        .legal-loria-gallery-figure figcaption {
+            padding: 12px 14px 14px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 900px) {
+            .legal-loria-profile-grid,
+            .legal-loria-gallery {
+                grid-template-columns: 1fr;
+            }
+
+            .legal-loria-profile-media,
+            .legal-loria-profile-media img {
+                min-height: 320px;
+            }
+
+            .legal-loria-profile-copy {
+                padding: 22px;
+            }
+        }
+    </style>
 </head>
 <body class="legal-page">
     <main class="legal-page-main">
@@ -50,7 +158,7 @@
         <section class="legal-hero">
             <div class="legal-eyebrow">CONTACT US</div>
             <h1>Loria Rigby</h1>
-            <p>Loria Rigby serves as the Broker for FAST BRIDGE GROUP and is the contact point for broker-supervision matters, brokerage authority questions, transaction oversight concerns, and compliance-sensitive issues.</p>
+            <p>Loria Rigby serves as the Broker for FAST BRIDGE GROUP and is the contact point for broker-supervision matters, brokerage authority questions, transaction oversight concerns, and compliance-sensitive issues. She brings more than 15 years of real estate experience and a client-first approach shaped by decades of hands-on work and leadership.</p>
         </section>
         <nav class="legal-top-links" aria-label="Contact pages">
             <a href="legal-contact-us.html">Contact Us</a>
@@ -60,6 +168,23 @@
             <a href="legal-broker-information.html">Broker Information</a>
         </nav>
         <section class="legal-grid" aria-label="Loria Rigby contact details">
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card legal-loria-profile-card" tabindex="0">
+                <div class="legal-loria-profile-grid">
+                    <div class="legal-loria-profile-media">
+                        <img src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%202%20(fastbridegroupllc).jpeg" alt="Portrait of Loria Rigby in a white dress">
+                    </div>
+                    <div class="legal-loria-profile-copy">
+                        <span class="legal-loria-profile-kicker">Broker Profile</span>
+                        <h2>Loria Rigby</h2>
+                        <p class="legal-card-lead">Founder of Rigby &amp; Associates R.E. SVC and broker contact for FAST BRIDGE GROUP, with more than 15 years of real estate experience.</p>
+                        <p>Her work is built on discipline, client loyalty, and a practical understanding of what families, buyers, and sellers need when a transaction matters.</p>
+                        <div class="legal-top-links" aria-label="Loria Rigby profile links">
+                            <a href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">Visit Full About Page</a>
+                            <a href="legal-broker-information.html">Broker Information</a>
+                        </div>
+                    </div>
+                </div>
+            </article>
             <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
                 <h2>Broker contact</h2>
                 <p class="legal-card-lead">Use this page when the issue involves broker identity, transaction supervision, licensing scope, authority questions, brokerage disclosures, or compliance review that requires broker-level attention.</p>
@@ -74,6 +199,42 @@
                 <p>Contact Loria Rigby when the issue touches licensing, brokerage authority, supervision, or transaction oversight. If broker review is part of doing the work correctly, this page is the right path.</p>
                 <div class="legal-top-links" aria-label="Broker information links">
                     <a href="legal-broker-information.html">Broker Information</a>
+                    <a href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">About Loria Rigby</a>
+                </div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Background &amp; experience</h2>
+                <p class="legal-card-lead">Loria Rigby, founder of Rigby &amp; Associates R.E. SVC, has practiced real estate for over 15 years after beginning her career in the industry as a broker's assistant while still working in retail management.</p>
+                <p>Before launching her own brokerage path, Loria spent more than 20 years in retail and worked her way into management. Even with that progress, she found the work unfulfilling and started pursuing real estate part time to build something more meaningful.</p>
+                <p>What began as supplemental income quickly became a calling. Helping people find the right home and guiding clients through real estate needs pushed her to leave retail behind and move fully into the business she now leads with long-term commitment and consistency.</p>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>What drives her work</h2>
+                <p class="legal-card-lead">Loria's work ethic is closely tied to her life story, family responsibilities, and a practical understanding of what clients need when a transaction carries real weight.</p>
+                <ul class="legal-card-list">
+                    <li>Born in Nicaragua and moved to the United States at age 13.</li>
+                    <li>Grew up watching her mother work two jobs to support the family.</li>
+                    <li>Raised two children as a single parent and understands the value of disciplined, reliable work.</li>
+                    <li>Built her business through loyal clients, personal referrals, and repeat business.</li>
+                    <li>Volunteers with TFCF, supporting homeless women and children.</li>
+                </ul>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Personal note</h2>
+                <p>Outside of client work, Loria enjoys spending time with family, entertaining friends, and traveling. That balance shows up in the way she approaches brokerage work: personal, steady, and committed to meeting client needs without losing the human side of the transaction.</p>
+            </article>
+            <article class="legal-card legal-hover-card legal-loria-gallery-card" tabindex="0">
+                <h2>Photo Gallery</h2>
+                <p class="legal-card-lead">Recent portraits used for broker and contact presentation across the site.</p>
+                <div class="legal-loria-gallery" aria-label="Loria Rigby photo gallery">
+                    <figure class="legal-loria-gallery-figure">
+                        <img src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%202%20(fastbridegroupllc).jpeg" alt="Loria Rigby smiling in a white dress">
+                        <figcaption>Primary profile portrait for her personal contact and biography page.</figcaption>
+                    </figure>
+                    <figure class="legal-loria-gallery-figure">
+                        <img src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%20(Fastbridgegroupllc).jpeg" alt="Loria Rigby in a black outfit by the pool">
+                        <figcaption>Broker portrait used to support the brokerage information section.</figcaption>
+                    </figure>
                 </div>
             </article>
         </section>
