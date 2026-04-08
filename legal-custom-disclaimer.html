@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Disclaimer - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="Custom marketing and lead-form disclaimer language for FAST BRIDGE GROUP Facebook and website lead collection.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const readJson = (key) => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (error) { return {}; } };
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const themeStore = readJson('dashboardThemeByUser');
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
+                if (theme === 'system') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) theme = 'beach';
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) { document.documentElement.setAttribute('data-theme', 'beach'); }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+        <section class="legal-hero">
+            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <h1>Custom Disclaimer</h1>
+            <p>Use this page for custom lead-form notices that supplement Facebook's default privacy disclaimer with marketing consent, contact authorization, and transaction-related legal notices.</p>
+        </section>
+        <nav class="legal-top-links" aria-label="Legal pages">
+            <a href="legal-privacy-policy.html">Privacy Policy</a>
+            <a href="legal-terms-of-use.html">Terms of Use</a>
+            <a href="legal-equal-housing.html">Equal Housing</a>
+            <a href="legal-contact-us.html">Contact Us</a>
+            <a href="legal-broker-information.html">Broker Information</a>
+        </nav>
+        <section class="legal-grid" aria-label="Custom disclaimer details">
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
+                <h2>Copy-ready Facebook custom disclaimer</h2>
+                <p class="legal-card-lead">Use the text below in Meta lead forms when you want a custom disclaimer in addition to the privacy-policy link.</p>
+                <p>By submitting this form, you agree that FAST BRIDGE GROUP may contact you by phone, email, and text message regarding your real-estate inquiry, property review, buying or selling opportunities, appointment scheduling, offer follow-up, and related marketing communications. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. Reply STOP to opt out and HELP for help. Submitted information is subject to our <a href="legal-privacy-policy.html">Privacy Policy</a> and <a href="legal-terms-of-use.html">Terms of Use</a>.</p>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>What this disclaimer covers</h2>
+                <ul class="legal-card-list">
+                    <li>Permission for FAST BRIDGE GROUP to follow up about the inquiry by call, email, or text.</li>
+                    <li>Marketing opt-in language that makes clear follow-up may include promotional communication tied to the submitted request.</li>
+                    <li>SMS notice basics including opt out, help instructions, and carrier-rate notice.</li>
+                    <li>Cross-reference to the site's main privacy policy and terms pages.</li>
+                </ul>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Recommended use</h2>
+                <p>This page is built for seller leads, buyer leads, cash-offer ads, listing intake, and similar real-estate campaigns where Facebook allows a custom disclaimer field. If the wording changes based on the campaign, keep the core consent, opt-out, and privacy-policy references intact.</p>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Additional legal notice</h2>
+                <p>Submission of a lead form does not create an agency relationship, guarantee an offer, promise eligibility, or create a binding transaction. Property evaluations, purchase discussions, timelines, and next steps depend on review, verification, and mutual agreement.</p>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Fair housing and compliance</h2>
+                <p>FAST BRIDGE GROUP supports equal housing opportunity and expects all lead handling, qualification, communication, and follow-up practices to comply with applicable fair housing, consumer protection, and advertising rules.</p>
+            </article>
+            <article class="legal-card legal-card-featured legal-hover-card" tabindex="0">
+                <h2>Public links for ad setup</h2>
+                <p class="legal-card-lead">Use this page URL for a custom disclaimer reference and use the privacy page URL for Facebook's privacy-policy field.</p>
+                <p><a href="legal-custom-disclaimer.html">Custom Disclaimer</a> | <a href="legal-privacy-policy.html">Privacy Policy</a></p>
+            </article>
+        </section>
+    </main>
+    <script src="templatemo-glass-admin-script.js"></script>
+</body>
+</html>
