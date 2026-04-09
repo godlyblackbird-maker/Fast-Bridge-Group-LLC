@@ -18388,7 +18388,8 @@ select,
 select.form-input,
 .ia-grid select,
 .offer-grid select,
-.form-group .form-input[type="select-one"] {
+.form-group .form-input[type="select-one"],
+.notes-folder-select {
     background-color: rgba(255, 255, 255, 0.06) !important;
     color: var(--text-primary) !important;
     border: 1px solid rgba(255, 255, 255, 0.16) !important;
@@ -18406,7 +18407,8 @@ select:focus,
 select.form-input:focus,
 .ia-grid select:focus,
 .offer-grid select:focus,
-.form-group .form-input[type="select-one"]:focus {
+.form-group .form-input[type="select-one"]:focus,
+.notes-folder-select:focus {
     border-color: rgba(52, 211, 153, 0.45) !important;
     box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.12);
 }

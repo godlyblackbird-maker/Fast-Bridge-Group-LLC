@@ -6505,6 +6505,162 @@ function initNavbarDateTime() {
         });
     }
 
+    function initGlobalNumericInputFormatting() {
+        const pageName = String(window.location.pathname || '').split('/').pop().toLowerCase();
+        if (pageName === 'mls-imports-spreadsheet.html') {
+            return;
+        }
+
+        function shouldSkipInput(input) {
+            if (!(input instanceof HTMLInputElement)) {
+                return true;
+            }
+
+            if (input.disabled || input.readOnly || input.dataset.autoCommas === 'off') {
+                return true;
+            }
+
+            const fieldIdentity = [input.id, input.name, input.autocomplete, input.placeholder]
+                .map((value) => String(value || '').trim().toLowerCase())
+                .join(' ');
+
+            if (String(input.autocomplete || '').trim().toLowerCase() === 'one-time-code') {
+                return true;
+            }
+
+            const maxLength = Number(input.maxLength);
+            if (Number.isFinite(maxLength) && maxLength > 0 && maxLength <= 8 && /(2fa|otp|authenticator|verification|verify|passcode|one-time|code)/.test(fieldIdentity)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function findNumericCaretPosition(formattedValue, digitCount, hasDecimalPointBeforeCaret) {
+            if (digitCount <= 0) {
+                if (hasDecimalPointBeforeCaret) {
+                    const decimalIndex = formattedValue.indexOf('.');
+                    return decimalIndex >= 0 ? decimalIndex + 1 : formattedValue.length;
+                }
+
+                return 0;
+            }
+
+            let seenDigits = 0;
+            for (let index = 0; index < formattedValue.length; index += 1) {
+                const character = formattedValue.charAt(index);
+                if (/\d/.test(character)) {
+                    seenDigits += 1;
+                }
+
+                if (seenDigits >= digitCount) {
+                    if (hasDecimalPointBeforeCaret) {
+                        const decimalIndex = formattedValue.indexOf('.');
+                        if (decimalIndex >= 0 && index < decimalIndex) {
+                            return decimalIndex + 1;
+                        }
+                    }
+
+                    return index + 1;
+                }
+            }
+
+            if (hasDecimalPointBeforeCaret) {
+                const decimalIndex = formattedValue.indexOf('.');
+                if (decimalIndex >= 0) {
+                    return Math.min(decimalIndex + 1, formattedValue.length);
+                }
+            }
+
+            return formattedValue.length;
+        }
+
+        function formatNumericInputValue(input) {
+            if (shouldSkipInput(input)) {
+                return;
+            }
+
+            const rawValue = String(input.value || '');
+            const inputMode = String(input.inputMode || '').trim().toLowerCase();
+            const isDecimal = inputMode === 'decimal';
+            const selectionStart = typeof input.selectionStart === 'number' ? input.selectionStart : rawValue.length;
+            const rawBeforeCaret = rawValue.slice(0, selectionStart);
+
+            if (isDecimal) {
+                const cleanedBeforeCaret = rawBeforeCaret.replace(/,/g, '').replace(/[^0-9.]/g, '');
+                const hasDecimalPointBeforeCaret = cleanedBeforeCaret.includes('.');
+                const digitsBeforeCaret = cleanedBeforeCaret.replace(/\D/g, '').length;
+
+                let sanitizedValue = rawValue.replace(/,/g, '').replace(/[^0-9.]/g, '');
+                if (!sanitizedValue) {
+                    input.value = '';
+                    return;
+                }
+
+                if (sanitizedValue.startsWith('.')) {
+                    sanitizedValue = `0${sanitizedValue}`;
+                }
+
+                const firstDecimalIndex = sanitizedValue.indexOf('.');
+                const hasDecimalPoint = firstDecimalIndex >= 0;
+                const hasTrailingDecimal = hasDecimalPoint && firstDecimalIndex === sanitizedValue.length - 1;
+                const integerRaw = hasDecimalPoint ? sanitizedValue.slice(0, firstDecimalIndex) : sanitizedValue;
+                const decimalRaw = hasDecimalPoint ? sanitizedValue.slice(firstDecimalIndex + 1).replace(/\./g, '') : '';
+                const normalizedInteger = integerRaw.replace(/^0+(?=\d)/, '') || '0';
+                const formattedInteger = Number(normalizedInteger).toLocaleString('en-US');
+                input.value = hasDecimalPoint
+                    ? `${formattedInteger}.${decimalRaw}`
+                    : formattedInteger;
+
+                if (hasTrailingDecimal && !decimalRaw) {
+                    input.value = `${formattedInteger}.`;
+                }
+
+                if (document.activeElement === input && typeof input.setSelectionRange === 'function') {
+                    const nextCaretPosition = findNumericCaretPosition(input.value, digitsBeforeCaret, hasDecimalPointBeforeCaret);
+                    input.setSelectionRange(nextCaretPosition, nextCaretPosition);
+                }
+                return;
+            }
+
+            const digitsBeforeCaret = rawBeforeCaret.replace(/\D/g, '').length;
+            const digitsOnly = rawValue.replace(/\D/g, '');
+            if (!digitsOnly) {
+                input.value = '';
+                return;
+            }
+
+            const normalizedDigits = digitsOnly.replace(/^0+(?=\d)/, '') || '0';
+            input.value = Number(normalizedDigits).toLocaleString('en-US');
+
+            if (document.activeElement === input && typeof input.setSelectionRange === 'function') {
+                const nextCaretPosition = findNumericCaretPosition(input.value, digitsBeforeCaret, false);
+                input.setSelectionRange(nextCaretPosition, nextCaretPosition);
+            }
+        }
+
+        const numericInputs = Array.from(document.querySelectorAll('input[type="text"][inputmode="numeric"], input[type="text"][inputmode="decimal"]'));
+        numericInputs.forEach((input) => {
+            if (shouldSkipInput(input)) {
+                return;
+            }
+
+            if (input.dataset.globalNumericFormattingBound === 'true') {
+                formatNumericInputValue(input);
+                return;
+            }
+
+            input.dataset.globalNumericFormattingBound = 'true';
+            formatNumericInputValue(input);
+            input.addEventListener('input', () => {
+                formatNumericInputValue(input);
+            });
+            input.addEventListener('blur', () => {
+                formatNumericInputValue(input);
+            });
+        });
+    }
+
     // ============================================
     // Password Visibility Toggle
     // ============================================
@@ -23182,6 +23338,33 @@ function initNavbarDateTime() {
             let investorAttachmentPackages = [];
             let fbgOfferTermsFiles = [];
 
+            function hasMeaningfulOfferDraft(draft) {
+                if (!draft || typeof draft !== 'object') {
+                    return false;
+                }
+
+                return [
+                    draft.senderName,
+                    draft.senderEmail,
+                    draft.recipientName,
+                    draft.recipientEmail,
+                    draft.category,
+                    draft.subcategory,
+                    draft.template,
+                    draft.investorAttachmentFolder,
+                    draft.subject,
+                    draft.body,
+                    draft.fontFamily,
+                    draft.fontSize,
+                    draft.textColor
+                ].some((value) => String(value || '').trim())
+                    || Boolean(draft.includeTerms)
+                    || Boolean(draft.includeECard)
+                    || Boolean(draft.includeFbgOfferTerms);
+            }
+
+            const preserveExistingOfferDraft = hasMeaningfulOfferDraft(savedDraft);
+
             function readLocalJson(key) {
                 try {
                     return JSON.parse(localStorage.getItem(key) || '{}');
@@ -24220,8 +24403,11 @@ function initNavbarDateTime() {
                 renderDocumentSummary();
             });
             loadInvestorAttachmentPackages().finally(() => {
-                applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
-                ensureAgentRecipient(getSelectedInvestorAttachmentProfile());
+                const selectedInvestorProfile = getSelectedInvestorAttachmentProfile();
+                if (!preserveExistingOfferDraft) {
+                    applyInvestorAttachmentProfile(selectedInvestorProfile);
+                }
+                ensureAgentRecipient(selectedInvestorProfile);
                 renderDocumentSummary();
             });
 
@@ -24513,7 +24699,9 @@ function initNavbarDateTime() {
 
             renderDocumentSummary();
 
-            saveDraft();
+            if (!preserveExistingOfferDraft) {
+                saveDraft();
+            }
 
         }
 
@@ -25741,6 +25929,7 @@ function initNavbarDateTime() {
             ['initSidebarScrollState', initSidebarScrollState],
             ['initMenuSoundEffects', initMenuSoundEffects],
             ['initSoundSettingsTab', initSoundSettingsTab],
+            ['initGlobalNumericInputFormatting', initGlobalNumericInputFormatting],
             ['initFormValidation', initFormValidation],
             ['initPasswordToggle', initPasswordToggle],
             ['initPageTransitions', initPageTransitions],
