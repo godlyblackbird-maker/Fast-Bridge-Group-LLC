@@ -12565,6 +12565,303 @@ function initNavbarDateTime() {
         loadDocuments();
     }
 
+    function initAdminFeatureAccessControls() {
+        const list = document.getElementById('admin-feature-access-list');
+        if (!list) {
+            return;
+        }
+
+        const subtitle = document.getElementById('admin-feature-access-subtitle');
+        const refreshButton = document.getElementById('admin-feature-access-refresh-btn');
+        const saveButton = document.getElementById('admin-feature-access-save-btn');
+        const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        const editableRoles = [
+            { key: 'user', label: 'User' },
+            { key: 'premium user', label: 'Premium' },
+            { key: 'broker', label: 'Broker' },
+            { key: 'test user', label: 'Test User' }
+        ];
+        const featureOrder = ['activeBuyers', 'analytics', 'campaigns', 'mlsSpreadsheet'];
+        let currentUser = null;
+        let featureAccessState = null;
+        let lastSavedSnapshot = '';
+
+        try {
+            currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        } catch (error) {
+            currentUser = null;
+        }
+
+        if (!currentUser || currentUser.role !== 'admin') {
+            if (subtitle) {
+                subtitle.textContent = 'Only admin accounts can update feature access rules.';
+            }
+            if (refreshButton) {
+                refreshButton.disabled = true;
+            }
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+            list.innerHTML = '<p class="outreach-empty">Admin access required.</p>';
+            return;
+        }
+
+        function escapeFeatureText(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatFeatureAuditText(featureAccess) {
+            const updatedAt = String(featureAccess?.updatedAt || '').trim();
+            const updatedByEmail = String(featureAccess?.updatedByEmail || '').trim();
+            if (!updatedAt && !updatedByEmail) {
+                return 'Default access rules are active.';
+            }
+
+            let formattedDate = updatedAt;
+            const parsedDate = updatedAt ? new Date(updatedAt) : null;
+            if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+                formattedDate = parsedDate.toLocaleString();
+            }
+
+            if (updatedByEmail) {
+                return `Last updated ${formattedDate} by ${updatedByEmail}.`;
+            }
+
+            return `Last updated ${formattedDate}.`;
+        }
+
+        function getEditableFeatureSnapshot() {
+            const snapshot = {};
+            const features = featureAccessState && typeof featureAccessState === 'object'
+                ? (featureAccessState.features && typeof featureAccessState.features === 'object' ? featureAccessState.features : featureAccessState)
+                : {};
+
+            featureOrder.forEach((featureKey) => {
+                const feature = features[featureKey] && typeof features[featureKey] === 'object' ? features[featureKey] : {};
+                snapshot[featureKey] = { roles: {} };
+                editableRoles.forEach((role) => {
+                    snapshot[featureKey].roles[role.key] = Boolean(feature.roles && feature.roles[role.key]);
+                });
+            });
+
+            return snapshot;
+        }
+
+        function setDirtyState(isDirty) {
+            if (!saveButton) {
+                return;
+            }
+
+            saveButton.textContent = isDirty ? 'Save Access Rules *' : 'Save Access Rules';
+        }
+
+        function syncToggleVisualState(scope) {
+            (scope || list).querySelectorAll('.admin-feature-access-role-label').forEach((label) => {
+                const input = label.querySelector('input[type="checkbox"]');
+                const state = label.querySelector('.admin-feature-access-role-state');
+                const isChecked = Boolean(input && input.checked);
+                label.classList.toggle('is-checked', isChecked);
+                label.classList.toggle('is-disabled', Boolean(input && input.disabled));
+                if (state) {
+                    state.textContent = isChecked ? 'On' : 'Off';
+                }
+            });
+        }
+
+        function refreshDirtyState() {
+            const currentSnapshot = JSON.stringify(getEditableFeatureSnapshot());
+            setDirtyState(currentSnapshot !== lastSavedSnapshot);
+        }
+
+        function renderFeatureAccess(featureAccess) {
+            featureAccessState = featureAccess && typeof featureAccess === 'object' ? featureAccess : { features: {} };
+            const features = featureAccessState.features && typeof featureAccessState.features === 'object'
+                ? featureAccessState.features
+                : {};
+
+            const headerCells = editableRoles
+                .map((role) => `<div class="admin-feature-access-cell"><span class="admin-feature-access-title">${escapeFeatureText(role.label)}</span></div>`)
+                .join('');
+
+            const rowsHtml = featureOrder.map((featureKey) => {
+                const feature = features[featureKey] && typeof features[featureKey] === 'object' ? features[featureKey] : null;
+                if (!feature) {
+                    return '';
+                }
+
+                const toggleCells = editableRoles.map((role) => {
+                    const checked = Boolean(feature.roles && feature.roles[role.key]);
+                    return `
+                        <div class="admin-feature-access-cell">
+                            <label class="admin-feature-access-role-label${checked ? ' is-checked' : ''}">
+                                <input type="checkbox" data-feature-key="${escapeFeatureText(featureKey)}" data-role-key="${escapeFeatureText(role.key)}"${checked ? ' checked' : ''}>
+                                <span class="admin-feature-access-role-state">${checked ? 'On' : 'Off'}</span>
+                            </label>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="admin-feature-access-row">
+                        <div class="admin-feature-access-cell admin-feature-access-primary">
+                            <span class="admin-feature-access-title">${escapeFeatureText(feature.label || featureKey)}</span>
+                            <span class="admin-feature-access-meta">${escapeFeatureText(feature.path || '')}</span>
+                        </div>
+                        ${toggleCells}
+                    </div>
+                `;
+            }).join('');
+
+            list.innerHTML = `
+                <div class="admin-feature-access-table">
+                    <div class="admin-feature-access-row is-header">
+                        <div class="admin-feature-access-cell admin-feature-access-primary">
+                            <span class="admin-feature-access-title">Restricted Tab</span>
+                            <span class="admin-feature-access-meta">Admin stays enabled automatically.</span>
+                        </div>
+                        ${headerCells}
+                    </div>
+                    ${rowsHtml}
+                </div>
+                <p class="admin-feature-access-updated">${escapeFeatureText(formatFeatureAuditText(featureAccessState))}</p>
+            `;
+
+            syncToggleVisualState(list);
+            lastSavedSnapshot = JSON.stringify(getEditableFeatureSnapshot());
+            setDirtyState(false);
+
+            if (subtitle) {
+                subtitle.textContent = 'Control which account roles can access restricted main-menu tabs.';
+            }
+        }
+
+        function buildFeatureAccessPayload() {
+            const nextFeatures = {};
+            const features = featureAccessState && typeof featureAccessState === 'object' && featureAccessState.features && typeof featureAccessState.features === 'object'
+                ? featureAccessState.features
+                : {};
+
+            featureOrder.forEach((featureKey) => {
+                const feature = features[featureKey] && typeof features[featureKey] === 'object' ? features[featureKey] : {};
+                nextFeatures[featureKey] = {
+                    roles: {
+                        admin: true
+                    }
+                };
+
+                editableRoles.forEach((role) => {
+                    const selector = `input[data-feature-key="${featureKey}"][data-role-key="${role.key}"]`;
+                    const input = list.querySelector(selector);
+                    nextFeatures[featureKey].roles[role.key] = Boolean(input && input.checked);
+                });
+
+                if (feature.roles && typeof feature.roles === 'object') {
+                    feature.roles.admin = true;
+                }
+            });
+
+            return nextFeatures;
+        }
+
+        async function loadFeatureAccess() {
+            if (!token) {
+                list.innerHTML = '<p class="outreach-empty">Missing auth token. Please sign in again.</p>';
+                return;
+            }
+
+            if (refreshButton) {
+                refreshButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch('/api/admin/feature-access', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load feature access settings');
+                }
+
+                renderFeatureAccess(data.featureAccess || {});
+            } catch (error) {
+                if (subtitle) {
+                    subtitle.textContent = 'Unable to load feature access settings right now.';
+                }
+                list.innerHTML = `<p class="outreach-empty">${escapeFeatureText(String(error.message || 'Unable to load feature access settings.'))}</p>`;
+            } finally {
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+                }
+            }
+        }
+
+        async function saveFeatureAccess() {
+            if (!token) {
+                showDashboardToast('error', 'Missing Auth', 'Please sign in again and retry.');
+                return;
+            }
+
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch('/api/admin/feature-access', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        features: buildFeatureAccessPayload()
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to save feature access settings');
+                }
+
+                renderFeatureAccess(data.featureAccess || {});
+                showDashboardToast('success', 'Access Rules Saved', 'The restricted tab access rules are now updated for the selected roles.');
+            } catch (error) {
+                showDashboardToast('error', 'Save Failed', String(error.message || 'Unable to save feature access settings.'));
+            } finally {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                }
+            }
+        }
+
+        list.addEventListener('change', (event) => {
+            const input = event.target && typeof event.target.closest === 'function'
+                ? event.target.closest('input[type="checkbox"][data-feature-key][data-role-key]')
+                : null;
+            if (!input) {
+                return;
+            }
+
+            syncToggleVisualState(list);
+            refreshDirtyState();
+        });
+
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadFeatureAccess);
+        }
+
+        if (saveButton) {
+            saveButton.addEventListener('click', saveFeatureAccess);
+        }
+
+        loadFeatureAccess();
+    }
+
     function initAdminUserManager() {
         const usersList = document.getElementById('admin-users-list');
         if (!usersList) {
@@ -20501,6 +20798,86 @@ function initNavbarDateTime() {
                 };
             }
 
+            function getEarthFocusMarkerMeta() {
+                const isSearchLocation = Boolean(
+                    lastSearchResult
+                    && Number.isFinite(Number(lastSearchResult.lat))
+                    && Number.isFinite(Number(lastSearchResult.lng))
+                );
+
+                return {
+                    label: isSearchLocation ? 'SEARCHED PROPERTY' : 'SUBJECT PROPERTY',
+                    shortLabel: isSearchLocation ? 'SEARCH' : 'SUBJECT'
+                };
+            }
+
+            function buildEarthMarkerPin(meta = {}) {
+                const pin = document.createElement('div');
+                pin.className = 'earth-subject-pin';
+                pin.style.cssText = [
+                    'position: relative',
+                    'display: inline-flex',
+                    'align-items: center',
+                    'justify-content: center',
+                    'padding: 0 14px',
+                    'min-width: 88px',
+                    'height: 42px',
+                    'border-radius: 999px',
+                    'background: linear-gradient(135deg, #dc2626, #fb7185)',
+                    'border: 2px solid rgba(255,255,255,0.92)',
+                    'box-shadow: 0 16px 28px rgba(15,23,42,0.42)',
+                    'color: #ffffff',
+                    'font-size: 11px',
+                    'font-weight: 800',
+                    'letter-spacing: 0.08em',
+                    'text-transform: uppercase',
+                    'white-space: nowrap',
+                    'font-family: Outfit, sans-serif'
+                ].join(';');
+                pin.textContent = String(meta.shortLabel || 'PROPERTY').trim() || 'PROPERTY';
+
+                const pointer = document.createElement('span');
+                pointer.style.cssText = [
+                    'position: absolute',
+                    'left: 50%',
+                    'bottom: -12px',
+                    'width: 18px',
+                    'height: 18px',
+                    'background: #dc2626',
+                    'border-right: 2px solid rgba(255,255,255,0.92)',
+                    'border-bottom: 2px solid rgba(255,255,255,0.92)',
+                    'transform: translateX(-50%) rotate(45deg)',
+                    'box-sizing: border-box'
+                ].join(';');
+                pin.appendChild(pointer);
+
+                return pin;
+            }
+
+            function syncEarthMarkerPresentation(meta = {}) {
+                if (!earthSubjectMarker) {
+                    return;
+                }
+
+                if ('label' in earthSubjectMarker) {
+                    earthSubjectMarker.label = String(meta.label || 'SUBJECT PROPERTY').trim() || 'SUBJECT PROPERTY';
+                }
+
+                if ('title' in earthSubjectMarker) {
+                    earthSubjectMarker.title = String(meta.label || 'Subject Property').trim() || 'Subject Property';
+                }
+
+                if (typeof earthSubjectMarker.replaceChildren === 'function') {
+                    earthSubjectMarker.replaceChildren(buildEarthMarkerPin(meta));
+                    return;
+                }
+
+                if (typeof earthSubjectMarker.append === 'function') {
+                    earthSubjectMarker.innerHTML = '';
+                    earthSubjectMarker.append(buildEarthMarkerPin(meta));
+                }
+            }
+
             function updateEarthCamera(locationLike) {
                 if (!earthMapElement) {
                     return;
@@ -20521,7 +20898,7 @@ function initNavbarDateTime() {
                 earthMapElement.tilt = 67.5;
                 earthMapElement.heading = 18;
                 earthMapElement.mode = earthMapModeValue;
-                syncEarthSubjectMarker(getSubjectLocation());
+                syncEarthSubjectMarker(getEarthFocusLocation());
             }
 
             function detachEarthMarker() {
@@ -20554,6 +20931,7 @@ function initNavbarDateTime() {
                     lng,
                     altitude: 0
                 };
+                const markerMeta = getEarthFocusMarkerMeta();
 
                 if (!earthSubjectMarker) {
                     earthSubjectMarker = new earthMarkerCtor({
@@ -20561,8 +20939,11 @@ function initNavbarDateTime() {
                         altitudeMode: 'CLAMP_TO_GROUND',
                         extruded: true,
                         drawsOccludedSegments: true,
-                        label: 'SUBJECT'
+                        label: markerMeta.label,
+                        title: markerMeta.label
                     });
+
+                    syncEarthMarkerPresentation(markerMeta);
 
                     if (typeof earthMapElement.append === 'function') {
                         earthMapElement.append(earthSubjectMarker);
@@ -20573,6 +20954,7 @@ function initNavbarDateTime() {
                 }
 
                 earthSubjectMarker.position = markerPosition;
+                syncEarthMarkerPresentation(markerMeta);
             }
 
             async function ensureEarthReady() {
@@ -20631,7 +21013,7 @@ function initNavbarDateTime() {
                     compsMapEarthCanvas.innerHTML = '';
                     compsMapEarthCanvas.appendChild(earthMapElement);
                     updateEarthCamera(getEarthFocusLocation());
-                    syncEarthSubjectMarker(getSubjectLocation());
+                    syncEarthSubjectMarker(getEarthFocusLocation());
                     return earthMapElement;
                 })().catch((error) => {
                     earthReadyPromise = null;
@@ -21251,9 +21633,18 @@ function initNavbarDateTime() {
                 }
 
                 const subjectLocation = getSubjectLocation();
-                const panoMatch = await findStreetViewPanorama(subjectLocation);
+                panoramaInstance.setPosition(subjectLocation);
+                panoramaInstance.setPov({
+                    heading: 34,
+                    pitch: 8
+                });
+                panoramaInstance.setVisible(true);
+                map.panTo(subjectLocation);
+                setStreetViewMode(true);
+
+                const panoMatch = await findStreetViewPanorama(subjectLocation).catch(() => null);
                 if (!panoMatch) {
-                    throw new Error('Google Street View is not available close enough to this property.');
+                    return;
                 }
 
                 detailData.streetViewPanoLat = panoMatch.lat;
@@ -21272,9 +21663,6 @@ function initNavbarDateTime() {
                     heading: Number.isFinite(heading) ? heading : 34,
                     pitch: 8
                 });
-                panoramaInstance.setVisible(true);
-                map.panTo(subjectLocation);
-                setStreetViewMode(true);
             }
 
             async function ensureMapReady() {
@@ -21295,8 +21683,8 @@ function initNavbarDateTime() {
                     }
                     updateMapStyleSource(config);
 
-                    await ensureSubjectCoordinates();
                     await loadGoogleMapsScript(config.apiKey);
+                    await ensureSubjectCoordinates();
 
                     if (window.google && window.google.maps && window.google.maps.importLibrary) {
                         await window.google.maps.importLibrary('maps');
@@ -22151,12 +22539,8 @@ function initNavbarDateTime() {
                             await showStreetViewForSubject();
                         }
                     } catch (error) {
-                        const streetViewAddress = getStreetViewAddressQuery();
-                        const fallbackUrl = Number.isFinite(Number(detailData.streetViewLat)) && Number.isFinite(Number(detailData.streetViewLng))
-                            ? buildGoogleStreetViewUrl(Number(detailData.streetViewLat), Number(detailData.streetViewLng))
-                            : buildGoogleMapsSearchUrl(streetViewAddress);
-                        window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-                        showDashboardToast('error', 'Street View Fallback', String(error && error.message || 'Street View could not be loaded inside FAST, so Google Maps was opened instead.'));
+                        setStreetViewMode(false);
+                        showDashboardToast('error', 'Street View Unavailable', String(error && error.message || 'Street View could not be loaded in the split pane right now.'));
                     } finally {
                         streetViewLoading = false;
                         syncStreetViewButtonState();
@@ -26185,6 +26569,7 @@ function initNavbarDateTime() {
             ['initAdminAccessRequests', initAdminAccessRequests],
             ['initAdminPropertySubmissions', initAdminPropertySubmissions],
             ['initAdminSmtpApprovals', initAdminSmtpApprovals],
+            ['initAdminFeatureAccessControls', initAdminFeatureAccessControls],
             ['initAdminUserManager', initAdminUserManager],
             ['initTodoGoalsWidget', initTodoGoalsWidget],
             ['initPlannerNotifications', initPlannerNotifications],

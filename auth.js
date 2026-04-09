@@ -26,13 +26,65 @@
   const ADMIN_CANONICAL_EMAILS = new Set();
   const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
   const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
+  const FEATURE_ACCESS_CACHE_KEY = 'featureAccessConfig';
   const PREMIUM_SETTINGS_URL = '/settings.html?tab=subscriptions';
   const TEST_USER_ROLE = 'test user';
+  const FEATURE_ACCESS_DEFAULTS = Object.freeze({
+    activeBuyers: Object.freeze({
+      key: 'activeBuyers',
+      label: 'Active Buyers',
+      path: '/active-buyers.html',
+      roles: Object.freeze({
+        admin: true,
+        user: false,
+        'premium user': false,
+        broker: false,
+        [TEST_USER_ROLE]: false
+      })
+    }),
+    analytics: Object.freeze({
+      key: 'analytics',
+      label: 'Analytics',
+      path: '/analytics.html',
+      roles: Object.freeze({
+        admin: true,
+        user: false,
+        'premium user': true,
+        broker: true,
+        [TEST_USER_ROLE]: true
+      })
+    }),
+    campaigns: Object.freeze({
+      key: 'campaigns',
+      label: 'Campaigns',
+      path: '/campaigns.html',
+      roles: Object.freeze({
+        admin: true,
+        user: false,
+        'premium user': true,
+        broker: true,
+        [TEST_USER_ROLE]: true
+      })
+    }),
+    mlsSpreadsheet: Object.freeze({
+      key: 'mlsSpreadsheet',
+      label: 'MLS Spreadsheet',
+      path: '/mls-imports-spreadsheet.html',
+      roles: Object.freeze({
+        admin: true,
+        user: false,
+        'premium user': true,
+        broker: true,
+        [TEST_USER_ROLE]: false
+      })
+    })
+  });
   let premiumUpgradeTooltip = null;
   let premiumUpgradeTooltipHideTimer = null;
   let authSyncInProgress = true;
   let authNavigationGuardBound = false;
   let testUserBanner = null;
+  let featureAccessConfig = null;
 
   KNOWN_EMAIL_GROUPS.forEach((group) => {
     if (group.forceRole === 'admin') {
@@ -505,6 +557,185 @@
     return Boolean(getStoredAuthToken());
   }
 
+  function cloneFeatureAccessDefaults() {
+    const cloned = {};
+
+    Object.entries(FEATURE_ACCESS_DEFAULTS).forEach(([featureKey, feature]) => {
+      cloned[featureKey] = {
+        key: feature.key,
+        label: feature.label,
+        path: feature.path,
+        roles: { ...feature.roles }
+      };
+    });
+
+    return cloned;
+  }
+
+  function normalizeFeatureAccessBoolean(value, fallbackValue) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      return value !== 0;
+    }
+
+    if (typeof value === 'string') {
+      const normalizedValue = String(value || '').trim().toLowerCase();
+      if (['true', '1', 'yes', 'on'].includes(normalizedValue)) {
+        return true;
+      }
+      if (['false', '0', 'no', 'off'].includes(normalizedValue)) {
+        return false;
+      }
+    }
+
+    return fallbackValue;
+  }
+
+  function normalizeFeatureAccessConfig(rawConfig) {
+    const normalized = cloneFeatureAccessDefaults();
+    const source = rawConfig && typeof rawConfig === 'object'
+      ? (rawConfig.features && typeof rawConfig.features === 'object' ? rawConfig.features : rawConfig)
+      : {};
+
+    Object.entries(normalized).forEach(([featureKey, feature]) => {
+      const sourceFeature = source[featureKey] && typeof source[featureKey] === 'object'
+        ? source[featureKey]
+        : (source[feature.key] && typeof source[feature.key] === 'object' ? source[feature.key] : null);
+      const sourceRoles = sourceFeature && typeof sourceFeature.roles === 'object'
+        ? sourceFeature.roles
+        : sourceFeature;
+
+      Object.keys(feature.roles).forEach((roleKey) => {
+        if (roleKey === 'admin') {
+          feature.roles.admin = true;
+          return;
+        }
+
+        feature.roles[roleKey] = normalizeFeatureAccessBoolean(
+          sourceRoles && Object.prototype.hasOwnProperty.call(sourceRoles, roleKey) ? sourceRoles[roleKey] : undefined,
+          feature.roles[roleKey]
+        );
+      });
+
+      feature.roles.admin = true;
+    });
+
+    return normalized;
+  }
+
+  function readCachedFeatureAccessConfig() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(FEATURE_ACCESS_CACHE_KEY) || 'null');
+      return parsed && typeof parsed === 'object' ? normalizeFeatureAccessConfig(parsed) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeCachedFeatureAccessConfig(config) {
+    const normalized = normalizeFeatureAccessConfig(config);
+    featureAccessConfig = normalized;
+    localStorage.setItem(FEATURE_ACCESS_CACHE_KEY, JSON.stringify({ features: normalized }));
+    return normalized;
+  }
+
+  function getFeatureAccessConfig() {
+    if (!featureAccessConfig) {
+      featureAccessConfig = readCachedFeatureAccessConfig() || cloneFeatureAccessDefaults();
+    }
+
+    return featureAccessConfig;
+  }
+
+  async function loadFeatureAccessConfig(forceRefresh) {
+    if (!forceRefresh && featureAccessConfig) {
+      return featureAccessConfig;
+    }
+
+    const token = getStoredAuthToken();
+    if (!token) {
+      featureAccessConfig = readCachedFeatureAccessConfig() || cloneFeatureAccessDefaults();
+      return featureAccessConfig;
+    }
+
+    try {
+      const response = await fetch('/api/feature-access', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        featureAccessConfig = readCachedFeatureAccessConfig() || cloneFeatureAccessDefaults();
+        return featureAccessConfig;
+      }
+
+      const payload = await response.json().catch(() => ({}));
+      return writeCachedFeatureAccessConfig(payload && payload.featureAccess ? payload.featureAccess : payload);
+    } catch (error) {
+      featureAccessConfig = readCachedFeatureAccessConfig() || cloneFeatureAccessDefaults();
+      return featureAccessConfig;
+    }
+  }
+
+  function getFeatureAccessRoleKey(userLike) {
+    const normalizedRole = String(userLike && userLike.role || '').trim().toLowerCase();
+    if (normalizedRole === 'admin') {
+      return 'admin';
+    }
+    if (normalizedRole === 'premium user') {
+      return 'premium user';
+    }
+    if (normalizedRole === 'broker') {
+      return 'broker';
+    }
+    if (normalizedRole === TEST_USER_ROLE) {
+      return TEST_USER_ROLE;
+    }
+    return 'user';
+  }
+
+  function isFeatureEnabledForUser(featureKey, userLike) {
+    const roleKey = getFeatureAccessRoleKey(userLike);
+    if (roleKey === 'admin') {
+      return true;
+    }
+
+    const features = getFeatureAccessConfig();
+    const feature = features[featureKey];
+    return !!(feature && feature.roles && feature.roles[roleKey]);
+  }
+
+  function getFeatureNavAccessMode(featureKey, userLike) {
+    if (isFeatureEnabledForUser(featureKey, userLike)) {
+      return 'show';
+    }
+
+    const roleKey = getFeatureAccessRoleKey(userLike);
+    if (roleKey === 'user' && ['analytics', 'campaigns', 'mlsSpreadsheet'].includes(featureKey)) {
+      return 'locked';
+    }
+
+    return 'hidden';
+  }
+
+  function removeNavLink(link) {
+    if (!link) {
+      return;
+    }
+
+    const listItem = link.closest('.nav-item');
+    if (listItem) {
+      listItem.remove();
+      return;
+    }
+
+    link.remove();
+  }
+
   function sanitizeLegacyProfileMirror() {
     const storedUser = readStoredUser();
     if (!storedUser || !hasStoredAuthToken()) {
@@ -808,26 +1039,21 @@
 
   function applyMlsSpreadsheetAccess(userLike) {
     const hasKnownRole = !!String(userLike && userLike.role || '').trim();
-    const isTest = isTestUser(userLike);
     const normalizedPath = String(window.location.pathname || '').trim().toLowerCase();
     const isSpreadsheetPage = isMlsSpreadsheetPath(normalizedPath);
     const existingLinks = document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
+    const navMode = hasKnownRole ? getFeatureNavAccessMode('mlsSpreadsheet', userLike) : 'show';
 
     existingLinks.forEach((link) => {
-      const listItem = link.closest('.nav-item');
-      if (listItem) {
-        listItem.remove();
-      } else {
-        link.remove();
-      }
+      removeNavLink(link);
     });
 
-    if (hasKnownRole && isTest) {
-      if (isSpreadsheetPage) {
-        window.location.href = '/dashboard.html';
-        return false;
-      }
+    if (hasKnownRole && navMode !== 'show' && isSpreadsheetPage) {
+      window.location.href = '/dashboard.html';
+      return false;
+    }
 
+    if (hasKnownRole && navMode === 'hidden') {
       return true;
     }
 
@@ -865,6 +1091,9 @@
 
     document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]').forEach((link) => {
       link.classList.toggle('active', isSpreadsheetPage);
+      if (navMode === 'locked') {
+        applyLockedMlsSpreadsheetLink(link);
+      }
     });
 
     const backLink = document.getElementById('mls-spreadsheet-back-link');
@@ -1216,30 +1445,20 @@
 
     const activeUser = window.getCurrentUser ? window.getCurrentUser() : null;
     const normalizedPath = String(currentPath || '').toLowerCase();
-    if (isActiveBuyersPath(normalizedPath)) {
-      if (isRegularUser(activeUser) || isBrokerUser(activeUser) || isTestUser(activeUser)) {
+    const protectedFeatures = [
+      ['activeBuyers', isActiveBuyersPath],
+      ['analytics', isAnalyticsPath],
+      ['campaigns', isCampaignsPath],
+      ['mlsSpreadsheet', isMlsSpreadsheetPath]
+    ];
+
+    for (const [featureKey, matcher] of protectedFeatures) {
+      if (matcher(normalizedPath) && !isFeatureEnabledForUser(featureKey, activeUser)) {
         window.location.href = '/dashboard.html';
         return;
       }
     }
-    if (isAnalyticsPath(normalizedPath)) {
-      if (isRegularUser(activeUser)) {
-        window.location.href = '/dashboard.html';
-        return;
-      }
-    }
-    if (isCampaignsPath(normalizedPath)) {
-      if (isRegularUser(activeUser)) {
-        window.location.href = '/dashboard.html';
-        return;
-      }
-    }
-    if (isMlsSpreadsheetPath(normalizedPath)) {
-      if (isTestUser(activeUser) || isRegularUser(activeUser)) {
-        window.location.href = '/dashboard.html';
-        return;
-      }
-    }
+
     if (normalizedPath.endsWith('/admin-controls.html') || normalizedPath === '/admin-controls.html') {
       if (!isAdminUser(activeUser)) {
         window.location.href = '/dashboard.html';
@@ -1260,15 +1479,12 @@
       if (applyAdminControlsAccess(storedUser) === false) {
         return;
       }
-      if (applyMlsSpreadsheetAccess(storedUser) === false) {
-        return;
-      }
 
       const syncedUser = await syncAuthenticatedUser();
+      await loadFeatureAccessConfig(true);
       checkAuthentication();
 
       const activeUser = syncedUser || getCurrentUser();
-      const isAdmin = isAdminUser(activeUser);
       if (applyAdminControlsAccess(activeUser) === false) {
         return;
       }
@@ -1280,39 +1496,48 @@
 
       const activeBuyersLinks = document.querySelectorAll('.nav-link[href="active-buyers.html"], .nav-link[href="/active-buyers.html"]');
       activeBuyersLinks.forEach(link => {
-        if (isRegularUser(activeUser)) {
-          applyLockedActiveBuyersLink(link);
-          return;
-        }
-
-        const listItem = link.closest('.nav-item');
-        if (isBrokerUser(activeUser) || (!isAdmin && !isPremiumUser(activeUser))) {
-          if (listItem) {
-            listItem.remove();
-          } else {
-            link.remove();
-          }
+        const navMode = getFeatureNavAccessMode('activeBuyers', activeUser);
+        if (navMode !== 'show') {
+          removeNavLink(link);
         }
       });
 
       const analyticsLinks = document.querySelectorAll('.nav-link[href="analytics.html"], .nav-link[href="/analytics.html"]');
       analyticsLinks.forEach(link => {
-        if (isRegularUser(activeUser)) {
+        const navMode = getFeatureNavAccessMode('analytics', activeUser);
+        if (navMode === 'locked') {
           applyLockedAnalyticsLink(link);
+          return;
+        }
+
+        if (navMode === 'hidden') {
+          removeNavLink(link);
         }
       });
 
       const campaignLinks = document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
       campaignLinks.forEach(link => {
-        if (isRegularUser(activeUser)) {
+        const navMode = getFeatureNavAccessMode('campaigns', activeUser);
+        if (navMode === 'locked') {
           applyLockedCampaignsLink(link);
+          return;
+        }
+
+        if (navMode === 'hidden') {
+          removeNavLink(link);
         }
       });
 
       const mlsSpreadsheetLinks = document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
       mlsSpreadsheetLinks.forEach(link => {
-        if (isRegularUser(activeUser)) {
+        const navMode = getFeatureNavAccessMode('mlsSpreadsheet', activeUser);
+        if (navMode === 'locked') {
           applyLockedMlsSpreadsheetLink(link);
+          return;
+        }
+
+        if (navMode === 'hidden') {
+          removeNavLink(link);
         }
       });
 

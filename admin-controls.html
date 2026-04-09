@@ -262,8 +262,115 @@
         .admin-control-panel:nth-child(6),
         .admin-control-panel:nth-child(7),
         .admin-control-panel:nth-child(8),
-        .admin-control-panel:nth-child(9) {
+        .admin-control-panel:nth-child(9),
+        .admin-control-panel:nth-child(10) {
             animation-delay: calc(var(--panel-index, 0) * 0.06s);
+        }
+
+        .admin-feature-access-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .admin-feature-access-note {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .admin-feature-access-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .admin-feature-access-table {
+            display: grid;
+            gap: 10px;
+        }
+
+        .admin-feature-access-row {
+            display: grid;
+            grid-template-columns: minmax(180px, 1.6fr) repeat(4, minmax(88px, 0.7fr));
+            gap: 10px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.12);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+        }
+
+        .admin-feature-access-row.is-header {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            background: rgba(15, 23, 42, 0.14);
+        }
+
+        .admin-feature-access-cell {
+            min-width: 0;
+        }
+
+        .admin-feature-access-title {
+            display: block;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .admin-feature-access-meta {
+            display: block;
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            word-break: break-word;
+        }
+
+        .admin-feature-access-role-label {
+            display: inline-flex;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 46px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.12);
+            background: rgba(255, 255, 255, 0.04);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-primary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .admin-feature-access-role-label input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: var(--emerald);
+        }
+
+        .admin-feature-access-role-label.is-checked {
+            border-color: rgba(var(--accent-rgb), 0.36);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-light-rgb), 0.14));
+            box-shadow: 0 16px 28px -24px rgba(var(--accent-rgb), 0.65);
+        }
+
+        .admin-feature-access-role-label.is-disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .admin-feature-access-updated {
+            margin: 2px 2px 0;
+            font-size: 12px;
+            color: var(--text-secondary);
         }
 
         .admin-control-panel[data-span="4"] {
@@ -372,6 +479,18 @@
             .admin-control-panel[data-span="8"] {
                 grid-column: span 12;
             }
+
+            .admin-feature-access-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .admin-feature-access-row.is-header {
+                display: none;
+            }
+
+            .admin-feature-access-cell.admin-feature-access-primary {
+                grid-column: 1 / -1;
+            }
         }
 
         @media (max-width: 780px) {
@@ -464,6 +583,7 @@
                     <a class="admin-quick-link" href="#requested-access-card">Access Queue</a>
                     <a class="admin-quick-link" href="#property-submissions-card">Seller Leads</a>
                     <a class="admin-quick-link" href="#smtp-approval-card">Gmail Approvals</a>
+                    <a class="admin-quick-link" href="#admin-feature-access-card">Feature Access</a>
                     <a class="admin-quick-link" href="mls-imports-spreadsheet.html">MLS Spreadsheet</a>
                     <a class="admin-quick-link" href="#admin-account-manager-card">Account Manager</a>
                     <a class="admin-quick-link" href="#digital-ecard-card">E Card</a>
@@ -527,6 +647,27 @@
                     </div>
                     <div id="admin-smtp-requests-list" class="outreach-list">
                         <p class="outreach-empty">No Gmail outbox requests loaded yet.</p>
+                    </div>
+                </div>
+
+                <div id="admin-feature-access-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="12" data-widget-id="admin-feature-access" data-widget-title="Feature Access" style="--panel-index:4;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
+                    <div class="card-header">
+                        <div>
+                            <div class="admin-panel-eyebrow">Navigation Control</div>
+                            <h2 class="card-title">Feature Access</h2>
+                            <p class="card-subtitle" id="admin-feature-access-subtitle">Control which account roles can access restricted main-menu tabs.</p>
+                        </div>
+                    </div>
+                    <div class="admin-feature-access-toolbar">
+                        <p class="admin-feature-access-note">Admin access stays on. Use these toggles to allow or block User, Premium User, Broker, and Test User access to restricted tabs.</p>
+                        <div class="outreach-actions">
+                            <button id="admin-feature-access-refresh-btn" type="button" class="card-btn">Refresh</button>
+                            <button id="admin-feature-access-save-btn" type="button" class="card-btn active">Save Access Rules</button>
+                        </div>
+                    </div>
+                    <div id="admin-feature-access-list" class="admin-feature-access-list">
+                        <p class="outreach-empty">Loading feature access settings...</p>
                     </div>
                 </div>
 

@@ -61,6 +61,58 @@ const TEST_USER_ROLE = 'test user';
 const PREMIUM_PLAN_KEY = 'premium';
 const PREMIUM_PRICE_CENTS = 9900;
 const PREMIUM_CURRENCY = 'USD';
+const FEATURE_ACCESS_SETTING_KEY = 'nav-feature-access';
+const FEATURE_ACCESS_ROLE_KEYS = ['admin', 'user', PREMIUM_USER_ROLE, 'broker', TEST_USER_ROLE];
+const FEATURE_ACCESS_DEFAULTS = Object.freeze({
+  activeBuyers: Object.freeze({
+    key: 'activeBuyers',
+    label: 'Active Buyers',
+    path: '/active-buyers.html',
+    roles: Object.freeze({
+      admin: true,
+      user: false,
+      [PREMIUM_USER_ROLE]: false,
+      broker: false,
+      [TEST_USER_ROLE]: false
+    })
+  }),
+  analytics: Object.freeze({
+    key: 'analytics',
+    label: 'Analytics',
+    path: '/analytics.html',
+    roles: Object.freeze({
+      admin: true,
+      user: false,
+      [PREMIUM_USER_ROLE]: true,
+      broker: true,
+      [TEST_USER_ROLE]: true
+    })
+  }),
+  campaigns: Object.freeze({
+    key: 'campaigns',
+    label: 'Campaigns',
+    path: '/campaigns.html',
+    roles: Object.freeze({
+      admin: true,
+      user: false,
+      [PREMIUM_USER_ROLE]: true,
+      broker: true,
+      [TEST_USER_ROLE]: true
+    })
+  }),
+  mlsSpreadsheet: Object.freeze({
+    key: 'mlsSpreadsheet',
+    label: 'MLS Spreadsheet',
+    path: '/mls-imports-spreadsheet.html',
+    roles: Object.freeze({
+      admin: true,
+      user: false,
+      [PREMIUM_USER_ROLE]: true,
+      broker: true,
+      [TEST_USER_ROLE]: false
+    })
+  })
+});
 const AUTH_SESSION_TTL = '24h';
 const TWO_FACTOR_CHALLENGE_TTL = '10m';
 const ONLINE_USER_ACTIVITY_WINDOW_MINUTES = 5;
@@ -1849,6 +1901,22 @@ function initializeDatabase() {
       console.error('Error creating user_security_settings table:', err);
     } else {
       console.log('User security settings table ready');
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS app_feature_settings (
+      setting_key TEXT PRIMARY KEY,
+      config_json TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by_user_id INTEGER,
+      updated_by_email TEXT
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating app_feature_settings table:', err);
+    } else {
+      console.log('App feature settings table ready');
     }
   });
 
@@ -4302,6 +4370,146 @@ function buildSubscriptionPayload(userRow, subscriptionRow) {
   };
 }
 
+function cloneFeatureAccessDefaults() {
+  const cloned = {};
+
+  Object.entries(FEATURE_ACCESS_DEFAULTS).forEach(([featureKey, feature]) => {
+    cloned[featureKey] = {
+      key: feature.key,
+      label: feature.label,
+      path: feature.path,
+      roles: { ...feature.roles }
+    };
+  });
+
+  return cloned;
+}
+
+function normalizeFeatureAccessBoolean(value, fallbackValue) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+
+  if (typeof value === 'string') {
+    const normalizedValue = String(value || '').trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalizedValue)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'off'].includes(normalizedValue)) {
+      return false;
+    }
+  }
+
+  return fallbackValue;
+}
+
+function normalizeFeatureAccessConfig(rawConfig) {
+  const normalized = cloneFeatureAccessDefaults();
+  const source = rawConfig && typeof rawConfig === 'object'
+    ? (rawConfig.features && typeof rawConfig.features === 'object' ? rawConfig.features : rawConfig)
+    : {};
+
+  Object.entries(normalized).forEach(([featureKey, feature]) => {
+    const sourceFeature = source[featureKey] && typeof source[featureKey] === 'object'
+      ? source[featureKey]
+      : (source[feature.key] && typeof source[feature.key] === 'object' ? source[feature.key] : null);
+    const sourceRoles = sourceFeature && typeof sourceFeature.roles === 'object'
+      ? sourceFeature.roles
+      : sourceFeature;
+
+    FEATURE_ACCESS_ROLE_KEYS.forEach((roleKey) => {
+      if (roleKey === 'admin') {
+        feature.roles.admin = true;
+        return;
+      }
+
+      feature.roles[roleKey] = normalizeFeatureAccessBoolean(
+        sourceRoles && Object.prototype.hasOwnProperty.call(sourceRoles, roleKey) ? sourceRoles[roleKey] : undefined,
+        feature.roles[roleKey]
+      );
+    });
+
+    feature.roles.admin = true;
+  });
+
+  return normalized;
+}
+
+function buildFeatureAccessPayload(config, metadata) {
+  const normalized = normalizeFeatureAccessConfig(config);
+  const details = metadata && typeof metadata === 'object' ? metadata : {};
+
+  return {
+    updatedAt: details.updatedAt || '',
+    updatedByUserId: Number.isInteger(Number(details.updatedByUserId)) ? Number(details.updatedByUserId) : null,
+    updatedByEmail: String(details.updatedByEmail || '').trim().toLowerCase(),
+    features: normalized
+  };
+}
+
+async function getFeatureAccessSettings() {
+  const defaultsPayload = buildFeatureAccessPayload(null, {});
+
+  try {
+    const row = await dbGet(
+      'SELECT config_json, updated_at, updated_by_user_id, updated_by_email FROM app_feature_settings WHERE setting_key = ?',
+      [FEATURE_ACCESS_SETTING_KEY]
+    );
+
+    if (!row) {
+      return defaultsPayload;
+    }
+
+    let parsedConfig = null;
+    try {
+      parsedConfig = JSON.parse(String(row.config_json || '{}'));
+    } catch (error) {
+      parsedConfig = null;
+    }
+
+    return buildFeatureAccessPayload(parsedConfig, {
+      updatedAt: row.updated_at,
+      updatedByUserId: row.updated_by_user_id,
+      updatedByEmail: row.updated_by_email
+    });
+  } catch (error) {
+    console.error('Feature access settings load error:', error);
+    return defaultsPayload;
+  }
+}
+
+async function saveFeatureAccessSettings(nextConfig, updatedBy) {
+  const normalizedPayload = buildFeatureAccessPayload(nextConfig, {
+    updatedByUserId: updatedBy?.id,
+    updatedByEmail: updatedBy?.email
+  });
+  const configJson = JSON.stringify({ features: normalizedPayload.features });
+  const updatedAt = new Date().toISOString();
+  const updatedByUserId = Number(updatedBy?.id) || null;
+  const updatedByEmail = String(updatedBy?.email || '').trim().toLowerCase();
+
+  await dbRun(
+    `INSERT INTO app_feature_settings (setting_key, config_json, updated_at, updated_by_user_id, updated_by_email)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(setting_key) DO UPDATE SET
+       config_json = excluded.config_json,
+       updated_at = excluded.updated_at,
+       updated_by_user_id = excluded.updated_by_user_id,
+       updated_by_email = excluded.updated_by_email`,
+    [FEATURE_ACCESS_SETTING_KEY, configJson, updatedAt, updatedByUserId, updatedByEmail]
+  );
+
+  return buildFeatureAccessPayload(normalizedPayload.features, {
+    updatedAt,
+    updatedByUserId,
+    updatedByEmail
+  });
+}
+
 function normalizeUserKey(value) {
   return String(value || '')
     .trim()
@@ -5868,6 +6076,60 @@ app.post('/api/login/2fa', async (req, res) => {
 // Public registration is disabled. Use admin-only endpoint below.
 app.post('/api/register', (req, res) => {
   return res.status(403).json({ error: 'Public registration is disabled. Contact an admin.' });
+});
+
+app.get('/api/feature-access', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const featureAccess = await getFeatureAccessSettings();
+    return res.json({ success: true, featureAccess });
+  } catch (error) {
+    console.error('Feature access status error:', error);
+    return res.status(500).json({ error: 'Unable to load feature access settings.' });
+  }
+});
+
+app.get('/api/admin/feature-access', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const featureAccess = await getFeatureAccessSettings();
+    return res.json({ success: true, featureAccess });
+  } catch (error) {
+    console.error('Admin feature access load error:', error);
+    return res.status(500).json({ error: 'Unable to load admin feature access settings.' });
+  }
+});
+
+app.put('/api/admin/feature-access', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const nextFeatures = req.body?.featureAccess?.features || req.body?.features || req.body;
+    const featureAccess = await saveFeatureAccessSettings(nextFeatures, {
+      id: decoded.id,
+      email: decoded.email
+    });
+
+    return res.json({
+      success: true,
+      message: 'Feature access settings saved successfully.',
+      featureAccess
+    });
+  } catch (error) {
+    console.error('Admin feature access save error:', error);
+    return res.status(500).json({ error: 'Unable to save feature access settings.' });
+  }
 });
 
 // Admin-only account creation endpoint.
