@@ -17886,6 +17886,95 @@ function initNavbarDateTime() {
     async function initPropertyDetailPage() {
         const addressEl = document.getElementById('property-address-title');
         if (!addressEl) return;
+
+        const tabButtons = Array.from(document.querySelectorAll('.property-tab-btn[data-tab]'));
+        const tabPanels = Array.from(document.querySelectorAll('.property-tab-panel[data-panel]'));
+        const propertyAccessRole = String(getWorkspaceUserContext().role || getStoredCurrentUserIdentity().role || '').trim().toLowerCase();
+        const lockedTabs = isRegularUserRole(propertyAccessRole)
+            ? new Set(['comps', 'ia', 'offer'])
+            : new Set();
+        const lockedTabLabels = {
+            comps: 'Comps',
+            ia: 'IA',
+            offer: 'Offer'
+        };
+
+        tabButtons.forEach((button) => {
+            const tabId = String(button.dataset.tab || '').trim().toLowerCase();
+            if (!lockedTabs.has(tabId)) {
+                return;
+            }
+
+            button.classList.add('property-tab-btn-locked');
+            button.setAttribute('aria-disabled', 'true');
+            button.setAttribute('title', 'upgrade to premium');
+            if (typeof window.attachPremiumUpgradeTooltip === 'function') {
+                window.attachPremiumUpgradeTooltip(button);
+            }
+
+            if (!button.querySelector('.property-tab-lock-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'property-tab-lock-badge';
+                badge.innerHTML = '<svg class="property-tab-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
+                button.appendChild(badge);
+            }
+        });
+
+        let activePropertyTabId = '';
+
+        function activatePropertyTab(tabId) {
+            const normalizedTabId = String(tabId || 'piq').trim().toLowerCase() || 'piq';
+            const nextTabId = lockedTabs.has(normalizedTabId) ? 'piq' : normalizedTabId;
+
+            if (nextTabId === activePropertyTabId) {
+                return;
+            }
+
+            activePropertyTabId = nextTabId;
+
+            tabButtons.forEach(button => {
+                const isActive = button.dataset.tab === nextTabId;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            tabPanels.forEach(panel => {
+                const isActive = panel.dataset.panel === nextTabId;
+                panel.classList.toggle('active', isActive);
+                panel.hidden = !isActive;
+            });
+
+            if (nextTabId === 'comps') {
+                window.setTimeout(() => {
+                    void maybeAutoSearchSubjectOnCompsOpen();
+                }, 40);
+            }
+        }
+
+        tabButtons.forEach(button => {
+            if (button.dataset.propertyTabBound === 'true') {
+                return;
+            }
+
+            button.dataset.propertyTabBound = 'true';
+            button.addEventListener('click', () => {
+                const tabId = button.dataset.tab;
+                const normalizedTabId = String(tabId || '').trim().toLowerCase();
+                if (lockedTabs.has(normalizedTabId)) {
+                    const tabLabel = lockedTabLabels[normalizedTabId] || 'This tab';
+                    showDashboardToast('error', 'Access Locked', `${tabLabel} is locked for User accounts. Upgrade to Premium to unlock it.`);
+                    activatePropertyTab('piq');
+                    return;
+                }
+                activatePropertyTab(tabId);
+            });
+        });
+
+        const initialActiveTab = tabButtons.find(button => button.classList.contains('active'))?.dataset.tab
+            || tabPanels.find(panel => panel.classList.contains('active'))?.dataset.panel
+            || 'piq';
+        activatePropertyTab(initialActiveTab);
+
         await propertyAssignmentsReady;
         const legacyCompsLine = 'Comparable set will include similar bed/bath properties within 1.0 mile radius and the last 6-12 month window.';
         const calculatorToggle = document.getElementById('property-calculator-toggle');
@@ -18741,70 +18830,6 @@ function initNavbarDateTime() {
 
         renderPropertyDetailSnapshot();
 
-        const tabButtons = Array.from(document.querySelectorAll('.property-tab-btn[data-tab]'));
-        const tabPanels = Array.from(document.querySelectorAll('.property-tab-panel[data-panel]'));
-        const propertyAccessRole = String(getWorkspaceUserContext().role || getStoredCurrentUserIdentity().role || '').trim().toLowerCase();
-        const lockedTabs = isRegularUserRole(propertyAccessRole)
-            ? new Set(['comps', 'ia', 'offer'])
-            : new Set();
-        const lockedTabLabels = {
-            comps: 'Comps',
-            ia: 'IA',
-            offer: 'Offer'
-        };
-
-        tabButtons.forEach((button) => {
-            const tabId = String(button.dataset.tab || '').trim().toLowerCase();
-            if (!lockedTabs.has(tabId)) {
-                return;
-            }
-
-            button.classList.add('property-tab-btn-locked');
-            button.setAttribute('aria-disabled', 'true');
-            button.setAttribute('title', 'upgrade to premium');
-            if (typeof window.attachPremiumUpgradeTooltip === 'function') {
-                window.attachPremiumUpgradeTooltip(button);
-            }
-
-            if (!button.querySelector('.property-tab-lock-badge')) {
-                const badge = document.createElement('span');
-                badge.className = 'property-tab-lock-badge';
-                badge.innerHTML = '<svg class="property-tab-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
-                button.appendChild(badge);
-            }
-        });
-
-        let activePropertyTabId = '';
-
-        function activatePropertyTab(tabId) {
-            const normalizedTabId = String(tabId || 'piq').trim().toLowerCase() || 'piq';
-            const nextTabId = lockedTabs.has(normalizedTabId) ? 'piq' : normalizedTabId;
-
-            if (nextTabId === activePropertyTabId) {
-                return;
-            }
-
-            activePropertyTabId = nextTabId;
-
-            tabButtons.forEach(button => {
-                const isActive = button.dataset.tab === nextTabId;
-                button.classList.toggle('active', isActive);
-                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-            });
-
-            tabPanels.forEach(panel => {
-                const isActive = panel.dataset.panel === nextTabId;
-                panel.classList.toggle('active', isActive);
-                panel.hidden = !isActive;
-            });
-
-            if (nextTabId === 'comps') {
-                window.setTimeout(() => {
-                    void maybeAutoSearchSubjectOnCompsOpen();
-                }, 40);
-            }
-        }
-
         if (calculatorToggle && calculatorWidget && calculatorDisplay) {
             let calculatorExpression = '';
             const calculatorPrimaryKey = calculatorWidget.querySelector('[data-calculator-action="clear"]');
@@ -19012,30 +19037,6 @@ function initNavbarDateTime() {
             setCalculatorOpenState(false);
             renderCalculatorDisplay('0');
         }
-
-        tabButtons.forEach(button => {
-            if (button.dataset.propertyTabBound === 'true') {
-                return;
-            }
-
-            button.dataset.propertyTabBound = 'true';
-            button.addEventListener('click', () => {
-                const tabId = button.dataset.tab;
-                const normalizedTabId = String(tabId || '').trim().toLowerCase();
-                if (lockedTabs.has(normalizedTabId)) {
-                    const tabLabel = lockedTabLabels[normalizedTabId] || 'This tab';
-                    showDashboardToast('error', 'Access Locked', `${tabLabel} is locked for User accounts. Upgrade to Premium to unlock it.`);
-                    activatePropertyTab('piq');
-                    return;
-                }
-                activatePropertyTab(tabId);
-            });
-        });
-
-        const initialActiveTab = tabButtons.find(button => button.classList.contains('active'))?.dataset.tab
-            || tabPanels.find(panel => panel.classList.contains('active'))?.dataset.panel
-            || 'piq';
-        activatePropertyTab(initialActiveTab);
 
         const previewGallery = document.getElementById('piq-property-image-preview');
         const imageGallery = document.getElementById('piq-property-image-gallery');
@@ -25707,7 +25708,12 @@ function initNavbarDateTime() {
         }
 
         try {
-            initializer();
+            const result = initializer();
+            if (result && typeof result.then === 'function') {
+                result.catch((error) => {
+                    console.error(`Initializer failed: ${name}`, error);
+                });
+            }
         } catch (error) {
             console.error(`Initializer failed: ${name}`, error);
         }
