@@ -1132,6 +1132,8 @@
     const previewRect = preview.getBoundingClientRect();
     const exportWidth = Math.max(Math.round(previewRect.width), preview.scrollWidth || 0, 560);
     const exportHeight = Math.max(Math.round(previewRect.height), preview.scrollHeight || 0, 320);
+    const captureWindowWidth = Math.max(window.innerWidth || 0, 1280);
+    const captureWindowHeight = Math.max(window.innerHeight || 0, 900);
 
     const exportHost = document.createElement('div');
     exportHost.setAttribute('aria-hidden', 'true');
@@ -1168,8 +1170,8 @@
         logging: false,
         width: exportWidth,
         height: exportHeight,
-        windowWidth: exportWidth,
-        windowHeight: exportHeight
+        windowWidth: captureWindowWidth,
+        windowHeight: captureWindowHeight
       });
 
       const link = document.createElement('a');
