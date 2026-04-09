@@ -24310,6 +24310,20 @@ function initNavbarDateTime() {
                 }
             }
 
+            function refreshPreparedEmailFromSourceFields(options = {}) {
+                if (!includeTermsToggle.checked) {
+                    saveDraft();
+                    return;
+                }
+
+                refreshPreparedEmail({
+                    includeTerms: true,
+                    preserveManualEdits: false,
+                    ...options
+                });
+                saveDraft();
+            }
+
             function getDocumentSummaryParts() {
                 const documents = getPropertyOfferDocuments();
                 const linked = documents.filter(item => item.url);
@@ -24651,15 +24665,17 @@ function initNavbarDateTime() {
 
             categorySelect.addEventListener('change', () => {
                 syncSubcategories(getOfferFieldValue('offer-type') || 'general');
-                saveDraft();
+                refreshPreparedEmailFromSourceFields();
             });
 
             subcategorySelect.addEventListener('change', () => {
                 syncTemplates('');
-                saveDraft();
+                refreshPreparedEmailFromSourceFields();
             });
 
-            templateSelect.addEventListener('change', saveDraft);
+            templateSelect.addEventListener('change', () => {
+                refreshPreparedEmailFromSourceFields();
+            });
             investorAttachmentsSelect.addEventListener('change', () => {
                 applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
                 ensureAgentRecipient(getSelectedInvestorAttachmentProfile());
@@ -24708,6 +24724,47 @@ function initNavbarDateTime() {
 
             [senderNameInput, senderEmailInput, recipientNameInput, recipientEmailInput].forEach(input => {
                 input.addEventListener('input', saveDraft);
+            });
+
+            const offerDraftSourceFieldIds = [
+                'offer-entity',
+                'offer-purchase-price',
+                'offer-close-escrow-days',
+                'offer-deposit-amount-mode',
+                'offer-deposit-flat-fee',
+                'offer-type',
+                'offer-appraisal',
+                'offer-inspection-period',
+                'offer-disclosures',
+                'offer-termite-inspection',
+                'offer-escrow-fees',
+                'offer-title-fees',
+                'offer-city-transfer-tax',
+                'offer-county-transfer-tax',
+                'offer-escrow',
+                'offer-title-company',
+                'offer-other-terms',
+                'offer-seller-comp-enabled',
+                'offer-seller-comp-percent',
+                'offer-seller-comp-amount'
+            ];
+
+            offerDraftSourceFieldIds.forEach((fieldId) => {
+                const field = document.getElementById(fieldId);
+                if (!field || field.dataset.offerEmailSyncBound === 'true') {
+                    return;
+                }
+
+                field.dataset.offerEmailSyncBound = 'true';
+                const handler = () => {
+                    if (fieldId === 'offer-type') {
+                        syncSubcategories(getOfferFieldValue('offer-type') || 'general');
+                    }
+                    refreshPreparedEmailFromSourceFields();
+                };
+
+                field.addEventListener('input', handler);
+                field.addEventListener('change', handler);
             });
 
             subjectInput.addEventListener('input', () => {
