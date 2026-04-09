@@ -724,16 +724,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.3.8</span>
-                    <span>Messaging persistence hardened</span>
-                    <span>MLS spreadsheet template controls expanded</span>
-                    <span>Live HTML update caching disabled</span>
+                    <span>Newest build: 1.3.9</span>
+                    <span>Admin feature access controls added</span>
+                    <span>Property map markers restored</span>
+                    <span>Street View split pane restored</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>21</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.8, including the full 1.2.3 to 1.3.8 release sequence.</span>
+                    <strong>22</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.3.9, including the full 1.2.3 to 1.3.9 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -745,26 +745,24 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.3.8</h2>
-                <p>This release hardens message history and deployment freshness by protecting SQLite persistence, restoring archived conversations when the local message table comes back empty, expanding MLS spreadsheet outreach controls, and preventing stale cached HTML from hiding current UI updates.</p>
+                <h2>Version 1.3.9</h2>
+                <p>This release adds admin-managed access toggles for restricted tabs and restores core property-map behavior so the searched property is clearly visible again across Street map, split Street View, and Google Earth.</p>
                 <div class="version-history-meta">
-                    <span>April 7, 2026</span>
-                    <span>Message recovery</span>
-                    <span>MLS workflow polish</span>
-                    <span>Cache-control fix</span>
-                    <span>Version 1.3.8</span>
+                    <span>April 9, 2026</span>
+                    <span>Admin controls</span>
+                    <span>Map marker fixes</span>
+                    <span>Street View restore</span>
+                    <span>Version 1.3.9</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Added persistent SQLite storage safeguards so production now requires a real database path or mounted data directory instead of silently relying on a fragile app-folder database file.</li>
-                    <li>Added archived message recovery so conversations can be restored from S3-backed message history when the local <code>user_messages</code> table comes back empty after a restart or redeploy.</li>
-                    <li>Updated message archiving to keep edited conversation content in sync and reduced the risk of users thinking message history was randomly disappearing.</li>
-                    <li>Expanded MLS Spreadsheet Copy Templates so the <code>Closed</code> status can be selected and edited directly in the template manager.</li>
-                    <li>Kept the MLS spreadsheet field order consistent with <code>LA Email</code> shown before <code>LA Cell</code> across the table, row parsing, and CSV export logic.</li>
-                    <li>Fixed dashboard ChatGPT widget scrolling by removing the nested assistant-bubble scroll trap so longer replies can be read normally inside the main chat pane.</li>
-                    <li>Disabled HTML page caching at the server layer so live updates like the MLS spreadsheet layout and version history changes stop getting masked by stale cached pages.</li>
+                    <li>Added a new Admin Controls Feature Access section so admins can toggle restricted tabs on or off for User, Premium User, Broker, and Test User roles from one central panel.</li>
+                    <li>Made <code>Active Buyers</code> admin-only by default and moved restricted-tab access rules into a persisted server-side configuration instead of scattered hardcoded sidebar checks.</li>
+                    <li>Restored the searched-property marker on the comps map so users can immediately see where the property in question sits instead of landing on a blank-looking map.</li>
+                    <li>Restored split-pane Street View behavior inside FAST so the right-side Street View panel opens again without forcing users out to a separate Google Maps tab.</li>
+                    <li>Added a clear Google Earth drop pin for the active property focus so Earth view now visibly marks the searched or subject property location.</li>
                 </ul>
             </div>
         </section>
@@ -776,6 +774,25 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.3.8</h2>
+                            <span class="version-date">April 7, 2026</span>
+                        </div>
+                        <span class="version-chip">1.3.8</span>
+                    </div>
+                    <ul>
+                        <li>Added persistent SQLite storage safeguards so production now requires a real database path or mounted data directory instead of silently relying on a fragile app-folder database file.</li>
+                        <li>Added archived message recovery so conversations can be restored from S3-backed message history when the local <code>user_messages</code> table comes back empty after a restart or redeploy.</li>
+                        <li>Updated message archiving to keep edited conversation content in sync and reduced the risk of users thinking message history was randomly disappearing.</li>
+                        <li>Expanded MLS Spreadsheet Copy Templates so the <code>Closed</code> status can be selected and edited directly in the template manager.</li>
+                        <li>Kept the MLS spreadsheet field order consistent with <code>LA Email</code> shown before <code>LA Cell</code> across the table, row parsing, and CSV export logic.</li>
+                        <li>Fixed dashboard ChatGPT widget scrolling by removing the nested assistant-bubble scroll trap so longer replies can be read normally inside the main chat pane.</li>
+                        <li>Disabled HTML page caching at the server layer so live updates like the MLS spreadsheet layout and version history changes stop getting masked by stale cached pages.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>
