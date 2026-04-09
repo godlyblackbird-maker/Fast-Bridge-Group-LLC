@@ -204,6 +204,9 @@ const LEGACY_EMAIL_ALIASES = new Map([
 const CANONICAL_LORIA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('LORIA_BROKER_EMAIL') || 'loria.rigby@fastbridgegroupllc.com');
 const CANONICAL_LORIA_PASSWORD = String(process.env.LORIA_BROKER_PASSWORD || 'Password123').trim() || 'Password123';
 const CANONICAL_LORIA_NAME = String(process.env.LORIA_BROKER_NAME || 'Loria Rigby').trim() || 'Loria Rigby';
+const CANONICAL_STEVEN_CASTILLO_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('STEVEN_CASTILLO_EMAIL') || 'steve.castillo@fastbridgegroupllc.com');
+const CANONICAL_STEVEN_CASTILLO_PASSWORD = String(process.env.STEVEN_CASTILLO_PASSWORD || 'Password123').trim() || 'Password123';
+const CANONICAL_STEVEN_CASTILLO_NAME = String(process.env.STEVEN_CASTILLO_NAME || 'Steven Castillo').trim() || 'Steven Castillo';
 const CANONICAL_TEST_EMAIL = 'test@fastbridgegroupllc.com';
 const CANONICAL_TEST_PASSWORD = 'subzero';
 const CANONICAL_TEST_NAME = 'Test';
@@ -1657,6 +1660,7 @@ function initializeDatabase() {
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
       syncLoriaBrokerAccount();
+      syncStevenCastilloUserAccount();
       syncPublicTestAccount();
     }
   });
@@ -5014,6 +5018,63 @@ async function syncLoriaBrokerAccount() {
     console.log('Loria broker account synced');
   } catch (error) {
     console.error('Failed to sync Loria broker account:', error);
+  }
+}
+
+async function syncStevenCastilloUserAccount() {
+  const canonicalEmail = CANONICAL_STEVEN_CASTILLO_EMAIL;
+  const canonicalName = CANONICAL_STEVEN_CASTILLO_NAME;
+  const canonicalPassword = CANONICAL_STEVEN_CASTILLO_PASSWORD;
+  const legacyEmails = [];
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) = ?
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
+      [canonicalEmail, canonicalName, canonicalEmail]
+    );
+
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+
+    if (!account) {
+      await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'user', '', '', '']
+      );
+      console.log('Steven Castillo user account created/synced');
+      return;
+    }
+
+    const currentSmtpPass = String(account.smtp_pass || '').trim();
+    const currentSmtpSignature = String(account.smtp_signature || '').trim();
+
+    await dbRun(
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      [
+        canonicalName,
+        canonicalEmail,
+        hash,
+        'user',
+        account.smtp_user || '',
+        currentSmtpPass,
+        currentSmtpSignature,
+        account.id
+      ]
+    );
+
+    await mergeLegacyConversationUsersIntoCanonicalAccount({
+      canonicalUserId: account.id,
+      canonicalEmail,
+      canonicalName,
+      legacyEmails,
+      logLabel: 'Steven Castillo user account'
+    });
+
+    console.log('Steven Castillo user account synced');
+  } catch (error) {
+    console.error('Failed to sync Steven Castillo user account:', error);
   }
 }
 
