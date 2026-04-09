@@ -1129,19 +1129,58 @@
       }
     }
 
-    const canvas = await html2canvas(preview, {
-      backgroundColor: null,
-      scale: Math.max(2, window.devicePixelRatio || 1),
-      useCORS: true,
-      logging: false
-    });
+    const previewRect = preview.getBoundingClientRect();
+    const exportWidth = Math.max(Math.round(previewRect.width), preview.scrollWidth || 0, 560);
+    const exportHeight = Math.max(Math.round(previewRect.height), preview.scrollHeight || 0, 320);
 
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/jpeg', 0.92);
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const exportHost = document.createElement('div');
+    exportHost.setAttribute('aria-hidden', 'true');
+    exportHost.style.position = 'fixed';
+    exportHost.style.left = '-10000px';
+    exportHost.style.top = '0';
+    exportHost.style.width = `${exportWidth}px`;
+    exportHost.style.height = `${exportHeight}px`;
+    exportHost.style.padding = '0';
+    exportHost.style.margin = '0';
+    exportHost.style.opacity = '1';
+    exportHost.style.pointerEvents = 'none';
+    exportHost.style.zIndex = '-1';
+    exportHost.style.background = 'transparent';
+
+    const exportClone = preview.cloneNode(true);
+    exportClone.id = `${preview.id || 'preview'}-export-clone`;
+    exportClone.style.width = `${exportWidth}px`;
+    exportClone.style.minWidth = `${exportWidth}px`;
+    exportClone.style.maxWidth = `${exportWidth}px`;
+    exportClone.style.height = `${exportHeight}px`;
+    exportClone.style.minHeight = `${exportHeight}px`;
+    exportClone.style.margin = '0';
+    exportClone.style.transform = 'none';
+
+    exportHost.appendChild(exportClone);
+    document.body.appendChild(exportHost);
+
+    try {
+      const canvas = await html2canvas(exportClone, {
+        backgroundColor: '#ffffff',
+        scale: Math.max(2, window.devicePixelRatio || 1),
+        useCORS: true,
+        logging: false,
+        width: exportWidth,
+        height: exportHeight,
+        windowWidth: exportWidth,
+        windowHeight: exportHeight
+      });
+
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/jpeg', 0.92);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } finally {
+      exportHost.remove();
+    }
   }
 
   async function downloadECardAsJpg() {
@@ -1164,131 +1203,7 @@
     const sanitizedName = (name || 'ecard').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const fileName = `${sanitizedName || 'ecard'}.jpg`;
 
-    const width = 1050;
-    const height = 600;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      showNotification('Unable to generate E Card image in this browser.', 'info');
-      return;
-    }
-
-    const bg = ctx.createLinearGradient(0, 0, width, height);
-    bg.addColorStop(0, '#f5f7fb');
-    bg.addColorStop(1, '#eef2f7');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(1.5, 1.5, width - 3, height - 3);
-
-    const brandColumnWidth = 300;
-    const dividerX = brandColumnWidth + 20;
-
-    function drawRoundedRect(context, x, y, w, h, r) {
-      const radius = Math.max(0, Math.min(r, w / 2, h / 2));
-      context.beginPath();
-      context.moveTo(x + radius, y);
-      context.lineTo(x + w - radius, y);
-      context.quadraticCurveTo(x + w, y, x + w, y + radius);
-      context.lineTo(x + w, y + h - radius);
-      context.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-      context.lineTo(x + radius, y + h);
-      context.quadraticCurveTo(x, y + h, x, y + h - radius);
-      context.lineTo(x, y + radius);
-      context.quadraticCurveTo(x, y, x + radius, y);
-      context.closePath();
-    }
-
-    const logoX = 30;
-    const logoY = 96;
-    const logoW = 262;
-    const logoH = 146;
-
-    const logoImage = await new Promise(resolve => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => resolve(null);
-      image.src = 'png photos/FAST LOGO 777.png';
-    });
-
-    if (logoImage) {
-      const fit = Math.min(logoW / logoImage.width, logoH / logoImage.height);
-      const drawW = logoImage.width * fit;
-      const drawH = logoImage.height * fit;
-      const drawX = logoX + (logoW - drawW) / 2;
-      const drawY = logoY + (logoH - drawH) / 2;
-      ctx.drawImage(logoImage, drawX, drawY, drawW, drawH);
-    } else {
-      ctx.fillStyle = '#b91c1c';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = '800 44px Arial, sans-serif';
-      ctx.fillText('FAST', logoX + logoW / 2, logoY + logoH / 2);
-    }
-
-    ctx.fillStyle = '#8a6a2f';
-    ctx.font = '700 24px Arial, sans-serif';
-    ctx.fillText('FAST BRIDGE GROUP, LLC', 160, 320);
-
-    ctx.strokeStyle = 'rgba(138, 106, 47, 0.75)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(dividerX, 40);
-    ctx.lineTo(dividerX, height - 40);
-    ctx.stroke();
-
-    const detailsX = dividerX + 34;
-    const detailsMaxWidth = width - detailsX - 34;
-    let y = 86;
-
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = '#c81e1e';
-    ctx.font = '800 54px Arial, sans-serif';
-    y = drawWrappedText(ctx, name, detailsX, y, detailsMaxWidth, 58, 2);
-
-    y += 10;
-    ctx.fillStyle = '#111827';
-    ctx.font = '600 20px Arial, sans-serif';
-    y = drawWrappedText(ctx, role, detailsX, y, detailsMaxWidth, 28, 2);
-    y += 16;
-
-    const lines = [
-      ['Phone', phone],
-      ['Email', email],
-      ['License', license],
-      ['Buying Box', buyBox],
-      ['Areas/Counties', targetAreas]
-    ].filter(([, value]) => {
-      const normalized = String(value || '').trim();
-      return normalized.length > 0 && normalized.toLowerCase() !== 'not set';
-    });
-
-    lines.forEach(([label, value], index) => {
-      const rowY = y + (index * 58);
-      ctx.fillStyle = '#475569';
-      ctx.font = '600 16px Arial, sans-serif';
-      ctx.fillText(label.toUpperCase(), detailsX, rowY);
-
-      ctx.fillStyle = '#111827';
-      ctx.font = '500 24px Arial, sans-serif';
-      const allowTwoLines = label === 'Buying Box' || label === 'Areas/Counties';
-      drawWrappedText(ctx, value, detailsX + 130, rowY, detailsMaxWidth - 130, 28, allowTwoLines ? 2 : 1);
-    });
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    await downloadPreviewAsExactJpg(preview, fileName);
 
     showNotification('E Card downloaded as JPG.', 'success');
   }
