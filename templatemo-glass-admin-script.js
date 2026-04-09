@@ -23365,6 +23365,225 @@ function initNavbarDateTime() {
 
             const preserveExistingOfferDraft = hasMeaningfulOfferDraft(savedDraft);
 
+            const FALLBACK_INVESTOR_ATTACHMENT_PACKAGES = [
+                {
+                    folderName: 'Alex',
+                    label: 'Alex - Chapter One Holdings LLC',
+                    files: [
+                        {
+                            name: 'Operating Agreement - Chapter One Holdings LLC.pdf',
+                            relativePath: 'Investors Attatchments/Alex/Operating Agreement - Chapter One Holdings LLC.pdf'
+                        }
+                    ],
+                    offerProfile: {
+                        entityValue: 'chapter-one-holdings-llc',
+                        entityLabel: 'Chapter One Holdings LLC',
+                        signerName: 'Alex Di Girgis',
+                        depositMode: 'flat-fee',
+                        depositAmount: '10000',
+                        closeEscrowDays: '17',
+                        closeEscrowNote: '17 days after acceptance',
+                        offerType: 'cash',
+                        appraisal: 'no-appraisal-contingencies',
+                        inspectionPeriod: '5',
+                        disclosures: '5',
+                        termiteInspection: 'no-termite',
+                        escrowFees: 'buyer',
+                        titleFees: 'buyer',
+                        cityTransferTax: 'seller',
+                        countyTransferTax: 'seller',
+                        escrowCompany: 'Clear Water Escrow - Rosalee Whitby',
+                        titleCompany: "Lawyer's Title - Orange County - Liz Ochoa",
+                        otherTermsSummary: 'Property to be delivered vacant at close of escrow.',
+                        contingencySummary: '5 day inspection, 5 day disclosures, no appraisal contingency, no termite inspection, and buyer waives home warranty.',
+                        closingCostSummary: 'Seller pays 3Q(1-6), if applicable, and 3Q(10-11). Buyer chooses and pays both sides for escrow with Clear Water Escrow - Rosalee Whitby and title with Lawyer\'s Title - Orange County - Liz Ochoa. Buyer waives home warranty.',
+                        additionalTerms: [
+                            'Buyer(s) are licensed brokers and licensed agents.',
+                            'Buyer is a professional real estate investor who buys property at below-market prices for the purposes of resale for profit.',
+                            'Buyer reserves the right to utilize any and all investment strategies to maximize profit, including buy and hold, fix and flip, resell as-is, or rent as-is.',
+                            'Property to be delivered vacant at close of escrow.'
+                        ],
+                        customSections: [
+                            {
+                                heading: 'Contract Terms',
+                                lines: [
+                                    'Buyer - Chapter signor is Alex Di Girgis.',
+                                    '3A. Price - all cash.',
+                                    '3B. COE - 17 days after acceptance.',
+                                    '3D(1). EMD - $10,000.',
+                                    '3L(3). Inspection - 5 days.',
+                                    '3N(1). Disclosures - 5 days.',
+                                    '3Q(1-6 if applicable) - Seller pays.',
+                                    '3Q(7) - Buyer chooses and pays both sides (Clear Water Escrow - Rosalee Whitby).',
+                                    '3Q(8) - Buyer chooses and pays both sides (Lawyer\'s Title - Orange County - Liz Ochoa).',
+                                    '3Q(10,11) - Seller pays.',
+                                    '3Q(18) - Buyer waives home warranty.'
+                                ]
+                            }
+                        ],
+                        assignmentVerbiage: 'Buyer(s) are licensed brokers, licensed agents. Buyer is a professional Real Estate Investor who buys property at below-market prices for the purposes of resale for profit. Buyer reserves the right to utilize any and all investment strategies to maximize their profit (i.e. buyhold, fix and flip, resell as-is, rent as-is, etc). Property to be delivered vacant at close of escrow.'
+                    }
+                },
+                {
+                    folderName: 'Brad',
+                    label: 'Brad - Revive SO Cal LLC',
+                    files: [
+                        {
+                            name: 'Revive SoCal LLC _ COGS (08.25.25) (5).pdf',
+                            relativePath: 'Investors Attatchments/Brad/Revive SoCal LLC _ COGS (08.25.25) (5).pdf'
+                        },
+                        {
+                            name: 'ReviveSoCal _ Written Consent (9.2025) (4).pdf',
+                            relativePath: 'Investors Attatchments/Brad/ReviveSoCal _ Written Consent (9.2025) (4).pdf'
+                        }
+                    ],
+                    offerProfile: {
+                        entityValue: 'revive-socal-llc',
+                        entityLabel: 'Revive SoCal LLC',
+                        signerName: 'Nick Battisto',
+                        recipientName: 'Brad',
+                        recipientEmail: 'brad@prophethomes.com',
+                        depositMode: 'flat-fee',
+                        depositAmount: '10000',
+                        closeEscrowDays: '21',
+                        closeEscrowNote: '21 days or sooner',
+                        offerType: 'cash',
+                        appraisal: 'no-appraisal-contingencies',
+                        inspectionPeriod: '7',
+                        termiteInspection: 'no-termite',
+                        escrowFees: 'buyer',
+                        titleFees: 'buyer',
+                        escrowCompany: 'Prominent Escrow',
+                        titleCompany: 'First Integrity Title',
+                        otherTermsSummary: 'Property to be delivered vacant. Buyer confirms vacancy before wiring funds and may fund with a non-contingent line of credit.',
+                        contingencySummary: '7 day physical inspection only. No loan, no appraisal, and no home warranty contingencies.',
+                        closingCostSummary: 'Buyer to pay seller\'s escrow and title traditional closing costs when buyer chooses providers; otherwise escrow/title to be split 50/50.',
+                        additionalTerms: [
+                            'Buyers are licensed real estate brokers/agents in multiple states, including CA.',
+                            'Buyers are investors who intend to purchase real estate and utilize all investment strategies for the subject property.',
+                            'Property to be delivered vacant.',
+                            'Buyer to confirm vacancy before wiring closing funds.',
+                            'Buyer may fund with a non-contingent line of credit.',
+                            'Buyer may pay invoices through escrow at buyers sole expense and approval.'
+                        ],
+                        customSections: [
+                            {
+                                heading: 'Escrow / Title Options',
+                                lines: [
+                                    'Prominent Escrow: buyer to pay for seller\'s escrow and title traditional closing costs if buyer chooses providers; otherwise 50/50 split.',
+                                    'First Integrity Title: buyer to pay for seller\'s escrow and title traditional closing costs if buyer chooses providers; otherwise 50/50 split.'
+                                ]
+                            }
+                        ],
+                        assignmentVerbiage: 'Buyers are licensed real estate brokers/agents in multiple states, including CA. Buyers are investors who intend to purchase real estate and utilize all investment strategies for the subject property. Property to be delivered vacant. Buyer to confirm vacancy before wiring closing funds. Buyer may fund with a non-contingent line of credit. Buyer may pay invoices through escrow at buyers sole expense and approval.'
+                    }
+                },
+                {
+                    folderName: 'Bret (OUR TERMS)',
+                    label: 'Bret (OUR TERMS)',
+                    files: [
+                        {
+                            name: 'by laws (2) (1) (2).pdf',
+                            relativePath: 'Investors Attatchments/Bret (OUR TERMS)/by laws (2) (1) (2).pdf'
+                        }
+                    ],
+                    offerProfile: null
+                },
+                {
+                    folderName: 'Fabi  (OUR TERMS)',
+                    label: 'Fabi  (OUR TERMS)',
+                    files: [
+                        {
+                            name: 'Article of Inc-1 (1).pdf',
+                            relativePath: 'Investors Attatchments/Fabi  (OUR TERMS)/Article of Inc-1 (1).pdf'
+                        },
+                        {
+                            name: 'ByLaws-1 (1).pdf',
+                            relativePath: 'Investors Attatchments/Fabi  (OUR TERMS)/ByLaws-1 (1).pdf'
+                        }
+                    ],
+                    offerProfile: null
+                },
+                {
+                    folderName: 'Kaylnn',
+                    label: 'Kalynn Brown - WH4, LLC',
+                    files: [
+                        {
+                            name: 'POF WH4 LLC xxxxx1825 (2) (1).pdf',
+                            relativePath: 'Investors Attatchments/Kaylnn/POF WH4 LLC xxxxx1825 (2) (1).pdf'
+                        }
+                    ],
+                    offerProfile: {
+                        entityValue: 'wh4-llc',
+                        entityLabel: 'WH4, LLC',
+                        signerName: 'Darin Puhl, as authorized agent',
+                        recipientName: 'Kalynn Brown',
+                        recipientEmail: 'kbrown@wedgewoodhomesrealty.com',
+                        assignmentVerbiage: 'EMD to be fully refundable in the instance of seller/assignor non-performance including property not being delivered vacant, not having clear and marketable title, or not in similar condition as when this assignment was executed. Buyer will not assume any payoffs, liens, or assessments. Buyer to walk through on date of funding to verify occupancy status and condition. Any personal property remaining at the property at close of escrow is expressly abandoned by the seller and otherwise released to the buyer.'
+                    }
+                },
+                {
+                    folderName: 'Shawn  (OUR TERMS)',
+                    label: 'Shawn  (OUR TERMS)',
+                    files: [
+                        {
+                            name: 'SM desert properties  (1) llc papers (1).pdf',
+                            relativePath: 'Investors Attatchments/Shawn  (OUR TERMS)/SM desert properties  (1) llc papers (1).pdf'
+                        }
+                    ],
+                    offerProfile: null
+                }
+            ];
+
+            function cloneInvestorAttachmentPackages(packages) {
+                return JSON.parse(JSON.stringify(Array.isArray(packages) ? packages : []));
+            }
+
+            function normalizeInvestorAttachmentPackages(packages) {
+                return cloneInvestorAttachmentPackages(packages)
+                    .map((entry) => {
+                        const files = Array.isArray(entry?.files)
+                            ? entry.files.filter((fileEntry) => fileEntry && fileEntry.relativePath)
+                            : [];
+
+                        if (!entry || !entry.folderName || files.length === 0) {
+                            return null;
+                        }
+
+                        return {
+                            folderName: String(entry.folderName).trim(),
+                            label: String(entry.label || entry.folderName).trim(),
+                            files,
+                            fileCount: files.length,
+                            offerProfile: entry.offerProfile && typeof entry.offerProfile === 'object'
+                                ? entry.offerProfile
+                                : null
+                        };
+                    })
+                    .filter(Boolean)
+                    .sort((left, right) => left.label.localeCompare(right.label));
+            }
+
+            function getMergedInvestorAttachmentPackages(apiPackages) {
+                const fallbackPackages = normalizeInvestorAttachmentPackages(FALLBACK_INVESTOR_ATTACHMENT_PACKAGES);
+                const mergedPackages = new Map(fallbackPackages.map((entry) => [entry.folderName, entry]));
+
+                normalizeInvestorAttachmentPackages(apiPackages).forEach((entry) => {
+                    const fallbackEntry = mergedPackages.get(entry.folderName);
+                    mergedPackages.set(entry.folderName, {
+                        folderName: entry.folderName,
+                        label: entry.label || fallbackEntry?.label || entry.folderName,
+                        files: entry.files.length > 0 ? entry.files : (fallbackEntry?.files || []),
+                        fileCount: entry.files.length > 0 ? entry.files.length : Number(fallbackEntry?.fileCount || 0),
+                        offerProfile: entry.offerProfile || fallbackEntry?.offerProfile || null
+                    });
+                });
+
+                return Array.from(mergedPackages.values())
+                    .filter((entry) => Array.isArray(entry.files) && entry.files.length > 0)
+                    .sort((left, right) => left.label.localeCompare(right.label));
+            }
+
             function readLocalJson(key) {
                 try {
                     return JSON.parse(localStorage.getItem(key) || '{}');
@@ -23858,12 +24077,18 @@ function initNavbarDateTime() {
                     }
 
                     const result = await response.json();
-                    investorAttachmentPackages = Array.isArray(result?.packages) ? result.packages : [];
+                    investorAttachmentPackages = getMergedInvestorAttachmentPackages(Array.isArray(result?.packages) ? result.packages : []);
                     populateInvestorAttachmentOptions(savedDraft.investorAttachmentFolder || '');
+
+                    if (!Array.isArray(result?.packages) || result.packages.length === 0) {
+                        emailNote.textContent = 'Investor attachment folders were restored from built-in package defaults for this property page.';
+                    }
                 } catch (error) {
-                    investorAttachmentPackages = [];
-                    populateInvestorAttachmentOptions('');
-                    emailNote.textContent = 'Investor attachment folders could not be loaded right now. Uploaded files in the Offer Documents section below will still be sent automatically with Send To Agent.';
+                    investorAttachmentPackages = getMergedInvestorAttachmentPackages([]);
+                    populateInvestorAttachmentOptions(savedDraft.investorAttachmentFolder || '');
+                    emailNote.textContent = investorAttachmentPackages.length > 0
+                        ? 'Investor attachment folders were restored from built-in package defaults because the live folder lookup is unavailable right now.'
+                        : 'Investor attachment folders could not be loaded right now. Uploaded files in the Offer Documents section below will still be sent automatically with Send To Agent.';
                 }
             }
 
