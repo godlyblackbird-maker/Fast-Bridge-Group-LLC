@@ -21035,6 +21035,12 @@ function initNavbarDateTime() {
                         stroke: '#fef3c7',
                         text: '#fef3c7'
                     }
+                    : variant === 'search'
+                        ? {
+                            fill: '#2563eb',
+                            stroke: '#dbeafe',
+                            text: '#eff6ff'
+                        }
                     : {
                         fill: variant === 'green' ? '#10b981' : (variant === 'orange' ? '#f59e0b' : '#ef4444'),
                         stroke: isActive ? '#f8fafc' : 'rgba(8,15,28,0.78)',
@@ -21647,22 +21653,26 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                detailData.streetViewPanoLat = panoMatch.lat;
-                detailData.streetViewPanoLng = panoMatch.lng;
-                persistCurrentPropertyDetail();
+                try {
+                    detailData.streetViewPanoLat = panoMatch.lat;
+                    detailData.streetViewPanoLng = panoMatch.lng;
+                    persistCurrentPropertyDetail();
 
-                const heading = window.google.maps.geometry && typeof window.google.maps.geometry.spherical?.computeHeading === 'function'
-                    ? window.google.maps.geometry.spherical.computeHeading(
-                        new window.google.maps.LatLng(panoMatch.lat, panoMatch.lng),
-                        new window.google.maps.LatLng(subjectLocation.lat, subjectLocation.lng)
-                    )
-                    : 34;
+                    const heading = window.google.maps.geometry && typeof window.google.maps.geometry.spherical?.computeHeading === 'function'
+                        ? window.google.maps.geometry.spherical.computeHeading(
+                            new window.google.maps.LatLng(panoMatch.lat, panoMatch.lng),
+                            new window.google.maps.LatLng(subjectLocation.lat, subjectLocation.lng)
+                        )
+                        : 34;
 
-                panoramaInstance.setPosition({ lat: panoMatch.lat, lng: panoMatch.lng });
-                panoramaInstance.setPov({
-                    heading: Number.isFinite(heading) ? heading : 34,
-                    pitch: 8
-                });
+                    panoramaInstance.setPosition({ lat: panoMatch.lat, lng: panoMatch.lng });
+                    panoramaInstance.setPov({
+                        heading: Number.isFinite(heading) ? heading : 34,
+                        pitch: 8
+                    });
+                } catch (error) {
+                    // Keep the visible subject panorama open even if refinement or cache persistence fails.
+                }
             }
 
             async function ensureMapReady() {
@@ -21949,6 +21959,8 @@ function initNavbarDateTime() {
                 const classes = ['comps-map-pin'];
                 if (variant === 'subject') {
                     classes.push('is-subject');
+                } else if (variant === 'search') {
+                    classes.push('is-search');
                 } else {
                     classes.push(`is-${variant || 'red'}`);
                 }
@@ -21966,7 +21978,7 @@ function initNavbarDateTime() {
                     subjectMarker = null;
                 }
                 if (searchedMarker) {
-                    searchedMarker.setMap(null);
+                    detachMarker(searchedMarker);
                     searchedMarker = null;
                 }
                 markerRegistry.forEach((marker) => {
@@ -22032,36 +22044,29 @@ function initNavbarDateTime() {
                 persistCurrentPropertyDetail();
 
                 if (searchedMarker) {
-                    searchedMarker.setMap(null);
+                    detachMarker(searchedMarker);
                 }
 
-                searchedMarker = new window.google.maps.Marker({
+                searchedMarker = createMapMarker({
                     map: mapInstance,
                     position,
+                    content: buildMarkerContent('SEARCH', 'search', false),
                     title: lastSearchResult.label,
-                    label: {
-                        text: 'S',
-                        color: '#ffffff',
-                        fontWeight: '700'
-                    },
-                    icon: {
-                        path: window.google.maps.SymbolPath.CIRCLE,
-                        fillColor: '#2563eb',
-                        fillOpacity: 1,
-                        strokeColor: '#f8fafc',
-                        strokeWeight: 2,
-                        scale: 10
-                    },
+                    label: 'SEARCH',
+                    variant: 'search',
+                    isActive: false,
                     zIndex: 320
                 });
-                searchedMarker.addListener('click', () => {
-                    openMarkerInfoWindow(searchedMarker, {
-                        address: lastSearchResult.label,
-                        propertyType: 'Search Result',
-                        price: 0,
-                        title: lastSearchResult.label
-                    }, false);
-                });
+                if (searchedMarker && typeof searchedMarker.addListener === 'function') {
+                    searchedMarker.addListener('click', () => {
+                        openMarkerInfoWindow(searchedMarker, {
+                            address: lastSearchResult.label,
+                            propertyType: 'Search Result',
+                            price: 0,
+                            title: lastSearchResult.label
+                        }, false);
+                    });
+                }
 
                 mapInstance.panTo(position);
                 if ((Number(mapInstance.getZoom()) || 0) < 15) {
@@ -22260,6 +22265,45 @@ function initNavbarDateTime() {
                     markerRegistry.set(compKey, marker);
                     bounds.extend({ lat: comp.lat, lng: comp.lng });
                 });
+
+                if (
+                    lastSearchResult
+                    && Number.isFinite(Number(lastSearchResult.lat))
+                    && Number.isFinite(Number(lastSearchResult.lng))
+                ) {
+                    const searchPosition = {
+                        lat: Number(lastSearchResult.lat),
+                        lng: Number(lastSearchResult.lng)
+                    };
+                    const sameAsSubject = Math.abs(searchPosition.lat - subjectLocation.lat) < 0.00001
+                        && Math.abs(searchPosition.lng - subjectLocation.lng) < 0.00001;
+
+                    if (!sameAsSubject) {
+                        searchedMarker = createMapMarker({
+                            map: mapInstance,
+                            position: searchPosition,
+                            content: buildMarkerContent('SEARCH', 'search', false),
+                            label: 'SEARCH',
+                            variant: 'search',
+                            isActive: false,
+                            title: String(lastSearchResult.label || 'Search result').trim() || 'Search result',
+                            zIndex: 290
+                        });
+
+                        if (searchedMarker && typeof searchedMarker.addListener === 'function') {
+                            searchedMarker.addListener('click', () => {
+                                openMarkerInfoWindow(searchedMarker, {
+                                    address: lastSearchResult.label,
+                                    propertyType: 'Search Result',
+                                    price: 0,
+                                    title: lastSearchResult.label
+                                }, false);
+                            });
+                        }
+
+                        bounds.extend(searchPosition);
+                    }
+                }
 
                 if (!bounds.isEmpty()) {
                     mapInstance.fitBounds(bounds, 80);
@@ -22539,8 +22583,15 @@ function initNavbarDateTime() {
                             await showStreetViewForSubject();
                         }
                     } catch (error) {
-                        setStreetViewMode(false);
-                        showDashboardToast('error', 'Street View Unavailable', String(error && error.message || 'Street View could not be loaded in the split pane right now.'));
+                        const streetViewStillVisible = Boolean(
+                            streetViewEnabled
+                            || (panoramaInstance && typeof panoramaInstance.getVisible === 'function' && panoramaInstance.getVisible())
+                        );
+
+                        if (!streetViewStillVisible) {
+                            setStreetViewMode(false);
+                            showDashboardToast('error', 'Street View Unavailable', String(error && error.message || 'Street View could not be loaded in the split pane right now.'));
+                        }
                     } finally {
                         streetViewLoading = false;
                         syncStreetViewButtonState();

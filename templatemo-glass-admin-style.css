@@ -16630,6 +16630,27 @@ body.analytics-reboot .analytics-my-file-count {
     pointer-events: none;
 }
 
+.comps-map-pin.is-search {
+    min-width: 78px;
+    padding: 8px 12px;
+    background: #2563eb;
+    color: #eff6ff;
+    border-color: rgba(219, 234, 254, 0.98);
+    box-shadow:
+        0 0 0 4px rgba(59, 130, 246, 0.2),
+        0 14px 28px rgba(15, 23, 42, 0.3);
+}
+
+.comps-map-pin.is-search::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 999px;
+    border: 2px solid rgba(147, 197, 253, 0.55);
+    animation: comps-map-subject-pulse 1.9s ease-out infinite;
+    pointer-events: none;
+}
+
 .comps-map-pin.is-red {
     background: #ef4444;
     color: #fff;
