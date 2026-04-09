@@ -20764,6 +20764,7 @@ function initNavbarDateTime() {
             let lastFilteredPool = [];
             let lastTopResults = [];
             let searchedMarker = null;
+            let searchedMarkerHalo = null;
             let lastSearchResult = null;
             let lastAutoSearchPropertyAddress = '';
             let earthMapElement = null;
@@ -21064,6 +21065,75 @@ function initNavbarDateTime() {
                     scaledSize: new window.google.maps.Size(width, height),
                     anchor: new window.google.maps.Point(width / 2, height / 2)
                 };
+            }
+
+            function buildSearchPinIcon() {
+                const svg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="38" height="52" viewBox="0 0 38 52">
+                        <path d="M19 1C9.611 1 2 8.611 2 18c0 13.271 14.748 28.985 16.117 30.423a1.2 1.2 0 0 0 1.766 0C21.252 46.985 36 31.271 36 18 36 8.611 28.389 1 19 1Z" fill="#2563eb" stroke="#eff6ff" stroke-width="2"/>
+                        <circle cx="19" cy="18" r="6.5" fill="#f8fafc"/>
+                        <circle cx="19" cy="18" r="3" fill="#93c5fd"/>
+                    </svg>
+                `.trim();
+
+                return {
+                    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+                    scaledSize: new window.google.maps.Size(38, 52),
+                    anchor: new window.google.maps.Point(19, 50)
+                };
+            }
+
+            function clearSearchedLocationArtifacts() {
+                if (searchedMarker) {
+                    detachMarker(searchedMarker);
+                    searchedMarker = null;
+                }
+                if (searchedMarkerHalo) {
+                    searchedMarkerHalo.setMap(null);
+                    searchedMarkerHalo = null;
+                }
+            }
+
+            function renderSearchedLocationMarker(position, titleText) {
+                if (!mapInstance || !window.google || !window.google.maps) {
+                    return null;
+                }
+
+                clearSearchedLocationArtifacts();
+
+                searchedMarkerHalo = new window.google.maps.Circle({
+                    strokeColor: '#93c5fd',
+                    strokeOpacity: 0.95,
+                    strokeWeight: 2,
+                    fillColor: '#2563eb',
+                    fillOpacity: 0.14,
+                    map: mapInstance,
+                    center: position,
+                    radius: 42,
+                    zIndex: 310
+                });
+
+                searchedMarker = new window.google.maps.Marker({
+                    map: mapInstance,
+                    position,
+                    title: String(titleText || 'Search result').trim() || 'Search result',
+                    icon: buildSearchPinIcon(),
+                    zIndex: 330,
+                    optimized: false
+                });
+
+                if (searchedMarker && typeof searchedMarker.addListener === 'function') {
+                    searchedMarker.addListener('click', () => {
+                        openMarkerInfoWindow(searchedMarker, {
+                            address: lastSearchResult && lastSearchResult.label ? lastSearchResult.label : titleText,
+                            propertyType: 'Search Result',
+                            price: 0,
+                            title: lastSearchResult && lastSearchResult.label ? lastSearchResult.label : titleText
+                        }, false);
+                    });
+                }
+
+                return searchedMarker;
             }
 
             function parseCurrencyAmount(value) {
@@ -21977,10 +22047,7 @@ function initNavbarDateTime() {
                     detachMarker(subjectMarker);
                     subjectMarker = null;
                 }
-                if (searchedMarker) {
-                    detachMarker(searchedMarker);
-                    searchedMarker = null;
-                }
+                clearSearchedLocationArtifacts();
                 markerRegistry.forEach((marker) => {
                     detachMarker(marker);
                 });
@@ -22043,30 +22110,7 @@ function initNavbarDateTime() {
                 detailData.compsSearchLabel = lastSearchResult.label;
                 persistCurrentPropertyDetail();
 
-                if (searchedMarker) {
-                    detachMarker(searchedMarker);
-                }
-
-                searchedMarker = createMapMarker({
-                    map: mapInstance,
-                    position,
-                    content: buildMarkerContent('SEARCH', 'search', false),
-                    title: lastSearchResult.label,
-                    label: 'SEARCH',
-                    variant: 'search',
-                    isActive: false,
-                    zIndex: 320
-                });
-                if (searchedMarker && typeof searchedMarker.addListener === 'function') {
-                    searchedMarker.addListener('click', () => {
-                        openMarkerInfoWindow(searchedMarker, {
-                            address: lastSearchResult.label,
-                            propertyType: 'Search Result',
-                            price: 0,
-                            title: lastSearchResult.label
-                        }, false);
-                    });
-                }
+                searchedMarker = renderSearchedLocationMarker(position, lastSearchResult.label);
 
                 mapInstance.panTo(position);
                 if ((Number(mapInstance.getZoom()) || 0) < 15) {
@@ -22279,27 +22323,10 @@ function initNavbarDateTime() {
                         && Math.abs(searchPosition.lng - subjectLocation.lng) < 0.00001;
 
                     if (!sameAsSubject) {
-                        searchedMarker = createMapMarker({
-                            map: mapInstance,
-                            position: searchPosition,
-                            content: buildMarkerContent('SEARCH', 'search', false),
-                            label: 'SEARCH',
-                            variant: 'search',
-                            isActive: false,
-                            title: String(lastSearchResult.label || 'Search result').trim() || 'Search result',
-                            zIndex: 290
-                        });
-
-                        if (searchedMarker && typeof searchedMarker.addListener === 'function') {
-                            searchedMarker.addListener('click', () => {
-                                openMarkerInfoWindow(searchedMarker, {
-                                    address: lastSearchResult.label,
-                                    propertyType: 'Search Result',
-                                    price: 0,
-                                    title: lastSearchResult.label
-                                }, false);
-                            });
-                        }
+                        searchedMarker = renderSearchedLocationMarker(
+                            searchPosition,
+                            String(lastSearchResult.label || 'Search result').trim() || 'Search result'
+                        );
 
                         bounds.extend(searchPosition);
                     }
