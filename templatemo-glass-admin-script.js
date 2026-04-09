@@ -6384,7 +6384,7 @@ function initNavbarDateTime() {
             return;
         }
 
-        const hoverAudio = new Audio('Sound FX/Menu TickG�+Hover (Terraria Sound) - Sound Effect for editing.wav');
+        const hoverAudio = new Audio('Sound FX/Menu Tick%E2%A7%B8Hover (Terraria Sound) - Sound Effect for editing.wav');
         hoverAudio.preload = 'auto';
         hoverAudio.volume = 0.35;
 
@@ -18140,6 +18140,14 @@ function initNavbarDateTime() {
         let detailData = null;
         detailData = getPersistedSelectedPropertyDetail();
 
+        function normalizePropertyDetailText(value) {
+            return String(value || '')
+                .replace(/ft-�/gi, 'sqft')
+                .replace(/�/g, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+        }
+
         const defaultDetailData = {
             address: 'No property selected',
             propertyImages: [
@@ -18221,10 +18229,10 @@ function initNavbarDateTime() {
             }
             : defaultDetailData;
 
-        detailData.propertyDetails = normalizePropertyDetailDisplayText(detailData.propertyDetails || defaultDetailData.propertyDetails);
-        detailData.marketInfo = normalizePropertyDetailDisplayText(detailData.marketInfo || defaultDetailData.marketInfo);
-        detailData.lotSize = normalizePropertyDetailDisplayText(detailData.lotSize || defaultDetailData.lotSize);
-        detailData.areaLabel = normalizePropertyDetailDisplayText(detailData.areaLabel || defaultDetailData.areaLabel);
+        detailData.propertyDetails = normalizePropertyDetailText(detailData.propertyDetails || defaultDetailData.propertyDetails);
+        detailData.marketInfo = normalizePropertyDetailText(detailData.marketInfo || defaultDetailData.marketInfo);
+        detailData.lotSize = normalizePropertyDetailText(detailData.lotSize || defaultDetailData.lotSize);
+        detailData.areaLabel = normalizePropertyDetailText(detailData.areaLabel || defaultDetailData.areaLabel);
 
         try {
             localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));

@@ -7121,33 +7121,55 @@ function cleanupExpiredMlsImportPdfJobs() {
       mlsImportPdfJobs.delete(jobId);
     }
   });
+}
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS agent_property_memory (
-      property_key TEXT NOT NULL,
-      agent_key TEXT NOT NULL,
-      agent_name TEXT,
-      agent_email TEXT,
-      property_address TEXT NOT NULL,
-      status_value TEXT NOT NULL,
-      owner_user_key TEXT NOT NULL,
-      owner_user_email TEXT,
-      owner_user_name TEXT,
-      payload_json TEXT NOT NULL,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (property_key, agent_key, owner_user_key)
-    )
-  `, (err) => {
-    if (err) {
-      console.error('Error creating agent_property_memory table:', err);
-    } else {
-      console.log('Agent property memory table ready');
+let agentPropertyMemoryReadyPromise = null;
+
+function ensureAgentPropertyMemoryTable() {
+  if (agentPropertyMemoryReadyPromise) {
+    return agentPropertyMemoryReadyPromise;
+  }
+
+  agentPropertyMemoryReadyPromise = new Promise((resolve, reject) => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS agent_property_memory (
+        property_key TEXT NOT NULL,
+        agent_key TEXT NOT NULL,
+        agent_name TEXT,
+        agent_email TEXT,
+        property_address TEXT NOT NULL,
+        status_value TEXT NOT NULL,
+        owner_user_key TEXT NOT NULL,
+        owner_user_email TEXT,
+        owner_user_name TEXT,
+        payload_json TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (property_key, agent_key, owner_user_key)
+      )
+    `, (err) => {
+      if (err) {
+        agentPropertyMemoryReadyPromise = null;
+        reject(err);
+        return;
+      }
+
       db.run('CREATE INDEX IF NOT EXISTS idx_agent_property_memory_owner_updated ON agent_property_memory(owner_user_key, updated_at DESC)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_agent_property_memory_agent_owner ON agent_property_memory(agent_key, owner_user_key)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_agent_property_memory_status_owner ON agent_property_memory(status_value, owner_user_key)', () => {});
-    }
+      resolve();
+    });
   });
+
+  return agentPropertyMemoryReadyPromise;
 }
+
+ensureAgentPropertyMemoryTable()
+  .then(() => {
+    console.log('Agent property memory table ready');
+  })
+  .catch((err) => {
+    console.error('Error creating agent_property_memory table:', err);
+  });
 
 function createMlsImportPdfJob({ requesterId, fileName }) {
   cleanupExpiredMlsImportPdfJobs();
@@ -10656,10 +10678,17 @@ app.post('/api/property-assignments', async (req, res) => {
   }
 });
 
-app.get('/api/agent-property-memory', (req, res) => {
+app.get('/api/agent-property-memory', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
+  }
+
+  try {
+    await ensureAgentPropertyMemoryTable();
+  } catch (error) {
+    console.error('Failed to ensure agent_property_memory table before read:', error);
+    return res.status(500).json({ error: 'Database error' });
   }
 
   const ownerUser = normalizeAssignmentUser(decoded);
@@ -10760,6 +10789,13 @@ app.post('/api/agent-property-memory', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
+  }
+
+  try {
+    await ensureAgentPropertyMemoryTable();
+  } catch (error) {
+    console.error('Failed to ensure agent_property_memory table before write:', error);
+    return res.status(500).json({ error: 'Unable to prepare agent property memory storage' });
   }
 
   const ownerUser = normalizeAssignmentUser(req.body?.ownerUser || decoded);
