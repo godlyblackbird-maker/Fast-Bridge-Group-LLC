@@ -7408,6 +7408,15 @@ function initNavbarDateTime() {
             const billingForm = document.getElementById('subscription-billing-form');
             const stripeCardHost = document.getElementById('subscription-stripe-card-element');
             const stripeStatus = document.getElementById('subscription-stripe-status');
+            const flowPlanStep = document.getElementById('subscription-flow-step-plan');
+            const flowBillingStep = document.getElementById('subscription-flow-step-billing');
+            const flowActivateStep = document.getElementById('subscription-flow-step-activate');
+            const selectedPlanLabel = document.getElementById('subscription-selected-plan');
+            const selectedPlanPrice = document.getElementById('subscription-selected-price');
+            const selectedPlanCopy = document.getElementById('subscription-selected-copy');
+            const selectedNextStep = document.getElementById('subscription-next-step');
+            const selectedAccessStatus = document.getElementById('subscription-access-status');
+            const summaryPill = document.getElementById('subscription-summary-pill');
             const brokerageSlider = document.getElementById('subscription-brokerage-agent-slider');
             const brokeragePrice = document.getElementById('subscription-brokerage-price');
             const brokerageAgentCount = document.getElementById('subscription-brokerage-agent-count');
@@ -7441,17 +7450,29 @@ function initNavbarDateTime() {
             const planCopy = {
                 admin: {
                     label: 'Admin Access',
-                    summary: 'Administrator accounts already have full platform access and are not affected by user or premium subscriptions.'
+                    summary: 'Administrator accounts already have full platform access and are not affected by user or premium subscriptions.',
+                    price: 'Included',
+                    recap: 'Administrator access already includes the full workspace, so there is no additional checkout flow for this account.',
+                    access: 'Full platform already active',
+                    nextStep: 'Next step: none required. Admin access is already live.'
                 },
                 basic: {
                     label: 'Basic',
                     summary: 'Basic keeps the core FAST workspace active with standard settings access and essential day-to-day dashboard tools.',
-                    cta: 'Stay on Basic if you want the standard workspace for account management and core workflow use, but do not need premium analysis, ROI visibility, comps workflow, analytics, or campaign tools yet.'
+                    cta: 'Stay on Basic if you want the standard workspace for account management and core workflow use, but do not need premium analysis, ROI visibility, comps workflow, analytics, or campaign tools yet.',
+                    price: '$0 / month',
+                    recap: 'Basic is the standard workspace path for everyday use, settings management, and core dashboard work.',
+                    access: 'Core workspace active',
+                    nextStep: 'Next step: keep Basic active or switch to Premium when you want the full investor tool stack.'
                 },
                 premium: {
                     label: 'Premium',
                     summary: 'Premium costs $99 and unlocks analysis, calculator tools, ROI visibility, comps, analytics, campaigns, and the full Premium User workspace.',
-                    cta: 'Get the full investor workspace with analysis, ROI visibility, comps, campaigns, and premium-only tools.'
+                    cta: 'Get the full investor workspace with analysis, ROI visibility, comps, campaigns, and premium-only tools.',
+                    price: '$99 / month',
+                    recap: 'Premium is the fast path for users who want analysis, comps, ROI visibility, analytics, and campaigns working together in one account.',
+                    access: 'Premium investor stack ready',
+                    nextStep: 'Next step: complete billing to turn on Premium access for this account.'
                 }
             };
             const brokeragePricingAnchors = [
@@ -7751,6 +7772,54 @@ function initNavbarDateTime() {
                             ? 'Premium is already live on this account. You can update billing details here anytime.'
                             : planCopy[activePlan].cta);
                 }
+                if (selectedPlanLabel) {
+                    selectedPlanLabel.textContent = planCopy[actualPlan].label;
+                }
+                if (selectedPlanPrice) {
+                    selectedPlanPrice.textContent = planCopy[actualPlan].price;
+                }
+                if (selectedPlanCopy) {
+                    selectedPlanCopy.textContent = isPremiumUser
+                        ? 'Premium is already active for this account, so the full investor stack is available now.'
+                        : planCopy[actualPlan].recap;
+                }
+                if (selectedAccessStatus) {
+                    selectedAccessStatus.textContent = isPremiumUser
+                        ? 'Premium workspace active'
+                        : planCopy[actualPlan].access;
+                }
+                if (selectedNextStep) {
+                    selectedNextStep.textContent = isPremiumUser
+                        ? 'Next step: manage billing details anytime from the section below.'
+                        : (isAdminUser ? planCopy.admin.nextStep : (activePlan === 'premium' ? planCopy.premium.nextStep : planCopy.basic.nextStep));
+                }
+                if (summaryPill) {
+                    summaryPill.textContent = `${planCopy[actualPlan].label} · ${planCopy[actualPlan].price}`;
+                }
+
+                const setStepState = (element, state) => {
+                    if (!element) {
+                        return;
+                    }
+                    element.classList.toggle('is-active', state === 'active');
+                    element.classList.toggle('is-complete', state === 'complete');
+                    element.classList.toggle('is-waiting', state === 'waiting');
+                };
+
+                if (isAdminUser || isPremiumUser) {
+                    setStepState(flowPlanStep, 'complete');
+                    setStepState(flowBillingStep, 'complete');
+                    setStepState(flowActivateStep, 'complete');
+                } else if (activePlan === 'premium') {
+                    setStepState(flowPlanStep, 'complete');
+                    setStepState(flowBillingStep, 'active');
+                    setStepState(flowActivateStep, 'waiting');
+                } else {
+                    setStepState(flowPlanStep, 'active');
+                    setStepState(flowBillingStep, 'waiting');
+                    setStepState(flowActivateStep, 'waiting');
+                }
+
                 billingSection.hidden = isAdminUser || !(activePlan === 'premium' || isPremiumUser);
                 if (billingNote) {
                     billingNote.textContent = isAdminUser

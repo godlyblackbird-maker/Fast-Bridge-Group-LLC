@@ -612,14 +612,14 @@ https://templatemo.com/tm-607-glass-admin
                                 <div>
                                     <span class="subscription-eyebrow">Subscription Service</span>
                                     <h3 class="settings-section-title subscription-title">Choose Your Plan</h3>
-                                    <p class="subscription-copy">Use FAST as an individual investor workspace or position it as a brokerage tool stack for your agents. The individual plan stays here, and brokerage subscription tiers are listed below.</p>
-                                    <p class="subscription-note">MLS data access stays exactly as-is. Individual Premium unlocks the full investing workflow around that data, while brokerage subscriptions are structured for teams that want their agents using FAST tools under one monthly plan.</p>
+                                    <p class="subscription-copy">Use FAST as an individual investor workspace or set it up for a brokerage team. This page should make both paths feel direct: pick a plan, review the value, and activate without digging around.</p>
+                                    <p class="subscription-note">MLS data access stays exactly as-is. Individual Premium unlocks the full investor workflow around that data, while the brokerage planner below is for teams that want FAST rolled out across agents under one monthly structure.</p>
                                     <div class="subscription-proof-row" aria-label="Premium access highlights">
                                         <span class="subscription-proof-pill">Deal Analysis</span>
                                         <span class="subscription-proof-pill">Investment Calculator</span>
                                         <span class="subscription-proof-pill">Automatic ROI Estimates</span>
                                         <span class="subscription-proof-pill">Comps + ARV Support</span>
-                                        <span class="subscription-proof-pill">Brokerage Tiers</span>
+                                        <span class="subscription-proof-pill">Brokerage Planning</span>
                                     </div>
                                 </div>
                                 <div class="subscription-status-card">
@@ -631,6 +631,44 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                         </div>
 
+                        <div class="settings-section subscription-flow-section">
+                            <div class="subscription-flow-shell">
+                                <div class="subscription-flow-steps" aria-label="Individual subscription flow steps">
+                                    <article class="subscription-flow-step is-active" id="subscription-flow-step-plan">
+                                        <span class="subscription-flow-step-index">1</span>
+                                        <div>
+                                            <strong>Choose a plan</strong>
+                                            <p>Pick Basic or Premium for this account.</p>
+                                        </div>
+                                    </article>
+                                    <article class="subscription-flow-step" id="subscription-flow-step-billing">
+                                        <span class="subscription-flow-step-index">2</span>
+                                        <div>
+                                            <strong>Add billing</strong>
+                                            <p>Premium activates through secure Stripe checkout.</p>
+                                        </div>
+                                    </article>
+                                    <article class="subscription-flow-step" id="subscription-flow-step-activate">
+                                        <span class="subscription-flow-step-index">3</span>
+                                        <div>
+                                            <strong>Unlock access</strong>
+                                            <p>Tabs and premium tools turn on after activation.</p>
+                                        </div>
+                                    </article>
+                                </div>
+                                <aside class="subscription-flow-recap" aria-live="polite">
+                                    <span class="subscription-flow-recap-kicker">Selected Path</span>
+                                    <strong id="subscription-selected-plan">Basic</strong>
+                                    <span class="subscription-flow-price" id="subscription-selected-price">$0 / month</span>
+                                    <p id="subscription-selected-copy">Basic keeps the core FAST workspace active for standard day-to-day use.</p>
+                                    <div class="subscription-flow-meta">
+                                        <span class="subscription-flow-meta-pill" id="subscription-access-status">Core workspace active</span>
+                                        <span class="subscription-flow-meta-note" id="subscription-next-step">Next step: stay on Basic or switch to Premium to unlock the investor stack.</span>
+                                    </div>
+                                </aside>
+                            </div>
+                        </div>
+
                         <div class="settings-section">
                             <div class="subscription-plan-grid">
                                 <label class="subscription-plan-card" for="subscription-plan-basic" data-plan-card="basic">
@@ -638,14 +676,14 @@ https://templatemo.com/tm-607-glass-admin
                                     <div class="subscription-plan-head">
                                         <div>
                                             <h4>Basic</h4>
-                                            <p>Keep the essential FAST workspace active with the standard tools you need to stay organized, manage your account, and keep day-to-day workflow moving without upgrading into the premium investor stack.</p>
+                                            <p>Keep the standard FAST workspace active for account control, daily workflow, and essential tools.</p>
                                         </div>
                                         <span class="subscription-plan-price">$0</span>
                                     </div>
                                     <ul class="subscription-feature-list">
-                                        <li>Profile, security, notification, and appearance settings so this account can stay updated, secure, and personalized</li>
-                                        <li>Core dashboard workflow tools for standard daily use, navigation, and account-level workspace activity</li>
-                                        <li>No MLS entitlement changes, premium analysis unlocks, or upgraded investor workflow access included on this plan</li>
+                                        <li>Profile, security, notification, and appearance settings</li>
+                                        <li>Core dashboard workflow and standard workspace access</li>
+                                        <li>No premium analysis, comps, ROI, analytics, or campaign unlocks</li>
                                     </ul>
                                 </label>
 
@@ -655,19 +693,17 @@ https://templatemo.com/tm-607-glass-admin
                                     <div class="subscription-plan-head">
                                         <div>
                                             <h4>Premium</h4>
-                                            <p>Unlock the serious investor stack so you can evaluate deals quicker, market smarter, and act with clearer numbers instead of guesswork.</p>
+                                            <p>Unlock the full investor stack so this account can analyze deals, comp properties, and move faster with better numbers.</p>
                                         </div>
                                         <span class="subscription-plan-price">$99</span>
                                     </div>
                                     <ul class="subscription-feature-list">
-                                        <li>Full analysis access so you can break down deals, review the numbers, and underwrite opportunities in one place</li>
-                                        <li>Investment Calculator tools for quick scenario checks, cleaner offer planning, and faster decision-making</li>
-                                        <li>Automatic ROI estimates surfaced across deal workflows so strong opportunities stand out faster</li>
-                                        <li>Advanced comps workflow with nearby property comps, filter controls, and ARV support for more defensible pricing</li>
-                                        <li>Analytics access to track performance, review closed deal momentum, and stay focused on what is actually producing profit</li>
-                                        <li>Campaigns access for outreach planning, SMS workflow execution, and keeping your investor pipeline moving</li>
-                                        <li>Unlock all premium workspace tabs for this account immediately after checkout</li>
-                                        <li>Role upgrades from user to premium user, giving this account the full premium workspace experience</li>
+                                        <li>Deal analysis and underwriting tools in one place</li>
+                                        <li>Investment Calculator support for faster scenario checks</li>
+                                        <li>Automatic ROI estimates across premium workflows</li>
+                                        <li>Advanced comps, filters, and ARV support</li>
+                                        <li>Analytics and campaigns for a stronger investor workflow</li>
+                                        <li>All premium tabs unlocked right after checkout</li>
                                     </ul>
                                 </label>
                             </div>
@@ -799,6 +835,20 @@ https://templatemo.com/tm-607-glass-admin
                                 </div>
                                 <span class="subscription-billing-price">$99</span>
                             </div>
+                            <div class="subscription-billing-trust-row" aria-label="Premium billing assurances">
+                                <article class="subscription-billing-trust-item">
+                                    <strong>Secure Stripe checkout</strong>
+                                    <span>Card details are handled through Stripe, not stored in the workspace.</span>
+                                </article>
+                                <article class="subscription-billing-trust-item">
+                                    <strong>Instant workspace unlock</strong>
+                                    <span>Premium tabs turn on for this account after successful activation.</span>
+                                </article>
+                                <article class="subscription-billing-trust-item">
+                                    <strong>No MLS entitlement changes</strong>
+                                    <span>This upgrades workflow tools only. MLS access stays exactly as-is.</span>
+                                </article>
+                            </div>
                             <form class="form-grid" id="subscription-billing-form">
                                 <div class="form-group-settings">
                                     <label for="subscription-billing-name">Billing Name</label>
@@ -858,6 +908,7 @@ https://templatemo.com/tm-607-glass-admin
                                 <div class="settings-label">
                                     <span class="settings-label-title">Plan Summary</span>
                                     <span class="settings-label-desc" id="subscription-plan-summary">Basic keeps standard dashboard access active.</span>
+                                    <span class="subscription-summary-pill" id="subscription-summary-pill">Basic · $0 / month</span>
                                 </div>
                                 <div class="subscription-cta-group">
                                     <button class="btn btn-primary" id="subscription-save-btn" type="button" style="width: auto;">Unlock Premium Access - $99</button>
