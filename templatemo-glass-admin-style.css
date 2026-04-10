@@ -7724,6 +7724,18 @@ body.analytics-reboot .analytics-my-file-count {
     color-scheme: light;
 }
 
+[data-theme="light"] .offer-email-grid select.form-input,
+[data-theme="light"] .offer-email-ecard-row select.form-input,
+[data-theme="light"] .offer-email-toolbar select.form-input {
+    color: #111827 !important;
+}
+
+[data-theme="light"] .offer-email-grid select.form-input option,
+[data-theme="light"] .offer-email-ecard-row select.form-input option,
+[data-theme="light"] .offer-email-toolbar select.form-input option {
+    color: #111827 !important;
+}
+
 .offer-date-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
