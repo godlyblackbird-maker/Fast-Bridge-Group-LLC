@@ -3961,6 +3961,14 @@ body.sidebar-collapsed .main-content {
     --legal-home-hover-shadow: 0 20px 38px rgba(8, 47, 73, 0.18);
 }
 
+
+[data-theme="beach"] .legal-page.legal-contact-page {
+    --legal-page-bg:
+        radial-gradient(circle at 12% 12%, rgba(14, 165, 233, 0.18), transparent 28%),
+        radial-gradient(circle at 86% 16%, rgba(251, 146, 60, 0.16), transparent 24%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+        linear-gradient(180deg, #a4deef, #d6f1f6 52%, #f7deb3);
+}
 [data-theme="swamp"] .legal-page {
     --legal-page-bg:
         radial-gradient(circle at 12% 10%, rgba(122, 156, 69, 0.2), transparent 28%),
@@ -4324,6 +4332,13 @@ body.sidebar-collapsed .main-content {
     box-shadow: var(--legal-panel-shadow), 0 12px 22px -20px rgba(0, 0, 0, 0.26);
 }
 
+.legal-page.legal-contact-page .legal-hover-card:hover,
+.legal-page.legal-contact-page .legal-hover-card:focus-visible,
+.legal-page.legal-contact-page .legal-hover-card:active {
+    transform: translateY(-1px) scale(1.002);
+    animation: legalContactHoverSway 2.4s ease-in-out infinite;
+}
+
 .legal-hover-card:focus-visible {
     outline: 2px solid rgba(var(--accent-rgb), 0.55);
     outline-offset: 3px;
@@ -4357,6 +4372,122 @@ body.sidebar-collapsed .main-content {
 
 .legal-card-list li {
     line-height: 1.65;
+}
+
+.legal-contact-directory {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.legal-contact-directory-card {
+    display: grid;
+    gap: 16px;
+    min-height: 100%;
+    text-decoration: none;
+    color: inherit;
+}
+
+.legal-contact-directory-card:hover,
+.legal-contact-directory-card:focus-visible {
+    color: inherit;
+}
+
+.legal-contact-directory-card h2,
+.legal-contact-directory-card p {
+    margin: 0;
+}
+
+.legal-contact-directory-kicker,
+.legal-contact-profile-kicker {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 32px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--accent-rgb), 0.16);
+    background: rgba(var(--accent-light-rgb), 0.08);
+    color: var(--legal-title-color);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.legal-contact-directory-meta,
+.legal-contact-profile-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.legal-contact-directory-meta span,
+.legal-contact-profile-pills span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.32);
+    border: 1px solid rgba(var(--accent-rgb), 0.12);
+    color: var(--legal-panel-text);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.legal-contact-directory-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: fit-content;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1px solid var(--legal-panel-border);
+    background: var(--legal-link-bg);
+    color: var(--legal-title-color);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.legal-contact-directory-link::after {
+    content: '\2192';
+    font-size: 15px;
+    line-height: 1;
+}
+
+.legal-contact-directory-link:hover,
+.legal-contact-directory-link:focus-visible {
+    color: var(--legal-link-hover-color);
+    background: var(--legal-link-hover-bg);
+    border-color: rgba(var(--accent-rgb), 0.28);
+}
+
+.legal-contact-profile-card {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 18px;
+    padding: 28px;
+}
+
+.legal-contact-profile-head {
+    display: grid;
+    gap: 14px;
+}
+
+.legal-contact-profile-card p {
+    margin: 0;
+}
+
+.legal-contact-profile-copy {
+    max-width: 760px;
+}
+
+@media (max-width: 1100px) {
+    .legal-contact-directory {
+        grid-template-columns: 1fr;
+    }
 }
 
 .legal-card-featured {
@@ -4457,6 +4588,9 @@ body.sidebar-collapsed .main-content {
     .legal-hover-card:hover,
     .legal-hover-card:focus-visible,
     .legal-hover-card:active,
+    .legal-page.legal-contact-page .legal-hover-card:hover,
+    .legal-page.legal-contact-page .legal-hover-card:focus-visible,
+    .legal-page.legal-contact-page .legal-hover-card:active,
     .legal-library-list a:hover,
     .legal-library-list a:focus-visible {
         animation: none;
@@ -12580,6 +12714,24 @@ body.analytics-reboot .analytics-my-file-count {
     }
     100% {
         transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0) scale(1);
+    }
+}
+
+@keyframes legalContactHoverSway {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+    25% {
+        transform: translateY(-0.5px) scale(1.001);
+    }
+    50% {
+        transform: translateY(-1px) scale(1.002);
+    }
+    75% {
+        transform: translateY(-0.5px) scale(1.001);
+    }
+    100% {
+        transform: translateY(0) scale(1);
     }
 }
 
