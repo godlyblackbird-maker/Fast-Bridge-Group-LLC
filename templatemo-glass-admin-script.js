@@ -17370,7 +17370,19 @@ function initNavbarDateTime() {
             }
             if (importSourceFetchButton) {
                 importSourceFetchButton.disabled = isBusy;
-                importSourceFetchButton.textContent = isBusy && activeButton === 'fetch' ? 'Loading...' : 'Autofill';
+                importSourceFetchButton.classList.toggle('is-busy', Boolean(isBusy && activeButton === 'fetch'));
+                importSourceFetchButton.setAttribute(
+                    'aria-label',
+                    isBusy && activeButton === 'fetch'
+                        ? 'Autofilling property from listing link'
+                        : 'Autofill property from listing link'
+                );
+                importSourceFetchButton.setAttribute(
+                    'title',
+                    isBusy && activeButton === 'fetch'
+                        ? 'Autofilling property from listing link'
+                        : 'Autofill property from listing link'
+                );
             }
         }
 
@@ -20801,6 +20813,9 @@ function initNavbarDateTime() {
             const compsMapPano = document.getElementById('comps-map-pano');
             const compsMapEarthShell = document.getElementById('comps-map-earth-shell');
             const compsMapEarthCanvas = document.getElementById('comps-map-earth-canvas');
+            const compsEarthHudKicker = document.getElementById('comps-earth-hud-kicker');
+            const compsEarthHudAddress = document.getElementById('comps-earth-hud-address');
+            const compsEarthHudNote = document.getElementById('comps-earth-hud-note');
             const compsMapEmptyState = document.getElementById('comps-map-empty-state');
             const compsMapEmptyMessage = document.getElementById('comps-map-empty-message');
             const compsAerialViewShell = document.getElementById('comps-aerial-view-shell');
@@ -20946,6 +20961,28 @@ function initNavbarDateTime() {
                 };
             }
 
+            function syncEarthHud() {
+                const markerMeta = getEarthFocusMarkerMeta();
+                const isSearchLocation = markerMeta.shortLabel === 'SEARCH';
+                const activeAddress = String(
+                    isSearchLocation
+                        ? (lastSearchResult && lastSearchResult.label)
+                        : (detailData.address || detailData.propertyAddress || 'Subject Property')
+                ).trim() || (isSearchLocation ? 'Searched Property' : 'Subject Property');
+
+                if (compsEarthHudKicker) {
+                    compsEarthHudKicker.textContent = markerMeta.label;
+                }
+                if (compsEarthHudAddress) {
+                    compsEarthHudAddress.textContent = activeAddress;
+                }
+                if (compsEarthHudNote) {
+                    compsEarthHudNote.textContent = isSearchLocation
+                        ? 'Target locked to the center reticle for the searched property.'
+                        : 'Target locked to the center reticle for the subject property.';
+                }
+            }
+
             function buildEarthMarkerPin(meta = {}) {
                 const pin = document.createElement('div');
                 pin.className = 'earth-subject-pin';
@@ -21034,6 +21071,7 @@ function initNavbarDateTime() {
                 earthMapElement.heading = 18;
                 earthMapElement.mode = earthMapModeValue;
                 syncEarthSubjectMarker(getEarthFocusLocation());
+                syncEarthHud();
             }
 
             function detachEarthMarker() {
@@ -21149,6 +21187,7 @@ function initNavbarDateTime() {
                     compsMapEarthCanvas.appendChild(earthMapElement);
                     updateEarthCamera(getEarthFocusLocation());
                     syncEarthSubjectMarker(getEarthFocusLocation());
+                    syncEarthHud();
                     return earthMapElement;
                 })().catch((error) => {
                     earthReadyPromise = null;
@@ -21247,14 +21286,25 @@ function initNavbarDateTime() {
                     zIndex: 310
                 });
 
-                searchedMarker = new window.google.maps.Marker({
-                    map: mapInstance,
-                    position,
-                    title: String(titleText || 'Search result').trim() || 'Search result',
-                    icon: buildSearchPinIcon(),
-                    zIndex: 330,
-                    optimized: false
-                });
+                searchedMarker = markerCtor
+                    ? createMapMarker({
+                        map: mapInstance,
+                        position,
+                        content: buildMarkerContent('SEARCH', 'search', false),
+                        label: 'SEARCH',
+                        variant: 'search',
+                        isActive: false,
+                        title: String(titleText || 'Search result').trim() || 'Search result',
+                        zIndex: 330
+                    })
+                    : new window.google.maps.Marker({
+                        map: mapInstance,
+                        position,
+                        title: String(titleText || 'Search result').trim() || 'Search result',
+                        icon: buildSearchPinIcon(),
+                        zIndex: 330,
+                        optimized: false
+                    });
 
                 if (searchedMarker && typeof searchedMarker.addListener === 'function') {
                     searchedMarker.addListener('click', () => {
@@ -21299,6 +21349,37 @@ function initNavbarDateTime() {
                 return {
                     lat: defaults.subjectLat,
                     lng: defaults.subjectLng
+                };
+            }
+
+            function isSameMapLocation(leftLocation, rightLocation) {
+                const leftLat = Number(leftLocation && leftLocation.lat);
+                const leftLng = Number(leftLocation && leftLocation.lng);
+                const rightLat = Number(rightLocation && rightLocation.lat);
+                const rightLng = Number(rightLocation && rightLocation.lng);
+
+                if (!Number.isFinite(leftLat) || !Number.isFinite(leftLng) || !Number.isFinite(rightLat) || !Number.isFinite(rightLng)) {
+                    return false;
+                }
+
+                return Math.abs(leftLat - rightLat) < 0.00001 && Math.abs(leftLng - rightLng) < 0.00001;
+            }
+
+            function getSubjectMarkerMeta(subjectLocation = getSubjectLocation()) {
+                const subjectMatchesSearch = Boolean(
+                    lastSearchResult
+                    && Number.isFinite(Number(lastSearchResult.lat))
+                    && Number.isFinite(Number(lastSearchResult.lng))
+                    && isSameMapLocation(lastSearchResult, subjectLocation)
+                );
+
+                return {
+                    label: subjectMatchesSearch ? 'SEARCH' : 'SUBJECT',
+                    variant: subjectMatchesSearch ? 'search' : 'subject',
+                    title: subjectMatchesSearch
+                        ? (String(lastSearchResult && lastSearchResult.label || detailData.address || 'Searched property').trim() || 'Searched property')
+                        : (detailData.address || 'Subject property'),
+                    propertyType: subjectMatchesSearch ? 'Searched Property' : (detailData.propertyDetails || 'Subject Property')
                 };
             }
 
@@ -22234,6 +22315,8 @@ function initNavbarDateTime() {
                 }
 
                 const position = { lat, lng };
+                const subjectLocation = getSubjectLocation();
+                const searchMatchesSubject = isSameMapLocation(position, subjectLocation);
                 lastSearchResult = {
                     lat,
                     lng,
@@ -22244,18 +22327,23 @@ function initNavbarDateTime() {
                 detailData.compsSearchLabel = lastSearchResult.label;
                 persistCurrentPropertyDetail();
 
-                searchedMarker = renderSearchedLocationMarker(position, lastSearchResult.label);
+                if (searchMatchesSubject) {
+                    clearSearchedLocationArtifacts();
+                    renderMapMarkers(lastTopResults);
+                } else {
+                    searchedMarker = renderSearchedLocationMarker(position, lastSearchResult.label);
+                }
 
                 mapInstance.panTo(position);
                 if ((Number(mapInstance.getZoom()) || 0) < 15) {
                     mapInstance.setZoom(15);
                 }
-                openMarkerInfoWindow(searchedMarker, {
+                openMarkerInfoWindow(searchMatchesSubject ? subjectMarker : searchedMarker, {
                     address: lastSearchResult.label,
-                    propertyType: 'Search Result',
+                    propertyType: searchMatchesSubject ? 'Searched Property' : 'Search Result',
                     price: 0,
                     title: lastSearchResult.label
-                }, false);
+                }, searchMatchesSubject);
                 updateCompsMapOpenLink(lastSearchResult.label);
                 if (currentMapLayer === 'earth') {
                     updateEarthCamera(position);
@@ -22381,24 +22469,25 @@ function initNavbarDateTime() {
                 clearMapArtifacts();
                 setMapEmptyState(false);
                 const subjectLocation = getSubjectLocation();
+                const subjectMarkerMeta = getSubjectMarkerMeta(subjectLocation);
                 const activeKey = activeCompKey;
                 const bounds = new window.google.maps.LatLngBounds();
 
                 subjectMarker = createMapMarker({
                     map: mapInstance,
                     position: subjectLocation,
-                    content: buildMarkerContent('SUBJECT', 'subject', false),
-                    label: 'SUBJECT',
-                    variant: 'subject',
+                    content: buildMarkerContent(subjectMarkerMeta.label, subjectMarkerMeta.variant, false),
+                    label: subjectMarkerMeta.label,
+                    variant: subjectMarkerMeta.variant,
                     isActive: false,
-                    title: detailData.address || 'Subject property',
+                    title: subjectMarkerMeta.title,
                     zIndex: 300
                 });
                 if (subjectMarker && typeof subjectMarker.addListener === 'function') {
                     subjectMarker.addListener('click', () => {
                         openMarkerInfoWindow(subjectMarker, {
-                            address: detailData.address || 'Subject Property',
-                            propertyType: detailData.propertyDetails || 'Subject Property'
+                            address: subjectMarkerMeta.title,
+                            propertyType: subjectMarkerMeta.propertyType
                         }, true);
                     });
                 }
@@ -22453,8 +22542,7 @@ function initNavbarDateTime() {
                         lat: Number(lastSearchResult.lat),
                         lng: Number(lastSearchResult.lng)
                     };
-                    const sameAsSubject = Math.abs(searchPosition.lat - subjectLocation.lat) < 0.00001
-                        && Math.abs(searchPosition.lng - subjectLocation.lng) < 0.00001;
+                    const sameAsSubject = isSameMapLocation(searchPosition, subjectLocation);
 
                     if (!sameAsSubject) {
                         searchedMarker = renderSearchedLocationMarker(
