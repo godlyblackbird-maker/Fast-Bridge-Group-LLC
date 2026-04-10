@@ -7408,6 +7408,14 @@ function initNavbarDateTime() {
             const billingForm = document.getElementById('subscription-billing-form');
             const stripeCardHost = document.getElementById('subscription-stripe-card-element');
             const stripeStatus = document.getElementById('subscription-stripe-status');
+            const brokerageSlider = document.getElementById('subscription-brokerage-agent-slider');
+            const brokeragePrice = document.getElementById('subscription-brokerage-price');
+            const brokerageAgentCount = document.getElementById('subscription-brokerage-agent-count');
+            const brokerageTotalAccounts = document.getElementById('subscription-brokerage-total-accounts');
+            const brokerageIncluded = document.getElementById('subscription-brokerage-included');
+            const brokerageSummaryTitle = document.getElementById('subscription-brokerage-summary-title');
+            const brokerageSummaryCopy = document.getElementById('subscription-brokerage-summary-copy');
+            const brokerageAnchors = Array.from(document.querySelectorAll('[data-broker-anchor]'));
 
             if (planInputs.length === 0 || !currentPlanLabel || !planSummary || !saveButton || !billingSection || !billingNote || !billingForm || !stripeCardHost || !stripeStatus) {
                 return;
@@ -7446,6 +7454,12 @@ function initNavbarDateTime() {
                     cta: 'Get the full investor workspace with analysis, ROI visibility, comps, campaigns, and premium-only tools.'
                 }
             };
+            const brokeragePricingAnchors = [
+                { agents: 1, price: 150 },
+                { agents: 2, price: 200 },
+                { agents: 10, price: 499 },
+                { agents: 50, price: 1999 }
+            ];
 
             const storedUser = getStoredCurrentUserIdentity();
             const initialRole = String(storedUser.role || workspaceUser.role || '').trim().toLowerCase();
@@ -7477,6 +7491,51 @@ function initNavbarDateTime() {
                 const selectedInput = planInputs.find((input) => input.value === resolvedPlan) || planInputs[0];
                 planInputs.forEach((input) => {
                     input.checked = input === selectedInput;
+                });
+            }
+
+            function formatBrokerageCurrency(amount) {
+                return `$${Number(amount || 0).toLocaleString('en-US')}`;
+            }
+
+            function getBrokerageMonthlyPrice(agentCount) {
+                const normalizedCount = Math.max(1, Math.min(50, Number(agentCount) || 1));
+                for (let index = 0; index < brokeragePricingAnchors.length; index += 1) {
+                    const currentAnchor = brokeragePricingAnchors[index];
+                    if (normalizedCount === currentAnchor.agents) {
+                        return currentAnchor.price;
+                    }
+                    const nextAnchor = brokeragePricingAnchors[index + 1];
+                    if (nextAnchor && normalizedCount > currentAnchor.agents && normalizedCount < nextAnchor.agents) {
+                        const span = nextAnchor.agents - currentAnchor.agents;
+                        const progress = (normalizedCount - currentAnchor.agents) / span;
+                        return Math.round(currentAnchor.price + ((nextAnchor.price - currentAnchor.price) * progress));
+                    }
+                }
+                return brokeragePricingAnchors[brokeragePricingAnchors.length - 1].price;
+            }
+
+            function updateBrokerageSubscriptionEstimator() {
+                if (!brokerageSlider || !brokeragePrice || !brokerageAgentCount || !brokerageTotalAccounts || !brokerageIncluded || !brokerageSummaryTitle || !brokerageSummaryCopy) {
+                    return;
+                }
+
+                const agentCount = Math.max(1, Math.min(50, Number(brokerageSlider.value) || 1));
+                const totalAccounts = agentCount + 1;
+                const price = getBrokerageMonthlyPrice(agentCount);
+                const pricePerAccount = Math.round(price / totalAccounts);
+
+                brokerageSlider.value = String(agentCount);
+                brokeragePrice.textContent = formatBrokerageCurrency(price);
+                brokerageAgentCount.textContent = String(agentCount);
+                brokerageTotalAccounts.textContent = String(totalAccounts);
+                brokerageIncluded.textContent = `Includes ${totalAccounts} total FAST accounts: 1 broker + ${agentCount} agent${agentCount === 1 ? '' : 's'}.`;
+                brokerageSummaryTitle.textContent = `${agentCount} agent${agentCount === 1 ? '' : 's'} + broker included`;
+                brokerageSummaryCopy.textContent = `${formatBrokerageCurrency(price)} per month for ${totalAccounts} total FAST accounts, which lands around ${formatBrokerageCurrency(pricePerAccount)} per included account.`;
+
+                brokerageAnchors.forEach((anchor) => {
+                    const anchorCount = Number(anchor.getAttribute('data-broker-anchor') || 0);
+                    anchor.classList.toggle('is-active', anchorCount === agentCount);
                 });
             }
 
@@ -7833,6 +7892,12 @@ function initNavbarDateTime() {
                     syncSubscriptionUi();
                 });
             });
+
+            if (brokerageSlider) {
+                brokerageSlider.addEventListener('input', updateBrokerageSubscriptionEstimator);
+                brokerageSlider.addEventListener('change', updateBrokerageSubscriptionEstimator);
+                updateBrokerageSubscriptionEstimator();
+            }
 
             loadSubscriptionStatus();
         }

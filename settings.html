@@ -678,69 +678,84 @@ https://templatemo.com/tm-607-glass-admin
                                 <div class="subscription-brokerage-head">
                                     <div>
                                         <span class="subscription-value-kicker subscription-brokerage-kicker">Brokerage Subscription</span>
-                                        <h4>Flat brokerage pricing for teams that want FAST across multiple agents</h4>
-                                        <p>These tiers are built for brokerages that want their agents using FAST tools under one clean monthly structure instead of treating every seat like a separate investor checkout.</p>
+                                        <h4>Choose brokerage pricing with a 1-50 agent selector</h4>
+                                        <p>Move the horizontal selector to price the brokerage plan by agent count. The broker account is included, and the monthly amount updates using your custom pricing logic.</p>
                                     </div>
                                     <div class="subscription-brokerage-summary">
-                                        <strong>Built for broker-led rollout</strong>
-                                        <span>Flat monthly pricing with agent caps and a cleaner pitch for office-wide adoption.</span>
+                                        <strong id="subscription-brokerage-summary-title">1 agent + broker included</strong>
+                                        <span id="subscription-brokerage-summary-copy">Starts at $150 per month for the broker plus 1 agent account.</span>
                                     </div>
                                 </div>
 
-                                <div class="subscription-brokerage-grid">
-                                    <article class="subscription-brokerage-card">
-                                        <div class="subscription-brokerage-card-head">
-                                            <span class="subscription-brokerage-tier">Starter Brokerage</span>
+                                <div class="subscription-brokerage-planner">
+                                    <div class="subscription-brokerage-meter-card">
+                                        <div class="subscription-brokerage-meter-head">
+                                            <span class="subscription-brokerage-tier">Brokerage Plan Builder</span>
                                             <div class="subscription-brokerage-price-block">
-                                                <strong>$499</strong>
+                                                <strong id="subscription-brokerage-price">$150</strong>
                                                 <span>/ month</span>
                                             </div>
                                         </div>
-                                        <p class="subscription-brokerage-seat-cap">Up to 10 agents</p>
-                                        <ul class="subscription-compare-list subscription-brokerage-list">
-                                            <li>Designed for smaller brokerages or pilot rollouts that want to get FAST tools into agent hands quickly</li>
-                                            <li>Gives the office a clean flat price instead of piecing together separate user upgrades</li>
-                                            <li>Strong fit for brokerages testing analysis, comps, and workflow tools with a core team first</li>
-                                        </ul>
-                                    </article>
+                                        <div class="subscription-brokerage-count-row">
+                                            <div>
+                                                <p class="subscription-brokerage-seat-cap"><span id="subscription-brokerage-agent-count">1</span> agent account</p>
+                                                <p class="subscription-brokerage-included" id="subscription-brokerage-included">Includes 2 total FAST accounts: 1 broker + 1 agent.</p>
+                                            </div>
+                                            <div class="subscription-brokerage-total-box">
+                                                <span>Total FAST Accounts</span>
+                                                <strong id="subscription-brokerage-total-accounts">2</strong>
+                                            </div>
+                                        </div>
+                                        <div class="subscription-brokerage-slider-shell">
+                                            <label class="subscription-brokerage-slider-label" for="subscription-brokerage-agent-slider">Agent count selector</label>
+                                            <input id="subscription-brokerage-agent-slider" class="subscription-brokerage-slider" type="range" min="1" max="50" step="1" value="1">
+                                            <div class="subscription-brokerage-slider-scale" aria-hidden="true">
+                                                <span>1</span>
+                                                <span>2</span>
+                                                <span>10</span>
+                                                <span>25</span>
+                                                <span>50</span>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                    <article class="subscription-brokerage-card subscription-brokerage-card-featured">
-                                        <span class="subscription-plan-ribbon">Most Practical</span>
-                                        <div class="subscription-brokerage-card-head">
-                                            <span class="subscription-brokerage-tier">Growth Brokerage</span>
-                                            <div class="subscription-brokerage-price-block">
-                                                <strong>$999</strong>
-                                                <span>/ month</span>
-                                            </div>
+                                    <div class="subscription-brokerage-points-card">
+                                        <h5>Pricing anchors</h5>
+                                        <div class="subscription-brokerage-anchor-grid">
+                                            <article class="subscription-brokerage-anchor" data-broker-anchor="1">
+                                                <strong>1 agent</strong>
+                                                <span>$150/mo</span>
+                                            </article>
+                                            <article class="subscription-brokerage-anchor" data-broker-anchor="2">
+                                                <strong>2 agents</strong>
+                                                <span>$200/mo</span>
+                                            </article>
+                                            <article class="subscription-brokerage-anchor" data-broker-anchor="10">
+                                                <strong>10 agents</strong>
+                                                <span>$499/mo</span>
+                                            </article>
+                                            <article class="subscription-brokerage-anchor" data-broker-anchor="50">
+                                                <strong>50 agents</strong>
+                                                <span>$1,999/mo</span>
+                                            </article>
                                         </div>
-                                        <p class="subscription-brokerage-seat-cap">Up to 25 agents</p>
-                                        <ul class="subscription-compare-list subscription-brokerage-list">
-                                            <li>Built for active brokerages that want FAST to become part of the regular agent tool stack</li>
-                                            <li>Better price efficiency once the brokerage is rolling the system out across multiple producers</li>
-                                            <li>Good middle tier for offices that want enough room to grow without jumping into a large enterprise-style commitment</li>
-                                        </ul>
-                                    </article>
+                                        <p class="subscription-brokerage-anchor-note">The selector uses those anchor prices and scales the in-between values across the 1-50 range.</p>
+                                    </div>
+                                </div>
 
-                                    <article class="subscription-brokerage-card">
-                                        <div class="subscription-brokerage-card-head">
-                                            <span class="subscription-brokerage-tier">Scale Brokerage</span>
-                                            <div class="subscription-brokerage-price-block">
-                                                <strong>$1,999</strong>
-                                                <span>/ month</span>
-                                            </div>
-                                        </div>
-                                        <p class="subscription-brokerage-seat-cap">Up to 55 agents</p>
-                                        <ul class="subscription-compare-list subscription-brokerage-list">
-                                            <li>Positioned for larger teams that want a brokerage-wide FAST deployment under one predictable monthly price</li>
-                                            <li>Lets broker leadership standardize tools, workflows, and adoption across a much bigger office footprint</li>
-                                            <li>Structured for brokerages that want system access broad enough to make FAST part of normal agent operations</li>
-                                        </ul>
-                                    </article>
+                                <div class="subscription-brokerage-link-row">
+                                    <a class="subscription-brokerage-link-card" href="legal-contact-us.html">
+                                        <strong>Talk To FAST About Brokerage Setup</strong>
+                                        <span>Use the contact page to discuss rollout, onboarding, and brokerage access structure.</span>
+                                    </a>
+                                    <div class="subscription-brokerage-link-card subscription-brokerage-link-card-static">
+                                        <strong>Broker included</strong>
+                                        <span>Every slider value includes the broker account, then adds the selected number of agent accounts on top.</span>
+                                    </div>
                                 </div>
 
                                 <div class="subscription-brokerage-footer">
-                                    <p>Brokerage subscriptions are for office-wide access positioning. If you want FAST sold as a broker tool stack for agents, this is the structure to present.</p>
-                                    <a class="btn btn-secondary" href="legal-contact-us.html" style="width: auto;">Talk To FAST About Brokerage Setup</a>
+                                    <p>Brokerage subscriptions are now shown as a live team-size selector instead of static tiers, so the office can see exactly how pricing changes from 1 to 50 agents.</p>
                                 </div>
                             </div>
                         </div>
@@ -937,11 +952,35 @@ https://templatemo.com/tm-607-glass-admin
                         <div class="settings-section">
                             <div class="settings-row">
                                 <div class="settings-label">
-                                    <span class="settings-label-title">Phone Link / Link to Windows</span>
-                                    <span class="settings-label-desc">Use Microsoft's Phone Link on desktop together with Link to Windows on mobile so calls, texts, notifications, and photos can stay closer to the workstation.</span>
+                                    <span class="settings-label-title">Phone Link on Windows</span>
+                                    <span class="settings-label-desc">On PC, the desktop app is called Phone Link.</span>
+                                    <span class="settings-label-desc">Use Microsoft's Phone Link on Windows together with Link to Windows on iPhone so calls, texts, notifications, and photos can stay closer to the workstation.</span>
                                     <span class="settings-label-desc">This is useful for users who want their phone activity visible while working deals, outreach, follow-up, and day-to-day pipeline tasks.</span>
                                 </div>
-                                <a class="btn btn-primary" href="https://apps.microsoft.com/detail/9nmpj99vjbwv?hl=en-US&amp;gl=US" target="_blank" rel="noopener noreferrer" style="width:auto;">Open Microsoft Store</a>
+                                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end;">
+                                    <a href="https://apps.microsoft.com/detail/9nmpj99vjbwv?hl=en-US&amp;gl=US" target="_blank" rel="noopener noreferrer" aria-label="Open Phone Link in the Microsoft Store" style="display:inline-flex; align-items:center; justify-content:center; width:auto; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.06); text-decoration:none;">
+                                        <img src="Symbols/microsoft-svgrepo-com.svg" alt="Microsoft logo" style="display:block; width:28px; height:28px;">
+                                    </a>
+                                    <a class="btn btn-primary" href="https://apps.microsoft.com/detail/9nmpj99vjbwv?hl=en-US&amp;gl=US" target="_blank" rel="noopener noreferrer" style="width:auto;">Open Microsoft Store</a>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Link to Windows on iPhone</span>
+                                    <span class="settings-label-desc">On iOS, the mobile app is called Link to Windows.</span>
+                                    <span class="settings-label-desc">Use the Apple Store badge to open the iPhone app listing directly.</span>
+                                </div>
+                                <a href="https://apps.apple.com/us/app/link-to-windows/id6443686328" target="_blank" rel="noopener noreferrer" aria-label="Open Link to Windows in the Apple App Store" style="display:inline-flex; align-items:center; justify-content:center; width:auto;">
+                                    <img src="Symbols/download-on-the-app-store-apple-logo-svgrepo-com.svg" alt="Download on the App Store" style="display:block; width:168px; height:auto; max-width:100%;">
+                                </a>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Extra App Location</span>
+                                    <span class="settings-label-desc">17042 C St Unit A, Victorville, CA 92395</span>
+                                    <span class="settings-label-desc">Saved here for the Extra Apps section so the physical location is easy to reference when needed.</span>
+                                </div>
+                                <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&amp;query=17042%20C%20St%20Unit%20A%2C%20Victorville%2C%20CA%2092395" target="_blank" rel="noopener noreferrer" style="width:auto;">Open Map</a>
                             </div>
                         </div>
 
@@ -955,8 +994,8 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="settings-row">
                                 <div class="settings-label">
-                                    <span class="settings-label-title">Mobile Pairing</span>
-                                    <span class="settings-label-desc">Open Link to Windows on the phone, sign into the same Microsoft account, and pair the device so notifications and messages sync properly.</span>
+                                    <span class="settings-label-title">iPhone Pairing</span>
+                                    <span class="settings-label-desc">Open Link to Windows on iPhone, sign into the same Microsoft account, and pair the device so notifications and messages sync properly.</span>
                                 </div>
                             </div>
                             <div class="settings-row">

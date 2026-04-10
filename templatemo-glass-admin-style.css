@@ -7240,6 +7240,41 @@ body.analytics-reboot .analytics-my-file-count {
     justify-content: space-between;
 }
 
+.daily-verse-widget .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.daily-verse-bible-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 auto;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.daily-verse-bible-link img {
+    display: block;
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+}
+
+.daily-verse-bible-link:hover,
+.daily-verse-bible-link:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(52, 211, 153, 0.3);
+    background: rgba(255, 255, 255, 0.11);
+}
+
 .daily-verse-quote {
     margin: 8px 0 0;
     padding: 12px 14px;
@@ -13256,13 +13291,14 @@ body.analytics-reboot .analytics-my-file-count {
     line-height: 1.6;
 }
 
-.subscription-brokerage-grid {
+.subscription-brokerage-planner {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
     gap: 18px;
 }
 
-.subscription-brokerage-card {
+.subscription-brokerage-meter-card,
+.subscription-brokerage-points-card {
     position: relative;
     display: grid;
     gap: 16px;
@@ -13275,17 +13311,17 @@ body.analytics-reboot .analytics-my-file-count {
     box-shadow: 0 20px 44px -34px rgba(15, 23, 42, 0.42);
 }
 
-.subscription-brokerage-card-featured {
-    border-color: rgba(250, 204, 21, 0.28);
+.subscription-brokerage-meter-card {
+    border-color: rgba(250, 204, 21, 0.24);
     background:
         radial-gradient(circle at 86% 16%, rgba(250, 204, 21, 0.18), transparent 22%),
         radial-gradient(circle at 12% 82%, rgba(var(--accent-rgb), 0.16), transparent 28%),
         linear-gradient(165deg, rgba(255, 245, 220, 0.14), rgba(255, 255, 255, 0.06)),
         rgba(60, 52, 28, 0.22);
-    box-shadow: 0 24px 52px -34px rgba(245, 158, 11, 0.34);
+    box-shadow: 0 24px 52px -34px rgba(245, 158, 11, 0.3);
 }
 
-.subscription-brokerage-card-head {
+.subscription-brokerage-meter-head {
     display: flex;
     align-items: start;
     justify-content: space-between;
@@ -13330,8 +13366,170 @@ body.analytics-reboot .analytics-my-file-count {
     font-weight: 700;
 }
 
-.subscription-brokerage-list {
+.subscription-brokerage-count-row {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.subscription-brokerage-included {
     margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.subscription-brokerage-total-box {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+    min-width: 120px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.subscription-brokerage-total-box span {
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.subscription-brokerage-total-box strong {
+    color: var(--text-primary);
+    font-size: 1.45rem;
+}
+
+.subscription-brokerage-slider-shell {
+    display: grid;
+    gap: 12px;
+}
+
+.subscription-brokerage-slider-label {
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.subscription-brokerage-slider {
+    width: 100%;
+    height: 12px;
+    margin: 0;
+    appearance: none;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(52, 211, 153, 0.95), rgba(250, 204, 21, 0.96));
+    outline: none;
+    box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.subscription-brokerage-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ffffff, #fef3c7);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.3);
+    cursor: pointer;
+}
+
+.subscription-brokerage-slider::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ffffff, #fef3c7);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.3);
+    cursor: pointer;
+}
+
+.subscription-brokerage-slider-scale {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.subscription-brokerage-points-card h5 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.subscription-brokerage-anchor-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.subscription-brokerage-anchor {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.subscription-brokerage-anchor strong,
+.subscription-brokerage-anchor span {
+    color: var(--text-primary);
+}
+
+.subscription-brokerage-anchor.is-active {
+    border-color: rgba(250, 204, 21, 0.34);
+    background: rgba(250, 204, 21, 0.12);
+    transform: translateY(-1px);
+}
+
+.subscription-brokerage-anchor-note {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.subscription-brokerage-link-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.subscription-brokerage-link-card {
+    display: grid;
+    gap: 6px;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.subscription-brokerage-link-card strong {
+    color: var(--text-primary);
+}
+
+.subscription-brokerage-link-card span {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.subscription-brokerage-link-card:hover,
+.subscription-brokerage-link-card:focus-visible {
+    border-color: rgba(var(--accent-rgb), 0.32);
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--text-primary);
+}
+
+.subscription-brokerage-link-card-static {
+    cursor: default;
 }
 
 .subscription-brokerage-footer {
@@ -13644,12 +13842,21 @@ body.analytics-reboot .analytics-my-file-count {
     }
 
     .subscription-brokerage-head,
-    .subscription-brokerage-grid {
+    .subscription-brokerage-planner,
+    .subscription-brokerage-link-row {
         grid-template-columns: 1fr;
     }
 
     .subscription-compare-grid {
         grid-template-columns: 1fr;
+    }
+
+    .subscription-brokerage-count-row {
+        flex-direction: column;
+    }
+
+    .subscription-brokerage-total-box {
+        justify-items: start;
     }
 
     .subscription-brokerage-footer {
