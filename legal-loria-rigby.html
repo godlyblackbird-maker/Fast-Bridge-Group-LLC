@@ -97,6 +97,54 @@
             margin: 0;
         }
 
+        .legal-loria-broker-brand {
+            display: grid;
+            grid-template-columns: 72px minmax(0, 1fr);
+            gap: 14px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(var(--accent-rgb), 0.18);
+            background: linear-gradient(145deg, rgba(var(--accent-light-rgb), 0.12), rgba(255, 255, 255, 0.06));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        }
+
+        .legal-loria-broker-brand img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 24px rgba(15, 23, 42, 0.24));
+        }
+
+        .legal-loria-broker-brand-copy {
+            display: grid;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .legal-loria-broker-brand-eyebrow {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .legal-loria-broker-brand-role {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .legal-loria-broker-brand-name {
+            color: var(--text-primary);
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
         .legal-loria-gallery-card {
             display: grid;
             gap: 18px;
@@ -130,6 +178,26 @@
             color: var(--text-secondary);
             font-size: 13px;
             line-height: 1.5;
+        }
+
+        .legal-loria-license-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .legal-loria-license-pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 36px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
         }
 
         @media (max-width: 900px) {
@@ -177,6 +245,18 @@
                         <span class="legal-loria-profile-kicker">Broker Profile</span>
                         <h2>Loria Rigby</h2>
                         <p class="legal-card-lead">Founder of Rigby &amp; Associates R.E. SVC and broker contact for FAST BRIDGE GROUP, with more than 15 years of real estate experience.</p>
+                        <div class="legal-loria-broker-brand" aria-label="FAST BRIDGE GROUP broker brand">
+                            <img src="png photos/FAST LOGO 777.png" alt="FAST BRIDGE GROUP logo">
+                            <div class="legal-loria-broker-brand-copy">
+                                <span class="legal-loria-broker-brand-eyebrow">FAST BRIDGE GROUP</span>
+                                <span class="legal-loria-broker-brand-role">Broker</span>
+                                <strong class="legal-loria-broker-brand-name">Loria Rigby</strong>
+                            </div>
+                        </div>
+                        <div class="legal-loria-license-bar" aria-label="Loria Rigby broker details">
+                            <span class="legal-loria-license-pill">Broker License: LIC: 01914506</span>
+                            <span class="legal-loria-license-pill">Broker Supervision</span>
+                        </div>
                         <p>Her work is built on discipline, client loyalty, and a practical understanding of what families, buyers, and sellers need when a transaction matters.</p>
                         <div class="legal-top-links" aria-label="Loria Rigby profile links">
                             <a href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">Visit Full About Page</a>
@@ -201,6 +281,11 @@
                     <a href="legal-broker-information.html">Broker Information</a>
                     <a href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">About Loria Rigby</a>
                 </div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Broker license</h2>
+                <p class="legal-card-lead">California Broker License: LIC: 01914506</p>
+                <p>Use this page when broker identity, licensing, supervisory review, or brokerage authority needs to be clearly tied to the FAST BRIDGE GROUP broker contact.</p>
             </article>
             <article class="legal-card legal-hover-card" tabindex="0">
                 <h2>Background &amp; experience</h2>

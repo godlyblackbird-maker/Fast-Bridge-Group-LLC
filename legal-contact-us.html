@@ -40,6 +40,92 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .legal-contact-person-card {
+            display: grid;
+            gap: 18px;
+        }
+
+        .legal-contact-person-top {
+            display: grid;
+            grid-template-columns: 120px minmax(0, 1fr);
+            gap: 18px;
+            align-items: center;
+        }
+
+        .legal-contact-person-photos {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .legal-contact-person-photos img {
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            object-fit: cover;
+            object-position: center top;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 32px -24px rgba(15, 23, 42, 0.72);
+        }
+
+        .legal-contact-person-copy {
+            display: grid;
+            gap: 10px;
+        }
+
+        .legal-contact-person-kicker {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-rgb), 0.2);
+            background: rgba(var(--accent-light-rgb), 0.12);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .legal-contact-person-copy h3 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--text-primary);
+        }
+
+        .legal-contact-person-copy p {
+            margin: 0;
+        }
+
+        .legal-contact-person-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .legal-contact-person-meta span {
+            display: inline-flex;
+            align-items: center;
+            min-height: 34px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        @media (max-width: 760px) {
+            .legal-contact-person-top {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body class="legal-page">
     <main class="legal-page-main">
@@ -56,7 +142,7 @@
             <a href="legal.html">Legal Hub</a>
             <a href="legal-steve-medina.html">Steve Medina</a>
             <a href="legal-isaac-haro.html">Isaac Haro</a>
-            <a href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">Loria Rigby</a>
+            <a href="legal-loria-rigby.html">Loria Rigby</a>
         </nav>
         <section class="legal-grid" aria-label="FAST BRIDGE GROUP contact routing">
             <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
@@ -65,8 +151,30 @@
                 <ul class="legal-card-list">
                     <li><a href="legal-steve-medina.html">Steve Medina</a> for CEO-level direction, partnerships, and executive review.</li>
                     <li><a href="legal-isaac-haro.html">Isaac Haro</a> for operations management, workflow coordination, and execution issues.</li>
-                    <li><a href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">Loria Rigby</a> for broker supervision, authority, and compliance-sensitive matters.</li>
+                    <li><a href="legal-loria-rigby.html">Loria Rigby</a> for broker supervision, authority, and compliance-sensitive matters.</li>
                 </ul>
+            </article>
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card legal-contact-person-card" tabindex="0">
+                <div class="legal-contact-person-top">
+                    <div class="legal-contact-person-photos" aria-label="Loria Rigby photo preview">
+                        <img src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%202%20(fastbridegroupllc).jpeg" alt="Loria Rigby smiling in a white dress">
+                        <img src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%20(Fastbridgegroupllc).jpeg" alt="Loria Rigby in a black outfit by the pool">
+                    </div>
+                    <div class="legal-contact-person-copy">
+                        <span class="legal-contact-person-kicker">Broker Contact Page</span>
+                        <h3>Loria Rigby</h3>
+                        <p class="legal-card-lead">Dedicated FAST BRIDGE GROUP broker page with her profile, both broker photos, and direct broker-information routing.</p>
+                        <div class="legal-contact-person-meta" aria-label="Loria Rigby broker details">
+                            <span>Broker</span>
+                            <span>LIC: 01914506</span>
+                            <span>FAST BRIDGE GROUP</span>
+                        </div>
+                        <div class="legal-top-links" aria-label="Loria Rigby contact links">
+                            <a href="legal-loria-rigby.html">Open Loria Rigby Page</a>
+                            <a href="legal-broker-information.html">Broker Information</a>
+                        </div>
+                    </div>
+                </div>
             </article>
             <article class="legal-card legal-hover-card" tabindex="0">
                 <h2>Leadership contacts</h2>
@@ -74,7 +182,7 @@
                 <div class="legal-top-links" aria-label="Leadership contact links">
                     <a href="legal-steve-medina.html">Steve Medina</a>
                     <a href="legal-isaac-haro.html">Isaac Haro</a>
-                    <a href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">Loria Rigby</a>
+                    <a href="legal-loria-rigby.html">Loria Rigby</a>
                 </div>
             </article>
         </section>

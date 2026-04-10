@@ -94,6 +94,61 @@
             gap: 8px;
         }
 
+        .legal-broker-brand {
+            display: grid;
+            grid-template-columns: 72px minmax(0, 1fr);
+            gap: 14px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(var(--accent-rgb), 0.18);
+            background: linear-gradient(145deg, rgba(var(--accent-light-rgb), 0.12), rgba(255, 255, 255, 0.06));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        }
+
+        .legal-broker-brand img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 24px rgba(15, 23, 42, 0.24));
+        }
+
+        .legal-broker-brand-copy {
+            display: grid;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .legal-broker-brand-eyebrow {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .legal-broker-brand-role {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .legal-broker-brand-name {
+            color: var(--text-primary);
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .legal-broker-license-note {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
         .legal-broker-contact-name {
             width: fit-content;
             color: var(--text-primary);
@@ -192,6 +247,17 @@
             color: var(--text-primary);
             overflow-wrap: anywhere;
         }
+
+        .legal-broker-contact-static {
+            display: grid;
+            grid-template-columns: 48px minmax(0, 1fr);
+            gap: 14px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
     </style>
 </head>
 <body class="legal-page">
@@ -245,6 +311,15 @@
                     <span class="legal-broker-contact-kicker">Broker Contact</span>
                     <h2>Rigby &amp; Associates</h2>
                     <a class="legal-broker-contact-name" href="https://www.rigbyandassociates.net/about" target="_blank" rel="noopener noreferrer">Loria Rigby</a>
+                    <div class="legal-broker-brand" aria-label="FAST BRIDGE GROUP broker brand">
+                        <img src="png photos/FAST LOGO 777.png" alt="FAST BRIDGE GROUP logo">
+                        <div class="legal-broker-brand-copy">
+                            <span class="legal-broker-brand-eyebrow">FAST BRIDGE GROUP</span>
+                            <span class="legal-broker-brand-role">Broker</span>
+                            <strong class="legal-broker-brand-name">Loria Rigby</strong>
+                        </div>
+                    </div>
+                    <p class="legal-broker-license-note">Broker License: LIC: 01914506</p>
                     <p class="legal-card-lead">Use the direct broker contact details below for brokerage information, supervision questions, and follow-up.</p>
                 </div>
                 <div class="legal-broker-contact-grid" aria-label="Broker contact details">
@@ -284,6 +359,20 @@
                             <span class="legal-broker-contact-value">rigbyloria@yahoo.com</span>
                         </span>
                     </a>
+                    <div class="legal-broker-contact-static">
+                        <span class="legal-broker-contact-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 7h8"></path>
+                                <path d="M8 11h8"></path>
+                                <path d="M8 15h5"></path>
+                                <rect x="4" y="3" width="16" height="18" rx="2"></rect>
+                            </svg>
+                        </span>
+                        <span class="legal-broker-contact-copy">
+                            <span class="legal-broker-contact-label">Broker License</span>
+                            <span class="legal-broker-contact-value">LIC: 01914506</span>
+                        </span>
+                    </div>
                 </div>
             </article>
         </section>
