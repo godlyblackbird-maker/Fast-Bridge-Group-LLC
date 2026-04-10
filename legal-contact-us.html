@@ -46,30 +46,6 @@
             gap: 18px;
         }
 
-        .legal-contact-person-top {
-            display: grid;
-            grid-template-columns: 120px minmax(0, 1fr);
-            gap: 18px;
-            align-items: center;
-        }
-
-        .legal-contact-person-photos {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .legal-contact-person-photos img {
-            width: 100%;
-            aspect-ratio: 4 / 5;
-            object-fit: cover;
-            object-position: center top;
-            border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            background: rgba(255, 255, 255, 0.06);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 32px -24px rgba(15, 23, 42, 0.72);
-        }
-
         .legal-contact-person-copy {
             display: grid;
             gap: 10px;
@@ -119,12 +95,6 @@
             font-weight: 700;
             letter-spacing: 0.03em;
         }
-
-        @media (max-width: 760px) {
-            .legal-contact-person-top {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
 </head>
 <body class="legal-page">
@@ -155,24 +125,18 @@
                 </ul>
             </article>
             <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card legal-contact-person-card" tabindex="0">
-                <div class="legal-contact-person-top">
-                    <div class="legal-contact-person-photos" aria-label="Loria Rigby photo preview">
-                        <img src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%202%20(fastbridegroupllc).jpeg" alt="Loria Rigby smiling in a white dress">
-                        <img src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%20(Fastbridgegroupllc).jpeg" alt="Loria Rigby in a black outfit by the pool">
+                <div class="legal-contact-person-copy">
+                    <span class="legal-contact-person-kicker">Broker Contact Page</span>
+                    <h3>Loria Rigby</h3>
+                    <p class="legal-card-lead">Dedicated FAST BRIDGE GROUP broker page with her broker details, profile information, and direct broker-information routing.</p>
+                    <div class="legal-contact-person-meta" aria-label="Loria Rigby broker details">
+                        <span>Broker</span>
+                        <span>LIC: 01914506</span>
+                        <span>FAST BRIDGE GROUP</span>
                     </div>
-                    <div class="legal-contact-person-copy">
-                        <span class="legal-contact-person-kicker">Broker Contact Page</span>
-                        <h3>Loria Rigby</h3>
-                        <p class="legal-card-lead">Dedicated FAST BRIDGE GROUP broker page with her profile, both broker photos, and direct broker-information routing.</p>
-                        <div class="legal-contact-person-meta" aria-label="Loria Rigby broker details">
-                            <span>Broker</span>
-                            <span>LIC: 01914506</span>
-                            <span>FAST BRIDGE GROUP</span>
-                        </div>
-                        <div class="legal-top-links" aria-label="Loria Rigby contact links">
-                            <a href="legal-loria-rigby.html">Open Loria Rigby Page</a>
-                            <a href="legal-broker-information.html">Broker Information</a>
-                        </div>
+                    <div class="legal-top-links" aria-label="Loria Rigby contact links">
+                        <a href="legal-loria-rigby.html">Open Loria Rigby Page</a>
+                        <a href="legal-broker-information.html">Broker Information</a>
                     </div>
                 </div>
             </article>

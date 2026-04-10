@@ -1660,7 +1660,6 @@ function initializeDatabase() {
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
       syncLoriaBrokerAccount();
-      syncStevenCastilloUserAccount();
       syncPublicTestAccount();
     }
   });
@@ -1887,6 +1886,7 @@ function initializeDatabase() {
     } else {
       console.log('Subscription profiles table ready');
       db.run(`ALTER TABLE subscription_profiles ADD COLUMN stripe_payment_method_id TEXT`, () => {});
+      syncStevenCastilloUserAccount();
     }
   });
 
@@ -5026,6 +5026,7 @@ async function syncStevenCastilloUserAccount() {
   const canonicalName = CANONICAL_STEVEN_CASTILLO_NAME;
   const canonicalPassword = CANONICAL_STEVEN_CASTILLO_PASSWORD;
   const legacyEmails = [];
+  const canonicalRole = PREMIUM_USER_ROLE;
 
   try {
     const account = await dbGet(
@@ -5041,8 +5042,34 @@ async function syncStevenCastilloUserAccount() {
     if (!account) {
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, 'user', '', '', '']
+        [canonicalName, canonicalEmail, hash, canonicalRole, '', '', '']
       );
+      const createdAccount = await dbGet('SELECT id FROM users WHERE LOWER(email) = ?', [canonicalEmail]);
+      if (createdAccount) {
+        await dbRun(
+          `INSERT INTO subscription_profiles (
+              user_id, plan_key, billing_name, billing_email, subscription_status, amount_cents,
+              currency, activated_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+              plan_key = excluded.plan_key,
+              billing_name = COALESCE(NULLIF(subscription_profiles.billing_name, ''), excluded.billing_name),
+              billing_email = COALESCE(NULLIF(subscription_profiles.billing_email, ''), excluded.billing_email),
+              subscription_status = 'active',
+              amount_cents = excluded.amount_cents,
+              currency = excluded.currency,
+              activated_at = COALESCE(subscription_profiles.activated_at, CURRENT_TIMESTAMP),
+              updated_at = CURRENT_TIMESTAMP`,
+          [
+            createdAccount.id,
+            PREMIUM_PLAN_KEY,
+            canonicalName,
+            canonicalEmail,
+            PREMIUM_PRICE_CENTS,
+            PREMIUM_CURRENCY
+          ]
+        );
+      }
       console.log('Steven Castillo user account created/synced');
       return;
     }
@@ -5056,11 +5083,35 @@ async function syncStevenCastilloUserAccount() {
         canonicalName,
         canonicalEmail,
         hash,
-        'user',
+        canonicalRole,
         account.smtp_user || '',
         currentSmtpPass,
         currentSmtpSignature,
         account.id
+      ]
+    );
+
+    await dbRun(
+      `INSERT INTO subscription_profiles (
+          user_id, plan_key, billing_name, billing_email, subscription_status, amount_cents,
+          currency, activated_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+          plan_key = excluded.plan_key,
+          billing_name = COALESCE(NULLIF(subscription_profiles.billing_name, ''), excluded.billing_name),
+          billing_email = COALESCE(NULLIF(subscription_profiles.billing_email, ''), excluded.billing_email),
+          subscription_status = 'active',
+          amount_cents = excluded.amount_cents,
+          currency = excluded.currency,
+          activated_at = COALESCE(subscription_profiles.activated_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP`,
+      [
+        account.id,
+        PREMIUM_PLAN_KEY,
+        canonicalName,
+        canonicalEmail,
+        PREMIUM_PRICE_CENTS,
+        PREMIUM_CURRENCY
       ]
     );
 

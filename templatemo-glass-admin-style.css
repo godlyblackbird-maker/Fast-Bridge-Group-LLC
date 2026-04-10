@@ -4321,7 +4321,7 @@ body.sidebar-collapsed .main-content {
 .legal-hover-card:focus-visible,
 .legal-hover-card:active {
     border-color: rgba(var(--accent-rgb), 0.4);
-    box-shadow: var(--legal-panel-shadow), 0 18px 32px -24px rgba(0, 0, 0, 0.38);
+    box-shadow: var(--legal-panel-shadow), 0 12px 22px -20px rgba(0, 0, 0, 0.26);
 }
 
 .legal-hover-card:focus-visible {
@@ -4445,12 +4445,12 @@ body.sidebar-collapsed .main-content {
 
 .legal-library-list a:hover,
 .legal-library-list a:focus-visible {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     border-color: rgba(var(--accent-rgb), 0.34);
     background: var(--legal-link-hover-bg);
     color: var(--legal-link-hover-color);
-    box-shadow: 0 14px 24px -20px rgba(0, 0, 0, 0.34);
-    animation: accessFastHoverSway 1.45s ease-in-out infinite;
+    box-shadow: 0 10px 18px -18px rgba(0, 0, 0, 0.24);
+    animation: accessFastHoverSway 1.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -12535,13 +12535,13 @@ body.analytics-reboot .analytics-my-file-count {
         transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0) scale(1);
     }
     25% {
-        transform: perspective(1000px) rotateX(3deg) rotateY(-5deg) translateY(-1px) scale(1.015);
+        transform: perspective(1000px) rotateX(0.7deg) rotateY(-1.1deg) translateY(-0.5px) scale(1.004);
     }
     50% {
-        transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-2px) scale(1.03);
+        transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-1px) scale(1.008);
     }
     75% {
-        transform: perspective(1000px) rotateX(-3deg) rotateY(5deg) translateY(-1px) scale(1.015);
+        transform: perspective(1000px) rotateX(-0.7deg) rotateY(1.1deg) translateY(-0.5px) scale(1.004);
     }
     100% {
         transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0) scale(1);

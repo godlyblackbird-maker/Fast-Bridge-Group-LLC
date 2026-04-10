@@ -803,6 +803,16 @@
         backdrop-filter: blur(18px);
       }
 
+      @media (max-width: 768px) {
+        .test-user-banner {
+          left: 12px;
+          right: 12px;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+          max-width: none;
+          padding: 11px 12px;
+        }
+      }
+
       .test-user-banner strong {
         display: block;
         margin-bottom: 4px;
