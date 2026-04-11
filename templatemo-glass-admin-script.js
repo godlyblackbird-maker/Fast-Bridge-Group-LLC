@@ -20935,9 +20935,7 @@ function initNavbarDateTime() {
             }
 
             function getEarthFocusLocation() {
-                const candidate = lastSearchResult && Number.isFinite(Number(lastSearchResult.lat)) && Number.isFinite(Number(lastSearchResult.lng))
-                    ? { lat: Number(lastSearchResult.lat), lng: Number(lastSearchResult.lng) }
-                    : getSubjectLocation();
+                const candidate = getSubjectLocation();
 
                 return {
                     lat: Number(candidate.lat),
@@ -20946,15 +20944,9 @@ function initNavbarDateTime() {
             }
 
             function getEarthFocusMarkerMeta() {
-                const isSearchLocation = Boolean(
-                    lastSearchResult
-                    && Number.isFinite(Number(lastSearchResult.lat))
-                    && Number.isFinite(Number(lastSearchResult.lng))
-                );
-
                 return {
-                    label: isSearchLocation ? 'SEARCHED PROPERTY' : 'SUBJECT PROPERTY',
-                    shortLabel: isSearchLocation ? 'SEARCH' : 'SUBJECT'
+                    label: 'SUBJECT PROPERTY',
+                    shortLabel: 'SUBJECT'
                 };
             }
 
@@ -21359,20 +21351,11 @@ function initNavbarDateTime() {
             }
 
             function getSubjectMarkerMeta(subjectLocation = getSubjectLocation()) {
-                const subjectMatchesSearch = Boolean(
-                    lastSearchResult
-                    && Number.isFinite(Number(lastSearchResult.lat))
-                    && Number.isFinite(Number(lastSearchResult.lng))
-                    && isSameMapLocation(lastSearchResult, subjectLocation)
-                );
-
                 return {
-                    label: subjectMatchesSearch ? 'SEARCH' : 'SUBJECT',
-                    variant: subjectMatchesSearch ? 'search' : 'subject',
-                    title: subjectMatchesSearch
-                        ? (String(lastSearchResult && lastSearchResult.label || detailData.address || 'Searched property').trim() || 'Searched property')
-                        : (detailData.address || 'Subject property'),
-                    propertyType: subjectMatchesSearch ? 'Searched Property' : (detailData.propertyDetails || 'Subject Property')
+                    label: 'SUBJECT',
+                    variant: 'subject',
+                    title: detailData.address || 'Subject property',
+                    propertyType: detailData.propertyDetails || 'Subject Property'
                 };
             }
 
@@ -21430,7 +21413,6 @@ function initNavbarDateTime() {
 
             function getAerialViewAddress() {
                 return String(
-                    (lastSearchResult && lastSearchResult.label) ||
                     detailData.address ||
                     detailData.streetViewAddress ||
                     ''
@@ -22308,42 +22290,24 @@ function initNavbarDateTime() {
                 }
 
                 const position = { lat, lng };
-                const subjectLocation = getSubjectLocation();
-                const searchMatchesSubject = isSameMapLocation(position, subjectLocation);
-                lastSearchResult = {
-                    lat,
-                    lng,
-                    label: String(labelText || 'Search result').trim() || 'Search result'
-                };
-                detailData.compsSearchLat = lat;
-                detailData.compsSearchLng = lng;
-                detailData.compsSearchLabel = lastSearchResult.label;
-                persistCurrentPropertyDetail();
-
-                if (searchMatchesSubject) {
-                    clearSearchedLocationArtifacts();
-                    renderMapMarkers(lastTopResults);
-                } else {
-                    searchedMarker = renderSearchedLocationMarker(position, lastSearchResult.label);
-                }
+                const resolvedLabel = String(labelText || 'Search result').trim() || 'Search result';
+                clearSearchedLocationArtifacts();
 
                 mapInstance.panTo(position);
                 if ((Number(mapInstance.getZoom()) || 0) < 15) {
                     mapInstance.setZoom(15);
                 }
-                openMarkerInfoWindow(searchMatchesSubject ? subjectMarker : searchedMarker, {
-                    address: lastSearchResult.label,
-                    propertyType: searchMatchesSubject ? 'Searched Property' : 'Search Result',
-                    price: 0,
-                    title: lastSearchResult.label
-                }, searchMatchesSubject);
-                updateCompsMapOpenLink(lastSearchResult.label);
-                if (currentMapLayer === 'earth') {
-                    updateEarthCamera(position);
+                if (infoWindowInstance) {
+                    infoWindowInstance.setPosition(position);
+                    infoWindowInstance.setContent(`
+                        <div class="info-card">
+                            <h4>${escapeHtml(resolvedLabel)}</h4>
+                            <p>Search Result</p>
+                        </div>
+                    `);
+                    infoWindowInstance.open({ map: mapInstance });
                 }
-                if (currentMapLayer === 'aerial') {
-                    void showAerialViewForCurrentAddress();
-                }
+                updateCompsMapOpenLink(resolvedLabel);
             }
 
             async function searchAddressOnMap(rawValue = '') {
@@ -22393,21 +22357,8 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const normalizedLastSearchLabel = normalizeAddressForAutoSearch(lastSearchResult && lastSearchResult.label);
-                if (normalizedLastSearchLabel === normalizedPropertyAddress) {
-                    lastAutoSearchPropertyAddress = normalizedPropertyAddress;
-                    return;
-                }
-
-                try {
-                    await searchAddressOnMap(propertyAddress);
-                    lastAutoSearchPropertyAddress = normalizedPropertyAddress;
-                } catch (error) {
-                    if (compsMapSearchInput) {
-                        compsMapSearchInput.value = propertyAddress;
-                    }
-                    updateCompsMapOpenLink(propertyAddress);
-                }
+                lastAutoSearchPropertyAddress = normalizedPropertyAddress;
+                updateCompsMapOpenLink(propertyAddress);
             }
 
             async function initCompsAddressAutocomplete() {
@@ -22524,27 +22475,6 @@ function initNavbarDateTime() {
                     bounds.extend({ lat: comp.lat, lng: comp.lng });
                 });
 
-                if (
-                    lastSearchResult
-                    && Number.isFinite(Number(lastSearchResult.lat))
-                    && Number.isFinite(Number(lastSearchResult.lng))
-                ) {
-                    const searchPosition = {
-                        lat: Number(lastSearchResult.lat),
-                        lng: Number(lastSearchResult.lng)
-                    };
-                    const sameAsSubject = isSameMapLocation(searchPosition, subjectLocation);
-
-                    if (!sameAsSubject) {
-                        searchedMarker = renderSearchedLocationMarker(
-                            searchPosition,
-                            String(lastSearchResult.label || 'Search result').trim() || 'Search result'
-                        );
-
-                        bounds.extend(searchPosition);
-                    }
-                }
-
                 if (!bounds.isEmpty()) {
                     mapInstance.fitBounds(bounds, 80);
                 } else {
@@ -22621,7 +22551,7 @@ function initNavbarDateTime() {
             }
 
             async function refreshMap(filtered) {
-                updateCompsMapOpenLink(lastSearchResult && lastSearchResult.label);
+                updateCompsMapOpenLink();
 
                 await ensureSubjectCoordinates();
                 const map = await ensureMapReady();
@@ -22630,9 +22560,6 @@ function initNavbarDateTime() {
                 }
                 setMapLayerMode(currentMapLayer);
                 renderMapMarkers(filtered);
-                if (lastSearchResult) {
-                    focusSearchLocation(lastSearchResult, lastSearchResult.label);
-                }
                 if (streetViewEnabled) {
                     setStreetViewMode(true);
                 }
@@ -22883,7 +22810,7 @@ function initNavbarDateTime() {
 
             if (compsMapSearchInput && compsMapSearchInput.dataset.bound !== 'true') {
                 compsMapSearchInput.dataset.bound = 'true';
-                compsMapSearchInput.value = String(detailData.compsSearchLabel || detailData.address || '').trim();
+                compsMapSearchInput.value = String(detailData.address || '').trim();
                 compsMapSearchInput.addEventListener('keydown', async (event) => {
                     if (event.key !== 'Enter') {
                         return;
@@ -22925,13 +22852,7 @@ function initNavbarDateTime() {
             setMapLayerMode(currentMapLayer);
             setDrawMode('none');
             setStreetViewMode(false);
-            lastSearchResult = Number.isFinite(Number(detailData.compsSearchLat)) && Number.isFinite(Number(detailData.compsSearchLng))
-                ? {
-                    lat: Number(detailData.compsSearchLat),
-                    lng: Number(detailData.compsSearchLng),
-                    label: String(detailData.compsSearchLabel || detailData.address || 'Search result').trim() || 'Search result'
-                }
-                : null;
+            lastSearchResult = null;
             initCompsAddressAutocomplete().catch(() => {
                 updateCompsMapOpenLink();
             });
