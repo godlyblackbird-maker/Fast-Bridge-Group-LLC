@@ -20813,9 +20813,6 @@ function initNavbarDateTime() {
             const compsMapPano = document.getElementById('comps-map-pano');
             const compsMapEarthShell = document.getElementById('comps-map-earth-shell');
             const compsMapEarthCanvas = document.getElementById('comps-map-earth-canvas');
-            const compsEarthHudKicker = document.getElementById('comps-earth-hud-kicker');
-            const compsEarthHudAddress = document.getElementById('comps-earth-hud-address');
-            const compsEarthHudNote = document.getElementById('comps-earth-hud-note');
             const compsMapEmptyState = document.getElementById('comps-map-empty-state');
             const compsMapEmptyMessage = document.getElementById('comps-map-empty-message');
             const compsAerialViewShell = document.getElementById('comps-aerial-view-shell');
@@ -20961,28 +20958,6 @@ function initNavbarDateTime() {
                 };
             }
 
-            function syncEarthHud() {
-                const markerMeta = getEarthFocusMarkerMeta();
-                const isSearchLocation = markerMeta.shortLabel === 'SEARCH';
-                const activeAddress = String(
-                    isSearchLocation
-                        ? (lastSearchResult && lastSearchResult.label)
-                        : (detailData.address || detailData.propertyAddress || 'Subject Property')
-                ).trim() || (isSearchLocation ? 'Searched Property' : 'Subject Property');
-
-                if (compsEarthHudKicker) {
-                    compsEarthHudKicker.textContent = markerMeta.label;
-                }
-                if (compsEarthHudAddress) {
-                    compsEarthHudAddress.textContent = activeAddress;
-                }
-                if (compsEarthHudNote) {
-                    compsEarthHudNote.textContent = isSearchLocation
-                        ? 'Target locked to the center reticle for the searched property.'
-                        : 'Target locked to the center reticle for the subject property.';
-                }
-            }
-
             function buildEarthMarkerPin(meta = {}) {
                 const pin = document.createElement('div');
                 pin.className = 'earth-subject-pin';
@@ -21071,7 +21046,6 @@ function initNavbarDateTime() {
                 earthMapElement.heading = 18;
                 earthMapElement.mode = earthMapModeValue;
                 syncEarthSubjectMarker(getEarthFocusLocation());
-                syncEarthHud();
             }
 
             function detachEarthMarker() {
@@ -21187,7 +21161,6 @@ function initNavbarDateTime() {
                     compsMapEarthCanvas.appendChild(earthMapElement);
                     updateEarthCamera(getEarthFocusLocation());
                     syncEarthSubjectMarker(getEarthFocusLocation());
-                    syncEarthHud();
                     return earthMapElement;
                 })().catch((error) => {
                     earthReadyPromise = null;
@@ -21253,6 +21226,26 @@ function initNavbarDateTime() {
                     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
                     scaledSize: new window.google.maps.Size(38, 52),
                     anchor: new window.google.maps.Point(19, 50)
+                };
+            }
+
+            function buildSubjectPinIcon(variant = 'subject') {
+                const isSearchVariant = variant === 'search';
+                const fillColor = isSearchVariant ? '#2563eb' : '#111827';
+                const strokeColor = isSearchVariant ? '#dbeafe' : '#fef3c7';
+                const innerColor = isSearchVariant ? '#93c5fd' : '#f59e0b';
+                const svg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="42" height="58" viewBox="0 0 42 58">
+                        <path d="M21 2C10.507 2 2 10.507 2 21c0 14.88 16.494 32.507 18.025 34.12a1.35 1.35 0 0 0 1.95 0C23.506 53.507 40 35.88 40 21 40 10.507 31.493 2 21 2Z" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2.4"/>
+                        <circle cx="21" cy="21" r="8.25" fill="#f8fafc"/>
+                        <circle cx="21" cy="21" r="4.1" fill="${innerColor}"/>
+                    </svg>
+                `.trim();
+
+                return {
+                    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+                    scaledSize: new window.google.maps.Size(42, 58),
+                    anchor: new window.google.maps.Point(21, 56)
                 };
             }
 
@@ -22473,15 +22466,13 @@ function initNavbarDateTime() {
                 const activeKey = activeCompKey;
                 const bounds = new window.google.maps.LatLngBounds();
 
-                subjectMarker = createMapMarker({
+                subjectMarker = new window.google.maps.Marker({
                     map: mapInstance,
                     position: subjectLocation,
-                    content: buildMarkerContent(subjectMarkerMeta.label, subjectMarkerMeta.variant, false),
-                    label: subjectMarkerMeta.label,
-                    variant: subjectMarkerMeta.variant,
-                    isActive: false,
                     title: subjectMarkerMeta.title,
-                    zIndex: 300
+                    zIndex: 300,
+                    icon: buildSubjectPinIcon(subjectMarkerMeta.variant),
+                    optimized: false
                 });
                 if (subjectMarker && typeof subjectMarker.addListener === 'function') {
                     subjectMarker.addListener('click', () => {
