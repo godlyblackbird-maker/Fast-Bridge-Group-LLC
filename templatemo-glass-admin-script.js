@@ -21294,6 +21294,7 @@ function initNavbarDateTime() {
                 const settings = options && typeof options === 'object' ? options : {};
                 const visible = Boolean(settings.visible);
                 measureShell.hidden = !visible;
+                measureShell.style.display = visible ? 'flex' : 'none';
                 measurePrimary.textContent = String(settings.primary || 'Pick Measure Sqft').trim() || 'Pick Measure Sqft';
                 measureBadge.textContent = String(settings.badge || 'Inactive').trim() || 'Inactive';
                 measureMessage.textContent = String(settings.message || 'Use Measure Sqft to trace a boundary and calculate lot size, square footage, and perimeter inside the comps map.').trim() || 'Use Measure Sqft to trace a boundary and calculate lot size, square footage, and perimeter inside the comps map.';

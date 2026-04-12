@@ -17062,6 +17062,10 @@ body.analytics-reboot .analytics-my-file-count {
     gap: 8px;
 }
 
+.comps-map-measure-shell[hidden] {
+    display: none !important;
+}
+
 .comps-map-measure-head {
     display: flex;
     align-items: center;
