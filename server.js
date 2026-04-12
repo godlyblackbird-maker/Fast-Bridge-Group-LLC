@@ -7385,12 +7385,28 @@ app.get('/api/maps/google-config', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
 
+  const earthMissingConfig = [];
+  if (!GOOGLE_MAPS_API_KEY) {
+    earthMissingConfig.push('GOOGLE_MAPS_API_KEY');
+  }
+  if (!GOOGLE_MAPS_MAP_ID) {
+    earthMissingConfig.push('GOOGLE_MAPS_MAP_ID');
+  }
+
+  const earthEnabled = earthMissingConfig.length === 0;
+  const earthMessage = earthEnabled
+    ? 'FAST Earth is configured through Google Maps JavaScript 3D with your JavaScript Map ID.'
+    : `FAST Earth uses Google Maps JavaScript 3D, not Google Earth Engine. Missing ${earthMissingConfig.join(' and ')} on the server. Also verify Maps JavaScript API, billing, and a JavaScript Map ID are enabled in Google Cloud.`;
+
   return res.json({
     success: true,
     enabled: Boolean(GOOGLE_MAPS_API_KEY),
     apiKey: GOOGLE_MAPS_API_KEY,
     mapId: GOOGLE_MAPS_MAP_ID,
-    earthEnabled: Boolean(GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_MAP_ID),
+    earthEnabled,
+    earthViewer: 'google-maps-javascript-3d',
+    earthMissingConfig,
+    earthMessage,
     stylePath: '/Themes/google-maps-mls-light.json'
   });
 });

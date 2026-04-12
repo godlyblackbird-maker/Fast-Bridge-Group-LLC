@@ -724,8 +724,7 @@
                                             <button type="button" class="card-btn active" data-comps-draw-mode="none">Browse</button>
                                             <button type="button" class="card-btn" data-comps-draw-mode="draw-area">Draw Area</button>
                                             <button type="button" class="card-btn" data-comps-draw-mode="freehand">Freehand</button>
-                                            <button type="button" class="card-btn" data-comps-draw-mode="measure-distance">Measure Distance</button>
-                                            <button type="button" class="card-btn" data-comps-draw-mode="measure-area">Measure Area</button>
+                                            <button type="button" class="card-btn" data-comps-draw-mode="measure-area">Measure Sqft</button>
                                             <button type="button" class="card-btn" id="comps-map-clear-area-btn">Clear Area</button>
                                         </div>
                                     </div>
@@ -766,11 +765,11 @@
                                         <div class="comps-map-measure-head">
                                             <div>
                                                 <span class="comps-map-measure-label">Ruler</span>
-                                                <strong id="comps-map-measure-primary">Pick a measure tool</strong>
+                                                <strong id="comps-map-measure-primary">Pick Measure Sqft</strong>
                                             </div>
                                             <span id="comps-map-measure-badge" class="comps-map-measure-badge">Inactive</span>
                                         </div>
-                                        <p id="comps-map-measure-message" class="comps-map-measure-message">Use Measure Distance or Measure Area to trace lengths, lot size, or perimeter inside the comps map.</p>
+                                        <p id="comps-map-measure-message" class="comps-map-measure-message">Use Measure Sqft to trace a boundary and calculate lot size, square footage, and perimeter inside the comps map.</p>
                                         <div class="comps-map-measure-metrics">
                                             <span id="comps-map-measure-secondary" class="comps-map-measure-metric">No measurement yet</span>
                                         </div>
@@ -787,6 +786,10 @@
                                             </video>
                                         </div>
                                         <div id="comps-map-earth-shell" class="comps-map-earth-shell" hidden>
+                                            <div class="comps-map-earth-indicator" id="comps-map-earth-indicator">
+                                                <span class="comps-map-earth-indicator-label">Earth Property</span>
+                                                <strong id="comps-map-earth-indicator-address">Property Address</strong>
+                                            </div>
                                             <div id="comps-map-earth-canvas" class="comps-map-earth-canvas" aria-label="Google Earth 3D map"></div>
                                         </div>
                                         <div class="comps-map-stage-grid">

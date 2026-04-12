@@ -17198,6 +17198,50 @@ body.analytics-reboot .analytics-my-file-count {
     background: rgba(5, 10, 18, 0.16);
 }
 
+.comps-map-earth-indicator {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: min(380px, calc(100% - 28px));
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(8, 15, 28, 0.78);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.24);
+    pointer-events: none;
+}
+
+.comps-map-earth-indicator-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #c7d2fe;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.comps-map-earth-indicator-label::before {
+    content: '';
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: #f59e0b;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+}
+
+.comps-map-earth-indicator strong {
+    color: #f8fafc;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
 .comps-map-earth-canvas {
     position: absolute;
     inset: 0;

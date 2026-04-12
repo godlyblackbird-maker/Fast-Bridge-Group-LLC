@@ -21123,6 +21123,8 @@ function initNavbarDateTime() {
             const compsMapSearchButton = document.getElementById('comps-map-address-search-btn');
             const compsMapStyleSource = document.getElementById('comps-map-style-source');
             const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
+            const earthIndicator = document.getElementById('comps-map-earth-indicator');
+            const earthIndicatorAddress = document.getElementById('comps-map-earth-indicator-address');
             const measureShell = document.getElementById('comps-map-measure-shell');
             const measurePrimary = document.getElementById('comps-map-measure-primary');
             const measureBadge = document.getElementById('comps-map-measure-badge');
@@ -21228,12 +21230,20 @@ function initNavbarDateTime() {
             let lastGoogleMapsConfig = null;
             let aerialViewLookupPromise = null;
             let aerialViewActiveAddress = '';
-            let measurementPolyline = null;
             let measurementPolygon = null;
             let measurementPathListeners = [];
 
             function getEarthLayerButton() {
                 return layerButtons.find((button) => String(button.dataset.compsMapLayer || '').trim() === 'earth') || null;
+            }
+
+            function getEarthUnavailableMessage(config = lastGoogleMapsConfig, fallbackMessage = '') {
+                const preferredMessage = String(config && config.earthMessage || '').trim();
+                if (preferredMessage) {
+                    return preferredMessage;
+                }
+
+                return String(fallbackMessage || 'FAST Earth uses Google Maps JavaScript 3D, not Google Earth Engine. Set GOOGLE_MAPS_API_KEY and GOOGLE_MAPS_MAP_ID, then verify Maps JavaScript API, billing, and a JavaScript Map ID are enabled in Google Cloud.').trim();
             }
 
             function syncEarthLayerAvailability(config) {
@@ -21247,7 +21257,7 @@ function initNavbarDateTime() {
                 earthButton.disabled = !earthEnabled;
                 earthButton.title = earthEnabled
                     ? ''
-                    : 'Google Earth needs both GOOGLE_MAPS_API_KEY and GOOGLE_MAPS_MAP_ID on the server.';
+                    : getEarthUnavailableMessage(lastGoogleMapsConfig);
             }
 
             function setEarthViewState(isVisible) {
@@ -21259,6 +21269,20 @@ function initNavbarDateTime() {
                 if (wrap) {
                     wrap.classList.toggle('is-earth-active', Boolean(isVisible));
                 }
+
+                if (isVisible) {
+                    syncEarthSubjectIndicator();
+                }
+            }
+
+            function syncEarthSubjectIndicator() {
+                if (!earthIndicator || !earthIndicatorAddress) {
+                    return;
+                }
+
+                const markerMeta = getSubjectMarkerMeta();
+                const subjectAddress = String(markerMeta && markerMeta.title || detailData.address || 'Subject property').trim() || 'Subject property';
+                earthIndicatorAddress.textContent = subjectAddress;
             }
 
             function setMeasurementPanelState(options = {}) {
@@ -21269,9 +21293,9 @@ function initNavbarDateTime() {
                 const settings = options && typeof options === 'object' ? options : {};
                 const visible = Boolean(settings.visible);
                 measureShell.hidden = !visible;
-                measurePrimary.textContent = String(settings.primary || 'Pick a measure tool').trim() || 'Pick a measure tool';
+                measurePrimary.textContent = String(settings.primary || 'Pick Measure Sqft').trim() || 'Pick Measure Sqft';
                 measureBadge.textContent = String(settings.badge || 'Inactive').trim() || 'Inactive';
-                measureMessage.textContent = String(settings.message || 'Use Measure Distance or Measure Area to trace lengths, lot size, or perimeter inside the comps map.').trim() || 'Use Measure Distance or Measure Area to trace lengths, lot size, or perimeter inside the comps map.';
+                measureMessage.textContent = String(settings.message || 'Use Measure Sqft to trace a boundary and calculate lot size, square footage, and perimeter inside the comps map.').trim() || 'Use Measure Sqft to trace a boundary and calculate lot size, square footage, and perimeter inside the comps map.';
                 measureSecondary.textContent = String(settings.secondary || 'No measurement yet').trim() || 'No measurement yet';
             }
 
@@ -21308,11 +21332,6 @@ function initNavbarDateTime() {
                 const settings = options && typeof options === 'object' ? options : {};
                 clearMeasurementPathListeners();
 
-                if (measurementPolyline) {
-                    measurementPolyline.setMap(null);
-                    measurementPolyline = null;
-                }
-
                 if (measurementPolygon) {
                     measurementPolygon.setMap(null);
                     measurementPolygon = null;
@@ -21344,21 +21363,6 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                if (measurementPolyline) {
-                    const polylinePath = getMeasurementShapePath(measurementPolyline) || [];
-                    const distanceMeters = polylinePath.length >= 2
-                        ? window.google.maps.geometry.spherical.computeLength(polylinePath)
-                        : 0;
-                    setMeasurementPanelState({
-                        visible: true,
-                        badge: 'Distance',
-                        primary: formatMeasuredDistance(distanceMeters),
-                        message: 'Distance ruler is active. Drag the blue vertices to fine-tune the path.',
-                        secondary: `${polylinePath.length} point${polylinePath.length === 1 ? '' : 's'} plotted`
-                    });
-                    return;
-                }
-
                 if (measurementPolygon) {
                     const polygonPath = getMeasurementShapePath(measurementPolygon) || [];
                     const areaSquareMeters = polygonPath.length >= 3
@@ -21373,21 +21377,10 @@ function initNavbarDateTime() {
                     const areaSummary = formatMeasuredArea(areaSquareMeters);
                     setMeasurementPanelState({
                         visible: true,
-                        badge: 'Area',
-                        primary: areaSummary.acres,
-                        message: `Area ruler is active. ${areaSummary.squareFeet} inside the traced boundary.`,
+                        badge: 'Sq Ft',
+                        primary: areaSummary.squareFeet,
+                        message: `Measure Sqft is active. ${areaSummary.acres} inside the traced boundary.`,
                         secondary: `Perimeter ${formatMeasuredDistance(perimeterMeters)}`
-                    });
-                    return;
-                }
-
-                if (currentDrawMode === 'measure-distance') {
-                    setMeasurementPanelState({
-                        visible: true,
-                        badge: 'Distance',
-                        primary: 'Click to trace distance',
-                        message: 'Click points on the map, then double-click to finish the ruler line.',
-                        secondary: 'Use Clear Area to remove the ruler'
                     });
                     return;
                 }
@@ -21395,9 +21388,9 @@ function initNavbarDateTime() {
                 if (currentDrawMode === 'measure-area') {
                     setMeasurementPanelState({
                         visible: true,
-                        badge: 'Area',
-                        primary: 'Draw a boundary',
-                        message: 'Click around the lot or project area, then double-click to finish the measurement polygon.',
+                        badge: 'Sq Ft',
+                        primary: 'Draw square footage',
+                        message: 'Click around the lot or project area, then double-click to finish the square-foot measurement boundary.',
                         secondary: 'Use Clear Area to remove the ruler'
                     });
                     return;
@@ -21484,7 +21477,7 @@ function initNavbarDateTime() {
                         extruded: true,
                         drawsOccludedSegments: true,
                         label: markerMeta.label,
-                        title: markerMeta.label
+                        title: markerMeta.title || markerMeta.label
                     });
 
                     syncEarthMarkerPresentation(markerMeta);
@@ -21498,6 +21491,9 @@ function initNavbarDateTime() {
                 }
 
                 earthSubjectMarker.position = markerPosition;
+                if ('title' in earthSubjectMarker) {
+                    earthSubjectMarker.title = markerMeta.title || markerMeta.label;
+                }
                 syncEarthMarkerPresentation(markerMeta);
             }
 
@@ -21516,10 +21512,10 @@ function initNavbarDateTime() {
                     const config = await resolveGoogleMapsBrowserConfig();
                     syncEarthLayerAvailability(config);
                     if (!config.enabled || !config.apiKey) {
-                        throw new Error('Google Maps API key is not configured for Earth view.');
+                        throw new Error(getEarthUnavailableMessage(config, 'Google Maps API key is not configured for Earth view.'));
                     }
                     if (!config.mapId) {
-                        throw new Error('Google Earth needs GOOGLE_MAPS_MAP_ID configured on the server.');
+                        throw new Error(getEarthUnavailableMessage(config, 'Google Earth needs GOOGLE_MAPS_MAP_ID configured on the server.'));
                     }
 
                     await loadGoogleMapsScript(config);
@@ -22056,7 +22052,7 @@ function initNavbarDateTime() {
                     button.disabled = false;
                 });
                 if (clearAreaButton) {
-                    clearAreaButton.disabled = !drawnPolygon && !measurementPolyline && !measurementPolygon;
+                    clearAreaButton.disabled = !drawnPolygon && !measurementPolygon;
                 }
                 if (mapInstance) {
                     mapInstance.setOptions({
@@ -22228,11 +22224,11 @@ function initNavbarDateTime() {
             }
 
             function setDrawMode(nextMode) {
-                const normalizedMode = ['none', 'draw-area', 'freehand', 'measure-distance', 'measure-area'].includes(String(nextMode || '').trim())
+                const normalizedMode = ['none', 'draw-area', 'freehand', 'measure-area'].includes(String(nextMode || '').trim())
                     ? String(nextMode || '').trim()
                     : 'none';
 
-                if ((normalizedMode === 'measure-distance' || normalizedMode === 'measure-area') && currentMapLayer === 'earth') {
+                if (normalizedMode === 'measure-area' && currentMapLayer === 'earth') {
                     showDashboardToast('info', 'Ruler Switched To Hybrid', 'FAST moved the map to Hybrid so the custom ruler can draw on the live map canvas.');
                     setMapLayerMode('hybrid');
                 }
@@ -22244,8 +22240,6 @@ function initNavbarDateTime() {
                     let drawingMode = null;
                     if (normalizedMode === 'draw-area' || normalizedMode === 'measure-area') {
                         drawingMode = window.google.maps.drawing.OverlayType.POLYGON;
-                    } else if (normalizedMode === 'measure-distance') {
-                        drawingMode = window.google.maps.drawing.OverlayType.POLYLINE;
                     }
                     drawingManager.setDrawingMode(drawingMode);
                 }
@@ -22442,24 +22436,11 @@ function initNavbarDateTime() {
                         drawingManager = new window.google.maps.drawing.DrawingManager({
                             drawingMode: null,
                             drawingControl: false,
-                            polygonOptions: getPolygonOptions(),
-                            polylineOptions: getMeasurementPolylineOptions()
+                            polygonOptions: getPolygonOptions()
                         });
                         drawingManager.setMap(mapInstance);
                         drawingManager.addListener('overlaycomplete', (event) => {
                             if (!event) {
-                                return;
-                            }
-
-                            if (currentDrawMode === 'measure-distance' && event.type === window.google.maps.drawing.OverlayType.POLYLINE) {
-                                clearMeasurementArtifacts({ keepPanel: true });
-                                measurementPolyline = event.overlay;
-                                measurementPolyline.setEditable(true);
-                                attachMeasurementPathListeners(measurementPolyline);
-                                currentDrawMode = 'none';
-                                syncDrawButtons();
-                                drawingManager.setDrawingMode(null);
-                                updateMeasurementSummary();
                                 return;
                             }
 
@@ -22554,7 +22535,7 @@ function initNavbarDateTime() {
                         layerButtons.forEach((button) => {
                             button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
                         });
-                        showDashboardToast('error', 'Google Earth Unavailable', 'Google Earth needs both GOOGLE_MAPS_API_KEY and GOOGLE_MAPS_MAP_ID configured on the server.');
+                        showDashboardToast('error', 'Google Earth Unavailable', getEarthUnavailableMessage(earthConfig));
                         if (mapInstance) {
                             mapInstance.setMapTypeId('hybrid');
                         }
@@ -23041,6 +23022,8 @@ function initNavbarDateTime() {
                         subjectBandEl.textContent = 'Ask is aligned with median comp close';
                     }
                 }
+
+                syncEarthSubjectIndicator();
             }
 
             async function refreshMap(filtered) {
@@ -23053,6 +23036,10 @@ function initNavbarDateTime() {
                 }
                 setMapLayerMode(currentMapLayer);
                 renderMapMarkers(filtered);
+                if (earthMapElement) {
+                    updateEarthCamera(getEarthFocusLocation());
+                    syncEarthSubjectMarker(getEarthFocusLocation());
+                }
                 if (streetViewEnabled) {
                     setStreetViewMode(true);
                 }

@@ -207,12 +207,14 @@ Edit `.env` file to customize:
 - **JWT_SECRET:** Change this in production!
 - **DATABASE:** Path to SQLite database
 - **GOOGLE_MAPS_API_KEY** or **GOOGLE_BROWSER_MAPS_API_KEY:** Browser-safe Google Maps JavaScript API key used by the comps map workspace
-- **GOOGLE_MAPS_MAP_ID** or **GOOGLE_MAP_ID:** Optional Google Cloud Map ID for cloud styling; if omitted, FAST falls back to `Themes/google-maps-mls-light.json`
+- **GOOGLE_MAPS_MAP_ID** or **GOOGLE_MAP_ID:** Google Cloud JavaScript Map ID used for cloud styling and required by FAST's Earth layer; if omitted, FAST falls back to `Themes/google-maps-mls-light.json` for normal maps and disables the Earth layer
 
 Google Cloud note for the comps workspace:
 - Enable **Maps JavaScript API** for the interactive map
 - Enable **Places API** for address autocomplete/search
 - Enable **Aerial View API** if you want the `Aerial` layer to fetch Google's photorealistic aerial video for supported US postal addresses
+- FAST's `Earth` layer uses **Google Maps JavaScript 3D (`maps3d`) with a JavaScript Map ID**, not Google Earth Engine
+- Enabling Google Earth Engine by itself will not power the in-app `Earth` tab; you still need billing enabled, **Maps JavaScript API**, and a **JavaScript Map ID** in Google Cloud
 - **OPENAI_API_KEY:** Server-side key for the dashboard AI helper
 - **OPENAI_MODEL:** OpenAI model name for the AI helper (default: `gpt-5-nano`)
 - **TWILIO_ACCOUNT_SID:** Twilio account SID for SMS sending
