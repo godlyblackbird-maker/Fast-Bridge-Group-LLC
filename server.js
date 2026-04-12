@@ -56,7 +56,6 @@ const DEFAULT_STRIPE_PUBLISHABLE_KEY = 'pk_test_51TDU29Q3MV5dyF2TauLp1mMkQukSL6P
 const STRIPE_PUBLISHABLE_KEY = String(process.env.STRIPE_PUBLISHABLE_KEY || DEFAULT_STRIPE_PUBLISHABLE_KEY).trim();
 const GOOGLE_MAPS_API_KEY = getFirstConfiguredEnvValue('GOOGLE_MAPS_API_KEY', 'GOOGLE_BROWSER_MAPS_API_KEY');
 const GOOGLE_MAPS_MAP_ID = getFirstConfiguredEnvValue('GOOGLE_MAPS_MAP_ID', 'GOOGLE_MAP_ID');
-const APPLE_MAPKIT_TOKEN = getFirstConfiguredEnvValue('APPLE_MAPKIT_TOKEN', 'APPLE_MAPS_MAPKIT_TOKEN');
 const PREMIUM_USER_ROLE = 'premium user';
 const TEST_USER_ROLE = 'test user';
 const PREMIUM_PLAN_KEY = 'premium';
@@ -6828,17 +6827,6 @@ app.get('/api/maps/google-config', (_req, res) => {
     apiKey: GOOGLE_MAPS_API_KEY,
     mapId: GOOGLE_MAPS_MAP_ID,
     stylePath: '/Themes/google-maps-mls-light.json'
-  });
-});
-
-app.get('/api/maps/apple-config', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  res.setHeader('Pragma', 'no-cache');
-
-  return res.json({
-    success: true,
-    enabled: Boolean(APPLE_MAPKIT_TOKEN),
-    token: APPLE_MAPKIT_TOKEN
   });
 });
 
