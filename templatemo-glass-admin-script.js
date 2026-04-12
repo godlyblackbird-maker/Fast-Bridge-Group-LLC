@@ -21230,6 +21230,7 @@ function initNavbarDateTime() {
             let lastGoogleMapsConfig = null;
             let aerialViewLookupPromise = null;
             let aerialViewActiveAddress = '';
+            let measurementPanelRequested = false;
             let measurementPolygon = null;
             let measurementPathListeners = [];
 
@@ -21338,6 +21339,7 @@ function initNavbarDateTime() {
                 }
 
                 if (!settings.keepPanel) {
+                    measurementPanelRequested = false;
                     setMeasurementPanelState({ visible: false });
                 }
             }
@@ -21352,6 +21354,11 @@ function initNavbarDateTime() {
             }
 
             function updateMeasurementSummary() {
+                if (!measurementPanelRequested && !measurementPolygon) {
+                    setMeasurementPanelState({ visible: false });
+                    return;
+                }
+
                 if (!window.google || !window.google.maps || !window.google.maps.geometry || !window.google.maps.geometry.spherical) {
                     setMeasurementPanelState({
                         visible: true,
@@ -22227,6 +22234,10 @@ function initNavbarDateTime() {
                 const normalizedMode = ['none', 'draw-area', 'freehand', 'measure-area'].includes(String(nextMode || '').trim())
                     ? String(nextMode || '').trim()
                     : 'none';
+
+                if (normalizedMode === 'measure-area') {
+                    measurementPanelRequested = true;
+                }
 
                 if (normalizedMode === 'measure-area' && currentMapLayer === 'earth') {
                     showDashboardToast('info', 'Ruler Switched To Hybrid', 'FAST moved the map to Hybrid so the custom ruler can draw on the live map canvas.');
@@ -23267,7 +23278,11 @@ function initNavbarDateTime() {
 
             drawButtons.forEach((button) => {
                 button.addEventListener('click', () => {
-                    setDrawMode(button.dataset.compsDrawMode || 'none');
+                    const nextMode = button.dataset.compsDrawMode || 'none';
+                    if (nextMode !== 'measure-area') {
+                        measurementPanelRequested = false;
+                    }
+                    setDrawMode(nextMode);
                 });
             });
 
