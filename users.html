@@ -476,11 +476,14 @@
                     </div>
                 </div>
 
-                <div id="agent-contract-card" class="glass-card widget-card outreach-card agent-contract-card" data-widget-id="agent-purchase-agreement" data-widget-title="Purchase Agreement Contracts">
+                <div id="agent-contract-card" class="glass-card widget-card outreach-card agent-contract-card" data-widget-id="agent-purchase-agreement" data-widget-title="DocuSign Purchase Agreement">
                     <div class="card-header">
                         <div>
-                            <h2 class="card-title">Purchase Agreement Contracts</h2>
-                            <p class="card-subtitle">Select a property, auto-fill the assignment agreement, and download the finished PDF.</p>
+                            <h2 class="card-title">DocuSign Purchase Agreement</h2>
+                            <p class="card-subtitle">Select a property, confirm the signers, and send your DocuSign template from the Agent Workspace.</p>
+                        </div>
+                        <div class="agent-contract-brand" aria-hidden="true">
+                            <img src="png photos/Docusingn.png" alt="" class="agent-contract-brand-image">
                         </div>
                     </div>
                     <div class="agent-contract-shell">
@@ -491,25 +494,21 @@
                                     <option value="">Manual Entry</option>
                                 </select>
                             </label>
-                            <div class="agent-contract-legend" aria-label="Contract field legend">
-                                <span class="agent-contract-legend-chip agent-contract-legend-chip-blue">Blue: auto-fill from property</span>
-                                <span class="agent-contract-legend-chip agent-contract-legend-chip-green">Green: fill details</span>
-                                <span class="agent-contract-legend-chip agent-contract-legend-chip-red">Red: initials</span>
+                            <div class="agent-contract-legend" aria-label="DocuSign workflow status">
+                                <span class="agent-contract-legend-chip agent-contract-legend-chip-blue">Property data can auto-fill</span>
+                                <span class="agent-contract-legend-chip agent-contract-legend-chip-green">Send through DocuSign template</span>
                             </div>
                         </div>
 
                         <div class="agent-contract-section">
-                            <h4>Auto-Filled Contract Fields</h4>
-                            <p class="agent-note-help">These fields load from the selected property when available and stay editable before download.</p>
+                            <h4>Transaction Snapshot</h4>
+                            <p class="agent-note-help">These details help keep the envelope tied to the selected property. Fill in anything the property snapshot does not already provide.</p>
                             <div class="offer-grid agent-contract-grid">
-                                <label>Date
+                                <label class="agent-contract-span-2">Property Address
+                                    <input id="agent-contract-property-address" class="form-input agent-contract-field-blue" type="text" placeholder="123 Main St, Los Angeles, CA">
+                                </label>
+                                <label>Contract Date
                                     <input id="agent-contract-date" class="form-input agent-contract-field-blue" type="text" placeholder="MM/DD/YYYY">
-                                </label>
-                                <label>Buyer
-                                    <input id="agent-contract-buyer" class="form-input agent-contract-field-blue" type="text" placeholder="Buyer / assignee name">
-                                </label>
-                                <label>Seller
-                                    <input id="agent-contract-seller" class="form-input agent-contract-field-blue" type="text" placeholder="Seller name">
                                 </label>
                                 <label>APN
                                     <input id="agent-contract-apn" class="form-input agent-contract-field-blue" type="text" placeholder="APN">
@@ -521,39 +520,39 @@
                         </div>
 
                         <div class="agent-contract-section">
-                            <h4>Signature Block Details</h4>
+                            <h4>DocuSign Recipients</h4>
                             <div class="offer-grid agent-contract-grid">
-                                <label>By
-                                    <input id="agent-contract-by" class="form-input agent-contract-field-green" type="text" placeholder="Signer or signature text">
+                                <label>Buyer / Assignee Name
+                                    <input id="agent-contract-buyer" class="form-input agent-contract-field-green" type="text" placeholder="Buyer or assignee name">
                                 </label>
-                                <label>Name
-                                    <input id="agent-contract-name" class="form-input agent-contract-field-green" type="text" placeholder="Printed name">
+                                <label>Buyer / Assignee Email
+                                    <input id="agent-contract-buyer-email" class="form-input agent-contract-field-green" type="email" placeholder="buyer@example.com">
                                 </label>
-                                <label>Title
-                                    <input id="agent-contract-title" class="form-input agent-contract-field-green" type="text" placeholder="Title">
+                                <label>Seller / Assignor Name
+                                    <input id="agent-contract-seller" class="form-input agent-contract-field-green" type="text" placeholder="Seller or assignor name">
                                 </label>
-                                <label>Company
-                                    <input id="agent-contract-company" class="form-input agent-contract-field-green" type="text" placeholder="Company">
+                                <label>Seller / Assignor Email
+                                    <input id="agent-contract-seller-email" class="form-input agent-contract-field-green" type="email" placeholder="seller@example.com">
                                 </label>
                             </div>
                         </div>
 
                         <div class="agent-contract-section">
-                            <h4>Initials</h4>
+                            <h4>Envelope Message</h4>
                             <div class="offer-grid agent-contract-grid">
-                                <label>Assignee Initials
-                                    <input id="agent-contract-assignee-initials" class="form-input agent-contract-field-red" type="text" maxlength="6" placeholder="EPI">
+                                <label class="agent-contract-span-2">Email Subject
+                                    <input id="agent-contract-email-subject" class="form-input" type="text" placeholder="Purchase agreement for 123 Main St">
                                 </label>
-                                <label>Assignor Initials
-                                    <input id="agent-contract-assignor-initials" class="form-input agent-contract-field-red" type="text" maxlength="6" placeholder="FBG">
+                                <label class="agent-contract-span-2">Email Message
+                                    <textarea id="agent-contract-email-message" class="form-input" rows="4" placeholder="Please review and sign the purchase agreement through DocuSign."></textarea>
                                 </label>
                             </div>
                         </div>
 
-                        <p id="agent-contract-status" class="offer-docs-note">Select a property to auto-fill the highlighted contract fields, then download the PDF.</p>
+                        <p id="agent-contract-status" class="offer-docs-note">Checking DocuSign configuration for this workspace...</p>
 
                         <div class="outreach-actions agent-contract-actions">
-                            <button type="button" class="card-btn active" id="agent-contract-download-btn">Download PDF</button>
+                            <button type="button" class="card-btn active" id="agent-contract-send-btn">Send DocuSign</button>
                         </div>
                     </div>
                 </div>

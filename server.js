@@ -226,6 +226,264 @@ function getFirstConfiguredEnvValue(...names) {
   return '';
 }
 
+function normalizeDocuSignPrivateKey(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\r/g, '')
+    .replace(/\\n/g, '\n');
+}
+
+function getDocuSignConfig() {
+  return {
+    authServer: getFirstConfiguredEnvValue('DOCUSIGN_AUTH_SERVER', 'DOCUSIGN_OAUTH_HOST') || 'account-d.docusign.com',
+    clientId: getFirstConfiguredEnvValue('DOCUSIGN_CLIENT_ID', 'DOCUSIGN_INTEGRATION_KEY'),
+    userId: getFirstConfiguredEnvValue('DOCUSIGN_USER_ID'),
+    accountId: getFirstConfiguredEnvValue('DOCUSIGN_ACCOUNT_ID'),
+    templateId: getFirstConfiguredEnvValue('DOCUSIGN_TEMPLATE_ID', 'DOCUSIGN_PURCHASE_TEMPLATE_ID'),
+    privateKey: normalizeDocuSignPrivateKey(
+      getFirstConfiguredEnvValue('DOCUSIGN_PRIVATE_KEY', 'DOCUSIGN_RSA_PRIVATE_KEY', 'DOCUSIGN_PRIVATE_KEY_PEM')
+    ),
+    buyerRoleName: getFirstConfiguredEnvValue('DOCUSIGN_BUYER_ROLE_NAME', 'DOCUSIGN_ASSIGNEE_ROLE_NAME') || 'Buyer',
+    sellerRoleName: getFirstConfiguredEnvValue('DOCUSIGN_SELLER_ROLE_NAME', 'DOCUSIGN_ASSIGNOR_ROLE_NAME') || 'Seller',
+    brandId: getFirstConfiguredEnvValue('DOCUSIGN_BRAND_ID')
+  };
+}
+
+function getDocuSignMissingConfig(config = getDocuSignConfig()) {
+  const missing = [];
+  if (!config.clientId) missing.push('DOCUSIGN_CLIENT_ID');
+  if (!config.userId) missing.push('DOCUSIGN_USER_ID');
+  if (!config.privateKey) missing.push('DOCUSIGN_PRIVATE_KEY');
+  if (!config.templateId) missing.push('DOCUSIGN_TEMPLATE_ID');
+  return missing;
+}
+
+function getDocuSignStatusPayload() {
+  const config = getDocuSignConfig();
+  const missing = getDocuSignMissingConfig(config);
+  return {
+    configured: missing.length === 0,
+    missing,
+    buyerRoleName: config.buyerRoleName,
+    sellerRoleName: config.sellerRoleName,
+    hasAccountId: Boolean(config.accountId),
+    authServer: config.authServer
+  };
+}
+
+function buildDocuSignErrorMessage(payload, fallbackMessage) {
+  if (payload && typeof payload === 'object') {
+    return String(
+      payload.error_description
+      || payload.error
+      || payload.message
+      || payload.details
+      || fallbackMessage
+    ).trim() || fallbackMessage;
+  }
+
+  return fallbackMessage;
+}
+
+function isValidEmailAddress(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
+function cleanDocuSignText(value, maxLength = 4000) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+async function getDocuSignAccessToken(config) {
+  if (typeof fetch !== 'function') {
+    throw new Error('This server runtime does not support the DocuSign fetch flow.');
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const assertion = jwt.sign(
+    {
+      iss: config.clientId,
+      sub: config.userId,
+      aud: config.authServer,
+      iat: nowSeconds,
+      exp: nowSeconds + 3600,
+      scope: 'signature impersonation'
+    },
+    config.privateKey,
+    { algorithm: 'RS256' }
+  );
+
+  const response = await fetch(`https://${config.authServer}/oauth/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion
+    }).toString()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(buildDocuSignErrorMessage(payload, 'DocuSign authentication failed.'));
+  }
+
+  const accessToken = String(payload.access_token || '').trim();
+  if (!accessToken) {
+    throw new Error('DocuSign authentication did not return an access token.');
+  }
+
+  return accessToken;
+}
+
+function selectDocuSignAccount(accounts, requestedAccountId) {
+  const normalizedAccounts = Array.isArray(accounts) ? accounts : [];
+  const requestedId = String(requestedAccountId || '').trim();
+
+  if (requestedId) {
+    const exactMatch = normalizedAccounts.find((account) => String(account && account.account_id || '').trim() === requestedId);
+    if (exactMatch) {
+      return exactMatch;
+    }
+    return null;
+  }
+
+  return normalizedAccounts.find((account) => account && account.is_default)
+    || normalizedAccounts[0]
+    || null;
+}
+
+async function resolveDocuSignAccountContext(config, accessToken) {
+  const response = await fetch(`https://${config.authServer}/oauth/userinfo`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(buildDocuSignErrorMessage(payload, 'Unable to read DocuSign account information.'));
+  }
+
+  const account = selectDocuSignAccount(payload.accounts, config.accountId);
+  if (!account) {
+    throw new Error(config.accountId
+      ? `DocuSign account ${config.accountId} is not available for the configured user.`
+      : 'No DocuSign account was returned for the configured user.');
+  }
+
+  const baseUri = String(account.base_uri || '').trim().replace(/\/+$/g, '');
+  const accountId = String(account.account_id || '').trim();
+  if (!baseUri || !accountId) {
+    throw new Error('DocuSign account information is incomplete.');
+  }
+
+  return {
+    baseUri,
+    accountId
+  };
+}
+
+function buildDocuSignEnvelopePayload(config, payload) {
+  const propertyAddress = cleanDocuSignText(payload.propertyAddress, 300);
+  const contractDate = cleanDocuSignText(payload.contractDate, 40);
+  const apn = cleanDocuSignText(payload.apn, 120);
+  const purchasePrice = cleanDocuSignText(payload.purchasePrice, 120);
+  const buyerName = cleanDocuSignText(payload.buyerName, 120);
+  const buyerEmail = cleanDocuSignText(payload.buyerEmail, 180).toLowerCase();
+  const sellerName = cleanDocuSignText(payload.sellerName, 120);
+  const sellerEmail = cleanDocuSignText(payload.sellerEmail, 180).toLowerCase();
+  const emailSubject = cleanDocuSignText(
+    payload.emailSubject || (propertyAddress ? `Purchase agreement for ${propertyAddress}` : 'FAST purchase agreement for signature'),
+    180
+  );
+  const emailMessage = cleanDocuSignText(
+    payload.emailMessage || 'Please review and sign the purchase agreement through DocuSign.',
+    1000
+  );
+
+  const textCustomFields = [
+    ['propertyAddress', propertyAddress],
+    ['contractDate', contractDate],
+    ['apn', apn],
+    ['purchasePrice', purchasePrice],
+    ['buyerName', buyerName],
+    ['sellerName', sellerName]
+  ]
+    .filter(([, value]) => Boolean(value))
+    .map(([name, value]) => ({
+      name,
+      value,
+      show: 'false'
+    }));
+
+  const envelope = {
+    status: 'sent',
+    templateId: config.templateId,
+    emailSubject,
+    emailBlurb: emailMessage,
+    templateRoles: [
+      {
+        roleName: config.buyerRoleName,
+        name: buyerName,
+        email: buyerEmail
+      },
+      {
+        roleName: config.sellerRoleName,
+        name: sellerName,
+        email: sellerEmail
+      }
+    ]
+  };
+
+  if (textCustomFields.length) {
+    envelope.customFields = {
+      textCustomFields
+    };
+  }
+
+  if (config.brandId) {
+    envelope.brandId = config.brandId;
+  }
+
+  return envelope;
+}
+
+async function sendDocuSignTemplateEnvelope(payload) {
+  const config = getDocuSignConfig();
+  const missingConfig = getDocuSignMissingConfig(config);
+  if (missingConfig.length) {
+    throw new Error(`DocuSign is not configured. Missing ${missingConfig.join(', ')}.`);
+  }
+
+  const accessToken = await getDocuSignAccessToken(config);
+  const accountContext = await resolveDocuSignAccountContext(config, accessToken);
+  const envelopePayload = buildDocuSignEnvelopePayload(config, payload);
+
+  const response = await fetch(`${accountContext.baseUri}/restapi/v2.1/accounts/${encodeURIComponent(accountContext.accountId)}/envelopes`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(envelopePayload)
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(buildDocuSignErrorMessage(result, 'DocuSign could not create the envelope.'));
+  }
+
+  return {
+    envelopeId: String(result.envelopeId || result.envelope_id || '').trim(),
+    status: String(result.status || 'sent').trim() || 'sent',
+    uri: String(result.uri || '').trim()
+  };
+}
+
 function resolveDatabaseFilePath() {
   const explicitPath = getFirstConfiguredEnvValue('DATABASE_PATH', 'SQLITE_DATABASE_PATH', 'SQLITE_DB_PATH');
   if (explicitPath) {
@@ -10022,6 +10280,78 @@ app.delete('/api/agent-workspace-documents/:documentId', async (req, res) => {
   } catch (error) {
     console.error('Failed to delete Agent Workspace document:', error);
     return res.status(500).json({ error: 'Failed to delete the selected file.' });
+  }
+});
+
+app.get('/api/agent-workspace-docusign', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  return res.json(getDocuSignStatusPayload());
+});
+
+app.post('/api/agent-workspace-docusign/send', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const propertyAddress = cleanDocuSignText(req.body?.propertyAddress, 300);
+    const contractDate = cleanDocuSignText(req.body?.contractDate, 40);
+    const apn = cleanDocuSignText(req.body?.apn, 120);
+    const purchasePrice = cleanDocuSignText(req.body?.purchasePrice, 120);
+    const buyerName = cleanDocuSignText(req.body?.buyerName, 120);
+    const buyerEmail = cleanDocuSignText(req.body?.buyerEmail, 180).toLowerCase();
+    const sellerName = cleanDocuSignText(req.body?.sellerName, 120);
+    const sellerEmail = cleanDocuSignText(req.body?.sellerEmail, 180).toLowerCase();
+    const emailSubject = cleanDocuSignText(req.body?.emailSubject, 180);
+    const emailMessage = cleanDocuSignText(req.body?.emailMessage, 1000);
+
+    const missingFields = [];
+    if (!propertyAddress) missingFields.push('property address');
+    if (!contractDate) missingFields.push('contract date');
+    if (!buyerName) missingFields.push('buyer name');
+    if (!buyerEmail) missingFields.push('buyer email');
+    if (!sellerName) missingFields.push('seller name');
+    if (!sellerEmail) missingFields.push('seller email');
+
+    if (missingFields.length) {
+      return res.status(400).json({ error: `Add ${missingFields.join(', ')} before sending DocuSign.` });
+    }
+
+    if (!isValidEmailAddress(buyerEmail) || !isValidEmailAddress(sellerEmail)) {
+      return res.status(400).json({ error: 'Enter valid buyer and seller email addresses.' });
+    }
+
+    const envelope = await sendDocuSignTemplateEnvelope({
+      propertyAddress,
+      contractDate,
+      apn,
+      purchasePrice,
+      buyerName,
+      buyerEmail,
+      sellerName,
+      sellerEmail,
+      emailSubject,
+      emailMessage,
+      requestedBy: {
+        userId: Number(decoded.id) || 0,
+        name: cleanDocuSignText(decoded.name, 120),
+        email: cleanDocuSignText(decoded.email, 180).toLowerCase()
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      envelope,
+      message: 'DocuSign envelope sent successfully.'
+    });
+  } catch (error) {
+    console.error('Failed to send Agent Workspace DocuSign envelope:', error);
+    return res.status(500).json({ error: error && error.message ? error.message : 'Failed to send the DocuSign envelope.' });
   }
 });
 

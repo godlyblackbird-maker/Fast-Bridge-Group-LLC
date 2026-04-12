@@ -7493,6 +7493,37 @@ body.analytics-reboot .analytics-my-file-count {
     grid-column: 1 / -1;
 }
 
+.agent-contract-card .card-header {
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.agent-contract-brand {
+    margin-left: auto;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: min(100%, 220px);
+    max-width: 260px;
+    padding: 10px 14px;
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        rgba(8, 10, 18, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+    overflow: hidden;
+}
+
+.agent-contract-brand-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.28));
+}
+
 .agent-contract-shell {
     display: flex;
     flex-direction: column;
@@ -7598,6 +7629,16 @@ body.analytics-reboot .analytics-my-file-count {
 @media (max-width: 900px) {
     .agent-contract-card {
         grid-column: auto;
+    }
+
+    .agent-contract-card .card-header {
+        flex-direction: column;
+    }
+
+    .agent-contract-brand {
+        margin-left: 0;
+        width: 100%;
+        max-width: 240px;
     }
 }
 

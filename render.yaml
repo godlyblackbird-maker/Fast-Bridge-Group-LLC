@@ -76,3 +76,19 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI
         sync: false
+      - key: DOCUSIGN_AUTH_SERVER
+        value: account-d.docusign.com
+      - key: DOCUSIGN_CLIENT_ID
+        sync: false
+      - key: DOCUSIGN_USER_ID
+        sync: false
+      - key: DOCUSIGN_ACCOUNT_ID
+        sync: false
+      - key: DOCUSIGN_PRIVATE_KEY
+        sync: false
+      - key: DOCUSIGN_TEMPLATE_ID
+        sync: false
+      - key: DOCUSIGN_BUYER_ROLE_NAME
+        value: Buyer
+      - key: DOCUSIGN_SELLER_ROLE_NAME
+        value: Seller

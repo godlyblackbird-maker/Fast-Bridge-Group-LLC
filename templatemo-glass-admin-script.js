@@ -16459,66 +16459,28 @@ function initNavbarDateTime() {
         }
 
         const propertySelect = document.getElementById('agent-contract-property-select');
+        const propertyAddressInput = document.getElementById('agent-contract-property-address');
         const dateInput = document.getElementById('agent-contract-date');
         const buyerInput = document.getElementById('agent-contract-buyer');
+        const buyerEmailInput = document.getElementById('agent-contract-buyer-email');
         const sellerInput = document.getElementById('agent-contract-seller');
+        const sellerEmailInput = document.getElementById('agent-contract-seller-email');
         const apnInput = document.getElementById('agent-contract-apn');
         const purchasePriceInput = document.getElementById('agent-contract-purchase-price');
-        const byInput = document.getElementById('agent-contract-by');
-        const nameInput = document.getElementById('agent-contract-name');
-        const titleInput = document.getElementById('agent-contract-title');
-        const companyInput = document.getElementById('agent-contract-company');
-        const assigneeInitialsInput = document.getElementById('agent-contract-assignee-initials');
-        const assignorInitialsInput = document.getElementById('agent-contract-assignor-initials');
-        const downloadButton = document.getElementById('agent-contract-download-btn');
+        const emailSubjectInput = document.getElementById('agent-contract-email-subject');
+        const emailMessageInput = document.getElementById('agent-contract-email-message');
+        const sendButton = document.getElementById('agent-contract-send-btn');
         const statusNote = document.getElementById('agent-contract-status');
 
-        if (!propertySelect || !dateInput || !buyerInput || !sellerInput || !apnInput || !purchasePriceInput || !byInput || !nameInput || !titleInput || !companyInput || !assigneeInitialsInput || !assignorInitialsInput || !downloadButton || !statusNote) {
+        if (!propertySelect || !propertyAddressInput || !dateInput || !buyerInput || !buyerEmailInput || !sellerInput || !sellerEmailInput || !apnInput || !purchasePriceInput || !emailSubjectInput || !emailMessageInput || !sendButton || !statusNote) {
             return;
         }
 
-        let pdfLibLoaderPromise = null;
         const propertyEntries = new Map();
-        const templatePath = encodeURI('Contracts/Real Estate Purchase Agreement.pdf');
-        const pdfPageHeight = 792;
-        const screenToPdfScale = 2 / 3;
-        const assignmentDateRect = { x: 111, y: 223, w: 84, h: 24 };
-        const buyerLineRect = { x: 604, y: 223, w: 182, h: 24 };
-
-        const contractRects = {
-            page1: {
-                seller: { x: 165, y: 405, w: 102, h: 18 },
-                purchaseAgreementDate: { x: 341, y: 405, w: 75, h: 18 },
-                apn: { x: 272, y: 424, w: 126, h: 19 },
-                addressLineOne: { x: 601, y: 424, w: 236, h: 19 },
-                addressLineTwo: { x: 76, y: 444, w: 84, h: 19 },
-                totalPriceWords: { x: 383, y: 707, w: 290, h: 46 },
-                totalPriceAmount: { x: 54, y: 727, w: 89, h: 20 },
-                earnestMoneyDate: { x: 538, y: 970, w: 74, h: 19 }
-            },
-            page2: {
-                assigneeInitials: { x: 802, y: 55, w: 41, h: 18 },
-                assignorInitials: { x: 802, y: 76, w: 41, h: 18 }
-            },
-            page3: {
-                assigneeInitialsTop: { x: 798, y: 57, w: 49, h: 18 },
-                assignorInitialsTop: { x: 798, y: 77, w: 49, h: 18 },
-                assigneeInitialsBottom: { x: 715, y: 1069, w: 41, h: 18 }
-            },
-            page4: {
-                assignorInitials: { x: 706, y: 54, w: 49, h: 18 },
-                assigneeDate: { x: 125, y: 440, w: 73, h: 20 },
-                by: { x: 415, y: 476, w: 230, h: 19 },
-                name: { x: 339, y: 517, w: 98, h: 17 },
-                title: { x: 328, y: 539, w: 304, h: 19 },
-                company: { x: 352, y: 560, w: 181, h: 19 },
-                assignorDate: { x: 128, y: 560, w: 73, h: 20 }
-            },
-            page5: {
-                assigneeInitials: { x: 807, y: 55, w: 57, h: 18 },
-                assignorInitials: { x: 807, y: 76, w: 57, h: 18 }
-            }
-        };
+        let isDocuSignConfigured = false;
+        let docusignConfigMessage = 'Checking DocuSign configuration for this workspace...';
+        let lastAutoSubject = '';
+        let lastAutoMessage = '';
 
         function setStatus(message, tone) {
             statusNote.textContent = message;
@@ -16527,13 +16489,6 @@ function initNavbarDateTime() {
 
         function cleanContractValue(value) {
             return String(value || '').replace(/\s+/g, ' ').trim();
-        }
-
-        function slugifyContractValue(value) {
-            return cleanContractValue(value)
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
         }
 
         function getTodayDateString() {
@@ -16552,6 +16507,10 @@ function initNavbarDateTime() {
             }
 
             return parsed.toLocaleDateString('en-US');
+        }
+
+        function isValidEmail(value) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanContractValue(value));
         }
 
         function escapeRegex(value) {
@@ -16593,206 +16552,30 @@ function initNavbarDateTime() {
             return Math.round(numeric).toLocaleString('en-US');
         }
 
-        function formatCurrencyForContract(value) {
-            const numeric = parseCurrencyNumber(value);
-            if (numeric <= 0) {
-                return '';
-            }
-
-            return `$${numeric.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
+        function getAuthToken() {
+            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
         }
 
-        function numberToWords(value) {
-            const numeric = Math.round(parseCurrencyNumber(value));
-            if (!Number.isFinite(numeric) || numeric <= 0) {
-                return '';
+        async function requestDocuSign(url, options = {}) {
+            const token = getAuthToken();
+            if (!token) {
+                throw new Error('Sign in again to use the Agent Workspace DocuSign flow.');
             }
 
-            const units = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-            const scales = ['', 'Thousand', 'Million', 'Billion'];
-
-            function chunkToWords(chunk) {
-                const words = [];
-                const hundreds = Math.floor(chunk / 100);
-                const remainder = chunk % 100;
-                const tenValue = Math.floor(remainder / 10);
-                const unitValue = remainder % 10;
-
-                if (hundreds > 0) {
-                    words.push(`${units[hundreds]} Hundred`);
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    ...(options.headers || {})
                 }
-
-                if (remainder >= 10 && remainder < 20) {
-                    words.push(teens[remainder - 10]);
-                } else {
-                    if (tenValue > 1) {
-                        words.push(unitValue > 0 ? `${tens[tenValue]}-${units[unitValue]}` : tens[tenValue]);
-                    } else if (tenValue === 1) {
-                        words.push(teens[unitValue]);
-                    } else if (unitValue > 0) {
-                        words.push(units[unitValue]);
-                    }
-                }
-
-                return words.join(' ');
-            }
-
-            let remaining = numeric;
-            let scaleIndex = 0;
-            const parts = [];
-
-            while (remaining > 0) {
-                const chunk = remaining % 1000;
-                if (chunk > 0) {
-                    const chunkWords = chunkToWords(chunk);
-                    const scale = scales[scaleIndex];
-                    parts.unshift(scale ? `${chunkWords} ${scale}` : chunkWords);
-                }
-                remaining = Math.floor(remaining / 1000);
-                scaleIndex += 1;
-            }
-
-            return `${parts.join(' ')} Dollars`;
-        }
-
-        function toPdfRect(screenRect) {
-            return {
-                x: screenRect.x * screenToPdfScale,
-                y: pdfPageHeight - ((screenRect.y + screenRect.h) * screenToPdfScale),
-                width: screenRect.w * screenToPdfScale,
-                height: screenRect.h * screenToPdfScale
-            };
-        }
-
-        function fitSingleLine(font, text, width, initialSize, minSize) {
-            const safeText = String(text || '');
-            let fontSize = initialSize;
-            while (fontSize > minSize && font.widthOfTextAtSize(safeText, fontSize) > width) {
-                fontSize -= 0.4;
-            }
-            return Math.max(fontSize, minSize);
-        }
-
-        function splitWordsAcrossRects(font, text, rects, fontSize) {
-            const words = cleanContractValue(text).split(/\s+/).filter(Boolean);
-            const lines = [];
-            let wordIndex = 0;
-
-            rects.forEach((rect) => {
-                const maxWidth = Math.max(rect.width - 4, 8);
-                let line = '';
-
-                while (wordIndex < words.length) {
-                    const nextLine = line ? `${line} ${words[wordIndex]}` : words[wordIndex];
-                    if (font.widthOfTextAtSize(nextLine, fontSize) <= maxWidth) {
-                        line = nextLine;
-                        wordIndex += 1;
-                        continue;
-                    }
-
-                    if (!line) {
-                        let truncated = words[wordIndex];
-                        while (truncated.length > 1 && font.widthOfTextAtSize(`${truncated}...`, fontSize) > maxWidth) {
-                            truncated = truncated.slice(0, -1);
-                        }
-                        line = truncated.length < words[wordIndex].length ? `${truncated}...` : truncated;
-                        wordIndex += 1;
-                    }
-                    break;
-                }
-
-                lines.push(line);
             });
 
-            if (wordIndex < words.length && lines.length) {
-                let combined = cleanContractValue(`${lines[lines.length - 1]} ${words.slice(wordIndex).join(' ')}`);
-                const rect = rects[rects.length - 1];
-                const maxWidth = Math.max(rect.width - 4, 8);
-                while (combined.length > 1 && font.widthOfTextAtSize(`${combined}...`, fontSize) > maxWidth) {
-                    combined = combined.slice(0, -1).trim();
-                }
-                lines[lines.length - 1] = combined ? `${combined}...` : '...';
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(String(payload && payload.error || 'DocuSign request failed.'));
             }
 
-            return lines;
-        }
-
-        function drawSingleLineField(page, font, text, screenRect, options, PDFLib) {
-            const config = options && typeof options === 'object' ? options : {};
-            const pdfRect = toPdfRect(screenRect);
-            const safeText = cleanContractValue(text);
-            const paddingX = Number(config.paddingX || 2);
-            const paddingY = Number(config.paddingY || 1);
-            const initialSize = Number(config.fontSize || 12);
-            const minSize = Number(config.minSize || 8);
-            const background = config.background !== false;
-            const textWidth = Math.max(pdfRect.width - (paddingX * 2), 8);
-            const fontSize = fitSingleLine(font, safeText, textWidth, initialSize, minSize);
-
-            if (background) {
-                page.drawRectangle({
-                    x: Math.max(pdfRect.x - 1, 0),
-                    y: Math.max(pdfRect.y - 1, 0),
-                    width: pdfRect.width + 2,
-                    height: pdfRect.height + 2,
-                    color: PDFLib.rgb(1, 1, 1)
-                });
-            }
-
-            page.drawText(safeText, {
-                x: pdfRect.x + paddingX,
-                y: pdfRect.y + ((pdfRect.height - fontSize) / 2) + paddingY,
-                size: fontSize,
-                font,
-                color: PDFLib.rgb(0, 0, 0)
-            });
-        }
-
-        function drawMultiRectField(page, font, text, screenRects, options, PDFLib) {
-            const config = options && typeof options === 'object' ? options : {};
-            const rects = screenRects.map(toPdfRect);
-            const safeText = cleanContractValue(text);
-            const initialSize = Number(config.fontSize || 12);
-            const minSize = Number(config.minSize || 8);
-            const paddingX = Number(config.paddingX || 2);
-            let fontSize = initialSize;
-            let lines = [];
-
-            while (fontSize >= minSize) {
-                lines = splitWordsAcrossRects(font, safeText, rects, fontSize);
-                const fits = lines.every((line, index) => font.widthOfTextAtSize(String(line || ''), fontSize) <= Math.max(rects[index].width - (paddingX * 2), 8));
-                if (fits) {
-                    break;
-                }
-                fontSize -= 0.4;
-            }
-
-            rects.forEach((rect, index) => {
-                page.drawRectangle({
-                    x: Math.max(rect.x - 1, 0),
-                    y: Math.max(rect.y - 1, 0),
-                    width: rect.width + 2,
-                    height: rect.height + 2,
-                    color: PDFLib.rgb(1, 1, 1)
-                });
-
-                if (!lines[index]) {
-                    return;
-                }
-
-                page.drawText(lines[index], {
-                    x: rect.x + paddingX,
-                    y: rect.y + ((rect.height - fontSize) / 2) + 1,
-                    size: fontSize,
-                    font,
-                    color: PDFLib.rgb(0, 0, 0)
-                });
-            });
+            return payload;
         }
 
         function inferBuyer(detail, snapshot, entry) {
@@ -16811,6 +16594,16 @@ function initNavbarDateTime() {
             );
         }
 
+        function inferBuyerEmail(detail, snapshot, entry) {
+            return firstNonEmptyValue(
+                entry && entry.assignmentRecord && entry.assignmentRecord.assignedTo && entry.assignmentRecord.assignedTo.email,
+                snapshot && snapshot.buyerEmail,
+                snapshot && snapshot.assigneeEmail,
+                detail && detail.buyerEmail,
+                detail && detail.assigneeEmail
+            );
+        }
+
         function inferSeller(detail, snapshot) {
             return firstNonEmptyValue(
                 snapshot && snapshot.sellerName,
@@ -16819,6 +16612,15 @@ function initNavbarDateTime() {
                 detail && detail.sellerName,
                 detail && detail.ownerName,
                 detail && detail.owner
+            );
+        }
+
+        function inferSellerEmail(detail, snapshot) {
+            return firstNonEmptyValue(
+                snapshot && snapshot.sellerEmail,
+                snapshot && snapshot.ownerEmail,
+                detail && detail.sellerEmail,
+                detail && detail.ownerEmail
             );
         }
 
@@ -16872,6 +16674,61 @@ function initNavbarDateTime() {
             return persistedDetail;
         }
 
+        function buildDefaultSubject(address) {
+            return cleanContractValue(address)
+                ? `Purchase agreement for ${cleanContractValue(address)}`
+                : 'FAST purchase agreement for signature';
+        }
+
+        function buildDefaultMessage(address) {
+            return cleanContractValue(address)
+                ? `Please review and sign the purchase agreement for ${cleanContractValue(address)} through DocuSign.`
+                : 'Please review and sign the purchase agreement through DocuSign.';
+        }
+
+        function applyAutoEnvelopeCopy(address) {
+            const nextSubject = buildDefaultSubject(address);
+            const currentSubject = cleanContractValue(emailSubjectInput.value);
+            if (!currentSubject || currentSubject === lastAutoSubject) {
+                emailSubjectInput.value = nextSubject;
+            }
+            lastAutoSubject = nextSubject;
+
+            const nextMessage = buildDefaultMessage(address);
+            const currentMessage = cleanContractValue(emailMessageInput.value);
+            if (!currentMessage || currentMessage === lastAutoMessage) {
+                emailMessageInput.value = nextMessage;
+            }
+            lastAutoMessage = nextMessage;
+        }
+
+        function updateSelectionStatus() {
+            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
+            const missingRecipientBits = [];
+
+            if (!cleanContractValue(buyerInput.value)) missingRecipientBits.push('buyer name');
+            if (!cleanContractValue(buyerEmailInput.value)) missingRecipientBits.push('buyer email');
+            if (!cleanContractValue(sellerInput.value)) missingRecipientBits.push('seller name');
+            if (!cleanContractValue(sellerEmailInput.value)) missingRecipientBits.push('seller email');
+
+            if (!isDocuSignConfigured) {
+                setStatus(docusignConfigMessage, 'warning');
+                return;
+            }
+
+            if (!selectedEntry) {
+                setStatus('Manual entry mode is active. Fill in the transaction details and signer emails, then send through DocuSign.', 'info');
+                return;
+            }
+
+            if (missingRecipientBits.length) {
+                setStatus(`${selectedEntry.address} loaded. Add ${missingRecipientBits.join(', ')} before sending the DocuSign template.`, 'warning');
+                return;
+            }
+
+            setStatus(`${selectedEntry.address} loaded. Confirm the signers and send the DocuSign template.`, 'success');
+        }
+
         function applySelectedProperty() {
             const selectedEntry = propertyEntries.get(propertySelect.value) || null;
             const persistedDetail = getPersistedSelectedPropertyDetail();
@@ -16882,30 +16739,25 @@ function initNavbarDateTime() {
                     ? persistedDetail
                     : (selectedEntry ? (selectedEntry.snapshot || {}) : {}));
             const snapshot = selectedEntry ? (selectedEntry.snapshot || {}) : {};
+            const propertyAddress = inferPropertyAddress(detail, snapshot, selectedEntry);
 
-            dateInput.value = getTodayDateString();
+            if (!cleanContractValue(dateInput.value)) {
+                dateInput.value = getTodayDateString();
+            }
+
+            propertyAddressInput.value = propertyAddress;
             buyerInput.value = inferBuyer(detail, snapshot, selectedEntry);
+            if (!cleanContractValue(buyerEmailInput.value) || buyerEmailInput.value === '') {
+                buyerEmailInput.value = inferBuyerEmail(detail, snapshot, selectedEntry);
+            }
             sellerInput.value = inferSeller(detail, snapshot);
+            if (!cleanContractValue(sellerEmailInput.value) || sellerEmailInput.value === '') {
+                sellerEmailInput.value = inferSellerEmail(detail, snapshot);
+            }
             apnInput.value = inferApn(detail, snapshot);
             purchasePriceInput.value = formatCurrencyForInput(inferPurchasePrice(detail, snapshot));
-
-            const missingAutoFields = [];
-            if (!cleanContractValue(buyerInput.value)) missingAutoFields.push('buyer');
-            if (!cleanContractValue(sellerInput.value)) missingAutoFields.push('seller');
-            if (!cleanContractValue(apnInput.value)) missingAutoFields.push('APN');
-            if (!cleanContractValue(purchasePriceInput.value)) missingAutoFields.push('purchase price');
-
-            if (!selectedEntry) {
-                setStatus('Manual entry mode is active. Enter the contract fields below, then download the PDF.', 'info');
-                return;
-            }
-
-            if (missingAutoFields.length) {
-                setStatus(`${selectedEntry.address} loaded. Enter the missing ${missingAutoFields.join(', ')} field${missingAutoFields.length === 1 ? '' : 's'} before downloading.`, 'warning');
-                return;
-            }
-
-            setStatus(`${selectedEntry.address} loaded. The blue contract fields were auto-filled from the property snapshot.`, 'success');
+            applyAutoEnvelopeCopy(propertyAddress);
+            updateSelectionStatus();
         }
 
         function refreshPropertyOptions() {
@@ -16937,179 +16789,122 @@ function initNavbarDateTime() {
             applySelectedProperty();
         }
 
-        function normalizeInitialsInput(input) {
-            input.value = String(input.value || '').replace(/[^a-z]/gi, '').toUpperCase().slice(0, 6);
-        }
+        async function loadDocuSignConfig() {
+            docusignConfigMessage = 'Checking DocuSign configuration for this workspace...';
+            updateSelectionStatus();
 
-        function loadPdfLib() {
-            if (window.PDFLib && window.PDFLib.PDFDocument) {
-                return Promise.resolve(window.PDFLib);
+            try {
+                const payload = await requestDocuSign('/api/agent-workspace-docusign');
+                const missing = Array.isArray(payload && payload.missing) ? payload.missing : [];
+                isDocuSignConfigured = Boolean(payload && payload.configured);
+                sendButton.disabled = !isDocuSignConfigured;
+
+                if (!isDocuSignConfigured) {
+                    docusignConfigMessage = missing.length
+                        ? `DocuSign is not configured on the server yet. Missing ${missing.join(', ')}.`
+                        : 'DocuSign is not configured on the server yet.';
+                } else {
+                    docusignConfigMessage = 'DocuSign is ready. Confirm the signer emails and send the template.';
+                }
+            } catch (error) {
+                isDocuSignConfigured = false;
+                sendButton.disabled = true;
+                docusignConfigMessage = error && error.message ? error.message : 'Unable to verify the DocuSign configuration.';
             }
 
-            if (pdfLibLoaderPromise) {
-                return pdfLibLoaderPromise;
-            }
-
-            pdfLibLoaderPromise = new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
-                script.async = true;
-                script.onload = () => {
-                    if (window.PDFLib && window.PDFLib.PDFDocument) {
-                        resolve(window.PDFLib);
-                        return;
-                    }
-                    reject(new Error('pdf-lib did not initialize.'));
-                };
-                script.onerror = () => reject(new Error('Failed to load pdf-lib.'));
-                document.head.appendChild(script);
-            });
-
-            return pdfLibLoaderPromise;
+            updateSelectionStatus();
         }
 
-        function getTemplatePayload() {
+        function buildEnvelopePayload() {
             return {
-                date: normalizeDateString(dateInput.value),
-                buyer: cleanContractValue(buyerInput.value),
-                seller: cleanContractValue(sellerInput.value),
+                propertyAddress: cleanContractValue(propertyAddressInput.value),
+                contractDate: normalizeDateString(dateInput.value),
+                buyerName: cleanContractValue(buyerInput.value),
+                buyerEmail: cleanContractValue(buyerEmailInput.value).toLowerCase(),
+                sellerName: cleanContractValue(sellerInput.value),
+                sellerEmail: cleanContractValue(sellerEmailInput.value).toLowerCase(),
                 apn: cleanContractValue(apnInput.value),
-                purchasePriceValue: cleanContractValue(purchasePriceInput.value),
-                by: cleanContractValue(byInput.value),
-                name: cleanContractValue(nameInput.value),
-                title: cleanContractValue(titleInput.value),
-                company: cleanContractValue(companyInput.value),
-                assigneeInitials: cleanContractValue(assigneeInitialsInput.value).toUpperCase(),
-                assignorInitials: cleanContractValue(assignorInitialsInput.value).toUpperCase()
+                purchasePrice: cleanContractValue(purchasePriceInput.value),
+                emailSubject: cleanContractValue(emailSubjectInput.value),
+                emailMessage: cleanContractValue(emailMessageInput.value)
             };
         }
 
-        function validateTemplatePayload(payload) {
+        function validateEnvelopePayload(payload) {
             const missing = [];
-            if (!payload.date) missing.push('date');
-            if (!payload.buyer) missing.push('buyer');
-            if (!payload.seller) missing.push('seller');
-            if (!payload.apn) missing.push('APN');
-            if (!parseCurrencyNumber(payload.purchasePriceValue)) missing.push('purchase price');
-            if (!payload.by) missing.push('By');
-            if (!payload.name) missing.push('Name');
-            if (!payload.title) missing.push('Title');
-            if (!payload.company) missing.push('Company');
-            if (!payload.assigneeInitials) missing.push('assignee initials');
-            if (!payload.assignorInitials) missing.push('assignor initials');
+            if (!payload.propertyAddress) missing.push('property address');
+            if (!payload.contractDate) missing.push('contract date');
+            if (!payload.buyerName) missing.push('buyer name');
+            if (!payload.buyerEmail) missing.push('buyer email');
+            if (!payload.sellerName) missing.push('seller name');
+            if (!payload.sellerEmail) missing.push('seller email');
+            if (payload.buyerEmail && !isValidEmail(payload.buyerEmail)) missing.push('valid buyer email');
+            if (payload.sellerEmail && !isValidEmail(payload.sellerEmail)) missing.push('valid seller email');
             return missing;
         }
 
-        function buildContractFileName() {
-            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
-            const address = selectedEntry ? selectedEntry.address : cleanContractValue(buyerInput.value) || 'purchase-agreement';
-            const slug = slugifyContractValue(address) || 'purchase-agreement';
-            return `${slug}-assignment-agreement.pdf`;
-        }
-
-        async function downloadFilledPurchaseAgreement() {
-            const payload = getTemplatePayload();
-            const missing = validateTemplatePayload(payload);
-
-            if (missing.length) {
-                showDashboardToast('error', 'Missing Contract Fields', `Add ${missing.join(', ')} before downloading the PDF.`);
-                setStatus(`Missing fields: ${missing.join(', ')}.`, 'error');
+        async function sendDocuSignEnvelope() {
+            if (!isDocuSignConfigured) {
+                showDashboardToast('error', 'DocuSign Not Ready', docusignConfigMessage);
+                updateSelectionStatus();
                 return;
             }
 
-            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
-            const persistedDetail = getPersistedSelectedPropertyDetail();
-            const propertyAddress = inferPropertyAddress(
-                persistedDetail && typeof persistedDetail === 'object' ? persistedDetail : {},
-                selectedEntry ? selectedEntry.snapshot : {},
-                selectedEntry
-            );
-            const formattedPrice = formatCurrencyForContract(payload.purchasePriceValue);
-            const spelledOutPrice = numberToWords(payload.purchasePriceValue);
+            const payload = buildEnvelopePayload();
+            const missing = validateEnvelopePayload(payload);
+            if (missing.length) {
+                const message = `Add ${missing.join(', ')} before sending DocuSign.`;
+                showDashboardToast('error', 'Missing DocuSign Fields', message);
+                setStatus(message, 'error');
+                return;
+            }
 
-            downloadButton.disabled = true;
-            setStatus('Building the filled purchase agreement PDF...', 'info');
+            sendButton.disabled = true;
+            setStatus('Sending the purchase agreement to DocuSign...', 'info');
 
             try {
-                const PDFLib = await loadPdfLib();
-                const templateResponse = await fetch(templatePath);
-                if (!templateResponse.ok) {
-                    throw new Error('The purchase agreement template could not be loaded.');
-                }
+                const response = await requestDocuSign('/api/agent-workspace-docusign/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-                const templateBytes = await templateResponse.arrayBuffer();
-                const pdfDoc = await PDFLib.PDFDocument.load(templateBytes);
-                const standardFonts = PDFLib.StandardFonts || {};
-                const timesRoman = await pdfDoc.embedFont(standardFonts.TimesRoman || 'Times-Roman');
-                const timesBold = await pdfDoc.embedFont(standardFonts.TimesBold || 'Times-Bold');
-                const helvetica = await pdfDoc.embedFont(standardFonts.Helvetica || 'Helvetica');
-                const helveticaBold = await pdfDoc.embedFont(standardFonts.HelveticaBold || 'Helvetica-Bold');
-                const pages = pdfDoc.getPages();
-
-                drawSingleLineField(pages[0], timesRoman, payload.date, assignmentDateRect, { fontSize: 14, minSize: 10 }, PDFLib);
-                drawSingleLineField(pages[0], timesBold, payload.buyer, buyerLineRect, { fontSize: 13, minSize: 8, paddingX: 1 }, PDFLib);
-                drawSingleLineField(pages[0], timesRoman, payload.seller, contractRects.page1.seller, { fontSize: 13, minSize: 9 }, PDFLib);
-                drawSingleLineField(pages[0], timesRoman, payload.date, contractRects.page1.purchaseAgreementDate, { fontSize: 13, minSize: 9 }, PDFLib);
-                drawSingleLineField(pages[0], timesRoman, payload.apn, contractRects.page1.apn, { fontSize: 13, minSize: 9 }, PDFLib);
-                drawMultiRectField(pages[0], timesRoman, propertyAddress, [contractRects.page1.addressLineOne, contractRects.page1.addressLineTwo], { fontSize: 12, minSize: 8 }, PDFLib);
-                drawSingleLineField(pages[0], timesBold, spelledOutPrice, contractRects.page1.totalPriceWords, { fontSize: 13, minSize: 8 }, PDFLib);
-                drawSingleLineField(pages[0], helveticaBold, `(${formattedPrice})`, contractRects.page1.totalPriceAmount, { fontSize: 12, minSize: 9 }, PDFLib);
-                drawSingleLineField(pages[0], timesRoman, payload.date, contractRects.page1.earnestMoneyDate, { fontSize: 13, minSize: 9 }, PDFLib);
-
-                drawSingleLineField(pages[1], helveticaBold, payload.assigneeInitials, contractRects.page2.assigneeInitials, { fontSize: 12, minSize: 10 }, PDFLib);
-                drawSingleLineField(pages[1], helveticaBold, payload.assignorInitials, contractRects.page2.assignorInitials, { fontSize: 12, minSize: 10 }, PDFLib);
-
-                drawSingleLineField(pages[2], helveticaBold, payload.assigneeInitials, contractRects.page3.assigneeInitialsTop, { fontSize: 12, minSize: 10 }, PDFLib);
-                drawSingleLineField(pages[2], helveticaBold, payload.assignorInitials, contractRects.page3.assignorInitialsTop, { fontSize: 12, minSize: 10 }, PDFLib);
-                drawSingleLineField(pages[2], helveticaBold, payload.assigneeInitials, contractRects.page3.assigneeInitialsBottom, { fontSize: 12, minSize: 10 }, PDFLib);
-
-                drawSingleLineField(pages[3], helveticaBold, payload.assignorInitials, contractRects.page4.assignorInitials, { fontSize: 12, minSize: 10 }, PDFLib);
-                drawSingleLineField(pages[3], timesRoman, payload.date, contractRects.page4.assigneeDate, { fontSize: 13, minSize: 9 }, PDFLib);
-                drawSingleLineField(pages[3], helvetica, payload.by, contractRects.page4.by, { fontSize: 13, minSize: 8 }, PDFLib);
-                drawSingleLineField(pages[3], helvetica, payload.name, contractRects.page4.name, { fontSize: 12, minSize: 8 }, PDFLib);
-                drawSingleLineField(pages[3], helvetica, payload.title, contractRects.page4.title, { fontSize: 12, minSize: 8 }, PDFLib);
-                drawSingleLineField(pages[3], helvetica, payload.company, contractRects.page4.company, { fontSize: 12, minSize: 8 }, PDFLib);
-                drawSingleLineField(pages[3], timesRoman, payload.date, contractRects.page4.assignorDate, { fontSize: 13, minSize: 9 }, PDFLib);
-
-                drawSingleLineField(pages[4], helveticaBold, payload.assigneeInitials, contractRects.page5.assigneeInitials, { fontSize: 12, minSize: 10 }, PDFLib);
-                drawSingleLineField(pages[4], helveticaBold, payload.assignorInitials, contractRects.page5.assignorInitials, { fontSize: 12, minSize: 10 }, PDFLib);
-
-                const pdfBytes = await pdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const downloadUrl = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = buildContractFileName();
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-
-                showDashboardToast('success', 'Contract Ready', 'The purchase agreement PDF was generated and downloaded.');
-                setStatus('The purchase agreement PDF was generated successfully.', 'success');
+                const envelopeId = cleanContractValue(response && response.envelope && response.envelope.envelopeId);
+                showDashboardToast('success', 'DocuSign Sent', envelopeId
+                    ? `Envelope ${envelopeId} was sent for signature.`
+                    : 'The DocuSign envelope was sent for signature.');
+                setStatus(envelopeId
+                    ? `DocuSign envelope ${envelopeId} was sent successfully.`
+                    : 'The DocuSign envelope was sent successfully.', 'success');
             } catch (error) {
-                showDashboardToast('error', 'Contract Download Failed', error && error.message ? error.message : 'The purchase agreement PDF could not be generated.');
-                setStatus(error && error.message ? error.message : 'The purchase agreement PDF could not be generated.', 'error');
+                const message = error && error.message ? error.message : 'The DocuSign envelope could not be sent.';
+                showDashboardToast('error', 'DocuSign Send Failed', message);
+                setStatus(message, 'error');
             } finally {
-                downloadButton.disabled = false;
+                sendButton.disabled = !isDocuSignConfigured;
             }
         }
-
-        [assigneeInitialsInput, assignorInitialsInput].forEach((input) => {
-            input.addEventListener('input', () => normalizeInitialsInput(input));
-        });
 
         purchasePriceInput.addEventListener('input', () => {
             const digits = String(purchasePriceInput.value || '').replace(/[^0-9]/g, '');
             purchasePriceInput.value = digits ? Number(digits).toLocaleString('en-US') : '';
         });
 
+        [propertyAddressInput, dateInput, buyerInput, buyerEmailInput, sellerInput, sellerEmailInput, apnInput, purchasePriceInput].forEach((input) => {
+            input.addEventListener('input', updateSelectionStatus);
+            input.addEventListener('change', updateSelectionStatus);
+        });
+
         propertySelect.addEventListener('change', applySelectedProperty);
-        downloadButton.addEventListener('click', downloadFilledPurchaseAgreement);
+        sendButton.addEventListener('click', sendDocuSignEnvelope);
         window.addEventListener('dashboard-data-updated', refreshPropertyOptions);
 
         dateInput.value = getTodayDateString();
+        applyAutoEnvelopeCopy('');
         refreshPropertyOptions();
+        void loadDocuSignConfig();
     }
 
     async function initDealsPage() {
