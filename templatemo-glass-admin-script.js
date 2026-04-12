@@ -12699,6 +12699,290 @@ function initNavbarDateTime() {
         loadDocuments();
     }
 
+    function initAdminAnnouncementsWidget() {
+        const card = document.getElementById('admin-announcement-card');
+        if (!card) {
+            return;
+        }
+
+        const titleInput = document.getElementById('admin-announcement-title');
+        const messageInput = document.getElementById('admin-announcement-message');
+        const toneInput = document.getElementById('admin-announcement-tone');
+        const ctaLabelInput = document.getElementById('admin-announcement-cta-label');
+        const ctaUrlInput = document.getElementById('admin-announcement-cta-url');
+        const subtitle = document.getElementById('admin-announcement-subtitle');
+        const previewBadge = document.getElementById('admin-announcement-preview-badge');
+        const previewTitle = document.getElementById('admin-announcement-preview-title');
+        const previewMessage = document.getElementById('admin-announcement-preview-message');
+        const previewLink = document.getElementById('admin-announcement-preview-link');
+        const meta = document.getElementById('admin-announcement-meta');
+        const refreshButton = document.getElementById('admin-announcement-refresh-btn');
+        const clearButton = document.getElementById('admin-announcement-clear-btn');
+        const saveButton = document.getElementById('admin-announcement-save-btn');
+        const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        let currentUser = null;
+
+        try {
+            currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        } catch (error) {
+            currentUser = null;
+        }
+
+        if (!currentUser || currentUser.role !== 'admin') {
+            card.style.display = 'none';
+            return;
+        }
+
+        function escapeAnnouncementText(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatAnnouncementAuditText(announcement) {
+            const updatedAt = String(announcement?.updatedAt || '').trim();
+            const updatedByEmail = String(announcement?.updatedByEmail || '').trim();
+            if (!updatedAt && !updatedByEmail) {
+                return 'No announcement has been published yet.';
+            }
+
+            let formattedDate = updatedAt;
+            const parsedDate = updatedAt ? new Date(updatedAt) : null;
+            if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+                formattedDate = parsedDate.toLocaleString();
+            }
+
+            return updatedByEmail
+                ? `Last published ${formattedDate} by ${updatedByEmail}.`
+                : `Last published ${formattedDate}.`;
+        }
+
+        function buildAnnouncementPayload(options = {}) {
+            return {
+                enabled: !options.clear && Boolean(String(titleInput.value || '').trim() && String(messageInput.value || '').trim()),
+                title: String(titleInput.value || '').trim(),
+                message: String(messageInput.value || '').trim(),
+                tone: String(toneInput.value || 'info').trim().toLowerCase() || 'info',
+                ctaLabel: String(ctaLabelInput.value || '').trim(),
+                ctaUrl: String(ctaUrlInput.value || '').trim()
+            };
+        }
+
+        function renderPreview(announcement) {
+            const payload = announcement || buildAnnouncementPayload();
+            const tone = String(payload.tone || 'info').trim() || 'info';
+            previewBadge.textContent = tone;
+            previewTitle.textContent = payload.title || 'No active announcement';
+            previewMessage.textContent = payload.message || 'Draft an announcement here, then publish it to the dashboard for all users.';
+            if (payload.ctaLabel && payload.ctaUrl) {
+                previewLink.hidden = false;
+                previewLink.textContent = payload.ctaLabel;
+                previewLink.href = payload.ctaUrl;
+            } else {
+                previewLink.hidden = true;
+                previewLink.textContent = 'Open linked page';
+                previewLink.href = '#';
+            }
+            meta.textContent = formatAnnouncementAuditText(announcement);
+        }
+
+        function applyAnnouncementToForm(announcement) {
+            const payload = announcement && typeof announcement === 'object' ? announcement : {};
+            titleInput.value = payload.title || '';
+            messageInput.value = payload.message || '';
+            toneInput.value = payload.tone || 'info';
+            ctaLabelInput.value = payload.ctaLabel || '';
+            ctaUrlInput.value = payload.ctaUrl || '';
+            renderPreview(payload);
+        }
+
+        async function loadAnnouncement() {
+            if (!token) {
+                subtitle.textContent = 'Missing auth token. Please sign in again.';
+                return;
+            }
+
+            if (refreshButton) {
+                refreshButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch('/api/admin/announcements', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load announcement settings');
+                }
+
+                applyAnnouncementToForm(data.announcement || {});
+            } catch (error) {
+                subtitle.textContent = 'Unable to load the announcement right now.';
+                meta.innerHTML = escapeAnnouncementText(String(error.message || 'Unable to load announcement settings.'));
+            } finally {
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+                }
+            }
+        }
+
+        async function saveAnnouncement(options = {}) {
+            if (!token) {
+                showDashboardToast('error', 'Missing Auth', 'Please sign in again and retry.');
+                return;
+            }
+
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+            if (clearButton) {
+                clearButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch('/api/admin/announcements', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ announcement: buildAnnouncementPayload(options) })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to save announcement');
+                }
+
+                applyAnnouncementToForm(data.announcement || {});
+                showDashboardToast('success', options.clear ? 'Announcement Cleared' : 'Announcement Published', data.message || 'Announcement updated successfully.');
+            } catch (error) {
+                showDashboardToast('error', 'Announcement Failed', String(error.message || 'Unable to save announcement.'));
+            } finally {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                }
+                if (clearButton) {
+                    clearButton.disabled = false;
+                }
+            }
+        }
+
+        [titleInput, messageInput, toneInput, ctaLabelInput, ctaUrlInput].forEach((input) => {
+            input.addEventListener('input', () => renderPreview());
+            input.addEventListener('change', () => renderPreview());
+        });
+
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadAnnouncement);
+        }
+
+        if (saveButton) {
+            saveButton.addEventListener('click', () => saveAnnouncement());
+        }
+
+        if (clearButton) {
+            clearButton.addEventListener('click', async () => {
+                titleInput.value = '';
+                messageInput.value = '';
+                toneInput.value = 'info';
+                ctaLabelInput.value = '';
+                ctaUrlInput.value = '';
+                renderPreview();
+                await saveAnnouncement({ clear: true });
+            });
+        }
+
+        renderPreview();
+        void loadAnnouncement();
+    }
+
+    function initDashboardAnnouncementsWidget() {
+        const card = document.getElementById('dashboard-announcement-card');
+        if (!card) {
+            return;
+        }
+
+        const badge = document.getElementById('dashboard-announcement-badge');
+        const title = document.getElementById('dashboard-announcement-title');
+        const message = document.getElementById('dashboard-announcement-message');
+        const meta = document.getElementById('dashboard-announcement-meta');
+        const link = document.getElementById('dashboard-announcement-link');
+        const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+
+        function formatAnnouncementAuditText(announcement) {
+            const updatedAt = String(announcement?.updatedAt || '').trim();
+            const updatedByEmail = String(announcement?.updatedByEmail || '').trim();
+            if (!updatedAt && !updatedByEmail) {
+                return '';
+            }
+
+            let formattedDate = updatedAt;
+            const parsedDate = updatedAt ? new Date(updatedAt) : null;
+            if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+                formattedDate = parsedDate.toLocaleString();
+            }
+
+            return updatedByEmail
+                ? `Published ${formattedDate} by ${updatedByEmail}`
+                : `Published ${formattedDate}`;
+        }
+
+        function renderAnnouncement(announcement) {
+            const payload = announcement && typeof announcement === 'object' ? announcement : {};
+            const enabled = Boolean(payload.enabled && payload.title && payload.message);
+            card.hidden = !enabled;
+            if (!enabled) {
+                return;
+            }
+
+            const tone = String(payload.tone || 'info').trim() || 'info';
+            card.dataset.tone = tone;
+            badge.textContent = tone;
+            title.textContent = payload.title;
+            message.textContent = payload.message;
+            meta.textContent = formatAnnouncementAuditText(payload);
+            if (payload.ctaLabel && payload.ctaUrl) {
+                link.hidden = false;
+                link.textContent = payload.ctaLabel;
+                link.href = payload.ctaUrl;
+            } else {
+                link.hidden = true;
+                link.textContent = 'Open Update';
+                link.href = '#';
+            }
+        }
+
+        async function loadAnnouncement() {
+            if (!token) {
+                card.hidden = true;
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/announcements/current', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load announcement');
+                }
+
+                renderAnnouncement(data.announcement || {});
+            } catch (error) {
+                card.hidden = true;
+            }
+        }
+
+        void loadAnnouncement();
+    }
+
     function initAdminFeatureAccessControls() {
         const list = document.getElementById('admin-feature-access-list');
         if (!list) {
@@ -26607,12 +26891,14 @@ function initNavbarDateTime() {
             ['initNotesWidget', initNotesWidget],
             ['initAgentWorkspacePurchaseAgreement', initAgentWorkspacePurchaseAgreement],
             ['initAgentWorkspaceEmailPrep', initAgentWorkspaceEmailPrep],
+            ['initAdminAnnouncementsWidget', initAdminAnnouncementsWidget],
             ['initAdminOnlineUsersWidget', initAdminOnlineUsersWidget],
             ['initAdminAccessRequests', initAdminAccessRequests],
             ['initAdminPropertySubmissions', initAdminPropertySubmissions],
             ['initAdminSmtpApprovals', initAdminSmtpApprovals],
             ['initAdminFeatureAccessControls', initAdminFeatureAccessControls],
             ['initAdminUserManager', initAdminUserManager],
+            ['initDashboardAnnouncementsWidget', initDashboardAnnouncementsWidget],
             ['initTodoGoalsWidget', initTodoGoalsWidget],
             ['initPlannerNotifications', initPlannerNotifications],
             ['initContractsWidget', initContractsWidget],

@@ -520,6 +520,92 @@
             word-break: break-all;
         }
 
+        .dashboard-announcement-widget[hidden] {
+            display: none;
+        }
+
+        .dashboard-announcement-widget {
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 18px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.16), transparent 28%),
+                linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+        }
+
+        .dashboard-announcement-widget::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.2), transparent 22%);
+            pointer-events: none;
+        }
+
+        .dashboard-announcement-shell {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: center;
+        }
+
+        .dashboard-announcement-copy {
+            display: grid;
+            gap: 10px;
+        }
+
+        .dashboard-announcement-badge {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.18);
+            color: rgba(255, 255, 255, 0.96);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .dashboard-announcement-title {
+            margin: 0;
+            font-size: clamp(1.2rem, 2vw, 1.5rem);
+            line-height: 1.08;
+        }
+
+        .dashboard-announcement-message {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.72;
+        }
+
+        .dashboard-announcement-meta {
+            margin: 0;
+            color: rgba(226, 232, 240, 0.58);
+            font-size: 12px;
+        }
+
+        .dashboard-announcement-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-announcement-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-announcement-actions {
+                justify-content: flex-start;
+            }
+        }
+
         [data-theme="light"] .discord-meetings-widget {
             border-color: rgba(79, 70, 229, 0.18);
             background:
@@ -1287,6 +1373,20 @@ https://templatemo.com/tm-607-glass-admin
                     </button>
                 </div>
             </nav>
+
+            <section class="glass-card widget-card outreach-card dashboard-announcement-widget" id="dashboard-announcement-card" data-widget-id="dashboard-announcement" data-widget-title="Announcement" hidden>
+                <div class="dashboard-announcement-shell">
+                    <div class="dashboard-announcement-copy">
+                        <span class="dashboard-announcement-badge" id="dashboard-announcement-badge">Info</span>
+                        <h2 class="dashboard-announcement-title" id="dashboard-announcement-title">Team announcement</h2>
+                        <p class="dashboard-announcement-message" id="dashboard-announcement-message">Dashboard announcements from admin will appear here.</p>
+                        <p class="dashboard-announcement-meta" id="dashboard-announcement-meta"></p>
+                    </div>
+                    <div class="dashboard-announcement-actions">
+                        <a class="card-btn active" id="dashboard-announcement-link" href="#" hidden>Open Update</a>
+                    </div>
+                </div>
+            </section>
 
             <!-- Bottom Grid -->
             <section class="bottom-grid">

@@ -62,6 +62,7 @@ const PREMIUM_PLAN_KEY = 'premium';
 const PREMIUM_PRICE_CENTS = 9900;
 const PREMIUM_CURRENCY = 'USD';
 const FEATURE_ACCESS_SETTING_KEY = 'nav-feature-access';
+const ANNOUNCEMENT_SETTING_KEY = 'dashboard-announcement';
 const FEATURE_ACCESS_ROLE_KEYS = ['admin', 'user', PREMIUM_USER_ROLE, 'broker', TEST_USER_ROLE];
 const FEATURE_ACCESS_DEFAULTS = Object.freeze({
   activeBuyers: Object.freeze({
@@ -4879,6 +4880,96 @@ async function saveFeatureAccessSettings(nextConfig, updatedBy) {
   });
 }
 
+function buildAnnouncementPayload(rawConfig, metadata = {}) {
+  const source = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+  const title = cleanDocuSignText(source.title || source.headline || '', 160);
+  const message = cleanDocuSignText(source.message || source.body || '', 2000);
+  const ctaLabel = cleanDocuSignText(source.ctaLabel || source.buttonLabel || '', 80);
+  const ctaUrl = cleanDocuSignText(source.ctaUrl || source.linkUrl || '', 500);
+  const tone = ['info', 'success', 'warning', 'urgent'].includes(String(source.tone || '').trim().toLowerCase())
+    ? String(source.tone || '').trim().toLowerCase()
+    : 'info';
+  const enabled = Boolean(source.enabled && title && message);
+
+  return {
+    enabled,
+    title,
+    message,
+    ctaLabel,
+    ctaUrl,
+    tone,
+    updatedAt: metadata.updatedAt || '',
+    updatedByUserId: metadata.updatedByUserId || null,
+    updatedByEmail: metadata.updatedByEmail || ''
+  };
+}
+
+async function getAnnouncementSettings() {
+  const defaultsPayload = buildAnnouncementPayload(null, {});
+
+  try {
+    const row = await dbGet(
+      'SELECT config_json, updated_at, updated_by_user_id, updated_by_email FROM app_feature_settings WHERE setting_key = ?',
+      [ANNOUNCEMENT_SETTING_KEY]
+    );
+
+    if (!row) {
+      return defaultsPayload;
+    }
+
+    let parsedConfig = null;
+    try {
+      parsedConfig = JSON.parse(String(row.config_json || '{}'));
+    } catch (error) {
+      parsedConfig = null;
+    }
+
+    return buildAnnouncementPayload(parsedConfig, {
+      updatedAt: row.updated_at,
+      updatedByUserId: row.updated_by_user_id,
+      updatedByEmail: row.updated_by_email
+    });
+  } catch (error) {
+    console.error('Announcement settings load error:', error);
+    return defaultsPayload;
+  }
+}
+
+async function saveAnnouncementSettings(nextConfig, updatedBy) {
+  const normalizedPayload = buildAnnouncementPayload(nextConfig, {
+    updatedByUserId: updatedBy?.id,
+    updatedByEmail: updatedBy?.email
+  });
+  const configJson = JSON.stringify({
+    enabled: normalizedPayload.enabled,
+    title: normalizedPayload.title,
+    message: normalizedPayload.message,
+    ctaLabel: normalizedPayload.ctaLabel,
+    ctaUrl: normalizedPayload.ctaUrl,
+    tone: normalizedPayload.tone
+  });
+  const updatedAt = new Date().toISOString();
+  const updatedByUserId = Number(updatedBy?.id) || null;
+  const updatedByEmail = String(updatedBy?.email || '').trim().toLowerCase();
+
+  await dbRun(
+    `INSERT INTO app_feature_settings (setting_key, config_json, updated_at, updated_by_user_id, updated_by_email)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(setting_key) DO UPDATE SET
+       config_json = excluded.config_json,
+       updated_at = excluded.updated_at,
+       updated_by_user_id = excluded.updated_by_user_id,
+       updated_by_email = excluded.updated_by_email`,
+    [ANNOUNCEMENT_SETTING_KEY, configJson, updatedAt, updatedByUserId, updatedByEmail]
+  );
+
+  return buildAnnouncementPayload(normalizedPayload, {
+    updatedAt,
+    updatedByUserId,
+    updatedByEmail
+  });
+}
+
 function normalizeUserKey(value) {
   return String(value || '')
     .trim()
@@ -6567,6 +6658,62 @@ app.get('/api/feature-access', async (req, res) => {
   } catch (error) {
     console.error('Feature access status error:', error);
     return res.status(500).json({ error: 'Unable to load feature access settings.' });
+  }
+});
+
+app.get('/api/announcements/current', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const announcement = await getAnnouncementSettings();
+    return res.json({ success: true, announcement });
+  } catch (error) {
+    console.error('Announcement status error:', error);
+    return res.status(500).json({ error: 'Unable to load the current announcement.' });
+  }
+});
+
+app.get('/api/admin/announcements', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const announcement = await getAnnouncementSettings();
+    return res.json({ success: true, announcement });
+  } catch (error) {
+    console.error('Admin announcement load error:', error);
+    return res.status(500).json({ error: 'Unable to load admin announcement settings.' });
+  }
+});
+
+app.put('/api/admin/announcements', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const nextAnnouncement = req.body?.announcement || req.body;
+    const announcement = await saveAnnouncementSettings(nextAnnouncement, {
+      id: decoded.id,
+      email: decoded.email
+    });
+
+    return res.json({
+      success: true,
+      message: announcement.enabled
+        ? 'Announcement published successfully.'
+        : 'Announcement cleared successfully.',
+      announcement
+    });
+  } catch (error) {
+    console.error('Admin announcement save error:', error);
+    return res.status(500).json({ error: 'Unable to save the announcement.' });
   }
 });
 

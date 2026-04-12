@@ -462,6 +462,80 @@
             font-size: 13px;
         }
 
+        .admin-announcement-form {
+            display: grid;
+            gap: 14px;
+        }
+
+        .admin-announcement-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .admin-announcement-grid .form-group-settings,
+        .admin-announcement-grid .form-group {
+            grid-column: span 6;
+        }
+
+        .admin-announcement-grid .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .admin-announcement-preview {
+            display: grid;
+            gap: 10px;
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.14);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+        }
+
+        .admin-announcement-preview-badge {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: rgba(var(--accent-rgb), 0.16);
+            color: rgba(241, 245, 249, 0.95);
+        }
+
+        .admin-announcement-preview h3 {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.1;
+            color: var(--text-primary);
+        }
+
+        .admin-announcement-preview p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .admin-announcement-preview-link {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            gap: 8px;
+            color: rgba(var(--accent-light-rgb), 0.95);
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .admin-announcement-meta {
+            margin: 0;
+            color: rgba(226, 232, 240, 0.62);
+            font-size: 12px;
+        }
+
         @keyframes adminPanelRise {
             from {
                 opacity: 0;
@@ -489,6 +563,11 @@
             }
 
             .admin-feature-access-cell.admin-feature-access-primary {
+                grid-column: 1 / -1;
+            }
+
+            .admin-announcement-grid .form-group-settings,
+            .admin-announcement-grid .form-group {
                 grid-column: 1 / -1;
             }
         }
@@ -582,6 +661,7 @@
                     <a class="admin-quick-link" href="#online-users-card">Online Users</a>
                     <a class="admin-quick-link" href="#requested-access-card">Access Queue</a>
                     <a class="admin-quick-link" href="#property-submissions-card">Seller Leads</a>
+                    <a class="admin-quick-link" href="#admin-announcement-card">Announcements</a>
                     <a class="admin-quick-link" href="#smtp-approval-card">Gmail Approvals</a>
                     <a class="admin-quick-link" href="#admin-feature-access-card">Feature Access</a>
                     <a class="admin-quick-link" href="mls-imports-spreadsheet.html">MLS Spreadsheet</a>
@@ -593,6 +673,58 @@
                 <button class="nav-btn" aria-label="Notifications shortcut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notification-dot"></span></button>
             </div>
             <section class="outreach-workspace-grid admin-controls-grid">
+                <div id="admin-announcement-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="12" data-widget-id="admin-announcement" data-widget-title="Announcements" style="--panel-index:0;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
+                    <div class="card-header">
+                        <div>
+                            <div class="admin-panel-eyebrow">Broadcast Center</div>
+                            <h2 class="card-title">Dashboard Announcements</h2>
+                            <p class="card-subtitle" id="admin-announcement-subtitle">Publish a message at the top of the dashboard so every signed-in user sees the update.</p>
+                        </div>
+                    </div>
+                    <div class="admin-announcement-form">
+                        <div class="admin-announcement-grid">
+                            <div class="form-group-settings">
+                                <label for="admin-announcement-title">Announcement Title</label>
+                                <input id="admin-announcement-title" class="form-input" type="text" maxlength="160" placeholder="System update, team meeting, deadline, or policy change">
+                            </div>
+                            <div class="form-group-settings">
+                                <label for="admin-announcement-tone">Tone</label>
+                                <select id="admin-announcement-tone" class="form-input">
+                                    <option value="info">Info</option>
+                                    <option value="success">Success</option>
+                                    <option value="warning">Warning</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div class="form-group-settings full-width">
+                                <label for="admin-announcement-message">Announcement Message</label>
+                                <textarea id="admin-announcement-message" class="form-input" rows="4" placeholder="Tell the team exactly what changed, what they need to do, and by when."></textarea>
+                            </div>
+                            <div class="form-group-settings">
+                                <label for="admin-announcement-cta-label">Button Label (optional)</label>
+                                <input id="admin-announcement-cta-label" class="form-input" type="text" maxlength="80" placeholder="Open policy, Review deal board, Join meeting">
+                            </div>
+                            <div class="form-group-settings">
+                                <label for="admin-announcement-cta-url">Button URL (optional)</label>
+                                <input id="admin-announcement-cta-url" class="form-input" type="url" maxlength="500" placeholder="https://fastbridgegroupllc.com/...">
+                            </div>
+                        </div>
+                        <div class="admin-announcement-preview" id="admin-announcement-preview">
+                            <span class="admin-announcement-preview-badge" id="admin-announcement-preview-badge">Info</span>
+                            <h3 id="admin-announcement-preview-title">No active announcement</h3>
+                            <p id="admin-announcement-preview-message">Draft an announcement here, then publish it to the dashboard for all users.</p>
+                            <a id="admin-announcement-preview-link" class="admin-announcement-preview-link" href="#" hidden>Open linked page</a>
+                        </div>
+                        <p class="admin-announcement-meta" id="admin-announcement-meta">No announcement has been published yet.</p>
+                        <div class="outreach-actions">
+                            <button id="admin-announcement-refresh-btn" type="button" class="card-btn">Refresh</button>
+                            <button id="admin-announcement-clear-btn" type="button" class="card-btn">Clear</button>
+                            <button id="admin-announcement-save-btn" type="button" class="card-btn active">Publish Announcement</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="online-users-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="4" data-widget-id="online-users" data-widget-title="Online Users" style="--panel-index:0;">
                     <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
