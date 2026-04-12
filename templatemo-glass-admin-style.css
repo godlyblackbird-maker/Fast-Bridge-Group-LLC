@@ -3936,13 +3936,7 @@ body.sidebar-collapsed .main-content {
 }
 
 [data-theme="beach"] .legal-page {
-    --legal-page-bg:
-        linear-gradient(180deg, rgba(205, 238, 247, 0.16), rgba(205, 238, 247, 0.08) 26%, rgba(255, 228, 181, 0.14) 100%),
-        url("Themes/Wallpaper Beach Mode.jpg") center center / cover no-repeat,
-        radial-gradient(circle at 12% 12%, rgba(14, 165, 233, 0.18), transparent 28%),
-        radial-gradient(circle at 86% 16%, rgba(251, 146, 60, 0.16), transparent 24%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
-        linear-gradient(180deg, #a4deef, #d6f1f6 52%, #f7deb3);
+    --legal-page-bg: transparent;
     --legal-panel-bg: linear-gradient(165deg, rgba(222, 244, 250, 0.62), rgba(255, 235, 205, 0.4));
     --legal-panel-border: rgba(12, 74, 110, 0.2);
     --legal-panel-shadow: 0 22px 44px rgba(8, 47, 73, 0.16);
@@ -3963,11 +3957,7 @@ body.sidebar-collapsed .main-content {
 
 
 [data-theme="beach"] .legal-page.legal-contact-page {
-    --legal-page-bg:
-        radial-gradient(circle at 12% 12%, rgba(14, 165, 233, 0.18), transparent 28%),
-        radial-gradient(circle at 86% 16%, rgba(251, 146, 60, 0.16), transparent 24%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
-        linear-gradient(180deg, #a4deef, #d6f1f6 52%, #f7deb3);
+    --legal-page-bg: transparent;
 }
 [data-theme="swamp"] .legal-page {
     --legal-page-bg:

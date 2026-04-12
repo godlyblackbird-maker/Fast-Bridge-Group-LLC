@@ -54,8 +54,196 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        [data-theme="beach"] .legal-page.legal-hub-page {
+            color: #083344;
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-page-main {
+            width: min(1280px, calc(100% - 32px));
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-hero,
+        [data-theme="beach"] .legal-hub-page .legal-card,
+        [data-theme="beach"] .legal-hub-page .legal-top-links a {
+            border-color: rgba(8, 145, 178, 0.24);
+            background:
+                linear-gradient(155deg, rgba(255, 255, 255, 0.84), rgba(239, 249, 255, 0.62) 52%, rgba(255, 237, 213, 0.48)),
+                rgba(255, 255, 255, 0.76);
+            box-shadow: 0 24px 48px rgba(8, 47, 73, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.56);
+            backdrop-filter: blur(16px);
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-back-link {
+            background: rgba(255, 255, 255, 0.8);
+            color: #0c4a6e;
+            border-color: rgba(8, 145, 178, 0.22);
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-home-link {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(224, 242, 254, 0.78));
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-login-link {
+            background: linear-gradient(135deg, #0284c7, #0ea5e9 55%, #fb923c);
+            border-color: rgba(255, 255, 255, 0.32);
+            box-shadow: 0 20px 38px rgba(8, 47, 73, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-eyebrow {
+            color: #0f766e;
+            font-size: 13px;
+            letter-spacing: 0.2em;
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-hero h1 {
+            color: #082f49;
+            font-size: clamp(42px, 6vw, 72px);
+            letter-spacing: -0.04em;
+            text-shadow: 0 10px 24px rgba(255, 255, 255, 0.32);
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-hero p {
+            color: rgba(8, 47, 73, 0.9);
+            font-size: 20px;
+            line-height: 1.75;
+            max-width: 880px;
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-top-links {
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 14px;
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-top-links a {
+            min-height: 82px;
+            display: grid;
+            align-content: center;
+            font-size: 16px;
+            font-weight: 800;
+            color: #0c4a6e;
+        }
+
+        [data-theme="beach"] .legal-hub-page .legal-top-links a:hover,
+        [data-theme="beach"] .legal-hub-page .legal-top-links a:focus-visible {
+            transform: translateY(-2px);
+            border-color: rgba(8, 145, 178, 0.34);
+            background:
+                linear-gradient(155deg, rgba(255, 255, 255, 0.92), rgba(224, 242, 254, 0.74) 52%, rgba(255, 237, 213, 0.56)),
+                rgba(255, 255, 255, 0.84);
+            color: #082f49;
+            box-shadow: 0 28px 48px rgba(8, 47, 73, 0.16);
+        }
+
+        .legal-hub-highlight-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .legal-hub-highlight-card {
+            display: grid;
+            gap: 16px;
+            min-height: 100%;
+        }
+
+        .legal-hub-highlight-kicker {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            min-height: 34px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(8, 145, 178, 0.18);
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(251, 146, 60, 0.12));
+            color: #0c4a6e;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .legal-hub-highlight-card h2 {
+            margin: 0;
+            color: #082f49;
+            font-size: clamp(26px, 3vw, 34px);
+            line-height: 1.06;
+            letter-spacing: -0.03em;
+        }
+
+        .legal-hub-highlight-card p {
+            margin: 0;
+            color: rgba(8, 47, 73, 0.86);
+            font-size: 17px;
+            line-height: 1.75;
+        }
+
+        .legal-hub-highlight-list {
+            display: grid;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .legal-hub-highlight-list li {
+            position: relative;
+            padding-left: 18px;
+            color: rgba(8, 47, 73, 0.84);
+            line-height: 1.7;
+        }
+
+        .legal-hub-highlight-list li::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #0284c7, #fb923c);
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.08);
+        }
+
+        .legal-hub-highlight-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: fit-content;
+            min-height: 46px;
+            padding: 0 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(8, 145, 178, 0.2);
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(251, 146, 60, 0.14));
+            color: #0c4a6e;
+            font-size: 15px;
+            font-weight: 800;
+            text-decoration: none;
+            box-shadow: 0 14px 26px rgba(8, 47, 73, 0.08);
+        }
+
+        .legal-hub-highlight-link::after {
+            content: '\2192';
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        .legal-hub-highlight-link:hover,
+        .legal-hub-highlight-link:focus-visible {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.18), rgba(251, 146, 60, 0.22));
+            color: #082f49;
+        }
+
+        @media (max-width: 980px) {
+            .legal-hub-highlight-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
-<body class="legal-page">
+<body class="legal-page legal-hub-page">
     <main class="legal-page-main">
         <header class="legal-page-header">
             <a class="legal-back-link legal-home-link" href="index.html">Back to Home</a>
@@ -84,6 +272,44 @@
             <a href="legal-2026-law-library.html">2026 Law Library</a>
             <a href="legal-contact-us.html">Contact Us</a>
         </nav>
+
+        <section class="legal-hub-highlight-grid" aria-label="Featured legal routes">
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card legal-hub-highlight-card" tabindex="0">
+                <span class="legal-hub-highlight-kicker">Privacy & Consent</span>
+                <h2>Customer Data, Messaging, and Website Use</h2>
+                <p>Use these disclosures when the question is about privacy rights, text messaging consent, analytics, cookies, or what FAST does with submitted information.</p>
+                <ul class="legal-hub-highlight-list">
+                    <li>Privacy Policy</li>
+                    <li>Terms of Use</li>
+                    <li>Electronic Submissions</li>
+                </ul>
+                <a class="legal-hub-highlight-link" href="legal-privacy-policy.html">Open privacy disclosures</a>
+            </article>
+
+            <article class="legal-card legal-hover-card legal-hub-highlight-card" tabindex="0">
+                <span class="legal-hub-highlight-kicker">Transactions</span>
+                <h2>Agreements, Signatures, and Deal Workflow</h2>
+                <p>Go here for the pages tied to purchase agreements, DocuSign-related workflows, document handling, and transaction-facing terms.</p>
+                <ul class="legal-hub-highlight-list">
+                    <li>Electronic Submissions</li>
+                    <li>Terms of Use</li>
+                    <li>Accuracy & Liability</li>
+                </ul>
+                <a class="legal-hub-highlight-link" href="legal-electronic-submissions.html">Open transaction disclosures</a>
+            </article>
+
+            <article class="legal-card legal-hover-card legal-hub-highlight-card" tabindex="0">
+                <span class="legal-hub-highlight-kicker">Broker & Compliance</span>
+                <h2>Broker Oversight, Housing, and MLS Rules</h2>
+                <p>These pages cover brokerage supervision, equal housing, MLS usage, licensing-related contact paths, and compliance-centered notices.</p>
+                <ul class="legal-hub-highlight-list">
+                    <li>Broker Information</li>
+                    <li>Equal Housing</li>
+                    <li>MLS / IDX / VOW Disclaimers</li>
+                </ul>
+                <a class="legal-hub-highlight-link" href="legal-broker-information.html">Open broker information</a>
+            </article>
+        </section>
 
     </main>
 
