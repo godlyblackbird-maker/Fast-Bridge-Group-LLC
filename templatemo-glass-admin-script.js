@@ -21277,7 +21277,9 @@ function initNavbarDateTime() {
                 }
 
                 const earthEnabled = Boolean(lastGoogleMapsConfig && lastGoogleMapsConfig.earthEnabled);
-                earthButton.disabled = !earthEnabled;
+                earthButton.disabled = false;
+                earthButton.setAttribute('aria-disabled', earthEnabled ? 'false' : 'true');
+                earthButton.classList.toggle('is-unavailable', !earthEnabled);
                 earthButton.title = earthEnabled
                     ? ''
                     : getEarthUnavailableMessage(lastGoogleMapsConfig);
@@ -23299,8 +23301,15 @@ function initNavbarDateTime() {
             });
 
             layerButtons.forEach((button) => {
-                button.addEventListener('click', () => {
-                    setMapLayerMode(button.dataset.compsMapLayer || 'street');
+                button.addEventListener('click', async () => {
+                    const nextLayer = button.dataset.compsMapLayer || 'street';
+                    if (nextLayer === 'earth') {
+                        const refreshedConfig = await resolveGoogleMapsBrowserConfig().catch(() => null);
+                        if (refreshedConfig && typeof refreshedConfig === 'object') {
+                            syncEarthLayerAvailability(refreshedConfig);
+                        }
+                    }
+                    setMapLayerMode(nextLayer);
                 });
             });
 
