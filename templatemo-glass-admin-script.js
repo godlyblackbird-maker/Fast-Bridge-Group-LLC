@@ -20957,6 +20957,27 @@ function initNavbarDateTime() {
             ]);
         }
 
+        function buildHybridGoogleMapsStyles(baseStyles) {
+            const normalizedBaseStyles = Array.isArray(baseStyles) ? baseStyles.slice() : [];
+            return normalizedBaseStyles.concat([
+                {
+                    featureType: 'transit.line',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#ff3b30' }, { visibility: 'on' }]
+                },
+                {
+                    featureType: 'transit.line',
+                    elementType: 'geometry.stroke',
+                    stylers: [{ color: '#ffb4af' }, { visibility: 'on' }]
+                },
+                {
+                    featureType: 'transit.station',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#ff453a' }]
+                }
+            ]);
+        }
+
         function geocodeAddressWithGoogle(address) {
             const trimmedAddress = String(address || '').trim();
             if (!trimmedAddress || !window.google || !window.google.maps || typeof window.google.maps.Geocoder !== 'function') {
@@ -21195,6 +21216,7 @@ function initNavbarDateTime() {
             let mapInstance = null;
             let defaultGoogleMapsStyles = null;
             let nakedGoogleMapsStyles = null;
+            let hybridGoogleMapsStyles = null;
             let panoramaInstance = null;
             let infoWindowInstance = null;
             let subjectMarker = null;
@@ -21484,7 +21506,6 @@ function initNavbarDateTime() {
                         altitudeMode: 'CLAMP_TO_GROUND',
                         extruded: true,
                         drawsOccludedSegments: true,
-                        label: markerMeta.label,
                         title: markerMeta.title || markerMeta.label
                     });
 
@@ -21986,7 +22007,13 @@ function initNavbarDateTime() {
 
                 const markerOptions = options && typeof options === 'object' ? options : {};
                 if (markerCtor) {
-                    return new markerCtor(markerOptions);
+                    return new markerCtor({
+                        map: markerOptions.map,
+                        position: markerOptions.position,
+                        content: markerOptions.content,
+                        title: markerOptions.title,
+                        zIndex: markerOptions.zIndex
+                    });
                 }
 
                 return new window.google.maps.Marker({
@@ -22026,9 +22053,15 @@ function initNavbarDateTime() {
 
                 const shouldUseNakedStyles = currentMapNaked;
                 const shouldUseDefaultStyles = !currentMapNaked && currentMapLayer !== 'aerial';
-                const nextStyles = shouldUseNakedStyles
-                    ? (nakedGoogleMapsStyles || buildNakedGoogleMapsStyles(defaultGoogleMapsStyles))
-                    : (shouldUseDefaultStyles && Array.isArray(defaultGoogleMapsStyles) ? defaultGoogleMapsStyles : null);
+                let nextStyles = null;
+
+                if (shouldUseNakedStyles) {
+                    nextStyles = nakedGoogleMapsStyles || buildNakedGoogleMapsStyles(defaultGoogleMapsStyles);
+                } else if (shouldUseDefaultStyles && Array.isArray(defaultGoogleMapsStyles)) {
+                    nextStyles = currentMapLayer === 'hybrid'
+                        ? (hybridGoogleMapsStyles || buildHybridGoogleMapsStyles(defaultGoogleMapsStyles))
+                        : defaultGoogleMapsStyles;
+                }
 
                 mapInstance.setOptions({
                     styles: nextStyles
@@ -22411,6 +22444,7 @@ function initNavbarDateTime() {
                     const styles = config.mapId ? null : await loadGoogleMapsStyles(config.stylePath);
                     defaultGoogleMapsStyles = Array.isArray(styles) ? styles : null;
                     nakedGoogleMapsStyles = buildNakedGoogleMapsStyles(defaultGoogleMapsStyles);
+                    hybridGoogleMapsStyles = buildHybridGoogleMapsStyles(defaultGoogleMapsStyles);
                     const subjectLocation = getSubjectLocation();
                     const mapOptions = {
                         center: subjectLocation,
