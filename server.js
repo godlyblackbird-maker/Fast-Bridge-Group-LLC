@@ -387,6 +387,64 @@ async function resolveDocuSignAccountContext(config, accessToken) {
   };
 }
 
+function collectDocuSignTemplateRoleNames(recipientsPayload) {
+  const recipientGroups = [
+    recipientsPayload && recipientsPayload.signers,
+    recipientsPayload && recipientsPayload.inPersonSigners,
+    recipientsPayload && recipientsPayload.agentSigners,
+    recipientsPayload && recipientsPayload.editors,
+    recipientsPayload && recipientsPayload.intermediaries,
+    recipientsPayload && recipientsPayload.carbonCopies,
+    recipientsPayload && recipientsPayload.certifiedDeliveries
+  ];
+
+  return Array.from(new Set(
+    recipientGroups
+      .flatMap((group) => Array.isArray(group) ? group : [])
+      .map((recipient) => cleanDocuSignText(recipient && recipient.roleName, 120))
+      .filter(Boolean)
+  ));
+}
+
+async function getDocuSignTemplateMetadata(config, accountContext, accessToken) {
+  const templateBaseUrl = `${accountContext.baseUri}/restapi/v2.1/accounts/${encodeURIComponent(accountContext.accountId)}/templates/${encodeURIComponent(config.templateId)}`;
+
+  const [templateResponse, recipientsResponse] = await Promise.all([
+    fetch(templateBaseUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }),
+    fetch(`${templateBaseUrl}/recipients`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    })
+  ]);
+
+  const templatePayload = await templateResponse.json().catch(() => ({}));
+  if (!templateResponse.ok) {
+    throw new Error(buildDocuSignErrorMessage(templatePayload, 'DocuSign could not load the configured template.'));
+  }
+
+  const recipientsPayload = await recipientsResponse.json().catch(() => ({}));
+  if (!recipientsResponse.ok) {
+    throw new Error(buildDocuSignErrorMessage(recipientsPayload, 'DocuSign could not load the configured template recipients.'));
+  }
+
+  const roleNames = collectDocuSignTemplateRoleNames(recipientsPayload);
+  const missingRoles = [config.buyerRoleName, config.sellerRoleName].filter((roleName) => !roleNames.includes(roleName));
+  if (missingRoles.length) {
+    throw new Error(`The DocuSign template is missing the expected role names: ${missingRoles.join(', ')}.`);
+  }
+
+  return {
+    id: cleanDocuSignText(templatePayload && (templatePayload.templateId || templatePayload.template_id || config.templateId), 120),
+    name: cleanDocuSignText(templatePayload && (templatePayload.name || templatePayload.templateName), 240) || 'DocuSign template',
+    roleNames
+  };
+}
+
 function buildDocuSignEnvelopePayload(config, payload) {
   const propertyAddress = cleanDocuSignText(payload.propertyAddress, 300);
   const contractDate = cleanDocuSignText(payload.contractDate, 40);
@@ -461,6 +519,7 @@ async function sendDocuSignTemplateEnvelope(payload) {
 
   const accessToken = await getDocuSignAccessToken(config);
   const accountContext = await resolveDocuSignAccountContext(config, accessToken);
+  const templateMetadata = await getDocuSignTemplateMetadata(config, accountContext, accessToken);
   const envelopePayload = buildDocuSignEnvelopePayload(config, payload);
 
   const response = await fetch(`${accountContext.baseUri}/restapi/v2.1/accounts/${encodeURIComponent(accountContext.accountId)}/envelopes`, {
@@ -480,7 +539,8 @@ async function sendDocuSignTemplateEnvelope(payload) {
   return {
     envelopeId: String(result.envelopeId || result.envelope_id || '').trim(),
     status: String(result.status || 'sent').trim() || 'sent',
-    uri: String(result.uri || '').trim()
+    uri: String(result.uri || '').trim(),
+    template: templateMetadata
   };
 }
 
