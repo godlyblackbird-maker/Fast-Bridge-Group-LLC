@@ -16481,6 +16481,7 @@ function initNavbarDateTime() {
         let docusignConfigMessage = 'Checking DocuSign configuration for this workspace...';
         let lastAutoSubject = '';
         let lastAutoMessage = '';
+        let lastAppliedPropertyKey = '';
 
         function setStatus(message, tone) {
             statusNote.textContent = message;
@@ -16686,6 +16687,24 @@ function initNavbarDateTime() {
                 : 'Please review and sign the purchase agreement through DocuSign.';
         }
 
+        function syncAutoFilledInput(input, nextValue, options = {}) {
+            if (!input) {
+                return;
+            }
+
+            const force = Boolean(options.force);
+            const normalizedNextValue = cleanContractValue(nextValue);
+            const normalizedCurrentValue = cleanContractValue(input.value);
+            const previousAutoValue = cleanContractValue(input.dataset.autoFilledValue || '');
+            const canReplaceCurrentValue = force || !normalizedCurrentValue || normalizedCurrentValue === previousAutoValue;
+
+            if (canReplaceCurrentValue) {
+                input.value = nextValue || '';
+            }
+
+            input.dataset.autoFilledValue = normalizedNextValue;
+        }
+
         function applyAutoEnvelopeCopy(address) {
             const nextSubject = buildDefaultSubject(address);
             const currentSubject = cleanContractValue(emailSubjectInput.value);
@@ -16740,22 +16759,24 @@ function initNavbarDateTime() {
                     : (selectedEntry ? (selectedEntry.snapshot || {}) : {}));
             const snapshot = selectedEntry ? (selectedEntry.snapshot || {}) : {};
             const propertyAddress = inferPropertyAddress(detail, snapshot, selectedEntry);
+            const selectedPropertyKey = selectedEntry ? String(selectedEntry.key || '') : '';
+            const shouldForceAutoFill = selectedPropertyKey !== lastAppliedPropertyKey;
 
             if (!cleanContractValue(dateInput.value)) {
                 dateInput.value = getTodayDateString();
             }
 
-            propertyAddressInput.value = propertyAddress;
-            buyerInput.value = inferBuyer(detail, snapshot, selectedEntry);
-            if (!cleanContractValue(buyerEmailInput.value) || buyerEmailInput.value === '') {
-                buyerEmailInput.value = inferBuyerEmail(detail, snapshot, selectedEntry);
+            if (selectedEntry) {
+                syncAutoFilledInput(propertyAddressInput, propertyAddress, { force: shouldForceAutoFill });
+                syncAutoFilledInput(buyerInput, inferBuyer(detail, snapshot, selectedEntry), { force: shouldForceAutoFill });
+                syncAutoFilledInput(buyerEmailInput, inferBuyerEmail(detail, snapshot, selectedEntry), { force: shouldForceAutoFill });
+                syncAutoFilledInput(sellerInput, inferSeller(detail, snapshot), { force: shouldForceAutoFill });
+                syncAutoFilledInput(sellerEmailInput, inferSellerEmail(detail, snapshot), { force: shouldForceAutoFill });
+                syncAutoFilledInput(apnInput, inferApn(detail, snapshot), { force: shouldForceAutoFill });
+                syncAutoFilledInput(purchasePriceInput, formatCurrencyForInput(inferPurchasePrice(detail, snapshot)), { force: shouldForceAutoFill });
             }
-            sellerInput.value = inferSeller(detail, snapshot);
-            if (!cleanContractValue(sellerEmailInput.value) || sellerEmailInput.value === '') {
-                sellerEmailInput.value = inferSellerEmail(detail, snapshot);
-            }
-            apnInput.value = inferApn(detail, snapshot);
-            purchasePriceInput.value = formatCurrencyForInput(inferPurchasePrice(detail, snapshot));
+
+            lastAppliedPropertyKey = selectedPropertyKey;
             applyAutoEnvelopeCopy(propertyAddress);
             updateSelectionStatus();
         }
