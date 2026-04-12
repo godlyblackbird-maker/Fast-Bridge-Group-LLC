@@ -56,6 +56,7 @@ const DEFAULT_STRIPE_PUBLISHABLE_KEY = 'pk_test_51TDU29Q3MV5dyF2TauLp1mMkQukSL6P
 const STRIPE_PUBLISHABLE_KEY = String(process.env.STRIPE_PUBLISHABLE_KEY || DEFAULT_STRIPE_PUBLISHABLE_KEY).trim();
 const GOOGLE_MAPS_API_KEY = getFirstConfiguredEnvValue('GOOGLE_MAPS_API_KEY', 'GOOGLE_BROWSER_MAPS_API_KEY');
 const GOOGLE_MAPS_MAP_ID = getFirstConfiguredEnvValue('GOOGLE_MAPS_MAP_ID', 'GOOGLE_MAP_ID');
+const GOOGLE_EARTH_FALLBACK_MAP_ID = 'DEMO_MAP_ID';
 const PREMIUM_USER_ROLE = 'premium user';
 const TEST_USER_ROLE = 'test user';
 const PREMIUM_PLAN_KEY = 'premium';
@@ -7385,17 +7386,17 @@ app.get('/api/maps/google-config', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
 
+  const earthMapId = GOOGLE_MAPS_MAP_ID || GOOGLE_EARTH_FALLBACK_MAP_ID;
   const earthMissingConfig = [];
   if (!GOOGLE_MAPS_API_KEY) {
     earthMissingConfig.push('GOOGLE_MAPS_API_KEY');
   }
-  if (!GOOGLE_MAPS_MAP_ID) {
-    earthMissingConfig.push('GOOGLE_MAPS_MAP_ID');
-  }
 
   const earthEnabled = earthMissingConfig.length === 0;
   const earthMessage = earthEnabled
-    ? 'FAST Earth is configured through Google Maps JavaScript 3D with your JavaScript Map ID.'
+    ? (GOOGLE_MAPS_MAP_ID
+      ? 'FAST Earth is configured through Google Maps JavaScript 3D with your JavaScript Map ID.'
+      : 'FAST Earth is using the Google Maps JavaScript 3D demo Map ID because GOOGLE_MAPS_MAP_ID is not configured on the server yet.')
     : `FAST Earth uses Google Maps JavaScript 3D, not Google Earth Engine. Missing ${earthMissingConfig.join(' and ')} on the server. Also verify Maps JavaScript API, billing, and a JavaScript Map ID are enabled in Google Cloud.`;
 
   return res.json({
@@ -7403,6 +7404,7 @@ app.get('/api/maps/google-config', (_req, res) => {
     enabled: Boolean(GOOGLE_MAPS_API_KEY),
     apiKey: GOOGLE_MAPS_API_KEY,
     mapId: GOOGLE_MAPS_MAP_ID,
+    earthMapId,
     earthEnabled,
     earthViewer: 'google-maps-javascript-3d',
     earthMissingConfig,

@@ -207,7 +207,7 @@ Edit `.env` file to customize:
 - **JWT_SECRET:** Change this in production!
 - **DATABASE:** Path to SQLite database
 - **GOOGLE_MAPS_API_KEY** or **GOOGLE_BROWSER_MAPS_API_KEY:** Browser-safe Google Maps JavaScript API key used by the comps map workspace
-- **GOOGLE_MAPS_MAP_ID** or **GOOGLE_MAP_ID:** Google Cloud JavaScript Map ID used for cloud styling and required by FAST's Earth layer; if omitted, FAST falls back to `Themes/google-maps-mls-light.json` for normal maps and disables the Earth layer
+- **GOOGLE_MAPS_MAP_ID** or **GOOGLE_MAP_ID:** Google Cloud JavaScript Map ID used for cloud styling and preferred by FAST's Earth layer; if omitted, FAST falls back to `Themes/google-maps-mls-light.json` for normal maps and uses Google's `DEMO_MAP_ID` for the Earth layer until you add your own Map ID
 
 Google Cloud note for the comps workspace:
 - Enable **Maps JavaScript API** for the interactive map

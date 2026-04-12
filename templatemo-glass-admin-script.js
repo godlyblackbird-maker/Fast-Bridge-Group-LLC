@@ -20805,7 +20805,7 @@ function initNavbarDateTime() {
                 ? configOrApiKey
                 : { apiKey: configOrApiKey };
             const apiKey = String(normalizedConfig.apiKey || '').trim();
-            const mapId = String(normalizedConfig.mapId || '').trim();
+            const mapId = String(normalizedConfig.mapId || normalizedConfig.earthMapId || '').trim();
 
             if (googleMapsAuthFailed) {
                 return Promise.reject(new Error(
@@ -21542,10 +21542,11 @@ function initNavbarDateTime() {
                 earthReadyPromise = (async () => {
                     const config = await resolveGoogleMapsBrowserConfig();
                     syncEarthLayerAvailability(config);
+                    const earthMapId = String(config && (config.earthMapId || config.mapId) || '').trim();
                     if (!config.enabled || !config.apiKey) {
                         throw new Error(getEarthUnavailableMessage(config, 'Google Maps API key is not configured for Earth view.'));
                     }
-                    if (!config.mapId) {
+                    if (!earthMapId) {
                         throw new Error(getEarthUnavailableMessage(config, 'Google Earth needs GOOGLE_MAPS_MAP_ID configured on the server.'));
                     }
 
@@ -21575,7 +21576,7 @@ function initNavbarDateTime() {
 
                     earthMapModeValue = MapMode && MapMode.HYBRID ? MapMode.HYBRID : 'HYBRID';
                     earthMapElement = new Map3DElement({
-                        mapId: config.mapId,
+                        mapId: earthMapId,
                         mode: earthMapModeValue,
                         range: 1400,
                         tilt: 67.5,
