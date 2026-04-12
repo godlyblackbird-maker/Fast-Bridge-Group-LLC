@@ -714,6 +714,7 @@
                                             <button type="button" class="card-btn active" data-comps-map-layer="street">Street</button>
                                             <button type="button" class="card-btn" data-comps-map-layer="aerial">Aerial</button>
                                             <button type="button" class="card-btn" data-comps-map-naked-toggle="true" aria-pressed="false">Naked</button>
+                                            <button type="button" class="card-btn" data-comps-map-layer="apple">Apple Maps</button>
                                             <button type="button" class="card-btn" data-comps-map-layer="earth">Earth</button>
                                             <button type="button" class="card-btn" data-comps-map-layer="hybrid">Hybrid</button>
                                         </div>
@@ -735,6 +736,7 @@
                                                 <button id="comps-map-address-search-btn" class="card-btn active" type="button">Search</button>
                                             </label>
                                             <button id="comps-map-street-view-btn" class="card-btn" type="button">Street View</button>
+                                            <button id="comps-map-apple-lookaround-btn" class="card-btn" type="button">Apple Look Around</button>
                                         </div>
                                     </div>
                                 </div>
@@ -773,9 +775,13 @@
                                         <div id="comps-map-earth-shell" class="comps-map-earth-shell" hidden>
                                             <div id="comps-map-earth-canvas" class="comps-map-earth-canvas" aria-label="Google Earth 3D map"></div>
                                         </div>
+                                        <div id="comps-map-apple-shell" class="comps-map-apple-shell" hidden>
+                                            <div id="comps-map-apple-canvas" class="comps-map-apple-canvas" aria-label="Apple Maps comps map"></div>
+                                        </div>
                                         <div class="comps-map-stage-grid">
                                             <div id="comps-map-canvas" class="comps-map-canvas" aria-label="Interactive comps map"></div>
                                             <div id="comps-map-pano" class="comps-map-pano" aria-label="Street View panorama"></div>
+                                            <div id="comps-map-lookaround" class="comps-map-lookaround" aria-label="Apple Look Around panorama" data-empty-message="Apple Look Around is standing by for this property."></div>
                                         </div>
                                     </div>
                                 </section>

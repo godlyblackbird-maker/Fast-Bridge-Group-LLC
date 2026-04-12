@@ -20550,9 +20550,13 @@ function initNavbarDateTime() {
 
         const compsMapOpenLink = document.getElementById('comps-map-open-link');
         const compsMapStreetViewButton = document.getElementById('comps-map-street-view-btn');
+        const compsMapAppleLookAroundButton = document.getElementById('comps-map-apple-lookaround-btn');
         let googleMapsBrowserConfigPromise = null;
         let googleMapsScriptPromise = null;
         let googleMapsStylesPromise = null;
+        let appleMapsBrowserConfigPromise = null;
+        let appleMapKitScriptPromise = null;
+        let appleMapKitRequestedLibraries = new Set();
 
         function buildGoogleMapsSearchUrl(query) {
             const encodedQuery = encodeURIComponent(String(query || '').trim() || 'California');
@@ -20561,6 +20565,108 @@ function initNavbarDateTime() {
 
         function buildGoogleStreetViewUrl(lat, lng) {
             return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${encodeURIComponent(`${lat},${lng}`)}`;
+        }
+
+        function getAppleMapsBrowserConfig(options = {}) {
+            const settings = options && typeof options === 'object' ? options : {};
+            const forceRefresh = Boolean(settings.forceRefresh);
+            if (!forceRefresh && appleMapsBrowserConfigPromise) {
+                return appleMapsBrowserConfigPromise;
+            }
+
+            const requestUrl = forceRefresh
+                ? `/api/maps/apple-config?ts=${Date.now()}`
+                : '/api/maps/apple-config';
+
+            appleMapsBrowserConfigPromise = fetch(requestUrl, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Apple Maps config could not be loaded.');
+                    }
+                    return response.json();
+                })
+                .then((payload) => payload && typeof payload === 'object' ? payload : {})
+                .catch((error) => {
+                    appleMapsBrowserConfigPromise = null;
+                    throw error;
+                });
+
+            return appleMapsBrowserConfigPromise;
+        }
+
+        async function resolveAppleMapsBrowserConfig() {
+            const cachedConfig = await getAppleMapsBrowserConfig().catch(() => null);
+            if (cachedConfig && cachedConfig.enabled && cachedConfig.token) {
+                return cachedConfig;
+            }
+
+            const freshConfig = await getAppleMapsBrowserConfig({ forceRefresh: true }).catch(() => null);
+            if (freshConfig && freshConfig.enabled && freshConfig.token) {
+                return freshConfig;
+            }
+
+            return freshConfig || cachedConfig || {};
+        }
+
+        function loadAppleMapKitScript(token, libraries = ['map', 'services', 'look-around']) {
+            const requestedLibraries = Array.isArray(libraries)
+                ? libraries.map((library) => String(library || '').trim()).filter(Boolean)
+                : [];
+            const requestedLibrarySet = new Set(requestedLibraries);
+            requestedLibraries.forEach((library) => appleMapKitRequestedLibraries.add(library));
+
+            if (window.mapkit && Array.isArray(window.mapkit.loadedLibraries) && requestedLibraries.every((library) => window.mapkit.loadedLibraries.includes(library))) {
+                return Promise.resolve(window.mapkit);
+            }
+
+            if (appleMapKitScriptPromise) {
+                return appleMapKitScriptPromise;
+            }
+
+            appleMapKitScriptPromise = new Promise((resolve, reject) => {
+                const existing = document.getElementById('fast-apple-mapkit-script');
+                if (existing) {
+                    if (window.mapkit && Array.isArray(window.mapkit.loadedLibraries) && requestedLibraries.every((library) => window.mapkit.loadedLibraries.includes(library))) {
+                        resolve(window.mapkit);
+                        return;
+                    }
+
+                    if (existing.parentNode) {
+                        existing.parentNode.removeChild(existing);
+                    }
+                }
+
+                const callbackName = '__fastAppleMapKitLoaded';
+                window[callbackName] = () => {
+                    resolve(window.mapkit);
+                    try {
+                        delete window[callbackName];
+                    } catch (error) {
+                        window[callbackName] = undefined;
+                    }
+                };
+
+                const script = document.createElement('script');
+                script.id = 'fast-apple-mapkit-script';
+                script.async = true;
+                script.crossOrigin = 'anonymous';
+                script.src = 'https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.core.js';
+                script.dataset.callback = callbackName;
+                script.dataset.libraries = Array.from(new Set(Array.from(appleMapKitRequestedLibraries).concat(Array.from(requestedLibrarySet)))).join(',');
+                script.dataset.token = String(token || '').trim();
+                script.onerror = () => reject(new Error('Apple Maps failed to load.'));
+                document.head.appendChild(script);
+            }).catch((error) => {
+                appleMapKitScriptPromise = null;
+                throw error;
+            });
+
+            return appleMapKitScriptPromise;
         }
 
         function getStreetViewAddressQuery(fallbackAddress = '') {
@@ -20718,6 +20824,37 @@ function initNavbarDateTime() {
             });
         }
 
+        async function geocodeAddressWithNominatim(address) {
+            const trimmedAddress = String(address || '').trim();
+            if (!trimmedAddress) {
+                return null;
+            }
+
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(trimmedAddress)}`, {
+                headers: {
+                    Accept: 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('FAST could not geocode this address right now.');
+            }
+
+            const results = await response.json().catch(() => []);
+            const match = Array.isArray(results) ? results[0] : null;
+            const lat = Number(match && match.lat);
+            const lng = Number(match && match.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                return null;
+            }
+
+            return {
+                lat,
+                lng,
+                formattedAddress: String(match && (match.display_name || trimmedAddress) || trimmedAddress).trim() || trimmedAddress
+            };
+        }
+
         function findStreetViewPanorama(locationLike) {
             const lat = Number(locationLike && locationLike.lat);
             const lng = Number(locationLike && locationLike.lng);
@@ -20813,6 +20950,9 @@ function initNavbarDateTime() {
             const compsMapPano = document.getElementById('comps-map-pano');
             const compsMapEarthShell = document.getElementById('comps-map-earth-shell');
             const compsMapEarthCanvas = document.getElementById('comps-map-earth-canvas');
+            const compsMapAppleShell = document.getElementById('comps-map-apple-shell');
+            const compsMapAppleCanvas = document.getElementById('comps-map-apple-canvas');
+            const compsMapLookAroundCanvas = document.getElementById('comps-map-lookaround');
             const compsMapEmptyState = document.getElementById('comps-map-empty-state');
             const compsMapEmptyMessage = document.getElementById('comps-map-empty-message');
             const compsAerialViewShell = document.getElementById('comps-aerial-view-shell');
@@ -20920,6 +21060,12 @@ function initNavbarDateTime() {
             let earthMarkerLibraryPromise = null;
             let earthMarkerCtor = null;
             let earthMapModeValue = 'HYBRID';
+            let appleMapInstance = null;
+            let appleMapReadyPromise = null;
+            let appleAnnotationRegistry = [];
+            let appleLookAroundInstance = null;
+            let appleLookAroundEnabled = false;
+            let appleLookAroundLoading = false;
             let aerialViewLookupPromise = null;
             let aerialViewActiveAddress = '';
 
@@ -20932,6 +21078,357 @@ function initNavbarDateTime() {
                 if (wrap) {
                     wrap.classList.toggle('is-earth-active', Boolean(isVisible));
                 }
+            }
+
+            function setAppleMapState(isVisible) {
+                if (compsMapAppleShell) {
+                    compsMapAppleShell.hidden = !isVisible;
+                }
+
+                const wrap = compsMapCanvas && compsMapCanvas.closest('.comps-map-wrap');
+                if (wrap) {
+                    wrap.classList.toggle('is-apple-active', Boolean(isVisible));
+                }
+            }
+
+            function setAppleLookAroundMode(isEnabled) {
+                appleLookAroundEnabled = Boolean(isEnabled);
+                compsExplorer.dataset.appleLookAround = appleLookAroundEnabled ? 'on' : 'off';
+                if (!appleLookAroundEnabled) {
+                    destroyAppleLookAround();
+                }
+                syncAppleLookAroundButtonState();
+                requestMapResize();
+            }
+
+            function setAppleLookAroundPaneMessage(messageText) {
+                if (!compsMapLookAroundCanvas) {
+                    return;
+                }
+
+                compsMapLookAroundCanvas.dataset.emptyMessage = String(
+                    messageText || 'Apple Look Around is standing by for this property.'
+                ).trim() || 'Apple Look Around is standing by for this property.';
+                compsMapLookAroundCanvas.classList.remove('has-content');
+            }
+
+            function destroyAppleLookAround() {
+                if (appleLookAroundInstance && typeof appleLookAroundInstance.destroy === 'function') {
+                    appleLookAroundInstance.destroy();
+                }
+                appleLookAroundInstance = null;
+                if (compsMapLookAroundCanvas) {
+                    compsMapLookAroundCanvas.innerHTML = '';
+                }
+                setAppleLookAroundPaneMessage('Apple Look Around is standing by for this property.');
+            }
+
+            function syncAppleLookAroundButtonState() {
+                if (!compsMapAppleLookAroundButton) {
+                    return;
+                }
+
+                compsMapAppleLookAroundButton.disabled = appleLookAroundLoading;
+                compsMapAppleLookAroundButton.classList.toggle('active', appleLookAroundEnabled && !appleLookAroundLoading);
+                compsMapAppleLookAroundButton.setAttribute('aria-pressed', appleLookAroundEnabled ? 'true' : 'false');
+                compsMapAppleLookAroundButton.textContent = appleLookAroundLoading
+                    ? 'Loading Apple Look Around...'
+                    : (appleLookAroundEnabled ? 'Hide Apple Look Around' : 'Apple Look Around');
+            }
+
+            function lookupApplePlaceByQuery(queryText) {
+                return new Promise((resolve, reject) => {
+                    if (!window.mapkit || typeof window.mapkit.Geocoder !== 'function') {
+                        reject(new Error('Apple Maps geocoder is unavailable in this browser.'));
+                        return;
+                    }
+
+                    const geocoder = new window.mapkit.Geocoder();
+                    geocoder.lookup(String(queryText || '').trim(), (error, result) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+
+                        const places = result && Array.isArray(result.results) ? result.results : [];
+                        resolve(places[0] || null);
+                    });
+                });
+            }
+
+            function reverseLookupApplePlaceByCoordinate(locationLike) {
+                return new Promise((resolve, reject) => {
+                    if (!window.mapkit || typeof window.mapkit.Geocoder !== 'function' || typeof window.mapkit.Coordinate !== 'function') {
+                        reject(new Error('Apple Maps reverse geocoder is unavailable in this browser.'));
+                        return;
+                    }
+
+                    const lat = Number(locationLike && locationLike.lat);
+                    const lng = Number(locationLike && locationLike.lng);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        resolve(null);
+                        return;
+                    }
+
+                    const geocoder = new window.mapkit.Geocoder();
+                    geocoder.reverseLookup(new window.mapkit.Coordinate(lat, lng), (error, result) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+
+                        const places = result && Array.isArray(result.results) ? result.results : [];
+                        resolve(places[0] || null);
+                    });
+                });
+            }
+
+            async function resolveAppleLookAroundPlace() {
+                const config = await resolveAppleMapsBrowserConfig();
+                if (!config.enabled || !config.token) {
+                    throw new Error('Apple Maps token is not configured in the server environment.');
+                }
+
+                await loadAppleMapKitScript(config.token, ['map', 'services', 'look-around']);
+                await ensureSubjectCoordinates();
+
+                const subjectAddress = getCurrentCompsSubjectAddress() || getStreetViewAddressQuery();
+                let place = null;
+
+                if (subjectAddress) {
+                    place = await lookupApplePlaceByQuery(subjectAddress).catch(() => null);
+                }
+
+                if (!place) {
+                    place = await reverseLookupApplePlaceByCoordinate(getSubjectLocation()).catch(() => null);
+                }
+
+                if (!place || !place.id) {
+                    throw new Error('Apple Look Around could not resolve a supported place for this property.');
+                }
+
+                return place;
+            }
+
+            async function showAppleLookAroundForSubject() {
+                if (!compsMapLookAroundCanvas) {
+                    throw new Error('Apple Look Around pane is unavailable in this layout.');
+                }
+
+                setAppleLookAroundPaneMessage('FAST is checking whether Apple has Look Around imagery for this property.');
+
+                const place = await resolveAppleLookAroundPlace();
+                destroyAppleLookAround();
+
+                appleLookAroundInstance = new window.mapkit.LookAround(
+                    compsMapLookAroundCanvas,
+                    place,
+                    {
+                        showsDialogControl: true
+                    }
+                );
+
+                if (typeof appleLookAroundInstance.addEventListener === 'function') {
+                    appleLookAroundInstance.addEventListener('load', () => {
+                        if (compsMapLookAroundCanvas) {
+                            compsMapLookAroundCanvas.classList.add('has-content');
+                        }
+                    });
+                    appleLookAroundInstance.addEventListener('error', () => {
+                        destroyAppleLookAround();
+                        setAppleLookAroundPaneMessage('Apple does not have Look Around imagery for this property yet. FAST is keeping the pane open so you know the address resolved, but street-level Apple imagery is unavailable here.');
+                    });
+                }
+
+                compsMapLookAroundCanvas.classList.add('has-content');
+                return appleLookAroundInstance;
+            }
+
+            function clearAppleAnnotations() {
+                if (appleMapInstance && appleAnnotationRegistry.length > 0 && typeof appleMapInstance.removeAnnotations === 'function') {
+                    appleMapInstance.removeAnnotations(appleAnnotationRegistry);
+                }
+                appleAnnotationRegistry = [];
+            }
+
+            function buildAppleAnnotationColor(variant) {
+                if (variant === 'subject') {
+                    return '#111827';
+                }
+                if (variant === 'search') {
+                    return '#2563eb';
+                }
+                if (variant === 'green') {
+                    return '#10b981';
+                }
+                if (variant === 'orange') {
+                    return '#f59e0b';
+                }
+                return '#ef4444';
+            }
+
+            function createAppleAnnotation(options = {}) {
+                if (!window.mapkit || typeof window.mapkit.MarkerAnnotation !== 'function') {
+                    return null;
+                }
+
+                const lat = Number(options.lat);
+                const lng = Number(options.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return null;
+                }
+
+                return new window.mapkit.MarkerAnnotation(
+                    new window.mapkit.Coordinate(lat, lng),
+                    {
+                        title: String(options.title || 'Property').trim() || 'Property',
+                        subtitle: String(options.subtitle || '').trim(),
+                        color: buildAppleAnnotationColor(options.variant),
+                        glyphText: String(options.glyphText || '').trim()
+                    }
+                );
+            }
+
+            function setAppleMapRegion(locations = [], preferredCenter = null) {
+                if (!appleMapInstance || !window.mapkit || typeof window.mapkit.CoordinateRegion !== 'function') {
+                    return;
+                }
+
+                const validLocations = (Array.isArray(locations) ? locations : [])
+                    .map((location) => ({
+                        lat: Number(location && location.lat),
+                        lng: Number(location && location.lng)
+                    }))
+                    .filter((location) => Number.isFinite(location.lat) && Number.isFinite(location.lng));
+
+                const centerCandidate = preferredCenter && Number.isFinite(Number(preferredCenter.lat)) && Number.isFinite(Number(preferredCenter.lng))
+                    ? { lat: Number(preferredCenter.lat), lng: Number(preferredCenter.lng) }
+                    : (validLocations[0] || getSubjectLocation());
+
+                const latitudes = validLocations.length ? validLocations.map((location) => location.lat) : [centerCandidate.lat];
+                const longitudes = validLocations.length ? validLocations.map((location) => location.lng) : [centerCandidate.lng];
+                const minLat = Math.min(...latitudes);
+                const maxLat = Math.max(...latitudes);
+                const minLng = Math.min(...longitudes);
+                const maxLng = Math.max(...longitudes);
+                const spanLat = Math.max(0.02, (maxLat - minLat) * 1.7 || 0.02);
+                const spanLng = Math.max(0.02, (maxLng - minLng) * 1.7 || 0.02);
+
+                appleMapInstance.region = new window.mapkit.CoordinateRegion(
+                    new window.mapkit.Coordinate(centerCandidate.lat, centerCandidate.lng),
+                    new window.mapkit.CoordinateSpan(spanLat, spanLng)
+                );
+            }
+
+            function focusLocationOnAppleMap(locationLike) {
+                if (!appleMapInstance) {
+                    return;
+                }
+
+                const lat = Number(locationLike && locationLike.lat);
+                const lng = Number(locationLike && locationLike.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return;
+                }
+
+                const searchLocation = { lat, lng };
+                const locations = [getSubjectLocation(), ...lastTopResults, searchLocation].map((location) => ({
+                    lat: Number(location && location.lat),
+                    lng: Number(location && location.lng)
+                }));
+                setAppleMapRegion(locations, searchLocation);
+            }
+
+            async function ensureAppleMapReady() {
+                if (!compsMapAppleCanvas) {
+                    return null;
+                }
+                if (appleMapInstance) {
+                    return appleMapInstance;
+                }
+                if (appleMapReadyPromise) {
+                    return appleMapReadyPromise;
+                }
+
+                appleMapReadyPromise = (async () => {
+                    const config = await resolveAppleMapsBrowserConfig();
+                    if (!config.enabled || !config.token) {
+                        throw new Error('Apple Maps token is not configured in the server environment.');
+                    }
+
+                    await loadAppleMapKitScript(config.token);
+                    await ensureSubjectCoordinates();
+
+                    appleMapInstance = new window.mapkit.Map('comps-map-apple-canvas');
+                    setAppleMapRegion([getSubjectLocation()], getSubjectLocation());
+                    return appleMapInstance;
+                })().catch((error) => {
+                    appleMapReadyPromise = null;
+                    clearAppleAnnotations();
+                    appleMapInstance = null;
+                    setAppleMapState(false);
+                    throw error;
+                });
+
+                return appleMapReadyPromise;
+            }
+
+            function renderAppleMapMarkers(filtered) {
+                if (!appleMapInstance) {
+                    return;
+                }
+
+                clearAppleAnnotations();
+
+                const subjectLocation = getSubjectLocation();
+                const subjectAnnotation = createAppleAnnotation({
+                    lat: subjectLocation.lat,
+                    lng: subjectLocation.lng,
+                    title: String(detailData.address || 'Subject Property').trim() || 'Subject Property',
+                    subtitle: 'Subject Property',
+                    variant: 'subject',
+                    glyphText: 'S'
+                });
+                if (subjectAnnotation) {
+                    appleAnnotationRegistry.push(subjectAnnotation);
+                }
+
+                (Array.isArray(filtered) ? filtered : []).forEach((comp, index) => {
+                    const annotation = createAppleAnnotation({
+                        lat: comp.lat,
+                        lng: comp.lng,
+                        title: comp.address,
+                        subtitle: `${comp.propertyType} · ${formatCurrency(comp.price)} · ${comp.distance.toFixed(2)} mi`,
+                        variant: comp.color,
+                        glyphText: String(index + 1)
+                    });
+                    if (annotation) {
+                        appleAnnotationRegistry.push(annotation);
+                    }
+                });
+
+                if (lastSearchResult && Number.isFinite(Number(lastSearchResult.lat)) && Number.isFinite(Number(lastSearchResult.lng))) {
+                    const searchAnnotation = createAppleAnnotation({
+                        lat: lastSearchResult.lat,
+                        lng: lastSearchResult.lng,
+                        title: String(lastSearchResult.label || 'Search Result').trim() || 'Search Result',
+                        subtitle: 'Search Result',
+                        variant: 'search',
+                        glyphText: 'Go'
+                    });
+                    if (searchAnnotation) {
+                        appleAnnotationRegistry.push(searchAnnotation);
+                    }
+                }
+
+                if (appleAnnotationRegistry.length > 0 && typeof appleMapInstance.addAnnotations === 'function') {
+                    appleMapInstance.addAnnotations(appleAnnotationRegistry);
+                }
+
+                const markerLocations = [subjectLocation]
+                    .concat((Array.isArray(filtered) ? filtered : []).map((comp) => ({ lat: comp.lat, lng: comp.lng })))
+                    .concat(lastSearchResult ? [{ lat: Number(lastSearchResult.lat), lng: Number(lastSearchResult.lng) }] : []);
+                setAppleMapRegion(markerLocations, lastSearchResult || subjectLocation);
             }
 
             function getEarthFocusLocation() {
@@ -21367,6 +21864,9 @@ function initNavbarDateTime() {
                 const visible = Boolean(isVisible);
                 compsMapEmptyState.hidden = !visible;
                 compsMapCanvas.setAttribute('aria-hidden', visible ? 'true' : 'false');
+                if (compsMapAppleCanvas) {
+                    compsMapAppleCanvas.setAttribute('aria-hidden', visible ? 'true' : 'false');
+                }
                 if (compsMapPano) {
                     compsMapPano.setAttribute('aria-hidden', visible ? 'true' : 'false');
                 }
@@ -21631,20 +22131,24 @@ function initNavbarDateTime() {
                 if (!compsMapStreetViewButton) {
                     return;
                 }
-                compsMapStreetViewButton.disabled = streetViewLoading;
+                const appleMode = currentMapLayer === 'apple';
+                compsMapStreetViewButton.disabled = streetViewLoading || appleMode;
                 compsMapStreetViewButton.classList.toggle('active', streetViewEnabled && !streetViewLoading);
                 compsMapStreetViewButton.setAttribute('aria-pressed', streetViewEnabled ? 'true' : 'false');
+                compsMapStreetViewButton.title = appleMode ? 'Street View stays on the Google map layers.' : '';
                 compsMapStreetViewButton.textContent = streetViewLoading
                     ? 'Locating...'
                     : (streetViewEnabled ? 'Hide Street View' : 'Street View');
             }
 
             function syncDrawButtons() {
+                const appleMode = currentMapLayer === 'apple';
                 drawButtons.forEach((button) => {
                     button.classList.toggle('active', String(button.dataset.compsDrawMode || 'none') === currentDrawMode);
+                    button.disabled = appleMode && String(button.dataset.compsDrawMode || 'none') !== 'none';
                 });
                 if (clearAreaButton) {
-                    clearAreaButton.disabled = !drawnPolygon;
+                    clearAreaButton.disabled = appleMode || !drawnPolygon;
                 }
                 if (mapInstance) {
                     mapInstance.setOptions({
@@ -21845,6 +22349,9 @@ function initNavbarDateTime() {
 
             function requestMapResize() {
                 if (!window.google || !window.google.maps) {
+                    if (appleMapInstance && currentMapLayer === 'apple') {
+                        focusLocationOnAppleMap(lastSearchResult || getSubjectLocation());
+                    }
                     return;
                 }
 
@@ -21881,6 +22388,15 @@ function initNavbarDateTime() {
                                 persistCurrentPropertyDetail();
                                 return { lat: googleMatch.lat, lng: googleMatch.lng };
                             }
+                        }
+
+                        const nominatimMatch = await geocodeAddressWithNominatim(address).catch(() => null);
+                        if (nominatimMatch && Number.isFinite(nominatimMatch.lat) && Number.isFinite(nominatimMatch.lng)) {
+                            detailData.streetViewLat = nominatimMatch.lat;
+                            detailData.streetViewLng = nominatimMatch.lng;
+                            detailData.streetViewAddress = nominatimMatch.formattedAddress || address;
+                            persistCurrentPropertyDetail();
+                            return { lat: nominatimMatch.lat, lng: nominatimMatch.lng };
                         }
 
                         await resolveStreetViewUrlForAddress(address);
@@ -22053,7 +22569,7 @@ function initNavbarDateTime() {
             }
 
             function setMapLayerMode(nextLayer) {
-                if (!['street', 'aerial', 'earth', 'hybrid'].includes(nextLayer)) {
+                if (!['street', 'aerial', 'earth', 'hybrid', 'apple'].includes(nextLayer)) {
                     return;
                 }
 
@@ -22075,6 +22591,39 @@ function initNavbarDateTime() {
 
                 if (currentMapLayer !== 'earth') {
                     setEarthViewState(false);
+                }
+
+                if (currentMapLayer !== 'apple') {
+                    setAppleMapState(false);
+                }
+
+                if (currentMapLayer === 'apple') {
+                    if (streetViewEnabled) {
+                        setStreetViewMode(false);
+                    }
+                    if (currentDrawMode !== 'none') {
+                        setDrawMode('none');
+                    }
+
+                    void ensureAppleMapReady()
+                        .then((appleMap) => {
+                            if (!appleMap) {
+                                return;
+                            }
+                            setAppleMapState(true);
+                            renderAppleMapMarkers(lastTopResults);
+                        })
+                        .catch((error) => {
+                            currentMapLayer = 'street';
+                            layerButtons.forEach((button) => {
+                                button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
+                            });
+                            setAppleMapState(false);
+                            showDashboardToast('error', 'Apple Maps Unavailable', String(error && error.message || 'Apple Maps could not be loaded for this property.'));
+                        });
+                    syncStreetViewButtonState();
+                    syncDrawButtons();
+                    return;
                 }
 
                 if (currentMapLayer === 'earth') {
@@ -22127,6 +22676,10 @@ function initNavbarDateTime() {
             function setStreetViewMode(isEnabled) {
                 streetViewEnabled = Boolean(isEnabled);
                 compsExplorer.dataset.streetView = streetViewEnabled ? 'on' : 'off';
+
+                if (streetViewEnabled && appleLookAroundEnabled) {
+                    setAppleLookAroundMode(false);
+                }
 
                 if (panoramaInstance) {
                     panoramaInstance.setVisible(streetViewEnabled);
@@ -22281,10 +22834,6 @@ function initNavbarDateTime() {
             }
 
             function focusSearchLocation(locationLike, labelText) {
-                if (!mapInstance || !window.google || !window.google.maps) {
-                    return;
-                }
-
                 const lat = Number(locationLike && locationLike.lat);
                 const lng = Number(locationLike && locationLike.lng);
                 if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -22293,21 +22842,34 @@ function initNavbarDateTime() {
 
                 const position = { lat, lng };
                 const resolvedLabel = String(labelText || 'Search result').trim() || 'Search result';
+                lastSearchResult = {
+                    lat,
+                    lng,
+                    label: resolvedLabel
+                };
                 clearSearchedLocationArtifacts();
 
-                mapInstance.panTo(position);
-                if ((Number(mapInstance.getZoom()) || 0) < 15) {
-                    mapInstance.setZoom(15);
+                if (mapInstance && window.google && window.google.maps) {
+                    renderSearchedLocationMarker(position, resolvedLabel);
+                    mapInstance.panTo(position);
+                    if ((Number(mapInstance.getZoom()) || 0) < 15) {
+                        mapInstance.setZoom(15);
+                    }
+                    if (infoWindowInstance) {
+                        infoWindowInstance.setPosition(position);
+                        infoWindowInstance.setContent(`
+                            <div class="info-card">
+                                <h4>${escapeHtml(resolvedLabel)}</h4>
+                                <p>Search Result</p>
+                            </div>
+                        `);
+                        infoWindowInstance.open({ map: mapInstance });
+                    }
                 }
-                if (infoWindowInstance) {
-                    infoWindowInstance.setPosition(position);
-                    infoWindowInstance.setContent(`
-                        <div class="info-card">
-                            <h4>${escapeHtml(resolvedLabel)}</h4>
-                            <p>Search Result</p>
-                        </div>
-                    `);
-                    infoWindowInstance.open({ map: mapInstance });
+
+                if (appleMapInstance) {
+                    renderAppleMapMarkers(lastTopResults);
+                    focusLocationOnAppleMap(position);
                 }
                 updateCompsMapOpenLink(resolvedLabel);
             }
@@ -22319,10 +22881,18 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                await ensureMapReady();
-                const geocodeMatch = await geocodeAddressWithGoogle(searchText);
+                if (currentMapLayer !== 'apple') {
+                    await ensureMapReady();
+                } else {
+                    await ensureAppleMapReady().catch(() => null);
+                }
+
+                let geocodeMatch = await geocodeAddressWithGoogle(searchText).catch(() => null);
                 if (!geocodeMatch) {
-                    throw new Error('Google Maps could not locate that search address.');
+                    geocodeMatch = await geocodeAddressWithNominatim(searchText).catch(() => null);
+                }
+                if (!geocodeMatch) {
+                    throw new Error('FAST could not locate that search address.');
                 }
 
                 if (compsMapSearchInput) {
@@ -22408,6 +22978,11 @@ function initNavbarDateTime() {
             }
 
             function renderMapMarkers(filtered) {
+                if (currentMapLayer === 'apple') {
+                    renderAppleMapMarkers(filtered);
+                    return;
+                }
+
                 if (!mapInstance || !window.google || !window.google.maps) {
                     return;
                 }
@@ -22515,6 +23090,10 @@ function initNavbarDateTime() {
                         syncFocusCard(comp, index, filteredPool);
                         renderNearbyCards(lastTopResults, lastFilteredPool);
                         renderMapMarkers(lastTopResults);
+                        if (currentMapLayer === 'apple') {
+                            focusLocationOnAppleMap({ lat: comp.lat, lng: comp.lng });
+                            return;
+                        }
                         const marker = markerRegistry.get(compKey);
                         const markerPosition = getMarkerPosition(marker);
                         if (markerPosition && mapInstance) {
@@ -22556,6 +23135,16 @@ function initNavbarDateTime() {
                 updateCompsMapOpenLink();
 
                 await ensureSubjectCoordinates();
+                if (currentMapLayer === 'apple') {
+                    const appleMap = await ensureAppleMapReady().catch(() => null);
+                    if (!appleMap) {
+                        return;
+                    }
+                    setAppleMapState(true);
+                    renderAppleMapMarkers(filtered);
+                    return;
+                }
+
                 const map = await ensureMapReady();
                 if (!map) {
                     return;
@@ -22768,6 +23357,34 @@ function initNavbarDateTime() {
                 });
             }
 
+            if (compsMapAppleLookAroundButton && compsMapAppleLookAroundButton.dataset.bound !== 'true') {
+                compsMapAppleLookAroundButton.dataset.bound = 'true';
+                compsMapAppleLookAroundButton.addEventListener('click', async () => {
+                    appleLookAroundLoading = true;
+                    syncAppleLookAroundButtonState();
+
+                    try {
+                        if (appleLookAroundEnabled) {
+                            setAppleLookAroundMode(false);
+                        } else {
+                            setAppleLookAroundMode(true);
+                            setAppleLookAroundPaneMessage('FAST is checking whether Apple has Look Around imagery for this property.');
+                            if (streetViewEnabled) {
+                                setStreetViewMode(false);
+                            }
+                            await showAppleLookAroundForSubject();
+                        }
+                    } catch (error) {
+                        setAppleLookAroundMode(true);
+                        setAppleLookAroundPaneMessage('Apple does not have Look Around imagery for this property yet. FAST can keep showing the Apple map and Google Street View for this address while Apple street-level imagery remains unavailable.');
+                        showDashboardToast('error', 'Apple Look Around Unavailable', String(error && error.message || 'Apple Look Around could not be loaded for this property.'));
+                    } finally {
+                        appleLookAroundLoading = false;
+                        syncAppleLookAroundButtonState();
+                    }
+                });
+            }
+
             viewButtons.forEach((button) => {
                 button.addEventListener('click', () => {
                     setViewMode(button.dataset.compsView || 'split');
@@ -22854,6 +23471,7 @@ function initNavbarDateTime() {
             setMapLayerMode(currentMapLayer);
             setDrawMode('none');
             setStreetViewMode(false);
+            setAppleLookAroundMode(false);
             lastSearchResult = null;
             initCompsAddressAutocomplete().catch(() => {
                 updateCompsMapOpenLink();
