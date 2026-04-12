@@ -17466,14 +17466,14 @@ function initNavbarDateTime() {
 
                 const redfinUrl = String(payload.primaryUrl || (payload.links && payload.links.redfin) || '').trim();
                 const listing = payload.listing && typeof payload.listing === 'object'
-                    ? { ...payload.listing, imageUrl: '' }
+                    ? { ...payload.listing }
                     : {};
                 if (importSourceUrlInput && redfinUrl) {
                     importSourceUrlInput.value = redfinUrl;
                 }
 
                 populateDealsImportForm(listing);
-                showDashboardToast('success', 'Auto Collected', 'FAST found the Redfin listing and autofilled the import form without using the listing photo.');
+                showDashboardToast('success', 'Auto Collected', 'FAST found the Redfin listing and autofilled the import form, including the primary image URL when available.');
             } catch (error) {
                 showDashboardToast('error', 'Auto Collect Failed', error && error.message ? error.message : 'FAST could not auto collect the Redfin listing for this address.');
             } finally {
@@ -21610,9 +21610,11 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const nextStyles = currentMapNaked
+                const shouldUseNakedStyles = currentMapNaked;
+                const shouldUseDefaultStyles = !currentMapNaked && currentMapLayer !== 'aerial';
+                const nextStyles = shouldUseNakedStyles
                     ? (nakedGoogleMapsStyles || buildNakedGoogleMapsStyles(defaultGoogleMapsStyles))
-                    : (Array.isArray(defaultGoogleMapsStyles) ? defaultGoogleMapsStyles : null);
+                    : (shouldUseDefaultStyles && Array.isArray(defaultGoogleMapsStyles) ? defaultGoogleMapsStyles : null);
 
                 mapInstance.setOptions({
                     styles: nextStyles
@@ -22105,7 +22107,7 @@ function initNavbarDateTime() {
                 }
 
                 const nextMapTypeId = currentMapLayer === 'aerial'
-                    ? 'satellite'
+                    ? (currentMapNaked ? 'satellite' : 'hybrid')
                     : (currentMapLayer === 'hybrid' ? 'hybrid' : 'roadmap');
                 mapInstance.setMapTypeId(nextMapTypeId);
                 applyCurrentMapStyles();

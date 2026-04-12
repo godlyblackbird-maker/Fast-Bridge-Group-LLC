@@ -712,6 +712,53 @@ function mapListingStatus(value) {
   return 'active';
 }
 
+function decodeImportedScriptValue(value) {
+  return String(value || '')
+    .replace(/\\u002f/gi, '/')
+    .replace(/\\u003a/gi, ':')
+    .replace(/\\u0026/gi, '&')
+    .replace(/\\u003d/gi, '=')
+    .replace(/\\\//g, '/')
+    .replace(/\\"/g, '"')
+    .trim();
+}
+
+function extractImportedImageCandidate(html, requestUrl, source, structuredImage, ogImage) {
+  const preferredCandidates = [structuredImage];
+
+  if (source === 'redfin') {
+    const redfinPatterns = [
+      /"photoUrls"\s*:\s*\[\s*"([^"]+)"/i,
+      /"(?:resizedPhotoUrl|mainPhotoUrl|photoUrl|imageUrl|heroImageUrl|src)"\s*:\s*"((?:https?:)?(?:\\\/|\/){2}[^"]*cdn-redfin\.com[^"]+)"/i,
+      /"(https?:\\\/\\\/[^"]*cdn-redfin\.com\\\/photo\\\/[^"]+)"/i,
+      /"(https?:\/\/[^"]*cdn-redfin\.com\/photo\/[^"\\]+)"/i
+    ];
+
+    for (const pattern of redfinPatterns) {
+      const match = html.match(pattern);
+      if (!match || !match[1]) {
+        continue;
+      }
+
+      const normalizedUrl = normalizeImportedImageUrl(decodeImportedScriptValue(match[1]), requestUrl);
+      if (normalizedUrl) {
+        return normalizedUrl;
+      }
+    }
+  }
+
+  preferredCandidates.push(ogImage);
+
+  for (const candidate of preferredCandidates) {
+    const normalizedUrl = normalizeImportedImageUrl(candidate, requestUrl);
+    if (normalizedUrl) {
+      return normalizedUrl;
+    }
+  }
+
+  return '';
+}
+
 function extractListingImportData(html, requestUrl, source) {
   const ogTitle = extractMetaTagContent(html, 'og:title') || extractMetaTagContent(html, 'twitter:title');
   const ogDescription = extractMetaTagContent(html, 'og:description') || extractMetaTagContent(html, 'description') || extractMetaTagContent(html, 'twitter:description');
@@ -735,7 +782,7 @@ function extractListingImportData(html, requestUrl, source) {
   const rawAddress = structuredAddress || normalizeListingText(ogTitle.split('|')[0].split(' - ')[0]);
   const rawLocation = locationLabel || findFirstPatternMatch(rawAddress, [/^[^,]+,\s*(.+)$/]);
   const description = ogDescription || normalizeListingText(structuredListing && structuredListing.description);
-  const normalizedImageUrl = normalizeImportedImageUrl(structuredImage || ogImage, requestUrl);
+  const normalizedImageUrl = extractImportedImageCandidate(html, requestUrl, source, structuredImage, ogImage);
 
   return {
     source,
