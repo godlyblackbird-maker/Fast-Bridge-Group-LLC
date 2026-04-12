@@ -407,6 +407,14 @@ function collectDocuSignTemplateRoleNames(recipientsPayload) {
   ));
 }
 
+function resolveDocuSignTemplateRoleName(configuredRoleName, templateRoleNames, fallbackCandidates = []) {
+  const candidates = [configuredRoleName, ...fallbackCandidates]
+    .map((value) => cleanDocuSignText(value, 120))
+    .filter(Boolean);
+
+  return candidates.find((candidate) => templateRoleNames.includes(candidate)) || '';
+}
+
 async function getDocuSignTemplateMetadata(config, accountContext, accessToken) {
   const templateBaseUrl = `${accountContext.baseUri}/restapi/v2.1/accounts/${encodeURIComponent(accountContext.accountId)}/templates/${encodeURIComponent(config.templateId)}`;
 
@@ -434,19 +442,107 @@ async function getDocuSignTemplateMetadata(config, accountContext, accessToken) 
   }
 
   const roleNames = collectDocuSignTemplateRoleNames(recipientsPayload);
-  const missingRoles = [config.buyerRoleName, config.sellerRoleName].filter((roleName) => !roleNames.includes(roleName));
+  const resolvedBuyerRoleName = resolveDocuSignTemplateRoleName(config.buyerRoleName, roleNames, [
+    'Buyer',
+    'Assignee',
+    'Buyer / Assignee',
+    'Buyer/Assignee'
+  ]);
+  const resolvedSellerRoleName = resolveDocuSignTemplateRoleName(config.sellerRoleName, roleNames, [
+    'Seller',
+    'Assignor',
+    'Seller / Assignor',
+    'Seller/Assignor'
+  ]);
+  const missingRoles = [];
+  if (!resolvedBuyerRoleName) missingRoles.push(`buyer role (${config.buyerRoleName})`);
+  if (!resolvedSellerRoleName) missingRoles.push(`seller role (${config.sellerRoleName})`);
   if (missingRoles.length) {
-    throw new Error(`The DocuSign template is missing the expected role names: ${missingRoles.join(', ')}.`);
+    throw new Error(`The DocuSign template is missing the expected recipient roles: ${missingRoles.join(', ')}. Available roles: ${roleNames.join(', ') || 'none found'}.`);
   }
 
   return {
     id: cleanDocuSignText(templatePayload && (templatePayload.templateId || templatePayload.template_id || config.templateId), 120),
     name: cleanDocuSignText(templatePayload && (templatePayload.name || templatePayload.templateName), 240) || 'DocuSign template',
-    roleNames
+    roleNames,
+    buyerRoleName: resolvedBuyerRoleName,
+    sellerRoleName: resolvedSellerRoleName
   };
 }
 
-function buildDocuSignEnvelopePayload(config, payload) {
+function buildDocuSignTextCustomFields(entries) {
+  const fields = new Map();
+
+  entries.forEach(([names, value]) => {
+    if (!value) {
+      return;
+    }
+
+    names.forEach((name) => {
+      const cleanName = cleanDocuSignText(name, 120);
+      const fieldKey = cleanName.toLowerCase();
+      if (!cleanName || fields.has(fieldKey)) {
+        return;
+      }
+
+      fields.set(fieldKey, {
+        name: cleanName,
+        value,
+        show: 'false'
+      });
+    });
+  });
+
+  return Array.from(fields.values());
+}
+
+function getDocuSignRecipientClientUserId(recipientType) {
+  return recipientType === 'seller'
+    ? 'agent-workspace-seller'
+    : 'agent-workspace-buyer';
+}
+
+async function createDocuSignRecipientSigningLink(accountContext, accessToken, envelopeId, recipient, requestOrigin) {
+  const cleanedEnvelopeId = cleanDocuSignText(envelopeId, 120);
+  const recipientName = cleanDocuSignText(recipient && recipient.name, 120);
+  const recipientEmail = cleanDocuSignText(recipient && recipient.email, 180).toLowerCase();
+  const recipientType = recipient && recipient.type === 'seller' ? 'seller' : 'buyer';
+  const clientUserId = getDocuSignRecipientClientUserId(recipientType);
+  const origin = String(requestOrigin || '').trim().replace(/\/+$/g, '') || `http://localhost:${PORT}`;
+
+  if (!cleanedEnvelopeId || !recipientName || !recipientEmail) {
+    throw new Error('A DocuSign signing link requires an envelope ID, recipient name, and recipient email.');
+  }
+
+  const response = await fetch(`${accountContext.baseUri}/restapi/v2.1/accounts/${encodeURIComponent(accountContext.accountId)}/envelopes/${encodeURIComponent(cleanedEnvelopeId)}/views/recipient`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      returnUrl: `${origin}/users.html?docusign=complete&recipient=${encodeURIComponent(recipientType)}`,
+      authenticationMethod: 'none',
+      email: recipientEmail,
+      userName: recipientName,
+      clientUserId
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(buildDocuSignErrorMessage(payload, `DocuSign could not create the ${recipientType} signing link.`));
+  }
+
+  const signingUrl = String(payload && payload.url || '').trim();
+  if (!signingUrl) {
+    throw new Error(`DocuSign did not return a ${recipientType} signing URL.`);
+  }
+
+  return signingUrl;
+}
+
+function buildDocuSignEnvelopePayload(config, payload, templateMetadata = null) {
   const propertyAddress = cleanDocuSignText(payload.propertyAddress, 300);
   const contractDate = cleanDocuSignText(payload.contractDate, 40);
   const apn = cleanDocuSignText(payload.apn, 120);
@@ -464,20 +560,19 @@ function buildDocuSignEnvelopePayload(config, payload) {
     1000
   );
 
-  const textCustomFields = [
-    ['propertyAddress', propertyAddress],
-    ['contractDate', contractDate],
-    ['apn', apn],
-    ['purchasePrice', purchasePrice],
-    ['buyerName', buyerName],
-    ['sellerName', sellerName]
-  ]
-    .filter(([, value]) => Boolean(value))
-    .map(([name, value]) => ({
-      name,
-      value,
-      show: 'false'
-    }));
+  const textCustomFields = buildDocuSignTextCustomFields([
+    [['propertyAddress', 'property_address', 'address'], propertyAddress],
+    [['contractDate', 'contract_date', 'agreementDate', 'purchaseAgreementDate'], contractDate],
+    [['apn', 'parcelNumber', 'propertyApn'], apn],
+    [['purchasePrice', 'purchase_price', 'salePrice', 'salesPrice'], purchasePrice],
+    [['buyerName', 'buyer', 'assigneeName', 'assignee'], buyerName],
+    [['buyerEmail', 'buyer_email', 'assigneeEmail', 'assignee_email'], buyerEmail],
+    [['sellerName', 'seller', 'assignorName', 'assignor'], sellerName],
+    [['sellerEmail', 'seller_email', 'assignorEmail', 'assignor_email'], sellerEmail]
+  ]);
+
+  const buyerRoleName = cleanDocuSignText(templateMetadata && templateMetadata.buyerRoleName, 120) || config.buyerRoleName;
+  const sellerRoleName = cleanDocuSignText(templateMetadata && templateMetadata.sellerRoleName, 120) || config.sellerRoleName;
 
   const envelope = {
     status: 'sent',
@@ -486,14 +581,18 @@ function buildDocuSignEnvelopePayload(config, payload) {
     emailBlurb: emailMessage,
     templateRoles: [
       {
-        roleName: config.buyerRoleName,
+        roleName: buyerRoleName,
         name: buyerName,
-        email: buyerEmail
+        email: buyerEmail,
+        clientUserId: getDocuSignRecipientClientUserId('buyer'),
+        embeddedRecipientStartURL: 'SIGN_AT_DOCUSIGN'
       },
       {
-        roleName: config.sellerRoleName,
+        roleName: sellerRoleName,
         name: sellerName,
-        email: sellerEmail
+        email: sellerEmail,
+        clientUserId: getDocuSignRecipientClientUserId('seller'),
+        embeddedRecipientStartURL: 'SIGN_AT_DOCUSIGN'
       }
     ]
   };
@@ -521,7 +620,7 @@ async function sendDocuSignTemplateEnvelope(payload) {
   const accessToken = await getDocuSignAccessToken(config);
   const accountContext = await resolveDocuSignAccountContext(config, accessToken);
   const templateMetadata = await getDocuSignTemplateMetadata(config, accountContext, accessToken);
-  const envelopePayload = buildDocuSignEnvelopePayload(config, payload);
+  const envelopePayload = buildDocuSignEnvelopePayload(config, payload, templateMetadata);
 
   const response = await fetch(`${accountContext.baseUri}/restapi/v2.1/accounts/${encodeURIComponent(accountContext.accountId)}/envelopes`, {
     method: 'POST',
@@ -7291,6 +7390,7 @@ app.get('/api/maps/google-config', (_req, res) => {
     enabled: Boolean(GOOGLE_MAPS_API_KEY),
     apiKey: GOOGLE_MAPS_API_KEY,
     mapId: GOOGLE_MAPS_MAP_ID,
+    earthEnabled: Boolean(GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_MAP_ID),
     stylePath: '/Themes/google-maps-mls-light.json'
   });
 });
@@ -10559,6 +10659,61 @@ app.post('/api/agent-workspace-docusign/send', express.json({ limit: '1mb' }), a
   } catch (error) {
     console.error('Failed to send Agent Workspace DocuSign envelope:', error);
     return res.status(500).json({ error: error && error.message ? error.message : 'Failed to send the DocuSign envelope.' });
+  }
+});
+
+app.post('/api/agent-workspace-docusign/signing-link', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const envelopeId = cleanDocuSignText(req.body?.envelopeId, 120);
+    const recipientType = String(req.body?.recipientType || '').trim().toLowerCase() === 'seller' ? 'seller' : 'buyer';
+    const recipientName = cleanDocuSignText(req.body?.recipientName, 120);
+    const recipientEmail = cleanDocuSignText(req.body?.recipientEmail, 180).toLowerCase();
+
+    if (!envelopeId) {
+      return res.status(400).json({ error: 'Send the purchase agreement first so an envelope is available.' });
+    }
+
+    if (!recipientName || !recipientEmail) {
+      return res.status(400).json({ error: `Add the ${recipientType} name and email before copying a DocuSign link.` });
+    }
+
+    if (!isValidEmailAddress(recipientEmail)) {
+      return res.status(400).json({ error: `Enter a valid ${recipientType} email address before copying the DocuSign link.` });
+    }
+
+    const config = getDocuSignConfig();
+    const missingConfig = getDocuSignMissingConfig(config);
+    if (missingConfig.length) {
+      return res.status(500).json({ error: `DocuSign is not configured. Missing ${missingConfig.join(', ')}.` });
+    }
+
+    const accessToken = await getDocuSignAccessToken(config);
+    const accountContext = await resolveDocuSignAccountContext(config, accessToken);
+    const signingUrl = await createDocuSignRecipientSigningLink(
+      accountContext,
+      accessToken,
+      envelopeId,
+      {
+        type: recipientType,
+        name: recipientName,
+        email: recipientEmail
+      },
+      getRequestOrigin(req)
+    );
+
+    return res.json({
+      success: true,
+      recipientType,
+      signingUrl
+    });
+  } catch (error) {
+    console.error('Failed to create Agent Workspace DocuSign signing link:', error);
+    return res.status(500).json({ error: error && error.message ? error.message : 'Failed to create the DocuSign signing link.' });
   }
 });
 

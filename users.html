@@ -519,17 +519,18 @@
 
                         <div class="agent-contract-section">
                             <h4>DocuSign Recipients</h4>
+                            <p class="agent-note-help">Use the buyer and seller names/emails from the updated agreement. Older assignee or assignor template roles are still mapped automatically on the server.</p>
                             <div class="offer-grid agent-contract-grid">
-                                <label>Buyer / Assignee Name
-                                    <input id="agent-contract-buyer" class="form-input agent-contract-field-green" type="text" placeholder="Buyer or assignee name">
+                                <label>Buyer Name
+                                    <input id="agent-contract-buyer" class="form-input agent-contract-field-green" type="text" placeholder="Buyer name">
                                 </label>
-                                <label>Buyer / Assignee Email
+                                <label>Buyer Email
                                     <input id="agent-contract-buyer-email" class="form-input agent-contract-field-green" type="email" placeholder="buyer@example.com">
                                 </label>
-                                <label>Seller / Assignor Name
-                                    <input id="agent-contract-seller" class="form-input agent-contract-field-green" type="text" placeholder="Seller or assignor name">
+                                <label>Seller Name
+                                    <input id="agent-contract-seller" class="form-input agent-contract-field-green" type="text" placeholder="Seller name">
                                 </label>
-                                <label>Seller / Assignor Email
+                                <label>Seller Email
                                     <input id="agent-contract-seller-email" class="form-input agent-contract-field-green" type="email" placeholder="seller@example.com">
                                 </label>
                             </div>
@@ -551,6 +552,20 @@
 
                         <div class="outreach-actions agent-contract-actions">
                             <button type="button" class="card-btn active" id="agent-contract-send-btn">Send DocuSign</button>
+                            <button type="button" class="card-btn subtle agent-contract-copy-btn" id="agent-contract-copy-buyer-link-btn" disabled>
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M10 14a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.41 1.41"></path>
+                                    <path d="M14 10a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.41-1.41"></path>
+                                </svg>
+                                <span>Copy Buyer Link</span>
+                            </button>
+                            <button type="button" class="card-btn subtle agent-contract-copy-btn" id="agent-contract-copy-seller-link-btn" disabled>
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M10 14a3 3 0 0 1 0-4.24l2.12-2.12a3 3 0 1 1 4.24 4.24l-1.41 1.41"></path>
+                                    <path d="M14 10a3 3 0 0 1 0 4.24l-2.12 2.12a3 3 0 1 1-4.24-4.24l1.41-1.41"></path>
+                                </svg>
+                                <span>Copy Seller Link</span>
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -16754,9 +16754,11 @@ function initNavbarDateTime() {
         const emailSubjectInput = document.getElementById('agent-contract-email-subject');
         const emailMessageInput = document.getElementById('agent-contract-email-message');
         const sendButton = document.getElementById('agent-contract-send-btn');
+        const copyBuyerLinkButton = document.getElementById('agent-contract-copy-buyer-link-btn');
+        const copySellerLinkButton = document.getElementById('agent-contract-copy-seller-link-btn');
         const statusNote = document.getElementById('agent-contract-status');
 
-        if (!propertySelect || !propertyAddressInput || !dateInput || !buyerInput || !buyerEmailInput || !sellerInput || !sellerEmailInput || !apnInput || !purchasePriceInput || !emailSubjectInput || !emailMessageInput || !sendButton || !statusNote) {
+        if (!propertySelect || !propertyAddressInput || !dateInput || !buyerInput || !buyerEmailInput || !sellerInput || !sellerEmailInput || !apnInput || !purchasePriceInput || !emailSubjectInput || !emailMessageInput || !sendButton || !copyBuyerLinkButton || !copySellerLinkButton || !statusNote) {
             return;
         }
 
@@ -16766,10 +16768,22 @@ function initNavbarDateTime() {
         let lastAutoSubject = '';
         let lastAutoMessage = '';
         let lastAppliedPropertyKey = '';
+        let lastEnvelopeId = '';
 
         function setStatus(message, tone) {
             statusNote.textContent = message;
             statusNote.dataset.tone = tone || '';
+        }
+
+        function updateCopyLinkButtons() {
+            const hasEnvelope = Boolean(cleanContractValue(lastEnvelopeId));
+            copyBuyerLinkButton.disabled = !hasEnvelope;
+            copySellerLinkButton.disabled = !hasEnvelope;
+        }
+
+        function clearSigningLinks() {
+            lastEnvelopeId = '';
+            updateCopyLinkButtons();
         }
 
         function cleanContractValue(value) {
@@ -17062,6 +17076,7 @@ function initNavbarDateTime() {
 
             lastAppliedPropertyKey = selectedPropertyKey;
             applyAutoEnvelopeCopy(propertyAddress);
+            clearSigningLinks();
             updateSelectionStatus();
         }
 
@@ -17135,6 +17150,68 @@ function initNavbarDateTime() {
             };
         }
 
+        async function copySigningLink(recipientType) {
+            const normalizedRecipientType = recipientType === 'seller' ? 'seller' : 'buyer';
+            const recipientName = cleanContractValue(normalizedRecipientType === 'seller' ? sellerInput.value : buyerInput.value);
+            const recipientEmail = cleanContractValue(normalizedRecipientType === 'seller' ? sellerEmailInput.value : buyerEmailInput.value).toLowerCase();
+
+            if (!cleanContractValue(lastEnvelopeId)) {
+                showDashboardToast('error', 'No Envelope Yet', 'Send the DocuSign purchase agreement before copying a signing link.');
+                return;
+            }
+
+            if (!recipientName || !recipientEmail || !isValidEmail(recipientEmail)) {
+                showDashboardToast('error', 'Missing Recipient Details', `Add a valid ${normalizedRecipientType} name and email before copying the signing link.`);
+                return;
+            }
+
+            const targetButton = normalizedRecipientType === 'seller' ? copySellerLinkButton : copyBuyerLinkButton;
+            const originalLabel = targetButton.querySelector('span') ? targetButton.querySelector('span').textContent : targetButton.textContent;
+
+            targetButton.disabled = true;
+            if (targetButton.querySelector('span')) {
+                targetButton.querySelector('span').textContent = 'Generating Link...';
+            }
+
+            try {
+                const response = await requestDocuSign('/api/agent-workspace-docusign/signing-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        envelopeId: lastEnvelopeId,
+                        recipientType: normalizedRecipientType,
+                        recipientName,
+                        recipientEmail
+                    })
+                });
+
+                const signingUrl = cleanContractValue(response && response.signingUrl);
+                if (!signingUrl) {
+                    throw new Error('DocuSign did not return a signing URL.');
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(signingUrl);
+                } else {
+                    throw new Error('Clipboard API unavailable');
+                }
+
+                showDashboardToast('success', 'Link Copied', `${normalizedRecipientType === 'seller' ? 'Seller' : 'Buyer'} signing link copied to clipboard.`);
+                setStatus(`${normalizedRecipientType === 'seller' ? 'Seller' : 'Buyer'} signing link copied.`, 'success');
+            } catch (error) {
+                const message = error && error.message ? error.message : 'The signing link could not be created.';
+                showDashboardToast('error', 'Copy Link Failed', message);
+                setStatus(message, 'error');
+            } finally {
+                if (targetButton.querySelector('span')) {
+                    targetButton.querySelector('span').textContent = originalLabel;
+                }
+                updateCopyLinkButtons();
+            }
+        }
+
         function validateEnvelopePayload(payload) {
             const missing = [];
             if (!payload.propertyAddress) missing.push('property address');
@@ -17177,14 +17254,17 @@ function initNavbarDateTime() {
                 });
 
                 const envelopeId = cleanContractValue(response && response.envelope && response.envelope.envelopeId);
+                lastEnvelopeId = envelopeId;
+                updateCopyLinkButtons();
                 showDashboardToast('success', 'DocuSign Sent', envelopeId
                     ? `Envelope ${envelopeId} was sent for signature.`
                     : 'The DocuSign envelope was sent for signature.');
                 setStatus(envelopeId
-                    ? `DocuSign envelope ${envelopeId} was sent successfully.`
-                    : 'The DocuSign envelope was sent successfully.', 'success');
+                    ? `DocuSign envelope ${envelopeId} was sent successfully. Use Copy Buyer Link or Copy Seller Link to share it.`
+                    : 'The DocuSign envelope was sent successfully. Use the copy-link buttons to share it.', 'success');
             } catch (error) {
                 const message = error && error.message ? error.message : 'The DocuSign envelope could not be sent.';
+                clearSigningLinks();
                 showDashboardToast('error', 'DocuSign Send Failed', message);
                 setStatus(message, 'error');
             } finally {
@@ -17200,14 +17280,19 @@ function initNavbarDateTime() {
         [propertyAddressInput, dateInput, buyerInput, buyerEmailInput, sellerInput, sellerEmailInput, apnInput, purchasePriceInput].forEach((input) => {
             input.addEventListener('input', updateSelectionStatus);
             input.addEventListener('change', updateSelectionStatus);
+            input.addEventListener('input', clearSigningLinks);
+            input.addEventListener('change', clearSigningLinks);
         });
 
         propertySelect.addEventListener('change', applySelectedProperty);
         sendButton.addEventListener('click', sendDocuSignEnvelope);
+        copyBuyerLinkButton.addEventListener('click', () => copySigningLink('buyer'));
+        copySellerLinkButton.addEventListener('click', () => copySigningLink('seller'));
         window.addEventListener('dashboard-data-updated', refreshPropertyOptions);
 
         dateInput.value = getTodayDateString();
         applyAutoEnvelopeCopy('');
+        updateCopyLinkButtons();
         refreshPropertyOptions();
         void loadDocuSignConfig();
     }
@@ -20715,7 +20800,13 @@ function initNavbarDateTime() {
             return freshConfig || cachedConfig || {};
         }
 
-        function loadGoogleMapsScript(apiKey) {
+        function loadGoogleMapsScript(configOrApiKey) {
+            const normalizedConfig = typeof configOrApiKey === 'object' && configOrApiKey !== null
+                ? configOrApiKey
+                : { apiKey: configOrApiKey };
+            const apiKey = String(normalizedConfig.apiKey || '').trim();
+            const mapId = String(normalizedConfig.mapId || '').trim();
+
             if (googleMapsAuthFailed) {
                 return Promise.reject(new Error(
                     googleMapsAuthFailureMessage || 'Google Maps authorization failed for this website.'
@@ -20814,7 +20905,17 @@ function initNavbarDateTime() {
                 script.id = 'fast-google-maps-script';
                 script.async = true;
                 script.defer = true;
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=beta&libraries=marker,drawing,geometry,places,maps3d&callback=${callbackName}`;
+                const mapsScriptParams = new URLSearchParams();
+                mapsScriptParams.set('key', apiKey);
+                mapsScriptParams.set('v', 'beta');
+                mapsScriptParams.set('loading', 'async');
+                mapsScriptParams.set('libraries', 'marker,drawing,geometry,places,maps3d');
+                mapsScriptParams.set('auth_referrer_policy', 'origin');
+                if (mapId) {
+                    mapsScriptParams.set('map_ids', mapId);
+                }
+                mapsScriptParams.set('callback', callbackName);
+                script.src = `https://maps.googleapis.com/maps/api/js?${mapsScriptParams.toString()}`;
                 script.onerror = () => {
                     restoreAuthFailureHandler();
                     rejectOnce(new Error('Google Maps failed to load.'));
@@ -21022,6 +21123,11 @@ function initNavbarDateTime() {
             const compsMapSearchButton = document.getElementById('comps-map-address-search-btn');
             const compsMapStyleSource = document.getElementById('comps-map-style-source');
             const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
+            const measureShell = document.getElementById('comps-map-measure-shell');
+            const measurePrimary = document.getElementById('comps-map-measure-primary');
+            const measureBadge = document.getElementById('comps-map-measure-badge');
+            const measureMessage = document.getElementById('comps-map-measure-message');
+            const measureSecondary = document.getElementById('comps-map-measure-secondary');
             const nearbyList = document.getElementById('comps-nearby-list');
             const summaryRow = document.getElementById('comps-applied-summary');
             const resultsMeta = document.getElementById('comps-results-meta');
@@ -21119,8 +21225,30 @@ function initNavbarDateTime() {
             let earthMarkerLibraryPromise = null;
             let earthMarkerCtor = null;
             let earthMapModeValue = 'HYBRID';
+            let lastGoogleMapsConfig = null;
             let aerialViewLookupPromise = null;
             let aerialViewActiveAddress = '';
+            let measurementPolyline = null;
+            let measurementPolygon = null;
+            let measurementPathListeners = [];
+
+            function getEarthLayerButton() {
+                return layerButtons.find((button) => String(button.dataset.compsMapLayer || '').trim() === 'earth') || null;
+            }
+
+            function syncEarthLayerAvailability(config) {
+                lastGoogleMapsConfig = config && typeof config === 'object' ? config : lastGoogleMapsConfig;
+                const earthButton = getEarthLayerButton();
+                if (!earthButton) {
+                    return;
+                }
+
+                const earthEnabled = Boolean(lastGoogleMapsConfig && lastGoogleMapsConfig.earthEnabled);
+                earthButton.disabled = !earthEnabled;
+                earthButton.title = earthEnabled
+                    ? ''
+                    : 'Google Earth needs both GOOGLE_MAPS_API_KEY and GOOGLE_MAPS_MAP_ID on the server.';
+            }
 
             function setEarthViewState(isVisible) {
                 if (compsMapEarthShell) {
@@ -21131,6 +21259,190 @@ function initNavbarDateTime() {
                 if (wrap) {
                     wrap.classList.toggle('is-earth-active', Boolean(isVisible));
                 }
+            }
+
+            function setMeasurementPanelState(options = {}) {
+                if (!measureShell || !measurePrimary || !measureBadge || !measureMessage || !measureSecondary) {
+                    return;
+                }
+
+                const settings = options && typeof options === 'object' ? options : {};
+                const visible = Boolean(settings.visible);
+                measureShell.hidden = !visible;
+                measurePrimary.textContent = String(settings.primary || 'Pick a measure tool').trim() || 'Pick a measure tool';
+                measureBadge.textContent = String(settings.badge || 'Inactive').trim() || 'Inactive';
+                measureMessage.textContent = String(settings.message || 'Use Measure Distance or Measure Area to trace lengths, lot size, or perimeter inside the comps map.').trim() || 'Use Measure Distance or Measure Area to trace lengths, lot size, or perimeter inside the comps map.';
+                measureSecondary.textContent = String(settings.secondary || 'No measurement yet').trim() || 'No measurement yet';
+            }
+
+            function formatMeasuredDistance(meters) {
+                const safeMeters = Number(meters) || 0;
+                const feet = safeMeters * 3.28084;
+                const miles = safeMeters / 1609.344;
+                if (miles >= 0.1) {
+                    return `${miles.toFixed(miles >= 10 ? 1 : 2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')} mi`;
+                }
+                return `${Math.round(feet).toLocaleString('en-US')} ft`;
+            }
+
+            function formatMeasuredArea(squareMeters) {
+                const safeArea = Number(squareMeters) || 0;
+                const squareFeet = safeArea * 10.7639;
+                const acres = safeArea / 4046.8564224;
+                return {
+                    squareFeet: `${Math.round(squareFeet).toLocaleString('en-US')} sq ft`,
+                    acres: `${acres.toFixed(acres >= 10 ? 1 : 2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')} ac`
+                };
+            }
+
+            function clearMeasurementPathListeners() {
+                measurementPathListeners.forEach((listener) => {
+                    if (listener && typeof listener.remove === 'function') {
+                        listener.remove();
+                    }
+                });
+                measurementPathListeners = [];
+            }
+
+            function clearMeasurementArtifacts(options = {}) {
+                const settings = options && typeof options === 'object' ? options : {};
+                clearMeasurementPathListeners();
+
+                if (measurementPolyline) {
+                    measurementPolyline.setMap(null);
+                    measurementPolyline = null;
+                }
+
+                if (measurementPolygon) {
+                    measurementPolygon.setMap(null);
+                    measurementPolygon = null;
+                }
+
+                if (!settings.keepPanel) {
+                    setMeasurementPanelState({ visible: false });
+                }
+            }
+
+            function getMeasurementShapePath(shape) {
+                if (!shape || typeof shape.getPath !== 'function') {
+                    return null;
+                }
+
+                const path = shape.getPath();
+                return path && typeof path.getArray === 'function' ? path.getArray() : null;
+            }
+
+            function updateMeasurementSummary() {
+                if (!window.google || !window.google.maps || !window.google.maps.geometry || !window.google.maps.geometry.spherical) {
+                    setMeasurementPanelState({
+                        visible: true,
+                        badge: 'Ruler',
+                        primary: 'Measurement ready',
+                        message: 'Google Maps geometry tools are unavailable in this browser session.',
+                        secondary: 'Measurement totals unavailable'
+                    });
+                    return;
+                }
+
+                if (measurementPolyline) {
+                    const polylinePath = getMeasurementShapePath(measurementPolyline) || [];
+                    const distanceMeters = polylinePath.length >= 2
+                        ? window.google.maps.geometry.spherical.computeLength(polylinePath)
+                        : 0;
+                    setMeasurementPanelState({
+                        visible: true,
+                        badge: 'Distance',
+                        primary: formatMeasuredDistance(distanceMeters),
+                        message: 'Distance ruler is active. Drag the blue vertices to fine-tune the path.',
+                        secondary: `${polylinePath.length} point${polylinePath.length === 1 ? '' : 's'} plotted`
+                    });
+                    return;
+                }
+
+                if (measurementPolygon) {
+                    const polygonPath = getMeasurementShapePath(measurementPolygon) || [];
+                    const areaSquareMeters = polygonPath.length >= 3
+                        ? window.google.maps.geometry.spherical.computeArea(polygonPath)
+                        : 0;
+                    const closedPolygonPath = polygonPath.length >= 3
+                        ? polygonPath.concat([polygonPath[0]])
+                        : polygonPath;
+                    const perimeterMeters = polygonPath.length >= 2
+                        ? window.google.maps.geometry.spherical.computeLength(closedPolygonPath)
+                        : 0;
+                    const areaSummary = formatMeasuredArea(areaSquareMeters);
+                    setMeasurementPanelState({
+                        visible: true,
+                        badge: 'Area',
+                        primary: areaSummary.acres,
+                        message: `Area ruler is active. ${areaSummary.squareFeet} inside the traced boundary.`,
+                        secondary: `Perimeter ${formatMeasuredDistance(perimeterMeters)}`
+                    });
+                    return;
+                }
+
+                if (currentDrawMode === 'measure-distance') {
+                    setMeasurementPanelState({
+                        visible: true,
+                        badge: 'Distance',
+                        primary: 'Click to trace distance',
+                        message: 'Click points on the map, then double-click to finish the ruler line.',
+                        secondary: 'Use Clear Area to remove the ruler'
+                    });
+                    return;
+                }
+
+                if (currentDrawMode === 'measure-area') {
+                    setMeasurementPanelState({
+                        visible: true,
+                        badge: 'Area',
+                        primary: 'Draw a boundary',
+                        message: 'Click around the lot or project area, then double-click to finish the measurement polygon.',
+                        secondary: 'Use Clear Area to remove the ruler'
+                    });
+                    return;
+                }
+
+                setMeasurementPanelState({ visible: false });
+            }
+
+            function attachMeasurementPathListeners(shape) {
+                clearMeasurementPathListeners();
+                if (!shape || typeof shape.getPath !== 'function') {
+                    return;
+                }
+
+                const path = shape.getPath();
+                ['insert_at', 'remove_at', 'set_at'].forEach((eventName) => {
+                    measurementPathListeners.push(path.addListener(eventName, () => {
+                        updateMeasurementSummary();
+                    }));
+                });
+            }
+
+            function getMeasurementPolylineOptions() {
+                return {
+                    strokeColor: '#38bdf8',
+                    strokeOpacity: 0.95,
+                    strokeWeight: 3,
+                    editable: true,
+                    clickable: true,
+                    zIndex: 340
+                };
+            }
+
+            function getMeasurementPolygonOptions() {
+                return {
+                    strokeColor: '#22c55e',
+                    strokeOpacity: 0.95,
+                    strokeWeight: 3,
+                    fillColor: '#22c55e',
+                    fillOpacity: 0.12,
+                    editable: true,
+                    draggable: false,
+                    clickable: true,
+                    zIndex: 340
+                };
             }
 
             function detachEarthMarker() {
@@ -21202,11 +21514,15 @@ function initNavbarDateTime() {
 
                 earthReadyPromise = (async () => {
                     const config = await resolveGoogleMapsBrowserConfig();
+                    syncEarthLayerAvailability(config);
                     if (!config.enabled || !config.apiKey) {
                         throw new Error('Google Maps API key is not configured for Earth view.');
                     }
+                    if (!config.mapId) {
+                        throw new Error('Google Earth needs GOOGLE_MAPS_MAP_ID configured on the server.');
+                    }
 
-                    await loadGoogleMapsScript(config.apiKey);
+                    await loadGoogleMapsScript(config);
                     if (!window.google || !window.google.maps || typeof window.google.maps.importLibrary !== 'function') {
                         throw new Error('Google Earth 3D is not supported in this browser.');
                     }
@@ -21232,6 +21548,7 @@ function initNavbarDateTime() {
 
                     earthMapModeValue = MapMode && MapMode.HYBRID ? MapMode.HYBRID : 'HYBRID';
                     earthMapElement = new Map3DElement({
+                        mapId: config.mapId,
                         mode: earthMapModeValue,
                         range: 1400,
                         tilt: 67.5,
@@ -21739,7 +22056,7 @@ function initNavbarDateTime() {
                     button.disabled = false;
                 });
                 if (clearAreaButton) {
-                    clearAreaButton.disabled = !drawnPolygon;
+                    clearAreaButton.disabled = !drawnPolygon && !measurementPolyline && !measurementPolygon;
                 }
                 if (mapInstance) {
                     mapInstance.setOptions({
@@ -21911,22 +22228,36 @@ function initNavbarDateTime() {
             }
 
             function setDrawMode(nextMode) {
-                const normalizedMode = ['none', 'draw-area', 'freehand'].includes(String(nextMode || '').trim())
+                const normalizedMode = ['none', 'draw-area', 'freehand', 'measure-distance', 'measure-area'].includes(String(nextMode || '').trim())
                     ? String(nextMode || '').trim()
                     : 'none';
+
+                if ((normalizedMode === 'measure-distance' || normalizedMode === 'measure-area') && currentMapLayer === 'earth') {
+                    showDashboardToast('info', 'Ruler Switched To Hybrid', 'FAST moved the map to Hybrid so the custom ruler can draw on the live map canvas.');
+                    setMapLayerMode('hybrid');
+                }
+
                 currentDrawMode = normalizedMode;
                 syncDrawButtons();
 
                 if (drawingManager) {
-                    drawingManager.setDrawingMode(normalizedMode === 'draw-area' ? window.google.maps.drawing.OverlayType.POLYGON : null);
+                    let drawingMode = null;
+                    if (normalizedMode === 'draw-area' || normalizedMode === 'measure-area') {
+                        drawingMode = window.google.maps.drawing.OverlayType.POLYGON;
+                    } else if (normalizedMode === 'measure-distance') {
+                        drawingMode = window.google.maps.drawing.OverlayType.POLYLINE;
+                    }
+                    drawingManager.setDrawingMode(drawingMode);
                 }
 
                 if (normalizedMode === 'freehand') {
                     enableFreehandMode();
+                    updateMeasurementSummary();
                     return;
                 }
 
                 disableFreehandMode();
+                updateMeasurementSummary();
             }
 
             function polygonContainsComp(comp) {
@@ -22054,12 +22385,13 @@ function initNavbarDateTime() {
 
                 mapReadyPromise = (async () => {
                     const config = await resolveGoogleMapsBrowserConfig();
+                    syncEarthLayerAvailability(config);
                     if (!config.enabled || !config.apiKey) {
                         throw new Error('Google Maps API key is not configured in the server environment.');
                     }
                     updateMapStyleSource(config);
 
-                    await loadGoogleMapsScript(config.apiKey);
+                    await loadGoogleMapsScript(config);
                     await ensureSubjectCoordinates();
 
                     if (window.google && window.google.maps && window.google.maps.importLibrary) {
@@ -22110,11 +22442,44 @@ function initNavbarDateTime() {
                         drawingManager = new window.google.maps.drawing.DrawingManager({
                             drawingMode: null,
                             drawingControl: false,
-                            polygonOptions: getPolygonOptions()
+                            polygonOptions: getPolygonOptions(),
+                            polylineOptions: getMeasurementPolylineOptions()
                         });
                         drawingManager.setMap(mapInstance);
                         drawingManager.addListener('overlaycomplete', (event) => {
-                            if (!event || event.type !== window.google.maps.drawing.OverlayType.POLYGON) {
+                            if (!event) {
+                                return;
+                            }
+
+                            if (currentDrawMode === 'measure-distance' && event.type === window.google.maps.drawing.OverlayType.POLYLINE) {
+                                clearMeasurementArtifacts({ keepPanel: true });
+                                measurementPolyline = event.overlay;
+                                measurementPolyline.setEditable(true);
+                                attachMeasurementPathListeners(measurementPolyline);
+                                currentDrawMode = 'none';
+                                syncDrawButtons();
+                                drawingManager.setDrawingMode(null);
+                                updateMeasurementSummary();
+                                return;
+                            }
+
+                            if (currentDrawMode === 'measure-area' && event.type === window.google.maps.drawing.OverlayType.POLYGON) {
+                                clearMeasurementArtifacts({ keepPanel: true });
+                                measurementPolygon = event.overlay;
+                                measurementPolygon.setOptions(getMeasurementPolygonOptions());
+                                measurementPolygon.setEditable(true);
+                                attachMeasurementPathListeners(measurementPolygon);
+                                currentDrawMode = 'none';
+                                syncDrawButtons();
+                                drawingManager.setDrawingMode(null);
+                                updateMeasurementSummary();
+                                return;
+                            }
+
+                            if (event.type !== window.google.maps.drawing.OverlayType.POLYGON) {
+                                if (event.overlay && typeof event.overlay.setMap === 'function') {
+                                    event.overlay.setMap(null);
+                                }
                                 return;
                             }
 
@@ -22134,6 +22499,7 @@ function initNavbarDateTime() {
                     setMapEmptyState(false);
                     syncStreetViewButtonState();
                     syncDrawButtons();
+                    updateMeasurementSummary();
                     return mapInstance;
                 })().catch((error) => {
                     mapReadyPromise = null;
@@ -22182,6 +22548,19 @@ function initNavbarDateTime() {
                 }
 
                 if (currentMapLayer === 'earth') {
+                    const earthConfig = lastGoogleMapsConfig || {};
+                    if (!earthConfig.earthEnabled) {
+                        currentMapLayer = 'hybrid';
+                        layerButtons.forEach((button) => {
+                            button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
+                        });
+                        showDashboardToast('error', 'Google Earth Unavailable', 'Google Earth needs both GOOGLE_MAPS_API_KEY and GOOGLE_MAPS_MAP_ID configured on the server.');
+                        if (mapInstance) {
+                            mapInstance.setMapTypeId('hybrid');
+                        }
+                        return;
+                    }
+
                     if (streetViewEnabled) {
                         setStreetViewMode(false);
                     }
@@ -22908,6 +23287,7 @@ function initNavbarDateTime() {
             if (clearAreaButton) {
                 clearAreaButton.addEventListener('click', () => {
                     clearDrawnArea();
+                    clearMeasurementArtifacts();
                     setDrawMode('none');
                 });
             }
@@ -22967,6 +23347,7 @@ function initNavbarDateTime() {
             setDrawMode('none');
             setStreetViewMode(false);
             lastSearchResult = null;
+            setMeasurementPanelState({ visible: false });
             initCompsAddressAutocomplete().catch(() => {
                 updateCompsMapOpenLink();
             });

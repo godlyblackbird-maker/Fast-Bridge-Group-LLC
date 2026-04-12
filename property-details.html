@@ -719,11 +719,13 @@
                                         </div>
                                     </div>
                                     <div class="comps-map-control-cluster">
-                                        <span class="comps-map-control-label">Area Tools</span>
+                                        <span class="comps-map-control-label">Map Tools</span>
                                         <div class="comps-map-toggle-group" role="tablist" aria-label="Map drawing tools">
                                             <button type="button" class="card-btn active" data-comps-draw-mode="none">Browse</button>
                                             <button type="button" class="card-btn" data-comps-draw-mode="draw-area">Draw Area</button>
                                             <button type="button" class="card-btn" data-comps-draw-mode="freehand">Freehand</button>
+                                            <button type="button" class="card-btn" data-comps-draw-mode="measure-distance">Measure Distance</button>
+                                            <button type="button" class="card-btn" data-comps-draw-mode="measure-area">Measure Area</button>
                                             <button type="button" class="card-btn" id="comps-map-clear-area-btn">Clear Area</button>
                                         </div>
                                     </div>
@@ -758,6 +760,20 @@
                                             <strong id="comps-map-subject-arv">$0</strong>
                                             <p id="comps-map-subject-band">Market Band</p>
                                         </article>
+                                    </div>
+
+                                    <div id="comps-map-measure-shell" class="comps-map-measure-shell" hidden>
+                                        <div class="comps-map-measure-head">
+                                            <div>
+                                                <span class="comps-map-measure-label">Ruler</span>
+                                                <strong id="comps-map-measure-primary">Pick a measure tool</strong>
+                                            </div>
+                                            <span id="comps-map-measure-badge" class="comps-map-measure-badge">Inactive</span>
+                                        </div>
+                                        <p id="comps-map-measure-message" class="comps-map-measure-message">Use Measure Distance or Measure Area to trace lengths, lot size, or perimeter inside the comps map.</p>
+                                        <div class="comps-map-measure-metrics">
+                                            <span id="comps-map-measure-secondary" class="comps-map-measure-metric">No measurement yet</span>
+                                        </div>
                                     </div>
 
                                     <div class="comps-map-wrap">

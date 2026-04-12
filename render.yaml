@@ -76,6 +76,10 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI
         sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_MAP_ID
+        sync: false
       - key: DOCUSIGN_AUTH_SERVER
         value: account-d.docusign.com
       - key: DOCUSIGN_CLIENT_ID

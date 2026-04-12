@@ -7607,6 +7607,29 @@ body.analytics-reboot .analytics-my-file-count {
 
 .agent-contract-actions {
     justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.agent-contract-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.agent-contract-copy-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.agent-contract-copy-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 @media (max-width: 900px) {
@@ -17027,6 +17050,77 @@ body.analytics-reboot .analytics-my-file-count {
     color: var(--text-secondary);
 }
 
+.comps-map-measure-shell {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(255, 255, 255, 0.03)),
+        rgba(15, 23, 42, 0.16);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.comps-map-measure-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.comps-map-measure-label {
+    display: inline-flex;
+    margin-bottom: 4px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.comps-map-measure-head strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.comps-map-measure-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #dbeafe;
+    background: rgba(37, 99, 235, 0.18);
+    border: 1px solid rgba(96, 165, 250, 0.34);
+}
+
+.comps-map-measure-message,
+.comps-map-measure-metric {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.comps-map-measure-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.comps-map-measure-metric {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+}
+
 .comps-map-wrap {
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -17687,6 +17781,11 @@ body.analytics-reboot .analytics-my-file-count {
 
     .comps-map-head {
         grid-template-columns: 1fr;
+    }
+
+    .comps-map-measure-head {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .comps-map-head-actions {
