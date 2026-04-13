@@ -341,6 +341,13 @@
             margin-top: 16px;
         }
 
+        .campaign-copy-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
         .campaign-tools-section {
             padding: 24px;
             display: flex;
@@ -366,21 +373,40 @@
             margin-top: 0;
         }
 
-        .campaign-provider-brand {
+        .campaign-provider-inline {
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 4px;
         }
 
-        .campaign-provider-logo {
-            width: 42px;
-            height: 42px;
+        .campaign-provider-inline-copy {
+            display: grid;
+            gap: 4px;
+        }
+
+        .campaign-provider-inline-label {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(191, 219, 254, 0.78);
+        }
+
+        .campaign-provider-inline-copy p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .campaign-provider-inline-logo {
+            width: 88px;
+            height: auto;
             object-fit: contain;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.92);
-            padding: 6px;
-            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
             flex: 0 0 auto;
+            filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.22));
         }
 
         .campaign-send-panel {
@@ -451,6 +477,146 @@
             font-size: 13px;
             line-height: 1.7;
             color: var(--text-primary);
+        }
+
+        .campaign-template-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .campaign-template-modal[hidden] {
+            display: none;
+        }
+
+        .campaign-template-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(10px);
+        }
+
+        .campaign-template-card {
+            position: relative;
+            width: min(760px, 100%);
+            max-height: min(90vh, 860px);
+            overflow: auto;
+            padding: 24px;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(16, 24, 39, 0.96), rgba(9, 15, 28, 0.96));
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            box-shadow: 0 32px 80px rgba(2, 8, 23, 0.45);
+        }
+
+        .campaign-template-header,
+        .campaign-template-controls,
+        .campaign-template-actions {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .campaign-template-header {
+            margin-bottom: 18px;
+        }
+
+        .campaign-template-title {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .campaign-template-subtitle,
+        .campaign-template-help,
+        .campaign-template-preview-label {
+            color: var(--text-secondary);
+        }
+
+        .campaign-template-subtitle {
+            margin: 8px 0 0;
+            line-height: 1.6;
+        }
+
+        .campaign-template-close {
+            width: 40px;
+            height: 40px;
+            border: 0;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-size: 26px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .campaign-template-controls {
+            margin-bottom: 14px;
+        }
+
+        .campaign-template-field {
+            display: grid;
+            gap: 8px;
+            flex: 1 1 280px;
+        }
+
+        .campaign-template-field-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .campaign-template-select,
+        .campaign-template-textarea,
+        .campaign-template-preview {
+            width: 100%;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.56);
+            color: var(--text-primary);
+        }
+
+        .campaign-template-select {
+            min-height: 48px;
+            padding: 0 14px;
+        }
+
+        .campaign-template-textarea {
+            min-height: 220px;
+            padding: 16px;
+            resize: vertical;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .campaign-template-help {
+            margin: 0 0 16px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .campaign-template-preview-wrap {
+            display: grid;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .campaign-template-preview {
+            min-height: 120px;
+            padding: 16px;
+            white-space: pre-wrap;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .campaign-template-actions {
+            margin-top: 18px;
         }
 
         .campaign-note {
@@ -530,6 +696,14 @@
             .campaign-tools-head {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+
+            .campaign-copy-head,
+            .campaign-template-header,
+            .campaign-template-controls,
+            .campaign-template-actions {
+                flex-direction: column;
+                align-items: stretch;
             }
         }
     </style>
@@ -741,68 +915,6 @@
                     </div>
                 </section>
 
-                <section class="stats-grid">
-                    <div class="glass-card glass-card-3d stat-card">
-                        <div class="stat-card-inner">
-                            <div class="stat-info">
-                                <h3>Target Send Window</h3>
-                                <div class="stat-value">9a-4p</div>
-                                <span class="stat-change positive">Local market time only</span>
-                            </div>
-                            <div class="stat-icon cyan">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald-light)" stroke-width="2">
-                                    <circle cx="12" cy="12" r="9"></circle>
-                                    <path d="M12 7v5l3 3"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-card glass-card-3d stat-card">
-                        <div class="stat-card-inner">
-                            <div class="stat-info">
-                                <h3>Reply SLA</h3>
-                                <div class="stat-value">&lt; 5 min</div>
-                                <span class="stat-change positive">Warm replies die fast</span>
-                            </div>
-                            <div class="stat-icon magenta">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-card glass-card-3d stat-card">
-                        <div class="stat-card-inner">
-                            <div class="stat-info">
-                                <h3>Daily Volume Target</h3>
-                                <div class="stat-value">40-60</div>
-                                <span class="stat-change positive">Per rep, per market segment</span>
-                            </div>
-                            <div class="stat-icon purple">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2">
-                                    <path d="M3 3v18h18"></path>
-                                    <path d="m7 14 4-4 3 3 5-6"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-card glass-card-3d stat-card">
-                        <div class="stat-card-inner">
-                            <div class="stat-info">
-                                <h3>Opt-Out Guardrail</h3>
-                                <div class="stat-value">&lt; 2%</div>
-                                <span class="stat-change positive">Pause segments above this</span>
-                            </div>
-                            <div class="stat-icon success">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2">
-                                    <path d="M9 12l2 2 4-4"></path>
-                                    <circle cx="12" cy="12" r="9"></circle>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 <section class="glass-card campaign-tools-section">
                     <div class="campaign-tools-head">
                         <div>
@@ -814,15 +926,19 @@
                     <div class="outreach-workspace-grid campaign-tools-grid">
                         <div class="glass-card widget-card outreach-card" data-widget-id="twilio-quick-send" data-widget-title="Twilio Quick Send">
                             <div class="card-header">
-                                <div class="campaign-provider-brand">
-                                    <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-provider-logo">
-                                    <div>
-                                        <h2 class="card-title">Twilio Quick Send</h2>
-                                        <p class="card-subtitle">Launch a small SMS campaign without leaving Campaigns.</p>
-                                    </div>
+                                <div>
+                                    <h2 class="card-title">Twilio Quick Send</h2>
+                                    <p class="card-subtitle">Launch a small SMS campaign without leaving Campaigns.</p>
                                 </div>
                             </div>
                             <div class="campaign-send-panel">
+                                <div class="campaign-provider-inline">
+                                    <div class="campaign-provider-inline-copy">
+                                        <span class="campaign-provider-inline-label">Twilio Workspace</span>
+                                        <p>Use this panel to build and send Twilio outreach directly from Campaigns.</p>
+                                    </div>
+                                    <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-provider-inline-logo">
+                                </div>
                                 <div id="campaign-twilio-status" class="campaign-status-pill offline">Checking Twilio config...</div>
                                 <div class="outreach-input-grid">
                                     <div class="form-group">
@@ -905,149 +1021,16 @@
 
                 <section class="campaign-grid">
                     <div class="campaign-main">
-                        <article class="glass-card campaign-section-card">
-                            <div class="card-header">
-                                <div>
-                                    <h3 class="card-title">SMS Launch Checklist</h3>
-                                    <p class="card-subtitle">Build the operating system before anyone touches send.</p>
-                                </div>
-                            </div>
-                            <ol>
-                                <li><strong>Clean the list:</strong> keep only active agents and brokers you genuinely want a relationship with. Remove duplicates, dead numbers, and anyone who already opted out.</li>
-                                <li><strong>Register your traffic:</strong> complete A2P 10DLC brand and campaign registration before launch. Unregistered 10DLC traffic will bottleneck or get filtered.</li>
-                                <li><strong>Segment the campaign:</strong> split by county, brokerage tier, listing side vs buyer-heavy agents, and recent transaction activity. One script should not hit every market.</li>
-                                <li><strong>Personalize the first line:</strong> include agent first name, target geography, and buyer type. The first 60 characters decide whether the message survives.</li>
-                                <li><strong>Set response ownership:</strong> every inbound needs a named human rep, response window, escalation path, and calendar-booking outcome.</li>
-                                <li><strong>Track outcomes:</strong> log reply status, referral source, stale listing flags, pocket listing mentions, and whether the agent is worth future outreach.</li>
-                            </ol>
-                        </article>
-
-                        <article class="glass-card campaign-section-card">
-                            <div class="card-header">
-                                <div>
-                                    <h3 class="card-title">Best Third Parties For Agent SMS</h3>
-                                    <p class="card-subtitle">Ranked for a small but serious acquisitions team that wants reliable delivery and developer control.</p>
-                                </div>
-                            </div>
-                            <div class="vendor-grid">
-                                <div class="vendor-card">
-                                    <div class="vendor-head">
-                                        <div class="vendor-brand">
-                                            <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="vendor-logo">
-                                            <div>
-                                                <div class="vendor-name">Twilio</div>
-                                                <div class="vendor-fit">Best overall programmable option</div>
-                                            </div>
-                                        </div>
-                                        <div class="vendor-score">9.4 / 10</div>
-                                    </div>
-                                    <ul>
-                                        <li>Strong API ecosystem, webhooks, and compliance tooling.</li>
-                                        <li>Best choice if you plan to route replies into your own workflow later.</li>
-                                        <li>Use as the main rail when reliability matters more than being the cheapest.</li>
-                                    </ul>
-                                </div>
-                                <div class="vendor-card">
-                                    <div class="vendor-head">
-                                        <div>
-                                            <div class="vendor-name">Telnyx</div>
-                                            <div class="vendor-fit">Best backup rail and cost lever</div>
-                                        </div>
-                                        <div class="vendor-score">9.1 / 10</div>
-                                    </div>
-                                    <ul>
-                                        <li>Very good pricing and solid direct connectivity.</li>
-                                        <li>Useful as a second route when you want redundancy or regional testing.</li>
-                                        <li>Good fit if you expect tighter unit economics at higher send volume.</li>
-                                    </ul>
-                                </div>
-                                <div class="vendor-card">
-                                    <div class="vendor-head">
-                                        <div>
-                                            <div class="vendor-name">Salesmsg</div>
-                                            <div class="vendor-fit">Best team inbox for reps</div>
-                                        </div>
-                                        <div class="vendor-score">8.7 / 10</div>
-                                    </div>
-                                    <ul>
-                                        <li>Fast to deploy if you do not want to build a rep-facing inbox.</li>
-                                        <li>Useful for assigning replies and keeping outreach conversational.</li>
-                                        <li>Best layered on top of a real carrier strategy, not as the only architecture decision.</li>
-                                    </ul>
-                                </div>
-                                <div class="vendor-card">
-                                    <div class="vendor-head">
-                                        <div>
-                                            <div class="vendor-name">Sinch MessageMedia</div>
-                                            <div class="vendor-fit">Best enterprise-scale alternative</div>
-                                        </div>
-                                        <div class="vendor-score">8.5 / 10</div>
-                                    </div>
-                                    <ul>
-                                        <li>Strong when enterprise controls and broader messaging footprint matter.</li>
-                                        <li>Worth a look if this becomes multi-market and more compliance heavy.</li>
-                                        <li>Usually less attractive than Twilio or Telnyx for a lean custom build.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <p class="campaign-note">Practical recommendation: start with Twilio as primary, Telnyx as fallback, and only add a rep inbox product if the team needs easier conversation assignment.</p>
-                        </article>
-
-                        <article class="glass-card campaign-section-card">
-                            <div class="card-header">
-                                <div>
-                                    <h3 class="card-title">Suggested Agent SMS Sequence</h3>
-                                    <p class="card-subtitle">Short, respectful touches that feel like deal flow outreach rather than list spam.</p>
-                                </div>
-                            </div>
-                            <div class="campaign-sequence-list">
-                                <div class="campaign-sequence-item"><strong>Touch 1, Day 0:</strong> Ask for active/off-market inventory in a specific area and state your buying capability in one line.</div>
-                                <div class="campaign-sequence-item"><strong>Touch 2, Day 2:</strong> Follow up with a narrower ask, such as probate, fixer, stale listing, or failed escrow opportunities.</div>
-                                <div class="campaign-sequence-item"><strong>Touch 3, Day 5:</strong> Ask if they want your exact buy box and proof-of-funds ready list for faster matching.</div>
-                                <div class="campaign-sequence-item"><strong>Touch 4, Day 10:</strong> Close the loop politely and leave the door open for future pocket listings or problem sellers.</div>
-                            </div>
-                        </article>
                     </div>
 
                     <aside class="campaign-rail">
-                        <article class="glass-card campaign-section-card">
-                            <div class="card-header">
-                                <div>
-                                    <h3 class="card-title">Go / No-Go Gates</h3>
-                                    <p class="card-subtitle">Do not launch until every item below is true.</p>
-                                </div>
-                            </div>
-                            <div class="campaign-checklist">
-                                <div class="campaign-checklist-item"><span class="campaign-badge-positive">Ready</span> <strong>Registered traffic:</strong> brand and use case approved for A2P 10DLC.</div>
-                                <div class="campaign-checklist-item"><span class="campaign-badge-positive">Ready</span> <strong>Opt-out handling:</strong> STOP, UNSUBSCRIBE, and equivalent keywords suppress immediately.</div>
-                                <div class="campaign-checklist-item"><span class="campaign-badge-warning">Watch</span> <strong>Inbox coverage:</strong> somebody owns inbound replies in real time during send windows.</div>
-                                <div class="campaign-checklist-item"><span class="campaign-badge-warning">Watch</span> <strong>Volume ramp:</strong> start small by market, then scale only after reply and opt-out metrics stabilize.</div>
-                            </div>
-                        </article>
-
-                        <article class="glass-card campaign-section-card">
-                            <div class="card-header">
-                                <div>
-                                    <h3 class="card-title">Compliance Rules</h3>
-                                    <p class="card-subtitle">Keep outreach useful, limited, and easy to exit.</p>
-                                </div>
-                            </div>
-                            <ul class="campaign-rule-list">
-                                <li>Stay in local business hours and avoid weekends unless there is an active conversation.</li>
-                                <li>Do not bury the sender identity. FAST BRIDGE GROUP should be recognizable in the message.</li>
-                                <li>Keep first touches short. Long promotional texts get filtered and ignored.</li>
-                                <li>Always include a simple opt-out path on campaign-style messages.</li>
-                                <li>Pause any segment that trends toward complaints, blocks, or heavy opt-outs.</li>
-                            </ul>
-                            <p class="campaign-note">This is operational guidance, not legal advice. If you scale aggressively, have counsel review your workflow and copy.</p>
-                        </article>
-
                         <article class="glass-card campaign-copy-card">
-                            <div class="card-header">
+                            <div class="card-header campaign-copy-head">
                                 <div>
                                     <h3 class="card-title">Copy-Ready SMS Blocks</h3>
                                     <p class="card-subtitle">Use these as starting points for agent outreach.</p>
                                 </div>
+                                <button id="campaign-manage-templates" type="button" class="card-btn">Edit SMS Blocks</button>
                             </div>
                             <div class="campaign-copy-grid">
                                 <div class="campaign-copy-block">
@@ -1081,6 +1064,42 @@
         </main>
     </div>
 
+    <div id="campaign-template-modal" class="campaign-template-modal" hidden aria-hidden="true">
+        <div class="campaign-template-backdrop" data-campaign-template-close="true"></div>
+        <div class="campaign-template-card" role="dialog" aria-modal="true" aria-labelledby="campaign-template-title">
+            <div class="campaign-template-header">
+                <div>
+                    <h3 id="campaign-template-title" class="campaign-template-title">SMS Block Templates</h3>
+                    <p class="campaign-template-subtitle">Edit the three Campaigns SMS blocks once and use them for quick copy/paste or direct Twilio loading.</p>
+                </div>
+                <button type="button" class="campaign-template-close" data-campaign-template-close="true" aria-label="Close SMS block manager">×</button>
+            </div>
+            <div class="campaign-template-controls">
+                <label class="campaign-template-field">
+                    <span class="campaign-template-field-label">SMS Block</span>
+                    <select id="campaign-template-select" class="campaign-template-select">
+                        <option value="first-touch">First Touch</option>
+                        <option value="follow-up">Follow-Up</option>
+                        <option value="breakup">Breakup / Keepalive</option>
+                    </select>
+                </label>
+            </div>
+            <p class="campaign-template-help">Placeholders you can keep in the copy: [Agent First Name], [Your Name], and [Area]. These saved templates stay tied to the signed-in workspace user on this browser.</p>
+            <label class="campaign-template-field">
+                <span class="campaign-template-field-label">Template Body</span>
+                <textarea id="campaign-template-body" class="campaign-template-textarea" spellcheck="true"></textarea>
+            </label>
+            <div class="campaign-template-preview-wrap">
+                <span class="campaign-template-preview-label">Preview</span>
+                <div id="campaign-template-preview" class="campaign-template-preview"></div>
+            </div>
+            <div class="campaign-template-actions">
+                <button id="campaign-template-reset" type="button" class="card-btn">Use Default For Block</button>
+                <button id="campaign-template-save" type="button" class="card-btn active">Save SMS Blocks</button>
+            </div>
+        </div>
+    </div>
+
     <button class="mobile-menu-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -1100,6 +1119,154 @@
             const campaignRecipientsInput = document.getElementById('campaign-sms-recipients');
             const campaignBodyInput = document.getElementById('campaign-sms-body');
             const campaignSendButton = document.getElementById('campaign-send-sms-btn');
+            const campaignManageTemplatesButton = document.getElementById('campaign-manage-templates');
+            const campaignTemplateModal = document.getElementById('campaign-template-modal');
+            const campaignTemplateSelect = document.getElementById('campaign-template-select');
+            const campaignTemplateBody = document.getElementById('campaign-template-body');
+            const campaignTemplatePreview = document.getElementById('campaign-template-preview');
+            const campaignTemplateSaveButton = document.getElementById('campaign-template-save');
+            const campaignTemplateResetButton = document.getElementById('campaign-template-reset');
+            const campaignTemplateCloseButtons = document.querySelectorAll('[data-campaign-template-close]');
+            const campaignTemplateBlocks = {
+                'first-touch': document.getElementById('sms-template-1'),
+                'follow-up': document.getElementById('sms-template-2'),
+                breakup: document.getElementById('sms-template-3')
+            };
+            const CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE = 'campaignSmsTemplateSettings';
+            const CAMPAIGN_TEMPLATE_DEFAULTS = {
+                'first-touch': 'Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.',
+                'follow-up': 'Checking back in, [Agent First Name]. We are still buying in [Area], especially probate, heavy fixer, and failed-escrow opportunities. If you want, I can text over our exact buy box and close timeline. Reply STOP to opt out.',
+                breakup: 'Last note from me for now, [Agent First Name]. If you ever have a seller who needs a quick as-is close in [Area], send it my way and I will respond fast. Happy to share proof of funds and our buy box when useful. Reply STOP to opt out.'
+            };
+            let campaignTemplateSettings = loadCampaignTemplateSettings();
+            let campaignTemplateDraft = cloneCampaignTemplateSettings(campaignTemplateSettings);
+
+            function readJson(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key) || '{}');
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function getCampaignUserContext() {
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                return {
+                    email,
+                    name,
+                    userKey: email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user'
+                };
+            }
+
+            function buildDefaultCampaignTemplateSettings() {
+                return {
+                    selectedTemplate: 'first-touch',
+                    templates: { ...CAMPAIGN_TEMPLATE_DEFAULTS }
+                };
+            }
+
+            function normalizeCampaignTemplateKey(value) {
+                const normalized = String(value || '').trim().toLowerCase();
+                return Object.prototype.hasOwnProperty.call(CAMPAIGN_TEMPLATE_DEFAULTS, normalized) ? normalized : 'first-touch';
+            }
+
+            function normalizeCampaignTemplateBody(value, templateKey) {
+                const normalized = String(value || '').replace(/\r/g, '').trim();
+                return normalized || CAMPAIGN_TEMPLATE_DEFAULTS[templateKey] || CAMPAIGN_TEMPLATE_DEFAULTS['first-touch'];
+            }
+
+            function normalizeCampaignTemplateSettings(value) {
+                const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+                const templateSource = source.templates && typeof source.templates === 'object' && !Array.isArray(source.templates)
+                    ? source.templates
+                    : {};
+                const templates = {};
+
+                Object.keys(CAMPAIGN_TEMPLATE_DEFAULTS).forEach((templateKey) => {
+                    templates[templateKey] = normalizeCampaignTemplateBody(templateSource[templateKey], templateKey);
+                });
+
+                return {
+                    selectedTemplate: normalizeCampaignTemplateKey(source.selectedTemplate),
+                    templates
+                };
+            }
+
+            function cloneCampaignTemplateSettings(value) {
+                const normalized = normalizeCampaignTemplateSettings(value);
+                return {
+                    selectedTemplate: normalized.selectedTemplate,
+                    templates: { ...normalized.templates }
+                };
+            }
+
+            function getCampaignTemplateStorageKey() {
+                return `${CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
+            }
+
+            function loadCampaignTemplateSettings() {
+                try {
+                    return normalizeCampaignTemplateSettings(JSON.parse(localStorage.getItem(getCampaignTemplateStorageKey()) || '{}'));
+                } catch (error) {
+                    return buildDefaultCampaignTemplateSettings();
+                }
+            }
+
+            function persistCampaignTemplateSettings(value) {
+                localStorage.setItem(getCampaignTemplateStorageKey(), JSON.stringify(normalizeCampaignTemplateSettings(value)));
+            }
+
+            function renderCampaignTemplateBlocks() {
+                Object.entries(campaignTemplateBlocks).forEach(([templateKey, element]) => {
+                    if (!element) {
+                        return;
+                    }
+                    element.textContent = campaignTemplateSettings.templates[templateKey] || CAMPAIGN_TEMPLATE_DEFAULTS[templateKey];
+                });
+            }
+
+            function syncCampaignTemplateEditor() {
+                if (!campaignTemplateSelect || !campaignTemplateBody || !campaignTemplatePreview) {
+                    return;
+                }
+
+                const selectedTemplate = normalizeCampaignTemplateKey(campaignTemplateSelect.value || campaignTemplateDraft.selectedTemplate);
+                campaignTemplateDraft.selectedTemplate = selectedTemplate;
+                campaignTemplateSelect.value = selectedTemplate;
+                campaignTemplateBody.value = campaignTemplateDraft.templates[selectedTemplate] || CAMPAIGN_TEMPLATE_DEFAULTS[selectedTemplate];
+                campaignTemplatePreview.textContent = campaignTemplateBody.value.trim() || CAMPAIGN_TEMPLATE_DEFAULTS[selectedTemplate];
+            }
+
+            function openCampaignTemplateModal() {
+                if (!campaignTemplateModal) {
+                    return;
+                }
+                campaignTemplateDraft = cloneCampaignTemplateSettings(campaignTemplateSettings);
+                syncCampaignTemplateEditor();
+                campaignTemplateModal.hidden = false;
+                campaignTemplateModal.setAttribute('aria-hidden', 'false');
+                window.requestAnimationFrame(() => {
+                    if (campaignTemplateBody) {
+                        campaignTemplateBody.focus();
+                        campaignTemplateBody.setSelectionRange(campaignTemplateBody.value.length, campaignTemplateBody.value.length);
+                    }
+                });
+            }
+
+            function closeCampaignTemplateModal() {
+                if (!campaignTemplateModal) {
+                    return;
+                }
+                campaignTemplateModal.hidden = true;
+                campaignTemplateModal.setAttribute('aria-hidden', 'true');
+            }
 
             function getCurrentSenderName() {
                 try {
@@ -1154,19 +1321,74 @@
                 }
             }
 
+            renderCampaignTemplateBlocks();
+
+            if (campaignManageTemplatesButton) {
+                campaignManageTemplatesButton.addEventListener('click', openCampaignTemplateModal);
+            }
+
+            campaignTemplateCloseButtons.forEach((button) => {
+                button.addEventListener('click', closeCampaignTemplateModal);
+            });
+
+            if (campaignTemplateSelect) {
+                campaignTemplateSelect.addEventListener('change', () => {
+                    if (campaignTemplateBody) {
+                        const currentKey = normalizeCampaignTemplateKey(campaignTemplateDraft.selectedTemplate);
+                        campaignTemplateDraft.templates[currentKey] = normalizeCampaignTemplateBody(campaignTemplateBody.value, currentKey);
+                    }
+                    campaignTemplateDraft.selectedTemplate = normalizeCampaignTemplateKey(campaignTemplateSelect.value);
+                    syncCampaignTemplateEditor();
+                });
+            }
+
+            if (campaignTemplateBody) {
+                campaignTemplateBody.addEventListener('input', () => {
+                    const currentKey = normalizeCampaignTemplateKey(campaignTemplateSelect ? campaignTemplateSelect.value : campaignTemplateDraft.selectedTemplate);
+                    campaignTemplateDraft.templates[currentKey] = normalizeCampaignTemplateBody(campaignTemplateBody.value, currentKey);
+                    campaignTemplatePreview.textContent = campaignTemplateBody.value.trim() || CAMPAIGN_TEMPLATE_DEFAULTS[currentKey];
+                });
+            }
+
+            if (campaignTemplateResetButton) {
+                campaignTemplateResetButton.addEventListener('click', () => {
+                    const currentKey = normalizeCampaignTemplateKey(campaignTemplateSelect ? campaignTemplateSelect.value : campaignTemplateDraft.selectedTemplate);
+                    campaignTemplateDraft.templates[currentKey] = CAMPAIGN_TEMPLATE_DEFAULTS[currentKey];
+                    syncCampaignTemplateEditor();
+                });
+            }
+
+            if (campaignTemplateSaveButton) {
+                campaignTemplateSaveButton.addEventListener('click', () => {
+                    if (campaignTemplateBody) {
+                        const currentKey = normalizeCampaignTemplateKey(campaignTemplateSelect ? campaignTemplateSelect.value : campaignTemplateDraft.selectedTemplate);
+                        campaignTemplateDraft.templates[currentKey] = normalizeCampaignTemplateBody(campaignTemplateBody.value, currentKey);
+                    }
+                    campaignTemplateSettings = cloneCampaignTemplateSettings(campaignTemplateDraft);
+                    persistCampaignTemplateSettings(campaignTemplateSettings);
+                    renderCampaignTemplateBlocks();
+                    closeCampaignTemplateModal();
+                });
+            }
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && campaignTemplateModal && !campaignTemplateModal.hidden) {
+                    closeCampaignTemplateModal();
+                }
+            });
+
             [
-                ['campaign-load-template-1', 'sms-template-1'],
-                ['campaign-load-template-2', 'sms-template-2'],
-                ['campaign-load-template-3', 'sms-template-3']
-            ].forEach(([buttonId, templateId]) => {
+                ['campaign-load-template-1', 'first-touch'],
+                ['campaign-load-template-2', 'follow-up'],
+                ['campaign-load-template-3', 'breakup']
+            ].forEach(([buttonId, templateKey]) => {
                 const button = document.getElementById(buttonId);
-                const template = document.getElementById(templateId);
-                if (!button || !template || !campaignBodyInput) {
+                if (!button || !campaignBodyInput) {
                     return;
                 }
 
                 button.addEventListener('click', () => {
-                    campaignBodyInput.value = String(template.textContent || '').trim();
+                    campaignBodyInput.value = campaignTemplateSettings.templates[templateKey] || CAMPAIGN_TEMPLATE_DEFAULTS[templateKey];
                 });
             });
 

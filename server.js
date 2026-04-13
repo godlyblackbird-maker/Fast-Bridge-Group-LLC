@@ -922,6 +922,15 @@ function normalizeKnownEmail(email) {
   return LEGACY_EMAIL_ALIASES.get(normalizedEmail) || normalizedEmail;
 }
 
+function isFastBridgeWorkspaceEmail(email) {
+  const normalizedEmail = normalizeKnownEmail(email);
+  return normalizedEmail.endsWith('@fastbridgegroupllc.com');
+}
+
+function userHasWebsiteAccess(userLike) {
+  return Number(userLike && userLike.access_granted) === 1;
+}
+
 function isKnownAdminEmail(email) {
   return ADMIN_CANONICAL_EMAILS.has(normalizeKnownEmail(email));
 }
@@ -2335,6 +2344,7 @@ function initializeDatabase() {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT DEFAULT 'user',
+      access_granted INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_login DATETIME
     )
@@ -2349,6 +2359,7 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN smtp_signature TEXT`, () => {});
       db.run(`ALTER TABLE users ADD COLUMN phone TEXT`, () => {});
       db.run(`ALTER TABLE users ADD COLUMN avatar_upload_id TEXT`, () => {});
+      db.run(`ALTER TABLE users ADD COLUMN access_granted INTEGER DEFAULT 0`, () => {});
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
       syncLoriaBrokerAccount();
@@ -5647,8 +5658,8 @@ async function syncIsaacAdminAccount() {
 
     if (!account) {
       await dbRun(
-        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail, envSmtpPass, envSmtpSignature]
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'admin', 1, canonicalEmail, envSmtpPass, envSmtpSignature]
       );
       console.log('Isaac admin account created/synced');
       return;
@@ -5664,7 +5675,7 @@ async function syncIsaacAdminAccount() {
     const nextSmtpSignature = currentSmtpSignature || envSmtpSignature;
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
@@ -5780,8 +5791,8 @@ async function syncSteveAdminAccount() {
 
     if (!account) {
       await dbRun(
-        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, 'admin', canonicalEmail, envSmtpPass, envSmtpSignature]
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'admin', 1, canonicalEmail, envSmtpPass, envSmtpSignature]
       );
       console.log('Steve admin account created/synced');
       return;
@@ -5797,7 +5808,7 @@ async function syncSteveAdminAccount() {
     const nextSmtpSignature = currentSmtpSignature || envSmtpSignature;
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
@@ -5843,8 +5854,8 @@ async function syncLoriaBrokerAccount() {
 
     if (!account) {
       await dbRun(
-        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, 'broker', canonicalEmail, '', '']
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, 'broker', 1, canonicalEmail, '', '']
       );
       console.log('Loria broker account created/synced');
       return;
@@ -5857,7 +5868,7 @@ async function syncLoriaBrokerAccount() {
     const nextSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail ? canonicalEmail : account.smtp_user;
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
@@ -5904,8 +5915,8 @@ async function syncStevenCastilloUserAccount() {
 
     if (!account) {
       await dbRun(
-        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, canonicalRole, '', '', '']
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
       );
       const createdAccount = await dbGet('SELECT id FROM users WHERE LOWER(email) = ?', [canonicalEmail]);
       if (createdAccount) {
@@ -5941,7 +5952,7 @@ async function syncStevenCastilloUserAccount() {
     const currentSmtpSignature = String(account.smtp_signature || '').trim();
 
     await dbRun(
-      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
@@ -6011,15 +6022,15 @@ async function syncPublicTestAccount() {
 
     if (!account) {
       const insertResult = await dbRun(
-        'INSERT INTO users (name, email, password_hash, role, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [canonicalName, canonicalEmail, hash, TEST_USER_ROLE, '', '', '']
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, TEST_USER_ROLE, 1, '', '', '']
       );
       userId = insertResult.lastID;
       console.log('Public test account created/synced');
     } else {
       userId = account.id;
       await dbRun(
-        'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+        'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
         [canonicalName, canonicalEmail, hash, TEST_USER_ROLE, '', '', '', account.id]
       );
       console.log('Public test account synced');
@@ -6749,22 +6760,23 @@ async function completeOAuthLogin({ email, name }) {
     throw new Error('OAuth provider did not return an email');
   }
 
+  if (!isFastBridgeWorkspaceEmail(normalizedEmail)) {
+    throw new Error('Only @fastbridgegroupllc.com Google accounts can sign in.');
+  }
+
   const normalizedName = String(name || '').trim() || normalizedEmail.split('@')[0] || 'User';
   const existingUser = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail]);
-  let userId = existingUser ? existingUser.id : null;
-  let userRole = isKnownAdminEmail(normalizedEmail) ? 'admin' : (existingUser ? existingUser.role : 'user');
-
   if (!existingUser) {
-    const randomPassword = crypto.randomBytes(24).toString('hex');
-    const hash = await bcrypt.hash(randomPassword, 10);
-    const insertResult = await dbRun(
-      'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [normalizedName, normalizedEmail, hash, userRole]
-    );
-    userId = insertResult.lastID;
-  } else {
-    await dbRun('UPDATE users SET name = ?, role = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [normalizedName, userRole, existingUser.id]);
+    throw new Error('This Google account is not approved for access. Ask an admin to create your FAST account first.');
   }
+
+  if (!userHasWebsiteAccess(existingUser)) {
+    throw new Error('This account does not have website access yet. Have an admin create or approve it first.');
+  }
+
+  const userId = existingUser.id;
+  const userRole = isKnownAdminEmail(normalizedEmail) ? 'admin' : existingUser.role;
+  await dbRun('UPDATE users SET name = ?, role = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [normalizedName, userRole, existingUser.id]);
 
   const userPayload = {
     id: userId,
@@ -6836,6 +6848,7 @@ app.get('/api/auth/google', (req, res) => {
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'offline',
+    hd: 'fastbridgegroupllc.com',
     prompt: 'select_account',
     state: createOAuthState('google')
   });
@@ -6862,6 +6875,7 @@ app.get('/auth/google', (req, res) => {
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'offline',
+    hd: 'fastbridgegroupllc.com',
     prompt: 'select_account',
     state: createOAuthState('google')
   });
@@ -6959,6 +6973,10 @@ app.post('/api/login', async (req, res) => {
 
   const normalizedEmail = normalizeKnownEmail(email);
 
+  if (!isFastBridgeWorkspaceEmail(normalizedEmail)) {
+    return res.status(403).json({ error: 'Only @fastbridgegroupllc.com accounts can sign in.' });
+  }
+
   if (normalizedEmail === CANONICAL_LORIA_EMAIL) {
     await syncLoriaBrokerAccount();
   }
@@ -6970,6 +6988,10 @@ app.post('/api/login', async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (!userHasWebsiteAccess(user)) {
+      return res.status(403).json({ error: 'This account does not have website access yet. Contact an admin.' });
     }
 
     try {
@@ -7183,11 +7205,15 @@ app.post('/api/admin/users', (req, res) => {
 
   const { name, email, password, role } = req.body;
   const normalizedName = String(name || '').trim();
-  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedEmail = normalizeKnownEmail(email);
   const normalizedRole = String(role || 'user').trim().toLowerCase();
 
   if (!normalizedName || !normalizedEmail || !password) {
     return res.status(400).json({ error: 'Name, email, and password are required' });
+  }
+
+  if (!isFastBridgeWorkspaceEmail(normalizedEmail)) {
+    return res.status(400).json({ error: 'User email must use the @fastbridgegroupllc.com domain' });
   }
 
   if (!['admin', 'user', 'broker', PREMIUM_USER_ROLE, TEST_USER_ROLE].includes(normalizedRole)) {
@@ -7204,8 +7230,8 @@ app.post('/api/admin/users', (req, res) => {
     }
 
     db.run(
-      'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [normalizedName, normalizedEmail, hash, normalizedRole],
+      'INSERT INTO users (name, email, password_hash, role, access_granted) VALUES (?, ?, ?, ?, ?)',
+      [normalizedName, normalizedEmail, hash, normalizedRole, 1],
       function onInsert(err) {
         if (err) {
           if (err.message.includes('UNIQUE constraint failed')) {
@@ -7236,7 +7262,7 @@ app.put('/api/admin/users/:id/email', (req, res) => {
   }
 
   const userId = Number.parseInt(String(req.params?.id || ''), 10);
-  const nextEmail = String(req.body?.email || '').trim().toLowerCase();
+  const nextEmail = normalizeKnownEmail(req.body?.email || '');
   const syncSmtpUser = req.body?.syncSmtpUser !== false;
 
   if (!Number.isInteger(userId) || userId <= 0) {
@@ -7249,6 +7275,10 @@ app.put('/api/admin/users/:id/email', (req, res) => {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
     return res.status(400).json({ error: 'Valid email is required' });
+  }
+
+  if (!isFastBridgeWorkspaceEmail(nextEmail)) {
+    return res.status(400).json({ error: 'User email must use the @fastbridgegroupllc.com domain' });
   }
 
   db.get('SELECT id, name, email, role, smtp_user FROM users WHERE id = ?', [userId], (selectError, userRow) => {
