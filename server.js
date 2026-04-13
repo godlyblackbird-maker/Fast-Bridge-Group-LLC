@@ -4352,8 +4352,17 @@ function getContentTypeForFileName(fileName, fallbackType = '') {
   if (extension === '.docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   if (extension === '.xls') return 'application/vnd.ms-excel';
   if (extension === '.xlsx') return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if (extension === '.ppt') return 'application/vnd.ms-powerpoint';
+  if (extension === '.pptx') return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+  if (extension === '.rtf') return 'application/rtf';
   if (extension === '.csv') return 'text/csv; charset=utf-8';
   if (extension === '.txt') return 'text/plain; charset=utf-8';
+  if (extension === '.md') return 'text/markdown; charset=utf-8';
+  if (extension === '.json') return 'application/json; charset=utf-8';
+  if (extension === '.xml') return 'application/xml; charset=utf-8';
+  if (extension === '.html' || extension === '.htm') return 'text/html; charset=utf-8';
+  if (extension === '.css') return 'text/css; charset=utf-8';
+  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') return 'text/javascript; charset=utf-8';
   if (extension === '.png') return 'image/png';
   if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
   if (extension === '.gif') return 'image/gif';
@@ -4365,7 +4374,79 @@ function getContentTypeForFileName(fileName, fallbackType = '') {
   if (extension === '.heif') return 'image/heif';
   if (extension === '.jfif') return 'image/jpeg';
   if (extension === '.tif' || extension === '.tiff') return 'image/tiff';
+  if (extension === '.mp3') return 'audio/mpeg';
+  if (extension === '.wav') return 'audio/wav';
+  if (extension === '.ogg') return 'audio/ogg';
+  if (extension === '.m4a') return 'audio/mp4';
+  if (extension === '.aac') return 'audio/aac';
+  if (extension === '.flac') return 'audio/flac';
+  if (extension === '.mp4') return 'video/mp4';
+  if (extension === '.mov') return 'video/quicktime';
+  if (extension === '.avi') return 'video/x-msvideo';
+  if (extension === '.webm') return 'video/webm';
+  if (extension === '.zip') return 'application/zip';
+  if (extension === '.rar') return 'application/vnd.rar';
+  if (extension === '.7z') return 'application/x-7z-compressed';
   return 'application/octet-stream';
+}
+
+function isAllowedUserUploadForScope(scope, extension, mimeType = '') {
+  if (String(scope || '').trim().toLowerCase() === 'fbg-message') {
+    return true;
+  }
+
+  return isAllowedInvestorAttachmentFile(extension, mimeType);
+}
+
+function isInlineMessageAttachmentType(fileName, fileType = '') {
+  const normalizedType = String(fileType || '').trim().toLowerCase();
+  const extension = path.extname(String(fileName || '')).toLowerCase();
+
+  if (normalizedType.startsWith('image/') || normalizedType.startsWith('audio/') || normalizedType.startsWith('video/')) {
+    return true;
+  }
+
+  if (
+    normalizedType === 'application/pdf'
+    || normalizedType === 'application/x-pdf'
+    || normalizedType.startsWith('text/')
+    || normalizedType.includes('json')
+    || normalizedType.includes('xml')
+  ) {
+    return true;
+  }
+
+  return [
+    '.pdf',
+    '.txt',
+    '.csv',
+    '.md',
+    '.json',
+    '.xml',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.webp',
+    '.bmp',
+    '.svg',
+    '.avif',
+    '.heic',
+    '.heif',
+    '.jfif',
+    '.tif',
+    '.tiff',
+    '.mp3',
+    '.wav',
+    '.ogg',
+    '.m4a',
+    '.aac',
+    '.flac',
+    '.mp4',
+    '.mov',
+    '.avi',
+    '.webm'
+  ].includes(extension);
 }
 
 function sanitizeUserUploadScope(value) {
@@ -10960,7 +11041,7 @@ app.post('/api/user-uploads', (req, res) => {
         return res.status(400).json({ error: 'A file is required.' });
       }
 
-      if (!isAllowedInvestorAttachmentFile(extension, uploadedFile.mimetype || '')) {
+      if (!isAllowedUserUploadForScope(scope, extension, uploadedFile.mimetype || '')) {
         return res.status(400).json({ error: 'This file type is not allowed.' });
       }
 
@@ -11794,8 +11875,11 @@ app.get('/api/messages/attachments/:documentId/content', async (req, res) => {
 
     const download = String(req.query?.download || '').trim() === '1';
     const fileName = String(uploadRecord.original_file_name || 'attachment').trim() || 'attachment';
-    res.setHeader('Content-Type', getContentTypeForFileName(fileName, uploadRecord.file_type));
-    res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="${fileName.replace(/"/g, '')}"`);
+    const contentType = getContentTypeForFileName(fileName, uploadRecord.file_type);
+    const forceDownload = download || !isInlineMessageAttachmentType(fileName, contentType);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', `${forceDownload ? 'attachment' : 'inline'}; filename="${fileName.replace(/"/g, '')}"`);
     await streamStoredUserUploadToResponse(uploadRecord, res);
     return;
   } catch (error) {

@@ -311,6 +311,23 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23e0f2fe' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
 }
 
+[data-theme="beach"] .property-detail-shell select,
+[data-theme="beach"] .property-detail-shell select.form-input,
+[data-theme="beach"] .property-detail-shell .ia-grid select,
+[data-theme="beach"] .property-detail-shell .offer-grid select {
+    background: rgba(5, 5, 5, 0.92) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 18px rgba(0, 0, 0, 0.28) !important;
+}
+
+[data-theme="beach"] .property-detail-shell select:focus,
+[data-theme="beach"] .property-detail-shell select.form-input:focus,
+[data-theme="beach"] .property-detail-shell .ia-grid select:focus,
+[data-theme="beach"] .property-detail-shell .offer-grid select:focus {
+    background: rgba(0, 0, 0, 0.96) !important;
+}
+
 [data-theme="beach"] .settings-select option,
 [data-theme="beach"] select option,
 [data-theme="beach"] select.form-input option,
@@ -329,6 +346,22 @@
 [data-theme="beach"] .form-group .form-input[type="select-one"] option:checked {
     background: #0c4a6e !important;
     color: #ecfeff !important;
+}
+
+[data-theme="beach"] .property-detail-shell select option,
+[data-theme="beach"] .property-detail-shell select.form-input option,
+[data-theme="beach"] .property-detail-shell .ia-grid select option,
+[data-theme="beach"] .property-detail-shell .offer-grid select option {
+    background: #000000 !important;
+    color: #ffffff !important;
+}
+
+[data-theme="beach"] .property-detail-shell select option:checked,
+[data-theme="beach"] .property-detail-shell select.form-input option:checked,
+[data-theme="beach"] .property-detail-shell .ia-grid select option:checked,
+[data-theme="beach"] .property-detail-shell .offer-grid select option:checked {
+    background: #171717 !important;
+    color: #ffffff !important;
 }
 
 [data-theme="beach"] input:disabled,
@@ -6579,9 +6612,10 @@ body.analytics-reboot .analytics-my-file-count {
 }
 
 .closed-deal-item-title {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--text-primary);
+    line-height: 1.35;
 }
 
 .closed-deal-item-title-btn {
@@ -19090,9 +19124,9 @@ body.analytics-reboot .analytics-my-file-count {
 .deals-compact-address {
     margin: 0;
     color: var(--text-primary);
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 700;
-    line-height: 1.3;
+    line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

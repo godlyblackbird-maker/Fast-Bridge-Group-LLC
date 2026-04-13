@@ -480,10 +480,17 @@
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.12);
+            overflow: hidden;
         }
 
         .messages-chat-attachment.is-image {
             background: rgba(255, 255, 255, 0.16);
+        }
+
+        .messages-chat-attachment.is-pdf,
+        .messages-chat-attachment.is-video,
+        .messages-chat-attachment.is-audio {
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .messages-chat-attachment-preview {
@@ -495,9 +502,90 @@
             background: rgba(255, 255, 255, 0.5);
         }
 
+        .messages-chat-attachment-embed,
+        .messages-chat-attachment-video {
+            display: block;
+            width: min(320px, 100%);
+            max-width: 100%;
+            height: 220px;
+            border: 0;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .messages-chat-attachment-audio {
+            display: block;
+            width: min(320px, 100%);
+            max-width: 100%;
+        }
+
         .messages-chat-attachment-link {
             color: inherit;
             text-decoration: none;
+            display: block;
+        }
+
+        .messages-chat-attachment-copy {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .messages-chat-attachment-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .messages-attachment-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.12);
+            color: #0f172a;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .messages-attachment-badge.kind-image {
+            background: rgba(14, 165, 233, 0.16);
+            color: #075985;
+        }
+
+        .messages-attachment-badge.kind-pdf,
+        .messages-attachment-badge.kind-document,
+        .messages-attachment-badge.kind-presentation {
+            background: rgba(239, 68, 68, 0.16);
+            color: #991b1b;
+        }
+
+        .messages-attachment-badge.kind-spreadsheet {
+            background: rgba(34, 197, 94, 0.18);
+            color: #166534;
+        }
+
+        .messages-attachment-badge.kind-audio,
+        .messages-attachment-badge.kind-video {
+            background: rgba(168, 85, 247, 0.16);
+            color: #6b21a8;
+        }
+
+        .messages-attachment-badge.kind-archive {
+            background: rgba(245, 158, 11, 0.18);
+            color: #92400e;
+        }
+
+        .messages-chat-bubble.outgoing .messages-attachment-badge {
+            background: rgba(255, 255, 255, 0.18);
+            color: #ffffff;
         }
 
         .messages-chat-attachment-link strong,
@@ -719,6 +807,15 @@
         .messages-pending-attachment-copy {
             display: grid;
             min-width: 0;
+            gap: 4px;
+        }
+
+        .messages-pending-attachment-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            flex-wrap: wrap;
         }
 
         .messages-pending-attachment-name,
@@ -1046,7 +1143,7 @@
                                 </button>
                                 <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
                             </div>
-                            <input id="messages-chat-attachment-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.gif,.webp,.bmp,.svg,.avif,.heic,.heif,.jfif,.tif,.tiff,image/*">
+                            <input id="messages-chat-attachment-input" type="file" hidden multiple accept="*/*">
                             <div class="messages-chat-actions">
                                 <div id="messages-chat-status" class="messages-chat-status"></div>
                                 <button id="messages-chat-send" type="submit" class="card-btn active" aria-label="Send message" title="Send message" disabled>
@@ -1418,9 +1515,139 @@
                 return `${value} B`;
             }
 
+            function getAttachmentFileName(attachment) {
+                return String(attachment && attachment.fileName || '').trim();
+            }
+
+            function getAttachmentFileType(attachment) {
+                return String(attachment && attachment.fileType || '').trim().toLowerCase();
+            }
+
+            function getAttachmentExtension(attachment) {
+                const fileName = getAttachmentFileName(attachment);
+                const match = fileName.match(/(\.[^.]+)$/);
+                return match ? match[1].toLowerCase() : '';
+            }
+
             function isImageAttachment(attachment) {
-                return /^image\//i.test(String(attachment && attachment.fileType || '').trim())
-                    || /\.(png|jpe?g|gif|webp|bmp|svg|avif|heic|heif|jfif|tiff?)$/i.test(String(attachment && attachment.fileName || '').trim());
+                return /^image\//i.test(getAttachmentFileType(attachment))
+                    || /\.(png|jpe?g|gif|webp|bmp|svg|avif|heic|heif|jfif|tiff?)$/i.test(getAttachmentFileName(attachment));
+            }
+
+            function isPdfAttachment(attachment) {
+                return getAttachmentFileType(attachment) === 'application/pdf'
+                    || getAttachmentExtension(attachment) === '.pdf';
+            }
+
+            function isVideoAttachment(attachment) {
+                return /^video\//i.test(getAttachmentFileType(attachment))
+                    || /\.(mp4|mov|avi|webm)$/i.test(getAttachmentFileName(attachment));
+            }
+
+            function isAudioAttachment(attachment) {
+                return /^audio\//i.test(getAttachmentFileType(attachment))
+                    || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(getAttachmentFileName(attachment));
+            }
+
+            function getAttachmentKind(attachment) {
+                if (isImageAttachment(attachment)) {
+                    return 'image';
+                }
+                if (isPdfAttachment(attachment)) {
+                    return 'pdf';
+                }
+                if (isVideoAttachment(attachment)) {
+                    return 'video';
+                }
+                if (isAudioAttachment(attachment)) {
+                    return 'audio';
+                }
+
+                const extension = getAttachmentExtension(attachment);
+                if (/\.(xls|xlsx|csv)$/i.test(extension)) {
+                    return 'spreadsheet';
+                }
+                if (/\.(doc|docx|rtf|txt|md)$/i.test(extension)) {
+                    return 'document';
+                }
+                if (/\.(ppt|pptx)$/i.test(extension)) {
+                    return 'presentation';
+                }
+                if (/\.(zip|rar|7z)$/i.test(extension)) {
+                    return 'archive';
+                }
+
+                return 'file';
+            }
+
+            function getAttachmentBadgeLabel(attachment) {
+                const extension = getAttachmentExtension(attachment).replace('.', '').toUpperCase();
+                if (extension) {
+                    return extension.length > 6 ? extension.slice(0, 6) : extension;
+                }
+
+                const kind = getAttachmentKind(attachment);
+                if (kind === 'spreadsheet') {
+                    return 'SHEET';
+                }
+                if (kind === 'presentation') {
+                    return 'SLIDE';
+                }
+                return kind.toUpperCase();
+            }
+
+            function buildAttachmentBadge(attachment) {
+                const badge = document.createElement('span');
+                const kind = getAttachmentKind(attachment);
+                badge.className = `messages-attachment-badge kind-${kind}`;
+                badge.textContent = getAttachmentBadgeLabel(attachment);
+                return badge;
+            }
+
+            function buildAttachmentPreviewNode(attachment) {
+                if (isImageAttachment(attachment)) {
+                    const previewLink = document.createElement('a');
+                    previewLink.className = 'messages-chat-attachment-link';
+                    previewLink.href = attachment.downloadPath || attachment.contentPath;
+                    previewLink.target = '_blank';
+                    previewLink.rel = 'noopener noreferrer';
+
+                    const image = document.createElement('img');
+                    image.className = 'messages-chat-attachment-preview';
+                    image.src = attachment.contentPath;
+                    image.alt = attachment.fileName || 'Attachment preview';
+                    previewLink.appendChild(image);
+                    return previewLink;
+                }
+
+                if (isPdfAttachment(attachment)) {
+                    const frame = document.createElement('iframe');
+                    frame.className = 'messages-chat-attachment-embed';
+                    frame.src = attachment.contentPath;
+                    frame.loading = 'lazy';
+                    frame.title = attachment.fileName || 'PDF attachment preview';
+                    return frame;
+                }
+
+                if (isVideoAttachment(attachment)) {
+                    const video = document.createElement('video');
+                    video.className = 'messages-chat-attachment-video';
+                    video.src = attachment.contentPath;
+                    video.controls = true;
+                    video.preload = 'metadata';
+                    return video;
+                }
+
+                if (isAudioAttachment(attachment)) {
+                    const audio = document.createElement('audio');
+                    audio.className = 'messages-chat-attachment-audio';
+                    audio.src = attachment.contentPath;
+                    audio.controls = true;
+                    audio.preload = 'metadata';
+                    return audio;
+                }
+
+                return null;
             }
 
             function buildMessageAttachmentPayload(documentItem) {
@@ -1433,7 +1660,7 @@
                     fileSize: Math.max(Number(documentItem && documentItem.fileSize) || 0, 0),
                     contentPath: basePath,
                     downloadPath: `${basePath}?download=1`,
-                    kind: /^image\//i.test(String(documentItem && documentItem.fileType || '')) ? 'image' : 'file'
+                    kind: getAttachmentKind(documentItem)
                 };
             }
 
@@ -1457,10 +1684,16 @@
                     chip.className = 'messages-pending-attachment-chip';
                     chip.innerHTML = `
                         <div class="messages-pending-attachment-copy">
-                            <p class="messages-pending-attachment-name">${escapeHtml(attachment.fileName || 'Attachment')}</p>
+                            <div class="messages-pending-attachment-top">
+                                <p class="messages-pending-attachment-name">${escapeHtml(attachment.fileName || 'Attachment')}</p>
+                            </div>
                             <p class="messages-pending-attachment-meta">${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` • ${escapeHtml(attachment.fileType)}` : ''}</p>
                         </div>
                     `;
+                    const pendingTop = chip.querySelector('.messages-pending-attachment-top');
+                    if (pendingTop) {
+                        pendingTop.prepend(buildAttachmentBadge(attachment));
+                    }
 
                     const removeButton = document.createElement('button');
                     removeButton.type = 'button';
@@ -1848,21 +2081,12 @@
 
                             messageBundle.attachments.forEach((attachment) => {
                                 const item = document.createElement('div');
-                                item.className = `messages-chat-attachment ${isImageAttachment(attachment) ? 'is-image' : ''}`;
+                                const attachmentKind = getAttachmentKind(attachment);
+                                item.className = `messages-chat-attachment is-${attachmentKind}${attachmentKind === 'image' ? ' is-image' : ''}`;
 
-                                if (isImageAttachment(attachment)) {
-                                    const previewLink = document.createElement('a');
-                                    previewLink.className = 'messages-chat-attachment-link';
-                                    previewLink.href = attachment.contentPath;
-                                    previewLink.target = '_blank';
-                                    previewLink.rel = 'noopener noreferrer';
-
-                                    const image = document.createElement('img');
-                                    image.className = 'messages-chat-attachment-preview';
-                                    image.src = attachment.contentPath;
-                                    image.alt = attachment.fileName || 'Attachment preview';
-                                    previewLink.appendChild(image);
-                                    item.appendChild(previewLink);
+                                const previewNode = buildAttachmentPreviewNode(attachment);
+                                if (previewNode) {
+                                    item.appendChild(previewNode);
                                 }
 
                                 const link = document.createElement('a');
@@ -1870,7 +2094,18 @@
                                 link.href = attachment.downloadPath || attachment.contentPath;
                                 link.target = '_blank';
                                 link.rel = 'noopener noreferrer';
-                                link.innerHTML = `<strong>${escapeHtml(attachment.fileName || 'Attachment')}</strong><span>${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` • ${escapeHtml(attachment.fileType)}` : ''}</span>`;
+                                link.innerHTML = `
+                                    <div class="messages-chat-attachment-copy">
+                                        <div class="messages-chat-attachment-head">
+                                            <strong>${escapeHtml(attachment.fileName || 'Attachment')}</strong>
+                                        </div>
+                                        <span>${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` • ${escapeHtml(attachment.fileType)}` : ''}</span>
+                                    </div>
+                                `;
+                                const attachmentHead = link.querySelector('.messages-chat-attachment-head');
+                                if (attachmentHead) {
+                                    attachmentHead.prepend(buildAttachmentBadge(attachment));
+                                }
                                 item.appendChild(link);
                                 attachmentsWrap.appendChild(item);
                             });
