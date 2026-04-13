@@ -16985,6 +16985,57 @@ function initNavbarDateTime() {
                 : 'Please review and sign the purchase agreement through DocuSign.';
         }
 
+        function getSelectedPropertyContext() {
+            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
+            const persistedDetail = getPersistedSelectedPropertyDetail();
+            const persistedKey = makePropertyStorageKey(persistedDetail && (persistedDetail.address || persistedDetail.propertyAddress));
+            const detail = selectedEntry && selectedEntry.source === 'selected'
+                ? (selectedEntry.snapshot || {})
+                : (selectedEntry && selectedEntry.key && selectedEntry.key === persistedKey && persistedDetail && typeof persistedDetail === 'object'
+                    ? persistedDetail
+                    : (selectedEntry ? (selectedEntry.snapshot || {}) : {}));
+            const snapshot = selectedEntry ? (selectedEntry.snapshot || {}) : {};
+
+            return {
+                selectedEntry,
+                detail,
+                snapshot
+            };
+        }
+
+        function inferOfferSummaryValue(detail, snapshot, labels) {
+            const offerSummary = [detail && detail.offer, snapshot && snapshot.offer].filter(Boolean).join('\n');
+            const normalizedLabels = Array.isArray(labels) ? labels : [labels];
+            return firstNonEmptyValue(...normalizedLabels.map((label) => extractLabeledValue(offerSummary, label)));
+        }
+
+        function buildOfferTermsPayload() {
+            const { detail, snapshot } = getSelectedPropertyContext();
+            const offerTerms = {};
+
+            const assignValue = (key, value) => {
+                const normalizedValue = cleanContractValue(value);
+                if (normalizedValue) {
+                    offerTerms[key] = normalizedValue;
+                }
+            };
+
+            assignValue('entity', inferOfferSummaryValue(detail, snapshot, ['Entity']));
+            assignValue('closeEscrowDays', inferOfferSummaryValue(detail, snapshot, ['Close of Escrow (Days)', 'Close of Escrow']));
+            assignValue('depositAmount', inferOfferSummaryValue(detail, snapshot, ['Deposit Amount']));
+            assignValue('depositType', inferOfferSummaryValue(detail, snapshot, ['Deposit Type']));
+            assignValue('offerType', inferOfferSummaryValue(detail, snapshot, ['Offer Type']));
+            assignValue('inspectionPeriod', inferOfferSummaryValue(detail, snapshot, ['Inspection Period']));
+            assignValue('escrowFees', inferOfferSummaryValue(detail, snapshot, ['Escrow Fees']));
+            assignValue('titleFees', inferOfferSummaryValue(detail, snapshot, ['Title Fees']));
+            assignValue('escrowCompany', inferOfferSummaryValue(detail, snapshot, ['Escrow', 'Escrow Company']));
+            assignValue('titleCompany', inferOfferSummaryValue(detail, snapshot, ['Title Company']));
+            assignValue('otherTerms', inferOfferSummaryValue(detail, snapshot, ['Other Terms']));
+            assignValue('sellerCompensation', inferOfferSummaryValue(detail, snapshot, ['Seller Compensation']));
+
+            return offerTerms;
+        }
+
         function syncAutoFilledInput(input, nextValue, options = {}) {
             if (!input) {
                 return;
@@ -17047,15 +17098,7 @@ function initNavbarDateTime() {
         }
 
         function applySelectedProperty() {
-            const selectedEntry = propertyEntries.get(propertySelect.value) || null;
-            const persistedDetail = getPersistedSelectedPropertyDetail();
-            const persistedKey = makePropertyStorageKey(persistedDetail && (persistedDetail.address || persistedDetail.propertyAddress));
-            const detail = selectedEntry && selectedEntry.source === 'selected'
-                ? (selectedEntry.snapshot || {})
-                : (selectedEntry && selectedEntry.key && selectedEntry.key === persistedKey && persistedDetail && typeof persistedDetail === 'object'
-                    ? persistedDetail
-                    : (selectedEntry ? (selectedEntry.snapshot || {}) : {}));
-            const snapshot = selectedEntry ? (selectedEntry.snapshot || {}) : {};
+            const { selectedEntry, detail, snapshot } = getSelectedPropertyContext();
             const propertyAddress = inferPropertyAddress(detail, snapshot, selectedEntry);
             const selectedPropertyKey = selectedEntry ? String(selectedEntry.key || '') : '';
             const shouldForceAutoFill = selectedPropertyKey !== lastAppliedPropertyKey;
@@ -17146,7 +17189,8 @@ function initNavbarDateTime() {
                 apn: cleanContractValue(apnInput.value),
                 purchasePrice: cleanContractValue(purchasePriceInput.value),
                 emailSubject: cleanContractValue(emailSubjectInput.value),
-                emailMessage: cleanContractValue(emailMessageInput.value)
+                emailMessage: cleanContractValue(emailMessageInput.value),
+                offerTerms: buildOfferTermsPayload()
             };
         }
 
@@ -20978,6 +21022,33 @@ function initNavbarDateTime() {
             ]);
         }
 
+        function buildDarkGoogleMapsStyles() {
+            return [
+                { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
+                { elementType: 'labels.text.fill', stylers: [{ color: '#cbd5f5' }] },
+                { elementType: 'labels.text.stroke', stylers: [{ color: '#020617' }] },
+                { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#334155' }] },
+                { featureType: 'administrative.land_parcel', elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
+                { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#111827' }] },
+                { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#132c22' }] },
+                { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
+                { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#93c5fd' }] },
+                { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#14532d' }] },
+                { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#bbf7d0' }] },
+                { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1f2937' }] },
+                { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#0b1220' }] },
+                { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#e2e8f0' }] },
+                { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#7c2d12' }] },
+                { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#fb923c' }] },
+                { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#ffedd5' }] },
+                { featureType: 'transit.line', elementType: 'geometry', stylers: [{ color: '#ef4444' }] },
+                { featureType: 'transit.line', elementType: 'geometry.stroke', stylers: [{ color: '#fca5a5' }] },
+                { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#fecaca' }] },
+                { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0c4a6e' }] },
+                { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#bae6fd' }] }
+            ];
+        }
+
         function geocodeAddressWithGoogle(address) {
             const trimmedAddress = String(address || '').trim();
             if (!trimmedAddress || !window.google || !window.google.maps || typeof window.google.maps.Geocoder !== 'function') {
@@ -21217,6 +21288,7 @@ function initNavbarDateTime() {
             let defaultGoogleMapsStyles = null;
             let nakedGoogleMapsStyles = null;
             let hybridGoogleMapsStyles = null;
+            let darkGoogleMapsStyles = null;
             let panoramaInstance = null;
             let infoWindowInstance = null;
             let subjectMarker = null;
@@ -22060,6 +22132,8 @@ function initNavbarDateTime() {
 
                 if (shouldUseNakedStyles) {
                     nextStyles = nakedGoogleMapsStyles || buildNakedGoogleMapsStyles(defaultGoogleMapsStyles);
+                } else if (currentMapLayer === 'dark') {
+                    nextStyles = darkGoogleMapsStyles || buildDarkGoogleMapsStyles();
                 } else if (shouldUseDefaultStyles && Array.isArray(defaultGoogleMapsStyles)) {
                     nextStyles = currentMapLayer === 'hybrid'
                         ? (hybridGoogleMapsStyles || buildHybridGoogleMapsStyles(defaultGoogleMapsStyles))
@@ -22448,6 +22522,7 @@ function initNavbarDateTime() {
                     defaultGoogleMapsStyles = Array.isArray(styles) ? styles : null;
                     nakedGoogleMapsStyles = buildNakedGoogleMapsStyles(defaultGoogleMapsStyles);
                     hybridGoogleMapsStyles = buildHybridGoogleMapsStyles(defaultGoogleMapsStyles);
+                    darkGoogleMapsStyles = buildDarkGoogleMapsStyles();
                     const subjectLocation = getSubjectLocation();
                     const mapOptions = {
                         center: subjectLocation,
@@ -22553,7 +22628,7 @@ function initNavbarDateTime() {
             }
 
             function setMapLayerMode(nextLayer) {
-                if (!['street', 'aerial', 'earth', 'hybrid'].includes(nextLayer)) {
+                if (!['street', 'dark', 'aerial', 'earth', 'hybrid'].includes(nextLayer)) {
                     return;
                 }
 

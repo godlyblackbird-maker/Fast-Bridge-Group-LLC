@@ -416,6 +416,89 @@ function resolveDocuSignTemplateRoleName(configuredRoleName, templateRoleNames, 
   return candidates.find((candidate) => templateRoleNames.includes(candidate)) || '';
 }
 
+function normalizeDocuSignTabKey(value) {
+  return cleanDocuSignText(value, 120)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function collectDocuSignTemplateRecipientsByRole(recipientsPayload) {
+  const recipientGroups = [
+    recipientsPayload && recipientsPayload.signers,
+    recipientsPayload && recipientsPayload.inPersonSigners,
+    recipientsPayload && recipientsPayload.agentSigners
+  ];
+
+  return recipientGroups
+    .flatMap((group) => Array.isArray(group) ? group : [])
+    .map((recipient) => ({
+      roleName: cleanDocuSignText(recipient && recipient.roleName, 120),
+      recipientId: cleanDocuSignText(recipient && (recipient.recipientId || recipient.recipient_id), 120)
+    }))
+    .filter((recipient) => recipient.roleName && recipient.recipientId);
+}
+
+function collectDocuSignTemplateTabLabels(tabsPayload) {
+  const tabGroups = [
+    tabsPayload && tabsPayload.textTabs,
+    tabsPayload && tabsPayload.numberTabs,
+    tabsPayload && tabsPayload.dateTabs,
+    tabsPayload && tabsPayload.noteTabs,
+    tabsPayload && tabsPayload.emailTabs,
+    tabsPayload && tabsPayload.formulaTabs,
+    tabsPayload && tabsPayload.listTabs
+  ];
+
+  return Array.from(new Set(
+    tabGroups
+      .flatMap((group) => Array.isArray(group) ? group : [])
+      .map((tab) => cleanDocuSignText(tab && (tab.tabLabel || tab.name), 120))
+      .filter(Boolean)
+  ));
+}
+
+function buildDocuSignTemplateRoleTabs(entries, availableLabels) {
+  const labels = Array.isArray(availableLabels) ? availableLabels : [];
+  if (!labels.length) {
+    return null;
+  }
+
+  const normalizedLabelMap = new Map();
+  labels.forEach((label) => {
+    const normalized = normalizeDocuSignTabKey(label);
+    if (normalized && !normalizedLabelMap.has(normalized)) {
+      normalizedLabelMap.set(normalized, label);
+    }
+  });
+
+  const usedLabels = new Set();
+  const textTabs = [];
+
+  entries.forEach(([aliases, value]) => {
+    const cleanValue = cleanDocuSignText(value, 4000);
+    if (!cleanValue) {
+      return;
+    }
+
+    aliases.forEach((alias) => {
+      const normalizedAlias = normalizeDocuSignTabKey(alias);
+      const matchedLabel = normalizedLabelMap.get(normalizedAlias);
+      if (!matchedLabel || usedLabels.has(matchedLabel)) {
+        return;
+      }
+
+      usedLabels.add(matchedLabel);
+      textTabs.push({
+        tabLabel: matchedLabel,
+        value: cleanValue,
+        locked: 'false'
+      });
+    });
+  });
+
+  return textTabs.length ? { textTabs } : null;
+}
+
 async function getDocuSignTemplateMetadata(config, accountContext, accessToken) {
   const templateBaseUrl = `${accountContext.baseUri}/restapi/v2.1/accounts/${encodeURIComponent(accountContext.accountId)}/templates/${encodeURIComponent(config.templateId)}`;
 
@@ -462,12 +545,41 @@ async function getDocuSignTemplateMetadata(config, accountContext, accessToken) 
     throw new Error(`The DocuSign template is missing the expected recipient roles: ${missingRoles.join(', ')}. Available roles: ${roleNames.join(', ') || 'none found'}.`);
   }
 
+  const templateRecipients = collectDocuSignTemplateRecipientsByRole(recipientsPayload);
+  const roleTabLabels = {};
+
+  await Promise.all(templateRecipients.map(async (recipient) => {
+    try {
+      const tabsResponse = await fetch(`${templateBaseUrl}/recipients/${encodeURIComponent(recipient.recipientId)}/tabs`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      const tabsPayload = await tabsResponse.json().catch(() => ({}));
+      if (!tabsResponse.ok) {
+        return;
+      }
+
+      const labels = collectDocuSignTemplateTabLabels(tabsPayload);
+      if (!labels.length) {
+        return;
+      }
+
+      const currentLabels = Array.isArray(roleTabLabels[recipient.roleName]) ? roleTabLabels[recipient.roleName] : [];
+      roleTabLabels[recipient.roleName] = Array.from(new Set(currentLabels.concat(labels)));
+    } catch (error) {
+      // Keep the envelope flow alive even if template tab inspection is unavailable.
+    }
+  }));
+
   return {
     id: cleanDocuSignText(templatePayload && (templatePayload.templateId || templatePayload.template_id || config.templateId), 120),
     name: cleanDocuSignText(templatePayload && (templatePayload.name || templatePayload.templateName), 240) || 'DocuSign template',
     roleNames,
     buyerRoleName: resolvedBuyerRoleName,
-    sellerRoleName: resolvedSellerRoleName
+    sellerRoleName: resolvedSellerRoleName,
+    roleTabLabels
   };
 }
 
@@ -560,6 +672,21 @@ function buildDocuSignEnvelopePayload(config, payload, templateMetadata = null) 
     payload.emailMessage || 'Please review and sign the purchase agreement through DocuSign.',
     1000
   );
+  const offerTerms = payload && payload.offerTerms && typeof payload.offerTerms === 'object'
+    ? payload.offerTerms
+    : {};
+  const entityName = cleanDocuSignText(offerTerms.entity, 160);
+  const closeEscrowDays = cleanDocuSignText(offerTerms.closeEscrowDays, 80);
+  const depositAmount = cleanDocuSignText(offerTerms.depositAmount, 120);
+  const depositType = cleanDocuSignText(offerTerms.depositType, 120);
+  const offerType = cleanDocuSignText(offerTerms.offerType, 120);
+  const inspectionPeriod = cleanDocuSignText(offerTerms.inspectionPeriod, 120);
+  const escrowFees = cleanDocuSignText(offerTerms.escrowFees, 120);
+  const titleFees = cleanDocuSignText(offerTerms.titleFees, 120);
+  const escrowCompany = cleanDocuSignText(offerTerms.escrowCompany, 160);
+  const titleCompany = cleanDocuSignText(offerTerms.titleCompany, 160);
+  const otherTerms = cleanDocuSignText(offerTerms.otherTerms, 500);
+  const sellerCompensation = cleanDocuSignText(offerTerms.sellerCompensation, 160);
 
   const textCustomFields = buildDocuSignTextCustomFields([
     [['propertyAddress', 'property_address', 'address'], propertyAddress],
@@ -569,11 +696,52 @@ function buildDocuSignEnvelopePayload(config, payload, templateMetadata = null) 
     [['buyerName', 'buyer', 'assigneeName', 'assignee'], buyerName],
     [['buyerEmail', 'buyer_email', 'assigneeEmail', 'assignee_email'], buyerEmail],
     [['sellerName', 'seller', 'assignorName', 'assignor'], sellerName],
-    [['sellerEmail', 'seller_email', 'assignorEmail', 'assignor_email'], sellerEmail]
+    [['sellerEmail', 'seller_email', 'assignorEmail', 'assignor_email'], sellerEmail],
+    [['entity', 'buyerEntity', 'purchasingEntity', 'vesting'], entityName],
+    [['closeEscrowDays', 'closeOfEscrowDays', 'closeOfEscrow'], closeEscrowDays],
+    [['depositAmount', 'emdAmount', 'earnestMoneyDeposit'], depositAmount],
+    [['depositType'], depositType],
+    [['offerType'], offerType],
+    [['inspectionPeriod'], inspectionPeriod],
+    [['escrowFees'], escrowFees],
+    [['titleFees'], titleFees],
+    [['escrowCompany', 'escrow'], escrowCompany],
+    [['titleCompany'], titleCompany],
+    [['otherTerms'], otherTerms],
+    [['sellerCompensation'], sellerCompensation]
   ]);
+
+  const templateTabEntries = [
+    [['propertyAddress', 'property_address', 'property address', 'address', 'subjectProperty', 'subject property'], propertyAddress],
+    [['contractDate', 'contract_date', 'contract date', 'agreementDate', 'agreement date', 'purchaseAgreementDate', 'purchase agreement date'], contractDate],
+    [['apn', 'parcelNumber', 'parcel number', 'propertyApn', 'property apn'], apn],
+    [['purchasePrice', 'purchase price', 'purchase_price', 'salePrice', 'sale price', 'salesPrice', 'sales price', 'offerPrice', 'offer price'], purchasePrice],
+    [['buyerName', 'buyer name', 'buyer', 'assigneeName', 'assignee name', 'assignee', 'purchaserName', 'purchaser name', 'purchaser'], buyerName],
+    [['buyerEmail', 'buyer email', 'buyer_email', 'assigneeEmail', 'assignee email', 'purchaserEmail', 'purchaser email'], buyerEmail],
+    [['sellerName', 'seller name', 'seller', 'assignorName', 'assignor name', 'assignor'], sellerName],
+    [['sellerEmail', 'seller email', 'seller_email', 'assignorEmail', 'assignor email'], sellerEmail],
+    [['entity', 'buyerEntity', 'buyer entity', 'purchasingEntity', 'purchasing entity', 'vesting', 'vestingName', 'vesting name'], entityName],
+    [['closeEscrowDays', 'close escrow days', 'closeOfEscrow', 'close of escrow', 'closeOfEscrowDays', 'close of escrow days', 'coe'], closeEscrowDays],
+    [['depositAmount', 'deposit amount', 'emdAmount', 'emd amount', 'earnestMoneyDeposit', 'earnest money deposit'], depositAmount],
+    [['depositType', 'deposit type'], depositType],
+    [['offerType', 'offer type'], offerType],
+    [['inspectionPeriod', 'inspection period'], inspectionPeriod],
+    [['escrowFees', 'escrow fees'], escrowFees],
+    [['titleFees', 'title fees'], titleFees],
+    [['escrowCompany', 'escrow company', 'escrow'], escrowCompany],
+    [['titleCompany', 'title company'], titleCompany],
+    [['otherTerms', 'other terms'], otherTerms],
+    [['sellerCompensation', 'seller compensation'], sellerCompensation]
+  ];
 
   const buyerRoleName = cleanDocuSignText(templateMetadata && templateMetadata.buyerRoleName, 120) || config.buyerRoleName;
   const sellerRoleName = cleanDocuSignText(templateMetadata && templateMetadata.sellerRoleName, 120) || config.sellerRoleName;
+  const roleTabLabels = templateMetadata && templateMetadata.roleTabLabels && typeof templateMetadata.roleTabLabels === 'object'
+    ? templateMetadata.roleTabLabels
+    : {};
+
+  const buyerTabs = buildDocuSignTemplateRoleTabs(templateTabEntries, roleTabLabels[buyerRoleName]);
+  const sellerTabs = buildDocuSignTemplateRoleTabs(templateTabEntries, roleTabLabels[sellerRoleName]);
 
   const envelope = {
     status: 'sent',
@@ -586,14 +754,16 @@ function buildDocuSignEnvelopePayload(config, payload, templateMetadata = null) 
         name: buyerName,
         email: buyerEmail,
         clientUserId: getDocuSignRecipientClientUserId('buyer'),
-        embeddedRecipientStartURL: 'SIGN_AT_DOCUSIGN'
+        embeddedRecipientStartURL: 'SIGN_AT_DOCUSIGN',
+        ...(buyerTabs ? { tabs: buyerTabs } : {})
       },
       {
         roleName: sellerRoleName,
         name: sellerName,
         email: sellerEmail,
         clientUserId: getDocuSignRecipientClientUserId('seller'),
-        embeddedRecipientStartURL: 'SIGN_AT_DOCUSIGN'
+        embeddedRecipientStartURL: 'SIGN_AT_DOCUSIGN',
+        ...(sellerTabs ? { tabs: sellerTabs } : {})
       }
     ]
   };
@@ -10634,6 +10804,9 @@ app.post('/api/agent-workspace-docusign/send', express.json({ limit: '1mb' }), a
     const sellerEmail = cleanDocuSignText(req.body?.sellerEmail, 180).toLowerCase();
     const emailSubject = cleanDocuSignText(req.body?.emailSubject, 180);
     const emailMessage = cleanDocuSignText(req.body?.emailMessage, 1000);
+    const offerTerms = req.body?.offerTerms && typeof req.body.offerTerms === 'object'
+      ? req.body.offerTerms
+      : {};
 
     const missingFields = [];
     if (!propertyAddress) missingFields.push('property address');
@@ -10662,6 +10835,7 @@ app.post('/api/agent-workspace-docusign/send', express.json({ limit: '1mb' }), a
       sellerEmail,
       emailSubject,
       emailMessage,
+      offerTerms,
       requestedBy: {
         userId: Number(decoded.id) || 0,
         name: cleanDocuSignText(decoded.name, 120),
