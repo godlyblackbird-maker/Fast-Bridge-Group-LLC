@@ -242,6 +242,7 @@ function getDocuSignConfig() {
     userId: getFirstConfiguredEnvValue('DOCUSIGN_USER_ID'),
     accountId: getFirstConfiguredEnvValue('DOCUSIGN_ACCOUNT_ID'),
     templateId: getFirstConfiguredEnvValue('DOCUSIGN_TEMPLATE_ID', 'DOCUSIGN_PURCHASE_TEMPLATE_ID'),
+    redirectUri: getFirstConfiguredEnvValue('DOCUSIGN_REDIRECT_URI'),
     privateKey: normalizeDocuSignPrivateKey(
       getFirstConfiguredEnvValue('DOCUSIGN_PRIVATE_KEY', 'DOCUSIGN_RSA_PRIVATE_KEY', 'DOCUSIGN_PRIVATE_KEY_PEM')
     ),
@@ -269,6 +270,8 @@ function getDocuSignStatusPayload() {
     buyerRoleName: config.buyerRoleName,
     sellerRoleName: config.sellerRoleName,
     hasAccountId: Boolean(config.accountId),
+    hasConsentRedirectUri: Boolean(String(config.redirectUri || '').trim()),
+    consentUrl: buildDocuSignConsentUrl(config),
     authServer: config.authServer
   };
 }
@@ -285,6 +288,59 @@ function buildDocuSignErrorMessage(payload, fallbackMessage) {
   }
 
   return fallbackMessage;
+}
+
+function buildDocuSignConsentUrl(config = getDocuSignConfig()) {
+  const redirectUri = String(config && config.redirectUri || '').trim();
+  const clientId = String(config && config.clientId || '').trim();
+  const authServer = String(config && config.authServer || '').trim();
+
+  if (!redirectUri || !clientId || !authServer) {
+    return '';
+  }
+
+  return `https://${authServer}/oauth/auth?${new URLSearchParams({
+    response_type: 'code',
+    scope: 'signature impersonation',
+    client_id: clientId,
+    redirect_uri: redirectUri
+  }).toString()}`;
+}
+
+function createDocuSignApiError(payload, fallbackMessage, statusCode = 500) {
+  const error = new Error(buildDocuSignErrorMessage(payload, fallbackMessage));
+  error.statusCode = Number(statusCode) || 500;
+  error.code = String(payload && (payload.error || payload.code) || '').trim().toLowerCase();
+  error.details = payload;
+  return error;
+}
+
+function buildDocuSignRouteErrorResponse(error) {
+  const code = String(error && error.code || '').trim().toLowerCase();
+  const consentUrl = buildDocuSignConsentUrl();
+
+  if (code === 'consent_required') {
+    return {
+      status: 403,
+      body: {
+        error: consentUrl
+          ? 'DocuSign needs one-time consent before this workspace can send envelopes. Use the consent link, approve access for the configured DocuSign user, and then try again.'
+          : 'DocuSign needs one-time consent before this workspace can send envelopes. Add DOCUSIGN_REDIRECT_URI for a registered DocuSign callback URL, grant consent for the configured DocuSign user, and then try again.',
+        code,
+        consentUrl: consentUrl || null
+      }
+    };
+  }
+
+  const fallbackMessage = error && error.message ? error.message : 'DocuSign request failed.';
+  const status = Number(error && error.statusCode);
+  return {
+    status: status >= 400 && status < 600 ? status : 500,
+    body: {
+      error: fallbackMessage,
+      code: code || null
+    }
+  };
 }
 
 function isValidEmailAddress(value) {
@@ -330,7 +386,7 @@ async function getDocuSignAccessToken(config) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(buildDocuSignErrorMessage(payload, 'DocuSign authentication failed.'));
+    throw createDocuSignApiError(payload, 'DocuSign authentication failed.', response.status);
   }
 
   const accessToken = String(payload.access_token || '').trim();
@@ -10931,7 +10987,8 @@ app.post('/api/agent-workspace-docusign/send', express.json({ limit: '1mb' }), a
     });
   } catch (error) {
     console.error('Failed to send Agent Workspace DocuSign envelope:', error);
-    return res.status(500).json({ error: error && error.message ? error.message : 'Failed to send the DocuSign envelope.' });
+    const routeError = buildDocuSignRouteErrorResponse(error);
+    return res.status(routeError.status).json(routeError.body);
   }
 });
 
@@ -10986,7 +11043,8 @@ app.post('/api/agent-workspace-docusign/signing-link', express.json({ limit: '1m
     });
   } catch (error) {
     console.error('Failed to create Agent Workspace DocuSign signing link:', error);
-    return res.status(500).json({ error: error && error.message ? error.message : 'Failed to create the DocuSign signing link.' });
+    const routeError = buildDocuSignRouteErrorResponse(error);
+    return res.status(routeError.status).json(routeError.body);
   }
 });
 

@@ -16498,6 +16498,26 @@ body.analytics-reboot .analytics-my-file-count {
     outline: none;
 }
 
+.property-share-doc-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.property-share-doc-delete-btn {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.property-share-doc-delete-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
 .property-back-link {
     display: inline-flex;
     align-items: center;

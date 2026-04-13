@@ -16757,14 +16757,26 @@ function initNavbarDateTime() {
         const copyBuyerLinkButton = document.getElementById('agent-contract-copy-buyer-link-btn');
         const copySellerLinkButton = document.getElementById('agent-contract-copy-seller-link-btn');
         const statusNote = document.getElementById('agent-contract-status');
+        const actionsRow = statusNote ? statusNote.nextElementSibling : null;
 
-        if (!propertySelect || !propertyAddressInput || !dateInput || !buyerInput || !buyerEmailInput || !sellerInput || !sellerEmailInput || !apnInput || !purchasePriceInput || !emailSubjectInput || !emailMessageInput || !sendButton || !copyBuyerLinkButton || !copySellerLinkButton || !statusNote) {
+        if (!propertySelect || !propertyAddressInput || !dateInput || !buyerInput || !buyerEmailInput || !sellerInput || !sellerEmailInput || !apnInput || !purchasePriceInput || !emailSubjectInput || !emailMessageInput || !sendButton || !copyBuyerLinkButton || !copySellerLinkButton || !statusNote || !actionsRow) {
             return;
         }
+
+        const consentButton = document.createElement('a');
+        consentButton.className = 'card-btn subtle';
+        consentButton.href = '#';
+        consentButton.target = '_blank';
+        consentButton.rel = 'noopener noreferrer';
+        consentButton.textContent = 'Grant DocuSign Consent';
+        consentButton.hidden = true;
+        actionsRow.appendChild(consentButton);
 
         const propertyEntries = new Map();
         let isDocuSignConfigured = false;
         let docusignConfigMessage = 'Checking DocuSign configuration for this workspace...';
+        let docusignConsentUrl = '';
+        let showDocuSignConsentButton = false;
         let lastAutoSubject = '';
         let lastAutoMessage = '';
         let lastAppliedPropertyKey = '';
@@ -16773,6 +16785,12 @@ function initNavbarDateTime() {
         function setStatus(message, tone) {
             statusNote.textContent = message;
             statusNote.dataset.tone = tone || '';
+        }
+
+        function updateDocuSignConsentButton() {
+            const hasConsentUrl = Boolean(cleanContractValue(docusignConsentUrl)) && showDocuSignConsentButton;
+            consentButton.hidden = !hasConsentUrl;
+            consentButton.href = hasConsentUrl ? docusignConsentUrl : '#';
         }
 
         function updateCopyLinkButtons() {
@@ -16871,7 +16889,10 @@ function initNavbarDateTime() {
 
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(String(payload && payload.error || 'DocuSign request failed.'));
+                const error = new Error(String(payload && payload.error || 'DocuSign request failed.'));
+                error.code = cleanContractValue(payload && payload.code).toLowerCase();
+                error.consentUrl = cleanContractValue(payload && payload.consentUrl);
+                throw error;
             }
 
             return payload;
@@ -17160,6 +17181,9 @@ function initNavbarDateTime() {
                 const payload = await requestDocuSign('/api/agent-workspace-docusign');
                 const missing = Array.isArray(payload && payload.missing) ? payload.missing : [];
                 isDocuSignConfigured = Boolean(payload && payload.configured);
+                docusignConsentUrl = cleanContractValue(payload && payload.consentUrl);
+                showDocuSignConsentButton = false;
+                updateDocuSignConsentButton();
                 sendButton.disabled = !isDocuSignConfigured;
 
                 if (!isDocuSignConfigured) {
@@ -17172,6 +17196,8 @@ function initNavbarDateTime() {
             } catch (error) {
                 isDocuSignConfigured = false;
                 sendButton.disabled = true;
+                showDocuSignConsentButton = false;
+                updateDocuSignConsentButton();
                 docusignConfigMessage = error && error.message ? error.message : 'Unable to verify the DocuSign configuration.';
             }
 
@@ -17244,8 +17270,15 @@ function initNavbarDateTime() {
 
                 showDashboardToast('success', 'Link Copied', `${normalizedRecipientType === 'seller' ? 'Seller' : 'Buyer'} signing link copied to clipboard.`);
                 setStatus(`${normalizedRecipientType === 'seller' ? 'Seller' : 'Buyer'} signing link copied.`, 'success');
+                showDocuSignConsentButton = false;
+                updateDocuSignConsentButton();
             } catch (error) {
-                const message = error && error.message ? error.message : 'The signing link could not be created.';
+                docusignConsentUrl = cleanContractValue(error && error.consentUrl) || docusignConsentUrl;
+                showDocuSignConsentButton = error && error.code === 'consent_required' && Boolean(docusignConsentUrl);
+                updateDocuSignConsentButton();
+                const message = error && error.code === 'consent_required' && docusignConsentUrl
+                    ? `${error.message} Use Grant DocuSign Consent, approve access, and then generate the link again.`
+                    : (error && error.message ? error.message : 'The signing link could not be created.');
                 showDashboardToast('error', 'Copy Link Failed', message);
                 setStatus(message, 'error');
             } finally {
@@ -17300,6 +17333,8 @@ function initNavbarDateTime() {
                 const envelopeId = cleanContractValue(response && response.envelope && response.envelope.envelopeId);
                 lastEnvelopeId = envelopeId;
                 updateCopyLinkButtons();
+                showDocuSignConsentButton = false;
+                updateDocuSignConsentButton();
                 showDashboardToast('success', 'DocuSign Sent', envelopeId
                     ? `Envelope ${envelopeId} was sent for signature.`
                     : 'The DocuSign envelope was sent for signature.');
@@ -17307,7 +17342,12 @@ function initNavbarDateTime() {
                     ? `DocuSign envelope ${envelopeId} was sent successfully. Use Copy Buyer Link or Copy Seller Link to share it.`
                     : 'The DocuSign envelope was sent successfully. Use the copy-link buttons to share it.', 'success');
             } catch (error) {
-                const message = error && error.message ? error.message : 'The DocuSign envelope could not be sent.';
+                docusignConsentUrl = cleanContractValue(error && error.consentUrl) || docusignConsentUrl;
+                showDocuSignConsentButton = error && error.code === 'consent_required' && Boolean(docusignConsentUrl);
+                updateDocuSignConsentButton();
+                const message = error && error.code === 'consent_required' && docusignConsentUrl
+                    ? `${error.message} Use Grant DocuSign Consent, approve access, and then send again.`
+                    : (error && error.message ? error.message : 'The DocuSign envelope could not be sent.');
                 clearSigningLinks();
                 showDashboardToast('error', 'DocuSign Send Failed', message);
                 setStatus(message, 'error');
@@ -17595,7 +17635,7 @@ function initNavbarDateTime() {
         function setDealsImportLookupBusy(isBusy, activeButton = null) {
             if (importSourceCollectButton) {
                 importSourceCollectButton.disabled = isBusy;
-                importSourceCollectButton.textContent = isBusy && activeButton === 'collect' ? 'Collecting...' : 'Auto collect';
+                importSourceCollectButton.textContent = isBusy && activeButton === 'collect' ? 'Autofilling...' : 'Autofill';
             }
             if (importSourceFetchButton) {
                 importSourceFetchButton.disabled = isBusy;
@@ -17603,14 +17643,14 @@ function initNavbarDateTime() {
                 importSourceFetchButton.setAttribute(
                     'aria-label',
                     isBusy && activeButton === 'fetch'
-                        ? 'Autofilling property from listing link'
-                        : 'Autofill property from listing link'
+                        ? 'Auto collecting property from address'
+                        : 'Auto collect property from address'
                 );
                 importSourceFetchButton.setAttribute(
                     'title',
                     isBusy && activeButton === 'fetch'
-                        ? 'Autofilling property from listing link'
-                        : 'Autofill property from listing link'
+                        ? 'Auto collecting property from address'
+                        : 'Auto collect property from address'
                 );
             }
         }
@@ -17666,7 +17706,7 @@ function initNavbarDateTime() {
             const addressInput = document.getElementById('deals-import-address');
             const trimmedAddress = String(addressInput && addressInput.value || '').trim();
             if (!trimmedAddress) {
-                showDashboardToast('error', 'Address Required', 'Enter the property address first, then click Auto collect.');
+                showDashboardToast('error', 'Address Required', 'Enter the property address first, then click Autofill.');
                 if (addressInput) {
                     addressInput.focus();
                 }
@@ -17730,11 +17770,11 @@ function initNavbarDateTime() {
         }
 
         if (importSourceFetchButton) {
-            importSourceFetchButton.addEventListener('click', fetchListingPreviewFromSource);
+            importSourceFetchButton.addEventListener('click', autoCollectDealsImportFromAddress);
         }
 
         if (importSourceCollectButton) {
-            importSourceCollectButton.addEventListener('click', autoCollectDealsImportFromAddress);
+            importSourceCollectButton.addEventListener('click', fetchListingPreviewFromSource);
         }
 
         if (importCloseButton) {
@@ -19465,6 +19505,30 @@ function initNavbarDateTime() {
                 `;
             }
 
+            async function removeDocument(documentItem) {
+                const fileName = documentItem.fileName || documentItem.label || 'this property document';
+                const confirmed = window.confirm(`Delete "${fileName}" from ${propertyAddress}?`);
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
+                    if (documentItem.storage === 'indexeddb') {
+                        await deleteOfferDocumentBlob(documentItem.id);
+                        const remainingLocalDocuments = getPropertyDetailDocuments().filter((item) => item.id !== documentItem.id);
+                        setPropertyDetailDocuments(remainingLocalDocuments);
+                    } else {
+                        await deleteCloudStoredDocument(documentItem);
+                    }
+
+                    propertyDocuments = propertyDocuments.filter((item) => item.id !== documentItem.id);
+                    renderDocuments();
+                    showDashboardToast('success', 'Document Deleted', `${fileName} was removed from this property.`);
+                } catch (error) {
+                    showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The selected property document could not be deleted.');
+                }
+            }
+
             function renderDocuments() {
                 libraryList.innerHTML = '';
 
@@ -19510,6 +19574,34 @@ function initNavbarDateTime() {
                     head.appendChild(titleWrap);
                     head.appendChild(meta);
                     item.appendChild(head);
+
+                    const actions = document.createElement('div');
+                    actions.className = 'property-share-doc-actions';
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'offer-doc-action-btn danger property-share-doc-delete-btn';
+                    deleteButton.setAttribute('aria-label', `Delete ${documentItem.fileName || documentItem.label || 'property document'}`);
+                    deleteButton.title = 'Delete property document';
+                    deleteButton.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M19 6l-1 14H6L5 6"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                        </svg>
+                    `;
+                    deleteButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void removeDocument(documentItem);
+                    });
+                    deleteButton.addEventListener('keydown', (event) => {
+                        event.stopPropagation();
+                    });
+                    actions.appendChild(deleteButton);
+                    item.appendChild(actions);
 
                     const openDocument = async () => {
                         try {
