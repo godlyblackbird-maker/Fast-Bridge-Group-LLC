@@ -251,6 +251,271 @@
 }
 
 [data-theme="beach"] .calendar-day.past-day .calendar-day-number {
+[data-theme="cloud"] {
+    --glass-bg: rgba(255, 255, 255, 0.36);
+    --glass-border: rgba(28, 112, 145, 0.22);
+    --glass-shadow: rgba(15, 60, 80, 0.16);
+    --glass-hover: rgba(255, 255, 255, 0.56);
+
+    --bg-dark: #dcf5fb;
+    --bg-gradient-1: #b9ebf7;
+    --bg-gradient-2: #e9fbff;
+    --bg-gradient-3: #fff2cf;
+
+    --text-primary: #13485d;
+    --text-secondary: rgba(19, 72, 93, 0.76);
+    --text-muted: rgba(19, 72, 93, 0.54);
+
+    --mobile-toggle-bg: linear-gradient(135deg, rgba(68, 193, 224, 0.96), rgba(255, 210, 96, 0.92));
+    --mobile-toggle-border: rgba(28, 112, 145, 0.22);
+    --mobile-toggle-shadow: 0 14px 30px -14px rgba(15, 60, 80, 0.26), 0 10px 24px rgba(68, 193, 224, 0.18);
+    --mobile-toggle-icon: #fffdf7;
+
+    --toast-surface: rgba(248, 254, 255, 0.97);
+    --toast-border: rgba(28, 112, 145, 0.16);
+    --toast-title: #13485d;
+    --toast-body: rgba(19, 72, 93, 0.86);
+    --toast-shadow: 0 18px 44px rgba(15, 60, 80, 0.16);
+}
+
+[data-theme="cloud"] .orb {
+    opacity: 0.24;
+}
+
+[data-theme="cloud"] .background::before {
+    background:
+        radial-gradient(ellipse 78% 50% at 14% 22%, rgba(68, 193, 224, 0.22) 0%, transparent 56%),
+        radial-gradient(ellipse 62% 46% at 84% 20%, rgba(255, 213, 100, 0.16) 0%, transparent 56%),
+        radial-gradient(ellipse 58% 42% at 52% 84%, rgba(117, 225, 245, 0.18) 0%, transparent 58%);
+}
+
+[data-theme="cloud"] .background::after {
+    content: '';
+    position: absolute;
+    inset: auto -8% -6% -8%;
+    height: 42%;
+    pointer-events: none;
+    background:
+        radial-gradient(96% 86% at 12% 100%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 60%),
+        radial-gradient(82% 72% at 45% 100%, rgba(240, 252, 255, 0.86) 0%, rgba(240, 252, 255, 0) 62%),
+        radial-gradient(92% 84% at 82% 100%, rgba(255, 248, 216, 0.68) 0%, rgba(255, 248, 216, 0) 64%),
+        repeating-radial-gradient(circle at 38% 118%, rgba(141, 220, 240, 0.12) 0 2px, rgba(255, 255, 255, 0) 2px 14px);
+    opacity: 0.96;
+}
+
+[data-theme="cloud"] .orb-1 {
+    background: #44c1e0;
+}
+
+[data-theme="cloud"] .orb-2 {
+    background: #ffffff;
+}
+
+[data-theme="cloud"] .orb-3 {
+    background: #ffd564;
+}
+
+[data-theme="cloud"] .glass-card {
+    border-color: rgba(28, 112, 145, 0.2);
+    box-shadow:
+        0 20px 40px -22px rgba(15, 60, 80, 0.24),
+        0 8px 24px rgba(68, 193, 224, 0.12);
+}
+
+[data-theme="cloud"] .glass-card:hover {
+    border-color: rgba(68, 193, 224, 0.32);
+    box-shadow:
+        0 24px 48px -22px rgba(15, 60, 80, 0.28),
+        0 0 28px rgba(117, 225, 245, 0.24);
+}
+
+[data-theme="cloud"] .sidebar,
+[data-theme="cloud"] .navbar {
+    border-color: rgba(28, 112, 145, 0.18);
+}
+
+[data-theme="cloud"] body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: url("Themes/Cloud%20-%20FAST%20-%20Wallpaper.jpg") no-repeat center center;
+    background-size: cover;
+    opacity: 0.76;
+    filter: blur(1.4px) saturate(1.04) contrast(1.02);
+    transform: scale(1.02);
+    transform-origin: center;
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="cloud"] body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(220, 245, 251, 0.2), rgba(220, 245, 251, 0.06) 28%, rgba(255, 242, 207, 0.18) 100%),
+        radial-gradient(58% 42% at 18% 16%, rgba(68, 193, 224, 0.18) 0%, rgba(68, 193, 224, 0) 72%),
+        radial-gradient(32% 28% at 72% 18%, rgba(255, 213, 100, 0.2) 0%, rgba(255, 213, 100, 0) 72%),
+        radial-gradient(52% 40% at 44% 86%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 70%);
+    opacity: 1;
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="cloud"] .calendar-day.past-day {
+    color: rgba(19, 72, 93, 0.92);
+    background: linear-gradient(135deg, rgba(192, 234, 245, 0.9), rgba(135, 204, 223, 0.78));
+    border-color: rgba(28, 112, 145, 0.24);
+}
+
+[data-theme="cloud"] .calendar-day.past-day .calendar-day-number {
+    color: #13485d;
+}
+
+[data-theme="cloud"] .form-input,
+[data-theme="cloud"] .search-input,
+[data-theme="cloud"] .settings-select,
+[data-theme="cloud"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+[data-theme="cloud"] textarea,
+[data-theme="cloud"] select,
+[data-theme="cloud"] select.form-input,
+[data-theme="cloud"] .ia-grid input,
+[data-theme="cloud"] .ia-grid select,
+[data-theme="cloud"] .offer-grid input,
+[data-theme="cloud"] .offer-grid select,
+[data-theme="cloud"] .calendar-inline-form textarea,
+[data-theme="cloud"] .calendar-inline-form input,
+[data-theme="cloud"] .agent-note-input,
+[data-theme="cloud"] .outreach-textarea {
+    background: rgba(252, 255, 255, 0.64) !important;
+    border-color: rgba(28, 112, 145, 0.18) !important;
+    color: #13485d !important;
+}
+
+[data-theme="cloud"] .form-input::placeholder,
+[data-theme="cloud"] .search-input::placeholder,
+[data-theme="cloud"] .agent-note-input::placeholder,
+[data-theme="cloud"] .outreach-textarea::placeholder,
+[data-theme="cloud"] input::placeholder,
+[data-theme="cloud"] textarea::placeholder {
+    color: rgba(19, 72, 93, 0.48) !important;
+}
+
+[data-theme="cloud"] .form-input:focus,
+[data-theme="cloud"] .search-input:focus,
+[data-theme="cloud"] .settings-select:focus,
+[data-theme="cloud"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="cloud"] textarea:focus,
+[data-theme="cloud"] select:focus,
+[data-theme="cloud"] .ia-grid input:focus,
+[data-theme="cloud"] .ia-grid select:focus,
+[data-theme="cloud"] .offer-grid input:focus,
+[data-theme="cloud"] .offer-grid select:focus,
+[data-theme="cloud"] .calendar-inline-form textarea:focus,
+[data-theme="cloud"] .calendar-inline-form input:focus,
+[data-theme="cloud"] .agent-note-input:focus,
+[data-theme="cloud"] .outreach-textarea:focus {
+    border-color: rgba(68, 193, 224, 0.42) !important;
+    box-shadow: 0 0 0 3px rgba(68, 193, 224, 0.14) !important;
+}
+
+[data-theme="cloud"] .settings-select,
+[data-theme="cloud"] select,
+[data-theme="cloud"] select.form-input,
+[data-theme="cloud"] .ia-grid select,
+[data-theme="cloud"] .offer-grid select,
+[data-theme="cloud"] .form-group .form-input[type="select-one"] {
+    background-image:
+        linear-gradient(45deg, transparent 50%, rgba(19, 72, 93, 0.8) 50%),
+        linear-gradient(135deg, rgba(19, 72, 93, 0.8) 50%, transparent 50%);
+}
+
+[data-theme="cloud"] .settings-select option,
+[data-theme="cloud"] select option,
+[data-theme="cloud"] select.form-input option,
+[data-theme="cloud"] .ia-grid select option,
+[data-theme="cloud"] .offer-grid select option,
+[data-theme="cloud"] .form-group .form-input[type="select-one"] option {
+    background: #effbff !important;
+    color: #13485d !important;
+}
+
+[data-theme="cloud"] .settings-select option:checked,
+[data-theme="cloud"] select option:checked,
+[data-theme="cloud"] select.form-input option:checked,
+[data-theme="cloud"] .ia-grid select option:checked,
+[data-theme="cloud"] .offer-grid select option:checked,
+[data-theme="cloud"] .form-group .form-input[type="select-one"] option:checked {
+    background: #98dfee !important;
+    color: #0f3e51 !important;
+}
+
+[data-theme="cloud"] input:disabled,
+[data-theme="cloud"] textarea:disabled,
+[data-theme="cloud"] select:disabled {
+    background: rgba(215, 241, 248, 0.62) !important;
+    border-color: rgba(28, 112, 145, 0.14) !important;
+    color: rgba(19, 72, 93, 0.46) !important;
+}
+
+[data-theme="cloud"] .ia-section {
+    border-color: rgba(28, 112, 145, 0.2);
+    background:
+        linear-gradient(140deg, rgba(255, 255, 255, 0.74), rgba(231, 249, 255, 0.68)),
+        linear-gradient(20deg, rgba(68, 193, 224, 0.08), rgba(255, 213, 100, 0.08));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 18px 28px -20px rgba(15, 60, 80, 0.18);
+}
+
+[data-theme="cloud"] .ia-section h3 {
+    color: #13485d;
+}
+
+[data-theme="cloud"] .ia-grid label,
+[data-theme="cloud"] .ia-other-head,
+[data-theme="cloud"] .ia-other-item {
+    color: rgba(19, 72, 93, 0.88);
+}
+
+[data-theme="cloud"] .ia-readout {
+    border-color: rgba(28, 112, 145, 0.2);
+    background: linear-gradient(135deg, rgba(219, 246, 252, 0.9), rgba(255, 247, 222, 0.78));
+    color: rgba(19, 72, 93, 0.92);
+}
+
+[data-theme="cloud"] .ia-readout strong {
+    color: #0f3e51;
+}
+
+[data-theme="cloud"] .ia-other-costs {
+    border-color: rgba(28, 112, 145, 0.2);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.46), rgba(68, 193, 224, 0.1));
+}
+
+[data-theme="cloud"] .ia-other-item {
+    border-color: rgba(28, 112, 145, 0.16);
+    background: rgba(255, 255, 255, 0.44);
+}
+
+[data-theme="cloud"] .ia-calc-btn,
+[data-theme="cloud"] .ia-other-head button {
+    border-color: rgba(28, 112, 145, 0.24);
+    background: linear-gradient(135deg, rgba(68, 193, 224, 0.82), rgba(255, 213, 100, 0.74));
+    color: #0f3e51;
+    box-shadow: 0 10px 18px -12px rgba(15, 60, 80, 0.28);
+}
+
+[data-theme="cloud"] .ia-calc-btn:hover,
+[data-theme="cloud"] .ia-other-head button:hover {
+    background: linear-gradient(135deg, rgba(84, 202, 231, 0.9), rgba(255, 221, 126, 0.82));
+}
+
+[data-theme="cloud"] .ia-cash-note {
+    border-color: rgba(28, 112, 145, 0.22);
+    color: #13485d;
+    background: rgba(255, 255, 255, 0.5);
+}
     color: rgba(5, 30, 46, 0.95);
 }
 

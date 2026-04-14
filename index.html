@@ -46,7 +46,7 @@
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
-                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
                     theme = 'beach';
                 }
 
@@ -214,6 +214,45 @@
             --primary-cta-end: rgba(251, 146, 60, 0.92);
         }
 
+        html[data-theme='cloud'] {
+            color-scheme: light;
+            --bg: #dcf5fb;
+            --panel: rgba(255, 255, 255, 0.5);
+            --border: rgba(28, 112, 145, 0.18);
+            --text: #13485d;
+            --muted: rgba(19, 72, 93, 0.74);
+            --accent: #44c1e0;
+            --accent-soft: #7de3f5;
+            --sand: #ffd564;
+            --shadow: 0 30px 80px rgba(15, 60, 80, 0.16);
+            --surface-top: rgba(255, 255, 255, 0.74);
+            --surface-bottom: rgba(236, 251, 255, 0.54);
+            --hero-orb: radial-gradient(circle, rgba(255, 213, 100, 0.24), transparent 70%);
+            --body-glow-a: rgba(68, 193, 224, 0.18);
+            --body-glow-b: rgba(255, 213, 100, 0.16);
+            --body-glow-c: #c7f3fb;
+            --body-glow-d: #eefcff;
+            --body-glow-e: #fff4d1;
+            --orb-a: rgba(68, 193, 224, 0.14);
+            --orb-b: rgba(255, 213, 100, 0.12);
+            --login-border: rgba(28, 112, 145, 0.24);
+            --login-shadow: 0 16px 34px rgba(15, 60, 80, 0.14);
+            --login-hover-border: rgba(68, 193, 224, 0.42);
+            --login-hover-shadow: 0 20px 38px rgba(15, 60, 80, 0.18);
+            --eyebrow-border: rgba(28, 112, 145, 0.16);
+            --eyebrow-bg: rgba(246, 254, 255, 0.74);
+            --secondary-border: rgba(28, 112, 145, 0.14);
+            --secondary-bg: rgba(255, 255, 255, 0.34);
+            --metric-bg: rgba(255, 255, 255, 0.42);
+            --metric-border: rgba(28, 112, 145, 0.1);
+            --ops-bg: rgba(255, 255, 255, 0.38);
+            --ops-border: rgba(28, 112, 145, 0.12);
+            --footer-text: rgba(19, 72, 93, 0.6);
+            --brand-shadow: rgba(15, 60, 80, 0.12);
+            --primary-cta-start: rgba(68, 193, 224, 1);
+            --primary-cta-end: rgba(255, 213, 100, 0.9);
+        }
+
         html[data-theme='beach'] body::before {
             content: '';
             position: fixed;
@@ -242,6 +281,40 @@
                 linear-gradient(180deg, rgba(205, 238, 247, 0.24), rgba(205, 238, 247, 0.08) 26%, rgba(255, 228, 181, 0.14) 100%),
                 radial-gradient(60% 45% at 12% 18%, rgba(14, 165, 233, 0.16) 0%, rgba(14, 165, 233, 0) 72%),
                 radial-gradient(42% 36% at 84% 22%, rgba(251, 146, 60, 0.16) 0%, rgba(251, 146, 60, 0) 72%);
+            opacity: 1;
+            filter: none;
+            transform: none;
+        }
+
+        html[data-theme='cloud'] body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            background: url("Themes/Cloud%20-%20FAST%20-%20Wallpaper.jpg") no-repeat center center;
+            background-size: cover;
+            opacity: 0.78;
+            filter: blur(1.2px) saturate(1.04) contrast(1.02);
+            transform: scale(1.02);
+        }
+
+        html[data-theme='cloud'] body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            background:
+                linear-gradient(180deg, rgba(220, 245, 251, 0.2), rgba(220, 245, 251, 0.06) 28%, rgba(255, 242, 207, 0.18) 100%),
+                radial-gradient(58% 42% at 18% 16%, rgba(68, 193, 224, 0.18) 0%, rgba(68, 193, 224, 0) 72%),
+                radial-gradient(32% 28% at 72% 18%, rgba(255, 213, 100, 0.2) 0%, rgba(255, 213, 100, 0) 72%),
+                radial-gradient(52% 40% at 44% 86%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 70%);
             opacity: 1;
             filter: none;
             transform: none;

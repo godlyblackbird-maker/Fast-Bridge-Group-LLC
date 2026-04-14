@@ -48,7 +48,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
@@ -931,6 +931,7 @@ https://templatemo.com/tm-607-glass-admin
                                     <option value="dark">Dark Mode</option>
                                     <option value="light">Light Mode</option>
                                     <option value="beach">Beach Mode</option>
+                                    <option value="cloud">Cloud Mode</option>
                                     <option value="swamp">Swamp Mode</option>
                                     <option value="sunset">Sunset Mode</option>
                                     <option value="space">Space Mode</option>

@@ -4354,6 +4354,119 @@ async function listArchivedUserMessagesForPair(userAId, userBId) {
   });
 }
 
+async function deleteArchivedUserMessagesForUser(userId) {
+  const normalizedUserId = Number.parseInt(String(userId || ''), 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return { deletedCount: 0 };
+  }
+
+  const s3Client = getS3Client();
+  const s3Config = getS3StorageConfig();
+  if (!s3Client || !isS3StorageConfigured(s3Config)) {
+    return { deletedCount: 0 };
+  }
+
+  const keys = await listS3Keys('message-archive/');
+  const matchingKeys = keys.filter((key) => {
+    const match = String(key || '').match(/^message-archive\/pair-(\d+)-(\d+)\//);
+    if (!match) {
+      return false;
+    }
+
+    return Number(match[1]) === normalizedUserId || Number(match[2]) === normalizedUserId;
+  });
+
+  for (const key of matchingKeys) {
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: s3Config.bucket,
+      Key: key
+    }));
+  }
+
+  return { deletedCount: matchingKeys.length };
+}
+
+async function deleteUserAccountById(userId) {
+  const normalizedUserId = Number.parseInt(String(userId || ''), 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    throw new Error('A valid user id is required.');
+  }
+
+  const userRow = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [normalizedUserId]);
+  if (!userRow) {
+    throw new Error('User not found.');
+  }
+
+  const normalizedEmail = String(userRow.email || '').trim().toLowerCase();
+  const normalizedName = String(userRow.name || '').trim().toLowerCase();
+  const ownedUploads = await dbAll('SELECT * FROM user_uploads WHERE owner_user_id = ?', [normalizedUserId]);
+  const sessionRows = await dbAll('SELECT id FROM auth_sessions WHERE user_id = ?', [normalizedUserId]);
+
+  for (const uploadRow of ownedUploads) {
+    await deleteStoredUserUpload(uploadRow).catch((error) => {
+      console.error('Failed to delete stored upload during user cleanup:', error);
+    });
+  }
+
+  let archivedMessagesDeleted = 0;
+  try {
+    const archiveCleanup = await deleteArchivedUserMessagesForUser(normalizedUserId);
+    archivedMessagesDeleted = Number(archiveCleanup?.deletedCount) || 0;
+  } catch (error) {
+    console.error('Failed to delete archived user messages during user cleanup:', error);
+  }
+
+  if (isPostgresMessageStoreEnabled()) {
+    await userMessageStorePool.query(
+      'DELETE FROM user_messages WHERE sender_user_id = $1 OR recipient_user_id = $1',
+      [normalizedUserId]
+    );
+  }
+
+  await dbRun('BEGIN TRANSACTION', []);
+  try {
+    await dbRun('DELETE FROM auth_sessions WHERE user_id = ?', [normalizedUserId]);
+    await dbRun('DELETE FROM user_security_settings WHERE user_id = ?', [normalizedUserId]);
+    await dbRun('DELETE FROM subscription_profiles WHERE user_id = ?', [normalizedUserId]);
+    await dbRun('DELETE FROM smtp_requests WHERE user_id = ? OR reviewed_by_user_id = ?', [normalizedUserId, normalizedUserId]);
+    await dbRun('DELETE FROM mls_import_rows WHERE owner_user_id = ?', [normalizedUserId]);
+    await dbRun('DELETE FROM mls_import_runs WHERE requester_user_id = ?', [normalizedUserId]);
+    await dbRun('DELETE FROM closed_deals WHERE owner_user_id = ?', [normalizedUserId]);
+    await dbRun('DELETE FROM user_uploads WHERE owner_user_id = ?', [normalizedUserId]);
+    await dbRun('DELETE FROM user_messages WHERE sender_user_id = ? OR recipient_user_id = ?', [normalizedUserId, normalizedUserId]);
+    await dbRun(
+      `DELETE FROM property_assignments
+        WHERE LOWER(COALESCE(assigned_to_email, '')) = ?
+           OR LOWER(COALESCE(assigned_by_email, '')) = ?
+           OR LOWER(COALESCE(assigned_to_name, '')) = ?
+           OR LOWER(COALESCE(assigned_by_name, '')) = ?
+           OR LOWER(COALESCE(payload_json, '')) LIKE ?`,
+      [normalizedEmail, normalizedEmail, normalizedName, normalizedName, `%${normalizedEmail}%`]
+    );
+    await dbRun('DELETE FROM access_requests WHERE LOWER(email) = ?', [normalizedEmail]);
+    await dbRun('DELETE FROM users WHERE id = ?', [normalizedUserId]);
+    await dbRun('COMMIT', []);
+  } catch (error) {
+    await dbRun('ROLLBACK', []).catch(() => {});
+    throw error;
+  }
+
+  sessionRows.forEach((row) => {
+    const sessionId = String(row?.id || '').trim();
+    if (sessionId) {
+      revokedSessionIds.delete(sessionId);
+    }
+  });
+
+  return {
+    deletedUserId: normalizedUserId,
+    deletedEmail: normalizedEmail,
+    deletedUploads: ownedUploads.length,
+    deletedSessions: sessionRows.length,
+    archivedMessagesDeleted
+  };
+}
+
 async function restoreArchivedMessagesForPair(userAId, userBId) {
   const archivedMessages = await listArchivedUserMessagesForPair(userAId, userBId);
   if (!archivedMessages.length) {
@@ -5634,6 +5747,87 @@ function parsePropertyAssignmentRow(row) {
     assignedAt: row.assigned_at,
     propertySnapshot: {}
   });
+}
+
+function normalizePropertyAssignmentIdentityKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+async function buildActiveUserIdentityLookup() {
+  const rows = await dbAll('SELECT id, name, email FROM users', []);
+  const lookup = new Set();
+
+  (rows || []).forEach((row) => {
+    const email = normalizeKnownEmail(row?.email || '');
+    const name = normalizePropertyAssignmentIdentityKey(row?.name || '');
+    const id = Number(row?.id) || 0;
+
+    if (email) {
+      lookup.add(email);
+    }
+    if (name) {
+      lookup.add(name);
+    }
+    if (id > 0) {
+      lookup.add(String(id));
+    }
+  });
+
+  return lookup;
+}
+
+function isKnownPropertyAssignmentUser(assignedTo, activeIdentityLookup) {
+  const safeAssignedTo = assignedTo && typeof assignedTo === 'object' ? assignedTo : {};
+  const normalizedEmail = normalizeKnownEmail(safeAssignedTo.email || '');
+  const normalizedKey = normalizeKnownEmail(safeAssignedTo.key || '');
+  const normalizedName = normalizePropertyAssignmentIdentityKey(safeAssignedTo.name || '');
+
+  if (normalizedEmail && activeIdentityLookup.has(normalizedEmail)) {
+    return true;
+  }
+
+  if (normalizedKey && activeIdentityLookup.has(normalizedKey)) {
+    return true;
+  }
+
+  if (normalizedName && activeIdentityLookup.has(normalizedName)) {
+    return true;
+  }
+
+  return false;
+}
+
+async function sanitizePropertyAssignments(rows) {
+  const activeIdentityLookup = await buildActiveUserIdentityLookup();
+  const assignments = {};
+  const orphanedPropertyKeys = [];
+
+  (rows || []).forEach((row) => {
+    const record = parsePropertyAssignmentRow(row);
+    if (!record || !record.propertyKey) {
+      return;
+    }
+
+    if (record.assignedTo && !isKnownPropertyAssignmentUser(record.assignedTo, activeIdentityLookup)) {
+      orphanedPropertyKeys.push(record.propertyKey);
+      return;
+    }
+
+    assignments[record.propertyKey] = record;
+  });
+
+  if (orphanedPropertyKeys.length) {
+    await Promise.all(
+      orphanedPropertyKeys.map((propertyKey) => dbRun('DELETE FROM property_assignments WHERE property_key = ?', [propertyKey]).catch((error) => {
+        console.error('Failed to delete orphaned property assignment:', propertyKey, error);
+      }))
+    );
+  }
+
+  return assignments;
 }
 
 async function syncIsaacAdminAccount() {
@@ -7344,6 +7538,47 @@ app.put('/api/admin/users/:id/email', (req, res) => {
       );
     });
   });
+});
+
+app.delete('/api/admin/users/:id', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const userId = Number.parseInt(String(req.params?.id || ''), 10);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return res.status(400).json({ error: 'Valid user id is required' });
+  }
+
+  if (Number(decoded.id) === userId) {
+    return res.status(400).json({ error: 'You cannot delete your own account while signed in' });
+  }
+
+  try {
+    const userRow = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [userId]);
+    if (!userRow) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const normalizedEmail = String(userRow.email || '').trim().toLowerCase();
+    const normalizedRole = String(userRow.role || '').trim().toLowerCase();
+    if (normalizedRole === 'admin' || isKnownAdminEmail(normalizedEmail)) {
+      return res.status(403).json({ error: 'Protected admin accounts cannot be deleted' });
+    }
+
+    const cleanup = await deleteUserAccountById(userId);
+
+    return res.json({
+      success: true,
+      message: 'User deleted successfully',
+      user: serializeUser(userRow),
+      cleanup
+    });
+  } catch (error) {
+    console.error('Admin user delete error:', error);
+    return res.status(500).json({ error: 'Unable to delete user account' });
+  }
 });
 
 app.get('/api/admin/online-users', (req, res) => {
@@ -12049,33 +12284,25 @@ app.get('/api/messages/notifications', async (req, res) => {
   }
 });
 
-app.get('/api/property-assignments', (req, res) => {
+app.get('/api/property-assignments', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
   }
 
-  db.all(
-    `SELECT property_key, property_address, assigned_to_key, assigned_to_email, assigned_to_name,
-            assigned_by_key, assigned_by_email, assigned_by_name, assigned_at, payload_json
-     FROM property_assignments`,
-    [],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      const assignments = {};
-      (rows || []).forEach((row) => {
-        const record = parsePropertyAssignmentRow(row);
-        if (record && record.propertyKey) {
-          assignments[record.propertyKey] = record;
-        }
-      });
-
-      return res.json({ assignments });
-    }
-  );
+  try {
+    const rows = await dbAll(
+      `SELECT property_key, property_address, assigned_to_key, assigned_to_email, assigned_to_name,
+              assigned_by_key, assigned_by_email, assigned_by_name, assigned_at, payload_json
+       FROM property_assignments`,
+      []
+    );
+    const assignments = await sanitizePropertyAssignments(rows);
+    return res.json({ assignments });
+  } catch (error) {
+    console.error('Property assignments load error:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
 });
 
 app.post('/api/property-assignments', async (req, res) => {

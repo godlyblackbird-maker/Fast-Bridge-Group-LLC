@@ -59,7 +59,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
+    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
     const KNOWN_EMAIL_GROUPS = [
         {
             canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -1581,9 +1581,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const assignments = payload && payload.assignments && typeof payload.assignments === 'object' && !Array.isArray(payload.assignments)
             ? payload.assignments
             : {};
-        const hydratedAssignments = isPopulatedObject(assignments)
-            ? mergePropertyAssignmentStores(assignments, localAssignments)
-            : localAssignments;
+        const hydratedAssignments = assignments && typeof assignments === 'object' && !Array.isArray(assignments)
+            ? assignments
+            : {};
 
         applyPropertyAssignmentStore(hydratedAssignments);
         return hydratedAssignments;
@@ -5652,6 +5652,7 @@ function initNavbarDateTime() {
             dark: 'Symbols/Dark Mode.svg',
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
+            cloud: 'Symbols/Ligh Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
             cyberpunk: 'Symbols/Dark Mode.svg',
@@ -5698,6 +5699,7 @@ function initNavbarDateTime() {
             dark: 'Symbols/Dark Mode.svg',
             light: 'Symbols/Ligh Mode.svg',
             beach: 'Symbols/Beach Mode.svg',
+            cloud: 'Symbols/Ligh Mode.svg',
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
             cyberpunk: 'Symbols/Dark Mode.svg',
@@ -5750,6 +5752,8 @@ function initNavbarDateTime() {
                 : currentTheme === 'light'
                     ? 'beach'
                     : currentTheme === 'beach'
+                        ? 'cloud'
+                        : currentTheme === 'cloud'
                         ? 'swamp'
                         : currentTheme === 'swamp'
                             ? 'sunset'
@@ -13344,6 +13348,7 @@ function initNavbarDateTime() {
                         <input class="form-input admin-user-email-input" type="email" value="${suggestedEmail || currentEmail}" placeholder="username@fastbridgegroupllc.com" data-user-id="${item.id}">
                         <button type="button" class="card-btn admin-suggest-email-btn" data-user-id="${item.id}">Use @${nextDomain}</button>
                         <button type="button" class="card-btn active admin-update-email-btn" data-user-id="${item.id}" data-current-email="${currentEmail}">Update Email</button>
+                        <button type="button" class="card-btn admin-delete-user-btn" data-user-id="${item.id}" data-user-name="${escapeHtml(item.name || 'User')}" data-user-email="${currentEmail}" ${normalizedRole === 'admin' ? 'disabled title="Protected admin accounts cannot be deleted"' : ''}>Delete User</button>
                     </div>
                 `;
                 usersList.appendChild(row);
@@ -13418,6 +13423,51 @@ function initNavbarDateTime() {
                         await loadUsers();
                     } catch (error) {
                         showDashboardToast('error', 'Update Failed', String(error.message || 'Unable to update user email.'));
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            });
+
+            usersList.querySelectorAll('.admin-delete-user-btn').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const userId = button.dataset.userId;
+                    const userName = String(button.dataset.userName || 'User').trim() || 'User';
+                    const userEmail = String(button.dataset.userEmail || '').trim().toLowerCase();
+
+                    if (!token) {
+                        showDashboardToast('error', 'Missing Auth', 'Please sign in again and retry.');
+                        return;
+                    }
+
+                    if (currentUser && Number(currentUser.id) === Number(userId)) {
+                        showDashboardToast('error', 'Delete Blocked', 'You cannot delete the account you are currently using.');
+                        return;
+                    }
+
+                    const confirmed = window.confirm(`Delete ${userName} (${userEmail}) permanently? This removes the login and related saved data.`);
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    button.disabled = true;
+
+                    try {
+                        const response = await fetch(`/api/admin/users/${userId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            }
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Unable to delete user');
+                        }
+
+                        showDashboardToast('success', 'User Deleted', `${userName} was removed from FAST.`);
+                        await loadUsers();
+                    } catch (error) {
+                        showDashboardToast('error', 'Delete Failed', String(error.message || 'Unable to delete user.'));
                     } finally {
                         button.disabled = false;
                     }
@@ -19151,8 +19201,6 @@ function initNavbarDateTime() {
                 mergedUsers.push(user);
             }
 
-            getLocalAssignableUsers().forEach(pushUser);
-
             const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             if (token) {
                 try {
@@ -19165,12 +19213,23 @@ function initNavbarDateTime() {
                     if (response.ok) {
                         const payload = await response.json();
                         const rows = Array.isArray(payload?.users) ? payload.users : [];
+                        pushUser(workspaceUser);
+                        pushUser(activeUser);
+                        pushUser(mergeUserIdentityRecords(workspaceUser, activeUser));
                         rows.forEach(pushUser);
+
+                        return mergedUsers.sort((left, right) => {
+                            const leftName = `${left.name} ${left.email}`.trim().toLowerCase();
+                            const rightName = `${right.name} ${right.email}`.trim().toLowerCase();
+                            return leftName.localeCompare(rightName);
+                        });
                     }
                 } catch (error) {
                     // Ignore and keep the local fallback set.
                 }
             }
+
+            getLocalAssignableUsers().forEach(pushUser);
 
             return mergedUsers.sort((left, right) => {
                 const leftName = `${left.name} ${left.email}`.trim().toLowerCase();

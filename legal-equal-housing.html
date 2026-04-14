@@ -32,7 +32,7 @@
                 const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
                 let theme = (themeStore[userKey] && themeStore[userKey].value) || storedHomepageTheme || 'beach';
                 if (theme === 'system') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                if (!/^(dark|light|beach|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) theme = 'beach';
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) theme = 'beach';
                 document.documentElement.setAttribute('data-theme', theme);
             } catch (error) { document.documentElement.setAttribute('data-theme', 'beach'); }
         })();
