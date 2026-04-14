@@ -12709,16 +12709,22 @@ function initNavbarDateTime() {
             return;
         }
 
+        const ANNOUNCEMENT_CACHE_KEY = 'dashboardAnnouncementState';
+
         const titleInput = document.getElementById('admin-announcement-title');
         const messageInput = document.getElementById('admin-announcement-message');
         const toneInput = document.getElementById('admin-announcement-tone');
         const ctaLabelInput = document.getElementById('admin-announcement-cta-label');
         const ctaUrlInput = document.getElementById('admin-announcement-cta-url');
+        const startAtInput = document.getElementById('admin-announcement-start-at');
+        const durationInput = document.getElementById('admin-announcement-duration');
+        const endAtInput = document.getElementById('admin-announcement-end-at');
         const subtitle = document.getElementById('admin-announcement-subtitle');
         const previewBadge = document.getElementById('admin-announcement-preview-badge');
         const previewTitle = document.getElementById('admin-announcement-preview-title');
         const previewMessage = document.getElementById('admin-announcement-preview-message');
         const previewLink = document.getElementById('admin-announcement-preview-link');
+        const trashButton = document.getElementById('admin-announcement-trash-btn');
         const meta = document.getElementById('admin-announcement-meta');
         const refreshButton = document.getElementById('admin-announcement-refresh-btn');
         const clearButton = document.getElementById('admin-announcement-clear-btn');
@@ -12764,6 +12770,121 @@ function initNavbarDateTime() {
                 : `Last published ${formattedDate}.`;
         }
 
+        function formatDateTimeLocalInput(value) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '';
+            }
+
+            const parsed = new Date(raw);
+            if (Number.isNaN(parsed.getTime())) {
+                return '';
+            }
+
+            const offsetMinutes = parsed.getTimezoneOffset();
+            const localDate = new Date(parsed.getTime() - (offsetMinutes * 60000));
+            return localDate.toISOString().slice(0, 16);
+        }
+
+        function parseLocalDateTimeInput(value) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '';
+            }
+
+            const parsed = new Date(raw);
+            if (Number.isNaN(parsed.getTime())) {
+                return '';
+            }
+
+            return parsed.toISOString();
+        }
+
+        function formatScheduleSummary(announcement) {
+            const startAt = String(announcement?.startAt || '').trim();
+            const endAt = String(announcement?.endAt || '').trim();
+            const status = String(announcement?.status || '').trim().toLowerCase();
+            const parts = [];
+
+            const formatDate = (value) => {
+                const parsed = value ? new Date(value) : null;
+                return parsed && !Number.isNaN(parsed.getTime()) ? parsed.toLocaleString() : '';
+            };
+
+            const formattedStart = formatDate(startAt);
+            const formattedEnd = formatDate(endAt);
+
+            if (status === 'scheduled' && formattedStart) {
+                parts.push(`Scheduled to start ${formattedStart}.`);
+            } else if (status === 'expired' && formattedEnd) {
+                parts.push(`Expired ${formattedEnd}.`);
+            } else if (formattedStart) {
+                parts.push(`Starts ${formattedStart}.`);
+            }
+
+            if (formattedEnd) {
+                parts.push(`Ends ${formattedEnd}.`);
+            }
+
+            return parts.join(' ');
+        }
+
+        function syncDurationSelectionFromAnnouncement(announcement) {
+            if (!durationInput || !endAtInput) {
+                return;
+            }
+
+            const startAt = String(announcement?.startAt || '').trim();
+            const endAt = String(announcement?.endAt || '').trim();
+            if (!endAt) {
+                durationInput.value = '';
+                return;
+            }
+
+            const startTime = startAt ? Date.parse(startAt) : Number.NaN;
+            const endTime = Date.parse(endAt);
+            if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
+                durationInput.value = 'custom';
+                return;
+            }
+
+            const durationHours = Math.round((endTime - startTime) / 3600000);
+            const knownDurations = ['1', '4', '12', '24', '72', '168'];
+            durationInput.value = knownDurations.includes(String(durationHours)) ? String(durationHours) : 'custom';
+        }
+
+        function applySelectedAnnouncementDuration() {
+            if (!durationInput || !endAtInput) {
+                return;
+            }
+
+            const durationValue = String(durationInput.value || '').trim();
+            if (!durationValue) {
+                endAtInput.value = '';
+                return;
+            }
+
+            if (durationValue === 'custom') {
+                return;
+            }
+
+            const durationHours = Number.parseInt(durationValue, 10);
+            if (!Number.isFinite(durationHours) || durationHours <= 0) {
+                endAtInput.value = '';
+                return;
+            }
+
+            const baseDate = startAtInput && startAtInput.value
+                ? new Date(startAtInput.value)
+                : new Date();
+            if (Number.isNaN(baseDate.getTime())) {
+                return;
+            }
+
+            const endDate = new Date(baseDate.getTime() + (durationHours * 3600000));
+            endAtInput.value = formatDateTimeLocalInput(endDate.toISOString());
+        }
+
         function buildAnnouncementPayload(options = {}) {
             return {
                 enabled: !options.clear && Boolean(String(titleInput.value || '').trim() && String(messageInput.value || '').trim()),
@@ -12771,12 +12892,23 @@ function initNavbarDateTime() {
                 message: String(messageInput.value || '').trim(),
                 tone: String(toneInput.value || 'info').trim().toLowerCase() || 'info',
                 ctaLabel: String(ctaLabelInput.value || '').trim(),
-                ctaUrl: String(ctaUrlInput.value || '').trim()
+                ctaUrl: String(ctaUrlInput.value || '').trim(),
+                startAt: parseLocalDateTimeInput(startAtInput && startAtInput.value),
+                endAt: parseLocalDateTimeInput(endAtInput && endAtInput.value)
             };
+        }
+
+        function cacheAnnouncementState(announcement) {
+            try {
+                localStorage.setItem(ANNOUNCEMENT_CACHE_KEY, JSON.stringify(announcement && typeof announcement === 'object' ? announcement : {}));
+            } catch (error) {
+                // Ignore local storage errors.
+            }
         }
 
         function renderPreview(announcement) {
             const payload = announcement || buildAnnouncementPayload();
+            const enabled = Boolean(payload.enabled && payload.title && payload.message);
             const tone = String(payload.tone || 'info').trim() || 'info';
             previewBadge.textContent = tone;
             previewTitle.textContent = payload.title || 'No active announcement';
@@ -12790,7 +12922,11 @@ function initNavbarDateTime() {
                 previewLink.textContent = 'Open linked page';
                 previewLink.href = '#';
             }
-            meta.textContent = formatAnnouncementAuditText(announcement);
+            if (trashButton) {
+                trashButton.hidden = !enabled;
+                trashButton.disabled = false;
+            }
+            meta.textContent = [formatScheduleSummary(payload), formatAnnouncementAuditText(announcement)].filter(Boolean).join(' ');
         }
 
         function applyAnnouncementToForm(announcement) {
@@ -12800,6 +12936,13 @@ function initNavbarDateTime() {
             toneInput.value = payload.tone || 'info';
             ctaLabelInput.value = payload.ctaLabel || '';
             ctaUrlInput.value = payload.ctaUrl || '';
+            if (startAtInput) {
+                startAtInput.value = formatDateTimeLocalInput(payload.startAt || '');
+            }
+            if (endAtInput) {
+                endAtInput.value = formatDateTimeLocalInput(payload.endAt || '');
+            }
+            syncDurationSelectionFromAnnouncement(payload);
             renderPreview(payload);
         }
 
@@ -12825,6 +12968,7 @@ function initNavbarDateTime() {
                 }
 
                 applyAnnouncementToForm(data.announcement || {});
+                cacheAnnouncementState(data.announcement || {});
             } catch (error) {
                 subtitle.textContent = 'Unable to load the announcement right now.';
                 meta.innerHTML = escapeAnnouncementText(String(error.message || 'Unable to load announcement settings.'));
@@ -12863,7 +13007,8 @@ function initNavbarDateTime() {
                 }
 
                 applyAnnouncementToForm(data.announcement || {});
-                showDashboardToast('success', options.clear ? 'Announcement Cleared' : 'Announcement Published', data.message || 'Announcement updated successfully.');
+                cacheAnnouncementState(data.announcement || {});
+                showDashboardToast('success', options.clear ? 'Announcement Cleared' : (data.announcement?.status === 'scheduled' ? 'Announcement Scheduled' : 'Announcement Published'), data.message || 'Announcement updated successfully.');
             } catch (error) {
                 showDashboardToast('error', 'Announcement Failed', String(error.message || 'Unable to save announcement.'));
             } finally {
@@ -12876,10 +13021,38 @@ function initNavbarDateTime() {
             }
         }
 
-        [titleInput, messageInput, toneInput, ctaLabelInput, ctaUrlInput].forEach((input) => {
+        [titleInput, messageInput, toneInput, ctaLabelInput, ctaUrlInput, startAtInput, endAtInput, durationInput].forEach((input) => {
+            if (!input) {
+                return;
+            }
             input.addEventListener('input', () => renderPreview());
             input.addEventListener('change', () => renderPreview());
         });
+
+        if (durationInput) {
+            durationInput.addEventListener('change', () => {
+                applySelectedAnnouncementDuration();
+                renderPreview();
+            });
+        }
+
+        if (startAtInput) {
+            startAtInput.addEventListener('change', () => {
+                if (durationInput && durationInput.value && durationInput.value !== 'custom') {
+                    applySelectedAnnouncementDuration();
+                }
+                renderPreview();
+            });
+        }
+
+        if (endAtInput) {
+            endAtInput.addEventListener('change', () => {
+                if (durationInput) {
+                    durationInput.value = endAtInput.value ? 'custom' : '';
+                }
+                renderPreview();
+            });
+        }
 
         if (refreshButton) {
             refreshButton.addEventListener('click', loadAnnouncement);
@@ -12891,12 +13064,45 @@ function initNavbarDateTime() {
 
         if (clearButton) {
             clearButton.addEventListener('click', async () => {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                }
                 titleInput.value = '';
                 messageInput.value = '';
                 toneInput.value = 'info';
                 ctaLabelInput.value = '';
                 ctaUrlInput.value = '';
+                if (startAtInput) {
+                    startAtInput.value = '';
+                }
+                if (endAtInput) {
+                    endAtInput.value = '';
+                }
+                if (durationInput) {
+                    durationInput.value = '';
+                }
                 renderPreview();
+            });
+        }
+
+        if (trashButton) {
+            trashButton.addEventListener('click', async () => {
+                titleInput.value = '';
+                messageInput.value = '';
+                toneInput.value = 'info';
+                ctaLabelInput.value = '';
+                ctaUrlInput.value = '';
+                if (startAtInput) {
+                    startAtInput.value = '';
+                }
+                if (endAtInput) {
+                    endAtInput.value = '';
+                }
+                if (durationInput) {
+                    durationInput.value = '';
+                }
+                renderPreview({ enabled: false });
+                trashButton.disabled = true;
                 await saveAnnouncement({ clear: true });
             });
         }
@@ -12911,12 +13117,76 @@ function initNavbarDateTime() {
             return;
         }
 
+        const ANNOUNCEMENT_CACHE_KEY = 'dashboardAnnouncementState';
+
         const badge = document.getElementById('dashboard-announcement-badge');
         const title = document.getElementById('dashboard-announcement-title');
         const message = document.getElementById('dashboard-announcement-message');
         const meta = document.getElementById('dashboard-announcement-meta');
         const link = document.getElementById('dashboard-announcement-link');
         const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        let announcementLifecycleTimer = 0;
+
+        function readCachedAnnouncement() {
+            try {
+                return JSON.parse(localStorage.getItem(ANNOUNCEMENT_CACHE_KEY) || '{}');
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function cacheAnnouncementState(announcement) {
+            try {
+                localStorage.setItem(ANNOUNCEMENT_CACHE_KEY, JSON.stringify(announcement && typeof announcement === 'object' ? announcement : {}));
+            } catch (error) {
+                // Ignore local storage errors.
+            }
+        }
+
+        function getAnnouncementDisplayState(announcement, now = Date.now()) {
+            const payload = announcement && typeof announcement === 'object' ? announcement : {};
+            const configuredEnabled = Boolean(payload.enabled && payload.title && payload.message);
+            if (!configuredEnabled) {
+                return { isLive: false, status: 'inactive' };
+            }
+
+            const startTime = payload.startAt ? Date.parse(String(payload.startAt)) : Number.NaN;
+            const endTime = payload.endAt ? Date.parse(String(payload.endAt)) : Number.NaN;
+
+            if (Number.isFinite(startTime) && now < startTime) {
+                return { isLive: false, status: 'scheduled' };
+            }
+
+            if (Number.isFinite(endTime) && now >= endTime) {
+                return { isLive: false, status: 'expired' };
+            }
+
+            return { isLive: true, status: 'live' };
+        }
+
+        function scheduleAnnouncementLifecycleRefresh(announcement) {
+            if (announcementLifecycleTimer) {
+                window.clearTimeout(announcementLifecycleTimer);
+                announcementLifecycleTimer = 0;
+            }
+
+            const payload = announcement && typeof announcement === 'object' ? announcement : {};
+            const now = Date.now();
+            const startTime = payload.startAt ? Date.parse(String(payload.startAt)) : Number.NaN;
+            const endTime = payload.endAt ? Date.parse(String(payload.endAt)) : Number.NaN;
+            const nextChangeAt = [startTime, endTime]
+                .filter((value) => Number.isFinite(value) && value > now)
+                .sort((left, right) => left - right)[0];
+
+            if (!Number.isFinite(nextChangeAt)) {
+                return;
+            }
+
+            announcementLifecycleTimer = window.setTimeout(() => {
+                renderAnnouncement(readCachedAnnouncement());
+                void loadAnnouncement();
+            }, Math.max(nextChangeAt - now, 500));
+        }
 
         function formatAnnouncementAuditText(announcement) {
             const updatedAt = String(announcement?.updatedAt || '').trim();
@@ -12938,9 +13208,20 @@ function initNavbarDateTime() {
 
         function renderAnnouncement(announcement) {
             const payload = announcement && typeof announcement === 'object' ? announcement : {};
-            const enabled = Boolean(payload.enabled && payload.title && payload.message);
-            card.hidden = !enabled;
-            if (!enabled) {
+            const displayState = getAnnouncementDisplayState(payload);
+            card.hidden = !displayState.isLive;
+            if (!displayState.isLive) {
+                card.dataset.tone = 'info';
+                badge.textContent = 'Info';
+                title.textContent = 'Team announcement';
+                message.textContent = 'Dashboard announcements from admin will appear here.';
+                meta.textContent = displayState.status === 'scheduled'
+                    ? 'This announcement is scheduled and will appear automatically when its start time arrives.'
+                    : '';
+                link.hidden = true;
+                link.textContent = 'Open Update';
+                link.href = '#';
+                scheduleAnnouncementLifecycleRefresh(payload);
                 return;
             }
 
@@ -12959,6 +13240,8 @@ function initNavbarDateTime() {
                 link.textContent = 'Open Update';
                 link.href = '#';
             }
+
+            scheduleAnnouncementLifecycleRefresh(payload);
         }
 
         async function loadAnnouncement() {
@@ -12978,12 +13261,20 @@ function initNavbarDateTime() {
                     throw new Error(data.error || 'Unable to load announcement');
                 }
 
+                cacheAnnouncementState(data.announcement || {});
                 renderAnnouncement(data.announcement || {});
             } catch (error) {
-                card.hidden = true;
+                renderAnnouncement(readCachedAnnouncement());
             }
         }
 
+        window.addEventListener('storage', (event) => {
+            if (event.key === ANNOUNCEMENT_CACHE_KEY) {
+                renderAnnouncement(readCachedAnnouncement());
+            }
+        });
+
+        renderAnnouncement(readCachedAnnouncement());
         void loadAnnouncement();
     }
 

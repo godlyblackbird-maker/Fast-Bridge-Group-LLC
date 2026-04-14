@@ -530,10 +530,51 @@
             text-decoration: none;
         }
 
+        .admin-announcement-preview-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .admin-announcement-trash-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(248, 113, 113, 0.24);
+            background: rgba(127, 29, 29, 0.18);
+            color: #fecaca;
+        }
+
+        .admin-announcement-trash-btn svg {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+        }
+
+        .admin-announcement-trash-btn:hover,
+        .admin-announcement-trash-btn:focus-visible {
+            border-color: rgba(248, 113, 113, 0.42);
+            background: rgba(127, 29, 29, 0.28);
+            color: #fee2e2;
+        }
+
+        .admin-announcement-trash-btn[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
         .admin-announcement-meta {
             margin: 0;
             color: rgba(226, 232, 240, 0.62);
             font-size: 12px;
+        }
+
+        .admin-announcement-schedule-note {
+            margin: 0;
+            color: rgba(226, 232, 240, 0.62);
+            font-size: 12px;
+            line-height: 1.55;
         }
 
         @keyframes adminPanelRise {
@@ -709,17 +750,45 @@
                                 <label for="admin-announcement-cta-url">Button URL (optional)</label>
                                 <input id="admin-announcement-cta-url" class="form-input" type="url" maxlength="500" placeholder="https://fastbridgegroupllc.com/...">
                             </div>
+                            <div class="form-group-settings">
+                                <label for="admin-announcement-start-at">Schedule Start (optional)</label>
+                                <input id="admin-announcement-start-at" class="form-input" type="datetime-local">
+                            </div>
+                            <div class="form-group-settings">
+                                <label for="admin-announcement-duration">Visible For</label>
+                                <select id="admin-announcement-duration" class="form-input">
+                                    <option value="">Until removed manually</option>
+                                    <option value="1">1 hour</option>
+                                    <option value="4">4 hours</option>
+                                    <option value="12">12 hours</option>
+                                    <option value="24">24 hours</option>
+                                    <option value="72">3 days</option>
+                                    <option value="168">7 days</option>
+                                    <option value="custom">Custom end time</option>
+                                </select>
+                            </div>
+                            <div class="form-group-settings full-width">
+                                <label for="admin-announcement-end-at">Schedule End (optional)</label>
+                                <input id="admin-announcement-end-at" class="form-input" type="datetime-local">
+                                <p class="admin-announcement-schedule-note">Set a start time to schedule the announcement ahead of time. Set an end time or choose a duration so it removes itself automatically.</p>
+                            </div>
                         </div>
                         <div class="admin-announcement-preview" id="admin-announcement-preview">
                             <span class="admin-announcement-preview-badge" id="admin-announcement-preview-badge">Info</span>
                             <h3 id="admin-announcement-preview-title">No active announcement</h3>
                             <p id="admin-announcement-preview-message">Draft an announcement here, then publish it to the dashboard for all users.</p>
-                            <a id="admin-announcement-preview-link" class="admin-announcement-preview-link" href="#" hidden>Open linked page</a>
+                            <div class="admin-announcement-preview-actions">
+                                <a id="admin-announcement-preview-link" class="admin-announcement-preview-link" href="#" hidden>Open linked page</a>
+                                <button id="admin-announcement-trash-btn" type="button" class="card-btn admin-announcement-trash-btn" hidden>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                                    <span>Trash Announcement</span>
+                                </button>
+                            </div>
                         </div>
                         <p class="admin-announcement-meta" id="admin-announcement-meta">No announcement has been published yet.</p>
                         <div class="outreach-actions">
                             <button id="admin-announcement-refresh-btn" type="button" class="card-btn">Refresh</button>
-                            <button id="admin-announcement-clear-btn" type="button" class="card-btn">Clear</button>
+                            <button id="admin-announcement-clear-btn" type="button" class="card-btn">Clear Form</button>
                             <button id="admin-announcement-save-btn" type="button" class="card-btn active">Publish Announcement</button>
                         </div>
                     </div>

@@ -5417,22 +5417,78 @@ function buildAnnouncementPayload(rawConfig, metadata = {}) {
   const message = cleanDocuSignText(source.message || source.body || '', 2000);
   const ctaLabel = cleanDocuSignText(source.ctaLabel || source.buttonLabel || '', 80);
   const ctaUrl = cleanDocuSignText(source.ctaUrl || source.linkUrl || '', 500);
+  const startAt = normalizeAnnouncementDateTime(source.startAt || source.publishAt || source.startsAt || '');
+  let endAt = normalizeAnnouncementDateTime(source.endAt || source.expiresAt || source.endsAt || '');
   const tone = ['info', 'success', 'warning', 'urgent'].includes(String(source.tone || '').trim().toLowerCase())
     ? String(source.tone || '').trim().toLowerCase()
     : 'info';
-  const enabled = Boolean(source.enabled && title && message);
+  const configuredEnabled = Boolean(source.enabled && title && message);
+
+  if (startAt && endAt) {
+    const startTime = Date.parse(startAt);
+    const endTime = Date.parse(endAt);
+    if (Number.isFinite(startTime) && Number.isFinite(endTime) && endTime <= startTime) {
+      endAt = '';
+    }
+  }
+
+  const scheduleState = getAnnouncementScheduleState({
+    enabled: configuredEnabled,
+    title,
+    message,
+    startAt,
+    endAt
+  });
 
   return {
-    enabled,
+    enabled: configuredEnabled,
     title,
     message,
     ctaLabel,
     ctaUrl,
     tone,
+    startAt,
+    endAt,
+    isLive: scheduleState.isLive,
+    status: scheduleState.status,
     updatedAt: metadata.updatedAt || '',
     updatedByUserId: metadata.updatedByUserId || null,
     updatedByEmail: metadata.updatedByEmail || ''
   };
+}
+
+function normalizeAnnouncementDateTime(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return parsed.toISOString();
+}
+
+function getAnnouncementScheduleState(announcement, now = Date.now()) {
+  const enabled = Boolean(announcement?.enabled && announcement?.title && announcement?.message);
+  if (!enabled) {
+    return { isLive: false, status: 'inactive' };
+  }
+
+  const startTime = announcement?.startAt ? Date.parse(String(announcement.startAt)) : Number.NaN;
+  const endTime = announcement?.endAt ? Date.parse(String(announcement.endAt)) : Number.NaN;
+
+  if (Number.isFinite(startTime) && now < startTime) {
+    return { isLive: false, status: 'scheduled' };
+  }
+
+  if (Number.isFinite(endTime) && now >= endTime) {
+    return { isLive: false, status: 'expired' };
+  }
+
+  return { isLive: true, status: 'live' };
 }
 
 async function getAnnouncementSettings() {
@@ -5477,7 +5533,9 @@ async function saveAnnouncementSettings(nextConfig, updatedBy) {
     message: normalizedPayload.message,
     ctaLabel: normalizedPayload.ctaLabel,
     ctaUrl: normalizedPayload.ctaUrl,
-    tone: normalizedPayload.tone
+    tone: normalizedPayload.tone,
+    startAt: normalizedPayload.startAt,
+    endAt: normalizedPayload.endAt
   });
   const updatedAt = new Date().toISOString();
   const updatedByUserId = Number(updatedBy?.id) || null;
@@ -7329,9 +7387,11 @@ app.put('/api/admin/announcements', async (req, res) => {
 
     return res.json({
       success: true,
-      message: announcement.enabled
-        ? 'Announcement published successfully.'
-        : 'Announcement cleared successfully.',
+      message: !announcement.enabled
+        ? 'Announcement cleared successfully.'
+        : announcement.status === 'scheduled'
+          ? 'Announcement scheduled successfully.'
+          : 'Announcement published successfully.',
       announcement
     });
   } catch (error) {
