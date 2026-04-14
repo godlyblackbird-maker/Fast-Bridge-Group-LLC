@@ -789,6 +789,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                         li.className = 'notification-center-item-list-entry';
                         const label = document.createElement('span');
                         const phone = formatPhoneDisplayValue(item.phone || '');
+                        label.textContent = String(item.label || phone || 'Untitled');
                         li.appendChild(label);
 
                         if (item.meta) {
@@ -796,7 +797,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                             small.textContent = item.meta;
                             li.appendChild(small);
                         }
-                            <p class="outreach-owner">Phone: ${escapeRequestText(phone || 'No phone submitted')}</p>
+                        details.appendChild(li);
                     });
                     article.appendChild(details);
                 }
