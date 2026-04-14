@@ -6522,11 +6522,7 @@ function isProofOfFundsFileName(value) {
   return /(?:^|[^a-z0-9])(pof|proof\s*of\s*funds)(?:[^a-z0-9]|$)/i.test(String(value || '').trim());
 }
 
-const INVESTOR_ATTACHMENT_PACKAGE_FILE_RULES = Object.freeze({
-  Alex: Object.freeze({
-    excludeProofOfFunds: true
-  })
-});
+const INVESTOR_ATTACHMENT_PACKAGE_FILE_RULES = Object.freeze({});
 
 function getInvestorAttachmentPackageFileRules(folderName) {
   const normalizedFolderName = String(folderName || '').trim();
@@ -6775,6 +6771,10 @@ function resolveInvestorAttachmentPath(relativePath) {
 
   const packageRelativePath = path.relative(INVESTOR_ATTACHMENTS_ROOT, absolutePath);
   const packageSegments = packageRelativePath.split(path.sep).filter(Boolean);
+  if (packageSegments.length < 2) {
+    return '';
+  }
+
   const packageFolderName = packageSegments[0] || '';
   const packageFileName = packageSegments.length > 1 ? packageSegments[packageSegments.length - 1] : '';
 
@@ -10826,7 +10826,7 @@ app.post('/api/property-submissions', (req, res) => {
   const sellerPhone = String(req.body?.sellerPhone || '').trim();
   const smsConsent = req.body?.smsConsent === true || String(req.body?.smsConsent || '').trim().toLowerCase() === 'true';
   const smsConsentText = smsConsent
-    ? 'By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for assistance.'
+    ? 'By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is not a condition of purchase.'
     : '';
   const propertyAddress = String(req.body?.propertyAddress || '').trim();
   const propertyCity = String(req.body?.propertyCity || '').trim();
@@ -11802,25 +11802,26 @@ app.post('/api/send-agent-email', async (req, res) => {
     });
   }
 
-  const availableFbgOfferTermsFiles = includeFbgOfferTerms ? listFbgOfferTermsFiles() : [];
-  const shouldPreferFbgPof = availableFbgOfferTermsFiles.some((item) => isProofOfFundsFileName(item?.name));
+  const resolvedInvestorAttachments = [];
 
   for (const item of investorAttachmentPaths) {
     const relativePath = String(item || '').trim();
-    if (shouldPreferFbgPof && isProofOfFundsFileName(relativePath)) {
-      continue;
-    }
-
     const resolvedAttachmentPath = resolveInvestorAttachmentPath(relativePath);
     if (!resolvedAttachmentPath) {
       continue;
     }
+
+    resolvedInvestorAttachments.push(resolvedAttachmentPath);
 
     normalizedAttachments.push({
       filename: path.basename(resolvedAttachmentPath),
       path: resolvedAttachmentPath
     });
   }
+
+  const availableFbgOfferTermsFiles = includeFbgOfferTerms && resolvedInvestorAttachments.length === 0
+    ? listFbgOfferTermsFiles()
+    : [];
 
   if (includeFbgOfferTerms) {
     for (const item of availableFbgOfferTermsFiles) {

@@ -24911,20 +24911,46 @@ function initNavbarDateTime() {
                 return JSON.parse(JSON.stringify(Array.isArray(packages) ? packages : []));
             }
 
+            function normalizeInvestorAttachmentRelativePath(folderName, relativePath) {
+                const normalizedFolderName = String(folderName || '').trim();
+                const normalizedPath = String(relativePath || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
+                const expectedPrefix = `Investors Attatchments/${normalizedFolderName}/`;
+
+                if (!normalizedFolderName || !normalizedPath || !normalizedPath.startsWith(expectedPrefix)) {
+                    return '';
+                }
+
+                return normalizedPath;
+            }
+
             function normalizeInvestorAttachmentPackages(packages) {
                 return cloneInvestorAttachmentPackages(packages)
                     .map((entry) => {
+                        const folderName = String(entry?.folderName || '').trim();
                         const files = Array.isArray(entry?.files)
-                            ? entry.files.filter((fileEntry) => fileEntry && fileEntry.relativePath)
+                            ? entry.files
+                                .map((fileEntry) => {
+                                    const relativePath = normalizeInvestorAttachmentRelativePath(folderName, fileEntry?.relativePath);
+                                    if (!fileEntry || !relativePath) {
+                                        return null;
+                                    }
+
+                                    return {
+                                        ...fileEntry,
+                                        name: String(fileEntry.name || '').trim() || relativePath.split('/').pop(),
+                                        relativePath
+                                    };
+                                })
+                                .filter(Boolean)
                             : [];
 
-                        if (!entry || !entry.folderName || files.length === 0) {
+                        if (!entry || !folderName || files.length === 0) {
                             return null;
                         }
 
                         return {
-                            folderName: String(entry.folderName).trim(),
-                            label: String(entry.label || entry.folderName).trim(),
+                            folderName,
+                            label: String(entry.label || folderName).trim(),
                             files,
                             fileCount: files.length,
                             offerProfile: entry.offerProfile && typeof entry.offerProfile === 'object'
@@ -25473,16 +25499,10 @@ function initNavbarDateTime() {
 
                     const result = await response.json();
                     fbgOfferTermsFiles = Array.isArray(result?.files) ? result.files : [];
-                    if (fbgOfferTermsNote) {
-                        fbgOfferTermsNote.textContent = fbgOfferTermsFiles.length > 0
-                            ? `Attach ${fbgOfferTermsFiles.length} FAST BRIDGE offer terms PDF${fbgOfferTermsFiles.length === 1 ? '' : 's'} to Send To Agent emails.`
-                            : 'No FAST BRIDGE offer terms PDFs found in Email - Offer Terms.';
-                    }
+                    syncStaticAttachmentToggles();
                 } catch (error) {
                     fbgOfferTermsFiles = [];
-                    if (fbgOfferTermsNote) {
-                        fbgOfferTermsNote.textContent = 'FBG offer terms PDFs could not be loaded right now.';
-                    }
+                    syncStaticAttachmentToggles();
                 }
             }
 
@@ -25496,6 +25516,25 @@ function initNavbarDateTime() {
                 return selectedPackage && selectedPackage.offerProfile && typeof selectedPackage.offerProfile === 'object'
                     ? selectedPackage.offerProfile
                     : null;
+            }
+
+            function syncStaticAttachmentToggles() {
+                const hasInvestorPackage = Boolean(getSelectedInvestorAttachmentPackage());
+
+                if (hasInvestorPackage && fbgOfferTermsToggle.checked) {
+                    fbgOfferTermsToggle.checked = false;
+                }
+
+                fbgOfferTermsToggle.disabled = hasInvestorPackage;
+
+                if (fbgOfferTermsNote) {
+                    const baseText = fbgOfferTermsFiles.length > 0
+                        ? `Attach ${fbgOfferTermsFiles.length} FAST BRIDGE offer terms PDF${fbgOfferTermsFiles.length === 1 ? '' : 's'} to Send To Agent emails.`
+                        : 'No FAST BRIDGE offer terms PDFs found in Email - Offer Terms.';
+                    fbgOfferTermsNote.textContent = hasInvestorPackage
+                        ? `${baseText} Select No investor package to enable FAST BRIDGE offer terms attachments.`
+                        : baseText;
+                }
             }
 
             function ensureSelectOption(selectEl, value, label) {
@@ -25616,15 +25655,7 @@ function initNavbarDateTime() {
                     return [];
                 }
 
-                const files = selectedPackage.files.filter((fileEntry) => fileEntry && fileEntry.relativePath);
-                const shouldPreferFbgPof = Boolean(fbgOfferTermsToggle.checked)
-                    && fbgOfferTermsFiles.some((fileEntry) => isProofOfFundsFileName(fileEntry?.name));
-
-                if (!shouldPreferFbgPof) {
-                    return files;
-                }
-
-                return files.filter((fileEntry) => !isProofOfFundsFileName(fileEntry?.name || fileEntry?.relativePath));
+                return selectedPackage.files.filter((fileEntry) => fileEntry && fileEntry.relativePath);
             }
 
             function getSelectedInvestorAttachmentPaths() {
@@ -25693,7 +25724,7 @@ function initNavbarDateTime() {
                 const { documents, linked, uploads } = getDocumentSummaryParts();
                 const selectedInvestorPackage = getSelectedInvestorAttachmentPackage();
                 const investorFiles = getPreparedInvestorAttachmentFiles();
-                const selectedFbgFiles = fbgOfferTermsToggle.checked ? fbgOfferTermsFiles : [];
+                const selectedFbgFiles = fbgOfferTermsToggle.checked && !selectedInvestorPackage ? fbgOfferTermsFiles : [];
                 const totalPreparedDocuments = documents.length + investorFiles.length + selectedFbgFiles.length;
 
                 if (totalPreparedDocuments === 0) {
@@ -25997,6 +26028,7 @@ function initNavbarDateTime() {
             syncOpenButtonLabel();
             populateInvestorAttachmentOptions(savedDraft.investorAttachmentFolder || '');
             loadFbgOfferTermsFiles().finally(() => {
+                syncStaticAttachmentToggles();
                 renderDocumentSummary();
             });
             loadInvestorAttachmentPackages().finally(() => {
@@ -26005,6 +26037,7 @@ function initNavbarDateTime() {
                     applyInvestorAttachmentProfile(selectedInvestorProfile);
                 }
                 ensureAgentRecipient(selectedInvestorProfile);
+                syncStaticAttachmentToggles();
                 renderDocumentSummary();
             });
 
@@ -26035,6 +26068,7 @@ function initNavbarDateTime() {
             investorAttachmentsSelect.addEventListener('change', () => {
                 applyInvestorAttachmentProfile(getSelectedInvestorAttachmentProfile());
                 ensureAgentRecipient(getSelectedInvestorAttachmentProfile());
+                syncStaticAttachmentToggles();
                 renderDocumentSummary();
                 saveDraft();
             });
