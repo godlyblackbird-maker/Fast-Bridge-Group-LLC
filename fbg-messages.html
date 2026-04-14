@@ -189,6 +189,12 @@
             align-items: start;
         }
 
+        .messages-side-stack {
+            display: grid;
+            gap: 20px;
+            align-content: start;
+        }
+
         .messages-chat-shell {
             display: grid;
             grid-template-columns: 340px minmax(0, 1fr);
@@ -1221,36 +1227,115 @@
                         </div>
                     </section>
 
-                    <aside class="glass-card">
-                        <div class="card-header">
-                            <div>
-                                <h3 class="card-title">FBG Quick Library</h3>
-                                <p class="card-subtitle">Copy-ready blocks for the stuff you send constantly.</p>
+                    <div class="messages-side-stack">
+                        <section class="glass-card widget-card calendar-widget" data-widget-id="calendar" data-widget-title="Calendar">
+                            <div class="calendar-header widget-header">
+                                <div>
+                                    <h2 class="card-title" id="calendar-month-label">Calendar</h2>
+                                    <p class="card-subtitle" id="calendar-selected-summary">Select a date to add notes or reminders</p>
+                                </div>
+                                <div class="calendar-nav">
+                                    <button class="calendar-nav-btn" id="calendar-prev-month" type="button" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+                                    <button class="calendar-nav-btn" id="calendar-next-month" type="button" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="messages-library-grid">
-                            <article class="messages-library-item">
-                                <span class="messages-library-label">Agent Intro</span>
-                                <p id="fbg-message-block-1">Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer, probate, and off-market opportunities in [Area]. If you have anything coming up that needs a quick, clean close, send it my way.</p>
-                                <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-1">Copy</button>
-                            </article>
-                            <article class="messages-library-item">
-                                <span class="messages-library-label">Stale Listing</span>
-                                <p id="fbg-message-block-2">Wanted to follow up on [Property Address]. If the seller is open to a serious cash option, FAST BRIDGE GROUP can review it quickly and let you stay on both sides if that works for the situation.</p>
-                                <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-2">Copy</button>
-                            </article>
-                            <article class="messages-library-item">
-                                <span class="messages-library-label">Voicemail</span>
-                                <p id="fbg-message-block-3">Hey [Agent Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area] right now and wanted to connect on anything off-market, stale, or fixer-heavy. Call or text me back when you get a chance.</p>
-                                <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-3">Copy</button>
-                            </article>
-                        </div>
-                        <ol class="messages-quick-notes">
-                            <li>Keep the first sentence useful. Agents decide fast whether this is real deal flow or list spam.</li>
-                            <li>Ask for one concrete thing: stale listing, failed escrow, pocket opportunity, probate, or fixer inventory.</li>
-                            <li>State FAST BRIDGE GROUP clearly so the message feels traceable and professional.</li>
-                        </ol>
-                    </aside>
+                            <div class="calendar-stage" id="calendar-stage">
+                                <div class="calendar-view calendar-view-month active" id="calendar-month-view">
+                                    <div class="calendar-grid calendar-grid-month" id="calendar-grid"></div>
+                                </div>
+                                <div class="calendar-view calendar-view-detail" id="calendar-detail-view">
+                                    <div class="calendar-detail-topbar">
+                                        <button class="calendar-back-btn" id="calendar-back-btn" type="button">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                                            Back to Month
+                                        </button>
+                                        <span class="calendar-detail-label">Date details</span>
+                                    </div>
+                                    <div class="calendar-detail-card">
+                                        <div class="calendar-detail-header">
+                                            <div>
+                                                <span class="calendar-agenda-label">Selected date</span>
+                                                <h3 id="calendar-selected-date">No date selected</h3>
+                                                <p class="calendar-detail-subtitle" id="calendar-detail-summary">Use your planner for this date.</p>
+                                            </div>
+                                        </div>
+                                        <p class="outreach-owner" id="todo-goal-owner-label">Workspace owner: You</p>
+                                        <p class="planner-reminder-note" id="planner-reminder-note">Top-right reminders will alert you when planner tasks are coming up, due, or overdue.</p>
+                                        <div class="planner-input-grid">
+                                            <div class="form-group planner-full-width">
+                                                <label for="planner-task-input">Task / Goal</label>
+                                                <input id="planner-task-input" class="form-input" type="text" placeholder="Add task, follow-up, or weekly goal...">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="planner-task-date">Due Date</label>
+                                                <input id="planner-task-date" class="form-input" type="date">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="planner-task-priority">Priority</label>
+                                                <select id="planner-task-priority" class="form-input">
+                                                    <option value="p2">Medium</option>
+                                                    <option value="p1">High</option>
+                                                    <option value="p3">Low</option>
+                                                    <option value="p4">Someday</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="planner-task-reminder">Reminder</label>
+                                                <select id="planner-task-reminder" class="form-input">
+                                                    <option value="day-of">On due date</option>
+                                                    <option value="1-day">1 day before</option>
+                                                    <option value="3-day">3 days before</option>
+                                                    <option value="none">No reminder</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="calendar-inline-actions">
+                                            <button id="planner-add-btn" type="button" class="card-btn active">Add To Planner</button>
+                                        </div>
+                                        <div class="planner-filters" role="tablist" aria-label="Planner filters">
+                                            <button type="button" class="planner-filter-btn active" data-filter="selected-date">Selected Date <span id="planner-count-today" class="planner-count">0</span></button>
+                                            <button type="button" class="planner-filter-btn" data-filter="upcoming">Upcoming <span id="planner-count-upcoming" class="planner-count">0</span></button>
+                                            <button type="button" class="planner-filter-btn" data-filter="done">Done <span id="planner-count-done" class="planner-count">0</span></button>
+                                        </div>
+                                        <div id="planner-task-list" class="outreach-list planner-task-list">
+                                            <p class="outreach-empty">No planner items yet.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <aside class="glass-card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">FBG Quick Library</h3>
+                                    <p class="card-subtitle">Copy-ready blocks for the stuff you send constantly.</p>
+                                </div>
+                            </div>
+                            <div class="messages-library-grid">
+                                <article class="messages-library-item">
+                                    <span class="messages-library-label">Agent Intro</span>
+                                    <p id="fbg-message-block-1">Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer, probate, and off-market opportunities in [Area]. If you have anything coming up that needs a quick, clean close, send it my way.</p>
+                                    <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-1">Copy</button>
+                                </article>
+                                <article class="messages-library-item">
+                                    <span class="messages-library-label">Stale Listing</span>
+                                    <p id="fbg-message-block-2">Wanted to follow up on [Property Address]. If the seller is open to a serious cash option, FAST BRIDGE GROUP can review it quickly and let you stay on both sides if that works for the situation.</p>
+                                    <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-2">Copy</button>
+                                </article>
+                                <article class="messages-library-item">
+                                    <span class="messages-library-label">Voicemail</span>
+                                    <p id="fbg-message-block-3">Hey [Agent Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area] right now and wanted to connect on anything off-market, stale, or fixer-heavy. Call or text me back when you get a chance.</p>
+                                    <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-3">Copy</button>
+                                </article>
+                            </div>
+                            <ol class="messages-quick-notes">
+                                <li>Keep the first sentence useful. Agents decide fast whether this is real deal flow or list spam.</li>
+                                <li>Ask for one concrete thing: stale listing, failed escrow, pocket opportunity, probate, or fixer inventory.</li>
+                                <li>State FAST BRIDGE GROUP clearly so the message feels traceable and professional.</li>
+                            </ol>
+                        </aside>
+                    </div>
                 </section>
             </div>
         </main>
