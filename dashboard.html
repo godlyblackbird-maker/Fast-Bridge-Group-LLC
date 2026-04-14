@@ -376,17 +376,86 @@
         }
 
         .discord-meetings-art {
+            position: relative;
             display: grid;
             place-items: center;
             width: 72px;
             height: 72px;
+            isolation: isolate;
+        }
+
+        .discord-meetings-art::before,
+        .discord-meetings-art::after {
+            content: '';
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+
+        .discord-meetings-art::before {
+            inset: 7px;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.58) 0%, rgba(var(--accent-rgb), 0.24) 48%, transparent 74%);
+            filter: blur(11px);
+            opacity: 0.92;
+            animation: discord-logo-glow 2.8s ease-in-out infinite;
+        }
+
+        .discord-meetings-art::after {
+            inset: -10px;
+            background: repeating-conic-gradient(from 0deg, rgba(var(--accent-light-rgb), 0.82) 0deg 7deg, transparent 7deg 24deg);
+            -webkit-mask: radial-gradient(circle, transparent 0 54%, #000 60% 63%, transparent 73%);
+            mask: radial-gradient(circle, transparent 0 54%, #000 60% 63%, transparent 73%);
+            opacity: 0.74;
+            animation: discord-logo-rays 2.8s ease-out infinite;
         }
 
         .discord-meetings-art img {
+            position: relative;
+            z-index: 1;
             width: 58px;
             height: 58px;
             object-fit: contain;
-            filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.24));
+            filter:
+                drop-shadow(0 0 12px rgba(var(--accent-light-rgb), 0.68))
+                drop-shadow(0 0 26px rgba(var(--accent-rgb), 0.34))
+                drop-shadow(0 6px 10px rgba(15, 23, 42, 0.24));
+            animation: discord-logo-breathe 2.8s ease-in-out infinite;
+        }
+
+        @keyframes discord-logo-glow {
+            0%,
+            100% {
+                transform: scale(0.92);
+                opacity: 0.62;
+            }
+            50% {
+                transform: scale(1.12);
+                opacity: 1;
+            }
+        }
+
+        @keyframes discord-logo-rays {
+            0% {
+                transform: scale(0.78) rotate(0deg);
+                opacity: 0;
+            }
+            25% {
+                opacity: 0.82;
+            }
+            100% {
+                transform: scale(1.2) rotate(18deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes discord-logo-breathe {
+            0%,
+            100% {
+                transform: scale(0.98);
+            }
+            50% {
+                transform: scale(1.04);
+            }
         }
 
         .discord-meetings-kicker {

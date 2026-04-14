@@ -2338,7 +2338,7 @@
                         </div>
                         <div class="access-request-field">
                             <label for="access-request-phone">Phone</label>
-                            <input id="access-request-phone" name="phone" type="tel" placeholder="(555) 555-5555">
+                            <input id="access-request-phone" name="phone" type="tel" placeholder="+1 (555) 123-4567">
                         </div>
                         <div class="access-request-field">
                             <label for="access-request-company">Company</label>
@@ -2467,6 +2467,7 @@
             const form = document.getElementById('access-request-form');
             const feedback = document.getElementById('access-request-feedback');
             const submitButton = document.getElementById('submit-access-request');
+            const phoneInput = document.getElementById('access-request-phone');
             const swayAccessButton = document.getElementById('open-access-request');
             const swayCards = Array.from(document.querySelectorAll('#platform .section-card'));
             const swayOpsItems = Array.from(document.querySelectorAll('.ops-item'));
@@ -2485,6 +2486,47 @@
                 if (state === 'success') {
                     feedback.classList.add('is-success');
                 }
+            };
+
+            const normalizePhoneToE164 = (value) => {
+                const raw = String(value || '').trim();
+                if (!raw) {
+                    return '';
+                }
+
+                if (raw.startsWith('+')) {
+                    const digits = `+${raw.slice(1).replace(/\D/g, '')}`;
+                    return /^\+[1-9]\d{7,14}$/.test(digits) ? digits : '';
+                }
+
+                const digits = raw.replace(/\D/g, '');
+                if (digits.length === 10) {
+                    return `+1${digits}`;
+                }
+                if (digits.length === 11 && digits.startsWith('1')) {
+                    return `+${digits}`;
+                }
+
+                return '';
+            };
+
+            const applyPhoneFormatting = () => {
+                if (!(phoneInput instanceof HTMLInputElement)) {
+                    return '';
+                }
+
+                phoneInput.placeholder = '+1 (555) 123-4567';
+                phoneInput.title = 'Phone numbers auto-format to +1 (555) 123-4567 and submit as E.164.';
+                const normalized = normalizePhoneToE164(phoneInput.value);
+                if (normalized) {
+                    if (/^\+1\d{10}$/.test(normalized)) {
+                        const national = normalized.slice(2);
+                        phoneInput.value = `+1 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6)}`;
+                    } else {
+                        phoneInput.value = normalized;
+                    }
+                }
+                return normalized;
             };
 
             const closeModal = () => {
@@ -2526,6 +2568,12 @@
                 });
             }
 
+            if (phoneInput) {
+                applyPhoneFormatting();
+                phoneInput.addEventListener('blur', applyPhoneFormatting);
+                phoneInput.addEventListener('change', applyPhoneFormatting);
+            }
+
             window.addEventListener('keydown', (event) => {
                 if (event.key === 'Escape' && modal && modal.classList.contains('is-open')) {
                     closeModal();
@@ -2538,16 +2586,22 @@
                     setFeedback('', '');
 
                     const formData = new FormData(form);
+                    const normalizedPhone = applyPhoneFormatting();
                     const payload = {
                         name: String(formData.get('name') || '').trim(),
                         email: String(formData.get('email') || '').trim(),
-                        phone: String(formData.get('phone') || '').trim(),
+                        phone: normalizedPhone || String(formData.get('phone') || '').trim(),
                         company: String(formData.get('company') || '').trim(),
                         message: String(formData.get('message') || '').trim()
                     };
 
                     if (!payload.name || !payload.email) {
                         setFeedback('Name and email are required.', 'error');
+                        return;
+                    }
+
+                    if (String(formData.get('phone') || '').trim() && !normalizedPhone) {
+                        setFeedback('Enter the phone number in E.164 format, for example +15551234567.', 'error');
                         return;
                     }
 

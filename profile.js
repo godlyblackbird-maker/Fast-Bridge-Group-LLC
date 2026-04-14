@@ -40,6 +40,60 @@
     return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
   }
 
+  function normalizePhoneToE164(value) {
+    if (typeof window.FAST_NORMALIZE_PHONE_E164 === 'function') {
+      return window.FAST_NORMALIZE_PHONE_E164(value);
+    }
+
+    const raw = String(value || '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    if (raw.startsWith('+')) {
+      const digits = `+${raw.slice(1).replace(/\D/g, '')}`;
+      return /^\+[1-9]\d{7,14}$/.test(digits) ? digits : '';
+    }
+
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 10) {
+      return `+1${digits}`;
+    }
+    if (digits.length === 11 && digits.startsWith('1')) {
+      return `+${digits}`;
+    }
+
+    return '';
+  }
+
+  function formatPhoneDisplayValue(value) {
+    const raw = String(value || '').trim();
+    const normalized = normalizePhoneToE164(raw);
+    if (!normalized) {
+      return raw;
+    }
+
+    if (/^\+1\d{10}$/.test(normalized)) {
+      const national = normalized.slice(2);
+      return `+1 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6)}`;
+    }
+
+    return normalized;
+  }
+
+  function preparePhoneInput(input) {
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    input.placeholder = '+1 (555) 123-4567';
+    input.title = 'Phone numbers auto-format to +1 (555) 123-4567 and save as E.164.';
+    const normalized = normalizePhoneToE164(input.value);
+    if (normalized) {
+      input.value = formatPhoneDisplayValue(normalized);
+    }
+  }
+
   function getScopedEmailKeys(email) {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!normalizedEmail) {
@@ -706,7 +760,7 @@
       const data = profileData;
       document.getElementById('profile-name').value = data.name || '';
       document.getElementById('profile-email').value = accountIdentity.email || data.email || '';
-      document.getElementById('profile-phone').value = data.phone || '';
+      document.getElementById('profile-phone').value = formatPhoneDisplayValue(data.phone || '');
       document.getElementById('profile-company').value = data.company || '';
       document.getElementById('profile-address').value = data.address || '';
       document.getElementById('profile-city').value = data.city || '';
@@ -723,6 +777,8 @@
       document.getElementById('profile-email').value = accountIdentity.email || user.email || '';
       updateSidebarProfile(user);
     }
+
+    preparePhoneInput(document.getElementById('profile-phone'));
 
     const profileEmailInput = document.getElementById('profile-email');
     if (profileEmailInput) {
@@ -745,7 +801,7 @@
       const profileData = {
         name: document.getElementById('profile-name').value,
         email: accountIdentity.email || existingProfile.email || '',
-        phone: document.getElementById('profile-phone').value,
+        phone: normalizePhoneToE164(document.getElementById('profile-phone').value) || document.getElementById('profile-phone').value.trim(),
         company: document.getElementById('profile-company').value,
         address: document.getElementById('profile-address').value,
         city: document.getElementById('profile-city').value,
@@ -874,8 +930,10 @@
     document.getElementById('settings-first-name').value = firstName;
     document.getElementById('settings-last-name').value = lastName;
     document.getElementById('settings-email').value = profileData.email || '';
-    document.getElementById('settings-phone').value = profileData.phone || '';
+    document.getElementById('settings-phone').value = formatPhoneDisplayValue(profileData.phone || '');
     document.getElementById('settings-bio').value = profileData.bio || '';
+
+    preparePhoneInput(document.getElementById('settings-phone'));
 
     updateSettingsProfileHeader(profileData);
     syncSettingsECardSection();
@@ -911,7 +969,7 @@
 
     const profileData = getResolvedProfileData();
     const displayName = (profileData.ecardDisplayName || profileData.name || 'User').trim();
-    const displayPhone = (profileData.ecardDisplayPhone || profileData.phone || '').trim();
+    const displayPhone = formatPhoneDisplayValue(profileData.ecardDisplayPhone || profileData.phone || '');
     const displayEmail = (profileData.ecardDisplayEmail || profileData.email || '').trim();
     const title = toRoleLabel(profileData.jobTitle || profileData.role);
     const license = (profileData.licenseNumber || '').trim();
@@ -931,6 +989,7 @@
     }
     if (phoneField) {
       phoneField.value = displayPhone;
+      preparePhoneInput(phoneField);
     }
     if (emailField) {
       emailField.value = displayEmail;
@@ -963,7 +1022,7 @@
     const targetAreasField = document.getElementById('ecard-target-areas');
 
     const displayName = nameField ? nameField.value.trim() : (profileData.ecardDisplayName || profileData.name || 'User').trim();
-    const displayPhone = phoneField ? phoneField.value.trim() : (profileData.ecardDisplayPhone || profileData.phone || '').trim();
+    const displayPhone = phoneField ? (normalizePhoneToE164(phoneField.value) || phoneField.value.trim()) : formatPhoneDisplayValue(profileData.ecardDisplayPhone || profileData.phone || '');
     const displayEmail = emailField ? emailField.value.trim() : (profileData.ecardDisplayEmail || profileData.email || '').trim();
     const displayTitle = titleField ? titleField.value.trim() : toRoleLabel(profileData.jobTitle || profileData.role);
     const displayLicense = licenseField ? licenseField.value.trim() : (profileData.licenseNumber || '').trim();
@@ -1014,7 +1073,7 @@
     const updatedProfile = {
       ...profileData,
       ecardDisplayName: document.getElementById('ecard-display-name').value.trim(),
-      ecardDisplayPhone: document.getElementById('ecard-display-phone').value.trim(),
+      ecardDisplayPhone: normalizePhoneToE164(document.getElementById('ecard-display-phone').value) || document.getElementById('ecard-display-phone').value.trim(),
       ecardDisplayEmail: document.getElementById('ecard-display-email').value.trim(),
       jobTitle: document.getElementById('ecard-display-title').value.trim(),
       licenseNumber: document.getElementById('ecard-license').value.trim(),
@@ -1038,7 +1097,7 @@
     const updatedProfile = {
       ...profileData,
       ecardDisplayName: document.getElementById('ecard-display-name').value.trim(),
-      ecardDisplayPhone: document.getElementById('ecard-display-phone').value.trim(),
+      ecardDisplayPhone: normalizePhoneToE164(document.getElementById('ecard-display-phone').value) || document.getElementById('ecard-display-phone').value.trim(),
       ecardDisplayEmail: document.getElementById('ecard-display-email').value.trim(),
       jobTitle: document.getElementById('ecard-display-title').value.trim(),
       licenseNumber: document.getElementById('ecard-license').value.trim(),
@@ -1226,7 +1285,7 @@
       ...existingProfile,
       name: fullName || existingProfile.name || 'User',
       email: resolvedAccountEmail,
-      phone: document.getElementById('settings-phone').value.trim(),
+      phone: normalizePhoneToE164(document.getElementById('settings-phone').value) || document.getElementById('settings-phone').value.trim(),
       avatarUploadId: existingProfile.avatarUploadId || '',
       bio: document.getElementById('settings-bio').value.trim(),
       updatedAt: new Date().toISOString()
@@ -1469,6 +1528,9 @@
   ['ecard-display-name', 'ecard-display-phone', 'ecard-display-email', 'ecard-display-title', 'ecard-license', 'ecard-buy-box', 'ecard-target-areas'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
+      if (id === 'ecard-display-phone') {
+        preparePhoneInput(input);
+      }
       input.addEventListener('input', () => {
         updateECardPreviewFromInputs();
 
@@ -1480,6 +1542,15 @@
           autoSaveSettingsECardSection();
         }, 300);
       });
+    }
+  });
+
+  ['profile-phone', 'settings-phone', 'ecard-display-phone'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) {
+      preparePhoneInput(input);
+      input.addEventListener('blur', () => preparePhoneInput(input));
+      input.addEventListener('change', () => preparePhoneInput(input));
     }
   });
 

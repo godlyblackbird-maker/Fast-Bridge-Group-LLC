@@ -41,10 +41,57 @@
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
+        .legal-contact-page {
+            --legal-contact-surface-bg: linear-gradient(155deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+            --legal-contact-surface-border: rgba(var(--accent-rgb), 0.18);
+            --legal-contact-surface-shadow: 0 22px 42px rgba(2, 6, 23, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            --legal-contact-chip-bg: rgba(255, 255, 255, 0.16);
+            --legal-contact-chip-border: rgba(var(--accent-rgb), 0.16);
+            --legal-contact-link-bg: linear-gradient(135deg, rgba(var(--accent-rgb), 0.12), rgba(var(--accent-light-rgb), 0.1));
+            --legal-contact-link-hover-bg: linear-gradient(135deg, rgba(var(--accent-rgb), 0.18), rgba(var(--accent-light-rgb), 0.16));
+            --legal-contact-link-hover-color: var(--legal-title-color);
+            --legal-contact-panel-radius: 24px;
+        }
+
+        [data-theme="light"] .legal-contact-page,
+        [data-theme="beach"] .legal-contact-page,
+        [data-theme="cloud"] .legal-contact-page,
+        [data-theme="japan"] .legal-contact-page {
+            --legal-contact-surface-bg: linear-gradient(155deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.44));
+            --legal-contact-surface-shadow: 0 24px 46px rgba(8, 47, 73, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.42);
+            --legal-contact-chip-bg: rgba(255, 255, 255, 0.46);
+        }
+
+        [data-theme="dark"] .legal-contact-page,
+        [data-theme="space"] .legal-contact-page,
+        [data-theme="swamp"] .legal-contact-page,
+        [data-theme="sunset"] .legal-contact-page,
+        [data-theme="cyberpunk"] .legal-contact-page,
+        [data-theme="holloween"] .legal-contact-page,
+        [data-theme="christmas"] .legal-contact-page {
+            --legal-contact-surface-bg: linear-gradient(155deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+            --legal-contact-surface-border: rgba(255, 255, 255, 0.12);
+            --legal-contact-surface-shadow: 0 22px 42px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            --legal-contact-chip-bg: rgba(255, 255, 255, 0.08);
+            --legal-contact-chip-border: rgba(255, 255, 255, 0.12);
+            --legal-contact-link-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(var(--accent-rgb), 0.16));
+            --legal-contact-link-hover-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(var(--accent-rgb), 0.22));
+        }
+
         [data-theme="beach"] body.legal-contact-page {
             --legal-page-bg: transparent;
             position: relative;
             color: #083344;
+            --legal-contact-surface-bg:
+                linear-gradient(155deg, rgba(255, 255, 255, 0.82), rgba(239, 249, 255, 0.56) 52%, rgba(255, 237, 213, 0.46)),
+                rgba(255, 255, 255, 0.72);
+            --legal-contact-surface-border: rgba(8, 145, 178, 0.24);
+            --legal-contact-surface-shadow: 0 26px 52px rgba(8, 47, 73, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+            --legal-contact-chip-bg: rgba(255, 255, 255, 0.72);
+            --legal-contact-chip-border: rgba(8, 145, 178, 0.18);
+            --legal-contact-link-bg: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(251, 146, 60, 0.14));
+            --legal-contact-link-hover-bg: linear-gradient(135deg, rgba(2, 132, 199, 0.18), rgba(251, 146, 60, 0.22));
+            --legal-contact-link-hover-color: #082f49;
         }
 
         [data-theme="beach"] body.legal-contact-page::before {
@@ -79,11 +126,9 @@
 
         [data-theme="beach"] .legal-contact-page .legal-hero,
         [data-theme="beach"] .legal-contact-page .legal-card {
-            border-color: rgba(8, 145, 178, 0.24);
-            background:
-                linear-gradient(155deg, rgba(255, 255, 255, 0.82), rgba(239, 249, 255, 0.56) 52%, rgba(255, 237, 213, 0.46)),
-                rgba(255, 255, 255, 0.72);
-            box-shadow: 0 26px 52px rgba(8, 47, 73, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+            border-color: var(--legal-contact-surface-border);
+            background: var(--legal-contact-surface-bg);
+            box-shadow: var(--legal-contact-surface-shadow);
             backdrop-filter: blur(18px);
         }
 
@@ -176,7 +221,7 @@
         }
 
         .legal-contact-page .legal-hero {
-            border-radius: 0;
+            border-radius: var(--legal-contact-panel-radius);
         }
 
         .legal-contact-hero-copy {
@@ -202,7 +247,7 @@
             padding: 8px 14px;
             border-radius: 999px;
             border: 1px solid rgba(var(--accent-rgb), 0.16);
-            background: rgba(255, 255, 255, 0.24);
+            background: var(--legal-contact-chip-bg);
             color: var(--legal-title-color);
             font-size: 12px;
             font-weight: 700;
@@ -214,10 +259,11 @@
             display: grid;
             gap: 16px;
             padding: 22px;
-            border-radius: 0;
-            border: 1px solid rgba(var(--accent-rgb), 0.2);
-            background: linear-gradient(155deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+            border-radius: var(--legal-contact-panel-radius);
+            border: 1px solid var(--legal-contact-surface-border);
+            background: var(--legal-contact-surface-bg);
+            box-shadow: var(--legal-contact-surface-shadow);
+            backdrop-filter: blur(16px);
         }
 
         .legal-contact-hero-panel h2,
@@ -244,9 +290,9 @@
             display: grid;
             gap: 4px;
             padding: 14px 16px;
-            border-radius: 0;
-            border: 1px solid rgba(var(--accent-rgb), 0.14);
-            background: rgba(255, 255, 255, 0.22);
+            border-radius: 18px;
+            border: 1px solid var(--legal-contact-chip-border);
+            background: var(--legal-contact-chip-bg);
         }
 
         .legal-contact-priority-item span,
@@ -296,9 +342,9 @@
             gap: 12px;
             align-items: start;
             padding: 14px 16px;
-            border-radius: 0;
-            border: 1px solid rgba(var(--accent-rgb), 0.14);
-            background: rgba(255, 255, 255, 0.18);
+            border-radius: 18px;
+            border: 1px solid var(--legal-contact-chip-border);
+            background: var(--legal-contact-chip-bg);
         }
 
         .legal-contact-step-index {
@@ -337,9 +383,9 @@
             justify-content: space-between;
             gap: 14px;
             padding: 14px 16px;
-            border-radius: 0;
-            border: 1px solid var(--legal-panel-border);
-            background: var(--legal-link-bg);
+            border-radius: 18px;
+            border: 1px solid var(--legal-contact-surface-border);
+            background: var(--legal-contact-link-bg);
             color: var(--legal-title-color);
             text-decoration: none;
             font-size: 14px;
@@ -351,8 +397,8 @@
         .legal-contact-action:focus-visible {
             transform: translateY(-1px);
             border-color: rgba(var(--accent-rgb), 0.34);
-            background: var(--legal-link-hover-bg);
-            color: var(--legal-link-hover-color);
+            background: var(--legal-contact-link-hover-bg);
+            color: var(--legal-contact-link-hover-color);
             box-shadow: 0 12px 22px -18px rgba(0, 0, 0, 0.24);
         }
 
@@ -381,7 +427,7 @@
             display: grid;
             gap: 18px;
             min-height: 100%;
-            border-radius: 0;
+            border-radius: var(--legal-contact-panel-radius);
         }
 
         .legal-contact-route-head {
@@ -401,8 +447,8 @@
             min-height: 34px;
             padding: 7px 12px;
             border-radius: 999px;
-            border: 1px solid rgba(var(--accent-rgb), 0.14);
-            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid var(--legal-contact-chip-border);
+            background: var(--legal-contact-chip-bg);
             color: var(--legal-panel-text);
             font-size: 12px;
             font-weight: 700;

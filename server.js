@@ -10821,7 +10821,8 @@ app.post('/api/leads', async (req, res) => {
 app.post('/api/access-requests', (req, res) => {
   const name = String(req.body?.name || '').trim();
   const email = String(req.body?.email || '').trim().toLowerCase();
-  const phone = String(req.body?.phone || '').trim();
+  const rawPhone = String(req.body?.phone || '').trim();
+  const phone = rawPhone ? normalizeSmsPhone(rawPhone) : '';
   const company = String(req.body?.company || '').trim();
   const message = String(req.body?.message || '').trim();
 
@@ -10831,6 +10832,10 @@ app.post('/api/access-requests', (req, res) => {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+
+  if (rawPhone && !phone) {
+    return res.status(400).json({ error: 'Enter the phone number in E.164 format, for example +15551234567.' });
   }
 
   db.run(
@@ -10883,7 +10888,8 @@ app.get('/api/access-requests', (req, res) => {
 app.post('/api/property-submissions', (req, res) => {
   const sellerName = String(req.body?.sellerName || '').trim();
   const sellerEmail = String(req.body?.sellerEmail || '').trim().toLowerCase();
-  const sellerPhone = String(req.body?.sellerPhone || '').trim();
+  const rawSellerPhone = String(req.body?.sellerPhone || '').trim();
+  const sellerPhone = normalizeSmsPhone(rawSellerPhone);
   const smsConsent = req.body?.smsConsent === true || String(req.body?.smsConsent || '').trim().toLowerCase() === 'true';
   const smsConsentText = smsConsent
     ? 'By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is not a condition of purchase.'
@@ -10911,6 +10917,10 @@ app.post('/api/property-submissions', (req, res) => {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerEmail)) {
     return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+
+  if (!sellerPhone) {
+    return res.status(400).json({ error: 'Enter the phone number in E.164 format, for example +15551234567.' });
   }
 
   if (!smsConsent) {

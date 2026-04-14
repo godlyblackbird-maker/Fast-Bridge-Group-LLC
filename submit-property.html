@@ -828,7 +828,7 @@
                             </div>
                             <div class="submit-field">
                                 <label for="seller-phone">Phone</label>
-                                <input id="seller-phone" name="sellerPhone" type="tel" placeholder="(555) 555-5555" required>
+                                <input id="seller-phone" name="sellerPhone" type="tel" placeholder="+1 (555) 123-4567" required>
                             </div>
                             <div class="submit-field">
                                 <label for="property-type">Property Type</label>
@@ -964,6 +964,7 @@
             const submitButton = document.getElementById('seller-property-submit-btn');
             const formPanel = document.getElementById('seller-property-form-panel');
             const successCard = document.getElementById('seller-property-success-card');
+            const sellerPhoneInput = document.getElementById('seller-phone');
 
             if (!form || !feedback || !submitButton || !formPanel || !successCard) {
                 return;
@@ -996,6 +997,49 @@
                 }
 
                 return formattedValue.length;
+            }
+
+            function normalizePhoneToE164(value) {
+                const raw = String(value || '').trim();
+                if (!raw) {
+                    return '';
+                }
+
+                if (raw.startsWith('+')) {
+                    const digits = `+${raw.slice(1).replace(/\D/g, '')}`;
+                    return /^\+[1-9]\d{7,14}$/.test(digits) ? digits : '';
+                }
+
+                const digits = raw.replace(/\D/g, '');
+                if (digits.length === 10) {
+                    return `+1${digits}`;
+                }
+                if (digits.length === 11 && digits.startsWith('1')) {
+                    return `+${digits}`;
+                }
+
+                return '';
+            }
+
+            function applySellerPhoneFormatting() {
+                if (!(sellerPhoneInput instanceof HTMLInputElement)) {
+                    return '';
+                }
+
+                sellerPhoneInput.placeholder = '+1 (555) 123-4567';
+                sellerPhoneInput.title = 'Phone numbers auto-format to +1 (555) 123-4567 and submit as E.164.';
+
+                const normalized = normalizePhoneToE164(sellerPhoneInput.value);
+                if (normalized) {
+                    if (/^\+1\d{10}$/.test(normalized)) {
+                        const national = normalized.slice(2);
+                        sellerPhoneInput.value = `+1 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6)}`;
+                    } else {
+                        sellerPhoneInput.value = normalized;
+                    }
+                }
+
+                return normalized;
             }
 
             function applySubmitDigitGrouping(input) {
@@ -1033,16 +1077,23 @@
                 });
             });
 
+            if (sellerPhoneInput) {
+                applySellerPhoneFormatting();
+                sellerPhoneInput.addEventListener('blur', applySellerPhoneFormatting);
+                sellerPhoneInput.addEventListener('change', applySellerPhoneFormatting);
+            }
+
             form.addEventListener('submit', async function (event) {
                 event.preventDefault();
                 setFeedback('', '');
 
                 const formData = new FormData(form);
+                const normalizedSellerPhone = applySellerPhoneFormatting();
                 const conditionIssues = formData.getAll('conditionIssues').map((item) => String(item || '').trim()).filter(Boolean);
                 const payload = {
                     sellerName: String(formData.get('sellerName') || '').trim(),
                     sellerEmail: String(formData.get('sellerEmail') || '').trim(),
-                    sellerPhone: String(formData.get('sellerPhone') || '').trim(),
+                    sellerPhone: normalizedSellerPhone || String(formData.get('sellerPhone') || '').trim(),
                     smsConsent: formData.get('smsConsent') === 'yes',
                     propertyAddress: String(formData.get('propertyAddress') || '').trim(),
                     propertyCity: String(formData.get('propertyCity') || '').trim(),
@@ -1065,6 +1116,11 @@
 
                 if (!payload.smsConsent) {
                     setFeedback('SMS consent is required before submitting this property inquiry.', 'error');
+                    return;
+                }
+
+                if (!normalizedSellerPhone) {
+                    setFeedback('Enter the phone number in E.164 format, for example +15551234567.', 'error');
                     return;
                 }
 

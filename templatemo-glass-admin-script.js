@@ -788,7 +788,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                         const li = document.createElement('li');
                         li.className = 'notification-center-item-list-entry';
                         const label = document.createElement('span');
-                        label.textContent = item.label;
+                        const phone = formatPhoneDisplayValue(item.phone || '');
                         li.appendChild(label);
 
                         if (item.meta) {
@@ -796,7 +796,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                             small.textContent = item.meta;
                             li.appendChild(small);
                         }
-                        details.appendChild(li);
+                            <p class="outreach-owner">Phone: ${escapeRequestText(phone || 'No phone submitted')}</p>
                     });
                     article.appendChild(details);
                 }
@@ -6663,6 +6663,93 @@ function initNavbarDateTime() {
                 formatNumericInputValue(input);
             });
         });
+    }
+
+    function normalizePhoneToE164(value) {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return '';
+        }
+
+        if (raw.startsWith('+')) {
+            const digits = `+${raw.slice(1).replace(/\D/g, '')}`;
+            return /^\+[1-9]\d{7,14}$/.test(digits) ? digits : '';
+        }
+
+        const digits = raw.replace(/\D/g, '');
+        if (digits.length === 10) {
+            return `+1${digits}`;
+        }
+        if (digits.length === 11 && digits.startsWith('1')) {
+            return `+${digits}`;
+        }
+
+        return '';
+    }
+
+    function formatPhoneDisplayValue(value) {
+        const raw = String(value || '').trim();
+        const normalized = normalizePhoneToE164(raw);
+        if (!normalized) {
+            return raw;
+        }
+
+        if (/^\+1\d{10}$/.test(normalized)) {
+            const national = normalized.slice(2);
+            return `+1 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6)}`;
+        }
+
+        return normalized;
+    }
+
+    function isLikelyPhoneInput(input) {
+        if (!(input instanceof HTMLInputElement)) {
+            return false;
+        }
+
+        const fieldIdentity = [input.type, input.id, input.name, input.autocomplete, input.placeholder]
+            .map((value) => String(value || '').trim().toLowerCase())
+            .join(' ');
+
+        return input.type === 'tel'
+            || /(^|[^a-z])phone([^a-z]|$)|mobile|cell|tel/.test(fieldIdentity);
+    }
+
+    function applyPhoneInputNormalization(input) {
+        if (!isLikelyPhoneInput(input) || input.disabled || input.readOnly) {
+            return;
+        }
+
+        input.placeholder = '+1 (555) 123-4567';
+        input.title = 'Phone numbers auto-format to +1 (555) 123-4567 and submit as E.164.';
+        if (!input.inputMode) {
+            input.inputMode = 'tel';
+        }
+
+        const normalized = normalizePhoneToE164(input.value);
+        if (normalized) {
+            input.value = formatPhoneDisplayValue(normalized);
+        }
+    }
+
+    function initGlobalPhoneInputFormatting() {
+        const phoneInputs = Array.from(document.querySelectorAll('input')).filter(isLikelyPhoneInput);
+        phoneInputs.forEach((input) => {
+            applyPhoneInputNormalization(input);
+            input.addEventListener('blur', () => applyPhoneInputNormalization(input));
+            input.addEventListener('change', () => applyPhoneInputNormalization(input));
+        });
+
+        Array.from(document.querySelectorAll('form')).forEach((form) => {
+            form.addEventListener('submit', () => {
+                Array.from(form.querySelectorAll('input')).forEach((input) => {
+                    applyPhoneInputNormalization(input);
+                });
+            }, true);
+        });
+
+        window.FAST_NORMALIZE_PHONE_E164 = normalizePhoneToE164;
+        window.FAST_FORMAT_PHONE_E164 = formatPhoneDisplayValue;
     }
 
     // ============================================
@@ -14247,6 +14334,7 @@ function initNavbarDateTime() {
                 const issues = Array.isArray(item.conditionIssues) && item.conditionIssues.length > 0
                     ? item.conditionIssues.map((issue) => escapeSubmissionText(issue)).join(' • ')
                     : 'No condition issues selected';
+                const sellerPhone = formatPhoneDisplayValue(item.sellerPhone || '');
 
                 row.innerHTML = `
                     <div class="outreach-item-head">
@@ -14255,7 +14343,7 @@ function initNavbarDateTime() {
                     </div>
                     <p class="outreach-item-body">${escapeSubmissionText(propertyLine || item.propertyAddress || 'No property address provided')}</p>
                     <p class="outreach-owner">Email: ${escapeSubmissionText(item.sellerEmail || 'No email provided')}</p>
-                    <p class="outreach-owner">Phone: ${escapeSubmissionText(item.sellerPhone || 'No phone submitted')}</p>
+                    <p class="outreach-owner">Phone: ${escapeSubmissionText(sellerPhone || 'No phone submitted')}</p>
                     <p class="outreach-owner">Property Type: ${escapeSubmissionText(item.propertyType || 'Not provided')}</p>
                     <p class="outreach-owner">Beds / Baths / Sq Ft: ${escapeSubmissionText(item.bedrooms || '-') } / ${escapeSubmissionText(item.bathrooms || '-') } / ${escapeSubmissionText(item.squareFeet || '-')}</p>
                     <p class="outreach-owner">Target Price: ${escapeSubmissionText(item.askingPrice || 'Not provided')}</p>
@@ -15254,7 +15342,7 @@ function initNavbarDateTime() {
                 'los-angeles': [
                     {
                         name: 'Brandon Wasilewski',
-                        phone: '(805) 856-8773',
+                        phone: '+18058568773',
                         email: 'lewskisells@gmail.com',
                         brokerage: 'Realty ONE Group Summit',
                         activeInLast2Years: 'TRUE',
@@ -15264,7 +15352,7 @@ function initNavbarDateTime() {
                     },
                     {
                         name: 'Elena Carrillo',
-                        phone: '(323) 555-0194',
+                        phone: '+13235550194',
                         email: 'elena.carrillo@summitrealty.com',
                         brokerage: 'Summit West Realty',
                         activeInLast2Years: 'TRUE',
@@ -15276,7 +15364,7 @@ function initNavbarDateTime() {
                 orange: [
                     {
                         name: 'Mason Kim',
-                        phone: '(714) 555-0138',
+                        phone: '+17145550138',
                         email: 'mason.kim@coastalgroup.com',
                         brokerage: 'Coastal Group Realty',
                         activeInLast2Years: 'TRUE',
@@ -15286,7 +15374,7 @@ function initNavbarDateTime() {
                     },
                     {
                         name: 'Sophia Nguyen',
-                        phone: '(949) 555-0107',
+                        phone: '+19495550107',
                         email: 's.nguyen@orangecrownrealty.com',
                         brokerage: 'Orange Crown Realty',
                         activeInLast2Years: 'TRUE',
@@ -15298,7 +15386,7 @@ function initNavbarDateTime() {
                 'san-diego': [
                     {
                         name: 'Jordan Reeves',
-                        phone: '(619) 555-0162',
+                        phone: '+16195550162',
                         email: 'jreeves@pacificcoasthomes.com',
                         brokerage: 'Pacific Coast Homes',
                         activeInLast2Years: 'TRUE',
@@ -15308,7 +15396,7 @@ function initNavbarDateTime() {
                     },
                     {
                         name: 'Ariana Lopez',
-                        phone: '(858) 555-0143',
+                        phone: '+18585550143',
                         email: 'alopez@sandiegoprime.com',
                         brokerage: 'San Diego Prime Realty',
                         activeInLast2Years: 'TRUE',
@@ -15320,7 +15408,7 @@ function initNavbarDateTime() {
                 'santa-clara': [
                     {
                         name: 'Noah Patel',
-                        phone: '(408) 555-0112',
+                        phone: '+14085550112',
                         email: 'npatel@baytechrealty.com',
                         brokerage: 'BayTech Realty',
                         activeInLast2Years: 'TRUE',
@@ -15330,7 +15418,7 @@ function initNavbarDateTime() {
                     },
                     {
                         name: 'Priya Menon',
-                        phone: '(650) 555-0154',
+                        phone: '+16505550154',
                         email: 'pmenon@siliconkeyhomes.com',
                         brokerage: 'Silicon Key Homes',
                         activeInLast2Years: 'TRUE',
@@ -19253,7 +19341,7 @@ function initNavbarDateTime() {
             agentRecord: {
                 name: 'Brandon Wasilewski',
                 title: 'Agent Record',
-                phone: '(805) 856-8773',
+                phone: '+18058568773',
                 email: 'lewskisells@gmail.com',
                 brokerage: 'Realty ONE Group Summit',
                 lastCommunicationDate: '-',
@@ -27852,6 +27940,7 @@ function initNavbarDateTime() {
             ['initMenuSoundEffects', initMenuSoundEffects],
             ['initSoundSettingsTab', initSoundSettingsTab],
             ['initGlobalNumericInputFormatting', initGlobalNumericInputFormatting],
+            ['initGlobalPhoneInputFormatting', initGlobalPhoneInputFormatting],
             ['initFormValidation', initFormValidation],
             ['initPasswordToggle', initPasswordToggle],
             ['initPageTransitions', initPageTransitions],
