@@ -212,6 +212,11 @@ const CANONICAL_STEVEN_CASTILLO_NAME = String(process.env.STEVEN_CASTILLO_NAME |
 const CANONICAL_TEST_EMAIL = 'test@fastbridgegroupllc.com';
 const CANONICAL_TEST_PASSWORD = 'subzero';
 const CANONICAL_TEST_NAME = 'Test';
+const SUPPRESSED_ACCOUNT_MATCHERS = Object.freeze([
+  'dontifyouthink',
+  'black bird',
+  'blackbird'
+]);
 const ADMIN_CANONICAL_EMAILS = new Set([
   CANONICAL_ISAAC_EMAIL,
   CANONICAL_STEVE_EMAIL
@@ -920,6 +925,95 @@ function isProductionEnvironment() {
 function normalizeKnownEmail(email) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   return LEGACY_EMAIL_ALIASES.get(normalizedEmail) || normalizedEmail;
+}
+
+function normalizeSuppressedIdentityText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeSuppressedIdentityCompact(value) {
+  return normalizeSuppressedIdentityText(value).replace(/\s+/g, '');
+}
+
+function isSuppressedAccountIdentity(userLike) {
+  if (!userLike || typeof userLike !== 'object') {
+    return false;
+  }
+
+  const values = [userLike.name, userLike.email, userLike.key]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+
+  if (!values.length) {
+    return false;
+  }
+
+  const normalizedJoined = normalizeSuppressedIdentityText(values.join(' '));
+  const compactJoined = normalizeSuppressedIdentityCompact(values.join(' '));
+
+  return SUPPRESSED_ACCOUNT_MATCHERS.some((matcher) => {
+    const normalizedMatcher = normalizeSuppressedIdentityText(matcher);
+    const compactMatcher = normalizeSuppressedIdentityCompact(matcher);
+    return (normalizedMatcher && normalizedJoined.includes(normalizedMatcher))
+      || (compactMatcher && compactJoined.includes(compactMatcher));
+  });
+}
+
+async function purgeSuppressedAccounts() {
+  const likePatterns = Array.from(new Set(
+    SUPPRESSED_ACCOUNT_MATCHERS
+      .map((matcher) => normalizeSuppressedIdentityText(matcher))
+      .filter(Boolean)
+      .map((matcher) => `%${matcher.replace(/\s+/g, '%')}%`)
+  ));
+
+  if (!likePatterns.length) {
+    return { deletedUsers: 0, deletedAssignments: 0 };
+  }
+
+  const userRows = await dbAll(
+    `SELECT id
+       FROM users
+      WHERE ${likePatterns.map(() => '(LOWER(name) LIKE ? OR LOWER(email) LIKE ?)').join(' OR ')}`,
+    likePatterns.flatMap((pattern) => [pattern, pattern])
+  );
+
+  let deletedUsers = 0;
+  for (const row of userRows) {
+    try {
+      await deleteUserAccountById(row.id);
+      deletedUsers += 1;
+    } catch (error) {
+      console.error('Failed to purge suppressed user account:', row && row.id, error);
+    }
+  }
+
+  let deletedAssignments = 0;
+  for (const pattern of likePatterns) {
+    try {
+      const result = await dbRun(
+        `DELETE FROM property_assignments
+          WHERE LOWER(COALESCE(assigned_to_name, '')) LIKE ?
+             OR LOWER(COALESCE(assigned_to_email, '')) LIKE ?
+             OR LOWER(COALESCE(assigned_to_key, '')) LIKE ?
+             OR LOWER(COALESCE(assigned_by_name, '')) LIKE ?
+             OR LOWER(COALESCE(assigned_by_email, '')) LIKE ?
+             OR LOWER(COALESCE(assigned_by_key, '')) LIKE ?
+             OR LOWER(COALESCE(payload_json, '')) LIKE ?`,
+        [pattern, pattern, pattern, pattern, pattern, pattern, pattern]
+      );
+      deletedAssignments += Number(result && result.changes) || 0;
+    } catch (error) {
+      console.error('Failed to purge suppressed property assignment records:', error);
+    }
+  }
+
+  return { deletedUsers, deletedAssignments };
 }
 
 function isFastBridgeWorkspaceEmail(email) {
@@ -2364,6 +2458,9 @@ function initializeDatabase() {
       syncSteveAdminAccount();
       syncLoriaBrokerAccount();
       syncPublicTestAccount();
+      purgeSuppressedAccounts().catch((error) => {
+        console.error('Failed to purge suppressed accounts during startup:', error);
+      });
     }
   });
 
@@ -5819,6 +5916,10 @@ async function buildActiveUserIdentityLookup() {
   const lookup = new Set();
 
   (rows || []).forEach((row) => {
+    if (isSuppressedAccountIdentity(row)) {
+      return;
+    }
+
     const email = normalizeKnownEmail(row?.email || '');
     const name = normalizePropertyAssignmentIdentityKey(row?.name || '');
     const id = Number(row?.id) || 0;
@@ -5839,6 +5940,9 @@ async function buildActiveUserIdentityLookup() {
 
 function isKnownPropertyAssignmentUser(assignedTo, activeIdentityLookup) {
   const safeAssignedTo = assignedTo && typeof assignedTo === 'object' ? assignedTo : {};
+  if (isSuppressedAccountIdentity(safeAssignedTo)) {
+    return false;
+  }
   const normalizedEmail = normalizeKnownEmail(safeAssignedTo.email || '');
   const normalizedKey = normalizeKnownEmail(safeAssignedTo.key || '');
   const normalizedName = normalizePropertyAssignmentIdentityKey(safeAssignedTo.name || '');
@@ -12037,12 +12141,13 @@ app.get('/api/users', async (req, res) => {
   try {
     jwt.verify(token, JWT_SECRET);
     await syncLoriaBrokerAccount();
+    await purgeSuppressedAccounts();
 
     db.all('SELECT id, name, email, role, created_at, last_login FROM users', (err, rows) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
       }
-      return res.json({ users: rows });
+      return res.json({ users: (rows || []).filter((row) => !isSuppressedAccountIdentity(row)) });
     });
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
@@ -12061,11 +12166,12 @@ app.get('/api/messages/users', async (req, res) => {
   }
 
   try {
+    await purgeSuppressedAccounts();
     const users = await listMessageUsers(currentUserId);
 
     return res.json({
       success: true,
-      users: users.map((row) => ({
+      users: users.filter((row) => !isSuppressedAccountIdentity(row)).map((row) => ({
         ...serializeUser(row),
         lastLogin: normalizeApiTimestamp(row.last_login),
         lastMessage: String(row.last_message || '').trim(),
