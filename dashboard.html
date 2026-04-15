@@ -380,29 +380,25 @@
             height: 72px;
             object-fit: contain;
             display: block;
-            filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 16px rgba(191, 219, 254, 0.18));
+            filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 14px rgba(191, 219, 254, 0.24)) drop-shadow(0 0 24px rgba(96, 165, 250, 0.14));
             transform-origin: center;
             transform-style: preserve-3d;
-            animation: discord-logo-turn 4.8s ease-in-out infinite;
+            animation: discord-logo-turn 5.2s linear infinite;
             transition: filter 0.2s ease;
         }
 
         .discord-meetings-widget:hover .discord-meetings-art,
         .discord-meetings-widget:focus-within .discord-meetings-art {
-            filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 22px rgba(var(--accent-light-rgb), 0.42));
+            filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 20px rgba(var(--accent-light-rgb), 0.34)) drop-shadow(0 0 30px rgba(var(--accent-light-rgb), 0.2));
         }
 
         @keyframes discord-logo-turn {
             0% {
-                transform: perspective(900px) rotateY(24deg) rotateX(2deg) rotateZ(-2deg);
-            }
-
-            50% {
-                transform: perspective(900px) rotateY(-24deg) rotateX(-2deg) rotateZ(2deg);
+                transform: perspective(900px) rotateX(5deg) rotateY(0deg);
             }
 
             100% {
-                transform: perspective(900px) rotateY(24deg) rotateX(2deg) rotateZ(-2deg);
+                transform: perspective(900px) rotateX(5deg) rotateY(360deg);
             }
         }
 

@@ -19,6 +19,14 @@ const KNOWN_EMAIL_GROUPS = [
 const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
 const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
 const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
+const ISAAC_ADMIN_BYPASS_CODE = '315598';
+const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
+const ISAAC_ADMIN_BYPASS_USER = Object.freeze({
+  email: 'isaac.haro@fastbridgegroupllc.com',
+  name: 'Isaac Haro',
+  role: 'admin',
+  id: 'admin-bypass-isaac'
+});
 
 KNOWN_EMAIL_GROUPS.forEach((group) => {
   group.aliases.forEach((alias) => {
@@ -140,24 +148,59 @@ function persistAuthenticatedUser(userLike) {
   localStorage.setItem('userProfile', JSON.stringify(mirroredProfile));
 }
 
+function persistAuthLock(userLike, token) {
+  if (!userLike || typeof userLike !== 'object') {
+    return;
+  }
+
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedToken) {
+    return;
+  }
+
+  const normalizedUser = {
+    ...userLike,
+    email: String(userLike.email || '').trim().toLowerCase(),
+    role: String(userLike.role || '').trim().toLowerCase()
+  };
+
+  localStorage.setItem(AUTH_USER_LOCK_KEY, JSON.stringify({
+    token: normalizedToken,
+    user: normalizedUser,
+    updatedAt: Date.now()
+  }));
+  sessionStorage.setItem(AUTH_TAB_SNAPSHOT_KEY, JSON.stringify({
+    token: normalizedToken,
+    user: {
+      email: normalizedUser.email,
+      name: String(normalizedUser.name || 'User').trim(),
+      role: normalizedUser.role
+    },
+    updatedAt: Date.now()
+  }));
+}
+
+function startIsaacAdminBypass() {
+  const enteredCode = String(window.prompt('Enter Isaac Haro admin bypass code:', '') || '').trim();
+  if (!enteredCode) {
+    return { ok: false, reason: 'cancelled' };
+  }
+
+  if (enteredCode !== ISAAC_ADMIN_BYPASS_CODE) {
+    return { ok: false, reason: 'invalid' };
+  }
+
+  localStorage.setItem('authToken', ISAAC_ADMIN_BYPASS_TOKEN);
+  localStorage.setItem('bypassAuth', 'true');
+  localStorage.setItem('bypassProfile', JSON.stringify(ISAAC_ADMIN_BYPASS_USER));
+  persistAuthenticatedUser(ISAAC_ADMIN_BYPASS_USER);
+  persistAuthLock(ISAAC_ADMIN_BYPASS_USER, ISAAC_ADMIN_BYPASS_TOKEN);
+  localStorage.removeItem('registeredEmail');
+  return { ok: true };
+}
+
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
-
-    // Developer bypass for Isaac
-    const devBypass = new URLSearchParams(window.location.search).get('devIsaac');
-    if (devBypass === '1') {
-      // Simulate successful login for Isaac
-      const user = {
-        email: 'isaac.haro@fastbridgegroupllc.com',
-        name: 'Isaac',
-        role: 'admin',
-        id: 'dev-isaac',
-      };
-      localStorage.setItem('authToken', 'devIsaacToken');
-      persistAuthenticatedUser(user);
-      window.location.href = '/dashboard.html';
-      return;
-    }
   const loginForm = document.getElementById('login-form');
   const loginBtn = document.getElementById('login-btn');
   const twoFactorForm = document.getElementById('two-factor-form');
@@ -172,6 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const termsAcceptCheckbox = document.getElementById('terms-accept-checkbox');
   const termsModal = document.getElementById('terms-modal');
   const termsContinueBtn = document.getElementById('terms-continue-btn');
+  const isaacAdminBypassLink = document.getElementById('isaac-admin-bypass-link');
   const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
   let pendingTwoFactorChallenge = '';
 
@@ -383,6 +427,21 @@ document.addEventListener('DOMContentLoaded', function() {
   if (googleSignInBtn) {
     googleSignInBtn.addEventListener('click', function() {
       startGoogleSignIn();
+    });
+  }
+
+  if (isaacAdminBypassLink) {
+    isaacAdminBypassLink.addEventListener('click', function() {
+      clearLoginError();
+      const bypassResult = startIsaacAdminBypass();
+      if (!bypassResult.ok) {
+        if (bypassResult.reason === 'invalid') {
+          showLoginError('Invalid Isaac admin bypass code.');
+        }
+        return;
+      }
+
+      window.location.href = '/dashboard.html';
     });
   }
 
