@@ -25,6 +25,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const MESSAGE_NOTIFICATION_POLL_MS = 15000;
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
     const DASHBOARD_NOTIFICATION_SOUND_PATH = 'Sound FX/Notification sound effect.wav';
+    const THEME_BACKGROUND_VIDEO_PATHS = {
+        cloud: 'Themes/animated cloud theme.mp4',
+        space: 'Themes/animated space theme.mp4'
+    };
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
     const USER_THEME_KEY = 'dashboardThemeByUser';
@@ -217,6 +221,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const themeLogoPreloadPromises = new Map();
     let themeAwareLogosInitialized = false;
     let themeLogoObserver = null;
+    let themeBackgroundMediaInitialized = false;
 
     function getDealsScopedStatus(propertyKey, workspaceUserLike) {
         const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
@@ -887,7 +892,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.4.1';
+                versionLabel.textContent = 'v1.4.2';
             });
     }
 
@@ -2919,6 +2924,49 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         });
     }
 
+    function syncThemeBackgroundMedia(theme) {
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+        const backgroundNode = document.querySelector('.background');
+        if (!(backgroundNode instanceof Element)) {
+            return;
+        }
+
+        const nextVideoPath = THEME_BACKGROUND_VIDEO_PATHS[resolvedTheme] || '';
+        let videoNode = backgroundNode.querySelector('.theme-background-video');
+
+        if (!nextVideoPath) {
+            if (videoNode instanceof HTMLVideoElement) {
+                videoNode.pause();
+                videoNode.hidden = true;
+            }
+            return;
+        }
+
+        if (!(videoNode instanceof HTMLVideoElement)) {
+            videoNode = document.createElement('video');
+            videoNode.className = 'theme-background-video';
+            videoNode.muted = true;
+            videoNode.loop = true;
+            videoNode.autoplay = true;
+            videoNode.playsInline = true;
+            videoNode.preload = 'auto';
+            videoNode.setAttribute('aria-hidden', 'true');
+            backgroundNode.prepend(videoNode);
+        }
+
+        if (videoNode.getAttribute('src') !== nextVideoPath) {
+            videoNode.setAttribute('src', nextVideoPath);
+            videoNode.load();
+        }
+
+        videoNode.dataset.themeVideo = resolvedTheme;
+        videoNode.hidden = false;
+        const playPromise = videoNode.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => {});
+        }
+    }
+
     function notifyThemeUpdated(theme) {
         const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
         window.dispatchEvent(new CustomEvent('dashboard-theme-updated', {
@@ -2932,6 +2980,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function initThemeAwareLogos() {
         if (themeAwareLogosInitialized) {
             syncThemeLogoImages(document.documentElement.getAttribute('data-theme') || getThemePreference());
+            syncThemeBackgroundMedia(document.documentElement.getAttribute('data-theme') || getThemePreference());
             return;
         }
 
@@ -2943,6 +2992,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         });
 
         syncThemeLogoImages(document.documentElement.getAttribute('data-theme') || getThemePreference());
+        syncThemeBackgroundMedia(document.documentElement.getAttribute('data-theme') || getThemePreference());
+
+        if (!themeBackgroundMediaInitialized) {
+            themeBackgroundMediaInitialized = true;
+            window.addEventListener('dashboard-theme-updated', (event) => {
+                syncThemeBackgroundMedia(event && event.detail ? event.detail.theme : document.documentElement.getAttribute('data-theme'));
+            });
+        }
 
         if (document.body && !themeLogoObserver) {
             themeLogoObserver = new MutationObserver((mutations) => {
@@ -5731,6 +5788,7 @@ function initNavbarDateTime() {
 
             updateThemeToggleIcons(themeToggle, effectiveTheme);
             syncThemeLogoImages(effectiveTheme);
+            syncThemeBackgroundMedia(effectiveTheme);
             notifyThemeUpdated(effectiveTheme);
 
             if (themeToggle) {
@@ -5909,8 +5967,14 @@ function initNavbarDateTime() {
         const variableTiltSelector = '.subscription-plan-card';
         const standardTiltSelector = '.glass-card-3d, .legal-hover-card';
         const noTiltTargetSelector = 'button, a, input, select, textarea, [role="button"], [role="tab"], [data-no-tilt]';
+        const disableAnalyticsTilt = document.body.classList.contains('analytics-reboot');
 
         document.querySelectorAll(`${standardTiltSelector}, ${variableTiltSelector}`).forEach(card => {
+            if (disableAnalyticsTilt && card.matches(standardTiltSelector)) {
+                card.style.transform = 'none';
+                return;
+            }
+
             if (card.dataset.tiltInitialized === 'true') {
                 return;
             }
@@ -6951,6 +7015,7 @@ function initNavbarDateTime() {
                 const themeToggle = document.getElementById('theme-toggle');
                 updateThemeToggleIcons(themeToggle, effectiveTheme);
                 syncThemeLogoImages(effectiveTheme);
+                syncThemeBackgroundMedia(effectiveTheme);
                 notifyThemeUpdated(effectiveTheme);
                 if (themeToggle) {
                     const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);

@@ -843,11 +843,10 @@
                         <div>
                             <div class="mls-search-kicker"><span class="mls-search-kicker-dot"></span>Investor Search Desk</div>
                             <h2>Build sharper MLS hunts without fighting the page.</h2>
-                            <p class="mls-search-hero-copy">Turn a rough buy box into a clean search brief, jump straight into the best listing sources, and keep your criteria organized so you can move faster on fix-and-flip, rental, or distress opportunities.</p>
+                            <p class="mls-search-hero-copy">Turn a rough buy box into a clean search brief and keep your criteria organized so you can move faster on fix-and-flip, rental, or distress opportunities.</p>
                             <div class="mls-search-jump-links">
                                 <a class="mls-jump-link" href="#mls-search-builder">Search Builder</a>
                                 <a class="mls-jump-link" href="#mls-search-preview">Results</a>
-                                <a class="mls-jump-link" href="#mls-search-sources">Sources</a>
                             </div>
                         </div>
                     </div>
@@ -1003,19 +1002,6 @@
                             </div>
                         </div>
 
-                        <div id="mls-search-sources" class="glass-card outreach-card mls-search-ops mls-search-anchor">
-                            <div class="card-header">
-                                <div>
-                                    <h2 class="card-title">Sources</h2>
-                                </div>
-                            </div>
-                            <div class="mls-search-source-grid">
-                                <a id="mls-search-zillow" class="mls-source-link is-primary" href="#" target="_blank" rel="noopener noreferrer">Zillow</a>
-                                <a id="mls-search-redfin" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Redfin</a>
-                                <a id="mls-search-realtor" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Realtor</a>
-                                <a id="mls-search-maps" class="mls-source-link" href="#" target="_blank" rel="noopener noreferrer">Google Maps</a>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
@@ -1078,12 +1064,6 @@
             const generateBtn = document.getElementById('mls-search-generate');
             const resultsTabButtons = Array.from(document.querySelectorAll('[data-mls-results-tab]'));
             const resultsTabPanels = Array.from(document.querySelectorAll('[data-mls-results-panel]'));
-            const sourceLinks = {
-                zillow: document.getElementById('mls-search-zillow'),
-                redfin: document.getElementById('mls-search-redfin'),
-                realtor: document.getElementById('mls-search-realtor'),
-                maps: document.getElementById('mls-search-maps')
-            };
 
             const presets = {
                 flip: {
@@ -1337,21 +1317,6 @@
                 return pills.length;
             }
 
-            function buildSearchUrls(state) {
-                const query = [state.location, state.propertyType, state.keywords].filter(Boolean).join(' ');
-                const encodedQuery = encodeURIComponent(query || 'investment property');
-                const encodedLocation = encodeURIComponent(state.location || 'California');
-                const minPrice = state.minPrice ? `&price=${encodeURIComponent(`${state.minPrice}-`)}` : '';
-                const maxPrice = state.maxPrice ? `&price=${encodeURIComponent(`-${state.maxPrice}`)}` : '';
-
-                return {
-                    zillow: `https://www.zillow.com/homes/${encodedLocation}/?searchQueryState=${encodeURIComponent(JSON.stringify({ usersSearchTerm: query || state.location || 'investment property' }))}`,
-                    redfin: `https://www.redfin.com/city/0/CA/${encodedLocation}/filter/property-type=${encodeURIComponent(state.propertyType || 'house')},min-price=${encodeURIComponent(state.minPrice || '')},max-price=${encodeURIComponent(state.maxPrice || '')},min-beds=${encodeURIComponent(state.beds || '')},min-baths=${encodeURIComponent(state.baths || '')}`,
-                    realtor: `https://www.realtor.com/realestateandhomes-search/${encodedLocation}${minPrice}${maxPrice}`,
-                    maps: `https://www.google.com/maps/search/${encodedQuery}`
-                };
-            }
-
             async function copyBrief() {
                 const state = buildSearchState();
                 const brief = buildSearchSummary(state);
@@ -1398,7 +1363,6 @@
                 const state = buildSearchState();
                 const summary = buildSearchSummary(state);
                 const pillCount = buildQueryPills(state);
-                const urls = buildSearchUrls(state);
                 const activeCriteria = [state.location, state.propertyType, state.minPrice, state.maxPrice, state.beds, state.baths, state.keywords].filter(Boolean).length;
 
                 if (summaryEl) {
@@ -1424,11 +1388,6 @@
 
                 buildSignalItems(state);
                 renderNearbyProperties(state);
-
-                Object.entries(sourceLinks).forEach(([key, link]) => {
-                    if (!link) return;
-                    link.href = urls[key];
-                });
             }
 
             Object.values(fields).forEach((field) => {
