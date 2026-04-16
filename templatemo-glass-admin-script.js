@@ -23615,7 +23615,7 @@ function initNavbarDateTime() {
                     return mapInstance;
                 })().catch((error) => {
                     mapReadyPromise = null;
-                    return null;
+                    throw error;
                 });
 
                 return mapReadyPromise;
@@ -23948,21 +23948,28 @@ function initNavbarDateTime() {
 
                 const resolvedSearchLabel = getSearchResultLabel(geocodeMatch, searchText);
 
+                    autocompletePlaceSelection = {
+                        query: searchText,
+                        lat: geocodeMatch.lat,
+                        lng: geocodeMatch.lng,
+                        formattedAddress: resolvedSearchLabel
+                    };
                 if (compsMapSearchInput) {
                     compsMapSearchInput.value = resolvedSearchLabel;
                 }
-                autocompletePlaceSelection = {
-                    query: searchText,
-                    lat: geocodeMatch.lat,
-                    lng: geocodeMatch.lng,
-                    formattedAddress: resolvedSearchLabel
-                };
-                focusSearchLocation(geocodeMatch, resolvedSearchLabel);
 
-                const resolvedMap = await ensureMapReady().catch(() => null);
-                if (resolvedMap && mapInstance && window.google && window.google.maps) {
+                    let resolvedMap = null;
+                    try {
+                        resolvedMap = await ensureMapReady();
+                    } catch (error) {
+                        throw new Error(String(error && error.message || 'The comps map could not finish loading for search.'));
+                    }
+
+                    if (!resolvedMap || !mapInstance || !window.google || !window.google.maps) {
+                        throw new Error('The interactive comps map is not ready yet. Refresh the page and try the search again.');
+                    }
+
                     focusSearchLocation(geocodeMatch, resolvedSearchLabel);
-                }
             }
 
             function normalizeAddressForAutoSearch(value) {
@@ -24040,7 +24047,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                await loadGoogleMapsScript(config.apiKey);
+                await loadGoogleMapsScript(config);
                 if (window.google && window.google.maps && window.google.maps.importLibrary) {
                     const placesLibrary = await window.google.maps.importLibrary('places');
                     autocompleteCtor = placesLibrary && placesLibrary.Autocomplete
@@ -24071,21 +24078,22 @@ function initNavbarDateTime() {
                         ? Number(place.geometry.location.lng())
                         : Number(place.geometry.location.lng);
                     const resolvedLabel = String(place.formatted_address || place.name || compsMapSearchInput.value || '').trim();
-                    if (compsMapSearchInput) {
-                        compsMapSearchInput.value = resolvedLabel;
-                    }
                     autocompletePlaceSelection = {
                         query: resolvedLabel,
                         lat,
                         lng,
                         formattedAddress: resolvedLabel
                     };
-                    focusSearchLocation({ lat, lng }, resolvedLabel);
+                    if (compsMapSearchInput) {
+                        compsMapSearchInput.value = resolvedLabel;
+                    }
                     ensureMapReady().then((resolvedMap) => {
                         if (resolvedMap && mapInstance && window.google && window.google.maps) {
                             focusSearchLocation({ lat, lng }, resolvedLabel);
                         }
-                    }).catch(() => null);
+                    }).catch((error) => {
+                        showDashboardToast('error', 'Address Search Failed', String(error && error.message || 'Google Maps could not finish loading the comps map.'));
+                    });
                 });
             }
 
