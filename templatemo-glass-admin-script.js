@@ -21550,10 +21550,6 @@ function initNavbarDateTime() {
                 mapsScriptParams.set('v', 'beta');
                 mapsScriptParams.set('loading', 'async');
                 mapsScriptParams.set('libraries', 'marker,drawing,geometry,places,maps3d');
-                mapsScriptParams.set('auth_referrer_policy', 'origin');
-                if (mapId) {
-                    mapsScriptParams.set('map_ids', mapId);
-                }
                 mapsScriptParams.set('callback', callbackName);
                 script.src = `https://maps.googleapis.com/maps/api/js?${mapsScriptParams.toString()}`;
                 script.onerror = () => {
@@ -21888,6 +21884,7 @@ function initNavbarDateTime() {
             let panoramaInstance = null;
             let infoWindowInstance = null;
             let subjectMarker = null;
+            let subjectMarkerHalo = null;
             let radiusCircle = null;
             let markerCtor = null;
             let autocompleteCtor = null;
@@ -22201,6 +22198,32 @@ function initNavbarDateTime() {
                 }
 
                 earthSubjectMarker = null;
+            }
+
+            function syncEarthMarkerPresentation(markerMeta = {}) {
+                if (!earthSubjectMarker) {
+                    return;
+                }
+
+                const safeMeta = markerMeta && typeof markerMeta === 'object' ? markerMeta : {};
+                const markerTitle = String(safeMeta.title || safeMeta.label || 'Subject property').trim() || 'Subject property';
+                const markerLabel = String(safeMeta.label || 'SUBJECT').trim() || 'SUBJECT';
+
+                if ('title' in earthSubjectMarker) {
+                    earthSubjectMarker.title = markerTitle;
+                }
+                if ('label' in earthSubjectMarker) {
+                    earthSubjectMarker.label = markerLabel;
+                }
+                if ('altitudeMode' in earthSubjectMarker) {
+                    earthSubjectMarker.altitudeMode = 'CLAMP_TO_GROUND';
+                }
+                if ('extruded' in earthSubjectMarker) {
+                    earthSubjectMarker.extruded = true;
+                }
+                if ('drawsOccludedSegments' in earthSubjectMarker) {
+                    earthSubjectMarker.drawsOccludedSegments = true;
+                }
             }
 
             function syncEarthSubjectMarker(locationLike) {
@@ -22752,11 +22775,11 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const usingMapId = Boolean(config && config.mapId);
-                compsMapStyleSource.textContent = usingMapId ? 'Cloud Map ID' : 'JSON Style';
-                compsMapStyleSource.classList.toggle('is-map-id', usingMapId);
-                compsMapStyleSource.title = usingMapId
-                    ? 'Google Cloud custom map styling is active through GOOGLE_MAPS_MAP_ID.'
+                const earthMapIdConfigured = Boolean(config && config.mapId);
+                compsMapStyleSource.textContent = 'JSON Style';
+                compsMapStyleSource.classList.remove('is-map-id');
+                compsMapStyleSource.title = earthMapIdConfigured
+                    ? 'FAST keeps JSON styling active on the comps map so railroad lines stand out. GOOGLE_MAPS_MAP_ID is reserved for the Earth panel.'
                     : 'Fallback JSON styling is active because no GOOGLE_MAPS_MAP_ID is configured.';
             }
 
@@ -22796,6 +22819,26 @@ function initNavbarDateTime() {
                 currentMapNaked = Boolean(isEnabled);
                 syncNakedButtonState();
                 applyCurrentMapStyles();
+            }
+
+            function syncCurrentMapPresentation() {
+                if (!mapInstance) {
+                    return;
+                }
+
+                const nextMapTypeId = currentMapLayer === 'aerial'
+                    ? (currentMapNaked ? 'satellite' : 'hybrid')
+                    : (currentMapLayer === 'hybrid' ? 'hybrid' : 'roadmap');
+
+                mapInstance.setMapTypeId(nextMapTypeId);
+                applyCurrentMapStyles();
+
+                if (typeof mapInstance.setTilt === 'function') {
+                    mapInstance.setTilt(0);
+                }
+                if (typeof mapInstance.setHeading === 'function') {
+                    mapInstance.setHeading(0);
+                }
             }
 
             function syncStreetViewButtonState() {
@@ -23159,13 +23202,10 @@ function initNavbarDateTime() {
 
                     if (window.google && window.google.maps && window.google.maps.importLibrary) {
                         await window.google.maps.importLibrary('maps');
-                        const markerLibrary = await window.google.maps.importLibrary('marker');
-                        markerCtor = markerLibrary && markerLibrary.AdvancedMarkerElement
-                            ? markerLibrary.AdvancedMarkerElement
-                            : null;
+                        markerCtor = null;
                     }
 
-                    const styles = config.mapId ? null : await loadGoogleMapsStyles(config.stylePath);
+                    const styles = await loadGoogleMapsStyles(config.stylePath);
                     defaultGoogleMapsStyles = Array.isArray(styles) ? styles : null;
                     nakedGoogleMapsStyles = buildNakedGoogleMapsStyles(defaultGoogleMapsStyles);
                     hybridGoogleMapsStyles = buildHybridGoogleMapsStyles(defaultGoogleMapsStyles);
@@ -23181,9 +23221,7 @@ function initNavbarDateTime() {
                         gestureHandling: 'greedy'
                     };
 
-                    if (config.mapId) {
-                        mapOptions.mapId = config.mapId;
-                    } else if (Array.isArray(styles) && styles.length > 0) {
+                    if (Array.isArray(styles) && styles.length > 0) {
                         mapOptions.styles = styles;
                     }
 
@@ -23298,18 +23336,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const nextMapTypeId = currentMapLayer === 'aerial'
-                    ? (currentMapNaked ? 'satellite' : 'hybrid')
-                    : (currentMapLayer === 'hybrid' ? 'hybrid' : 'roadmap');
-                mapInstance.setMapTypeId(nextMapTypeId);
-                applyCurrentMapStyles();
-
-                if (typeof mapInstance.setTilt === 'function') {
-                    mapInstance.setTilt(0);
-                }
-                if (typeof mapInstance.setHeading === 'function') {
-                    mapInstance.setHeading(0);
-                }
+                syncCurrentMapPresentation();
 
                 if (currentMapLayer === 'aerial') {
                     void showAerialViewForCurrentAddress();
@@ -23328,6 +23355,8 @@ function initNavbarDateTime() {
                         panoramaInstance.setPov({ heading: 34, pitch: 10 });
                     }
                 }
+
+                syncCurrentMapPresentation();
 
                 syncStreetViewButtonState();
                 requestMapResize();
@@ -23430,6 +23459,10 @@ function initNavbarDateTime() {
                 if (subjectMarker) {
                     detachMarker(subjectMarker);
                     subjectMarker = null;
+                }
+                if (subjectMarkerHalo) {
+                    subjectMarkerHalo.setMap(null);
+                    subjectMarkerHalo = null;
                 }
                 clearSearchedLocationArtifacts();
                 markerRegistry.forEach((marker) => {
@@ -23619,13 +23652,27 @@ function initNavbarDateTime() {
                 const activeKey = activeCompKey;
                 const bounds = new window.google.maps.LatLngBounds();
 
-                subjectMarker = new window.google.maps.Marker({
+                subjectMarkerHalo = new window.google.maps.Circle({
+                    strokeColor: '#f59e0b',
+                    strokeOpacity: 0.85,
+                    strokeWeight: 2,
+                    fillColor: '#f59e0b',
+                    fillOpacity: 0.12,
+                    map: mapInstance,
+                    center: subjectLocation,
+                    radius: 34,
+                    zIndex: 290
+                });
+
+                subjectMarker = createMapMarker({
                     map: mapInstance,
                     position: subjectLocation,
+                    content: buildMarkerContent(subjectMarkerMeta.label, subjectMarkerMeta.variant, true),
+                    label: subjectMarkerMeta.label,
+                    variant: subjectMarkerMeta.variant,
+                    isActive: true,
                     title: subjectMarkerMeta.title,
-                    zIndex: 300,
-                    icon: buildSubjectPinIcon(subjectMarkerMeta.variant),
-                    optimized: false
+                    zIndex: 300
                 });
                 if (subjectMarker && typeof subjectMarker.addListener === 'function') {
                     subjectMarker.addListener('click', () => {

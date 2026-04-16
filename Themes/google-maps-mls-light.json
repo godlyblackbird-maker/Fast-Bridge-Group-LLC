@@ -181,7 +181,7 @@
     "elementType": "geometry",
     "stylers": [
       {
-        "color": "#ff7a7a"
+        "color": "#ff3b30"
       }
     ]
   },
@@ -190,7 +190,7 @@
     "elementType": "geometry.stroke",
     "stylers": [
       {
-        "color": "#ffb3b3"
+        "color": "#ffb4af"
       }
     ]
   },
@@ -199,7 +199,7 @@
     "elementType": "labels.text.fill",
     "stylers": [
       {
-        "color": "#ff7a7a"
+        "color": "#ff453a"
       }
     ]
   },
@@ -208,7 +208,7 @@
     "elementType": "labels.icon",
     "stylers": [
       {
-        "color": "#ff7a7a"
+        "color": "#ff453a"
       }
     ]
   },
