@@ -21494,28 +21494,12 @@ function initNavbarDateTime() {
 
         function getGoogleMapsConfigErrorMessage(config = null) {
             const settings = config && typeof config === 'object' ? config : {};
-            const missingConfig = Array.isArray(settings.earthMissingConfig)
-                ? settings.earthMissingConfig.map((item) => String(item || '').trim()).filter(Boolean)
-                : [];
 
             if (!settings || (!Object.keys(settings).length && googleMapsConfigLoadFailureMessage)) {
                 return `Interactive Google Maps could not confirm server config right now. ${googleMapsConfigLoadFailureMessage}`;
             }
 
-            if (missingConfig.includes('GOOGLE_MAPS_API_KEY') || !String(settings.apiKey || '').trim()) {
-                return 'Interactive Google Maps is offline because GOOGLE_MAPS_API_KEY is missing on the server. Add GOOGLE_MAPS_API_KEY in Render Environment, redeploy the service, then verify Maps JavaScript API and billing are enabled in Google Cloud.';
-            }
-
             return 'Interactive Google Maps could not start. Verify the browser Maps key, billing, enabled APIs, and website referrer restrictions in Google Cloud.';
-        }
-
-        function isGoogleMapsServerConfigMissing(config = null) {
-            const settings = config && typeof config === 'object' ? config : {};
-            const missingConfig = Array.isArray(settings.earthMissingConfig)
-                ? settings.earthMissingConfig.map((item) => String(item || '').trim()).filter(Boolean)
-                : [];
-
-            return missingConfig.includes('GOOGLE_MAPS_API_KEY') || !String(settings.apiKey || '').trim();
         }
 
         function detectBrokenGoogleMapsState() {
@@ -22236,9 +22220,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                compsMapStatusBadgeTitle.textContent = isGoogleMapsServerConfigMissing(config)
-                    ? 'Google Maps Server Config Missing'
-                    : 'Google Maps Unavailable';
+                compsMapStatusBadgeTitle.textContent = 'Google Maps Unavailable';
                 compsMapStatusBadgeText.textContent = getGoogleMapsConfigErrorMessage(config || {});
             }
 
