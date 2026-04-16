@@ -18141,14 +18141,14 @@ function initNavbarDateTime() {
                 importSourceFetchButton.setAttribute(
                     'aria-label',
                     isBusy && activeButton === 'fetch'
-                        ? 'Auto collecting property from address'
-                        : 'Auto collect property from address'
+                        ? 'Autofilling property from address'
+                        : 'Autofill property from address'
                 );
                 importSourceFetchButton.setAttribute(
                     'title',
                     isBusy && activeButton === 'fetch'
-                        ? 'Auto collecting property from address'
-                        : 'Auto collect property from address'
+                        ? 'Autofilling property from address'
+                        : 'Autofill property from address'
                 );
             }
         }
@@ -18211,7 +18211,6 @@ function initNavbarDateTime() {
                 return;
             }
 
-            setDealsImportSource('redfin');
             setDealsImportLookupBusy(true, 'collect');
 
             try {
@@ -18221,17 +18220,21 @@ function initNavbarDateTime() {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        address: trimmedAddress,
-                        source: 'redfin'
+                        address: trimmedAddress
                     })
                 });
 
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error(payload && payload.error ? payload.error : 'FAST could not find a matching Redfin listing for this address.');
+                    throw new Error(payload && payload.error ? payload.error : 'FAST could not find a matching Zillow, Redfin, or public property record for this address.');
                 }
 
-                const redfinUrl = String(payload.primaryUrl || (payload.links && payload.links.redfin) || '').trim();
+                const primarySource = String(payload.primarySource || payload.listing?.source || '').trim().toLowerCase();
+                const redfinUrl = String(
+                    (payload.links && payload.links.redfin)
+                    || (primarySource === 'redfin' ? payload.primaryUrl : '')
+                    || ''
+                ).trim();
                 const listing = payload.listing && typeof payload.listing === 'object'
                     ? { ...payload.listing }
                     : {};
@@ -18240,9 +18243,9 @@ function initNavbarDateTime() {
                 }
 
                 populateDealsImportForm(listing);
-                showDashboardToast('success', 'Auto Collected', 'FAST found the Redfin listing and autofilled the import form, including the primary image URL when available.');
+                showDashboardToast('success', 'Auto Collected', 'FAST found the best available Zillow, Redfin, or public property match and autofilled the import form, including the primary image URL when available.');
             } catch (error) {
-                showDashboardToast('error', 'Auto Collect Failed', error && error.message ? error.message : 'FAST could not auto collect the Redfin listing for this address.');
+                showDashboardToast('error', 'Auto Collect Failed', error && error.message ? error.message : 'FAST could not auto collect this property from the address search.');
             } finally {
                 setDealsImportLookupBusy(false);
             }
@@ -20930,12 +20933,17 @@ function initNavbarDateTime() {
                         return;
                     }
 
-                    renderPropertyImages();
+                    refreshPropertyImageWorkspace();
                 })
                 .catch(() => {})
                 .finally(() => {
                     propertyImageFallbackPromise = null;
                 });
+        }
+
+        function refreshPropertyImageWorkspace() {
+            renderPropertyDetailSnapshot();
+            renderPropertyImages();
         }
 
         function promptForPropertyImageUrl() {
@@ -20957,7 +20965,7 @@ function initNavbarDateTime() {
                 detailData.propertyImages = [normalizedUrl, ...remainingImages];
                 detailData.imageUrl = normalizedUrl;
                 persistCurrentPropertyDetail();
-                renderPropertyImages();
+                refreshPropertyImageWorkspace();
                 showDashboardToast('success', 'Image Updated', 'The property image link was updated for this property.');
             } catch (error) {
                 showDashboardToast('error', 'Invalid Image Link', 'Paste a valid image URL before saving.');
@@ -21020,7 +21028,7 @@ function initNavbarDateTime() {
                         detailData.propertyImages = remainingImages;
                         detailData.imageUrl = remainingImages[0] || '';
                         persistCurrentPropertyDetail();
-                        renderPropertyImages();
+                        refreshPropertyImageWorkspace();
                         showDashboardToast('success', 'Image Deleted', 'The property image was removed.');
                     });
                     actions.appendChild(deleteButton);

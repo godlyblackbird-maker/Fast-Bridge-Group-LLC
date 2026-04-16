@@ -183,37 +183,13 @@
             pointer-events: none;
         }
 
-        .campaign-brand-logo-shell {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 18px 28px;
-            border-radius: 999px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.52));
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.14);
-            backdrop-filter: blur(14px);
-            animation: campaignTwilioBreathing 5.4s ease-in-out infinite;
-            transform-origin: center;
-            will-change: transform, box-shadow;
-        }
-
-        .campaign-brand-logo-shell::after {
-            content: '';
-            position: absolute;
-            inset: -14px;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(239, 68, 68, 0.16), transparent 68%);
-            z-index: -1;
-            filter: blur(10px);
-            opacity: 0.85;
-        }
-
         .campaign-brand-logo {
             width: clamp(120px, 18vw, 172px);
             height: auto;
             display: block;
+            animation: campaignTwilioBreathing 5.4s ease-in-out infinite;
+            transform-origin: center;
+            will-change: transform, filter;
             filter: drop-shadow(0 10px 18px rgba(190, 24, 93, 0.12));
         }
 
@@ -221,12 +197,12 @@
             0%,
             100% {
                 transform: translate3d(0, 0, 0) scale(0.97);
-                box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+                filter: drop-shadow(0 10px 18px rgba(190, 24, 93, 0.12));
             }
 
             50% {
                 transform: translate3d(0, -4px, 0) scale(1.03);
-                box-shadow: 0 28px 56px rgba(15, 23, 42, 0.18);
+                filter: drop-shadow(0 18px 28px rgba(190, 24, 93, 0.18));
             }
         }
 
@@ -1011,9 +987,6 @@
                 max-width: 100%;
             }
 
-            .campaign-brand-logo-shell {
-                padding: 14px 22px;
-            }
         }
     </style>
 </head>
@@ -1205,9 +1178,7 @@
 
             <div class="campaigns-wrap">
                 <section class="campaign-brand-strip" aria-label="Twilio brand highlight">
-                    <div class="campaign-brand-logo-shell">
-                        <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-brand-logo">
-                    </div>
+                    <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-brand-logo">
                 </section>
 
                 <section class="glass-card campaign-tools-section">
