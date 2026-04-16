@@ -21923,6 +21923,17 @@ function initNavbarDateTime() {
             let measurementPanelRequested = false;
             let measurementPolygon = null;
             let measurementPathListeners = [];
+            let earthPanelVisible = false;
+
+            function syncLayerButtonState() {
+                layerButtons.forEach((button) => {
+                    const layerName = String(button.dataset.compsMapLayer || '').trim();
+                    const isActive = layerName === 'earth'
+                        ? earthPanelVisible
+                        : layerName === currentMapLayer;
+                    button.classList.toggle('active', isActive);
+                });
+            }
 
             function getEarthLayerButton() {
                 return layerButtons.find((button) => String(button.dataset.compsMapLayer || '').trim() === 'earth') || null;
@@ -21953,14 +21964,54 @@ function initNavbarDateTime() {
                     : getEarthUnavailableMessage(lastGoogleMapsConfig);
             }
 
+            function getEarthFocusLocation() {
+                return getSubjectLocation();
+            }
+
+            function getEarthFocusMarkerMeta() {
+                return getSubjectMarkerMeta(getEarthFocusLocation());
+            }
+
+            function updateEarthCamera(locationLike) {
+                if (!earthMapElement) {
+                    return;
+                }
+
+                const lat = Number(locationLike && locationLike.lat);
+                const lng = Number(locationLike && locationLike.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return;
+                }
+
+                const nextCenter = {
+                    lat,
+                    lng,
+                    altitude: 120
+                };
+
+                if ('center' in earthMapElement) {
+                    earthMapElement.center = nextCenter;
+                }
+                if ('range' in earthMapElement) {
+                    earthMapElement.range = 1400;
+                }
+                if ('tilt' in earthMapElement) {
+                    earthMapElement.tilt = 67.5;
+                }
+                if ('heading' in earthMapElement) {
+                    earthMapElement.heading = 18;
+                }
+            }
+
+            function setEarthPanelState(isVisible) {
+                earthPanelVisible = Boolean(isVisible);
+                setEarthViewState(earthPanelVisible);
+                syncLayerButtonState();
+            }
+
             function setEarthViewState(isVisible) {
                 if (compsMapEarthShell) {
                     compsMapEarthShell.hidden = !isVisible;
-                }
-
-                const wrap = compsMapCanvas && compsMapCanvas.closest('.comps-map-wrap');
-                if (wrap) {
-                    wrap.classList.toggle('is-earth-active', Boolean(isVisible));
                 }
 
                 if (isVisible) {
@@ -23224,7 +23275,7 @@ function initNavbarDateTime() {
             }
 
             function setMapLayerMode(nextLayer) {
-                if (!['street', 'dark', 'aerial', 'earth', 'hybrid'].includes(nextLayer)) {
+                if (!['street', 'dark', 'aerial', 'hybrid'].includes(nextLayer)) {
                     return;
                 }
 
@@ -23235,55 +23286,12 @@ function initNavbarDateTime() {
                 }
 
                 currentMapLayer = nextLayer;
-                layerButtons.forEach((button) => {
-                    button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
-                });
+                setEarthPanelState(false);
+                syncLayerButtonState();
 
                 if (currentMapLayer !== 'aerial') {
                     aerialViewActiveAddress = '';
                     setAerialViewState({ visible: false });
-                }
-
-                if (currentMapLayer !== 'earth') {
-                    setEarthViewState(false);
-                }
-
-                if (currentMapLayer === 'earth') {
-                    const earthConfig = lastGoogleMapsConfig || {};
-                    if (!earthConfig.earthEnabled) {
-                        currentMapLayer = 'hybrid';
-                        layerButtons.forEach((button) => {
-                            button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
-                        });
-                        showDashboardToast('error', 'Google Earth Unavailable', getEarthUnavailableMessage(earthConfig));
-                        if (mapInstance) {
-                            mapInstance.setMapTypeId('hybrid');
-                        }
-                        return;
-                    }
-
-                    if (streetViewEnabled) {
-                        setStreetViewMode(false);
-                    }
-
-                    void ensureEarthReady()
-                        .then((earthMap) => {
-                            if (!earthMap) {
-                                return;
-                            }
-                            setEarthViewState(true);
-                            updateEarthCamera(getEarthFocusLocation());
-                        })
-                        .catch((error) => {
-                            currentMapLayer = 'hybrid';
-                            layerButtons.forEach((button) => {
-                                button.classList.toggle('active', button.dataset.compsMapLayer === currentMapLayer);
-                            });
-                            if (mapInstance) {
-                                mapInstance.setMapTypeId('hybrid');
-                            }
-                            showDashboardToast('error', 'Google Earth Unavailable', String(error && error.message || 'Google Earth could not be loaded for this property.'));
-                        });
                 }
 
                 if (!mapInstance) {
@@ -23980,6 +23988,35 @@ function initNavbarDateTime() {
                         if (refreshedConfig && typeof refreshedConfig === 'object') {
                             syncEarthLayerAvailability(refreshedConfig);
                         }
+
+                        const earthConfig = lastGoogleMapsConfig || {};
+                        if (!earthConfig.earthEnabled) {
+                            showDashboardToast('error', 'Google Earth Unavailable', getEarthUnavailableMessage(earthConfig));
+                            return;
+                        }
+
+                        if (earthPanelVisible) {
+                            setEarthPanelState(false);
+                            return;
+                        }
+
+                        await ensureSubjectCoordinates().catch(() => getSubjectLocation());
+                        await ensureMapReady().catch(() => null);
+
+                        await ensureEarthReady()
+                            .then((earthMap) => {
+                                if (!earthMap) {
+                                    return;
+                                }
+                                setEarthPanelState(true);
+                                updateEarthCamera(getEarthFocusLocation());
+                                syncEarthSubjectMarker(getEarthFocusLocation());
+                            })
+                            .catch((error) => {
+                                setEarthPanelState(false);
+                                showDashboardToast('error', 'Google Earth Unavailable', String(error && error.message || 'Google Earth could not be loaded for this property.'));
+                            });
+                        return;
                     }
                     setMapLayerMode(nextLayer);
                 });

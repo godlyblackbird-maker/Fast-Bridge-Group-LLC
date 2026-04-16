@@ -35,14 +35,11 @@
                 const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const storedSubmitTheme = String(localStorage.getItem('submitPropertyTheme') || '').trim().toLowerCase();
                 const themeStore = readJson('dashboardThemeByUser');
-                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                let theme = storedSubmitTheme || (themeStore[userKey] && themeStore[userKey].value) || 'beach';
 
-                if (theme === 'system') {
-                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                }
-
-                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
+                if (!/^(beach|sunset|cyberpunk)$/.test(theme)) {
                     theme = 'beach';
                 }
 
@@ -123,6 +120,7 @@
 
         html[data-theme='beach'] {
             color-scheme: light;
+            --submit-bg: url("Themes/Wallpaper Beach Mode.jpg") center center / cover no-repeat;
             --submit-backdrop: linear-gradient(180deg, rgba(205, 238, 247, 0.68), rgba(205, 238, 247, 0.44) 28%, rgba(255, 228, 181, 0.56) 100%);
         }
 
@@ -150,6 +148,7 @@
 
         html[data-theme='sunset'] {
             color-scheme: light;
+            --submit-bg: url("Themes/Wallpaper SUNSET.jpg") center center / cover no-repeat;
             --submit-backdrop: linear-gradient(180deg, rgba(58, 27, 63, 0.86) 0%, rgba(83, 40, 77, 0.78) 54%, rgba(106, 49, 86, 0.8) 100%);
             --submit-panel: rgba(88, 44, 88, 0.34);
             --submit-border: rgba(255, 203, 167, 0.2);
@@ -168,6 +167,29 @@
             --submit-success-bg: rgba(255, 255, 255, 0.08);
             --submit-button-text: #3d1627;
             --submit-button-shadow: 0 20px 40px rgba(73, 24, 61, 0.26);
+        }
+
+        html[data-theme='cyberpunk'] {
+            color-scheme: dark;
+            --submit-bg: url("Themes/Cyberpunk Theme.jpg") center center / cover no-repeat;
+            --submit-backdrop: linear-gradient(180deg, rgba(6, 5, 18, 0.88) 0%, rgba(16, 8, 34, 0.8) 54%, rgba(28, 10, 40, 0.84) 100%);
+            --submit-panel: rgba(17, 9, 36, 0.54);
+            --submit-border: rgba(66, 243, 255, 0.2);
+            --submit-soft: rgba(255, 255, 255, 0.06);
+            --submit-copy: rgba(234, 244, 255, 0.82);
+            --submit-copy-muted: rgba(234, 244, 255, 0.64);
+            --submit-accent: #42f3ff;
+            --submit-accent-strong: #ff3bbd;
+            --submit-danger: #fb7185;
+            --submit-text: #eef6ff;
+            --submit-control-border: rgba(66, 243, 255, 0.18);
+            --submit-control-bg: rgba(255, 255, 255, 0.05);
+            --submit-chip-border: rgba(66, 243, 255, 0.14);
+            --submit-chip-bg: rgba(255, 255, 255, 0.05);
+            --submit-success-border: rgba(66, 243, 255, 0.16);
+            --submit-success-bg: rgba(255, 255, 255, 0.05);
+            --submit-button-text: #0d0b1c;
+            --submit-button-shadow: 0 20px 40px rgba(2, 4, 16, 0.34);
         }
 
         html[data-theme='space'] {
@@ -359,6 +381,62 @@
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
             font-weight: 600;
+        }
+
+        .submit-topbar-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .submit-theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px;
+            border-radius: 999px;
+            border: 1px solid var(--submit-border);
+            background: var(--submit-soft);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 14px 30px rgba(8, 28, 43, 0.12);
+        }
+
+        .submit-theme-option {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 36px;
+            padding: 0 14px;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--submit-copy-muted);
+            font: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .submit-theme-option:hover,
+        .submit-theme-option:focus-visible {
+            outline: none;
+            transform: translateY(-1px);
+            color: var(--submit-text);
+            border-color: color-mix(in srgb, var(--submit-accent) 28%, transparent);
+            background: color-mix(in srgb, var(--submit-soft) 70%, white 10%);
+        }
+
+        .submit-theme-option.is-active {
+            color: var(--submit-button-text);
+            border-color: color-mix(in srgb, var(--submit-accent) 28%, transparent);
+            background: linear-gradient(135deg, var(--submit-accent), var(--submit-accent-strong));
+            box-shadow: 0 14px 24px -18px color-mix(in srgb, var(--submit-accent) 42%, black 16%);
         }
 
         .submit-hero {
@@ -757,6 +835,20 @@
                 align-items: stretch;
             }
 
+            .submit-topbar-actions,
+            .submit-theme-toggle {
+                width: 100%;
+            }
+
+            .submit-topbar-actions {
+                justify-content: stretch;
+            }
+
+            .submit-theme-option,
+            .submit-back-link {
+                flex: 1 1 0;
+            }
+
             .submit-grid,
             .submit-checkbox-grid {
                 grid-template-columns: 1fr;
@@ -785,7 +877,14 @@
                     <span>Seller Property Intake</span>
                 </div>
             </a>
-            <a class="submit-back-link" href="index.html">Back To Home</a>
+            <div class="submit-topbar-actions">
+                <div class="submit-theme-toggle" role="group" aria-label="Choose submit property page theme">
+                    <button class="submit-theme-option" type="button" data-submit-theme="beach">Beach</button>
+                    <button class="submit-theme-option" type="button" data-submit-theme="sunset">Sunset</button>
+                    <button class="submit-theme-option" type="button" data-submit-theme="cyberpunk">Cyber</button>
+                </div>
+                <a class="submit-back-link" href="index.html">Back To Home</a>
+            </div>
         </div>
 
         <section class="submit-hero">
@@ -959,16 +1058,47 @@
 
     <script>
         (function () {
+            const SUBMIT_THEME_KEY = 'submitPropertyTheme';
+            const ALLOWED_SUBMIT_THEMES = ['beach', 'sunset', 'cyberpunk'];
             const form = document.getElementById('seller-property-form');
             const feedback = document.getElementById('seller-property-feedback');
             const submitButton = document.getElementById('seller-property-submit-btn');
             const formPanel = document.getElementById('seller-property-form-panel');
             const successCard = document.getElementById('seller-property-success-card');
             const sellerPhoneInput = document.getElementById('seller-phone');
+            const themeButtons = Array.from(document.querySelectorAll('[data-submit-theme]'));
 
             if (!form || !feedback || !submitButton || !formPanel || !successCard) {
                 return;
             }
+
+            function resolveSubmitTheme(value) {
+                const normalized = String(value || '').trim().toLowerCase();
+                return ALLOWED_SUBMIT_THEMES.includes(normalized) ? normalized : 'beach';
+            }
+
+            function updateSubmitThemeUi(activeTheme) {
+                themeButtons.forEach(function (button) {
+                    const isActive = button.getAttribute('data-submit-theme') === activeTheme;
+                    button.classList.toggle('is-active', isActive);
+                    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+            }
+
+            function applySubmitTheme(theme) {
+                const resolvedTheme = resolveSubmitTheme(theme);
+                document.documentElement.setAttribute('data-theme', resolvedTheme);
+                localStorage.setItem(SUBMIT_THEME_KEY, resolvedTheme);
+                updateSubmitThemeUi(resolvedTheme);
+            }
+
+            updateSubmitThemeUi(resolveSubmitTheme(document.documentElement.getAttribute('data-theme')));
+
+            themeButtons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    applySubmitTheme(button.getAttribute('data-submit-theme'));
+                });
+            });
 
             function setFeedback(message, state) {
                 feedback.textContent = String(message || '');

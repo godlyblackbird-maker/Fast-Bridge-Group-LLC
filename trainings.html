@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainings - 3D Glassmorphism Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="FAST BRIDGE GROUP training workspace.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
+                const themeLogoPaths = {
+                    christmas: 'png photos/Christmas Theme Logo.png',
+                    swamp: 'png photos/Swamp Theme Logo.png',
+                    cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    japan: 'png photos/Japan Theme Mode Logo.png'
+                };
+                const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
+                root.setAttribute('data-theme-logo-path', themeLogoPath);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .training-library-card {
+            display: grid;
+            gap: 24px;
+        }
+
+        .training-video-feature {
+            display: grid;
+            gap: 16px;
+            max-width: 960px;
+        }
+
+        .training-video-stage {
+            position: relative;
+            width: min(960px, 100%);
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 24px 48px -30px var(--glass-shadow);
+            background: rgba(8, 15, 28, 0.14);
+        }
+
+        .training-video-thumb {
+            position: absolute;
+            inset: 0;
+            display: block;
+            overflow: hidden;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            transition: opacity 0.35s ease, visibility 0.35s ease, transform 0.35s ease;
+            z-index: 2;
+        }
+
+        .training-video-thumb img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .training-video-thumb::after {
+            content: 'Play Training';
+            position: absolute;
+            left: 18px;
+            bottom: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(8, 15, 28, 0.78);
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            backdrop-filter: blur(14px);
+        }
+
+        .training-video-thumb:hover,
+        .training-video-thumb:focus-visible {
+            transform: scale(1.01);
+            outline: none;
+        }
+
+        .training-video-stage.is-playing .training-video-thumb {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: scale(1.02);
+        }
+
+        .training-video-title {
+            margin: 0;
+            font-size: clamp(24px, 3vw, 32px);
+            line-height: 1.1;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .training-video-frame {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            border-radius: 0;
+            border: 0;
+            box-shadow: none;
+            background: rgba(8, 15, 28, 0.14);
+            width: 100%;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .training-video-frame.is-visible {
+            opacity: 1;
+            z-index: 1;
+        }
+
+        .training-video-frame iframe {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="dashboard.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="analytics.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                Analytics
+                                <span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fire" aria-hidden="true"></span>
+                                MLS Hot Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls-search.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="7"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                MLS Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
+                                Campaigns
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="trainings.html" class="nav-link active">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m22 10-10-5-10 5 10 5 10-5z"/>
+                                    <path d="M6 12v5c3 2 9 2 12 0v-5"/>
+                                    <path d="M22 10v6"/>
+                                </svg>
+                                Trainings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="admin-controls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                    <path d="M8 20h8"/>
+                                    <path d="M12 16v4"/>
+                                </svg>
+                                Admin Controls
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="active-buyers.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 5h18"/>
+                                    <path d="M3 12h18"/>
+                                    <path d="M3 19h18"/>
+                                </svg>
+                                Active Buyers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="login.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-header">
+                    <h1 class="page-title">Trainings</h1>
+                    <div class="page-breadcrumb">
+                        <a href="dashboard.html">Dashboard</a>
+                        <span>/</span>
+                        <span>Trainings</span>
+                    </div>
+                </div>
+                <div class="navbar-right">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="text" class="search-input" placeholder="Search anything...">
+                    </div>
+                    <button class="nav-btn" type="button" aria-label="Open notifications">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notification-dot"></span>
+                    </button>
+                </div>
+            </nav>
+
+            <section class="glass-card training-library-card" aria-labelledby="trainings-placeholder-title">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title" id="trainings-placeholder-title">Training Library</h2>
+                        <p class="card-subtitle">FAST training videos, walkthroughs, and onboarding content live here.</p>
+                    </div>
+                </div>
+                <div class="training-video-feature">
+                    <h3 class="training-video-title">Fast Bridge Group | NAVIGATION</h3>
+                    <div class="training-video-stage" id="training-video-stage">
+                        <button class="training-video-thumb" type="button" data-training-play="true" aria-label="Play FAST BRIDGE GROUP training video on this page">
+                            <img src="https://i.ytimg.com/vi/O6mfCJAjces/hqdefault.jpg" alt="FAST BRIDGE GROUP first training video thumbnail">
+                        </button>
+                        <div class="training-video-frame" id="training-video-player">
+                            <iframe id="training-video-iframe" src="about:blank" title="FAST BRIDGE GROUP training video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+    <script>
+        (function () {
+            const playButtons = Array.from(document.querySelectorAll('[data-training-play="true"]'));
+            const videoFrame = document.getElementById('training-video-iframe');
+            const playerContainer = document.getElementById('training-video-player');
+            const videoStage = document.getElementById('training-video-stage');
+
+            if (!playButtons.length || !(videoFrame instanceof HTMLIFrameElement) || !(playerContainer instanceof HTMLElement) || !(videoStage instanceof HTMLElement)) {
+                return;
+            }
+
+            const defaultSrc = 'https://www.youtube-nocookie.com/embed/O6mfCJAjces';
+            const autoplaySrc = `${defaultSrc}?autoplay=1&rel=0`;
+
+            playButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    videoStage.classList.add('is-playing');
+                    playerContainer.classList.add('is-visible');
+
+                    if (videoFrame.getAttribute('src') !== autoplaySrc) {
+                        videoFrame.setAttribute('src', autoplaySrc);
+                    }
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
