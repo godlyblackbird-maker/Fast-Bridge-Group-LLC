@@ -22193,7 +22193,7 @@ function initNavbarDateTime() {
                     return preferredMessage;
                 }
 
-                return String(fallbackMessage || 'FAST Earth uses Google Maps JavaScript 3D, not Google Earth Engine. Set GOOGLE_MAPS_API_KEY and GOOGLE_MAPS_MAP_ID, then verify Maps JavaScript API, billing, and a JavaScript Map ID are enabled in Google Cloud.').trim();
+                return String(fallbackMessage || 'Google Earth 3D could not start right now. Verify the Maps config endpoint is reachable, Maps JavaScript 3D is available in this browser, and Google Cloud billing and APIs are enabled.').trim();
             }
 
             function updateMapStatusBadge(options = {}) {
@@ -24536,7 +24536,7 @@ function initNavbarDateTime() {
                         }
 
                         const earthConfig = lastGoogleMapsConfig || {};
-                        if (!earthConfig.earthEnabled) {
+                        if (earthConfig && typeof earthConfig === 'object' && earthConfig.earthEnabled === false) {
                             showDashboardToast('error', 'Google Earth Unavailable', getEarthUnavailableMessage(earthConfig));
                             return;
                         }
