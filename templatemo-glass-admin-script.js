@@ -23707,15 +23707,15 @@ function initNavbarDateTime() {
                     throw new Error('FAST could not locate that search address.');
                 }
 
-                const map = await ensureMapReady();
-                if (!map || !mapInstance || !window.google || !window.google.maps) {
-                    throw new Error('The interactive comps map is not ready yet. Reload the page and try the search again.');
-                }
-
                 if (compsMapSearchInput) {
                     compsMapSearchInput.value = geocodeMatch.formattedAddress || searchText;
                 }
                 focusSearchLocation(geocodeMatch, geocodeMatch.formattedAddress || searchText);
+
+                const resolvedMap = await ensureMapReady().catch(() => null);
+                if (resolvedMap && mapInstance && window.google && window.google.maps) {
+                    focusSearchLocation(geocodeMatch, geocodeMatch.formattedAddress || searchText);
+                }
             }
 
             function normalizeAddressForAutoSearch(value) {
@@ -23910,6 +23910,15 @@ function initNavbarDateTime() {
                     markerRegistry.set(compKey, marker);
                     bounds.extend({ lat: comp.lat, lng: comp.lng });
                 });
+
+                if (lastSearchResult && Number.isFinite(Number(lastSearchResult.lat)) && Number.isFinite(Number(lastSearchResult.lng))) {
+                    const searchedPosition = {
+                        lat: Number(lastSearchResult.lat),
+                        lng: Number(lastSearchResult.lng)
+                    };
+                    renderSearchedLocationMarker(searchedPosition, lastSearchResult.label || 'Search result');
+                    bounds.extend(searchedPosition);
+                }
 
                 if (!bounds.isEmpty()) {
                     mapInstance.fitBounds(bounds, 80);
