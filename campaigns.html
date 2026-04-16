@@ -164,6 +164,72 @@
             gap: 24px;
         }
 
+        .campaign-brand-strip {
+            position: relative;
+            min-height: 132px;
+            display: grid;
+            place-items: center;
+            padding: 10px 24px 0;
+            overflow: visible;
+        }
+
+        .campaign-brand-strip::before {
+            content: '';
+            position: absolute;
+            inset: 8px 14% 0;
+            border-radius: 999px;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03) 62%, transparent 78%);
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        .campaign-brand-logo-shell {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 28px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.52));
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.14);
+            backdrop-filter: blur(14px);
+            animation: campaignTwilioBreathing 5.4s ease-in-out infinite;
+            transform-origin: center;
+            will-change: transform, box-shadow;
+        }
+
+        .campaign-brand-logo-shell::after {
+            content: '';
+            position: absolute;
+            inset: -14px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.16), transparent 68%);
+            z-index: -1;
+            filter: blur(10px);
+            opacity: 0.85;
+        }
+
+        .campaign-brand-logo {
+            width: clamp(120px, 18vw, 172px);
+            height: auto;
+            display: block;
+            filter: drop-shadow(0 10px 18px rgba(190, 24, 93, 0.12));
+        }
+
+        @keyframes campaignTwilioBreathing {
+            0%,
+            100% {
+                transform: translate3d(0, 0, 0) scale(0.97);
+                box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+            }
+
+            50% {
+                transform: translate3d(0, -4px, 0) scale(1.03);
+                box-shadow: 0 28px 56px rgba(15, 23, 42, 0.18);
+            }
+        }
+
         .campaign-hero {
             display: grid;
             grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
@@ -376,7 +442,7 @@
         .campaign-provider-inline {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 16px;
             margin-bottom: 4px;
         }
@@ -399,14 +465,6 @@
             color: var(--text-secondary);
             font-size: 13px;
             line-height: 1.5;
-        }
-
-        .campaign-provider-inline-logo {
-            width: 88px;
-            height: auto;
-            object-fit: contain;
-            flex: 0 0 auto;
-            filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.22));
         }
 
         .campaign-send-panel {
@@ -924,6 +982,11 @@
         }
 
         @media (max-width: 720px) {
+            .campaign-brand-strip {
+                min-height: 108px;
+                padding-top: 0;
+            }
+
             .campaign-copy-top,
             .vendor-head,
             .campaign-tools-head {
@@ -946,6 +1009,10 @@
 
             .campaign-reply-message {
                 max-width: 100%;
+            }
+
+            .campaign-brand-logo-shell {
+                padding: 14px 22px;
             }
         }
     </style>
@@ -1137,6 +1204,12 @@
             </nav>
 
             <div class="campaigns-wrap">
+                <section class="campaign-brand-strip" aria-label="Twilio brand highlight">
+                    <div class="campaign-brand-logo-shell">
+                        <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-brand-logo">
+                    </div>
+                </section>
+
                 <section class="glass-card campaign-tools-section">
                     <div class="campaign-tools-head">
                         <div>
@@ -1159,7 +1232,6 @@
                                         <span class="campaign-provider-inline-label">Twilio Workspace</span>
                                         <p>Use this panel to build and send Twilio outreach directly from Campaigns.</p>
                                     </div>
-                                    <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-provider-inline-logo">
                                 </div>
                                 <div id="campaign-twilio-status" class="campaign-status-pill offline">Checking Twilio config...</div>
                                 <div class="outreach-input-grid">
