@@ -2032,6 +2032,373 @@ function personalizeSmsBody(body, recipient = {}, senderName = '') {
     .trim();
 }
 
+function normalizeTwilioPlatformIdentity(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  return normalizeSmsPhone(raw) || raw.toUpperCase();
+}
+
+function buildTwilioConversationKey(contactPhone, platformIdentity) {
+  const normalizedContact = normalizeSmsPhone(contactPhone) || String(contactPhone || '').trim();
+  const normalizedPlatform = normalizeTwilioPlatformIdentity(platformIdentity);
+  if (!normalizedContact || !normalizedPlatform) {
+    return '';
+  }
+  return `${normalizedContact}::${normalizedPlatform}`;
+}
+
+function getTwilioRequestOrigin(req) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+  const protocol = forwardedProto || String(req.protocol || '').trim() || 'https';
+  const host = forwardedHost || String(req.get('host') || '').trim();
+  if (!host) {
+    return '';
+  }
+  return `${protocol}://${host}`;
+}
+
+function getTwilioWebhookRequestUrl(req) {
+  const origin = getTwilioRequestOrigin(req);
+  const originalUrl = String(req.originalUrl || req.url || '').trim();
+  if (!origin || !originalUrl) {
+    return '';
+  }
+  return `${origin}${originalUrl}`;
+}
+
+function buildTwilioWebhookUrl(req, pathName) {
+  const origin = getTwilioRequestOrigin(req);
+  if (!origin) {
+    return '';
+  }
+
+  try {
+    return new URL(String(pathName || '').trim() || '/', origin).toString();
+  } catch (error) {
+    return '';
+  }
+}
+
+function isTwilioWebhookRequestValid(req) {
+  const config = getTwilioMessagingConfig();
+  if (!config.authToken) {
+    return false;
+  }
+
+  const signature = String(req.headers['x-twilio-signature'] || '').trim();
+  if (!signature) {
+    return String(process.env.NODE_ENV || '').trim().toLowerCase() !== 'production';
+  }
+
+  const requestUrl = getTwilioWebhookRequestUrl(req);
+  if (!requestUrl) {
+    return false;
+  }
+
+  try {
+    return twilio.validateRequest(config.authToken, signature, requestUrl, req.body || {});
+  } catch (error) {
+    return false;
+  }
+}
+
+function safeJsonStringify(value, fallback = '{}') {
+  try {
+    return JSON.stringify(value ?? {});
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function getTwilioConversationDetails({ contactPhone, platformIdentity }) {
+  const normalizedContactPhone = normalizeSmsPhone(contactPhone);
+  const normalizedPlatformIdentity = normalizeTwilioPlatformIdentity(platformIdentity);
+  return {
+    contactPhone: normalizedContactPhone,
+    platformIdentity: normalizedPlatformIdentity,
+    conversationKey: buildTwilioConversationKey(normalizedContactPhone, normalizedPlatformIdentity)
+  };
+}
+
+function getTwilioConversationDetailsFromPayload(payload, direction) {
+  const inbound = String(direction || '').trim().toLowerCase() === 'inbound';
+  const contactPhone = inbound ? payload?.From : payload?.To;
+  const platformIdentity = payload?.MessagingServiceSid || (inbound ? payload?.To : payload?.From);
+  return getTwilioConversationDetails({ contactPhone, platformIdentity });
+}
+
+function serializeTwilioInboxMessage(row) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  return {
+    id: Number(row.id) || 0,
+    messageSid: String(row.message_sid || '').trim(),
+    conversationKey: String(row.conversation_key || '').trim(),
+    campaignName: String(row.campaign_name || '').trim(),
+    contactName: String(row.contact_name || '').trim(),
+    contactPhone: String(row.contact_phone || '').trim(),
+    platformIdentity: String(row.platform_identity || '').trim(),
+    direction: String(row.direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
+    body: String(row.body || '').trim(),
+    status: String(row.status || '').trim(),
+    errorCode: String(row.error_code || '').trim(),
+    errorMessage: String(row.error_message || '').trim(),
+    createdAt: normalizeApiTimestamp(row.created_at) || new Date().toISOString(),
+    updatedAt: normalizeApiTimestamp(row.updated_at) || normalizeApiTimestamp(row.created_at) || new Date().toISOString(),
+    readAt: normalizeApiTimestamp(row.read_at)
+  };
+}
+
+async function getAuthenticatedUserFromBearerHeader(authHeader) {
+  const token = String(authHeader || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = Number(decoded?.id) || 0;
+    if (!userId) {
+      return null;
+    }
+    const userRow = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [userId]);
+    return userRow || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function upsertTwilioInboxMessage(record) {
+  if (!record || typeof record !== 'object') {
+    return null;
+  }
+
+  const messageSid = String(record.messageSid || '').trim();
+  const conversationKey = String(record.conversationKey || '').trim();
+  const contactPhone = normalizeSmsPhone(record.contactPhone);
+  const platformIdentity = normalizeTwilioPlatformIdentity(record.platformIdentity);
+  const createdAt = normalizeApiTimestamp(record.createdAt) || new Date().toISOString();
+  const updatedAt = normalizeApiTimestamp(record.updatedAt) || createdAt;
+  const readAt = normalizeApiTimestamp(record.readAt);
+  const payloadJson = safeJsonStringify(record.rawPayload || {});
+
+  if (!conversationKey || !contactPhone || !platformIdentity) {
+    return null;
+  }
+
+  if (messageSid) {
+    await dbRun(
+      `INSERT INTO twilio_inbox_messages (
+         message_sid,
+         account_sid,
+         conversation_key,
+         campaign_name,
+         contact_name,
+         contact_phone,
+         platform_identity,
+         owner_user_id,
+         owner_name,
+         owner_email,
+         direction,
+         body,
+         status,
+         error_code,
+         error_message,
+         raw_payload_json,
+         created_at,
+         updated_at,
+         read_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(message_sid) DO UPDATE SET
+         account_sid = excluded.account_sid,
+         conversation_key = excluded.conversation_key,
+         campaign_name = excluded.campaign_name,
+         contact_name = excluded.contact_name,
+         contact_phone = excluded.contact_phone,
+         platform_identity = excluded.platform_identity,
+         owner_user_id = COALESCE(excluded.owner_user_id, twilio_inbox_messages.owner_user_id),
+         owner_name = COALESCE(NULLIF(excluded.owner_name, ''), twilio_inbox_messages.owner_name),
+         owner_email = COALESCE(NULLIF(excluded.owner_email, ''), twilio_inbox_messages.owner_email),
+         direction = excluded.direction,
+         body = excluded.body,
+         status = excluded.status,
+         error_code = excluded.error_code,
+         error_message = excluded.error_message,
+         raw_payload_json = excluded.raw_payload_json,
+         updated_at = excluded.updated_at,
+         read_at = COALESCE(excluded.read_at, twilio_inbox_messages.read_at)`,
+      [
+        messageSid,
+        String(record.accountSid || '').trim(),
+        conversationKey,
+        String(record.campaignName || '').trim(),
+        String(record.contactName || '').trim(),
+        contactPhone,
+        platformIdentity,
+        Number(record.ownerUserId) || null,
+        String(record.ownerName || '').trim(),
+        String(record.ownerEmail || '').trim().toLowerCase(),
+        String(record.direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outbound',
+        String(record.body || '').trim(),
+        String(record.status || '').trim(),
+        String(record.errorCode || '').trim(),
+        String(record.errorMessage || '').trim(),
+        payloadJson,
+        createdAt,
+        updatedAt,
+        readAt
+      ]
+    );
+
+    return dbGet('SELECT * FROM twilio_inbox_messages WHERE message_sid = ?', [messageSid]);
+  }
+
+  const result = await dbRun(
+    `INSERT INTO twilio_inbox_messages (
+       account_sid,
+       conversation_key,
+       campaign_name,
+       contact_name,
+       contact_phone,
+       platform_identity,
+       owner_user_id,
+       owner_name,
+       owner_email,
+       direction,
+       body,
+       status,
+       error_code,
+       error_message,
+       raw_payload_json,
+       created_at,
+       updated_at,
+       read_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      String(record.accountSid || '').trim(),
+      conversationKey,
+      String(record.campaignName || '').trim(),
+      String(record.contactName || '').trim(),
+      contactPhone,
+      platformIdentity,
+      Number(record.ownerUserId) || null,
+      String(record.ownerName || '').trim(),
+      String(record.ownerEmail || '').trim().toLowerCase(),
+      String(record.direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
+      String(record.body || '').trim(),
+      String(record.status || '').trim(),
+      String(record.errorCode || '').trim(),
+      String(record.errorMessage || '').trim(),
+      payloadJson,
+      createdAt,
+      updatedAt,
+      readAt
+    ]
+  );
+
+  return dbGet('SELECT * FROM twilio_inbox_messages WHERE id = ?', [result.lastID]);
+}
+
+async function listTwilioInboxConversations() {
+  return dbAll(
+    `SELECT
+        base.conversation_key,
+        base.contact_phone,
+        base.platform_identity,
+        COALESCE(
+          NULLIF((
+            SELECT contact_name
+              FROM twilio_inbox_messages latest_name
+             WHERE latest_name.conversation_key = base.conversation_key
+               AND TRIM(COALESCE(latest_name.contact_name, '')) <> ''
+             ORDER BY datetime(latest_name.created_at) DESC, latest_name.id DESC
+             LIMIT 1
+          ), ''),
+          base.contact_phone
+        ) AS contact_name,
+        COALESCE((
+          SELECT campaign_name
+            FROM twilio_inbox_messages latest_campaign
+           WHERE latest_campaign.conversation_key = base.conversation_key
+             AND TRIM(COALESCE(latest_campaign.campaign_name, '')) <> ''
+           ORDER BY datetime(latest_campaign.created_at) DESC, latest_campaign.id DESC
+           LIMIT 1
+        ), '') AS campaign_name,
+        (
+          SELECT body
+            FROM twilio_inbox_messages latest_body
+           WHERE latest_body.conversation_key = base.conversation_key
+           ORDER BY datetime(latest_body.created_at) DESC, latest_body.id DESC
+           LIMIT 1
+        ) AS last_message_body,
+        (
+          SELECT created_at
+            FROM twilio_inbox_messages latest_created
+           WHERE latest_created.conversation_key = base.conversation_key
+           ORDER BY datetime(latest_created.created_at) DESC, latest_created.id DESC
+           LIMIT 1
+        ) AS last_message_at,
+        (
+          SELECT direction
+            FROM twilio_inbox_messages latest_direction
+           WHERE latest_direction.conversation_key = base.conversation_key
+           ORDER BY datetime(latest_direction.created_at) DESC, latest_direction.id DESC
+           LIMIT 1
+        ) AS last_direction,
+        (
+          SELECT status
+            FROM twilio_inbox_messages latest_status
+           WHERE latest_status.conversation_key = base.conversation_key
+           ORDER BY datetime(latest_status.created_at) DESC, latest_status.id DESC
+           LIMIT 1
+        ) AS last_status,
+        SUM(CASE WHEN base.direction = 'inbound' AND base.read_at IS NULL THEN 1 ELSE 0 END) AS unread_count
+       FROM twilio_inbox_messages base
+      GROUP BY base.conversation_key, base.contact_phone, base.platform_identity
+      ORDER BY datetime(last_message_at) DESC, LOWER(contact_name) ASC`,
+    []
+  );
+}
+
+async function listTwilioInboxMessages(conversationKey) {
+  return dbAll(
+    `SELECT *
+       FROM twilio_inbox_messages
+      WHERE conversation_key = ?
+      ORDER BY datetime(created_at) ASC, id ASC`,
+    [String(conversationKey || '').trim()]
+  );
+}
+
+async function getLatestTwilioConversationRow(conversationKey) {
+  return dbGet(
+    `SELECT *
+       FROM twilio_inbox_messages
+      WHERE conversation_key = ?
+      ORDER BY datetime(created_at) DESC, id DESC
+      LIMIT 1`,
+    [String(conversationKey || '').trim()]
+  );
+}
+
+async function markTwilioConversationRead(conversationKey) {
+  await dbRun(
+    `UPDATE twilio_inbox_messages
+        SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+      WHERE conversation_key = ?
+        AND direction = 'inbound'
+        AND read_at IS NULL`,
+    [String(conversationKey || '').trim()]
+  );
+}
+
 async function queryOpenAiAssistant(question) {
   const apiKeys = getOpenAiApiKeyCandidates();
   if (apiKeys.length === 0) {
@@ -2652,6 +3019,40 @@ function initializeDatabase() {
       db.run(`ALTER TABLE user_messages ADD COLUMN edited_at DATETIME`, () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_pair_created ON user_messages(sender_user_id, recipient_user_id, created_at)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_recipient_read ON user_messages(recipient_user_id, read_at)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS twilio_inbox_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message_sid TEXT UNIQUE,
+      account_sid TEXT,
+      conversation_key TEXT NOT NULL,
+      campaign_name TEXT,
+      contact_name TEXT,
+      contact_phone TEXT NOT NULL,
+      platform_identity TEXT NOT NULL,
+      owner_user_id INTEGER,
+      owner_name TEXT,
+      owner_email TEXT,
+      direction TEXT NOT NULL,
+      body TEXT NOT NULL,
+      status TEXT,
+      error_code TEXT,
+      error_message TEXT,
+      raw_payload_json TEXT NOT NULL DEFAULT '{}',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      read_at DATETIME
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating twilio_inbox_messages table:', err);
+    } else {
+      console.log('Twilio inbox messages table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_conversation_created ON twilio_inbox_messages(conversation_key, created_at, id)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_unread ON twilio_inbox_messages(direction, read_at, created_at)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_contact_phone ON twilio_inbox_messages(contact_phone, created_at DESC)', () => {});
     }
   });
 
@@ -11834,8 +12235,241 @@ app.get('/api/twilio/status', (req, res) => {
     configured: isTwilioConfigured(config),
     fromNumberMasked: maskPhoneNumber(config.fromNumber),
     messagingServiceSidConfigured: Boolean(config.messagingServiceSid),
-    mode: config.messagingServiceSid ? 'messaging-service' : (config.fromNumber ? 'phone-number' : 'unconfigured')
+    mode: config.messagingServiceSid ? 'messaging-service' : (config.fromNumber ? 'phone-number' : 'unconfigured'),
+    inboxWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/webhook/incoming'),
+    statusWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/webhook/status')
   });
+});
+
+app.post('/api/twilio/webhook/incoming', async (req, res) => {
+  if (!isTwilioWebhookRequestValid(req)) {
+    return res.status(403).type('text/plain').send('Invalid Twilio signature');
+  }
+
+  try {
+    const payload = req.body || {};
+    const messageSid = String(payload.MessageSid || payload.SmsSid || '').trim();
+    const body = String(payload.Body || '').trim();
+    const details = getTwilioConversationDetailsFromPayload(payload, 'inbound');
+
+    if (!messageSid || !details.conversationKey || !body) {
+      return res.type('text/xml').send('<Response></Response>');
+    }
+
+    const latestRow = await getLatestTwilioConversationRow(details.conversationKey);
+    await upsertTwilioInboxMessage({
+      messageSid,
+      accountSid: String(payload.AccountSid || '').trim(),
+      conversationKey: details.conversationKey,
+      campaignName: String(latestRow?.campaign_name || '').trim(),
+      contactName: String(payload.ProfileName || latestRow?.contact_name || '').trim(),
+      contactPhone: details.contactPhone,
+      platformIdentity: details.platformIdentity,
+      direction: 'inbound',
+      body,
+      status: String(payload.SmsStatus || payload.MessageStatus || 'received').trim(),
+      errorCode: String(payload.ErrorCode || '').trim(),
+      errorMessage: String(payload.ErrorMessage || '').trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      readAt: null,
+      rawPayload: payload
+    });
+
+    return res.type('text/xml').send('<Response></Response>');
+  } catch (error) {
+    console.error('Failed to persist inbound Twilio message:', error);
+    return res.type('text/xml').send('<Response></Response>');
+  }
+});
+
+app.post('/api/twilio/webhook/status', async (req, res) => {
+  if (!isTwilioWebhookRequestValid(req)) {
+    return res.status(403).type('text/plain').send('Invalid Twilio signature');
+  }
+
+  try {
+    const messageSid = String(req.body?.MessageSid || req.body?.SmsSid || '').trim();
+    if (!messageSid) {
+      return res.status(204).end();
+    }
+
+    await dbRun(
+      `UPDATE twilio_inbox_messages
+          SET status = ?,
+              error_code = ?,
+              error_message = ?,
+              updated_at = CURRENT_TIMESTAMP
+        WHERE message_sid = ?`,
+      [
+        String(req.body?.MessageStatus || req.body?.SmsStatus || '').trim(),
+        String(req.body?.ErrorCode || '').trim(),
+        String(req.body?.ErrorMessage || '').trim(),
+        messageSid
+      ]
+    );
+
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Failed to persist Twilio status update:', error);
+    return res.status(204).end();
+  }
+});
+
+app.get('/api/twilio/inbox/conversations', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const rows = await listTwilioInboxConversations();
+    const conversations = rows.map((row) => ({
+      conversationKey: String(row.conversation_key || '').trim(),
+      campaignName: String(row.campaign_name || '').trim(),
+      contactName: String(row.contact_name || '').trim() || String(row.contact_phone || '').trim(),
+      contactPhone: String(row.contact_phone || '').trim(),
+      platformIdentity: String(row.platform_identity || '').trim(),
+      lastMessageBody: String(row.last_message_body || '').trim(),
+      lastMessageAt: normalizeApiTimestamp(row.last_message_at) || null,
+      lastDirection: String(row.last_direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
+      lastStatus: String(row.last_status || '').trim(),
+      unreadCount: Math.max(0, Number(row.unread_count) || 0)
+    }));
+
+    return res.json({ conversations });
+  } catch (error) {
+    console.error('Failed to load Twilio inbox conversations:', error);
+    return res.status(500).json({ error: 'Unable to load Twilio inbox conversations.' });
+  }
+});
+
+app.get('/api/twilio/inbox/messages', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const conversationKey = String(req.query?.conversationKey || '').trim();
+  if (!conversationKey) {
+    return res.status(400).json({ error: 'conversationKey is required.' });
+  }
+
+  try {
+    const rows = await listTwilioInboxMessages(conversationKey);
+    return res.json({
+      conversationKey,
+      messages: rows.map(serializeTwilioInboxMessage).filter(Boolean)
+    });
+  } catch (error) {
+    console.error('Failed to load Twilio inbox messages:', error);
+    return res.status(500).json({ error: 'Unable to load Twilio inbox messages.' });
+  }
+});
+
+app.post('/api/twilio/inbox/messages/read', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const conversationKey = String(req.body?.conversationKey || '').trim();
+  if (!conversationKey) {
+    return res.status(400).json({ error: 'conversationKey is required.' });
+  }
+
+  try {
+    await markTwilioConversationRead(conversationKey);
+    return res.json({ success: true, conversationKey });
+  } catch (error) {
+    console.error('Failed to mark Twilio conversation read:', error);
+    return res.status(500).json({ error: 'Unable to mark Twilio conversation as read.' });
+  }
+});
+
+app.post('/api/twilio/inbox/reply', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const config = getTwilioMessagingConfig();
+  if (!isTwilioConfigured(config)) {
+    return res.status(400).json({ error: 'Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.' });
+  }
+
+  const conversationKey = String(req.body?.conversationKey || '').trim();
+  const body = String(req.body?.body || '').trim();
+  const campaignName = String(req.body?.campaignName || '').trim();
+  if (!conversationKey || !body) {
+    return res.status(400).json({ error: 'conversationKey and body are required.' });
+  }
+
+  const latestRow = await getLatestTwilioConversationRow(conversationKey);
+  if (!latestRow) {
+    return res.status(404).json({ error: 'Conversation not found.' });
+  }
+
+  const client = getTwilioClient();
+  if (!client) {
+    return res.status(500).json({ error: 'Twilio client could not be initialized.' });
+  }
+
+  try {
+    const payload = {
+      body: body.slice(0, 1600),
+      to: String(latestRow.contact_phone || '').trim()
+    };
+
+    if (config.messagingServiceSid) {
+      payload.messagingServiceSid = config.messagingServiceSid;
+    } else {
+      payload.from = config.fromNumber;
+    }
+
+    const statusCallbackUrl = buildTwilioWebhookUrl(req, '/api/twilio/webhook/status');
+    if (statusCallbackUrl) {
+      payload.statusCallback = statusCallbackUrl;
+    }
+
+    const message = await client.messages.create(payload);
+    const storedRow = await upsertTwilioInboxMessage({
+      messageSid: String(message.sid || '').trim(),
+      accountSid: String(message.accountSid || config.accountSid || '').trim(),
+      conversationKey,
+      campaignName: campaignName || String(latestRow.campaign_name || '').trim(),
+      contactName: String(latestRow.contact_name || '').trim(),
+      contactPhone: String(latestRow.contact_phone || '').trim(),
+      platformIdentity: String(latestRow.platform_identity || '').trim(),
+      ownerUserId: Number(decoded.id) || null,
+      ownerName: String(decoded.name || '').trim(),
+      ownerEmail: String(decoded.email || '').trim().toLowerCase(),
+      direction: 'outgoing',
+      body: payload.body,
+      status: String(message.status || 'queued').trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      readAt: new Date().toISOString(),
+      rawPayload: {
+        sid: message.sid,
+        status: message.status,
+        to: payload.to,
+        from: payload.from || '',
+        messagingServiceSid: payload.messagingServiceSid || ''
+      }
+    });
+
+    await markTwilioConversationRead(conversationKey);
+
+    return res.json({
+      success: true,
+      conversationKey,
+      message: serializeTwilioInboxMessage(storedRow)
+    });
+  } catch (error) {
+    console.error('Failed to send Twilio reply:', error);
+    return res.status(500).json({ error: error.message || 'Unable to send Twilio reply.' });
+  }
 });
 
 app.post('/api/twilio/send-sms', async (req, res) => {
@@ -11857,14 +12491,9 @@ app.post('/api/twilio/send-sms', async (req, res) => {
   }
 
   let senderName = String(req.body?.senderName || '').trim();
-  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  if (!senderName && token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      senderName = String(decoded?.name || '').trim();
-    } catch (error) {
-      // Ignore invalid token and continue without a sender name.
-    }
+  const authenticatedUser = await getAuthenticatedUserFromBearerHeader(req.headers.authorization || '');
+  if (!senderName && authenticatedUser) {
+    senderName = String(authenticatedUser.name || '').trim();
   }
 
   const client = getTwilioClient();
@@ -11874,6 +12503,7 @@ app.post('/api/twilio/send-sms', async (req, res) => {
 
   const sent = [];
   const failed = [];
+  const statusCallbackUrl = buildTwilioWebhookUrl(req, '/api/twilio/webhook/status');
 
   for (const entry of providedRecipients) {
     const recipient = typeof entry === 'string'
@@ -11908,12 +12538,46 @@ app.post('/api/twilio/send-sms', async (req, res) => {
         payload.from = config.fromNumber;
       }
 
+      if (statusCallbackUrl) {
+        payload.statusCallback = statusCallbackUrl;
+      }
+
       const message = await client.messages.create(payload);
+      const details = getTwilioConversationDetails({
+        contactPhone: normalizedPhone,
+        platformIdentity: payload.messagingServiceSid || payload.from || config.messagingServiceSid || config.fromNumber
+      });
+      const storedRow = await upsertTwilioInboxMessage({
+        messageSid: String(message.sid || '').trim(),
+        accountSid: String(message.accountSid || config.accountSid || '').trim(),
+        conversationKey: details.conversationKey,
+        campaignName,
+        contactName: String(recipient.name || '').trim(),
+        contactPhone: details.contactPhone,
+        platformIdentity: details.platformIdentity,
+        ownerUserId: Number(authenticatedUser?.id) || null,
+        ownerName: String(authenticatedUser?.name || senderName || '').trim(),
+        ownerEmail: String(authenticatedUser?.email || '').trim().toLowerCase(),
+        direction: 'outgoing',
+        body: personalizedBody,
+        status: String(message.status || 'queued').trim(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        readAt: new Date().toISOString(),
+        rawPayload: {
+          sid: message.sid,
+          status: message.status,
+          to: payload.to,
+          from: payload.from || '',
+          messagingServiceSid: payload.messagingServiceSid || ''
+        }
+      });
       sent.push({
         name: recipient.name || '',
         phone: normalizedPhone,
         sid: message.sid,
-        status: message.status || 'queued'
+        status: message.status || 'queued',
+        conversationKey: String(storedRow?.conversation_key || details.conversationKey || '').trim()
       });
     } catch (error) {
       failed.push({

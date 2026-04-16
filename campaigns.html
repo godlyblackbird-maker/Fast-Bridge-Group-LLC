@@ -448,6 +448,238 @@
             font-size: 13px;
         }
 
+        .campaign-replies-card {
+            grid-column: 1 / -1;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .campaign-replies-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 24px 24px 0;
+        }
+
+        .campaign-replies-head-copy p {
+            margin: 8px 0 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .campaign-replies-shell {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            min-height: 640px;
+            margin-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(245, 247, 250, 0.98) 0%, rgba(232, 236, 242, 0.98) 100%);
+        }
+
+        .campaign-replies-list,
+        .campaign-replies-thread-shell {
+            min-width: 0;
+        }
+
+        .campaign-replies-list {
+            border-right: 1px solid rgba(15, 23, 42, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 246, 250, 0.98) 100%);
+        }
+
+        .campaign-replies-list-head,
+        .campaign-replies-thread-head {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(18px);
+        }
+
+        .campaign-replies-list-head h4,
+        .campaign-replies-thread-head h4 {
+            margin: 0;
+            color: #111827;
+            font-size: 18px;
+        }
+
+        .campaign-replies-list-head p,
+        .campaign-replies-thread-head p {
+            margin: 6px 0 0;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .campaign-replies-list-body {
+            display: grid;
+            gap: 8px;
+            padding: 14px;
+            max-height: 560px;
+            overflow: auto;
+        }
+
+        .campaign-reply-conversation {
+            display: grid;
+            gap: 8px;
+            padding: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.88);
+            color: #0f172a;
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .campaign-reply-conversation:hover,
+        .campaign-reply-conversation.is-active {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-rgb), 0.34);
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+        }
+
+        .campaign-reply-conversation-top,
+        .campaign-reply-conversation-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .campaign-reply-conversation-name {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .campaign-reply-conversation-preview,
+        .campaign-reply-conversation-meta,
+        .campaign-reply-empty,
+        .campaign-reply-thread-empty,
+        .campaign-reply-status {
+            color: #6b7280;
+        }
+
+        .campaign-reply-conversation-preview {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .campaign-reply-conversation-meta,
+        .campaign-reply-conversation-time,
+        .campaign-reply-badge,
+        .campaign-reply-status,
+        .campaign-reply-status-tag,
+        .campaign-reply-thread-meta {
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .campaign-reply-badge,
+        .campaign-reply-status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.12);
+            border: 1px solid rgba(var(--accent-rgb), 0.18);
+            color: #0f172a;
+            width: fit-content;
+        }
+
+        .campaign-reply-badge.is-unread {
+            background: rgba(16, 185, 129, 0.14);
+            border-color: rgba(16, 185, 129, 0.24);
+            color: #065f46;
+        }
+
+        .campaign-replies-thread-shell {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            background: linear-gradient(180deg, rgba(249, 250, 251, 0.96) 0%, rgba(239, 244, 248, 0.98) 100%);
+        }
+
+        .campaign-reply-thread {
+            display: grid;
+            align-content: start;
+            gap: 14px;
+            padding: 20px;
+            overflow: auto;
+            min-height: 320px;
+        }
+
+        .campaign-reply-message {
+            max-width: min(78%, 640px);
+            display: grid;
+            gap: 8px;
+            padding: 14px 16px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            color: #111827;
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .campaign-reply-message.is-outgoing {
+            justify-self: end;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.92), rgba(15, 23, 42, 0.94));
+            color: #f8fafc;
+            border-color: rgba(var(--accent-rgb), 0.42);
+        }
+
+        .campaign-reply-message-body {
+            margin: 0;
+            white-space: pre-wrap;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .campaign-reply-message-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-thread-meta,
+        .campaign-reply-message.is-outgoing .campaign-reply-status-tag {
+            color: rgba(248, 250, 252, 0.82);
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-status-tag {
+            border-color: rgba(248, 250, 252, 0.18);
+            background: rgba(248, 250, 252, 0.12);
+        }
+
+        .campaign-reply-form {
+            display: grid;
+            gap: 12px;
+            padding: 18px 20px 20px;
+            border-top: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255, 255, 255, 0.88);
+        }
+
+        .campaign-reply-form-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .campaign-reply-form .outreach-textarea {
+            min-height: 110px;
+            background: rgba(255, 255, 255, 0.94);
+            color: #0f172a;
+            border-color: rgba(148, 163, 184, 0.22);
+        }
+
+        .campaign-reply-thread-empty,
+        .campaign-reply-empty {
+            margin: 0;
+            padding: 24px 18px;
+            text-align: center;
+        }
+
         .campaign-copy-block {
             padding: 16px;
             border-radius: 16px;
@@ -685,7 +917,8 @@
         @media (max-width: 1180px) {
             .campaign-hero,
             .campaign-grid,
-            .vendor-grid {
+            .vendor-grid,
+            .campaign-replies-shell {
                 grid-template-columns: 1fr;
             }
         }
@@ -701,9 +934,18 @@
             .campaign-copy-head,
             .campaign-template-header,
             .campaign-template-controls,
-            .campaign-template-actions {
+            .campaign-template-actions,
+            .campaign-replies-head,
+            .campaign-reply-form-row,
+            .campaign-reply-conversation-top,
+            .campaign-reply-conversation-bottom,
+            .campaign-reply-message-foot {
                 flex-direction: column;
                 align-items: stretch;
+            }
+
+            .campaign-reply-message {
+                max-width: 100%;
             }
         }
     </style>
@@ -944,6 +1186,43 @@
                             </div>
                         </div>
 
+                        <div class="glass-card campaign-replies-card">
+                            <div class="campaign-replies-head">
+                                <div class="campaign-replies-head-copy">
+                                    <h2 class="card-title">Twilio Replies Inbox</h2>
+                                    <p>Replies from real SMS campaigns land here and stay persisted in the backend. This is the external texting workspace; FBG Messaging stays internal to FAST platform users only.</p>
+                                </div>
+                                <div id="campaign-replies-status" class="campaign-status-pill offline">Loading replies...</div>
+                            </div>
+                            <div class="campaign-replies-shell">
+                                <aside class="campaign-replies-list">
+                                    <div class="campaign-replies-list-head">
+                                        <h4>Active Threads</h4>
+                                        <p>Twilio responses grouped by contact number.</p>
+                                    </div>
+                                    <div id="campaign-reply-conversations" class="campaign-replies-list-body">
+                                        <p class="campaign-reply-empty">No Twilio reply threads yet.</p>
+                                    </div>
+                                </aside>
+                                <section class="campaign-replies-thread-shell">
+                                    <div class="campaign-replies-thread-head">
+                                        <h4 id="campaign-reply-title">Choose a Twilio thread</h4>
+                                        <p id="campaign-reply-subtitle">Open a contact on the left to review replies and send a direct response.</p>
+                                    </div>
+                                    <div id="campaign-reply-thread" class="campaign-reply-thread">
+                                        <p class="campaign-reply-thread-empty">Replies will appear here once a contact answers a Twilio campaign.</p>
+                                    </div>
+                                    <form id="campaign-reply-form" class="campaign-reply-form">
+                                        <div id="campaign-reply-status" class="campaign-reply-status"></div>
+                                        <div class="campaign-reply-form-row">
+                                            <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
+                                            <button id="campaign-reply-send" type="submit" class="card-btn active" disabled>Send Reply</button>
+                                        </div>
+                                    </form>
+                                </section>
+                            </div>
+                        </div>
+
                         <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="Agent Templates">
                             <div class="card-header">
                                 <div>
@@ -1107,6 +1386,15 @@
             const campaignTemplateSaveButton = document.getElementById('campaign-template-save');
             const campaignTemplateResetButton = document.getElementById('campaign-template-reset');
             const campaignTemplateCloseButtons = document.querySelectorAll('[data-campaign-template-close]');
+            const campaignRepliesStatus = document.getElementById('campaign-replies-status');
+            const campaignReplyConversations = document.getElementById('campaign-reply-conversations');
+            const campaignReplyTitle = document.getElementById('campaign-reply-title');
+            const campaignReplySubtitle = document.getElementById('campaign-reply-subtitle');
+            const campaignReplyThread = document.getElementById('campaign-reply-thread');
+            const campaignReplyForm = document.getElementById('campaign-reply-form');
+            const campaignReplyInput = document.getElementById('campaign-reply-input');
+            const campaignReplySendButton = document.getElementById('campaign-reply-send');
+            const campaignReplyStatus = document.getElementById('campaign-reply-status');
             const campaignTemplateBlocks = {
                 'first-touch': document.getElementById('sms-template-1'),
                 'follow-up': document.getElementById('sms-template-2'),
@@ -1120,6 +1408,9 @@
             };
             let campaignTemplateSettings = loadCampaignTemplateSettings();
             let campaignTemplateDraft = cloneCampaignTemplateSettings(campaignTemplateSettings);
+            let twilioInboxConversations = [];
+            let activeTwilioConversationKey = '';
+            let twilioInboxRefreshHandle = null;
 
             function readJson(key) {
                 try {
@@ -1254,6 +1545,255 @@
                     return String(user.name || '').trim();
                 } catch (error) {
                     return '';
+                }
+            }
+
+            function formatCampaignReplyTimestamp(value) {
+                const date = value ? new Date(value) : null;
+                if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                    return 'Unknown time';
+                }
+
+                return new Intl.DateTimeFormat('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                }).format(date);
+            }
+
+            function setCampaignRepliesStatus(message, mode) {
+                if (!campaignRepliesStatus) {
+                    return;
+                }
+
+                campaignRepliesStatus.textContent = message;
+                campaignRepliesStatus.classList.remove('ready', 'offline');
+                campaignRepliesStatus.classList.add(mode === 'ready' ? 'ready' : 'offline');
+            }
+
+            function setCampaignReplyComposerEnabled(enabled) {
+                if (campaignReplyInput) {
+                    campaignReplyInput.disabled = !enabled;
+                }
+                if (campaignReplySendButton) {
+                    campaignReplySendButton.disabled = !enabled;
+                }
+            }
+
+            function renderTwilioReplyConversations() {
+                if (!campaignReplyConversations) {
+                    return;
+                }
+
+                campaignReplyConversations.replaceChildren();
+
+                if (!twilioInboxConversations.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'campaign-reply-empty';
+                    empty.textContent = 'No persisted Twilio reply threads yet.';
+                    campaignReplyConversations.appendChild(empty);
+                    return;
+                }
+
+                twilioInboxConversations.forEach((conversation) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'campaign-reply-conversation';
+                    if (conversation.conversationKey === activeTwilioConversationKey) {
+                        button.classList.add('is-active');
+                    }
+
+                    const top = document.createElement('div');
+                    top.className = 'campaign-reply-conversation-top';
+
+                    const name = document.createElement('span');
+                    name.className = 'campaign-reply-conversation-name';
+                    name.textContent = conversation.contactName || conversation.contactPhone || 'Unknown contact';
+
+                    const time = document.createElement('span');
+                    time.className = 'campaign-reply-conversation-time';
+                    time.textContent = formatCampaignReplyTimestamp(conversation.lastMessageAt);
+
+                    top.append(name, time);
+
+                    const preview = document.createElement('p');
+                    preview.className = 'campaign-reply-conversation-preview';
+                    preview.textContent = conversation.lastMessageBody || 'No preview available.';
+
+                    const bottom = document.createElement('div');
+                    bottom.className = 'campaign-reply-conversation-bottom';
+
+                    const meta = document.createElement('span');
+                    meta.className = 'campaign-reply-conversation-meta';
+                    meta.textContent = conversation.campaignName
+                        ? `${conversation.contactPhone} • ${conversation.campaignName}`
+                        : conversation.contactPhone;
+
+                    const badge = document.createElement('span');
+                    badge.className = 'campaign-reply-badge';
+                    if (Number(conversation.unreadCount) > 0) {
+                        badge.classList.add('is-unread');
+                        badge.textContent = `${conversation.unreadCount} unread`;
+                    } else {
+                        badge.textContent = conversation.lastDirection === 'inbound' ? 'Reply received' : 'Awaiting reply';
+                    }
+
+                    bottom.append(meta, badge);
+                    button.append(top, preview, bottom);
+
+                    button.addEventListener('click', () => {
+                        loadTwilioInboxMessages(conversation.conversationKey, { markRead: true });
+                    });
+
+                    campaignReplyConversations.appendChild(button);
+                });
+            }
+
+            function renderTwilioReplyThread(messages, conversation) {
+                if (!campaignReplyThread || !campaignReplyTitle || !campaignReplySubtitle) {
+                    return;
+                }
+
+                campaignReplyThread.replaceChildren();
+
+                if (!conversation) {
+                    campaignReplyTitle.textContent = 'Choose a Twilio thread';
+                    campaignReplySubtitle.textContent = 'Open a contact on the left to review replies and send a direct response.';
+                    const empty = document.createElement('p');
+                    empty.className = 'campaign-reply-thread-empty';
+                    empty.textContent = 'Replies will appear here once a contact answers a Twilio campaign.';
+                    campaignReplyThread.appendChild(empty);
+                    setCampaignReplyComposerEnabled(false);
+                    return;
+                }
+
+                campaignReplyTitle.textContent = conversation.contactName || conversation.contactPhone || 'Twilio contact';
+                campaignReplySubtitle.textContent = conversation.campaignName
+                    ? `${conversation.contactPhone} • ${conversation.campaignName}`
+                    : `${conversation.contactPhone} • Direct Twilio thread`;
+                setCampaignReplyComposerEnabled(true);
+
+                if (!Array.isArray(messages) || !messages.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'campaign-reply-thread-empty';
+                    empty.textContent = 'No persisted messages yet for this Twilio conversation.';
+                    campaignReplyThread.appendChild(empty);
+                    return;
+                }
+
+                messages.forEach((message) => {
+                    const bubble = document.createElement('article');
+                    bubble.className = `campaign-reply-message ${message.direction === 'outgoing' ? 'is-outgoing' : 'is-incoming'}`;
+
+                    const body = document.createElement('p');
+                    body.className = 'campaign-reply-message-body';
+                    body.textContent = message.body || '';
+
+                    const foot = document.createElement('div');
+                    foot.className = 'campaign-reply-message-foot';
+
+                    const meta = document.createElement('span');
+                    meta.className = 'campaign-reply-thread-meta';
+                    meta.textContent = `${message.direction === 'outgoing' ? 'Sent' : 'Reply'} • ${formatCampaignReplyTimestamp(message.createdAt)}`;
+
+                    foot.appendChild(meta);
+
+                    if (message.status || message.errorMessage) {
+                        const status = document.createElement('span');
+                        status.className = 'campaign-reply-status-tag';
+                        status.textContent = message.errorMessage
+                            ? `${message.status || 'error'} • ${message.errorMessage}`
+                            : (message.status || 'queued');
+                        foot.appendChild(status);
+                    }
+
+                    bubble.append(body, foot);
+                    campaignReplyThread.appendChild(bubble);
+                });
+
+                campaignReplyThread.scrollTop = campaignReplyThread.scrollHeight;
+            }
+
+            async function loadTwilioInboxConversations(options = {}) {
+                if (!campaignReplyConversations) {
+                    return;
+                }
+
+                if (!token) {
+                    setCampaignRepliesStatus('Sign in to load Twilio replies', 'offline');
+                    renderTwilioReplyThread([], null);
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/twilio/inbox/conversations', {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load Twilio conversations.');
+                    }
+
+                    twilioInboxConversations = Array.isArray(data.conversations) ? data.conversations : [];
+                    if (!activeTwilioConversationKey || !twilioInboxConversations.some((item) => item.conversationKey === activeTwilioConversationKey)) {
+                        activeTwilioConversationKey = options.preferredConversationKey || (twilioInboxConversations[0]?.conversationKey || '');
+                    }
+
+                    setCampaignRepliesStatus(
+                        twilioInboxConversations.length ? `${twilioInboxConversations.length} Twilio thread${twilioInboxConversations.length === 1 ? '' : 's'} ready` : 'Twilio inbox ready',
+                        'ready'
+                    );
+                    renderTwilioReplyConversations();
+
+                    if (activeTwilioConversationKey) {
+                        await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: Boolean(options.markRead) });
+                    } else {
+                        renderTwilioReplyThread([], null);
+                    }
+                } catch (error) {
+                    setCampaignRepliesStatus(error.message || 'Twilio inbox unavailable', 'offline');
+                    twilioInboxConversations = [];
+                    activeTwilioConversationKey = '';
+                    renderTwilioReplyConversations();
+                    renderTwilioReplyThread([], null);
+                }
+            }
+
+            async function loadTwilioInboxMessages(conversationKey, options = {}) {
+                if (!conversationKey || !token) {
+                    renderTwilioReplyThread([], null);
+                    return;
+                }
+
+                activeTwilioConversationKey = conversationKey;
+                renderTwilioReplyConversations();
+
+                try {
+                    const response = await fetch(`/api/twilio/inbox/messages?conversationKey=${encodeURIComponent(conversationKey)}`, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load Twilio messages.');
+                    }
+
+                    const conversation = twilioInboxConversations.find((item) => item.conversationKey === conversationKey) || null;
+                    renderTwilioReplyThread(Array.isArray(data.messages) ? data.messages : [], conversation);
+
+                    if (options.markRead) {
+                        await fetch('/api/twilio/inbox/messages/read', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { Authorization: `Bearer ${token}` } : {})
+                            },
+                            body: JSON.stringify({ conversationKey })
+                        });
+                        await loadTwilioInboxConversations({ preferredConversationKey: conversationKey, markRead: false });
+                    }
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || 'Unable to load this Twilio thread.';
                 }
             }
 
@@ -1414,6 +1954,7 @@
                             campaignSendStatus.textContent = failedCount > 0
                                 ? `Queued ${data.sent.length} SMS. ${failedCount} failed.`
                                 : `Queued ${data.sent.length} SMS successfully.`;
+                            loadTwilioInboxConversations({ preferredConversationKey: data.sent[0]?.conversationKey || activeTwilioConversationKey, markRead: false });
                         } else {
                             campaignSendStatus.textContent = data.error || 'Failed to queue campaign.';
                         }
@@ -1446,7 +1987,62 @@
                 });
             });
 
+            if (campaignReplyForm) {
+                campaignReplyForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+
+                    const body = campaignReplyInput ? campaignReplyInput.value.trim() : '';
+                    if (!activeTwilioConversationKey) {
+                        campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
+                        return;
+                    }
+
+                    if (!body) {
+                        campaignReplyStatus.textContent = 'Type a reply before sending.';
+                        return;
+                    }
+
+                    campaignReplyStatus.textContent = 'Sending Twilio reply...';
+
+                    try {
+                        const conversation = twilioInboxConversations.find((item) => item.conversationKey === activeTwilioConversationKey) || null;
+                        const response = await fetch('/api/twilio/inbox/reply', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { Authorization: `Bearer ${token}` } : {})
+                            },
+                            body: JSON.stringify({
+                                conversationKey: activeTwilioConversationKey,
+                                body,
+                                campaignName: conversation?.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply'
+                            })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'Unable to send Twilio reply.');
+                        }
+
+                        if (campaignReplyInput) {
+                            campaignReplyInput.value = '';
+                        }
+                        campaignReplyStatus.textContent = 'Twilio reply sent.';
+                        await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
+                        await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
+                    } catch (error) {
+                        campaignReplyStatus.textContent = error.message || 'Unable to send Twilio reply.';
+                    }
+                });
+            }
+
             loadTwilioStatus();
+            loadTwilioInboxConversations({ markRead: true });
+
+            if (!twilioInboxRefreshHandle) {
+                twilioInboxRefreshHandle = window.setInterval(() => {
+                    loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
+                }, 20000);
+            }
         })();
     </script>
 </body>
