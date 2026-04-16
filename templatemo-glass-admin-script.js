@@ -21512,7 +21512,9 @@ function initNavbarDateTime() {
 
         function detectBrokenGoogleMapsState() {
             const brokenStatePattern = /for development purposes only|this page can'?t load google maps correctly/i;
-            return [compsMapCanvas, compsMapPano].some((element) => {
+            const mapCanvas = document.getElementById('comps-map-canvas');
+            const mapPano = document.getElementById('comps-map-pano');
+            return [mapCanvas, mapPano].some((element) => {
                 if (!(element instanceof HTMLElement)) {
                     return false;
                 }
@@ -21521,11 +21523,31 @@ function initNavbarDateTime() {
         }
 
         function handleBrokenGoogleMapsState() {
+            const compsExplorer = document.getElementById('comps-map-explorer');
+            const mapCanvas = document.getElementById('comps-map-canvas');
+            const mapPano = document.getElementById('comps-map-pano');
+            const emptyState = document.getElementById('comps-map-empty-state');
+            const emptyMessage = document.getElementById('comps-map-empty-message');
+            const earthShell = document.getElementById('comps-map-earth-shell');
+            const streetViewButton = document.getElementById('comps-map-street-view-btn');
+            const statusBadge = document.getElementById('comps-map-status-badge');
+            const statusBadgeTitle = document.getElementById('comps-map-status-badge-title');
+            const statusBadgeText = document.getElementById('comps-map-status-badge-text');
             googleMapsAuthFailed = true;
             if (!googleMapsAuthFailureMessage) {
                 googleMapsAuthFailureMessage = getGoogleMapsBrokenStateMessage();
             }
-            updateMapStatusBadge({ visible: true });
+
+            if (statusBadge) {
+                statusBadge.hidden = false;
+                statusBadge.classList.add('visible');
+            }
+            if (statusBadgeTitle) {
+                statusBadgeTitle.textContent = 'Google Maps attention needed';
+            }
+            if (statusBadgeText) {
+                statusBadgeText.textContent = getGoogleMapsBrokenStateMessage();
+            }
 
             if (panoramaInstance && typeof panoramaInstance.setVisible === 'function') {
                 panoramaInstance.setVisible(false);
@@ -21535,9 +21557,34 @@ function initNavbarDateTime() {
             if (compsExplorer) {
                 compsExplorer.dataset.streetView = 'off';
             }
-            syncStreetViewButtonState();
-            setEarthPanelState(false);
-            setMapEmptyState(true, `${getGoogleMapsBrokenStateMessage()} FAST hid the broken Google map until the website key configuration is fixed.`);
+            if (streetViewButton) {
+                streetViewButton.disabled = false;
+                streetViewButton.classList.remove('active');
+                streetViewButton.setAttribute('aria-pressed', 'false');
+                streetViewButton.textContent = 'Street View';
+                streetViewButton.title = '';
+            }
+
+            earthPanelVisible = false;
+            if (earthShell) {
+                earthShell.hidden = true;
+            }
+
+            if (emptyState && mapCanvas) {
+                const message = `${getGoogleMapsBrokenStateMessage()} FAST hid the broken Google map until the website key configuration is fixed.`;
+                emptyState.hidden = false;
+                mapCanvas.setAttribute('aria-hidden', 'true');
+                if (mapPano) {
+                    mapPano.setAttribute('aria-hidden', 'true');
+                }
+                const wrap = mapCanvas.closest('.comps-map-wrap');
+                if (wrap) {
+                    wrap.classList.add('has-empty-state');
+                }
+                if (emptyMessage) {
+                    emptyMessage.textContent = message;
+                }
+            }
         }
 
         function startGoogleMapsIntegrityMonitor() {
@@ -21546,7 +21593,9 @@ function initNavbarDateTime() {
                 googleMapsIntegrityObserver = null;
             }
 
-            const observedTargets = [compsMapCanvas, compsMapPano].filter((element) => element instanceof HTMLElement);
+            const mapCanvas = document.getElementById('comps-map-canvas');
+            const mapPano = document.getElementById('comps-map-pano');
+            const observedTargets = [mapCanvas, mapPano].filter((element) => element instanceof HTMLElement);
             if (!observedTargets.length || typeof MutationObserver !== 'function') {
                 return;
             }
