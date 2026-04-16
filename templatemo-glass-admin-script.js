@@ -22130,6 +22130,7 @@ function initNavbarDateTime() {
             let markerCtor = null;
             let autocompleteCtor = null;
             let addressAutocomplete = null;
+            let autocompletePlaceSelection = null;
             let drawingManager = null;
             let drawnPolygon = null;
             let mapReadyPromise = null;
@@ -23825,6 +23826,35 @@ function initNavbarDateTime() {
                 updateCompsMapOpenLink(resolvedLabel);
             }
 
+            function clearAutocompletePlaceSelection() {
+                autocompletePlaceSelection = null;
+            }
+
+            function getAutocompletePlaceSelection(rawValue = '') {
+                const searchText = String(rawValue || '').trim().toLowerCase();
+                if (!autocompletePlaceSelection || !searchText) {
+                    return null;
+                }
+
+                const selectionLabel = String(autocompletePlaceSelection.formattedAddress || '').trim().toLowerCase();
+                const selectionQuery = String(autocompletePlaceSelection.query || '').trim().toLowerCase();
+                if (selectionLabel !== searchText && selectionQuery !== searchText) {
+                    return null;
+                }
+
+                const lat = Number(autocompletePlaceSelection.lat);
+                const lng = Number(autocompletePlaceSelection.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return null;
+                }
+
+                return {
+                    lat,
+                    lng,
+                    formattedAddress: String(autocompletePlaceSelection.formattedAddress || rawValue).trim() || String(rawValue || '').trim()
+                };
+            }
+
             async function searchAddressOnMap(rawValue = '') {
                 const searchText = String(rawValue || '').trim();
                 if (!searchText) {
@@ -23837,7 +23867,10 @@ function initNavbarDateTime() {
                     await loadGoogleMapsScript(config).catch(() => null);
                 }
 
-                let geocodeMatch = await geocodeAddressWithGooglePlaces(searchText).catch(() => null);
+                let geocodeMatch = getAutocompletePlaceSelection(searchText);
+                if (!geocodeMatch) {
+                    geocodeMatch = await geocodeAddressWithGooglePlaces(searchText).catch(() => null);
+                }
                 if (!geocodeMatch) {
                     geocodeMatch = await geocodeAddressWithGoogle(searchText).catch(() => null);
                 }
@@ -23851,6 +23884,12 @@ function initNavbarDateTime() {
                 if (compsMapSearchInput) {
                     compsMapSearchInput.value = geocodeMatch.formattedAddress || searchText;
                 }
+                autocompletePlaceSelection = {
+                    query: searchText,
+                    lat: geocodeMatch.lat,
+                    lng: geocodeMatch.lng,
+                    formattedAddress: geocodeMatch.formattedAddress || searchText
+                };
                 focusSearchLocation(geocodeMatch, geocodeMatch.formattedAddress || searchText);
 
                 const resolvedMap = await ensureMapReady().catch(() => null);
@@ -23964,7 +24003,22 @@ function initNavbarDateTime() {
                     const lng = typeof place.geometry.location.lng === 'function'
                         ? Number(place.geometry.location.lng())
                         : Number(place.geometry.location.lng);
-                    focusSearchLocation({ lat, lng }, String(place.formatted_address || place.name || compsMapSearchInput.value || '').trim());
+                    const resolvedLabel = String(place.formatted_address || place.name || compsMapSearchInput.value || '').trim();
+                    if (compsMapSearchInput) {
+                        compsMapSearchInput.value = resolvedLabel;
+                    }
+                    autocompletePlaceSelection = {
+                        query: resolvedLabel,
+                        lat,
+                        lng,
+                        formattedAddress: resolvedLabel
+                    };
+                    focusSearchLocation({ lat, lng }, resolvedLabel);
+                    ensureMapReady().then((resolvedMap) => {
+                        if (resolvedMap && mapInstance && window.google && window.google.maps) {
+                            focusSearchLocation({ lat, lng }, resolvedLabel);
+                        }
+                    }).catch(() => null);
                 });
             }
 
@@ -24445,6 +24499,13 @@ function initNavbarDateTime() {
             if (compsMapSearchInput && compsMapSearchInput.dataset.bound !== 'true') {
                 compsMapSearchInput.dataset.bound = 'true';
                 compsMapSearchInput.value = String(detailData.address || '').trim();
+                compsMapSearchInput.addEventListener('input', () => {
+                    const currentValue = String(compsMapSearchInput.value || '').trim();
+                    const selectedValue = String(autocompletePlaceSelection && autocompletePlaceSelection.formattedAddress || '').trim();
+                    if (!currentValue || currentValue !== selectedValue) {
+                        clearAutocompletePlaceSelection();
+                    }
+                });
                 compsMapSearchInput.addEventListener('keydown', async (event) => {
                     if (event.key !== 'Enter') {
                         return;
