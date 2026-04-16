@@ -23699,14 +23699,17 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                await ensureMapReady();
-
                 let geocodeMatch = await geocodeAddressWithGoogle(searchText).catch(() => null);
                 if (!geocodeMatch) {
                     geocodeMatch = await geocodeAddressWithNominatim(searchText).catch(() => null);
                 }
                 if (!geocodeMatch) {
                     throw new Error('FAST could not locate that search address.');
+                }
+
+                const map = await ensureMapReady();
+                if (!map || !mapInstance || !window.google || !window.google.maps) {
+                    throw new Error('The interactive comps map is not ready yet. Reload the page and try the search again.');
                 }
 
                 if (compsMapSearchInput) {
@@ -24278,7 +24281,8 @@ function initNavbarDateTime() {
                 });
             }
 
-            if (compsMapSearchButton) {
+            if (compsMapSearchButton && compsMapSearchButton.dataset.bound !== 'true') {
+                compsMapSearchButton.dataset.bound = 'true';
                 compsMapSearchButton.addEventListener('click', async () => {
                     try {
                         await searchAddressOnMap(compsMapSearchInput ? compsMapSearchInput.value : '');
