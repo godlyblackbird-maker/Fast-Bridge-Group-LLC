@@ -482,6 +482,61 @@
             font-size: 13px;
         }
 
+        .campaign-webhook-panel {
+            display: grid;
+            gap: 10px;
+            margin-top: 2px;
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(8, 12, 24, 0.24);
+        }
+
+        .campaign-webhook-copy {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .campaign-webhook-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .campaign-webhook-url {
+            margin: 0;
+            padding: 11px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            font-size: 12px;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+
+        .campaign-webhook-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .campaign-webhook-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
         .campaign-replies-card {
             grid-column: 1 / -1;
             padding: 0;
@@ -1205,6 +1260,21 @@
                                     </div>
                                 </div>
                                 <div id="campaign-twilio-status" class="campaign-status-pill offline">Checking Twilio config...</div>
+                                <div class="campaign-webhook-panel">
+                                    <p id="campaign-webhook-copy" class="campaign-webhook-copy">Replies only show up after Twilio posts inbound messages back to FAST.</p>
+                                    <div class="campaign-webhook-meta">
+                                        <span id="campaign-webhook-target" class="campaign-webhook-chip">Checking setup target...</span>
+                                        <span id="campaign-webhook-mode" class="campaign-webhook-chip">Checking mode...</span>
+                                    </div>
+                                    <div class="campaign-webhook-row">
+                                        <p id="campaign-inbox-webhook-url" class="campaign-webhook-url">Loading inbound webhook...</p>
+                                        <button id="campaign-copy-inbox-webhook" type="button" class="card-btn">Copy Inbound URL</button>
+                                    </div>
+                                    <div class="campaign-webhook-row">
+                                        <p id="campaign-status-webhook-url" class="campaign-webhook-url">Loading status webhook...</p>
+                                        <button id="campaign-copy-status-webhook" type="button" class="card-btn">Copy Status URL</button>
+                                    </div>
+                                </div>
                                 <div class="outreach-input-grid">
                                     <div class="form-group">
                                         <label for="campaign-sms-name">Campaign Name</label>
@@ -1416,6 +1486,13 @@
             const copyButtons = document.querySelectorAll('[data-copy-target]');
             const token = String(localStorage.getItem('authToken') || '').trim();
             const campaignStatus = document.getElementById('campaign-twilio-status');
+            const campaignWebhookCopy = document.getElementById('campaign-webhook-copy');
+            const campaignWebhookTarget = document.getElementById('campaign-webhook-target');
+            const campaignWebhookMode = document.getElementById('campaign-webhook-mode');
+            const campaignInboxWebhookUrl = document.getElementById('campaign-inbox-webhook-url');
+            const campaignStatusWebhookUrl = document.getElementById('campaign-status-webhook-url');
+            const campaignCopyInboxWebhookButton = document.getElementById('campaign-copy-inbox-webhook');
+            const campaignCopyStatusWebhookButton = document.getElementById('campaign-copy-status-webhook');
             const campaignSendStatus = document.getElementById('campaign-send-status');
             const campaignNameInput = document.getElementById('campaign-sms-name');
             const campaignRecipientsInput = document.getElementById('campaign-sms-recipients');
@@ -1454,6 +1531,46 @@
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
             let twilioInboxRefreshHandle = null;
+
+            function setTwilioWebhookUiState(data = {}) {
+                const configured = Boolean(data.configured);
+                const usesMessagingService = Boolean(data.messagingServiceSidConfigured);
+                const mode = String(data.mode || '').trim();
+                const inboxWebhookUrl = String(data.inboxWebhookUrl || '').trim();
+                const statusWebhookUrl = String(data.statusWebhookUrl || '').trim();
+                const targetLabel = usesMessagingService ? 'Configure Messaging Service' : 'Configure Phone Number';
+                const modeLabel = mode ? mode.replace(/-/g, ' ') : 'unknown';
+
+                if (campaignWebhookCopy) {
+                    campaignWebhookCopy.textContent = configured
+                        ? 'Replies only show up after Twilio sends inbound and status webhooks back to FAST.'
+                        : 'Twilio must be configured before replies can post back to FAST.';
+                }
+
+                if (campaignWebhookTarget) {
+                    campaignWebhookTarget.textContent = targetLabel;
+                }
+
+                if (campaignWebhookMode) {
+                    campaignWebhookMode.textContent = `Mode: ${modeLabel}`;
+                }
+
+                if (campaignInboxWebhookUrl) {
+                    campaignInboxWebhookUrl.textContent = inboxWebhookUrl || 'Inbound webhook unavailable';
+                }
+
+                if (campaignStatusWebhookUrl) {
+                    campaignStatusWebhookUrl.textContent = statusWebhookUrl || 'Status webhook unavailable';
+                }
+
+                if (campaignCopyInboxWebhookButton) {
+                    campaignCopyInboxWebhookButton.disabled = !inboxWebhookUrl;
+                }
+
+                if (campaignCopyStatusWebhookButton) {
+                    campaignCopyStatusWebhookButton.disabled = !statusWebhookUrl;
+                }
+            }
 
             function readJson(key) {
                 try {
@@ -1865,6 +1982,7 @@
                 try {
                     const response = await fetch('/api/twilio/status');
                     const data = await response.json();
+                    setTwilioWebhookUiState(data);
                     if (data.configured) {
                         const modeLabel = data.messagingServiceSidConfigured
                             ? 'Messaging Service connected'
@@ -1878,6 +1996,7 @@
                         campaignStatus.classList.add('offline');
                     }
                 } catch (error) {
+                    setTwilioWebhookUiState({});
                     campaignStatus.textContent = 'Twilio status unavailable';
                     campaignStatus.classList.remove('ready');
                     campaignStatus.classList.add('offline');
@@ -2029,6 +2148,38 @@
                     }, 1200);
                 });
             });
+
+            if (campaignCopyInboxWebhookButton) {
+                campaignCopyInboxWebhookButton.addEventListener('click', async () => {
+                    const value = String(campaignInboxWebhookUrl ? campaignInboxWebhookUrl.textContent : '').trim();
+                    if (!value || /unavailable/i.test(value)) {
+                        return;
+                    }
+
+                    try {
+                        await navigator.clipboard.writeText(value);
+                        campaignSendStatus.textContent = 'Inbound webhook URL copied.';
+                    } catch (error) {
+                        campaignSendStatus.textContent = 'Could not copy the inbound webhook URL.';
+                    }
+                });
+            }
+
+            if (campaignCopyStatusWebhookButton) {
+                campaignCopyStatusWebhookButton.addEventListener('click', async () => {
+                    const value = String(campaignStatusWebhookUrl ? campaignStatusWebhookUrl.textContent : '').trim();
+                    if (!value || /unavailable/i.test(value)) {
+                        return;
+                    }
+
+                    try {
+                        await navigator.clipboard.writeText(value);
+                        campaignSendStatus.textContent = 'Status webhook URL copied.';
+                    } catch (error) {
+                        campaignSendStatus.textContent = 'Could not copy the status webhook URL.';
+                    }
+                });
+            }
 
             if (campaignReplyForm) {
                 campaignReplyForm.addEventListener('submit', async (event) => {

@@ -12478,6 +12478,11 @@ app.delete('/api/twilio/voice/presence', async (req, res) => {
 
 app.post('/api/twilio/voice/webhook/incoming', async (req, res) => {
   if (!isTwilioWebhookRequestValid(req)) {
+    console.warn('Rejected incoming Twilio voice webhook:', {
+      hasSignature: Boolean(String(req.headers['x-twilio-signature'] || '').trim()),
+      requestUrl: getTwilioWebhookRequestUrl(req),
+      host: String(req.get('host') || '').trim()
+    });
     return res.status(403).type('text/plain').send('Invalid Twilio signature');
   }
 
@@ -12495,6 +12500,11 @@ app.post('/api/twilio/voice/webhook/incoming', async (req, res) => {
 
 app.post('/api/twilio/webhook/incoming', async (req, res) => {
   if (!isTwilioWebhookRequestValid(req)) {
+    console.warn('Rejected incoming Twilio SMS webhook:', {
+      hasSignature: Boolean(String(req.headers['x-twilio-signature'] || '').trim()),
+      requestUrl: getTwilioWebhookRequestUrl(req),
+      host: String(req.get('host') || '').trim()
+    });
     return res.status(403).type('text/plain').send('Invalid Twilio signature');
   }
 
@@ -12537,6 +12547,11 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
 
 app.post('/api/twilio/webhook/status', async (req, res) => {
   if (!isTwilioWebhookRequestValid(req)) {
+    console.warn('Rejected Twilio status webhook:', {
+      hasSignature: Boolean(String(req.headers['x-twilio-signature'] || '').trim()),
+      requestUrl: getTwilioWebhookRequestUrl(req),
+      host: String(req.get('host') || '').trim()
+    });
     return res.status(403).type('text/plain').send('Invalid Twilio signature');
   }
 

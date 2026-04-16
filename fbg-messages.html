@@ -142,6 +142,31 @@
             line-height: 1.75;
         }
 
+        .messages-hero-card {
+            display: grid;
+            gap: 14px;
+        }
+
+        .messages-hero-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .messages-hero-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(8, 12, 24, 0.28);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
         .messages-chip-row,
         .messages-metric-list,
         .messages-library-grid {
@@ -1104,9 +1129,13 @@
 
             <div class="messages-shell">
                 <section class="glass-card messages-hero-card">
-                    <span class="messages-kicker">Internal Platform Messaging</span>
-                    <h2 class="card-title">FBG Messaging stays inside FAST.</h2>
-                    <p class="messages-copy">This workspace is for direct messaging between users on the FAST platform. It does not text external phone numbers or run outbound outreach. Use Campaigns with Twilio when you need real SMS conversations with outside contacts.</p>
+                    <span class="messages-kicker">Internal Messaging</span>
+                    <h2 class="card-title">Message FAST users only.</h2>
+                    <p class="messages-copy">Use FBG Messaging for internal team chat. For real SMS with outside contacts, use Campaigns with Twilio.</p>
+                    <div class="messages-hero-pills" aria-label="Messaging scope">
+                        <span class="messages-hero-pill">FAST users here</span>
+                        <span class="messages-hero-pill">External SMS in Campaigns</span>
+                    </div>
                 </section>
 
                 <section class="glass-card messages-chat-shell">
@@ -1170,70 +1199,6 @@
                 </section>
 
                 <section class="messages-grid">
-                    <section class="glass-card campaign-tools-section">
-                        <div class="campaign-tools-head">
-                            <div>
-                                <h3 class="card-title">FBG Message Workspace</h3>
-                                <p class="card-subtitle">Store your reusable FAST copy below. Everything here is user-scoped and ready to copy or publish later.</p>
-                            </div>
-                        </div>
-
-                        <div class="outreach-workspace-grid campaign-tools-grid">
-                            <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="FBG Templates">
-                                <div class="card-header">
-                                    <div>
-                                        <h2 class="card-title">FBG Message Templates</h2>
-                                            <p class="card-subtitle">Save internal FAST message copy for platform users, follow-ups, and handoffs</p>
-                                    </div>
-                                </div>
-                                <p class="outreach-owner" id="template-owner-label">Workspace owner: You</p>
-                                <div class="outreach-input-grid">
-                                    <div class="form-group">
-                                        <label for="template-title-input">Template Title</label>
-                                        <input id="template-title-input" class="form-input" type="text" placeholder="Initial outreach, stale listing follow-up, quick intro...">
-                                    </div>
-                                    <div class="form-group outreach-full-width">
-                                        <label for="template-body-input">Template Message</label>
-                                        <textarea id="template-body-input" class="form-input outreach-textarea" placeholder="Hi [Agent Name], this is [Your Name] with FAST BRIDGE GROUP. We are reviewing [Property Address] and wanted to ask..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="outreach-actions">
-                                    <button id="save-template-btn" type="button" class="card-btn active">Save Template</button>
-                                </div>
-
-                                <div id="template-list" class="outreach-list">
-                                    <p class="outreach-empty">No templates yet.</p>
-                                </div>
-                            </div>
-
-                            <div class="glass-card widget-card outreach-card" data-widget-id="call-scripts" data-widget-title="FBG Call Scripts">
-                                <div class="card-header">
-                                    <div>
-                                        <h2 class="card-title">FBG Call Scripts</h2>
-                                        <p class="card-subtitle">Keep your rep-ready openers and objection handling together</p>
-                                    </div>
-                                </div>
-                                <p class="outreach-owner" id="script-owner-label">Workspace owner: You</p>
-                                <div class="outreach-input-grid">
-                                    <div class="form-group">
-                                        <label for="script-title-input">Script Title</label>
-                                        <input id="script-title-input" class="form-input" type="text" placeholder="Warm opener, voicemail, second touch...">
-                                    </div>
-                                    <div class="form-group outreach-full-width">
-                                        <label for="script-body-input">Call Script</label>
-                                        <textarea id="script-body-input" class="form-input outreach-textarea" placeholder="Hey [Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in your area and wanted to ask..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="outreach-actions">
-                                    <button id="save-script-btn" type="button" class="card-btn active">Save Script</button>
-                                </div>
-                                <div id="script-list" class="outreach-list">
-                                    <p class="outreach-empty">No scripts yet.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
                     <div class="messages-side-stack">
                         <section class="glass-card widget-card calendar-widget" data-widget-id="calendar" data-widget-title="Calendar">
                             <div class="calendar-header widget-header">
@@ -1312,36 +1277,6 @@
                             </div>
                         </section>
 
-                        <aside class="glass-card">
-                            <div class="card-header">
-                                <div>
-                                    <h3 class="card-title">FBG Quick Library</h3>
-                                    <p class="card-subtitle">Copy-ready blocks for the stuff you send constantly.</p>
-                                </div>
-                            </div>
-                            <div class="messages-library-grid">
-                                <article class="messages-library-item">
-                                    <span class="messages-library-label">Agent Intro</span>
-                                    <p id="fbg-message-block-1">Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer, probate, and off-market opportunities in [Area]. If you have anything coming up that needs a quick, clean close, send it my way.</p>
-                                    <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-1">Copy</button>
-                                </article>
-                                <article class="messages-library-item">
-                                    <span class="messages-library-label">Stale Listing</span>
-                                    <p id="fbg-message-block-2">Wanted to follow up on [Property Address]. If the seller is open to a serious cash option, FAST BRIDGE GROUP can review it quickly and let you stay on both sides if that works for the situation.</p>
-                                    <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-2">Copy</button>
-                                </article>
-                                <article class="messages-library-item">
-                                    <span class="messages-library-label">Voicemail</span>
-                                    <p id="fbg-message-block-3">Hey [Agent Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area] right now and wanted to connect on anything off-market, stale, or fixer-heavy. Call or text me back when you get a chance.</p>
-                                    <button type="button" class="card-btn active" data-copy-message-target="fbg-message-block-3">Copy</button>
-                                </article>
-                            </div>
-                            <ol class="messages-quick-notes">
-                                <li>Keep the first sentence useful. Agents decide fast whether this is real deal flow or list spam.</li>
-                                <li>Ask for one concrete thing: stale listing, failed escrow, pocket opportunity, probate, or fixer inventory.</li>
-                                <li>State FAST BRIDGE GROUP clearly so the message feels traceable and professional.</li>
-                            </ol>
-                        </aside>
                     </div>
                 </section>
             </div>
