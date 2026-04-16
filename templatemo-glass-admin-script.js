@@ -21509,6 +21509,15 @@ function initNavbarDateTime() {
             return 'Interactive Google Maps could not start. Verify the browser Maps key, billing, enabled APIs, and website referrer restrictions in Google Cloud.';
         }
 
+        function isGoogleMapsServerConfigMissing(config = null) {
+            const settings = config && typeof config === 'object' ? config : {};
+            const missingConfig = Array.isArray(settings.earthMissingConfig)
+                ? settings.earthMissingConfig.map((item) => String(item || '').trim()).filter(Boolean)
+                : [];
+
+            return missingConfig.includes('GOOGLE_MAPS_API_KEY') || !String(settings.apiKey || '').trim();
+        }
+
         function detectBrokenGoogleMapsState() {
             const brokenStatePattern = /for development purposes only|this page can'?t load google maps correctly/i;
             return [compsMapCanvas, compsMapPano].some((element) => {
@@ -22227,7 +22236,9 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                compsMapStatusBadgeTitle.textContent = 'Google Maps Server Config Missing';
+                compsMapStatusBadgeTitle.textContent = isGoogleMapsServerConfigMissing(config)
+                    ? 'Google Maps Server Config Missing'
+                    : 'Google Maps Unavailable';
                 compsMapStatusBadgeText.textContent = getGoogleMapsConfigErrorMessage(config || {});
             }
 
