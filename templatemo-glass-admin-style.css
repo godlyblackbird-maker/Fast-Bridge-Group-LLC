@@ -17872,7 +17872,7 @@ body.analytics-reboot .analytics-my-file-count {
 
 .comps-map-earth-shell {
     position: relative;
-    min-height: 320px;
+    min-height: 420px;
     margin-top: 14px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
@@ -18527,7 +18527,7 @@ body.analytics-reboot .analytics-my-file-count {
     }
 
     .comps-map-earth-shell {
-        min-height: 280px;
+        min-height: 340px;
     }
 
     .comps-map-explorer[data-street-view="on"] .comps-map-stage-grid {
@@ -20718,8 +20718,8 @@ select.form-input option:checked,
 
     .comps-map-earth-shell,
     .comps-map-earth-shell iframe {
-        min-height: 240px;
-        height: 240px;
+        min-height: 280px;
+        height: 280px;
     }
 
     .planner-input-grid {

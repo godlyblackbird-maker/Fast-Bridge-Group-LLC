@@ -1784,6 +1784,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         const snapshot = {
             address: sanitizeSharedPropertyText(detail.address || detail.propertyAddress, 180),
+            subjectLat: Number.isFinite(Number(detail.subjectLat)) ? Number(detail.subjectLat) : '',
+            subjectLng: Number.isFinite(Number(detail.subjectLng)) ? Number(detail.subjectLng) : '',
+            subjectCoordinateAddress: sanitizeSharedPropertyText(detail.subjectCoordinateAddress, 180),
             propertyImages: sanitizeSharedPropertyImages(detail.propertyImages),
             propertyDetails: sanitizeSharedPropertyText(detail.propertyDetails, 320),
             listPrice: sanitizeSharedPropertyText(detail.listPrice, 60),
@@ -19357,6 +19360,9 @@ function initNavbarDateTime() {
 
         const defaultDetailData = {
             address: 'No property selected',
+            subjectLat: '',
+            subjectLng: '',
+            subjectCoordinateAddress: '',
             propertyImages: [
                 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
                 'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=80',
@@ -19505,6 +19511,28 @@ function initNavbarDateTime() {
         let propertyKey = makePropertyStorageKey(propertyAddress);
         let linkedDealPropertyKey = propertyKey;
         const persistedAssignment = getPropertyAssignmentRecord(propertyKey);
+
+        function normalizeCoordinateCacheAddress(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function resetPropertyLocationCaches() {
+            const previousStreetViewImageUrl = String(detailData.streetViewImageUrl || '').trim();
+            detailData.subjectLat = '';
+            detailData.subjectLng = '';
+            detailData.subjectCoordinateAddress = '';
+            detailData.streetViewLat = '';
+            detailData.streetViewLng = '';
+            detailData.streetViewAddress = '';
+            detailData.streetViewPanoLat = '';
+            detailData.streetViewPanoLng = '';
+            detailData.streetViewImageUrl = '';
+            detailData.streetViewImageAddress = '';
+            detailData.streetViewImageDismissedAddress = '';
+            if (previousStreetViewImageUrl && String(detailData.imageUrl || '').trim() === previousStreetViewImageUrl) {
+                detailData.imageUrl = '';
+            }
+        }
 
         if (persistedAssignment) {
             detailData.propertyAssignment = {
@@ -20583,6 +20611,11 @@ function initNavbarDateTime() {
                 : (detailData.sourceListingLinks && typeof detailData.sourceListingLinks === 'object' ? detailData.sourceListingLinks : {});
 
             if (nextAddress) {
+                const previousAddressKey = normalizeCoordinateCacheAddress(detailData.address || detailData.propertyAddress);
+                const nextAddressKey = normalizeCoordinateCacheAddress(nextAddress);
+                if (nextAddressKey && nextAddressKey !== previousAddressKey) {
+                    resetPropertyLocationCaches();
+                }
                 detailData.address = nextAddress;
                 propertyAddress = nextAddress;
                 propertyKey = makePropertyStorageKey(nextAddress);
@@ -21380,6 +21413,7 @@ function initNavbarDateTime() {
         let googleMapsStylesPromise = null;
         let googleMapsAuthFailed = false;
         let googleMapsAuthFailureMessage = '';
+        let googleMapsIntegrityObserver = null;
 
         function buildGoogleMapsSearchUrl(query) {
             const encodedQuery = encodeURIComponent(String(query || '').trim() || 'California');
@@ -21426,9 +21460,72 @@ function initNavbarDateTime() {
             return googleMapsBrowserConfigPromise;
         }
 
+        function getGoogleMapsBrokenStateMessage() {
+            return String(
+                googleMapsAuthFailureMessage
+                || 'Google Maps is showing a development-only watermark. Check billing, enabled APIs, and browser referrer restrictions for this website key.'
+            ).trim();
+        }
+
+        function detectBrokenGoogleMapsState() {
+            const brokenStatePattern = /for development purposes only|this page can'?t load google maps correctly/i;
+            return [compsMapCanvas, compsMapPano].some((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return false;
+                }
+                return brokenStatePattern.test(String(element.textContent || '').trim());
+            });
+        }
+
+        function handleBrokenGoogleMapsState() {
+            googleMapsAuthFailed = true;
+            if (!googleMapsAuthFailureMessage) {
+                googleMapsAuthFailureMessage = getGoogleMapsBrokenStateMessage();
+            }
+
+            if (panoramaInstance && typeof panoramaInstance.setVisible === 'function') {
+                panoramaInstance.setVisible(false);
+            }
+
+            streetViewEnabled = false;
+            if (compsExplorer) {
+                compsExplorer.dataset.streetView = 'off';
+            }
+            syncStreetViewButtonState();
+            setEarthPanelState(false);
+            setMapEmptyState(true, `${getGoogleMapsBrokenStateMessage()} FAST hid the broken Google map until the website key configuration is fixed.`);
+        }
+
+        function startGoogleMapsIntegrityMonitor() {
+            if (googleMapsIntegrityObserver) {
+                googleMapsIntegrityObserver.disconnect();
+                googleMapsIntegrityObserver = null;
+            }
+
+            const observedTargets = [compsMapCanvas, compsMapPano].filter((element) => element instanceof HTMLElement);
+            if (!observedTargets.length || typeof MutationObserver !== 'function') {
+                return;
+            }
+
+            googleMapsIntegrityObserver = new MutationObserver(() => {
+                if (detectBrokenGoogleMapsState()) {
+                    handleBrokenGoogleMapsState();
+                }
+            });
+
+            observedTargets.forEach((element) => {
+                googleMapsIntegrityObserver.observe(element, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true
+                });
+            });
+        }
+
         async function resolveGoogleMapsBrowserConfig() {
             const cachedConfig = await getGoogleMapsBrowserConfig().catch(() => null);
             if (cachedConfig && cachedConfig.enabled && cachedConfig.apiKey) {
+                        startGoogleMapsIntegrityMonitor();
                 return cachedConfig;
             }
 
@@ -21647,6 +21744,36 @@ function initNavbarDateTime() {
                 return Promise.resolve(null);
             }
 
+            function scoreGeocodeResult(result) {
+                if (!result || typeof result !== 'object') {
+                    return Number.NEGATIVE_INFINITY;
+                }
+
+                const geometry = result.geometry && typeof result.geometry === 'object' ? result.geometry : {};
+                const locationType = String(geometry.location_type || '').trim().toUpperCase();
+                const types = Array.isArray(result.types) ? result.types.map(type => String(type || '').trim().toLowerCase()) : [];
+                const formattedAddress = String(result.formatted_address || '').trim().toLowerCase();
+                const requestedAddress = trimmedAddress.toLowerCase();
+                const requestedStreetNumber = (requestedAddress.match(/\b\d+[a-z]?\b/i) || [])[0] || '';
+
+                let score = 0;
+                if (locationType === 'ROOFTOP') score += 500;
+                else if (locationType === 'RANGE_INTERPOLATED') score += 320;
+                else if (locationType === 'GEOMETRIC_CENTER') score += 140;
+                else if (locationType === 'APPROXIMATE') score += 40;
+
+                if (types.includes('street_address')) score += 220;
+                if (types.includes('premise')) score += 180;
+                if (types.includes('subpremise')) score += 150;
+                if (types.includes('route')) score += 60;
+                if (result.partial_match) score -= 180;
+                if (requestedStreetNumber && formattedAddress.includes(requestedStreetNumber.toLowerCase())) score += 120;
+                if (formattedAddress === requestedAddress) score += 160;
+                else if (formattedAddress.includes(requestedAddress)) score += 70;
+
+                return score;
+            }
+
             return new Promise((resolve, reject) => {
                 const geocoder = new window.google.maps.Geocoder();
                 geocoder.geocode({ address: trimmedAddress }, (results, status) => {
@@ -21655,7 +21782,16 @@ function initNavbarDateTime() {
                         return;
                     }
 
-                    const topResult = results[0];
+                    const rankedResults = results
+                        .map((result) => ({
+                            result,
+                            score: scoreGeocodeResult(result)
+                        }))
+                        .sort((left, right) => right.score - left.score);
+
+                    const topResult = rankedResults[0] && rankedResults[0].result
+                        ? rankedResults[0].result
+                        : results[0];
                     const location = topResult && topResult.geometry && topResult.geometry.location;
                     if (!location || typeof location.lat !== 'function' || typeof location.lng !== 'function') {
                         reject(new Error('Google Maps returned an invalid location for this property.'));
@@ -21665,7 +21801,9 @@ function initNavbarDateTime() {
                     resolve({
                         lat: Number(location.lat()),
                         lng: Number(location.lng()),
-                        formattedAddress: String(topResult.formatted_address || trimmedAddress).trim() || trimmedAddress
+                        formattedAddress: String(topResult.formatted_address || trimmedAddress).trim() || trimmedAddress,
+                        locationType: String(topResult.geometry && topResult.geometry.location_type || '').trim(),
+                        partialMatch: Boolean(topResult.partial_match)
                     });
                 });
             });
@@ -22506,10 +22644,9 @@ function initNavbarDateTime() {
             }
 
             function getSubjectLocation() {
-                const lat = Number(detailData.streetViewLat);
-                const lng = Number(detailData.streetViewLng);
-                if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                    return { lat, lng };
+                const storedLocation = getStoredSubjectLocation();
+                if (storedLocation) {
+                    return storedLocation;
                 }
                 return {
                     lat: defaults.subjectLat,
@@ -23095,21 +23232,27 @@ function initNavbarDateTime() {
             }
 
             async function ensureSubjectCoordinates() {
-                const currentLat = Number(detailData.streetViewLat);
-                const currentLng = Number(detailData.streetViewLng);
-                if (Number.isFinite(currentLat) && Number.isFinite(currentLng)) {
-                    return { lat: currentLat, lng: currentLng };
+                const currentAddressKey = normalizeCoordinateCacheAddress(getCurrentCompsSubjectAddress());
+                const subjectLat = Number(detailData.subjectLat);
+                const subjectLng = Number(detailData.subjectLng);
+                const subjectAddressKey = normalizeCoordinateCacheAddress(detailData.subjectCoordinateAddress);
+                const storedLocation = currentAddressKey
+                    && subjectAddressKey === currentAddressKey
+                    && Number.isFinite(subjectLat)
+                    && Number.isFinite(subjectLng)
+                    ? { lat: subjectLat, lng: subjectLng }
+                    : null;
+                if (storedLocation) {
+                    return storedLocation;
                 }
 
-                const address = getStreetViewAddressQuery();
+                const address = getCurrentCompsSubjectAddress() || getStreetViewAddressQuery();
                 if (address) {
                     try {
                         if (window.google && window.google.maps) {
                             const googleMatch = await geocodeAddressWithGoogle(address).catch(() => null);
                             if (googleMatch && Number.isFinite(googleMatch.lat) && Number.isFinite(googleMatch.lng)) {
-                                detailData.streetViewLat = googleMatch.lat;
-                                detailData.streetViewLng = googleMatch.lng;
-                                detailData.streetViewAddress = googleMatch.formattedAddress || address;
+                                storeSubjectLocation(googleMatch, googleMatch.formattedAddress || address);
                                 persistCurrentPropertyDetail();
                                 return { lat: googleMatch.lat, lng: googleMatch.lng };
                             }
@@ -23117,9 +23260,7 @@ function initNavbarDateTime() {
 
                         const nominatimMatch = await geocodeAddressWithNominatim(address).catch(() => null);
                         if (nominatimMatch && Number.isFinite(nominatimMatch.lat) && Number.isFinite(nominatimMatch.lng)) {
-                            detailData.streetViewLat = nominatimMatch.lat;
-                            detailData.streetViewLng = nominatimMatch.lng;
-                            detailData.streetViewAddress = nominatimMatch.formattedAddress || address;
+                            storeSubjectLocation(nominatimMatch, nominatimMatch.formattedAddress || address);
                             persistCurrentPropertyDetail();
                             return { lat: nominatimMatch.lat, lng: nominatimMatch.lng };
                         }
@@ -23139,6 +23280,10 @@ function initNavbarDateTime() {
                 const map = await ensureMapReady();
                 if (!map || !panoramaInstance) {
                     throw new Error('Street View pane could not be initialized.');
+                }
+                if (googleMapsAuthFailed || detectBrokenGoogleMapsState()) {
+                    handleBrokenGoogleMapsState();
+                    throw new Error(getGoogleMapsBrokenStateMessage());
                 }
 
                 const subjectLocation = getSubjectLocation();
@@ -23226,6 +23371,7 @@ function initNavbarDateTime() {
                     }
 
                     mapInstance = new window.google.maps.Map(compsMapCanvas, mapOptions);
+                    startGoogleMapsIntegrityMonitor();
                     applyCurrentMapStyles();
                     panoramaInstance = new window.google.maps.StreetViewPanorama(compsMapPano, {
                         position: subjectLocation,
@@ -23344,6 +23490,11 @@ function initNavbarDateTime() {
             }
 
             function setStreetViewMode(isEnabled) {
+                if (isEnabled && (googleMapsAuthFailed || detectBrokenGoogleMapsState())) {
+                    handleBrokenGoogleMapsState();
+                    return;
+                }
+
                 streetViewEnabled = Boolean(isEnabled);
                 compsExplorer.dataset.streetView = streetViewEnabled ? 'on' : 'off';
 
@@ -23575,6 +23726,39 @@ function initNavbarDateTime() {
                     || propertyAddress
                     || ''
                 ).trim();
+            }
+
+            function getStoredSubjectLocation() {
+                const currentAddressKey = normalizeCoordinateCacheAddress(getCurrentCompsSubjectAddress());
+                const subjectLat = Number(detailData.subjectLat);
+                const subjectLng = Number(detailData.subjectLng);
+                const subjectAddressKey = normalizeCoordinateCacheAddress(detailData.subjectCoordinateAddress);
+                if (currentAddressKey && subjectAddressKey === currentAddressKey && Number.isFinite(subjectLat) && Number.isFinite(subjectLng)) {
+                    return { lat: subjectLat, lng: subjectLng };
+                }
+
+                const streetViewLat = Number(detailData.streetViewLat);
+                const streetViewLng = Number(detailData.streetViewLng);
+                const streetViewAddressKey = normalizeCoordinateCacheAddress(detailData.streetViewAddress);
+                if (currentAddressKey && streetViewAddressKey === currentAddressKey && Number.isFinite(streetViewLat) && Number.isFinite(streetViewLng)) {
+                    return { lat: streetViewLat, lng: streetViewLng };
+                }
+
+                return null;
+            }
+
+            function storeSubjectLocation(locationLike, addressLike = '') {
+                const lat = Number(locationLike && locationLike.lat);
+                const lng = Number(locationLike && locationLike.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return false;
+                }
+
+                const resolvedAddress = String(addressLike || getCurrentCompsSubjectAddress()).trim();
+                detailData.subjectLat = lat;
+                detailData.subjectLng = lng;
+                detailData.subjectCoordinateAddress = resolvedAddress;
+                return true;
             }
 
             async function maybeAutoSearchSubjectOnCompsOpen() {
