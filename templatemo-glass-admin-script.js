@@ -21413,6 +21413,7 @@ function initNavbarDateTime() {
         let googleMapsStylesPromise = null;
         let googleMapsAuthFailed = false;
         let googleMapsAuthFailureMessage = '';
+        let googleMapsConfigLoadFailureMessage = '';
         let googleMapsIntegrityObserver = null;
 
         function buildGoogleMapsSearchUrl(query) {
@@ -21439,21 +21440,45 @@ function initNavbarDateTime() {
                 ? `/api/maps/google-config?ts=${Date.now()}`
                 : '/api/maps/google-config';
 
-            googleMapsBrowserConfigPromise = fetch(requestUrl, {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache'
-                }
-            })
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error('Google Maps config could not be loaded.');
+            const requestCandidates = [requestUrl];
+            const locationOrigin = String(window.location && window.location.origin || '').trim();
+            if (locationOrigin && locationOrigin !== 'null') {
+                requestCandidates.push(`${locationOrigin}${requestUrl}`);
+            }
+
+            googleMapsBrowserConfigPromise = (async () => {
+                let lastError = null;
+
+                for (const candidateUrl of requestCandidates) {
+                    try {
+                        const response = await fetch(candidateUrl, {
+                            cache: 'no-store',
+                            headers: {
+                                'Cache-Control': 'no-cache'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Google Maps config request failed with status ${response.status}.`);
+                        }
+
+                        const payload = await response.json().catch(() => {
+                            throw new Error('Google Maps config returned invalid JSON.');
+                        });
+
+                        googleMapsConfigLoadFailureMessage = '';
+                        return payload;
+                    } catch (error) {
+                        lastError = error;
                     }
-                    return response.json();
-                })
+                }
+
+                throw lastError || new Error('Google Maps config could not be loaded.');
+            })()
                 .then((payload) => payload && typeof payload === 'object' ? payload : {})
                 .catch((error) => {
                     googleMapsBrowserConfigPromise = null;
+                    googleMapsConfigLoadFailureMessage = String(error && error.message || 'Google Maps config could not be loaded.').trim();
                     throw error;
                 });
 
@@ -21472,6 +21497,10 @@ function initNavbarDateTime() {
             const missingConfig = Array.isArray(settings.earthMissingConfig)
                 ? settings.earthMissingConfig.map((item) => String(item || '').trim()).filter(Boolean)
                 : [];
+
+            if (!settings || (!Object.keys(settings).length && googleMapsConfigLoadFailureMessage)) {
+                return `Interactive Google Maps could not confirm server config right now. ${googleMapsConfigLoadFailureMessage}`;
+            }
 
             if (missingConfig.includes('GOOGLE_MAPS_API_KEY') || !String(settings.apiKey || '').trim()) {
                 return 'Interactive Google Maps is offline because GOOGLE_MAPS_API_KEY is missing on the server. Add GOOGLE_MAPS_API_KEY in Render Environment, redeploy the service, then verify Maps JavaScript API and billing are enabled in Google Cloud.';
