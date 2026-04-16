@@ -22197,32 +22197,7 @@ function initNavbarDateTime() {
             }
 
             function updateMapStatusBadge(options = {}) {
-                if (!compsMapStatusBadge || !compsMapStatusBadgeTitle || !compsMapStatusBadgeText) {
-                    return;
-                }
-
-                const settings = options && typeof options === 'object' ? options : {};
-                const config = settings.config && typeof settings.config === 'object'
-                    ? settings.config
-                    : (lastGoogleMapsConfig && typeof lastGoogleMapsConfig === 'object' ? lastGoogleMapsConfig : null);
-                const explicitVisible = typeof settings.visible === 'boolean' ? settings.visible : null;
-                const visible = explicitVisible !== null
-                    ? explicitVisible
-                    : Boolean(googleMapsAuthFailed || !config || !config.enabled || !String(config.apiKey || '').trim());
-
-                compsMapStatusBadge.hidden = !visible;
-                if (!visible) {
-                    return;
-                }
-
-                if (googleMapsAuthFailed) {
-                    compsMapStatusBadgeTitle.textContent = 'Google Maps Authorization Failed';
-                    compsMapStatusBadgeText.textContent = getGoogleMapsBrokenStateMessage();
-                    return;
-                }
-
-                compsMapStatusBadgeTitle.textContent = 'Google Maps Unavailable';
-                compsMapStatusBadgeText.textContent = getGoogleMapsConfigErrorMessage(config || {});
+                return;
             }
 
             function syncEarthLayerAvailability(config) {
@@ -23640,10 +23615,6 @@ function initNavbarDateTime() {
                     return mapInstance;
                 })().catch((error) => {
                     mapReadyPromise = null;
-                    const message = error && error.message
-                        ? `${String(error.message).trim()} FAST can still show nearby comps and open the search in Google Maps while the interactive map is unavailable.`
-                        : 'FAST can still show nearby comps and open the search in Google Maps while the interactive map is unavailable.';
-                    setMapEmptyState(true, message);
                     return null;
                 });
 
