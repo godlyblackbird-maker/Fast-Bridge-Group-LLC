@@ -21823,6 +21823,63 @@ function initNavbarDateTime() {
             });
         }
 
+        async function geocodeAddressWithGooglePlaces(address) {
+            const trimmedAddress = String(address || '').trim();
+            if (!trimmedAddress || !window.google || !window.google.maps) {
+                return null;
+            }
+
+            if ((!window.google.maps.places || typeof window.google.maps.places.PlacesService !== 'function')
+                && typeof window.google.maps.importLibrary === 'function') {
+                await window.google.maps.importLibrary('places').catch(() => null);
+            }
+
+            const placesNamespace = window.google.maps.places;
+            if (!placesNamespace || typeof placesNamespace.PlacesService !== 'function') {
+                return null;
+            }
+
+            return new Promise((resolve) => {
+                const service = new placesNamespace.PlacesService(document.createElement('div'));
+                service.findPlaceFromQuery({
+                    query: trimmedAddress,
+                    fields: ['formatted_address', 'geometry', 'name']
+                }, (results, status) => {
+                    const okStatus = placesNamespace.PlacesServiceStatus && placesNamespace.PlacesServiceStatus.OK
+                        ? placesNamespace.PlacesServiceStatus.OK
+                        : 'OK';
+                    if (status !== okStatus || !Array.isArray(results) || results.length === 0) {
+                        resolve(null);
+                        return;
+                    }
+
+                    const topResult = results[0];
+                    const location = topResult && topResult.geometry && topResult.geometry.location;
+                    if (!location) {
+                        resolve(null);
+                        return;
+                    }
+
+                    const lat = typeof location.lat === 'function'
+                        ? Number(location.lat())
+                        : Number(location.lat);
+                    const lng = typeof location.lng === 'function'
+                        ? Number(location.lng())
+                        : Number(location.lng);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        resolve(null);
+                        return;
+                    }
+
+                    resolve({
+                        lat,
+                        lng,
+                        formattedAddress: String(topResult.formatted_address || topResult.name || trimmedAddress).trim() || trimmedAddress
+                    });
+                });
+            });
+        }
+
         async function geocodeAddressWithNominatim(address) {
             const trimmedAddress = String(address || '').trim();
             if (!trimmedAddress) {
@@ -23746,7 +23803,15 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                let geocodeMatch = await geocodeAddressWithGoogle(searchText).catch(() => null);
+                const config = await resolveGoogleMapsBrowserConfig().catch(() => null);
+                if (config && config.enabled && config.apiKey) {
+                    await loadGoogleMapsScript(config).catch(() => null);
+                }
+
+                let geocodeMatch = await geocodeAddressWithGooglePlaces(searchText).catch(() => null);
+                if (!geocodeMatch) {
+                    geocodeMatch = await geocodeAddressWithGoogle(searchText).catch(() => null);
+                }
                 if (!geocodeMatch) {
                     geocodeMatch = await geocodeAddressWithNominatim(searchText).catch(() => null);
                 }
