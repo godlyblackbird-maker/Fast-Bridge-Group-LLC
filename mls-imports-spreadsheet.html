@@ -1392,6 +1392,18 @@
             let lastLoadedRows = [];
             let recentPdfJobs = [];
             const activeRecentJobPolls = new Map();
+            let mlsSpreadsheetClearGeneration = 0;
+            let activePdfUploadRequest = null;
+
+            function createMlsSpreadsheetClearedError() {
+                const error = new Error('The MLS spreadsheet was cleared, so the active import was cancelled.');
+                error.code = 'MLS_SPREADSHEET_CLEARED';
+                return error;
+            }
+
+            function wasMlsSpreadsheetCleared(clearGeneration) {
+                return Number(clearGeneration) !== Number(mlsSpreadsheetClearGeneration);
+            }
 
             function buildManualRowMatchKey() {
                 return `manual|${Date.now()}|${Math.random().toString(16).slice(2)}`;
@@ -1506,6 +1518,7 @@
 
             async function syncRecentPdfJob(jobId) {
                 const normalizedJobId = String(jobId || '').trim();
+                const clearGeneration = mlsSpreadsheetClearGeneration;
                 if (!normalizedJobId || activeRecentJobPolls.has(normalizedJobId)) {
                     return activeRecentJobPolls.get(normalizedJobId) || null;
                 }
@@ -1517,11 +1530,14 @@
 
                 const pollPromise = (async () => {
                     try {
-                        await pollPdfExtractionJob(normalizedJobId, authToken);
+                        await pollPdfExtractionJob(normalizedJobId, authToken, { clearGeneration });
                     } catch (error) {
                         // Ignore here; the persisted history card will show the failure state.
                     } finally {
                         activeRecentJobPolls.delete(normalizedJobId);
+                        if (wasMlsSpreadsheetCleared(clearGeneration)) {
+                            return;
+                        }
                         try {
                             await fetchRecentPdfJobs({ syncRunningJobs: false });
                             await fetchSpreadsheetRowsPage(1, { silent: true });
@@ -1770,12 +1786,27 @@
                 progressBox.hidden = true;
             }
 
+            function resetPdfUploadUi() {
+                if (addPdfButton) {
+                    addPdfButton.disabled = false;
+                    addPdfButton.textContent = 'Add PDF';
+                }
+                clearPdfProgressState();
+            }
+
             function startPdfExtractionJob(file, authToken, onUploadProgress) {
                 return new Promise((resolve, reject) => {
                     const request = new XMLHttpRequest();
+                    activePdfUploadRequest = request;
                     request.open('POST', '/api/admin/mls-imports/extract-pdf-job', true);
                     request.responseType = 'json';
                     request.setRequestHeader('Authorization', `Bearer ${authToken}`);
+
+                    const finalizeRequest = () => {
+                        if (activePdfUploadRequest === request) {
+                            activePdfUploadRequest = null;
+                        }
+                    };
 
                     request.upload.onprogress = (event) => {
                         if (!onUploadProgress || !event || !event.lengthComputable) {
@@ -1785,10 +1816,17 @@
                     };
 
                     request.onerror = () => {
+                        finalizeRequest();
                         reject(new Error('The PDF upload failed before extraction could start.'));
                     };
 
+                    request.onabort = () => {
+                        finalizeRequest();
+                        reject(createMlsSpreadsheetClearedError());
+                    };
+
                     request.onload = () => {
+                        finalizeRequest();
                         const payload = request.response && typeof request.response === 'object'
                             ? request.response
                             : (() => {
@@ -1819,14 +1857,23 @@
                 });
             }
 
-            async function pollPdfExtractionJob(jobId, authToken) {
+            async function pollPdfExtractionJob(jobId, authToken, options = {}) {
                 const normalizedJobId = String(jobId || '').trim();
+                const clearGeneration = Number(options && options.clearGeneration);
                 if (!normalizedJobId) {
                     throw new Error('The MLS PDF extraction job did not return a valid id.');
                 }
 
                 while (true) {
+                    if (wasMlsSpreadsheetCleared(clearGeneration)) {
+                        throw createMlsSpreadsheetClearedError();
+                    }
+
                     await waitForPdfProgressPoll(900);
+                    if (wasMlsSpreadsheetCleared(clearGeneration)) {
+                        throw createMlsSpreadsheetClearedError();
+                    }
+
                     const response = await fetch(`/api/admin/mls-imports/extract-pdf-job/${encodeURIComponent(normalizedJobId)}`, {
                         method: 'GET',
                         headers: {
@@ -1835,6 +1882,9 @@
                     });
                     const payload = await response.json().catch(() => ({}));
                     if (!response.ok) {
+                        if (response.status === 404 && wasMlsSpreadsheetCleared(clearGeneration)) {
+                            throw createMlsSpreadsheetClearedError();
+                        }
                         throw new Error(payload && payload.error ? payload.error : 'Unable to check MLS PDF extraction progress.');
                     }
 
@@ -2647,7 +2697,13 @@
             }
 
             async function clearAllRows() {
-                await fetchJsonWithAuth('/api/admin/mls-imports/rows', { method: 'DELETE' });
+                const payload = await fetchJsonWithAuth('/api/admin/mls-imports/rows', { method: 'DELETE' });
+                mlsSpreadsheetClearGeneration += 1;
+                activeRecentJobPolls.clear();
+                if (activePdfUploadRequest) {
+                    activePdfUploadRequest.abort();
+                    activePdfUploadRequest = null;
+                }
                 localStorage.removeItem(getCopiedStorageKey());
                 copiedRowSignatures.clear();
                 totalRowsCount = 0;
@@ -2658,6 +2714,11 @@
                 renderRecentPdfJobs();
                 updateCount(0);
                 updatePaginationUi();
+                resetPdfUploadUi();
+
+                return {
+                    cancelledJobCount: Math.max(0, Number(payload && payload.cancelledJobCount) || 0)
+                };
             }
 
             function normalizeMyAgentsRow(row) {
@@ -2990,12 +3051,18 @@
                     return;
                 }
 
+                const clearGeneration = mlsSpreadsheetClearGeneration;
+
                 addPdfButton.disabled = true;
                 addPdfButton.textContent = 'Extracting...';
 
                 try {
                     setPdfProgressState('Uploading PDF and starting extraction...', 4, `Streaming ${file.name} to the server now.`);
                     const payload = await startPdfExtractionJob(file, authToken, (loaded, total) => {
+                        if (wasMlsSpreadsheetCleared(clearGeneration)) {
+                            return;
+                        }
+
                         const ratio = total > 0 ? loaded / total : 0;
                         setPdfProgressState(
                             'Uploading PDF and starting extraction...',
@@ -3014,7 +3081,7 @@
                         );
                     }
 
-                    const completedJob = await pollPdfExtractionJob(startedJob.id, authToken);
+                    const completedJob = await pollPdfExtractionJob(startedJob.id, authToken, { clearGeneration });
                     await fetchRecentPdfJobs({ syncRunningJobs: false });
                     setPdfProgressState(
                         completedJob && completedJob.message ? completedJob.message : 'Finished parsing the PDF.',
@@ -3058,11 +3125,16 @@
                         `${normalizedRows.length} MLS import row${normalizedRows.length === 1 ? '' : 's'} were saved to the spreadsheet.${pageCountMessage}`
                     );
                 } catch (error) {
+                    if (error && error.code === 'MLS_SPREADSHEET_CLEARED') {
+                        showToast('success', 'MLS Spreadsheet Cleared', 'The spreadsheet and any active MLS import were cleared.');
+                        return;
+                    }
+
                     showToast('error', 'PDF Extraction Failed', error && error.message ? error.message : 'The PDF could not be processed.');
                 } finally {
-                    clearPdfProgressState();
-                    addPdfButton.disabled = false;
-                    addPdfButton.textContent = 'Add PDF';
+                    if (!wasMlsSpreadsheetCleared(clearGeneration)) {
+                        resetPdfUploadUi();
+                    }
                 }
             });
 
@@ -3105,18 +3177,35 @@
             clearAllButton.addEventListener('click', async () => {
                 try {
                     const existingRows = await fetchAllSpreadsheetRows();
-                    if (existingRows.length === 0) {
-                        showToast('error', 'Nothing To Clear', 'There are no MLS import rows to clear right now.');
+                    const runningJobCount = recentPdfJobs.filter((job) => {
+                        const status = String(job && job.status || '').trim().toLowerCase();
+                        return status === 'queued' || status === 'running';
+                    }).length;
+                    const hasActiveUpload = Boolean(activePdfUploadRequest);
+                    const hasAnythingToClear = existingRows.length > 0 || runningJobCount > 0 || hasActiveUpload;
+
+                    if (!hasAnythingToClear) {
+                        showToast('error', 'Nothing To Clear', 'There are no MLS rows or running imports to clear right now.');
                         return;
                     }
 
-                    const confirmed = window.confirm('Clear all MLS Imports spreadsheet rows for this admin?');
+                    const confirmMessage = runningJobCount > 0 || hasActiveUpload
+                        ? 'Clear all MLS spreadsheet rows and cancel the running MLS imports for this admin?'
+                        : 'Clear all MLS Imports spreadsheet rows for this admin?';
+                    const confirmed = window.confirm(confirmMessage);
                     if (!confirmed) {
                         return;
                     }
 
-                    await clearAllRows();
-                    showToast('success', 'Spreadsheet Cleared', 'All MLS Imports spreadsheet rows were removed.');
+                    const clearResult = await clearAllRows();
+                    const cancelledJobCount = Math.max(0, Number(clearResult && clearResult.cancelledJobCount) || 0);
+                    showToast(
+                        'success',
+                        'Spreadsheet Cleared',
+                        cancelledJobCount > 0
+                            ? `All MLS Imports spreadsheet rows were removed and ${cancelledJobCount} running PDF import${cancelledJobCount === 1 ? '' : 's'} were cancelled.`
+                            : 'All MLS Imports spreadsheet rows were removed, and any active local import state was reset.'
+                    );
                 } catch (error) {
                     showToast('error', 'Clear Failed', error && error.message ? error.message : 'The MLS spreadsheet could not be cleared.');
                 }

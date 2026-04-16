@@ -3781,16 +3781,23 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
 async function clearMlsImportSpreadsheetRowsForUser(ownerUserId) {
   const normalizedOwnerUserId = Number(ownerUserId) || 0;
   const clearedAt = Date.now();
+  let cancelledJobCount = 0;
 
   mlsImportSpreadsheetClearedAtByUser.set(normalizedOwnerUserId, clearedAt);
   mlsImportPdfJobs.forEach((job, jobId) => {
     if (Number(job && job.requesterId) === normalizedOwnerUserId) {
       mlsImportPdfJobs.delete(jobId);
+      cancelledJobCount += 1;
     }
   });
 
   await dbRun('DELETE FROM mls_import_rows WHERE owner_user_id = ?', [normalizedOwnerUserId]);
   await dbRun('DELETE FROM mls_import_runs WHERE requester_user_id = ?', [normalizedOwnerUserId]);
+
+  return {
+    clearedAt,
+    cancelledJobCount
+  };
 }
 
 function wasMlsImportSpreadsheetClearedSince(ownerUserId, startedAt) {
@@ -11043,10 +11050,15 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
 
       setImmediate(async () => {
         let persistedRowCount = 0;
+        const isSpreadsheetClearCancelled = () => {
+          return wasMlsImportSpreadsheetClearedSince(decoded.id, job.startedAt)
+            || !mlsImportPdfJobs.has(job.id);
+        };
+
         try {
           const extracted = await extractMlsImportPdfFields(uploadedPath, {
             onProgress: (progress) => {
-              if (wasMlsImportSpreadsheetClearedSince(decoded.id, job.startedAt)) {
+              if (isSpreadsheetClearCancelled()) {
                 return;
               }
 
@@ -11064,7 +11076,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
             }
           });
 
-          if (wasMlsImportSpreadsheetClearedSince(decoded.id, job.startedAt)) {
+          if (isSpreadsheetClearCancelled()) {
             return;
           }
 
@@ -11087,8 +11099,16 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
             extracted,
             error: ''
           });
+          if (!completedJob || isSpreadsheetClearCancelled()) {
+            return;
+          }
+
           await persistMlsImportPdfJobRecord(completedJob);
         } catch (error) {
+          if (isSpreadsheetClearCancelled()) {
+            return;
+          }
+
           console.error('Failed to extract MLS import PDF fields:', error);
           const failedJob = updateMlsImportPdfJob(job.id, {
             status: 'failed',
@@ -11097,6 +11117,10 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
             message: 'MLS PDF extraction failed.',
             error: error && error.message ? error.message : 'Failed to extract fields from the uploaded PDF.'
           });
+          if (!failedJob || isSpreadsheetClearCancelled()) {
+            return;
+          }
+
           await persistMlsImportPdfJobRecord(failedJob);
         } finally {
           await fs.promises.unlink(uploadedPath).catch(() => {});
@@ -11201,8 +11225,8 @@ app.delete('/api/admin/mls-imports/rows', async (req, res) => {
   }
 
   try {
-    await clearMlsImportSpreadsheetRowsForUser(decoded.id);
-    return res.json({ success: true });
+    const result = await clearMlsImportSpreadsheetRowsForUser(decoded.id);
+    return res.json({ success: true, cancelledJobCount: Number(result && result.cancelledJobCount) || 0 });
   } catch (error) {
     console.error('Failed to clear MLS import rows:', error);
     return res.status(500).json({ error: 'Failed to clear MLS import rows.' });
