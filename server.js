@@ -160,6 +160,9 @@ const USER_MESSAGE_EDIT_WINDOW_MS = 60 * 1000;
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
 const mlsImportSpreadsheetClearedAtByUser = new Map();
+const twilioVoicePresence = new Map();
+const TWILIO_VOICE_TOKEN_TTL_SECONDS = 60 * 60;
+const TWILIO_VOICE_PRESENCE_WINDOW_MS = 75 * 1000;
 
 fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
 fs.mkdirSync(SQLITE_BACKUP_TEMP_DIR, { recursive: true });
@@ -2000,8 +2003,22 @@ function getTwilioMessagingConfig() {
   };
 }
 
+function getTwilioVoiceConfig() {
+  const messagingConfig = getTwilioMessagingConfig();
+  return {
+    ...messagingConfig,
+    apiKeySid: String(process.env.TWILIO_API_KEY_SID || '').trim(),
+    apiKeySecret: String(process.env.TWILIO_API_KEY_SECRET || '').trim(),
+    twimlAppSid: String(process.env.TWILIO_TWIML_APP_SID || '').trim()
+  };
+}
+
 function isTwilioConfigured(config = getTwilioMessagingConfig()) {
   return Boolean(config.accountSid && config.authToken && (config.messagingServiceSid || config.fromNumber));
+}
+
+function isTwilioVoiceConfigured(config = getTwilioVoiceConfig()) {
+  return Boolean(config.accountSid && config.authToken && config.apiKeySid && config.apiKeySecret);
 }
 
 function getTwilioClient() {
@@ -2017,6 +2034,122 @@ function getTwilioClient() {
   }
 
   return cachedTwilioClient;
+}
+
+function buildTwilioVoiceIdentity(userLike) {
+  if (!userLike || typeof userLike !== 'object') {
+    return '';
+  }
+
+  const userId = Number(userLike.id) || 0;
+  if (userId > 0) {
+    return `fast-user-${userId}`;
+  }
+
+  const fallback = String(userLike.email || userLike.name || '').trim().toLowerCase();
+  const sanitized = fallback.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return sanitized ? `fast-user-${sanitized}` : '';
+}
+
+function pruneTwilioVoicePresence(now = Date.now()) {
+  for (const [identity, entry] of twilioVoicePresence.entries()) {
+    if (!entry || (now - Number(entry.lastSeenAt || 0)) > TWILIO_VOICE_PRESENCE_WINDOW_MS) {
+      twilioVoicePresence.delete(identity);
+    }
+  }
+}
+
+function listActiveTwilioVoicePresence() {
+  pruneTwilioVoicePresence();
+  return Array.from(twilioVoicePresence.values());
+}
+
+function registerTwilioVoicePresence(userLike) {
+  const identity = buildTwilioVoiceIdentity(userLike);
+  if (!identity) {
+    return null;
+  }
+
+  const nextEntry = {
+    identity,
+    userId: Number(userLike.id) || 0,
+    name: String(userLike.name || '').trim(),
+    email: String(userLike.email || '').trim().toLowerCase(),
+    role: String(userLike.role || '').trim().toLowerCase(),
+    lastSeenAt: Date.now()
+  };
+
+  twilioVoicePresence.set(identity, nextEntry);
+  pruneTwilioVoicePresence(nextEntry.lastSeenAt);
+  return nextEntry;
+}
+
+function unregisterTwilioVoicePresence(userLike) {
+  const identity = buildTwilioVoiceIdentity(userLike);
+  if (!identity) {
+    return false;
+  }
+
+  return twilioVoicePresence.delete(identity);
+}
+
+function createTwilioVoiceAccessToken(userLike) {
+  const config = getTwilioVoiceConfig();
+  if (!isTwilioVoiceConfigured(config)) {
+    return null;
+  }
+
+  const identity = buildTwilioVoiceIdentity(userLike);
+  if (!identity) {
+    return null;
+  }
+
+  const AccessToken = twilio.jwt.AccessToken;
+  const VoiceGrant = AccessToken.VoiceGrant;
+  const accessToken = new AccessToken(config.accountSid, config.apiKeySid, config.apiKeySecret, {
+    identity,
+    ttl: TWILIO_VOICE_TOKEN_TTL_SECONDS
+  });
+
+  const voiceGrant = new VoiceGrant({
+    incomingAllow: true,
+    ...(config.twimlAppSid ? { outgoingApplicationSid: config.twimlAppSid } : {})
+  });
+
+  accessToken.addGrant(voiceGrant);
+
+  return {
+    identity,
+    token: accessToken.toJwt(),
+    expiresIn: TWILIO_VOICE_TOKEN_TTL_SECONDS
+  };
+}
+
+function buildTwilioIncomingVoiceResponse(req) {
+  const config = getTwilioVoiceConfig();
+  const response = new twilio.twiml.VoiceResponse();
+  const activePresence = listActiveTwilioVoicePresence();
+
+  if (activePresence.length === 0) {
+    response.say({ voice: 'Polly.Joanna' }, 'FAST is unavailable right now. Please try again shortly.');
+    response.hangup();
+    return response.toString();
+  }
+
+  const dial = response.dial({
+    answerOnBridge: true,
+    timeout: 20,
+    ...(String(req.body?.To || config.fromNumber || '').trim() ? { callerId: String(req.body?.To || config.fromNumber || '').trim() } : {})
+  });
+
+  activePresence.slice(0, 20).forEach((entry) => {
+    if (!entry || !entry.identity) {
+      return;
+    }
+    dial.client(entry.identity);
+  });
+
+  return response.toString();
 }
 
 function personalizeSmsBody(body, recipient = {}, senderName = '') {
@@ -12230,6 +12363,7 @@ app.delete('/api/closed-deals/:dealId', async (req, res) => {
 
 app.get('/api/twilio/status', (req, res) => {
   const config = getTwilioMessagingConfig();
+  const voiceConfig = getTwilioVoiceConfig();
 
   return res.json({
     configured: isTwilioConfigured(config),
@@ -12237,8 +12371,88 @@ app.get('/api/twilio/status', (req, res) => {
     messagingServiceSidConfigured: Boolean(config.messagingServiceSid),
     mode: config.messagingServiceSid ? 'messaging-service' : (config.fromNumber ? 'phone-number' : 'unconfigured'),
     inboxWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/webhook/incoming'),
-    statusWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/webhook/status')
+    statusWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/webhook/status'),
+    voiceConfigured: isTwilioVoiceConfigured(voiceConfig),
+    voiceWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/voice/webhook/incoming'),
+    activeVoiceSessions: listActiveTwilioVoicePresence().length
   });
+});
+
+app.get('/api/twilio/voice/token', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const config = getTwilioVoiceConfig();
+  if (!isTwilioVoiceConfigured(config)) {
+    return res.status(400).json({
+      error: 'Twilio Voice is not configured. Add TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET to issue browser call tokens.'
+    });
+  }
+
+  const tokenPayload = createTwilioVoiceAccessToken(decoded);
+  if (!tokenPayload) {
+    return res.status(500).json({ error: 'Unable to generate a Twilio Voice token for this user.' });
+  }
+
+  return res.json({
+    configured: true,
+    identity: tokenPayload.identity,
+    token: tokenPayload.token,
+    expiresIn: tokenPayload.expiresIn,
+    voiceWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/voice/webhook/incoming')
+  });
+});
+
+app.post('/api/twilio/voice/presence', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  if (!isTwilioVoiceConfigured()) {
+    return res.status(400).json({ error: 'Twilio Voice is not configured.' });
+  }
+
+  const entry = registerTwilioVoicePresence(decoded);
+  if (!entry) {
+    return res.status(400).json({ error: 'Unable to register voice presence for this user.' });
+  }
+
+  return res.json({
+    success: true,
+    identity: entry.identity,
+    refreshedAt: new Date(entry.lastSeenAt).toISOString(),
+    activeVoiceSessions: listActiveTwilioVoicePresence().length
+  });
+});
+
+app.delete('/api/twilio/voice/presence', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  unregisterTwilioVoicePresence(decoded);
+  return res.json({ success: true, activeVoiceSessions: listActiveTwilioVoicePresence().length });
+});
+
+app.post('/api/twilio/voice/webhook/incoming', async (req, res) => {
+  if (!isTwilioWebhookRequestValid(req)) {
+    return res.status(403).type('text/plain').send('Invalid Twilio signature');
+  }
+
+  try {
+    const twiml = buildTwilioIncomingVoiceResponse(req);
+    return res.type('text/xml').send(twiml);
+  } catch (error) {
+    console.error('Failed to build incoming Twilio voice response:', error);
+    const fallback = new twilio.twiml.VoiceResponse();
+    fallback.say({ voice: 'Polly.Joanna' }, 'FAST is unavailable right now. Please try again later.');
+    fallback.hangup();
+    return res.type('text/xml').send(fallback.toString());
+  }
 });
 
 app.post('/api/twilio/webhook/incoming', async (req, res) => {

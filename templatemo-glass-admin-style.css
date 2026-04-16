@@ -12544,6 +12544,205 @@ body.analytics-reboot .analytics-my-file-count {
         top: 14px;
     }
 
+
+.twilio-call-banner {
+    position: fixed;
+    top: 88px;
+    right: 22px;
+    z-index: 1600;
+    width: min(360px, calc(100vw - 28px));
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background:
+        linear-gradient(145deg, rgba(8, 14, 12, 0.94), rgba(16, 24, 22, 0.88)),
+        var(--glass-bg);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(22px);
+    color: var(--text-primary);
+    animation: twilioCallBannerIn 0.24s ease-out;
+}
+
+.twilio-call-banner[hidden] {
+    display: none;
+}
+
+.twilio-call-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at top right, rgba(34, 197, 94, 0.16), transparent 34%);
+    pointer-events: none;
+}
+
+.twilio-call-banner.is-ringing {
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(34, 197, 94, 0.22);
+}
+
+.twilio-call-banner.is-ringing .twilio-call-banner-avatar {
+    animation: twilioCallPulse 1.15s ease-in-out infinite;
+}
+
+.twilio-call-banner-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.twilio-call-banner-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(34, 197, 94, 0.22), rgba(15, 23, 42, 0.18));
+    color: #86efac;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.twilio-call-banner-avatar svg {
+    width: 22px;
+    height: 22px;
+}
+
+.twilio-call-banner-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.twilio-call-banner-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    margin-bottom: 8px;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.twilio-call-banner-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.twilio-call-banner-caller {
+    margin: 4px 0 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.twilio-call-banner-meta {
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.twilio-call-banner-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.twilio-call-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 16px;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.twilio-call-banner-btn:hover,
+.twilio-call-banner-btn:focus-visible {
+    transform: translateY(-1px);
+}
+
+.twilio-call-banner-btn-answer {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #f0fdf4;
+    box-shadow: 0 16px 32px rgba(34, 197, 94, 0.28);
+}
+
+.twilio-call-banner-btn-decline {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fef2f2;
+    box-shadow: 0 16px 32px rgba(239, 68, 68, 0.24);
+}
+
+.twilio-call-banner-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.twilio-call-banner-btn[disabled] {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+}
+
+@keyframes twilioCallBannerIn {
+    from {
+        opacity: 0;
+        transform: translate3d(14px, -10px, 0) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@keyframes twilioCallPulse {
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 0 rgba(34, 197, 94, 0.16);
+    }
+
+    50% {
+        transform: scale(1.04);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 10px rgba(34, 197, 94, 0);
+    }
+}
+
+@media (max-width: 720px) {
+    .twilio-call-banner {
+        top: 82px;
+        right: 14px;
+        left: 14px;
+        width: auto;
+    }
+
+    .twilio-call-banner-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .twilio-call-banner-btn {
+        width: 100%;
+    }
+}
     .dashboard-toast {
         min-width: 0;
         max-width: none;

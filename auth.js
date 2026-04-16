@@ -31,6 +31,11 @@
   const FEATURE_ACCESS_CACHE_KEY = 'featureAccessConfig';
   const PREMIUM_SETTINGS_URL = '/settings.html?tab=subscriptions';
   const TEST_USER_ROLE = 'test user';
+  const TWILIO_VOICE_SDK_URL = 'https://sdk.twilio.com/js/voice/releases/2.12.3/twilio.min.js';
+  const TWILIO_VOICE_HEARTBEAT_MS = 30 * 1000;
+  const TWILIO_VOICE_SIGNAL_STORAGE_KEY = 'fastTwilioVoiceSignal';
+  const TWILIO_VOICE_BROADCAST_CHANNEL_NAME = 'fastTwilioVoiceChannel';
+  const TWILIO_VOICE_TAB_ID = `twilio-voice-${Math.random().toString(36).slice(2, 10)}`;
   const FEATURE_ACCESS_DEFAULTS = Object.freeze({
     activeBuyers: Object.freeze({
       key: 'activeBuyers',
@@ -87,6 +92,17 @@
   let authNavigationGuardBound = false;
   let testUserBanner = null;
   let featureAccessConfig = null;
+  let twilioVoiceSdkPromise = null;
+  let twilioVoiceDevice = null;
+  let twilioVoiceInitPromise = null;
+  let twilioVoiceHeartbeatHandle = null;
+  let twilioVoiceCurrentCall = null;
+  let twilioVoiceCurrentCallSid = '';
+  let twilioVoiceIdentity = '';
+  let twilioVoiceBanner = null;
+  let twilioVoiceBroadcastChannel = null;
+  let twilioVoiceSignalSyncBound = false;
+  let twilioVoiceUnloadBound = false;
 
   KNOWN_EMAIL_GROUPS.forEach((group) => {
     if (group.forceRole === 'admin') {
@@ -1515,6 +1531,479 @@
     }
   }
 
+  function loadTwilioVoiceSdk() {
+    if (window.Twilio && window.Twilio.Device) {
+      return Promise.resolve(window.Twilio);
+    }
+
+    if (twilioVoiceSdkPromise) {
+      return twilioVoiceSdkPromise;
+    }
+
+    twilioVoiceSdkPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = TWILIO_VOICE_SDK_URL;
+      script.async = true;
+      script.onload = () => {
+        if (window.Twilio && window.Twilio.Device) {
+          resolve(window.Twilio);
+          return;
+        }
+        reject(new Error('Twilio Voice SDK did not initialize.'));
+      };
+      script.onerror = () => reject(new Error('Failed to load the Twilio Voice SDK.'));
+      document.head.appendChild(script);
+    });
+
+    return twilioVoiceSdkPromise;
+  }
+
+  function ensureTwilioVoiceBanner() {
+    if (twilioVoiceBanner && document.body.contains(twilioVoiceBanner)) {
+      return twilioVoiceBanner;
+    }
+
+    const banner = document.createElement('aside');
+    banner.className = 'twilio-call-banner';
+    banner.setAttribute('hidden', 'hidden');
+    banner.innerHTML = `
+      <div class="twilio-call-banner-top">
+        <div class="twilio-call-banner-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.87 19.87 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.87 19.87 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        </div>
+        <div class="twilio-call-banner-copy">
+          <span class="twilio-call-banner-label">Incoming Call</span>
+          <h3 class="twilio-call-banner-title">Twilio voice call</h3>
+          <p class="twilio-call-banner-caller">Unknown caller</p>
+          <p class="twilio-call-banner-meta">A caller is trying to reach FAST right now.</p>
+        </div>
+      </div>
+      <div class="twilio-call-banner-actions">
+        <button type="button" class="twilio-call-banner-btn twilio-call-banner-btn-answer" data-twilio-call-action="answer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.87 19.87 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.87 19.87 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+          <span>Answer</span>
+        </button>
+        <button type="button" class="twilio-call-banner-btn twilio-call-banner-btn-decline" data-twilio-call-action="decline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12c1.5-2 4.17-3 7-3s5.5 1 7 3"></path><path d="M5 12l-2.5 2.5"></path><path d="M19 12l2.5 2.5"></path><path d="M9 14l-2 5"></path><path d="M15 14l2 5"></path></svg>
+          <span>Decline</span>
+        </button>
+      </div>
+    `;
+
+    const answerButton = banner.querySelector('[data-twilio-call-action="answer"]');
+    const declineButton = banner.querySelector('[data-twilio-call-action="decline"]');
+
+    if (answerButton) {
+      answerButton.addEventListener('click', () => {
+        const call = twilioVoiceCurrentCall;
+        if (!call) {
+          return;
+        }
+
+        answerButton.disabled = true;
+        const currentCallSid = getTwilioVoiceCallSid(call);
+        broadcastTwilioVoiceSignal({ type: 'accepted', callSid: currentCallSid });
+        setTwilioVoiceBannerState({
+          title: 'Connecting call',
+          caller: getTwilioVoiceCallerLabel(call),
+          meta: 'FAST is connecting the call now.',
+          ringing: false,
+          canAnswer: false,
+          declineLabel: 'End Call'
+        });
+        try {
+          call.accept();
+        } catch (error) {
+          answerButton.disabled = false;
+        }
+      });
+    }
+
+    if (declineButton) {
+      declineButton.addEventListener('click', () => {
+        const answerControl = banner.querySelector('[data-twilio-call-action="answer"]');
+        dismissTwilioVoiceCall(answerControl && answerControl.hidden ? 'ended' : 'declined');
+      });
+    }
+
+    document.body.appendChild(banner);
+    twilioVoiceBanner = banner;
+    return banner;
+  }
+
+  function setTwilioVoiceBannerState(options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const banner = ensureTwilioVoiceBanner();
+    const title = banner.querySelector('.twilio-call-banner-title');
+    const caller = banner.querySelector('.twilio-call-banner-caller');
+    const meta = banner.querySelector('.twilio-call-banner-meta');
+    const answerButton = banner.querySelector('[data-twilio-call-action="answer"]');
+    const declineButton = banner.querySelector('[data-twilio-call-action="decline"] span');
+
+    if (title) {
+      title.textContent = String(config.title || 'Twilio voice call').trim();
+    }
+    if (caller) {
+      caller.textContent = String(config.caller || 'Unknown caller').trim();
+    }
+    if (meta) {
+      meta.textContent = String(config.meta || 'A caller is trying to reach FAST right now.').trim();
+    }
+    if (answerButton) {
+      answerButton.hidden = config.canAnswer === false;
+      answerButton.disabled = Boolean(config.answerDisabled);
+    }
+    if (declineButton) {
+      declineButton.textContent = String(config.declineLabel || 'Decline').trim();
+    }
+
+    banner.classList.toggle('is-ringing', Boolean(config.ringing));
+
+    if (config.visible === false) {
+      banner.setAttribute('hidden', 'hidden');
+      return;
+    }
+
+    banner.removeAttribute('hidden');
+  }
+
+  function hideTwilioVoiceBanner() {
+    if (!twilioVoiceBanner) {
+      return;
+    }
+    twilioVoiceBanner.setAttribute('hidden', 'hidden');
+    twilioVoiceBanner.classList.remove('is-ringing');
+  }
+
+  function getTwilioVoiceCallSid(call) {
+    if (!call || typeof call !== 'object') {
+      return '';
+    }
+
+    return String((call.parameters && (call.parameters.CallSid || call.parameters.call_sid)) || '').trim();
+  }
+
+  function getTwilioVoiceCallerLabel(call) {
+    if (!call || typeof call !== 'object') {
+      return 'Unknown caller';
+    }
+
+    const parameters = call.parameters && typeof call.parameters === 'object' ? call.parameters : {};
+    const from = String(parameters.From || '').trim();
+    const callerName = String(parameters.CallerName || parameters.caller_name || '').trim();
+    if (callerName && from) {
+      return `${callerName} • ${from}`;
+    }
+    return callerName || from || 'Unknown caller';
+  }
+
+  function clearTwilioVoiceCurrentCall() {
+    twilioVoiceCurrentCall = null;
+    twilioVoiceCurrentCallSid = '';
+  }
+
+  function bindTwilioVoiceSignalSync() {
+    if (twilioVoiceSignalSyncBound) {
+      return;
+    }
+
+    twilioVoiceSignalSyncBound = true;
+
+    if ('BroadcastChannel' in window) {
+      twilioVoiceBroadcastChannel = new BroadcastChannel(TWILIO_VOICE_BROADCAST_CHANNEL_NAME);
+      twilioVoiceBroadcastChannel.addEventListener('message', (event) => {
+        handleTwilioVoiceSignal(event && event.data);
+      });
+    }
+
+    window.addEventListener('storage', (event) => {
+      if (event.key !== TWILIO_VOICE_SIGNAL_STORAGE_KEY || !event.newValue) {
+        return;
+      }
+
+      try {
+        handleTwilioVoiceSignal(JSON.parse(event.newValue));
+      } catch (error) {
+        // Ignore malformed cross-tab call signals.
+      }
+    });
+  }
+
+  function broadcastTwilioVoiceSignal(signal) {
+    const payload = {
+      ...(signal && typeof signal === 'object' ? signal : {}),
+      tabId: TWILIO_VOICE_TAB_ID,
+      sentAt: Date.now()
+    };
+
+    if (twilioVoiceBroadcastChannel) {
+      twilioVoiceBroadcastChannel.postMessage(payload);
+    }
+
+    try {
+      localStorage.setItem(TWILIO_VOICE_SIGNAL_STORAGE_KEY, JSON.stringify(payload));
+      localStorage.removeItem(TWILIO_VOICE_SIGNAL_STORAGE_KEY);
+    } catch (error) {
+      // Ignore storage write failures for cross-tab call sync.
+    }
+  }
+
+  function handleTwilioVoiceSignal(signal) {
+    if (!signal || signal.tabId === TWILIO_VOICE_TAB_ID) {
+      return;
+    }
+
+    const incomingCall = twilioVoiceCurrentCall;
+    const signalCallSid = String(signal.callSid || '').trim();
+    const currentCallSid = getTwilioVoiceCallSid(incomingCall) || twilioVoiceCurrentCallSid;
+    if (!incomingCall || !signalCallSid || signalCallSid !== currentCallSid) {
+      return;
+    }
+
+    if (signal.type === 'accepted' || signal.type === 'declined' || signal.type === 'ended') {
+      try {
+        if (typeof incomingCall.reject === 'function') {
+          incomingCall.reject();
+        }
+      } catch (error) {
+        // Ignore duplicate reject attempts from another tab.
+      }
+
+      clearTwilioVoiceCurrentCall();
+      hideTwilioVoiceBanner();
+    }
+  }
+
+  function clearTwilioVoiceHeartbeat() {
+    if (!twilioVoiceHeartbeatHandle) {
+      return;
+    }
+
+    window.clearInterval(twilioVoiceHeartbeatHandle);
+    twilioVoiceHeartbeatHandle = null;
+  }
+
+  async function refreshTwilioVoicePresence() {
+    const token = getStoredAuthToken();
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const response = await fetch('/api/twilio/voice/presence', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.ok;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function scheduleTwilioVoicePresence() {
+    clearTwilioVoiceHeartbeat();
+    refreshTwilioVoicePresence();
+    twilioVoiceHeartbeatHandle = window.setInterval(() => {
+      refreshTwilioVoicePresence();
+    }, TWILIO_VOICE_HEARTBEAT_MS);
+  }
+
+  function unbindTwilioVoicePresenceOnUnload() {
+    if (twilioVoiceUnloadBound) {
+      return;
+    }
+
+    twilioVoiceUnloadBound = true;
+    window.addEventListener('pagehide', () => {
+      const token = getStoredAuthToken();
+      if (!token) {
+        return;
+      }
+
+      fetch('/api/twilio/voice/presence', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        keepalive: true
+      }).catch(() => {});
+    });
+  }
+
+  async function refreshTwilioVoiceToken() {
+    const token = getStoredAuthToken();
+    if (!token) {
+      return null;
+    }
+
+    const response = await fetch('/api/twilio/voice/token', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Unable to refresh the Twilio Voice token.');
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return String(data.token || '').trim();
+  }
+
+  function bindTwilioVoiceCallEvents(call) {
+    if (!call || call.__fastVoiceBound) {
+      return;
+    }
+
+    call.__fastVoiceBound = true;
+    const callSid = getTwilioVoiceCallSid(call);
+
+    call.on('accept', () => {
+      setTwilioVoiceBannerState({
+        title: 'Call connected',
+        caller: getTwilioVoiceCallerLabel(call),
+        meta: 'You are connected through FAST Twilio calling.',
+        ringing: false,
+        canAnswer: false,
+        declineLabel: 'End Call'
+      });
+      broadcastTwilioVoiceSignal({ type: 'accepted', callSid });
+    });
+
+    const clearCall = (signalType) => {
+      broadcastTwilioVoiceSignal({ type: signalType, callSid });
+      clearTwilioVoiceCurrentCall();
+      hideTwilioVoiceBanner();
+    };
+
+    call.on('cancel', () => clearCall('ended'));
+    call.on('disconnect', () => clearCall('ended'));
+    call.on('reject', () => clearCall('declined'));
+    call.on('error', () => clearCall('ended'));
+  }
+
+  function dismissTwilioVoiceCall(reason) {
+    const call = twilioVoiceCurrentCall;
+    if (!call) {
+      hideTwilioVoiceBanner();
+      return;
+    }
+
+    const callSid = getTwilioVoiceCallSid(call);
+    broadcastTwilioVoiceSignal({ type: reason === 'accepted' ? 'accepted' : 'declined', callSid });
+
+    try {
+      if (typeof call.disconnect === 'function' && reason === 'ended') {
+        call.disconnect();
+      } else if (typeof call.reject === 'function') {
+        call.reject();
+      }
+    } catch (error) {
+      // Ignore duplicate call dismissals.
+    }
+
+    clearTwilioVoiceCurrentCall();
+    hideTwilioVoiceBanner();
+  }
+
+  function handleTwilioIncomingCall(call) {
+    if (!call) {
+      return;
+    }
+
+    bindTwilioVoiceCallEvents(call);
+    twilioVoiceCurrentCall = call;
+    twilioVoiceCurrentCallSid = getTwilioVoiceCallSid(call);
+
+    setTwilioVoiceBannerState({
+      title: 'Incoming call',
+      caller: getTwilioVoiceCallerLabel(call),
+      meta: 'Answer or decline this Twilio call from the top right.',
+      ringing: true,
+      canAnswer: true,
+      answerDisabled: false,
+      declineLabel: 'Decline'
+    });
+  }
+
+  async function initTwilioVoiceNotifications(activeUser) {
+    if (twilioVoiceInitPromise || !activeUser || !getStoredAuthToken()) {
+      return twilioVoiceInitPromise;
+    }
+
+    bindTwilioVoiceSignalSync();
+    ensureTwilioVoiceBanner();
+
+    twilioVoiceInitPromise = (async () => {
+      try {
+        const token = getStoredAuthToken();
+        const response = await fetch('/api/twilio/voice/token', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const data = await response.json().catch(() => ({}));
+        const accessToken = String(data.token || '').trim();
+        if (!accessToken) {
+          return null;
+        }
+
+        twilioVoiceIdentity = String(data.identity || '').trim();
+
+        const TwilioSdk = await loadTwilioVoiceSdk();
+        const Device = TwilioSdk && TwilioSdk.Device;
+        if (!Device) {
+          return null;
+        }
+
+        twilioVoiceDevice = new Device(accessToken, {
+          codecPreferences: ['opus', 'pcmu'],
+          enableRingingState: true,
+          logLevel: 1
+        });
+
+        twilioVoiceDevice.on('registered', () => {
+          scheduleTwilioVoicePresence();
+        });
+        twilioVoiceDevice.on('unregistered', () => {
+          clearTwilioVoiceHeartbeat();
+        });
+        twilioVoiceDevice.on('incoming', (call) => {
+          handleTwilioIncomingCall(call);
+        });
+        twilioVoiceDevice.on('tokenWillExpire', async () => {
+          try {
+            const nextToken = await refreshTwilioVoiceToken();
+            if (nextToken) {
+              twilioVoiceDevice.updateToken(nextToken);
+            }
+          } catch (error) {
+            console.error('Twilio voice token refresh failed:', error);
+          }
+        });
+        twilioVoiceDevice.on('error', (error) => {
+          console.error('Twilio voice device error:', error);
+        });
+
+        await twilioVoiceDevice.register();
+        unbindTwilioVoicePresenceOnUnload();
+        return twilioVoiceDevice;
+      } catch (error) {
+        console.error('Twilio voice initialization failed:', error);
+        return null;
+      }
+    })();
+
+    return twilioVoiceInitPromise;
+  }
+
   // Run check when page loads
   document.addEventListener('DOMContentLoaded', async function() {
     setAuthSyncState(true);
@@ -1608,6 +2097,8 @@
       if (user) {
         updateUserProfile(user);
       }
+
+      await initTwilioVoiceNotifications(activeUser);
     } finally {
       setAuthSyncState(false);
     }
@@ -1670,6 +2161,15 @@
   // Logout function
   window.logout = async function() {
     const token = getStoredAuthToken();
+    clearTwilioVoiceHeartbeat();
+    hideTwilioVoiceBanner();
+    if (twilioVoiceDevice && typeof twilioVoiceDevice.destroy === 'function') {
+      try {
+        twilioVoiceDevice.destroy();
+      } catch (error) {
+        // Ignore Twilio Voice device cleanup failures during logout.
+      }
+    }
     if (token) {
       try {
         await fetch('/api/logout', {
