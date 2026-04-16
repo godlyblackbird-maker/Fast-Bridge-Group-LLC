@@ -63,9 +63,9 @@
       roles: Object.freeze({
         admin: true,
         user: false,
-        'premium user': true,
-        broker: true,
-        [TEST_USER_ROLE]: true
+        'premium user': false,
+        broker: false,
+        [TEST_USER_ROLE]: false
       })
     }),
     mlsSpreadsheet: Object.freeze({
@@ -730,12 +730,20 @@
       return true;
     }
 
+    if (featureKey === 'campaigns') {
+      return false;
+    }
+
     const features = getFeatureAccessConfig();
     const feature = features[featureKey];
     return !!(feature && feature.roles && feature.roles[roleKey]);
   }
 
   function getFeatureNavAccessMode(featureKey, userLike) {
+    if (featureKey === 'campaigns') {
+      return isAdminUser(userLike) ? 'show' : 'hidden';
+    }
+
     if (isFeatureEnabledForUser(featureKey, userLike)) {
       return 'show';
     }
