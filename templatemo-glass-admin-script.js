@@ -22159,6 +22159,7 @@ function initNavbarDateTime() {
             let lastAutoSearchPropertyAddress = '';
             let earthMapElement = null;
             let earthSubjectMarker = null;
+            let earthCompMarkers = [];
             let earthReadyPromise = null;
             let earthLibraryPromise = null;
             let earthMarkerLibraryPromise = null;
@@ -22480,6 +22481,21 @@ function initNavbarDateTime() {
                 earthSubjectMarker = null;
             }
 
+            function detachEarthCompMarkers() {
+                earthCompMarkers.forEach((marker) => {
+                    if (!marker) {
+                        return;
+                    }
+
+                    if (typeof marker.remove === 'function') {
+                        marker.remove();
+                    } else if (marker.parentNode && typeof marker.parentNode.removeChild === 'function') {
+                        marker.parentNode.removeChild(marker);
+                    }
+                });
+                earthCompMarkers = [];
+            }
+
             function syncEarthMarkerPresentation(markerMeta = {}) {
                 if (!earthSubjectMarker) {
                     return;
@@ -22550,6 +22566,47 @@ function initNavbarDateTime() {
                 syncEarthMarkerPresentation(markerMeta);
             }
 
+            function syncEarthCompMarkers(filtered) {
+                if (!earthMapElement || !earthMarkerCtor) {
+                    return;
+                }
+
+                detachEarthCompMarkers();
+
+                const safeFiltered = Array.isArray(filtered) ? filtered : [];
+                safeFiltered.forEach((comp) => {
+                    const lat = Number(comp && comp.lat);
+                    const lng = Number(comp && comp.lng);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        return;
+                    }
+
+                    const marker = new earthMarkerCtor({
+                        position: {
+                            lat,
+                            lng,
+                            altitude: 0
+                        },
+                        altitudeMode: 'CLAMP_TO_GROUND',
+                        extruded: false,
+                        drawsOccludedSegments: true,
+                        title: String(comp.address || 'Comparable property').trim() || 'Comparable property'
+                    });
+
+                    if ('label' in marker) {
+                        marker.label = formatCompactCurrency(comp.price);
+                    }
+
+                    if (typeof earthMapElement.append === 'function') {
+                        earthMapElement.append(marker);
+                    } else if (typeof earthMapElement.appendChild === 'function') {
+                        earthMapElement.appendChild(marker);
+                    }
+
+                    earthCompMarkers.push(marker);
+                });
+            }
+
             async function ensureEarthReady() {
                 if (!compsMapEarthCanvas) {
                     return null;
@@ -22613,10 +22670,12 @@ function initNavbarDateTime() {
                     compsMapEarthCanvas.appendChild(earthMapElement);
                     updateEarthCamera(getEarthFocusLocation());
                     syncEarthSubjectMarker(getEarthFocusLocation());
+                    syncEarthCompMarkers(lastTopResults);
                     return earthMapElement;
                 })().catch((error) => {
                     earthReadyPromise = null;
                     detachEarthMarker();
+                    detachEarthCompMarkers();
                     earthMapElement = null;
                     earthMarkerCtor = null;
                     setEarthViewState(false);
@@ -23655,6 +23714,32 @@ function initNavbarDateTime() {
                 requestMapResize();
             }
 
+            function normalizeFilterRange(minValue, maxValue) {
+                if (minValue !== null && maxValue !== null && minValue > maxValue) {
+                    return [maxValue, minValue];
+                }
+
+                return [minValue, maxValue];
+            }
+
+            function normalizeRangeInputs(minInputId, maxInputId) {
+                const minInput = document.getElementById(minInputId);
+                const maxInput = document.getElementById(maxInputId);
+                const [normalizedMin, normalizedMax] = normalizeFilterRange(
+                    inputNumber(minInputId),
+                    inputNumber(maxInputId)
+                );
+
+                if (minInput && normalizedMin !== null) {
+                    minInput.value = String(normalizedMin);
+                }
+                if (maxInput && normalizedMax !== null) {
+                    maxInput.value = String(normalizedMax);
+                }
+
+                return [normalizedMin, normalizedMax];
+            }
+
             function syncFocusCard(comp, matchIndex, filteredPool) {
                 const safeComp = comp && typeof comp === 'object' ? comp : null;
                 if (!safeComp) {
@@ -24147,6 +24232,9 @@ function initNavbarDateTime() {
                     return;
                 }
 
+                const focusedComp = filtered.find((comp) => getCompKey(comp) === activeCompKey) || filtered[0];
+                activeCompKey = getCompKey(focusedComp);
+
                 filtered.forEach((comp, index) => {
                     const compPpsf = Math.round(comp.price / Math.max(comp.sqft, 1));
                     const item = document.createElement('article');
@@ -24161,7 +24249,7 @@ function initNavbarDateTime() {
                     `;
                     item.addEventListener('click', () => {
                         activeCompKey = compKey;
-                        syncFocusCard(comp, index, filteredPool);
+                        syncFocusCard(comp, index, filtered);
                         renderNearbyCards(lastTopResults, lastFilteredPool);
                         renderMapMarkers(lastTopResults);
                         const marker = markerRegistry.get(compKey);
@@ -24174,9 +24262,7 @@ function initNavbarDateTime() {
                     nearbyList.appendChild(item);
                 });
 
-                const focusedComp = filtered.find((comp) => getCompKey(comp) === activeCompKey) || filtered[0];
-                activeCompKey = getCompKey(focusedComp);
-                syncFocusCard(focusedComp, filtered.findIndex((comp) => getCompKey(comp) === activeCompKey), filteredPool);
+                syncFocusCard(focusedComp, filtered.findIndex((comp) => getCompKey(comp) === activeCompKey), filtered);
             }
 
             function updateSubjectCards(filteredPool) {
@@ -24216,8 +24302,10 @@ function initNavbarDateTime() {
                 if (earthMapElement) {
                     updateEarthCamera(getEarthFocusLocation());
                     syncEarthSubjectMarker(getEarthFocusLocation());
+                    syncEarthCompMarkers(filtered);
                 }
                 if (streetViewEnabled) {
+                    panoramaInstance && panoramaInstance.setPosition(getSubjectLocation());
                     setStreetViewMode(true);
                 }
             }
@@ -24306,25 +24394,33 @@ function initNavbarDateTime() {
             }
 
             async function renderResults() {
+                const [sqftMin, sqftMax] = normalizeRangeInputs('comps-sqft-min', 'comps-sqft-max');
+                const [builtMin, builtMax] = normalizeRangeInputs('comps-built-min', 'comps-built-max');
+                const [bedMin, bedMax] = normalizeRangeInputs('comps-bed-min', 'comps-bed-max');
+                const [bathMin, bathMax] = normalizeRangeInputs('comps-bath-min', 'comps-bath-max');
+                const [priceMin, priceMax] = normalizeRangeInputs('comps-price-min', 'comps-price-max');
+                const [lotMin, lotMax] = normalizeRangeInputs('comps-lot-min', 'comps-lot-max');
+                const [garageMin, garageMax] = normalizeRangeInputs('comps-garage-min', 'comps-garage-max');
+                const [domMin, domMax] = normalizeRangeInputs('comps-dom-min', 'comps-dom-max');
                 const filters = {
-                    sqftMin: inputNumber('comps-sqft-min'),
-                    sqftMax: inputNumber('comps-sqft-max'),
-                    builtMin: inputNumber('comps-built-min'),
-                    builtMax: inputNumber('comps-built-max'),
+                    sqftMin,
+                    sqftMax,
+                    builtMin,
+                    builtMax,
                     radius: inputNumber('comps-radius') || 1,
                     closedWithin: inputNumber('comps-closed-within') || 180,
-                    bedMin: inputNumber('comps-bed-min'),
-                    bedMax: inputNumber('comps-bed-max'),
-                    bathMin: inputNumber('comps-bath-min'),
-                    bathMax: inputNumber('comps-bath-max'),
-                    priceMin: inputNumber('comps-price-min'),
-                    priceMax: inputNumber('comps-price-max'),
-                    lotMin: inputNumber('comps-lot-min'),
-                    lotMax: inputNumber('comps-lot-max'),
-                    garageMin: inputNumber('comps-garage-min'),
-                    garageMax: inputNumber('comps-garage-max'),
-                    domMin: inputNumber('comps-dom-min'),
-                    domMax: inputNumber('comps-dom-max'),
+                    bedMin,
+                    bedMax,
+                    bathMin,
+                    bathMax,
+                    priceMin,
+                    priceMax,
+                    lotMin,
+                    lotMax,
+                    garageMin,
+                    garageMax,
+                    domMin,
+                    domMax,
                     zipcode: inputValue('comps-zipcode').toLowerCase(),
                     area: inputValue('comps-area').toLowerCase(),
                     city: inputValue('comps-city').toLowerCase(),
@@ -24392,6 +24488,36 @@ function initNavbarDateTime() {
                 }
 
                 await refreshMap(filtered);
+            }
+
+            function queueCompsRender() {
+                renderResults().catch(() => {
+                    setMapEmptyState(true, 'FAST could not refresh the comps workspace right now.');
+                });
+            }
+
+            function bindLiveCompFilters() {
+                const liveInputs = Array.from(document.querySelectorAll(
+                    '.comps-filters input, .comps-filters select'
+                ));
+
+                let renderHandle = 0;
+                const scheduleRender = () => {
+                    window.clearTimeout(renderHandle);
+                    renderHandle = window.setTimeout(() => {
+                        queueCompsRender();
+                    }, 120);
+                };
+
+                liveInputs.forEach((element) => {
+                    if (!element || element.dataset.compsLiveBound === 'true') {
+                        return;
+                    }
+
+                    element.dataset.compsLiveBound = 'true';
+                    const eventName = element.matches('input[type="checkbox"], select') ? 'change' : 'input';
+                    element.addEventListener(eventName, scheduleRender);
+                });
             }
 
             if (compsMapStreetViewButton && compsMapStreetViewButton.dataset.bound !== 'true') {
@@ -24561,6 +24687,7 @@ function initNavbarDateTime() {
             lastSearchResult = null;
             setMeasurementPanelState({ visible: false });
             updateMapStatusBadge({ config: lastGoogleMapsConfig });
+            bindLiveCompFilters();
             initCompsAddressAutocomplete().catch(() => {
                 updateCompsMapOpenLink();
             });
