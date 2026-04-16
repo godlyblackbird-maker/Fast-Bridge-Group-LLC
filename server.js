@@ -1560,9 +1560,47 @@ function normalizeImportedImageUrl(value, requestUrl = '') {
   }
 
   try {
-    return new URL(rawValue, requestUrl || undefined).href;
+    const normalizedUrl = new URL(rawValue, requestUrl || undefined).href;
+    return isImportedImageUrl(normalizedUrl) ? normalizedUrl : '';
   } catch (error) {
-    return rawValue;
+    return isImportedImageUrl(rawValue) ? rawValue : '';
+  }
+}
+
+function isImportedImageUrl(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) {
+    return false;
+  }
+
+  try {
+    const parsedUrl = new URL(rawValue, 'https://example.com');
+    const pathname = String(parsedUrl.pathname || '').trim().toLowerCase();
+    const hostname = String(parsedUrl.hostname || '').trim().toLowerCase();
+
+    if (!pathname) {
+      return false;
+    }
+
+    if (/\.(?:js|mjs|css|map|json|xml|txt|pdf|html?)$/i.test(pathname)) {
+      return false;
+    }
+
+    if (/\.(?:avif|gif|ico|jpe?g|jfif|png|svg|webp)(?:$|[?#])/i.test(pathname)) {
+      return true;
+    }
+
+    if (hostname.includes('cdn-redfin.com') && /\/photo\//i.test(pathname)) {
+      return true;
+    }
+
+    if (/[?&](?:format|fm)=(?:avif|gif|jpeg|jpg|png|webp)\b/i.test(rawValue)) {
+      return true;
+    }
+
+    return /\b(?:image|images|photo|photos|thumbnail|thumbnails|listing-photo)\b/i.test(pathname);
+  } catch (error) {
+    return false;
   }
 }
 
