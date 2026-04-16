@@ -21845,6 +21845,7 @@ function initNavbarDateTime() {
                         lat: Number(location.lat()),
                         lng: Number(location.lng()),
                         formattedAddress: String(topResult.formatted_address || trimmedAddress).trim() || trimmedAddress,
+                        provider: 'google-geocoder',
                         locationType: String(topResult.geometry && topResult.geometry.location_type || '').trim(),
                         partialMatch: Boolean(topResult.partial_match)
                     });
@@ -21903,7 +21904,8 @@ function initNavbarDateTime() {
                     resolve({
                         lat,
                         lng,
-                        formattedAddress: String(topResult.formatted_address || topResult.name || trimmedAddress).trim() || trimmedAddress
+                        formattedAddress: String(topResult.formatted_address || topResult.name || trimmedAddress).trim() || trimmedAddress,
+                        provider: 'google-places'
                     });
                 });
             });
@@ -21936,8 +21938,21 @@ function initNavbarDateTime() {
             return {
                 lat,
                 lng,
-                formattedAddress: String(match && (match.display_name || trimmedAddress) || trimmedAddress).trim() || trimmedAddress
+                formattedAddress: String(match && (match.display_name || trimmedAddress) || trimmedAddress).trim() || trimmedAddress,
+                provider: 'nominatim'
             };
+        }
+
+        function getSearchResultLabel(locationLike, fallbackLabel = '') {
+            const provider = String(locationLike && locationLike.provider || '').trim().toLowerCase();
+            const fallbackText = String(fallbackLabel || '').trim();
+            const formattedAddress = String(locationLike && locationLike.formattedAddress || '').trim();
+
+            if (provider === 'nominatim') {
+                return fallbackText || formattedAddress || 'Search result';
+            }
+
+            return formattedAddress || fallbackText || 'Search result';
         }
 
         function findStreetViewPanorama(locationLike) {
@@ -23851,7 +23866,8 @@ function initNavbarDateTime() {
                 return {
                     lat,
                     lng,
-                    formattedAddress: String(autocompletePlaceSelection.formattedAddress || rawValue).trim() || String(rawValue || '').trim()
+                    formattedAddress: String(autocompletePlaceSelection.formattedAddress || rawValue).trim() || String(rawValue || '').trim(),
+                    provider: 'autocomplete'
                 };
             }
 
@@ -23881,20 +23897,22 @@ function initNavbarDateTime() {
                     throw new Error('FAST could not locate that search address.');
                 }
 
+                const resolvedSearchLabel = getSearchResultLabel(geocodeMatch, searchText);
+
                 if (compsMapSearchInput) {
-                    compsMapSearchInput.value = geocodeMatch.formattedAddress || searchText;
+                    compsMapSearchInput.value = resolvedSearchLabel;
                 }
                 autocompletePlaceSelection = {
                     query: searchText,
                     lat: geocodeMatch.lat,
                     lng: geocodeMatch.lng,
-                    formattedAddress: geocodeMatch.formattedAddress || searchText
+                    formattedAddress: resolvedSearchLabel
                 };
-                focusSearchLocation(geocodeMatch, geocodeMatch.formattedAddress || searchText);
+                focusSearchLocation(geocodeMatch, resolvedSearchLabel);
 
                 const resolvedMap = await ensureMapReady().catch(() => null);
                 if (resolvedMap && mapInstance && window.google && window.google.maps) {
-                    focusSearchLocation(geocodeMatch, geocodeMatch.formattedAddress || searchText);
+                    focusSearchLocation(geocodeMatch, resolvedSearchLabel);
                 }
             }
 
