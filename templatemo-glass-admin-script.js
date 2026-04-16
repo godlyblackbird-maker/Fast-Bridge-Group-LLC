@@ -21467,6 +21467,19 @@ function initNavbarDateTime() {
             ).trim();
         }
 
+        function getGoogleMapsConfigErrorMessage(config = null) {
+            const settings = config && typeof config === 'object' ? config : {};
+            const missingConfig = Array.isArray(settings.earthMissingConfig)
+                ? settings.earthMissingConfig.map((item) => String(item || '').trim()).filter(Boolean)
+                : [];
+
+            if (missingConfig.includes('GOOGLE_MAPS_API_KEY') || !String(settings.apiKey || '').trim()) {
+                return 'Interactive Google Maps is offline because GOOGLE_MAPS_API_KEY is missing on the server. Add GOOGLE_MAPS_API_KEY in Render Environment, redeploy the service, then verify Maps JavaScript API and billing are enabled in Google Cloud.';
+            }
+
+            return 'Interactive Google Maps could not start. Verify the browser Maps key, billing, enabled APIs, and website referrer restrictions in Google Cloud.';
+        }
+
         function detectBrokenGoogleMapsState() {
             const brokenStatePattern = /for development purposes only|this page can'?t load google maps correctly/i;
             return [compsMapCanvas, compsMapPano].some((element) => {
@@ -21482,6 +21495,7 @@ function initNavbarDateTime() {
             if (!googleMapsAuthFailureMessage) {
                 googleMapsAuthFailureMessage = getGoogleMapsBrokenStateMessage();
             }
+            updateMapStatusBadge({ visible: true });
 
             if (panoramaInstance && typeof panoramaInstance.setVisible === 'function') {
                 panoramaInstance.setVisible(false);
@@ -21943,6 +21957,9 @@ function initNavbarDateTime() {
             const compsAerialViewVideo = document.getElementById('comps-aerial-view-video');
             const compsMapSearchInput = document.getElementById('comps-map-address-search');
             const compsMapSearchButton = document.getElementById('comps-map-address-search-btn');
+            const compsMapStatusBadge = document.getElementById('comps-map-status-badge');
+            const compsMapStatusBadgeTitle = document.getElementById('comps-map-status-badge-title');
+            const compsMapStatusBadgeText = document.getElementById('comps-map-status-badge-text');
             const compsMapStyleSource = document.getElementById('comps-map-style-source');
             const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
             const earthIndicator = document.getElementById('comps-map-earth-indicator');
@@ -22083,8 +22100,38 @@ function initNavbarDateTime() {
                 return String(fallbackMessage || 'FAST Earth uses Google Maps JavaScript 3D, not Google Earth Engine. Set GOOGLE_MAPS_API_KEY and GOOGLE_MAPS_MAP_ID, then verify Maps JavaScript API, billing, and a JavaScript Map ID are enabled in Google Cloud.').trim();
             }
 
+            function updateMapStatusBadge(options = {}) {
+                if (!compsMapStatusBadge || !compsMapStatusBadgeTitle || !compsMapStatusBadgeText) {
+                    return;
+                }
+
+                const settings = options && typeof options === 'object' ? options : {};
+                const config = settings.config && typeof settings.config === 'object'
+                    ? settings.config
+                    : (lastGoogleMapsConfig && typeof lastGoogleMapsConfig === 'object' ? lastGoogleMapsConfig : null);
+                const explicitVisible = typeof settings.visible === 'boolean' ? settings.visible : null;
+                const visible = explicitVisible !== null
+                    ? explicitVisible
+                    : Boolean(googleMapsAuthFailed || !config || !config.enabled || !String(config.apiKey || '').trim());
+
+                compsMapStatusBadge.hidden = !visible;
+                if (!visible) {
+                    return;
+                }
+
+                if (googleMapsAuthFailed) {
+                    compsMapStatusBadgeTitle.textContent = 'Google Maps Authorization Failed';
+                    compsMapStatusBadgeText.textContent = getGoogleMapsBrokenStateMessage();
+                    return;
+                }
+
+                compsMapStatusBadgeTitle.textContent = 'Google Maps Server Config Missing';
+                compsMapStatusBadgeText.textContent = getGoogleMapsConfigErrorMessage(config || {});
+            }
+
             function syncEarthLayerAvailability(config) {
                 lastGoogleMapsConfig = config && typeof config === 'object' ? config : lastGoogleMapsConfig;
+                updateMapStatusBadge({ config: lastGoogleMapsConfig });
                 const earthButton = getEarthLayerButton();
                 if (!earthButton) {
                     return;
@@ -23338,7 +23385,7 @@ function initNavbarDateTime() {
                     const config = await resolveGoogleMapsBrowserConfig();
                     syncEarthLayerAvailability(config);
                     if (!config.enabled || !config.apiKey) {
-                        throw new Error('Google Maps API key is not configured in the server environment.');
+                        throw new Error(getGoogleMapsConfigErrorMessage(config));
                     }
                     updateMapStyleSource(config);
 
@@ -24347,6 +24394,7 @@ function initNavbarDateTime() {
             setStreetViewMode(false);
             lastSearchResult = null;
             setMeasurementPanelState({ visible: false });
+            updateMapStatusBadge({ config: lastGoogleMapsConfig });
             initCompsAddressAutocomplete().catch(() => {
                 updateCompsMapOpenLink();
             });
