@@ -579,8 +579,9 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            position: relative;
             margin-top: 14px;
-            padding: 12px 14px;
+            padding: 12px 46px 12px 14px;
             border-radius: 18px;
             border: 1px solid rgba(var(--accent-rgb, 5, 150, 105), 0.22);
             background: linear-gradient(145deg, rgba(var(--accent-rgb, 5, 150, 105), 0.16), rgba(255, 255, 255, 0.08));
@@ -702,6 +703,47 @@
         .buyers-sheet-progress-meta {
             font-size: 11px;
             color: var(--buyers-note);
+        }
+
+        .buyers-sheet-progress-close {
+            position: absolute;
+            top: 9px;
+            right: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.14);
+            color: inherit;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .buyers-sheet-progress-close:hover,
+        .buyers-sheet-progress-close:focus-visible {
+            background: rgba(var(--accent-rgb, 5, 150, 105), 0.22);
+            transform: scale(1.04);
+            outline: none;
+        }
+
+        .buyers-sheet-progress-close:disabled {
+            opacity: 0.55;
+            cursor: wait;
+            transform: none;
+        }
+
+        [data-theme="light"] .buyers-sheet-progress-close,
+        [data-theme="beach"] .buyers-sheet-progress-close,
+        [data-theme="japan"] .buyers-sheet-progress-close {
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: 0 4px 14px rgba(148, 163, 184, 0.18);
         }
 
         .buyers-sheet-recent-imports {
@@ -1126,6 +1168,7 @@
                             </div>
                             <div id="mls-imports-progress-meta" class="buyers-sheet-progress-meta">Waiting for PDF upload to start.</div>
                         </div>
+                        <button id="mls-imports-progress-cancel" class="buyers-sheet-progress-close" type="button" aria-label="Cancel MLS PDF upload" title="Cancel MLS PDF upload">&times;</button>
                     </div>
                     <section id="mls-imports-recent-imports" class="buyers-sheet-recent-imports" aria-live="polite">
                         <div class="buyers-sheet-recent-imports-head">
@@ -1363,6 +1406,7 @@
             const progressPercent = document.getElementById('mls-imports-progress-percent');
             const progressFill = document.getElementById('mls-imports-progress-fill');
             const progressMeta = document.getElementById('mls-imports-progress-meta');
+            const progressCancelButton = document.getElementById('mls-imports-progress-cancel');
             const recentImportsSection = document.getElementById('mls-imports-recent-imports');
             const recentImportsList = document.getElementById('mls-imports-recent-imports-list');
             const recentImportsEmpty = document.getElementById('mls-imports-recent-imports-empty');
@@ -1394,6 +1438,32 @@
             const activeRecentJobPolls = new Map();
             let mlsSpreadsheetClearGeneration = 0;
             let activePdfUploadRequest = null;
+            let activePdfJobId = '';
+            let activePdfImportCancelled = false;
+
+            function createMlsPdfImportCancelledError() {
+                const error = new Error('The MLS PDF import was cancelled.');
+                error.code = 'MLS_PDF_IMPORT_CANCELLED';
+                return error;
+            }
+
+            function isMlsPdfImportCancelled() {
+                return activePdfImportCancelled;
+            }
+
+            function updatePdfCancelButtonState() {
+                if (!progressCancelButton) {
+                    return;
+                }
+
+                const hasActiveImport = Boolean(activePdfUploadRequest || activePdfJobId);
+                progressCancelButton.disabled = !hasActiveImport || isMlsPdfImportCancelled();
+                progressCancelButton.hidden = !hasActiveImport;
+                progressCancelButton.title = activePdfJobId
+                    ? 'Cancel MLS PDF extraction'
+                    : 'Cancel MLS PDF upload';
+                progressCancelButton.setAttribute('aria-label', progressCancelButton.title);
+            }
 
             function createMlsSpreadsheetClearedError() {
                 const error = new Error('The MLS spreadsheet was cleared, so the active import was cancelled.');
@@ -1768,6 +1838,7 @@
                 }
                 progressMeta.textContent = String(metaText || (resolvedPercent >= 100 ? 'Wrapping up extracted data.' : 'Working through the PDF now.')).trim();
                 progressBox.hidden = false;
+                updatePdfCancelButtonState();
             }
 
             function clearPdfProgressState() {
@@ -1784,6 +1855,9 @@
                 }
                 progressMeta.textContent = 'Waiting for PDF upload to start.';
                 progressBox.hidden = true;
+                if (progressCancelButton) {
+                    progressCancelButton.hidden = true;
+                }
             }
 
             function resetPdfUploadUi() {
@@ -1791,6 +1865,9 @@
                     addPdfButton.disabled = false;
                     addPdfButton.textContent = 'Add PDF';
                 }
+                activePdfJobId = '';
+                activePdfImportCancelled = false;
+                updatePdfCancelButtonState();
                 clearPdfProgressState();
             }
 
@@ -1798,6 +1875,7 @@
                 return new Promise((resolve, reject) => {
                     const request = new XMLHttpRequest();
                     activePdfUploadRequest = request;
+                    updatePdfCancelButtonState();
                     request.open('POST', '/api/admin/mls-imports/extract-pdf-job', true);
                     request.responseType = 'json';
                     request.setRequestHeader('Authorization', `Bearer ${authToken}`);
@@ -1817,16 +1895,19 @@
 
                     request.onerror = () => {
                         finalizeRequest();
+                        updatePdfCancelButtonState();
                         reject(new Error('The PDF upload failed before extraction could start.'));
                     };
 
                     request.onabort = () => {
                         finalizeRequest();
-                        reject(createMlsSpreadsheetClearedError());
+                        updatePdfCancelButtonState();
+                        reject(isMlsPdfImportCancelled() ? createMlsPdfImportCancelledError() : createMlsSpreadsheetClearedError());
                     };
 
                     request.onload = () => {
                         finalizeRequest();
+                        updatePdfCancelButtonState();
                         const payload = request.response && typeof request.response === 'object'
                             ? request.response
                             : (() => {
@@ -1857,6 +1938,33 @@
                 });
             }
 
+            async function cancelActivePdfImport() {
+                if (isMlsPdfImportCancelled()) {
+                    return;
+                }
+
+                const hasActiveImport = Boolean(activePdfUploadRequest || activePdfJobId);
+                if (!hasActiveImport) {
+                    return;
+                }
+
+                activePdfImportCancelled = true;
+                updatePdfCancelButtonState();
+
+                if (activePdfUploadRequest) {
+                    activePdfUploadRequest.abort();
+                    return;
+                }
+
+                if (!activePdfJobId) {
+                    return;
+                }
+
+                await fetchJsonWithAuth(`/api/admin/mls-imports/extract-pdf-job/${encodeURIComponent(activePdfJobId)}`, {
+                    method: 'DELETE'
+                });
+            }
+
             async function pollPdfExtractionJob(jobId, authToken, options = {}) {
                 const normalizedJobId = String(jobId || '').trim();
                 const clearGeneration = Number(options && options.clearGeneration);
@@ -1865,11 +1973,18 @@
                 }
 
                 while (true) {
+                    if (isMlsPdfImportCancelled()) {
+                        throw createMlsPdfImportCancelledError();
+                    }
+
                     if (wasMlsSpreadsheetCleared(clearGeneration)) {
                         throw createMlsSpreadsheetClearedError();
                     }
 
                     await waitForPdfProgressPoll(900);
+                    if (isMlsPdfImportCancelled()) {
+                        throw createMlsPdfImportCancelledError();
+                    }
                     if (wasMlsSpreadsheetCleared(clearGeneration)) {
                         throw createMlsSpreadsheetClearedError();
                     }
@@ -1882,6 +1997,9 @@
                     });
                     const payload = await response.json().catch(() => ({}));
                     if (!response.ok) {
+                        if (response.status === 404 && isMlsPdfImportCancelled()) {
+                            throw createMlsPdfImportCancelledError();
+                        }
                         if (response.status === 404 && wasMlsSpreadsheetCleared(clearGeneration)) {
                             throw createMlsSpreadsheetClearedError();
                         }
@@ -1889,6 +2007,9 @@
                     }
 
                     const job = payload && payload.job && typeof payload.job === 'object' ? payload.job : {};
+                    if (isMlsPdfImportCancelled()) {
+                        throw createMlsPdfImportCancelledError();
+                    }
                     if (job.message) {
                         setPdfProgressState(
                             job.message,
@@ -1901,6 +2022,10 @@
 
                     if (job.status === 'completed') {
                         return job;
+                    }
+
+                    if (job.status === 'cancelled') {
+                        throw createMlsPdfImportCancelledError();
                     }
 
                     if (job.status === 'failed') {
@@ -3033,6 +3158,17 @@
                 pdfInput.click();
             });
 
+            if (progressCancelButton) {
+                progressCancelButton.addEventListener('click', () => {
+                    void cancelActivePdfImport().catch((error) => {
+                        activePdfImportCancelled = false;
+                        updatePdfCancelButtonState();
+                        showToast('error', 'Cancel Failed', error && error.message ? error.message : 'The MLS PDF import could not be cancelled.');
+                    });
+                });
+                updatePdfCancelButtonState();
+            }
+
             pdfInput.addEventListener('change', async () => {
                 const file = Array.from(pdfInput.files || [])[0] || null;
                 pdfInput.value = '';
@@ -3052,6 +3188,8 @@
                 }
 
                 const clearGeneration = mlsSpreadsheetClearGeneration;
+                activePdfImportCancelled = false;
+                activePdfJobId = '';
 
                 addPdfButton.disabled = true;
                 addPdfButton.textContent = 'Extracting...';
@@ -3072,6 +3210,8 @@
                     });
 
                     const startedJob = payload && payload.job && typeof payload.job === 'object' ? payload.job : {};
+                    activePdfJobId = String(startedJob.id || '').trim();
+                    updatePdfCancelButtonState();
                     await fetchRecentPdfJobs({ syncRunningJobs: false });
                     if (startedJob.message) {
                         setPdfProgressState(
@@ -3127,6 +3267,12 @@
                 } catch (error) {
                     if (error && error.code === 'MLS_SPREADSHEET_CLEARED') {
                         showToast('success', 'MLS Spreadsheet Cleared', 'The spreadsheet and any active MLS import were cleared.');
+                        return;
+                    }
+
+                     if (error && error.code === 'MLS_PDF_IMPORT_CANCELLED') {
+                        await fetchRecentPdfJobs({ syncRunningJobs: false }).catch(() => {});
+                        showToast('success', 'PDF Import Cancelled', 'The MLS PDF upload was cancelled.');
                         return;
                     }
 

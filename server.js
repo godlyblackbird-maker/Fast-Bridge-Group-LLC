@@ -3800,6 +3800,43 @@ async function clearMlsImportSpreadsheetRowsForUser(ownerUserId) {
   };
 }
 
+async function cancelMlsImportPdfJobForUser(jobId, ownerUserId) {
+  const normalizedJobId = String(jobId || '').trim();
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  if (!normalizedJobId || !normalizedOwnerUserId) {
+    return null;
+  }
+
+  const currentJob = mlsImportPdfJobs.get(normalizedJobId) || await loadMlsImportPdfJobRecord(normalizedJobId);
+  if (!currentJob) {
+    return null;
+  }
+
+  if (Number(currentJob.requesterId) !== normalizedOwnerUserId) {
+    return false;
+  }
+
+  const normalizedStatus = String(currentJob.status || '').trim().toLowerCase();
+  if (normalizedStatus === 'completed' || normalizedStatus === 'failed' || normalizedStatus === 'cancelled') {
+    mlsImportPdfJobs.delete(normalizedJobId);
+    return currentJob;
+  }
+
+  const cancelledJob = {
+    ...currentJob,
+    status: 'cancelled',
+    message: 'MLS PDF import was cancelled.',
+    progressPercent: 100,
+    extracted: null,
+    error: '',
+    updatedAt: Date.now()
+  };
+
+  await persistMlsImportPdfJobRecord(cancelledJob);
+  mlsImportPdfJobs.delete(normalizedJobId);
+  return cancelledJob;
+}
+
 function wasMlsImportSpreadsheetClearedSince(ownerUserId, startedAt) {
   const normalizedOwnerUserId = Number(ownerUserId) || 0;
   const clearedAt = Number(mlsImportSpreadsheetClearedAtByUser.get(normalizedOwnerUserId)) || 0;
@@ -3862,6 +3899,8 @@ async function persistMlsImportPdfJobRecord(job) {
     return;
   }
 
+  const normalizedStatus = String(job.status || '').trim().toLowerCase();
+
   await dbRun(
     `INSERT INTO mls_import_runs (
       id,
@@ -3899,7 +3938,7 @@ async function persistMlsImportPdfJobRecord(job) {
       Math.max(0, Number(job.persistedRowCount) || 0),
       Number(job.startedAt) || Date.now(),
       Number(job.updatedAt) || Date.now(),
-      String(job.status || '') === 'completed' || String(job.status || '') === 'failed' ? Number(job.updatedAt) || Date.now() : null,
+      normalizedStatus === 'completed' || normalizedStatus === 'failed' || normalizedStatus === 'cancelled' ? Number(job.updatedAt) || Date.now() : null,
       String(job.error || '').trim()
     ]
   );
@@ -11159,6 +11198,33 @@ app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => {
   }
 
   return res.json({ job: serializeMlsImportPdfJob(job) });
+});
+
+app.delete('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const jobId = String(req.params?.jobId || '').trim();
+  if (!jobId) {
+    return res.status(400).json({ error: 'A valid job id is required.' });
+  }
+
+  try {
+    const cancelledJob = await cancelMlsImportPdfJobForUser(jobId, decoded.id);
+    if (cancelledJob === false) {
+      return res.status(403).json({ error: 'You do not have access to this MLS PDF extraction job.' });
+    }
+    if (!cancelledJob) {
+      return res.status(404).json({ error: 'The MLS PDF extraction job was not found.' });
+    }
+
+    return res.json({ success: true, job: serializeMlsImportPdfJob(cancelledJob) });
+  } catch (error) {
+    console.error('Failed to cancel MLS import PDF job:', error);
+    return res.status(500).json({ error: 'Failed to cancel the MLS PDF extraction job.' });
+  }
 });
 
 app.get('/api/admin/mls-imports/extract-pdf-jobs', async (req, res) => {
