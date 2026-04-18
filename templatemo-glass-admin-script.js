@@ -21489,6 +21489,7 @@ function initNavbarDateTime() {
         const compsMapStreetViewButton = document.getElementById('comps-map-street-view-btn');
         const GOOGLE_MAPS_SCRIPT_ID = 'fast-google-maps-script';
         const GOOGLE_MAPS_CALLBACK_NAME = '__fastGoogleMapsLoaded';
+        const GOOGLE_MAPS_SCRIPT_TIMEOUT_MS = 15000;
         let googleMapsBrowserConfigPromise = null;
         let googleMapsScriptPromise = null;
         let googleMapsStylesPromise = null;
@@ -21785,13 +21786,21 @@ function initNavbarDateTime() {
 
             googleMapsScriptPromise = new Promise((resolve, reject) => {
                 let settled = false;
+                let loadTimeoutId = 0;
                 const previousAuthFailureHandler = window.gm_authFailure;
                 const authFailureMessage = 'Google Maps rejected this website key or billing setup, so FAST stopped the interactive Google map before Google could show its warning banner.';
+                const finish = () => {
+                    if (loadTimeoutId) {
+                        window.clearTimeout(loadTimeoutId);
+                        loadTimeoutId = 0;
+                    }
+                };
                 const rejectOnce = (error) => {
                     if (settled) {
                         return;
                     }
                     settled = true;
+                    finish();
                     reject(error);
                 };
                 const resolveOnce = (value) => {
@@ -21799,6 +21808,7 @@ function initNavbarDateTime() {
                         return;
                     }
                     settled = true;
+                    finish();
                     resolve(value);
                 };
                 const existing = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
@@ -21812,8 +21822,25 @@ function initNavbarDateTime() {
                         return;
                     }
 
-                    existing.addEventListener('load', () => resolveOnce(window.google.maps));
+                    existing.addEventListener('load', () => {
+                        if (window.google && window.google.maps) {
+                            resolveOnce(window.google.maps);
+                            return;
+                        }
+
+                        window.setTimeout(() => {
+                            if (window.google && window.google.maps) {
+                                resolveOnce(window.google.maps);
+                                return;
+                            }
+
+                            rejectOnce(new Error('Google Maps loaded but did not finish initializing in the browser.'));
+                        }, 250);
+                    });
                     existing.addEventListener('error', () => rejectOnce(new Error('Google Maps failed to load.')));
+                    loadTimeoutId = window.setTimeout(() => {
+                        rejectOnce(new Error('Google Maps script timed out before initialization completed.'));
+                    }, GOOGLE_MAPS_SCRIPT_TIMEOUT_MS);
                     return;
                 }
 
@@ -21873,11 +21900,21 @@ function initNavbarDateTime() {
                 mapsScriptParams.set('libraries', 'drawing,geometry,places');
                 mapsScriptParams.set('callback', GOOGLE_MAPS_CALLBACK_NAME);
                 script.src = `https://maps.googleapis.com/maps/api/js?${mapsScriptParams.toString()}`;
+                script.onload = () => {
+                    if (window.google && window.google.maps) {
+                        resolveOnce(window.google.maps);
+                    }
+                };
                 script.onerror = () => {
                     restoreAuthFailureHandler();
                     removeInjectedGoogleMapsScript();
                     rejectOnce(new Error('Google Maps failed to load.'));
                 };
+                loadTimeoutId = window.setTimeout(() => {
+                    restoreAuthFailureHandler();
+                    removeInjectedGoogleMapsScript();
+                    rejectOnce(new Error('Google Maps script timed out before initialization completed.'));
+                }, GOOGLE_MAPS_SCRIPT_TIMEOUT_MS);
                 document.body.appendChild(script);
             }).catch((error) => {
                 googleMapsScriptPromise = null;
