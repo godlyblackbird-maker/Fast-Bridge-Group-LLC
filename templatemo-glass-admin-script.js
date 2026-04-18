@@ -12866,6 +12866,7 @@ function initNavbarDateTime() {
         }
 
         const ANNOUNCEMENT_CACHE_KEY = 'dashboardAnnouncementState';
+        const ANNOUNCEMENT_SYNC_EVENT = 'dashboard-announcement-updated';
 
         const titleInput = document.getElementById('admin-announcement-title');
         const messageInput = document.getElementById('admin-announcement-message');
@@ -12885,7 +12886,6 @@ function initNavbarDateTime() {
         const refreshButton = document.getElementById('admin-announcement-refresh-btn');
         const clearButton = document.getElementById('admin-announcement-clear-btn');
         const saveButton = document.getElementById('admin-announcement-save-btn');
-        const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
         let currentUser = null;
 
         try {
@@ -12897,6 +12897,10 @@ function initNavbarDateTime() {
         if (!currentUser || currentUser.role !== 'admin') {
             card.style.display = 'none';
             return;
+        }
+
+        function getAuthToken() {
+            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
         }
 
         function escapeAnnouncementText(value) {
@@ -13062,6 +13066,16 @@ function initNavbarDateTime() {
             }
         }
 
+        function broadcastAnnouncementUpdate(announcement) {
+            const payload = announcement && typeof announcement === 'object' ? announcement : {};
+            cacheAnnouncementState(payload);
+            window.dispatchEvent(new CustomEvent(ANNOUNCEMENT_SYNC_EVENT, {
+                detail: {
+                    announcement: payload
+                }
+            }));
+        }
+
         function renderPreview(announcement) {
             const payload = announcement || buildAnnouncementPayload();
             const enabled = Boolean(payload.enabled && payload.title && payload.message);
@@ -13103,6 +13117,7 @@ function initNavbarDateTime() {
         }
 
         async function loadAnnouncement() {
+            const token = getAuthToken();
             if (!token) {
                 subtitle.textContent = 'Missing auth token. Please sign in again.';
                 return;
@@ -13124,7 +13139,7 @@ function initNavbarDateTime() {
                 }
 
                 applyAnnouncementToForm(data.announcement || {});
-                cacheAnnouncementState(data.announcement || {});
+                broadcastAnnouncementUpdate(data.announcement || {});
             } catch (error) {
                 subtitle.textContent = 'Unable to load the announcement right now.';
                 meta.innerHTML = escapeAnnouncementText(String(error.message || 'Unable to load announcement settings.'));
@@ -13136,6 +13151,7 @@ function initNavbarDateTime() {
         }
 
         async function saveAnnouncement(options = {}) {
+            const token = getAuthToken();
             if (!token) {
                 showDashboardToast('error', 'Missing Auth', 'Please sign in again and retry.');
                 return;
@@ -13163,7 +13179,7 @@ function initNavbarDateTime() {
                 }
 
                 applyAnnouncementToForm(data.announcement || {});
-                cacheAnnouncementState(data.announcement || {});
+                broadcastAnnouncementUpdate(data.announcement || {});
                 showDashboardToast('success', options.clear ? 'Announcement Cleared' : (data.announcement?.status === 'scheduled' ? 'Announcement Scheduled' : 'Announcement Published'), data.message || 'Announcement updated successfully.');
             } catch (error) {
                 showDashboardToast('error', 'Announcement Failed', String(error.message || 'Unable to save announcement.'));
@@ -13274,14 +13290,21 @@ function initNavbarDateTime() {
         }
 
         const ANNOUNCEMENT_CACHE_KEY = 'dashboardAnnouncementState';
+        const ANNOUNCEMENT_SYNC_EVENT = 'dashboard-announcement-updated';
+        const ANNOUNCEMENT_REFRESH_INTERVAL_MS = 30000;
 
         const badge = document.getElementById('dashboard-announcement-badge');
         const title = document.getElementById('dashboard-announcement-title');
         const message = document.getElementById('dashboard-announcement-message');
         const meta = document.getElementById('dashboard-announcement-meta');
         const link = document.getElementById('dashboard-announcement-link');
-        const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
         let announcementLifecycleTimer = 0;
+        let announcementRefreshTimer = 0;
+        let loadAnnouncementPromise = null;
+
+        function getAuthToken() {
+            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        }
 
         function readCachedAnnouncement() {
             try {
@@ -13400,37 +13423,85 @@ function initNavbarDateTime() {
             scheduleAnnouncementLifecycleRefresh(payload);
         }
 
-        async function loadAnnouncement() {
-            if (!token) {
-                card.hidden = true;
+        function startAnnouncementRefreshLoop() {
+            if (announcementRefreshTimer) {
                 return;
             }
 
-            try {
-                const response = await fetch('/api/announcements/current', {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || 'Unable to load announcement');
+            announcementRefreshTimer = window.setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    void loadAnnouncement();
                 }
+            }, ANNOUNCEMENT_REFRESH_INTERVAL_MS);
+        }
 
-                cacheAnnouncementState(data.announcement || {});
-                renderAnnouncement(data.announcement || {});
-            } catch (error) {
-                renderAnnouncement(readCachedAnnouncement());
+        function loadAnnouncement() {
+            if (loadAnnouncementPromise) {
+                return loadAnnouncementPromise;
             }
+
+            const token = getAuthToken();
+            if (!token) {
+                card.hidden = true;
+                return Promise.resolve();
+            }
+
+            loadAnnouncementPromise = (async () => {
+                try {
+                    const response = await fetch('/api/announcements/current', {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load announcement');
+                    }
+
+                    cacheAnnouncementState(data.announcement || {});
+                    renderAnnouncement(data.announcement || {});
+                } catch (error) {
+                    renderAnnouncement(readCachedAnnouncement());
+                } finally {
+                    loadAnnouncementPromise = null;
+                }
+            })();
+
+            return loadAnnouncementPromise;
         }
 
         window.addEventListener('storage', (event) => {
             if (event.key === ANNOUNCEMENT_CACHE_KEY) {
                 renderAnnouncement(readCachedAnnouncement());
+                void loadAnnouncement();
             }
         });
 
+        window.addEventListener(ANNOUNCEMENT_SYNC_EVENT, (event) => {
+            const announcement = event && event.detail && typeof event.detail === 'object'
+                ? event.detail.announcement
+                : null;
+            if (announcement && typeof announcement === 'object') {
+                cacheAnnouncementState(announcement);
+                renderAnnouncement(announcement);
+            } else {
+                renderAnnouncement(readCachedAnnouncement());
+            }
+            void loadAnnouncement();
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                void loadAnnouncement();
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            void loadAnnouncement();
+        });
+
         renderAnnouncement(readCachedAnnouncement());
+        startAnnouncementRefreshLoop();
         void loadAnnouncement();
     }
 
@@ -21416,6 +21487,8 @@ function initNavbarDateTime() {
 
         const compsMapOpenLink = document.getElementById('comps-map-open-link');
         const compsMapStreetViewButton = document.getElementById('comps-map-street-view-btn');
+        const GOOGLE_MAPS_SCRIPT_ID = 'fast-google-maps-script';
+        const GOOGLE_MAPS_CALLBACK_NAME = '__fastGoogleMapsLoaded';
         let googleMapsBrowserConfigPromise = null;
         let googleMapsScriptPromise = null;
         let googleMapsStylesPromise = null;
@@ -21423,6 +21496,7 @@ function initNavbarDateTime() {
         let googleMapsAuthFailureMessage = '';
         let googleMapsConfigLoadFailureMessage = '';
         let googleMapsIntegrityObserver = null;
+        let googleMapsLastApiKey = '';
 
         function buildGoogleMapsSearchUrl(query) {
             const encodedQuery = encodeURIComponent(String(query || '').trim() || 'California');
@@ -21498,6 +21572,45 @@ function initNavbarDateTime() {
                 googleMapsAuthFailureMessage
                 || 'Google Maps is showing a development-only watermark. Check billing, enabled APIs, and browser referrer restrictions for this website key.'
             ).trim();
+        }
+
+        function clearGoogleMapsAuthFailureState() {
+            googleMapsAuthFailed = false;
+            googleMapsAuthFailureMessage = '';
+        }
+
+        function removeInjectedGoogleMapsScript() {
+            const existing = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
+            if (existing && existing.parentNode) {
+                existing.parentNode.removeChild(existing);
+            }
+
+            try {
+                delete window[GOOGLE_MAPS_CALLBACK_NAME];
+            } catch (error) {
+                window[GOOGLE_MAPS_CALLBACK_NAME] = undefined;
+            }
+
+            try {
+                delete window.gm_authFailure;
+            } catch (error) {
+                window.gm_authFailure = undefined;
+            }
+        }
+
+        function resetGoogleMapsLoaderState(options = {}) {
+            const settings = options && typeof options === 'object' ? options : {};
+            googleMapsScriptPromise = null;
+
+            if (!settings.keepStylesPromise) {
+                googleMapsStylesPromise = null;
+            }
+
+            if (!settings.preserveAuthFailure) {
+                clearGoogleMapsAuthFailureState();
+            }
+
+            removeInjectedGoogleMapsScript();
         }
 
         function getGoogleMapsConfigErrorMessage(config = null) {
@@ -21585,6 +21698,8 @@ function initNavbarDateTime() {
                     emptyMessage.textContent = message;
                 }
             }
+
+            updateMapStatusBadge({ config: lastGoogleMapsConfig, error: googleMapsAuthFailureMessage });
         }
 
         function startGoogleMapsIntegrityMonitor() {
@@ -21618,12 +21733,20 @@ function initNavbarDateTime() {
         async function resolveGoogleMapsBrowserConfig() {
             const cachedConfig = await getGoogleMapsBrowserConfig().catch(() => null);
             if (cachedConfig && cachedConfig.enabled && cachedConfig.apiKey) {
-                        startGoogleMapsIntegrityMonitor();
+                if (googleMapsAuthFailed && !window.google?.maps) {
+                    resetGoogleMapsLoaderState({ keepStylesPromise: true });
+                }
+                googleMapsLastApiKey = String(cachedConfig.apiKey || '').trim();
+                startGoogleMapsIntegrityMonitor();
                 return cachedConfig;
             }
 
             const freshConfig = await getGoogleMapsBrowserConfig({ forceRefresh: true }).catch(() => null);
             if (freshConfig && freshConfig.enabled && freshConfig.apiKey) {
+                if (googleMapsAuthFailed && !window.google?.maps) {
+                    resetGoogleMapsLoaderState({ keepStylesPromise: true });
+                }
+                googleMapsLastApiKey = String(freshConfig.apiKey || '').trim();
                 return freshConfig;
             }
 
@@ -21636,6 +21759,15 @@ function initNavbarDateTime() {
                 : { apiKey: configOrApiKey };
             const apiKey = String(normalizedConfig.apiKey || '').trim();
             const mapId = String(normalizedConfig.mapId || normalizedConfig.earthMapId || '').trim();
+            const shouldRetryAfterFailure = googleMapsAuthFailed || (googleMapsLastApiKey && apiKey && googleMapsLastApiKey !== apiKey);
+
+            if (shouldRetryAfterFailure && !window.google?.maps) {
+                resetGoogleMapsLoaderState({ keepStylesPromise: true });
+            }
+
+            if (apiKey) {
+                googleMapsLastApiKey = apiKey;
+            }
 
             if (googleMapsAuthFailed) {
                 return Promise.reject(new Error(
@@ -21669,7 +21801,7 @@ function initNavbarDateTime() {
                     settled = true;
                     resolve(value);
                 };
-                const existing = document.getElementById('fast-google-maps-script');
+                const existing = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
                 if (existing) {
                     if (googleMapsAuthFailed) {
                         rejectOnce(new Error(authFailureMessage));
@@ -21685,7 +21817,6 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const callbackName = '__fastGoogleMapsLoaded';
                 const restoreAuthFailureHandler = () => {
                     if (previousAuthFailureHandler && previousAuthFailureHandler !== window.gm_authFailure) {
                         window.gm_authFailure = previousAuthFailureHandler;
@@ -21698,7 +21829,7 @@ function initNavbarDateTime() {
                         window.gm_authFailure = undefined;
                     }
                 };
-                window[callbackName] = () => {
+                window[GOOGLE_MAPS_CALLBACK_NAME] = () => {
                     restoreAuthFailureHandler();
                     if (googleMapsAuthFailed) {
                         rejectOnce(new Error(googleMapsAuthFailureMessage || authFailureMessage));
@@ -21706,9 +21837,9 @@ function initNavbarDateTime() {
                     }
                     resolveOnce(window.google.maps);
                     try {
-                        delete window[callbackName];
+                        delete window[GOOGLE_MAPS_CALLBACK_NAME];
                     } catch (error) {
-                        window[callbackName] = undefined;
+                        window[GOOGLE_MAPS_CALLBACK_NAME] = undefined;
                     }
                 };
 
@@ -21717,33 +21848,34 @@ function initNavbarDateTime() {
                     googleMapsAuthFailureMessage = authFailureMessage;
                     restoreAuthFailureHandler();
 
-                    const injectedScript = document.getElementById('fast-google-maps-script');
+                    const injectedScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
                     if (injectedScript && injectedScript.parentNode) {
                         injectedScript.parentNode.removeChild(injectedScript);
                     }
 
                     try {
-                        delete window[callbackName];
+                        delete window[GOOGLE_MAPS_CALLBACK_NAME];
                     } catch (error) {
-                        window[callbackName] = undefined;
+                        window[GOOGLE_MAPS_CALLBACK_NAME] = undefined;
                     }
 
                     rejectOnce(new Error(authFailureMessage));
                 };
 
                 const script = document.createElement('script');
-                script.id = 'fast-google-maps-script';
+                script.id = GOOGLE_MAPS_SCRIPT_ID;
                 script.async = true;
                 script.defer = true;
                 const mapsScriptParams = new URLSearchParams();
                 mapsScriptParams.set('key', apiKey);
                 mapsScriptParams.set('v', 'beta');
                 mapsScriptParams.set('loading', 'async');
-                mapsScriptParams.set('libraries', 'marker,drawing,geometry,places,maps3d');
-                mapsScriptParams.set('callback', callbackName);
+                mapsScriptParams.set('libraries', 'drawing,geometry,places');
+                mapsScriptParams.set('callback', GOOGLE_MAPS_CALLBACK_NAME);
                 script.src = `https://maps.googleapis.com/maps/api/js?${mapsScriptParams.toString()}`;
                 script.onerror = () => {
                     restoreAuthFailureHandler();
+                    removeInjectedGoogleMapsScript();
                     rejectOnce(new Error('Google Maps failed to load.'));
                 };
                 document.body.appendChild(script);
@@ -22254,7 +22386,52 @@ function initNavbarDateTime() {
             }
 
             function updateMapStatusBadge(options = {}) {
-                return;
+                if (!compsMapStatusBadge || !compsMapStatusBadgeTitle || !compsMapStatusBadgeText) {
+                    return;
+                }
+
+                const settings = options && typeof options === 'object' ? options : {};
+                const config = settings.config && typeof settings.config === 'object'
+                    ? settings.config
+                    : (lastGoogleMapsConfig && typeof lastGoogleMapsConfig === 'object' ? lastGoogleMapsConfig : null);
+                const explicitError = String(settings.error && settings.error.message || settings.error || '').trim();
+                let state = 'info';
+                let title = 'Maps diagnostics';
+                let message = 'FAST is checking the Google Maps config, script loader, and browser authorization for this comps session.';
+
+                if (googleMapsAuthFailed || detectBrokenGoogleMapsState()) {
+                    state = 'error';
+                    title = 'Google Maps blocked';
+                    message = getGoogleMapsBrokenStateMessage();
+                } else if (googleMapsConfigLoadFailureMessage) {
+                    state = 'warning';
+                    title = 'Config endpoint unavailable';
+                    message = `FAST could not confirm /api/maps/google-config. ${googleMapsConfigLoadFailureMessage}`;
+                } else if (config && !config.enabled) {
+                    state = 'warning';
+                    title = 'Maps key missing';
+                    message = getGoogleMapsConfigErrorMessage(config);
+                } else if (explicitError) {
+                    state = 'warning';
+                    title = 'Map load retry needed';
+                    message = explicitError;
+                } else if (mapInstance && window.google && window.google.maps) {
+                    state = 'success';
+                    title = 'Google Maps connected';
+                    message = String(config && config.mapId
+                        ? 'Interactive map is live. Earth can use your configured Google Map ID, and the comps map is ready.'
+                        : 'Interactive map is live. FAST is using JSON styling for the comps canvas and the fallback Earth demo Map ID until a Map ID is configured.'
+                    ).trim();
+                } else if (config && config.enabled && config.apiKey) {
+                    state = 'info';
+                    title = 'Google Maps ready to load';
+                    message = 'FAST found a browser Maps key and is waiting for the interactive map to initialize in this tab.';
+                }
+
+                compsMapStatusBadge.dataset.state = state;
+                compsMapStatusBadge.hidden = false;
+                compsMapStatusBadgeTitle.textContent = title;
+                compsMapStatusBadgeText.textContent = message;
             }
 
             function syncEarthLayerAvailability(config) {
@@ -23669,9 +23846,11 @@ function initNavbarDateTime() {
                     syncStreetViewButtonState();
                     syncDrawButtons();
                     updateMeasurementSummary();
+                    updateMapStatusBadge({ config });
                     return mapInstance;
                 })().catch((error) => {
                     mapReadyPromise = null;
+                    updateMapStatusBadge({ config: lastGoogleMapsConfig, error });
                     throw error;
                 });
 

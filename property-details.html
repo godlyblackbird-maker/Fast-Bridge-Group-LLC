@@ -749,6 +749,16 @@
                                             <button id="comps-map-street-view-btn" class="card-btn" type="button">Street View</button>
                                         </div>
                                     </div>
+                                    <div class="comps-map-control-cluster comps-map-control-cluster-search">
+                                        <span class="comps-map-control-label">Diagnostics</span>
+                                        <div class="comps-map-toolbar">
+                                            <span id="comps-map-style-source" class="comps-map-style-source" title="Map styling source">JSON Style</span>
+                                        </div>
+                                        <div id="comps-map-status-badge" class="comps-map-status-badge" data-state="info">
+                                            <strong id="comps-map-status-badge-title">Maps diagnostics</strong>
+                                            <span id="comps-map-status-badge-text">FAST is checking the Google Maps config, script loader, and browser authorization for this comps session.</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -787,6 +797,10 @@
                                     </div>
 
                                     <div class="comps-map-wrap">
+                                        <div id="comps-map-empty-state" class="comps-map-empty-state" hidden>
+                                            <strong>Interactive map unavailable</strong>
+                                            <p id="comps-map-empty-message">FAST can still show nearby comps while the interactive map finishes loading.</p>
+                                        </div>
                                         <div id="comps-aerial-view-shell" class="comps-aerial-view-shell" hidden>
                                             <div class="comps-aerial-view-status" id="comps-aerial-view-status">
                                                 <strong>Aerial View</strong>

@@ -17815,6 +17815,45 @@ body.analytics-reboot .analytics-my-file-count {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+.comps-map-status-badge[data-state="success"] {
+    border-color: rgba(52, 211, 153, 0.28);
+    background: linear-gradient(145deg, rgba(6, 95, 70, 0.34), rgba(6, 78, 59, 0.18));
+}
+
+.comps-map-status-badge[data-state="success"] strong {
+    color: #d1fae5;
+}
+
+.comps-map-status-badge[data-state="success"] span {
+    color: #a7f3d0;
+}
+
+.comps-map-status-badge[data-state="info"] {
+    border-color: rgba(96, 165, 250, 0.26);
+    background: linear-gradient(145deg, rgba(30, 64, 175, 0.28), rgba(30, 41, 59, 0.16));
+}
+
+.comps-map-status-badge[data-state="info"] strong {
+    color: #dbeafe;
+}
+
+.comps-map-status-badge[data-state="info"] span {
+    color: #bfdbfe;
+}
+
+.comps-map-status-badge[data-state="warning"] {
+    border-color: rgba(251, 191, 36, 0.3);
+    background: linear-gradient(145deg, rgba(146, 64, 14, 0.3), rgba(120, 53, 15, 0.16));
+}
+
+.comps-map-status-badge[data-state="warning"] strong {
+    color: #fef3c7;
+}
+
+.comps-map-status-badge[data-state="warning"] span {
+    color: #fde68a;
+}
+
 .comps-map-status-badge strong {
     color: #fee2e2;
     font-size: 11px;
@@ -18062,6 +18101,10 @@ body.analytics-reboot .analytics-my-file-count {
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.6;
+}
+
+.comps-map-empty-state[hidden] {
+    display: none !important;
 }
 
 .comps-aerial-view-shell {
