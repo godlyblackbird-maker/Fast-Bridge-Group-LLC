@@ -69,25 +69,30 @@
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
+        .training-library-grid {
+            display: grid;
+            gap: 18px;
+        }
+
         .training-library-card {
             display: grid;
-            gap: 24px;
+            gap: 18px;
         }
 
         .training-video-feature {
             display: grid;
-            gap: 16px;
-            max-width: 960px;
+            gap: 12px;
+            max-width: 780px;
         }
 
         .training-video-stage {
             position: relative;
-            width: min(960px, 100%);
+            width: min(780px, 100%);
             aspect-ratio: 16 / 9;
             overflow: hidden;
-            border-radius: 24px;
+            border-radius: 18px;
             border: 1px solid var(--glass-border);
-            box-shadow: 0 24px 48px -30px var(--glass-shadow);
+            box-shadow: 0 18px 36px -28px var(--glass-shadow);
             background: rgba(8, 15, 28, 0.14);
         }
 
@@ -118,19 +123,19 @@
         .training-video-thumb::after {
             content: 'Play Training';
             position: absolute;
-            left: 18px;
-            bottom: 18px;
+            left: 14px;
+            bottom: 14px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 38px;
-            padding: 0 14px;
+            min-height: 34px;
+            padding: 0 12px;
             border-radius: 999px;
             background: rgba(8, 15, 28, 0.78);
             color: #f8fafc;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.07em;
             text-transform: uppercase;
             backdrop-filter: blur(14px);
         }
@@ -150,10 +155,18 @@
 
         .training-video-title {
             margin: 0;
-            font-size: clamp(24px, 3vw, 32px);
+            font-size: clamp(20px, 2.4vw, 26px);
             line-height: 1.1;
             font-weight: 700;
             letter-spacing: -0.03em;
+        }
+
+        .training-video-description {
+            margin: 0;
+            max-width: 62ch;
+            color: var(--muted-text, rgba(226, 232, 240, 0.74));
+            font-size: 14px;
+            line-height: 1.5;
         }
 
         .training-video-frame {
@@ -179,6 +192,13 @@
             width: 100%;
             aspect-ratio: 16 / 9;
             border: 0;
+        }
+
+        @media (min-width: 1200px) {
+            .training-library-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                align-items: start;
+            }
         }
     </style>
 </head>
@@ -363,36 +383,49 @@
                 </div>
             </nav>
 
-            <section class="glass-card training-library-card" aria-labelledby="trainings-placeholder-title">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title" id="trainings-placeholder-title">Training Library</h2>
-                        <p class="card-subtitle">FAST training videos, walkthroughs, and onboarding content live here.</p>
-                    </div>
-                </div>
-                <div class="training-video-feature">
-                    <h3 class="training-video-title">Fast Bridge Group | NAVIGATION</h3>
-                    <div class="training-video-stage" data-training-stage="true">
-                        <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-id="O6mfCJAjces" aria-label="Play FAST BRIDGE GROUP navigation training video on this page">
-                            <img src="https://i.ytimg.com/vi/O6mfCJAjces/hqdefault.jpg" alt="FAST BRIDGE GROUP first training video thumbnail">
-                        </button>
-                        <div class="training-video-frame" data-training-player="true">
-                            <iframe src="about:blank" title="FAST BRIDGE GROUP navigation training video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            <div class="training-library-grid">
+                <section class="glass-card training-library-card" aria-labelledby="trainings-placeholder-title">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title" id="trainings-placeholder-title">Training Library</h2>
+                            <p class="card-subtitle">FAST training videos, walkthroughs, and onboarding content live here.</p>
                         </div>
                     </div>
-                </div>
-                <div class="training-video-feature">
-                    <h3 class="training-video-title">Real Estate License Training</h3>
-                    <div class="training-video-stage" data-training-stage="true">
-                        <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-id="0Dn0Wip6udA" aria-label="Play Real Estate License Training video on this page">
-                            <img src="https://i.ytimg.com/vi/0Dn0Wip6udA/hqdefault.jpg" alt="Real Estate License Training video thumbnail">
-                        </button>
-                        <div class="training-video-frame" data-training-player="true">
-                            <iframe src="about:blank" title="Real Estate License Training video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                    <div class="training-video-feature">
+                        <h3 class="training-video-title">Fast Bridge Group | NAVIGATION</h3>
+                        <p class="training-video-description">Quick navigation training for moving through the FAST dashboard, workspace tools, and daily workflow sections.</p>
+                        <div class="training-video-stage" data-training-stage="true">
+                            <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-id="O6mfCJAjces" aria-label="Play FAST BRIDGE GROUP navigation training video on this page">
+                                <img src="https://i.ytimg.com/vi/O6mfCJAjces/hqdefault.jpg" alt="FAST BRIDGE GROUP first training video thumbnail">
+                            </button>
+                            <div class="training-video-frame" data-training-player="true">
+                                <iframe src="about:blank" title="FAST BRIDGE GROUP navigation training video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <section class="glass-card training-library-card" aria-labelledby="real-estate-license-training-title">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title" id="real-estate-license-training-title">Real Estate License Training</h2>
+                            <p class="card-subtitle">Dedicated licensing prep video content in its own training container.</p>
+                        </div>
+                    </div>
+                    <div class="training-video-feature">
+                        <h3 class="training-video-title">Real Estate License Training</h3>
+                        <p class="training-video-description">Focused license training content with the same inline thumbnail-to-player flow as the rest of the training library.</p>
+                        <div class="training-video-stage" data-training-stage="true">
+                            <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-id="0Dn0Wip6udA" aria-label="Play Real Estate License Training video on this page">
+                                <img src="https://i.ytimg.com/vi/0Dn0Wip6udA/hqdefault.jpg" alt="Real Estate License Training video thumbnail">
+                            </button>
+                            <div class="training-video-frame" data-training-player="true">
+                                <iframe src="about:blank" title="Real Estate License Training video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
