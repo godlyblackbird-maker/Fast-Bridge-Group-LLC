@@ -22382,6 +22382,7 @@ function initNavbarDateTime() {
             let searchedMarker = null;
             let searchedMarkerHalo = null;
             let lastSearchResult = null;
+            let lastSearchProviderNote = '';
             let lastAutoSearchPropertyAddress = '';
             let earthMapElement = null;
             let earthSubjectMarker = null;
@@ -22465,10 +22466,31 @@ function initNavbarDateTime() {
                     message = 'FAST found a browser Maps key and is waiting for the interactive map to initialize in this tab.';
                 }
 
+                if (lastSearchProviderNote) {
+                    message = `${message} ${lastSearchProviderNote}`.trim();
+                }
+
                 compsMapStatusBadge.dataset.state = state;
                 compsMapStatusBadge.hidden = false;
                 compsMapStatusBadgeTitle.textContent = title;
                 compsMapStatusBadgeText.textContent = message;
+            }
+
+            function getSearchProviderNote(provider) {
+                const normalizedProvider = String(provider || '').trim().toLowerCase();
+                if (normalizedProvider === 'autocomplete') {
+                    return 'Latest Search + View result came from Google Autocomplete.';
+                }
+                if (normalizedProvider === 'google-places') {
+                    return 'Latest Search + View result came from Google Places.';
+                }
+                if (normalizedProvider === 'google-geocoder') {
+                    return 'Latest Search + View result came from the Google Geocoding service.';
+                }
+                if (normalizedProvider === 'nominatim') {
+                    return 'Latest Search + View result used the OpenStreetMap fallback because Google did not return a match.';
+                }
+                return '';
             }
 
             function syncEarthLayerAvailability(config) {
@@ -24220,29 +24242,31 @@ function initNavbarDateTime() {
                 }
 
                 const resolvedSearchLabel = getSearchResultLabel(geocodeMatch, searchText);
+                lastSearchProviderNote = getSearchProviderNote(geocodeMatch.provider);
 
-                    autocompletePlaceSelection = {
-                        query: searchText,
-                        lat: geocodeMatch.lat,
-                        lng: geocodeMatch.lng,
-                        formattedAddress: resolvedSearchLabel
-                    };
+                autocompletePlaceSelection = {
+                    query: searchText,
+                    lat: geocodeMatch.lat,
+                    lng: geocodeMatch.lng,
+                    formattedAddress: resolvedSearchLabel
+                };
                 if (compsMapSearchInput) {
                     compsMapSearchInput.value = resolvedSearchLabel;
                 }
 
-                    let resolvedMap = null;
-                    try {
-                        resolvedMap = await ensureMapReady();
-                    } catch (error) {
-                        throw new Error(String(error && error.message || 'The comps map could not finish loading for search.'));
-                    }
+                let resolvedMap = null;
+                try {
+                    resolvedMap = await ensureMapReady();
+                } catch (error) {
+                    throw new Error(String(error && error.message || 'The comps map could not finish loading for search.'));
+                }
 
-                    if (!resolvedMap || !mapInstance || !window.google || !window.google.maps) {
-                        throw new Error('The interactive comps map is not ready yet. Refresh the page and try the search again.');
-                    }
+                if (!resolvedMap || !mapInstance || !window.google || !window.google.maps) {
+                    throw new Error('The interactive comps map is not ready yet. Refresh the page and try the search again.');
+                }
 
-                    focusSearchLocation(geocodeMatch, resolvedSearchLabel);
+                updateMapStatusBadge({ config });
+                focusSearchLocation(geocodeMatch, resolvedSearchLabel);
             }
 
             function normalizeAddressForAutoSearch(value) {
@@ -24357,11 +24381,13 @@ function initNavbarDateTime() {
                         lng,
                         formattedAddress: resolvedLabel
                     };
+                    lastSearchProviderNote = getSearchProviderNote('autocomplete');
                     if (compsMapSearchInput) {
                         compsMapSearchInput.value = resolvedLabel;
                     }
                     ensureMapReady().then((resolvedMap) => {
                         if (resolvedMap && mapInstance && window.google && window.google.maps) {
+                            updateMapStatusBadge({ config: lastGoogleMapsConfig });
                             focusSearchLocation({ lat, lng }, resolvedLabel);
                         }
                     }).catch((error) => {
