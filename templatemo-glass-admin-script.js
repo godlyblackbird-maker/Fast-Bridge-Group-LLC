@@ -21490,6 +21490,7 @@ function initNavbarDateTime() {
         const GOOGLE_MAPS_SCRIPT_ID = 'fast-google-maps-script';
         const GOOGLE_MAPS_CALLBACK_NAME = '__fastGoogleMapsLoaded';
         const GOOGLE_MAPS_SCRIPT_TIMEOUT_MS = 15000;
+        const GOOGLE_EARTH_DEMO_MAP_ID = 'DEMO_MAP_ID';
         let googleMapsBrowserConfigPromise = null;
         let googleMapsScriptPromise = null;
         let googleMapsStylesPromise = null;
@@ -22889,11 +22890,11 @@ function initNavbarDateTime() {
                 earthReadyPromise = (async () => {
                     const config = await resolveGoogleMapsBrowserConfig();
                     syncEarthLayerAvailability(config);
-                    const earthMapId = String(config && (config.earthMapId || config.mapId) || '').trim();
+                    const configuredEarthMapId = String(config && (config.earthMapId || config.mapId) || '').trim();
                     if (!config.enabled || !config.apiKey) {
                         throw new Error(getEarthUnavailableMessage(config, 'Google Maps API key is not configured for Earth view.'));
                     }
-                    if (!earthMapId) {
+                    if (!configuredEarthMapId) {
                         throw new Error(getEarthUnavailableMessage(config, 'Google Earth needs GOOGLE_MAPS_MAP_ID configured on the server.'));
                     }
 
@@ -22922,8 +22923,8 @@ function initNavbarDateTime() {
                     }
 
                     earthMapModeValue = MapMode && MapMode.HYBRID ? MapMode.HYBRID : 'HYBRID';
-                    earthMapElement = new Map3DElement({
-                        mapId: earthMapId,
+                    const buildEarthMapElement = (mapId) => new Map3DElement({
+                        mapId,
                         mode: earthMapModeValue,
                         range: 1400,
                         tilt: 67.5,
@@ -22934,11 +22935,31 @@ function initNavbarDateTime() {
                         }
                     });
 
+                    let earthMapBuildError = null;
+                    try {
+                        earthMapElement = buildEarthMapElement(configuredEarthMapId);
+                    } catch (error) {
+                        earthMapBuildError = error;
+                        const canFallbackToDemoMap = configuredEarthMapId !== GOOGLE_EARTH_DEMO_MAP_ID;
+                        if (!canFallbackToDemoMap) {
+                            throw error;
+                        }
+
+                        earthMapElement = buildEarthMapElement(GOOGLE_EARTH_DEMO_MAP_ID);
+                        if (config && typeof config === 'object') {
+                            config.earthMapId = GOOGLE_EARTH_DEMO_MAP_ID;
+                        }
+                    }
+
                     compsMapEarthCanvas.innerHTML = '';
                     compsMapEarthCanvas.appendChild(earthMapElement);
                     updateEarthCamera(getEarthFocusLocation());
                     syncEarthSubjectMarker(getEarthFocusLocation());
                     syncEarthCompMarkers(lastTopResults);
+
+                    if (earthMapBuildError) {
+                        showDashboardToast('info', 'Google Earth Fallback', 'FAST switched Earth to the Google demo 3D Map ID because the configured Map ID did not initialize in this browser session.');
+                    }
                     return earthMapElement;
                 })().catch((error) => {
                     earthReadyPromise = null;
