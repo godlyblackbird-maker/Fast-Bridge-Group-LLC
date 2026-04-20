@@ -1285,7 +1285,7 @@
                             <span>Add Good Time Of Day</span>
                         </label>
                     </div>
-                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. If you leave it out, the generator adds it at the end.</p>
+                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}, {dayGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. Add {dayGreeting} anywhere to place Happy Monday!/Tuesday/etc. based on the current day. If you leave {timeGreeting} out, the generator adds it at the end.</p>
                     <label class="buyers-sheet-template-field">
                         <span class="buyers-sheet-template-field-label">Template Body</span>
                         <textarea id="mls-imports-template-body" class="buyers-sheet-template-textarea" spellcheck="true"></textarea>
@@ -2385,6 +2385,12 @@
                 return `Hope you're having a good ${getTimeOfDayGreeting()}!`;
             }
 
+            function getDayGreetingSentence() {
+                const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const dayName = dayNames[new Date().getDay()] || 'Day';
+                return `Happy ${dayName}!`;
+            }
+
             function getPreferredTemplateUserName() {
                 const profile = safeReadJson('userProfile');
                 const user = safeReadJson('user');
@@ -2428,7 +2434,7 @@
             }
 
             function replaceTemplateTokens(value, replacements) {
-                return String(value || '').replace(/\{(propertyAddress|status|agentFirstName|agentName|senderName|timeGreeting)\}/g, (match, key) => {
+                return String(value || '').replace(/\{(propertyAddress|status|agentFirstName|agentName|senderName|timeGreeting|dayGreeting)\}/g, (match, key) => {
                     return Object.prototype.hasOwnProperty.call(replacements, key) ? replacements[key] : match;
                 });
             }
@@ -2444,13 +2450,15 @@
                 const bodyTemplate = upgradeManagedTemplateBody(settings.templates[templateStatusKey] || TEMPLATE_DEFAULT_BODIES[templateStatusKey], templateStatusKey);
                 const includesTimeGreetingToken = /\{timeGreeting\}/.test(String(bodyTemplate || ''));
                 const timeGreeting = settings.includeTimeOfDay ? getTimeGreetingSentence() : '';
+                const dayGreeting = getDayGreetingSentence();
                 const body = replaceTemplateTokens(bodyTemplate, {
                     propertyAddress,
                     status: rawStatus,
                     agentFirstName,
                     agentName: laName || agentFirstName,
                     senderName: getCurrentUserFullName(),
-                    timeGreeting
+                    timeGreeting,
+                    dayGreeting
                 }).replace(/\s+([,!.?])/g, '$1').trim();
 
                 if (settings.includeTimeOfDay && !includesTimeGreetingToken && timeGreeting) {

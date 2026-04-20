@@ -435,7 +435,7 @@
             position: relative;
             overflow: hidden;
             display: grid;
-            place-items: center;
+            align-items: stretch;
             min-height: 360px;
             border-radius: 24px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -445,17 +445,110 @@
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
+        .community-voice-stage-media {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: 360px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            padding: 12px;
+            align-items: stretch;
+        }
+
+        .community-voice-stage-media[hidden] {
+            display: none;
+        }
+
+        .community-voice-stage-group {
+            display: grid;
+            gap: 10px;
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(15, 23, 42, 0.42);
+        }
+
+        .community-voice-stage-group-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .community-voice-stage-group-title {
+            margin: 0;
+            color: #e2e8f0;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .community-voice-stage-group-count {
+            color: rgba(191, 219, 254, 0.92);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .community-voice-stage-group-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .community-voice-stage-tile {
+            position: relative;
+            overflow: hidden;
+            min-height: 220px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(2, 6, 23, 0.92);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        .community-voice-stage-media[data-tile-count="1"] .community-voice-stage-tile {
+            min-height: 336px;
+        }
+
         .community-voice-stage-video {
             width: 100%;
             height: 100%;
-            min-height: 360px;
-            object-fit: contain;
+            min-height: 220px;
+            object-fit: cover;
             background: #020617;
+        }
+
+        .community-voice-stage-media[data-tile-count="1"] .community-voice-stage-video {
+            min-height: 336px;
+            object-fit: contain;
+        }
+
+        .community-voice-stage-tile-label {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.78);
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            width: fit-content;
+            max-width: calc(100% - 24px);
+            backdrop-filter: blur(10px);
         }
 
         .community-voice-stage-empty {
             position: absolute;
             inset: 0;
+            z-index: 2;
             display: grid;
             place-items: center;
             padding: 28px;
@@ -734,6 +827,126 @@
             font-weight: 800;
         }
 
+        .community-voice-settings-device {
+            align-items: start;
+        }
+
+        .community-voice-settings-device-controls {
+            width: min(260px, 100%);
+            display: grid;
+            gap: 6px;
+            justify-items: stretch;
+        }
+
+        .community-voice-settings-select {
+            width: 100%;
+            min-height: 42px;
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .community-voice-settings-select:focus-visible {
+            outline: 2px solid rgba(96, 165, 250, 0.4);
+            outline-offset: 2px;
+        }
+
+        .community-voice-settings-select:disabled {
+            opacity: 0.56;
+            cursor: not-allowed;
+        }
+
+        .community-voice-settings-device-note {
+            color: var(--community-menu-label-color);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .community-voice-settings-gain {
+            align-items: start;
+        }
+
+        .community-voice-settings-gain-controls {
+            width: min(260px, 100%);
+            display: grid;
+            gap: 10px;
+        }
+
+        .community-voice-settings-gain-adjust {
+            display: grid;
+            grid-template-columns: 42px minmax(0, 1fr) 42px;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .community-voice-settings-gain-btn {
+            min-width: 42px;
+            min-height: 42px;
+            padding: 0;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .community-voice-settings-gain-value {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        .community-voice-settings-meter {
+            display: grid;
+            gap: 6px;
+        }
+
+        .community-voice-settings-meter-bar {
+            position: relative;
+            overflow: hidden;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.86);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .community-voice-settings-meter-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #38bdf8 0%, #22c55e 65%, #f59e0b 100%);
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.26);
+            transition: width 0.14s ease;
+        }
+
+        .community-voice-settings-meter-scale {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            color: var(--community-menu-label-color);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .community-voice-settings-meter-readout {
+            color: #dbeafe;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: right;
+        }
+
         .community-voice-settings-actions {
             display: flex;
             justify-content: flex-end;
@@ -751,6 +964,7 @@
             }
 
             .community-voice-stage-frame,
+            .community-voice-stage-media,
             .community-voice-stage-video {
                 min-height: 280px;
             }
@@ -1068,6 +1282,39 @@
             font-weight: 800;
             letter-spacing: 0.04em;
             text-decoration: none;
+        }
+
+        .community-voice-member-mute {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8fafc;
+        }
+
+        .community-voice-member-mute svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .community-voice-member-mute .community-voice-member-mute-slash {
+            opacity: 0;
+            transition: opacity 0.18s ease;
+        }
+
+        .community-voice-member-mute.is-muted {
+            border-color: rgba(248, 113, 113, 0.34);
+            background: rgba(248, 113, 113, 0.16);
+            color: #fecaca;
+        }
+
+        .community-voice-member-mute.is-muted .community-voice-member-mute-slash {
+            opacity: 1;
         }
 
         .community-voice-link {
@@ -1593,12 +1840,12 @@
                                 <div class="community-voice-stage">
                                     <div class="community-voice-stage-head">
                                         <span class="community-voice-stage-kicker" id="community-voice-stage-kicker">Meeting Room 1</span>
-                                        <h3 class="community-voice-stage-title" id="community-voice-stage-title">Meeting Room 1 Screen</h3>
-                                        <p class="community-voice-stage-copy" id="community-voice-stage-copy">Anyone sharing their screen in this room will appear here for everyone else in the same meeting room.</p>
+                                        <h3 class="community-voice-stage-title" id="community-voice-stage-title">Meeting Room 1 Shared Media</h3>
+                                        <p class="community-voice-stage-copy" id="community-voice-stage-copy">Anyone sharing their screen or camera in this room will appear here for everyone else in the same meeting room.</p>
                                     </div>
                                     <div class="community-voice-stage-frame">
-                                        <video class="community-voice-stage-video" id="community-voice-stage-video" autoplay playsinline hidden></video>
-                                        <div class="community-voice-stage-empty" id="community-voice-stage-empty">No one is sharing their screen in this room yet.</div>
+                                        <div class="community-voice-stage-media" id="community-voice-stage-media" hidden></div>
+                                        <div class="community-voice-stage-empty" id="community-voice-stage-empty"></div>
                                     </div>
                                 </div>
                                 <div class="community-voice-stage-side">
@@ -1877,6 +2124,49 @@
                     </div>
                     <button class="card-btn community-voice-settings-action" type="button" id="community-voice-settings-audio-action">Deafen</button>
                 </div>
+                <div class="community-voice-settings-row community-voice-settings-device">
+                    <div class="community-voice-settings-copy">
+                        <strong>Microphone Device</strong>
+                        <span id="community-voice-settings-mic-device-state">Choose which microphone this room should use.</span>
+                    </div>
+                    <div class="community-voice-settings-device-controls">
+                        <select class="community-voice-settings-select" id="community-voice-settings-mic-device"></select>
+                        <span class="community-voice-settings-device-note" id="community-voice-settings-mic-device-note">Join a room to switch microphones live.</span>
+                    </div>
+                </div>
+                <div class="community-voice-settings-row community-voice-settings-gain">
+                    <div class="community-voice-settings-copy">
+                        <strong>Mic Gain</strong>
+                        <span id="community-voice-settings-gain-state">Adjust input gain and watch your live microphone level.</span>
+                    </div>
+                    <div class="community-voice-settings-gain-controls">
+                        <div class="community-voice-settings-gain-adjust">
+                            <button class="card-btn community-voice-settings-gain-btn" type="button" id="community-voice-settings-gain-down" aria-label="Lower microphone gain">-</button>
+                            <div class="community-voice-settings-gain-value" id="community-voice-settings-gain-value">0 dB</div>
+                            <button class="card-btn community-voice-settings-gain-btn" type="button" id="community-voice-settings-gain-up" aria-label="Raise microphone gain">+</button>
+                        </div>
+                        <div class="community-voice-settings-meter" aria-hidden="true">
+                            <div class="community-voice-settings-meter-bar">
+                                <div class="community-voice-settings-meter-fill" id="community-voice-settings-gain-meter-fill"></div>
+                            </div>
+                            <div class="community-voice-settings-meter-scale">
+                                <span>-30 dB</span>
+                                <span>0 dB</span>
+                            </div>
+                            <div class="community-voice-settings-meter-readout" id="community-voice-settings-gain-meter-readout">Input level: -30 dB</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="community-voice-settings-row community-voice-settings-device">
+                    <div class="community-voice-settings-copy">
+                        <strong>Headset / Speaker</strong>
+                        <span id="community-voice-settings-output-device-state">Choose where room audio should play.</span>
+                    </div>
+                    <div class="community-voice-settings-device-controls">
+                        <select class="community-voice-settings-select" id="community-voice-settings-output-device"></select>
+                        <span class="community-voice-settings-device-note" id="community-voice-settings-output-device-note">Pick the speaker or headset for room audio.</span>
+                    </div>
+                </div>
                 <div class="community-voice-settings-row">
                     <div class="community-voice-settings-copy">
                         <strong>Screen share</strong>
@@ -1915,7 +2205,7 @@
             const voiceLeaveButton = document.getElementById('community-voice-leave-btn');
             const voiceStageTitle = document.getElementById('community-voice-stage-title');
             const voiceStageCopy = document.getElementById('community-voice-stage-copy');
-            const voiceStageVideo = document.getElementById('community-voice-stage-video');
+            const voiceStageMedia = document.getElementById('community-voice-stage-media');
             const voiceStageEmpty = document.getElementById('community-voice-stage-empty');
             const voiceStageKicker = document.getElementById('community-voice-stage-kicker');
             const voiceInviteButton = document.getElementById('community-voice-invite-btn');
@@ -1933,6 +2223,18 @@
             const voiceSettingsMicAction = document.getElementById('community-voice-settings-mic-action');
             const voiceSettingsAudioState = document.getElementById('community-voice-settings-audio-state');
             const voiceSettingsAudioAction = document.getElementById('community-voice-settings-audio-action');
+            const voiceSettingsMicDeviceState = document.getElementById('community-voice-settings-mic-device-state');
+            const voiceSettingsMicDeviceSelect = document.getElementById('community-voice-settings-mic-device');
+            const voiceSettingsMicDeviceNote = document.getElementById('community-voice-settings-mic-device-note');
+            const voiceSettingsGainState = document.getElementById('community-voice-settings-gain-state');
+            const voiceSettingsGainDownButton = document.getElementById('community-voice-settings-gain-down');
+            const voiceSettingsGainValue = document.getElementById('community-voice-settings-gain-value');
+            const voiceSettingsGainUpButton = document.getElementById('community-voice-settings-gain-up');
+            const voiceSettingsGainMeterFill = document.getElementById('community-voice-settings-gain-meter-fill');
+            const voiceSettingsGainMeterReadout = document.getElementById('community-voice-settings-gain-meter-readout');
+            const voiceSettingsOutputDeviceState = document.getElementById('community-voice-settings-output-device-state');
+            const voiceSettingsOutputDeviceSelect = document.getElementById('community-voice-settings-output-device');
+            const voiceSettingsOutputDeviceNote = document.getElementById('community-voice-settings-output-device-note');
             const voiceSettingsScreenState = document.getElementById('community-voice-settings-screen-state');
             const voiceSettingsScreenAction = document.getElementById('community-voice-settings-screen-action');
             const voiceSettingsCameraState = document.getElementById('community-voice-settings-camera-state');
@@ -1991,6 +2293,9 @@
             const VOICE_SESSION_CHANNEL = 'fast-community-voice-session';
             const VOICE_CONTROLLER_WINDOW_NAME = 'fastCommunityVoiceController';
             const VOICE_SESSION_STATE_STALE_MS = 30000;
+            const VOICE_INPUT_DEVICE_KEY = 'fastCommunityVoiceInputDeviceId';
+            const VOICE_MIC_GAIN_DB_KEY = 'fastCommunityVoiceMicGainDb';
+            const VOICE_OUTPUT_DEVICE_KEY = 'fastCommunityVoiceOutputDeviceId';
             const voiceSessionChannel = typeof window.BroadcastChannel === 'function'
                 ? new BroadcastChannel(VOICE_SESSION_CHANNEL)
                 : null;
@@ -2008,8 +2313,13 @@
             let voiceInviteButtonResetHandle = 0;
             let voiceSpeakingMonitorHandle = 0;
             let voiceAudioContext = null;
+            let voiceLocalInputStream = null;
             let voiceLocalStream = null;
             let voiceLocalAudioMeter = null;
+            let voiceLocalGainNode = null;
+            let voiceLocalInputSourceNode = null;
+            let voiceLocalDestinationNode = null;
+            let voiceMicGainDb = 0;
             let voiceCameraStream = null;
             let voiceScreenShareStream = null;
             let voiceScreenShareMode = '';
@@ -2021,7 +2331,14 @@
             let voiceMuted = false;
             let voiceDeafened = false;
             let voiceScreenSharePending = false;
+            let voiceInputDevices = [];
+            let voiceOutputDevices = [];
+            let voiceSelectedInputDeviceId = '';
+            let voiceSelectedOutputDeviceId = '';
+            let voiceDeviceRefreshPending = false;
+            let voiceDeviceChangePending = false;
             const voiceSpeakingState = new Map();
+            const voiceLocallyMutedParticipants = new Set();
             const voicePeerConnections = new Map();
             const voiceRemoteAudioByParticipant = new Map();
             const voiceRemoteVideoByParticipant = new Map();
@@ -2036,6 +2353,7 @@
             const getActiveVoiceRoom = () => getVoiceRoom(activeVoiceRoomId || selectedVoiceRoomId);
             const shouldShowVoiceRoster = () => Boolean(voiceChannelInteracted || voiceJoined || voiceJoining);
             const supportsVoiceScreenShare = () => Boolean(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
+            const supportsVoiceOutputSelection = () => Boolean(typeof HTMLMediaElement !== 'undefined' && HTMLMediaElement.prototype && typeof HTMLMediaElement.prototype.setSinkId === 'function');
 
             const syncVoiceMuteState = () => {
                 if (!voiceLocalStream) {
@@ -2047,10 +2365,36 @@
                 });
             };
 
+            const isVoiceParticipantLocallyMuted = (participantId) => voiceLocallyMutedParticipants.has(participantId);
+
+            const applyRemoteAudioMuteState = (participantId) => {
+                const audio = voiceRemoteAudioByParticipant.get(participantId);
+                if (!audio) {
+                    return;
+                }
+
+                audio.muted = voiceDeafened || isVoiceParticipantLocallyMuted(participantId);
+            };
+
             const syncVoiceDeafenState = () => {
-                Array.from(voiceRemoteAudioByParticipant.values()).forEach((audio) => {
-                    audio.muted = voiceDeafened;
+                Array.from(voiceRemoteAudioByParticipant.keys()).forEach((participantId) => {
+                    applyRemoteAudioMuteState(participantId);
                 });
+            };
+
+            const toggleLocalMuteForParticipant = (participantId) => {
+                if (!participantId || participantId === 'self') {
+                    return;
+                }
+
+                if (voiceLocallyMutedParticipants.has(participantId)) {
+                    voiceLocallyMutedParticipants.delete(participantId);
+                } else {
+                    voiceLocallyMutedParticipants.add(participantId);
+                }
+
+                applyRemoteAudioMuteState(participantId);
+                renderVoiceRoster();
             };
 
             const getLiveScreenStream = (stream) => {
@@ -2081,112 +2425,206 @@
                 return fallbackKind;
             };
 
-            const getActiveLocalVisualShare = () => {
+            const getActiveLocalVisualShares = () => {
+                const shares = [];
+
                 if (voiceScreenShareStream && getLiveScreenStream(voiceScreenShareStream)) {
-                    return {
+                    shares.push({
                         stream: voiceScreenShareStream,
                         ownerName: `${getCurrentUserName()} (you)`,
-                        kind: 'screen'
-                    };
+                        kind: 'screen',
+                        key: 'local-screen',
+                        isLocal: true
+                    });
                 }
 
                 if (voiceCameraStream && getLiveScreenStream(voiceCameraStream)) {
-                    return {
+                    shares.push({
                         stream: voiceCameraStream,
                         ownerName: `${getCurrentUserName()} (you)`,
-                        kind: 'camera'
-                    };
+                        kind: 'camera',
+                        key: 'local-camera',
+                        isLocal: true
+                    });
                 }
 
-                return null;
+                return shares;
             };
 
-            const getPrimaryVoiceScreenShare = () => {
-                const localShare = getActiveLocalVisualShare();
-                if (localShare) {
-                    return localShare;
-                }
+            const getAllVoiceVisualShares = () => {
+                const shares = getActiveLocalVisualShares();
 
                 for (const [participantId, entry] of voiceRemoteVideoByParticipant.entries()) {
-                    const liveStream = getLiveScreenStream(entry && entry.stream ? entry.stream : null);
-                    if (!liveStream) {
+                    if (!entry || typeof entry !== 'object') {
                         continue;
                     }
 
                     const participant = findParticipant(participantId);
-                    return {
-                        stream: liveStream,
-                        ownerName: participant ? participant.name : 'FAST User',
-                        kind: entry && entry.kind ? entry.kind : detectVisualShareKind(liveStream, 'screen')
-                    };
+                    const ownerName = participant ? participant.name : 'FAST User';
+
+                    ['screen', 'camera'].forEach((kind) => {
+                        const shareEntry = entry[kind];
+                        const liveStream = getLiveScreenStream(shareEntry && shareEntry.stream ? shareEntry.stream : null);
+                        if (!liveStream) {
+                            return;
+                        }
+
+                        shares.push({
+                            stream: liveStream,
+                            ownerName,
+                            kind,
+                            key: `${participantId}-${kind}`,
+                            isLocal: false
+                        });
+                    });
                 }
 
-                return null;
+                return shares;
+            };
+
+            const clearVoiceStageMedia = () => {
+                if (!voiceStageMedia) {
+                    return;
+                }
+
+                voiceStageMedia.querySelectorAll('video').forEach((video) => {
+                    if (video.srcObject) {
+                        video.srcObject = null;
+                    }
+                });
+                voiceStageMedia.replaceChildren();
+                voiceStageMedia.hidden = true;
+                voiceStageMedia.dataset.tileCount = '0';
             };
 
             const renderVoiceScreenStage = () => {
-                if (!voiceStageTitle || !voiceStageCopy || !voiceStageVideo || !voiceStageEmpty) {
+                if (!voiceStageTitle || !voiceStageCopy || !voiceStageEmpty || !voiceStageMedia) {
                     return;
                 }
 
                 const room = getActiveVoiceRoom();
-                const activeShare = getPrimaryVoiceScreenShare();
+                const activeShares = getAllVoiceVisualShares();
 
                 if (voiceStageKicker) {
                     voiceStageKicker.textContent = `${room.label} Room`;
                 }
 
-                if (!activeShare) {
+                if (!activeShares.length) {
                     voiceStageTitle.textContent = `${room.label} Shared Media`;
                     voiceStageCopy.textContent = 'Anyone sharing their screen or camera in this room will appear here for everyone else in the same meeting room.';
                     voiceStageEmpty.hidden = false;
-                    voiceStageVideo.hidden = true;
-                    if (voiceStageVideo.srcObject) {
-                        voiceStageVideo.srcObject = null;
-                    }
+                    clearVoiceStageMedia();
                     return;
                 }
 
-                voiceStageTitle.textContent = activeShare.kind === 'camera'
-                    ? `${room.label}: ${activeShare.ownerName} is sharing camera`
-                    : `${room.label}: ${activeShare.ownerName} is sharing screen`;
-                voiceStageCopy.textContent = activeShare.kind === 'camera'
-                    ? `Live camera in ${room.label}. Everyone in this room can watch here.`
-                    : `Live screen share in ${room.label}. Everyone in this room can watch here.`;
+                voiceStageTitle.textContent = activeShares.length === 1
+                    ? `${room.label}: ${activeShares[0].ownerName} is sharing ${activeShares[0].kind}`
+                    : `${room.label}: ${activeShares.length} live media feeds`;
+                voiceStageCopy.textContent = activeShares.length === 1
+                    ? (activeShares[0].kind === 'camera'
+                        ? `Live camera in ${room.label}. Everyone in this room can watch here.`
+                        : `Live screen share in ${room.label}. Everyone in this room can watch here.`)
+                    : `Live screen shares and cameras in ${room.label}. Everyone in this room can watch both here.`;
                 voiceStageEmpty.hidden = true;
-                voiceStageVideo.hidden = false;
-                voiceStageVideo.muted = activeShare.stream === voiceScreenShareStream || activeShare.stream === voiceCameraStream;
-                if (voiceStageVideo.srcObject !== activeShare.stream) {
-                    voiceStageVideo.srcObject = activeShare.stream;
-                }
+                voiceStageMedia.hidden = false;
+                voiceStageMedia.dataset.tileCount = String(activeShares.length);
+                voiceStageMedia.replaceChildren();
+
+                const groupedShares = {
+                    screen: activeShares.filter((share) => share.kind === 'screen'),
+                    camera: activeShares.filter((share) => share.kind === 'camera')
+                };
+
+                const buildShareTile = (share) => {
+                    const tile = document.createElement('div');
+                    tile.className = 'community-voice-stage-tile';
+                    tile.dataset.kind = share.kind;
+                    tile.dataset.shareKey = share.key;
+
+                    const video = document.createElement('video');
+                    video.className = 'community-voice-stage-video';
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.muted = true;
+                    video.srcObject = share.stream;
+
+                    const label = document.createElement('div');
+                    label.className = 'community-voice-stage-tile-label';
+                    label.textContent = `${share.ownerName} · ${share.kind === 'camera' ? 'Camera' : 'Screen'}`;
+
+                    tile.appendChild(video);
+                    tile.appendChild(label);
+                    return tile;
+                };
+
+                const appendShareGroup = (kind, title) => {
+                    const shares = groupedShares[kind];
+                    if (!shares.length) {
+                        return;
+                    }
+
+                    const section = document.createElement('section');
+                    section.className = 'community-voice-stage-group';
+                    section.dataset.kind = kind;
+
+                    const head = document.createElement('div');
+                    head.className = 'community-voice-stage-group-head';
+
+                    const heading = document.createElement('h4');
+                    heading.className = 'community-voice-stage-group-title';
+                    heading.textContent = title;
+
+                    const count = document.createElement('span');
+                    count.className = 'community-voice-stage-group-count';
+                    count.textContent = `${shares.length} live`;
+
+                    const grid = document.createElement('div');
+                    grid.className = 'community-voice-stage-group-grid';
+
+                    head.appendChild(heading);
+                    head.appendChild(count);
+                    section.appendChild(head);
+                    section.appendChild(grid);
+
+                    shares.forEach((share) => {
+                        grid.appendChild(buildShareTile(share));
+                    });
+
+                    voiceStageMedia.appendChild(section);
+                };
+
+                appendShareGroup('screen', 'Screen Shares');
+                appendShareGroup('camera', 'Camera Feeds');
             };
 
-            const syncPeerConnectionScreenTrack = (connection) => {
+            const syncPeerConnectionVisualTrack = (connection, kind) => {
                 if (!connection) {
                     return false;
                 }
 
-                const activeVisualShare = getActiveLocalVisualShare();
-                const nextStream = activeVisualShare && activeVisualShare.stream ? activeVisualShare.stream : null;
-                const nextTrack = activeVisualShare && activeVisualShare.stream
-                    ? activeVisualShare.stream.getVideoTracks()[0] || null
+                const nextStream = kind === 'screen'
+                    ? getLiveScreenStream(voiceScreenShareStream)
+                    : getLiveScreenStream(voiceCameraStream);
+                const nextTrack = nextStream
+                    ? nextStream.getVideoTracks()[0] || null
                     : null;
-                const currentSender = connection.__screenSender || null;
+                const senderKey = kind === 'screen' ? '__screenSender' : '__cameraSender';
+                const currentSender = connection[senderKey] || null;
 
                 if (!nextTrack && currentSender) {
                     connection.removeTrack(currentSender);
-                    connection.__screenSender = null;
+                    connection[senderKey] = null;
                     return true;
                 }
 
                 if (nextTrack && !currentSender) {
-                    connection.__screenSender = connection.addTrack(nextTrack, nextStream);
+                    connection[senderKey] = connection.addTrack(nextTrack, nextStream);
                     return true;
                 }
 
                 if (nextTrack && currentSender && currentSender.track !== nextTrack) {
                     connection.removeTrack(currentSender);
-                    connection.__screenSender = connection.addTrack(nextTrack, nextStream);
+                    connection[senderKey] = connection.addTrack(nextTrack, nextStream);
                     return true;
                 }
 
@@ -2213,15 +2651,16 @@
 
                 for (const participant of voiceParticipants) {
                     const connection = ensurePeerConnection(participant);
-                    const trackChanged = syncPeerConnectionScreenTrack(connection);
-                    if (!trackChanged) {
+                    const screenTrackChanged = syncPeerConnectionVisualTrack(connection, 'screen');
+                    const cameraTrackChanged = syncPeerConnectionVisualTrack(connection, 'camera');
+                    if (!screenTrackChanged && !cameraTrackChanged) {
                         continue;
                     }
 
                     try {
                         await requestVoicePeerVisualRenegotiation(participant);
                     } catch (error) {
-                        voiceLastError = error && error.message ? String(error.message).trim() : `Unable to update screen sharing in ${getActiveVoiceRoom().label}.`;
+                        voiceLastError = error && error.message ? String(error.message).trim() : `Unable to update live media in ${getActiveVoiceRoom().label}.`;
                         renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
                     }
                 }
@@ -2428,6 +2867,40 @@
                     voiceSettingsAudioAction.disabled = !voiceJoined;
                 }
 
+                if (voiceSettingsMicDeviceState) {
+                    voiceSettingsMicDeviceState.textContent = voiceJoined
+                        ? `Using ${findVoiceDeviceLabel(voiceInputDevices, voiceSelectedInputDeviceId, 'system default microphone')}.`
+                        : 'Choose which microphone this room should use when you join.';
+                }
+
+                renderVoiceDeviceSelectOptions(voiceSettingsMicDeviceSelect, voiceInputDevices, voiceSelectedInputDeviceId, 'No microphones found');
+                if (voiceSettingsMicDeviceSelect) {
+                    voiceSettingsMicDeviceSelect.disabled = voiceDeviceRefreshPending || !voiceInputDevices.length;
+                }
+                if (voiceSettingsMicDeviceNote) {
+                    voiceSettingsMicDeviceNote.textContent = voiceJoined
+                        ? 'Switching microphones updates your live voice track for this room.'
+                        : 'Join a room to use the selected microphone live.';
+                }
+
+                updateVoiceMicGainVisualizer();
+
+                if (voiceSettingsOutputDeviceState) {
+                    voiceSettingsOutputDeviceState.textContent = supportsVoiceOutputSelection()
+                        ? `Playing room audio through ${findVoiceDeviceLabel(voiceOutputDevices, voiceSelectedOutputDeviceId, 'your default speaker')}.`
+                        : 'This browser is using its current default audio output.';
+                }
+
+                renderVoiceDeviceSelectOptions(voiceSettingsOutputDeviceSelect, voiceOutputDevices, voiceSelectedOutputDeviceId, 'No speakers found');
+                if (voiceSettingsOutputDeviceSelect) {
+                    voiceSettingsOutputDeviceSelect.disabled = voiceDeviceRefreshPending || !supportsVoiceOutputSelection() || !voiceOutputDevices.length;
+                }
+                if (voiceSettingsOutputDeviceNote) {
+                    voiceSettingsOutputDeviceNote.textContent = supportsVoiceOutputSelection()
+                        ? 'Choose the speaker or headset for room playback on this device.'
+                        : 'Per-device speaker selection is not supported by this browser.';
+                }
+
                 if (voiceSettingsScreenState) {
                     voiceSettingsScreenState.textContent = voiceScreenShareStream
                         ? `Sharing ${voiceScreenShareMode === 'monitor' ? 'entire screen' : 'window'} now.`
@@ -2453,27 +2926,26 @@
 
             const openVoiceSettingsModal = () => {
                 voiceSettingsOpen = true;
+                refreshVoiceDeviceOptions().catch(() => {});
                 renderVoiceSettingsModal();
             };
 
-            const startVoiceScreenShare = async (mode) => {
+            const startVoiceScreenShare = async (mode = '') => {
                 if (!voiceJoined || !supportsVoiceScreenShare()) {
                     return;
                 }
 
                 voiceScreenSharePending = true;
-                closeVoiceScreenShareModal();
                 renderVoiceToolbar();
 
                 try {
-                    stopVoiceCameraShare();
                     stopVoiceScreenShare();
 
                     const stream = await navigator.mediaDevices.getDisplayMedia(buildVoiceDisplayMediaOptions(mode));
 
                     const [videoTrack] = stream.getVideoTracks();
                     const displaySurfaceKind = getVoiceDisplaySurfaceKind(videoTrack);
-                    if (!doesVoiceDisplaySurfaceMatchMode(mode, displaySurfaceKind)) {
+                    if (mode && !doesVoiceDisplaySurfaceMatchMode(mode, displaySurfaceKind)) {
                         stream.getTracks().forEach((track) => {
                             try {
                                 track.stop();
@@ -2522,7 +2994,6 @@
                 renderVoiceToolbar();
 
                 try {
-                    stopVoiceScreenShare();
                     stopVoiceCameraShare();
 
                     const stream = await navigator.mediaDevices.getUserMedia({
@@ -2628,6 +3099,421 @@
                         // Ignore storage failures.
                     }
                 }
+            };
+
+            voiceSelectedInputDeviceId = String(safeStorage.get(VOICE_INPUT_DEVICE_KEY) || '').trim();
+            voiceMicGainDb = Number.parseInt(String(safeStorage.get(VOICE_MIC_GAIN_DB_KEY) || '0').trim(), 10);
+            if (!Number.isFinite(voiceMicGainDb)) {
+                voiceMicGainDb = 0;
+            }
+            voiceSelectedOutputDeviceId = String(safeStorage.get(VOICE_OUTPUT_DEVICE_KEY) || '').trim();
+
+            const clampVoiceMicGainDb = (value) => Math.max(-18, Math.min(18, Math.round(Number(value) || 0)));
+            const formatVoiceMicGainDb = (value) => {
+                const normalized = clampVoiceMicGainDb(value);
+                return `${normalized > 0 ? '+' : ''}${normalized} dB`;
+            };
+            const convertVoiceGainDbToMultiplier = (value) => Math.pow(10, clampVoiceMicGainDb(value) / 20);
+
+            const getVoiceDeviceOptionLabel = (device, index, fallbackPrefix) => {
+                if (device && device.label) {
+                    return String(device.label).trim();
+                }
+                return `${fallbackPrefix} ${index + 1}`;
+            };
+
+            const getVoiceAudioConstraints = (deviceId = voiceSelectedInputDeviceId) => {
+                const audio = {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                };
+
+                if (deviceId && deviceId !== 'default') {
+                    audio.deviceId = { exact: deviceId };
+                }
+
+                return {
+                    audio,
+                    video: false
+                };
+            };
+
+            const findVoiceDeviceLabel = (devices, deviceId, fallbackLabel) => {
+                if (!deviceId) {
+                    return fallbackLabel;
+                }
+
+                const exactMatch = devices.find((device) => device.deviceId === deviceId);
+                if (exactMatch) {
+                    return exactMatch.label || fallbackLabel;
+                }
+
+                const defaultMatch = devices.find((device) => device.deviceId === 'default');
+                return defaultMatch && defaultMatch.label ? defaultMatch.label : fallbackLabel;
+            };
+
+            const renderVoiceDeviceSelectOptions = (selectElement, devices, selectedId, placeholderLabel) => {
+                if (!selectElement) {
+                    return;
+                }
+
+                selectElement.innerHTML = '';
+
+                if (!devices.length) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = placeholderLabel;
+                    selectElement.appendChild(option);
+                    selectElement.value = '';
+                    return;
+                }
+
+                devices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = getVoiceDeviceOptionLabel(device, index, placeholderLabel);
+                    selectElement.appendChild(option);
+                });
+
+                const hasSelected = devices.some((device) => device.deviceId === selectedId);
+                selectElement.value = hasSelected ? selectedId : devices[0].deviceId;
+            };
+
+            const applyVoiceOutputDeviceToAudioElement = async (audioElement) => {
+                if (!audioElement || typeof audioElement.setSinkId !== 'function') {
+                    return;
+                }
+
+                const nextDeviceId = voiceSelectedOutputDeviceId || 'default';
+                if (audioElement.sinkId === nextDeviceId) {
+                    return;
+                }
+
+                await audioElement.setSinkId(nextDeviceId);
+            };
+
+            const applyVoiceOutputDeviceToAllAudio = async () => {
+                const tasks = [];
+                voiceRemoteAudioByParticipant.forEach((audioElement) => {
+                    tasks.push(applyVoiceOutputDeviceToAudioElement(audioElement));
+                });
+                await Promise.all(tasks);
+            };
+
+            const refreshVoiceDeviceOptions = async ({ render = true } = {}) => {
+                if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+                    voiceInputDevices = [];
+                    voiceOutputDevices = [];
+                    if (render) {
+                        renderVoiceSettingsModal();
+                    }
+                    return;
+                }
+
+                voiceDeviceRefreshPending = true;
+                if (render) {
+                    renderVoiceSettingsModal();
+                }
+
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    voiceInputDevices = devices
+                        .filter((device) => device.kind === 'audioinput')
+                        .map((device, index) => ({
+                            deviceId: device.deviceId,
+                            label: getVoiceDeviceOptionLabel(device, index, 'Microphone')
+                        }));
+                    voiceOutputDevices = devices
+                        .filter((device) => device.kind === 'audiooutput')
+                        .map((device, index) => ({
+                            deviceId: device.deviceId,
+                            label: getVoiceDeviceOptionLabel(device, index, 'Speaker')
+                        }));
+
+                    if (voiceInputDevices.length && !voiceInputDevices.some((device) => device.deviceId === voiceSelectedInputDeviceId)) {
+                        voiceSelectedInputDeviceId = voiceInputDevices[0].deviceId;
+                        safeStorage.set(VOICE_INPUT_DEVICE_KEY, voiceSelectedInputDeviceId);
+                    }
+
+                    if (voiceOutputDevices.length && !voiceOutputDevices.some((device) => device.deviceId === voiceSelectedOutputDeviceId)) {
+                        const defaultOutput = voiceOutputDevices.find((device) => device.deviceId === 'default') || voiceOutputDevices[0];
+                        voiceSelectedOutputDeviceId = defaultOutput ? defaultOutput.deviceId : '';
+                        safeStorage.set(VOICE_OUTPUT_DEVICE_KEY, voiceSelectedOutputDeviceId);
+                    }
+                } catch (error) {
+                    voiceInputDevices = [];
+                    voiceOutputDevices = [];
+                } finally {
+                    voiceDeviceRefreshPending = false;
+                    if (render) {
+                        renderVoiceSettingsModal();
+                    }
+                }
+            };
+
+            const acquireVoiceAudioStream = async (deviceId = voiceSelectedInputDeviceId) => {
+                try {
+                    return await navigator.mediaDevices.getUserMedia(getVoiceAudioConstraints(deviceId));
+                } catch (error) {
+                    const errorName = String(error && error.name || '').trim();
+                    const canFallbackToDefault = Boolean(deviceId) && (errorName === 'OverconstrainedError' || errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError');
+                    if (!canFallbackToDefault) {
+                        throw error;
+                    }
+
+                    voiceSelectedInputDeviceId = '';
+                    safeStorage.set(VOICE_INPUT_DEVICE_KEY, '');
+                    return navigator.mediaDevices.getUserMedia(getVoiceAudioConstraints(''));
+                }
+            };
+
+            const stopVoiceLocalAudioProcessing = ({ stopInputTracks = true, stopOutputTracks = true } = {}) => {
+                if (voiceLocalInputSourceNode) {
+                    try {
+                        voiceLocalInputSourceNode.disconnect();
+                    } catch (error) {
+                        // Ignore disconnect failures.
+                    }
+                }
+
+                if (voiceLocalGainNode) {
+                    try {
+                        voiceLocalGainNode.disconnect();
+                    } catch (error) {
+                        // Ignore disconnect failures.
+                    }
+                }
+
+                if (voiceLocalInputStream && stopInputTracks) {
+                    voiceLocalInputStream.getTracks().forEach((track) => {
+                        try {
+                            track.stop();
+                        } catch (error) {
+                            // Ignore track stop failures.
+                        }
+                    });
+                }
+
+                if (voiceLocalStream && stopOutputTracks) {
+                    voiceLocalStream.getTracks().forEach((track) => {
+                        try {
+                            track.stop();
+                        } catch (error) {
+                            // Ignore track stop failures.
+                        }
+                    });
+                }
+
+                voiceLocalInputSourceNode = null;
+                voiceLocalGainNode = null;
+                voiceLocalDestinationNode = null;
+                voiceLocalInputStream = null;
+            };
+
+            const buildVoiceProcessedAudioStream = (inputStream) => {
+                const context = ensureVoiceAudioContext();
+                const fallbackStream = inputStream;
+                if (!context || !inputStream) {
+                    voiceLocalInputSourceNode = null;
+                    voiceLocalGainNode = null;
+                    voiceLocalDestinationNode = null;
+                    return fallbackStream;
+                }
+
+                if (voiceLocalInputSourceNode) {
+                    try {
+                        voiceLocalInputSourceNode.disconnect();
+                    } catch (error) {
+                        // Ignore disconnect failures.
+                    }
+                }
+
+                if (voiceLocalGainNode) {
+                    try {
+                        voiceLocalGainNode.disconnect();
+                    } catch (error) {
+                        // Ignore disconnect failures.
+                    }
+                }
+
+                const inputSource = context.createMediaStreamSource(inputStream);
+                const gainNode = context.createGain();
+                const destination = context.createMediaStreamDestination();
+                gainNode.gain.value = convertVoiceGainDbToMultiplier(voiceMicGainDb);
+
+                inputSource.connect(gainNode);
+                gainNode.connect(destination);
+
+                voiceLocalInputSourceNode = inputSource;
+                voiceLocalGainNode = gainNode;
+                voiceLocalDestinationNode = destination;
+                return destination.stream;
+            };
+
+            const applyVoiceMicGainToProcessing = () => {
+                const normalizedGainDb = clampVoiceMicGainDb(voiceMicGainDb);
+                voiceMicGainDb = normalizedGainDb;
+                safeStorage.set(VOICE_MIC_GAIN_DB_KEY, String(normalizedGainDb));
+
+                if (!voiceLocalGainNode) {
+                    return;
+                }
+
+                const context = ensureVoiceAudioContext();
+                const nextValue = convertVoiceGainDbToMultiplier(normalizedGainDb);
+                if (context && typeof voiceLocalGainNode.gain.setTargetAtTime === 'function') {
+                    voiceLocalGainNode.gain.setTargetAtTime(nextValue, context.currentTime, 0.03);
+                    return;
+                }
+
+                voiceLocalGainNode.gain.value = nextValue;
+            };
+
+            const readVoiceMeterDb = (meter) => {
+                if (!meter || !meter.analyser || !meter.dataArray) {
+                    return -30;
+                }
+
+                meter.analyser.getByteTimeDomainData(meter.dataArray);
+                let total = 0;
+                for (let index = 0; index < meter.dataArray.length; index += 1) {
+                    const normalized = (meter.dataArray[index] - 128) / 128;
+                    total += normalized * normalized;
+                }
+
+                const rms = Math.sqrt(total / meter.dataArray.length);
+                if (!rms || rms <= 0) {
+                    return -30;
+                }
+
+                const db = 20 * Math.log10(rms);
+                return Math.max(-30, Math.min(0, db));
+            };
+
+            const updateVoiceMicGainVisualizer = () => {
+                const gainSupported = Boolean(window.AudioContext || window.webkitAudioContext);
+                const levelDb = voiceJoined && voiceLocalAudioMeter ? readVoiceMeterDb(voiceLocalAudioMeter) : -30;
+                const normalizedWidth = `${Math.max(0, Math.min(100, ((levelDb + 30) / 30) * 100))}%`;
+
+                if (voiceSettingsGainValue) {
+                    voiceSettingsGainValue.textContent = formatVoiceMicGainDb(voiceMicGainDb);
+                }
+
+                if (voiceSettingsGainMeterFill) {
+                    voiceSettingsGainMeterFill.style.width = normalizedWidth;
+                }
+
+                if (voiceSettingsGainMeterReadout) {
+                    voiceSettingsGainMeterReadout.textContent = `Input level: ${Math.round(levelDb)} dB`;
+                }
+
+                if (voiceSettingsGainDownButton) {
+                    voiceSettingsGainDownButton.disabled = !gainSupported || clampVoiceMicGainDb(voiceMicGainDb) <= -18;
+                }
+
+                if (voiceSettingsGainUpButton) {
+                    voiceSettingsGainUpButton.disabled = !gainSupported || clampVoiceMicGainDb(voiceMicGainDb) >= 18;
+                }
+
+                if (voiceSettingsGainState) {
+                    voiceSettingsGainState.textContent = !gainSupported
+                        ? 'Microphone gain control is not supported by this browser.'
+                        : voiceJoined
+                            ? 'Adjust mic gain live and watch the room input level below.'
+                            : 'Set your mic gain now. The live analyzer appears when you join a room.';
+                }
+            };
+
+            const replaceVoiceInputTrack = async (deviceId) => {
+                if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                    return;
+                }
+
+                const inputStream = await acquireVoiceAudioStream(deviceId);
+                const processedStream = buildVoiceProcessedAudioStream(inputStream);
+                const [nextAudioTrack] = processedStream.getAudioTracks();
+                if (!nextAudioTrack) {
+                    inputStream.getTracks().forEach((track) => {
+                        try {
+                            track.stop();
+                        } catch (error) {
+                            // Ignore track stop failures.
+                        }
+                    });
+                    throw new Error('No microphone track was returned for this device.');
+                }
+
+                nextAudioTrack.enabled = !voiceMuted;
+                const previousInputStream = voiceLocalInputStream;
+                const previousOutputStream = voiceLocalStream;
+
+                voiceLocalInputStream = inputStream;
+                voiceLocalStream = processedStream;
+                applyVoiceMicGainToProcessing();
+
+                for (const connection of voicePeerConnections.values()) {
+                    const sender = connection.getSenders().find((entry) => entry.track && entry.track.kind === 'audio');
+                    if (sender) {
+                        await sender.replaceTrack(nextAudioTrack);
+                    }
+                }
+
+                syncVoiceMuteState();
+                syncLocalAudioMeter();
+
+                if (previousInputStream && previousInputStream !== voiceLocalInputStream) {
+                    previousInputStream.getTracks().forEach((track) => {
+                        try {
+                            track.stop();
+                        } catch (error) {
+                            // Ignore track stop failures.
+                        }
+                    });
+                }
+
+                if (previousOutputStream && previousOutputStream !== voiceLocalStream) {
+                    previousOutputStream.getTracks().forEach((track) => {
+                        try {
+                            track.stop();
+                        } catch (error) {
+                            // Ignore track stop failures.
+                        }
+                    });
+                }
+            };
+
+            const handleVoiceInputDeviceSelection = async (deviceId) => {
+                const normalizedDeviceId = String(deviceId || '').trim();
+                if (!normalizedDeviceId || normalizedDeviceId === voiceSelectedInputDeviceId) {
+                    return;
+                }
+
+                voiceSelectedInputDeviceId = normalizedDeviceId;
+                safeStorage.set(VOICE_INPUT_DEVICE_KEY, normalizedDeviceId);
+
+                if (!voiceJoined || !voiceLocalStream) {
+                    renderVoiceSettingsModal();
+                    return;
+                }
+
+                await replaceVoiceInputTrack(normalizedDeviceId);
+                await refreshVoiceDeviceOptions({ render: false });
+                renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: '', participants: voiceParticipants });
+                renderVoiceSettingsModal();
+            };
+
+            const handleVoiceOutputDeviceSelection = async (deviceId) => {
+                const normalizedDeviceId = String(deviceId || '').trim();
+                if (!normalizedDeviceId || normalizedDeviceId === voiceSelectedOutputDeviceId) {
+                    return;
+                }
+
+                voiceSelectedOutputDeviceId = normalizedDeviceId;
+                safeStorage.set(VOICE_OUTPUT_DEVICE_KEY, normalizedDeviceId);
+                await applyVoiceOutputDeviceToAllAudio();
+                renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: '', participants: voiceParticipants });
+                renderVoiceSettingsModal();
             };
 
             const parseVoiceSessionPayload = (rawValue) => {
@@ -2992,6 +3878,30 @@
                     actions.appendChild(link);
                 }
 
+                if (member.canToggleLocalMute && member.memberId && member.memberId !== 'self') {
+                    const muteButton = document.createElement('button');
+                    const isMuted = Boolean(member.locallyMuted);
+                    muteButton.type = 'button';
+                    muteButton.className = 'card-btn community-voice-member-mute';
+                    muteButton.classList.toggle('is-muted', isMuted);
+                    muteButton.setAttribute('aria-pressed', isMuted ? 'true' : 'false');
+                    muteButton.setAttribute('aria-label', isMuted ? `Unmute ${member.name} for me` : `Mute ${member.name} for me`);
+                    muteButton.title = isMuted ? `Unmute ${member.name} for me` : `Mute ${member.name} for me`;
+                    muteButton.innerHTML = [
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+                        '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>',
+                        '<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>',
+                        '<path d="M12 19v4"></path>',
+                        '<path d="M8 23h8"></path>',
+                        '<path class="community-voice-member-mute-slash" d="M4 4l16 16"></path>',
+                        '</svg>'
+                    ].join('');
+                    muteButton.addEventListener('click', () => {
+                        toggleLocalMuteForParticipant(member.memberId);
+                    });
+                    actions.appendChild(muteButton);
+                }
+
                 item.appendChild(avatar);
                 item.appendChild(copy);
                 if (actions.childElementCount) {
@@ -3100,6 +4010,8 @@
                     updateVoiceSpeakingClass('self', false);
                 }
 
+                updateVoiceMicGainVisualizer();
+
                 Array.from(voiceRemoteAudioMeters.entries()).forEach(([participantId, meter]) => {
                     updateVoiceSpeakingClass(participantId, readAudioMeterSpeaking(meter));
                 });
@@ -3141,6 +4053,7 @@
             const syncLocalAudioMeter = () => {
                 destroyAudioMeter(voiceLocalAudioMeter);
                 voiceLocalAudioMeter = voiceLocalStream ? createAudioMeter(voiceLocalStream, { threshold: 0.045, holdMs: 320 }) : null;
+                updateVoiceMicGainVisualizer();
                 scheduleVoiceSpeakingMonitor();
             };
 
@@ -3248,6 +4161,7 @@
                     audio.parentNode.removeChild(audio);
                 }
                 voiceRemoteAudioByParticipant.delete(participantId);
+                voiceLocallyMutedParticipants.delete(participantId);
             };
 
             const detachPeerConnection = (participantId) => {
@@ -3273,17 +4187,12 @@
                 destroyAudioMeter(voiceLocalAudioMeter);
                 voiceLocalAudioMeter = null;
                 updateVoiceSpeakingClass('self', false);
+                updateVoiceMicGainVisualizer();
                 scheduleVoiceSpeakingMonitor();
-                if (!voiceLocalStream) {
+                if (!voiceLocalStream && !voiceLocalInputStream) {
                     return;
                 }
-                voiceLocalStream.getTracks().forEach((track) => {
-                    try {
-                        track.stop();
-                    } catch (error) {
-                        // Ignore track stop failures.
-                    }
-                });
+                stopVoiceLocalAudioProcessing();
                 voiceLocalStream = null;
             };
 
@@ -3305,14 +4214,17 @@
                 }];
 
                 voiceParticipants.forEach((participant) => {
+                    const participantId = String(participant.id || '').trim() || `member-${people.length + 1}`;
                     people.push({
-                        memberId: String(participant.id || '').trim() || `member-${people.length + 1}`,
+                        memberId: participantId,
                         name: String(participant.name || 'FAST User').trim() || 'FAST User',
                         subtitle: `In ${room.label} now`,
                         badge: 'Live',
                         avatarImage: '',
                         linkLabel: '',
-                        linkHref: ''
+                        linkHref: '',
+                        canToggleLocalMute: true,
+                        locallyMuted: isVoiceParticipantLocallyMuted(participantId)
                     });
                 });
 
@@ -3382,22 +4294,31 @@
 
             const findParticipant = (participantId) => voiceParticipants.find((entry) => entry.id === participantId) || null;
 
-            const attachRemoteStream = (participantId, stream, trackKind = 'audio') => {
+            const attachRemoteStream = (participantId, stream, trackKind = 'audio', visualKind = '') => {
                 if (!stream) {
                     return;
                 }
 
                 if (trackKind === 'video') {
-                    voiceRemoteVideoByParticipant.set(participantId, {
+                    const nextVisualKind = visualKind || detectVisualShareKind(stream, 'screen');
+                    const visualEntry = voiceRemoteVideoByParticipant.get(participantId) || {};
+                    visualEntry[nextVisualKind] = {
                         stream,
-                        kind: detectVisualShareKind(stream, 'screen')
-                    });
+                        kind: nextVisualKind
+                    };
+                    voiceRemoteVideoByParticipant.set(participantId, visualEntry);
                     const [videoTrack] = stream.getVideoTracks();
-                    if (videoTrack && !videoTrack.__fastScreenBound) {
-                        videoTrack.__fastScreenBound = true;
+                    if (videoTrack && !videoTrack.__fastVisualBound) {
+                        videoTrack.__fastVisualBound = true;
                         const rerenderScreenStage = () => {
                             if (!getLiveScreenStream(stream)) {
-                                voiceRemoteVideoByParticipant.delete(participantId);
+                                const activeVisualEntry = voiceRemoteVideoByParticipant.get(participantId) || {};
+                                delete activeVisualEntry[nextVisualKind];
+                                if (!activeVisualEntry.screen && !activeVisualEntry.camera) {
+                                    voiceRemoteVideoByParticipant.delete(participantId);
+                                } else {
+                                    voiceRemoteVideoByParticipant.set(participantId, activeVisualEntry);
+                                }
                             }
                             renderVoiceScreenStage();
                         };
@@ -3426,7 +4347,8 @@
                     audio.srcObject = stream;
                 }
 
-                audio.muted = voiceDeafened;
+                applyRemoteAudioMuteState(participantId);
+                applyVoiceOutputDeviceToAudioElement(audio).catch(() => {});
 
                 if (stream.getAudioTracks().length) {
                     stopRemoteAudioMeter(participantId);
@@ -3464,6 +4386,7 @@
                 connection.__isNegotiating = false;
                 connection.__pendingVisualUpdate = false;
                 connection.__screenSender = null;
+                connection.__cameraSender = null;
 
                 if (voiceLocalStream) {
                     voiceLocalStream.getTracks().forEach((track) => {
@@ -3471,7 +4394,8 @@
                     });
                 }
 
-                syncPeerConnectionScreenTrack(connection);
+                syncPeerConnectionVisualTrack(connection, 'screen');
+                syncPeerConnectionVisualTrack(connection, 'camera');
 
                 connection.onicecandidate = (event) => {
                     if (!event.candidate) {
@@ -3485,8 +4409,15 @@
 
                 connection.ontrack = (event) => {
                     const [stream] = event.streams || [];
+                    const trackKind = event.track && event.track.kind ? event.track.kind : 'audio';
+                    if (trackKind === 'video' && event.track) {
+                        const visualStream = new MediaStream([event.track]);
+                        attachRemoteStream(participant.id, visualStream, 'video', detectVisualShareKind(visualStream, 'screen'));
+                        return;
+                    }
+
                     if (stream) {
-                        attachRemoteStream(participant.id, stream, event.track && event.track.kind ? event.track.kind : 'audio');
+                        attachRemoteStream(participant.id, stream, trackKind);
                     }
                 };
 
@@ -3649,6 +4580,7 @@
                 activeVoiceRoomId = '';
                 voiceMuted = false;
                 voiceDeafened = false;
+                voiceLocallyMutedParticipants.clear();
 
                 Array.from(voiceRemoteAudioMeters.keys()).forEach((participantId) => {
                     stopRemoteAudioMeter(participantId);
@@ -3699,17 +4631,14 @@
                 renderVoiceState({ joined: false, joining: true, lastError: '', participants: voiceParticipants });
 
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        },
-                        video: false
-                    });
-                    voiceLocalStream = stream;
+                    const inputStream = await acquireVoiceAudioStream();
+                    const processedStream = buildVoiceProcessedAudioStream(inputStream);
+                    voiceLocalInputStream = inputStream;
+                    voiceLocalStream = processedStream;
+                    applyVoiceMicGainToProcessing();
                     syncVoiceMuteState();
                     syncLocalAudioMeter();
+                    await refreshVoiceDeviceOptions({ render: false });
 
                     const data = await requestVoiceJson('/api/community/voice/join', {
                         method: 'POST',
@@ -3866,7 +4795,7 @@
                         return;
                     }
 
-                    openVoiceScreenShareModal();
+                    startVoiceScreenShare().catch(() => {});
                     renderVoiceToolbar();
                 });
             }
@@ -3963,6 +4892,42 @@
                 });
             }
 
+            if (voiceSettingsMicDeviceSelect) {
+                voiceSettingsMicDeviceSelect.addEventListener('change', () => {
+                    handleVoiceInputDeviceSelection(voiceSettingsMicDeviceSelect.value).catch((error) => {
+                        voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to switch microphones.';
+                        renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                        renderVoiceSettingsModal();
+                    });
+                });
+            }
+
+            if (voiceSettingsOutputDeviceSelect) {
+                voiceSettingsOutputDeviceSelect.addEventListener('change', () => {
+                    handleVoiceOutputDeviceSelection(voiceSettingsOutputDeviceSelect.value).catch((error) => {
+                        voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to switch room audio output.';
+                        renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                        renderVoiceSettingsModal();
+                    });
+                });
+            }
+
+            if (voiceSettingsGainDownButton) {
+                voiceSettingsGainDownButton.addEventListener('click', () => {
+                    voiceMicGainDb = clampVoiceMicGainDb(voiceMicGainDb - 3);
+                    applyVoiceMicGainToProcessing();
+                    updateVoiceMicGainVisualizer();
+                });
+            }
+
+            if (voiceSettingsGainUpButton) {
+                voiceSettingsGainUpButton.addEventListener('click', () => {
+                    voiceMicGainDb = clampVoiceMicGainDb(voiceMicGainDb + 3);
+                    applyVoiceMicGainToProcessing();
+                    updateVoiceMicGainVisualizer();
+                });
+            }
+
             if (voiceSettingsAudioAction) {
                 voiceSettingsAudioAction.addEventListener('click', () => {
                     if (!voiceJoined) {
@@ -3989,7 +4954,7 @@
                     }
 
                     closeVoiceSettingsModal();
-                    openVoiceScreenShareModal();
+                    startVoiceScreenShare().catch(() => {});
                     renderVoiceToolbar();
                 });
             }
@@ -4009,6 +4974,19 @@
 
                     startVoiceCameraShare().catch(() => {});
                     renderVoiceToolbar();
+                });
+            }
+
+            if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
+                navigator.mediaDevices.addEventListener('devicechange', () => {
+                    if (voiceDeviceChangePending) {
+                        return;
+                    }
+
+                    voiceDeviceChangePending = true;
+                    refreshVoiceDeviceOptions({ render: voiceSettingsOpen }).catch(() => {}).finally(() => {
+                        voiceDeviceChangePending = false;
+                    });
                 });
             }
 
