@@ -186,6 +186,11 @@
             transition: transform 0.18s ease;
         }
 
+        .settings-app-logo-microsoft {
+            width: 72px;
+            height: 72px;
+        }
+
         @media (max-width: 768px) {
             .settings-app-actions {
                 justify-content: flex-start;
@@ -194,6 +199,11 @@
             .settings-app-logo {
                 width: 48px;
                 height: 48px;
+            }
+
+            .settings-app-logo-microsoft {
+                width: 60px;
+                height: 60px;
             }
         }
     </style>
@@ -731,8 +741,8 @@ https://templatemo.com/tm-607-glass-admin
                                         <p>Move the horizontal selector to price the brokerage plan by agent count. The broker account is included, and the monthly amount updates using your custom pricing logic.</p>
                                     </div>
                                     <div class="subscription-brokerage-summary">
-                                        <strong id="subscription-brokerage-summary-title">1 agent + broker included</strong>
-                                        <span id="subscription-brokerage-summary-copy">Starts at $150 per month for the broker plus 1 agent account.</span>
+                                        <strong id="subscription-brokerage-summary-title">1 agent account</strong>
+                                        <span id="subscription-brokerage-summary-copy">Starts at $150 per month for 1 agent account. Broker access is included.</span>
                                     </div>
                                 </div>
 
@@ -748,22 +758,22 @@ https://templatemo.com/tm-607-glass-admin
                                         <div class="subscription-brokerage-count-row">
                                             <div>
                                                 <p class="subscription-brokerage-seat-cap"><span id="subscription-brokerage-agent-count">1</span> agent account</p>
-                                                <p class="subscription-brokerage-included" id="subscription-brokerage-included">Includes 2 total FAST accounts: 1 broker + 1 agent.</p>
+                                                <p class="subscription-brokerage-included" id="subscription-brokerage-included">Broker access is included at no extra charge.</p>
                                             </div>
                                             <div class="subscription-brokerage-total-box">
-                                                <span>Total FAST Accounts</span>
-                                                <strong id="subscription-brokerage-total-accounts">2</strong>
+                                                <span>Selected Agents</span>
+                                                <strong id="subscription-brokerage-total-accounts">1</strong>
                                             </div>
                                         </div>
                                         <div class="subscription-brokerage-slider-shell">
                                             <label class="subscription-brokerage-slider-label" for="subscription-brokerage-agent-slider">Agent count selector</label>
                                             <input id="subscription-brokerage-agent-slider" class="subscription-brokerage-slider" type="range" min="1" max="50" step="1" value="1">
                                             <div class="subscription-brokerage-slider-scale" aria-hidden="true">
-                                                <span>1</span>
-                                                <span>2</span>
-                                                <span>10</span>
-                                                <span>25</span>
-                                                <span>50</span>
+                                                <span class="is-start" style="--broker-scale-position: 0%;">1</span>
+                                                <span style="--broker-scale-position: 2.0408%;">2</span>
+                                                <span style="--broker-scale-position: 18.3673%;">10</span>
+                                                <span style="--broker-scale-position: 48.9796%;">25</span>
+                                                <span class="is-end" style="--broker-scale-position: 100%;">50</span>
                                             </div>
                                         </div>
                                     </div>
@@ -798,13 +808,13 @@ https://templatemo.com/tm-607-glass-admin
                                         <span>Use the contact page to discuss rollout, onboarding, and brokerage access structure.</span>
                                     </a>
                                     <div class="subscription-brokerage-link-card subscription-brokerage-link-card-static">
-                                        <strong>Broker included</strong>
-                                        <span>Every slider value includes the broker account, then adds the selected number of agent accounts on top.</span>
+                                        <strong>Simple team sizing</strong>
+                                        <span>Choose how many agent accounts you want. Broker access is included with the same 1-50 pricing structure.</span>
                                     </div>
                                 </div>
 
                                 <div class="subscription-brokerage-footer">
-                                    <p>Brokerage subscriptions are now shown as a live team-size selector instead of static tiers, so the office can see exactly how pricing changes from 1 to 50 agents.</p>
+                                    <p>Brokerage subscriptions use a live team-size selector so the office can see exactly how pricing changes from 1 to 50 agent accounts.</p>
                                 </div>
                             </div>
                         </div>
@@ -992,13 +1002,6 @@ https://templatemo.com/tm-607-glass-admin
                                 </label>
                             </div>
 
-                            <div class="settings-row">
-                                <div class="settings-label">
-                                    <span class="settings-label-title">Version History</span>
-                                    <span class="settings-label-desc">Open the recent update log with bullet points for each version release.</span>
-                                </div>
-                                <a class="btn btn-secondary" href="version-history.html?source=app" style="width:auto;">Open Version History</a>
-                            </div>
                         </div>
 
                         <div class="btn-group">
@@ -1024,7 +1027,7 @@ https://templatemo.com/tm-607-glass-admin
                                 </div>
                                 <div class="settings-app-actions">
                                     <a href="https://apps.microsoft.com/detail/9nmpj99vjbwv?hl=en-US&amp;gl=US" target="_blank" rel="noopener noreferrer" aria-label="Open Phone Link in the Microsoft Store" class="settings-app-logo-link">
-                                        <img src="png photos/Microsoft-Logo.png" alt="Microsoft logo" class="settings-app-logo">
+                                        <img src="png photos/Microsoft-Logo.png" alt="Microsoft logo" class="settings-app-logo settings-app-logo-microsoft">
                                     </a>
                                     <a class="btn btn-primary" href="https://apps.microsoft.com/detail/9nmpj99vjbwv?hl=en-US&amp;gl=US" target="_blank" rel="noopener noreferrer" style="width:auto;">Open Microsoft Store</a>
                                 </div>

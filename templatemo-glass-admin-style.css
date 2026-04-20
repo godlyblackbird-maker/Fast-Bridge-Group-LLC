@@ -14645,12 +14645,27 @@ body.analytics-reboot .analytics-my-file-count {
 }
 
 .subscription-brokerage-slider-scale {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
+    position: relative;
+    height: 18px;
     color: var(--text-muted);
     font-size: 0.78rem;
     font-weight: 700;
+}
+
+.subscription-brokerage-slider-scale span {
+    position: absolute;
+    top: 0;
+    left: var(--broker-scale-position, 0%);
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.subscription-brokerage-slider-scale span.is-start {
+    transform: translateX(0);
+}
+
+.subscription-brokerage-slider-scale span.is-end {
+    transform: translateX(-100%);
 }
 
 .subscription-brokerage-points-card h5 {

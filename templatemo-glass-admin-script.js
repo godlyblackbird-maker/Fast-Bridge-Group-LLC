@@ -892,7 +892,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.4.2';
+                versionLabel.textContent = 'v1.4.3';
             });
     }
 
@@ -7713,10 +7713,10 @@ function initNavbarDateTime() {
                 brokerageSlider.value = String(agentCount);
                 brokeragePrice.textContent = formatBrokerageCurrency(price);
                 brokerageAgentCount.textContent = String(agentCount);
-                brokerageTotalAccounts.textContent = String(totalAccounts);
-                brokerageIncluded.textContent = `Includes ${totalAccounts} total FAST accounts: 1 broker + ${agentCount} agent${agentCount === 1 ? '' : 's'}.`;
-                brokerageSummaryTitle.textContent = `${agentCount} agent${agentCount === 1 ? '' : 's'} + broker included`;
-                brokerageSummaryCopy.textContent = `${formatBrokerageCurrency(price)} per month for ${totalAccounts} total FAST accounts, which lands around ${formatBrokerageCurrency(pricePerAccount)} per included account.`;
+                brokerageTotalAccounts.textContent = String(agentCount);
+                brokerageIncluded.textContent = 'Broker access is included at no extra charge.';
+                brokerageSummaryTitle.textContent = `${agentCount} agent account${agentCount === 1 ? '' : 's'}`;
+                brokerageSummaryCopy.textContent = `${formatBrokerageCurrency(price)} per month for ${agentCount} agent account${agentCount === 1 ? '' : 's'}. Broker access is included.`;
 
                 brokerageAnchors.forEach((anchor) => {
                     const anchorCount = Number(anchor.getAttribute('data-broker-anchor') || 0);
