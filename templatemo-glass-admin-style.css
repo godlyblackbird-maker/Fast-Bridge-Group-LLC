@@ -8408,8 +8408,8 @@ body.analytics-reboot .analytics-my-file-count {
 [data-widget-id="agent-workspace-filter"] {
     display: flex;
     flex-direction: column;
-    min-height: clamp(520px, 62vh, 720px);
-    max-height: calc(100vh - 150px);
+    min-height: clamp(660px, 76vh, 920px);
+    max-height: calc(100vh - 110px);
 }
 
 [data-widget-id="agent-workspace-filter"] .card-header,
@@ -8421,7 +8421,7 @@ body.analytics-reboot .analytics-my-file-count {
 
 #agent-workspace-filter-list {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 320px;
     max-height: none;
     overflow-y: auto;
     overscroll-behavior: contain;

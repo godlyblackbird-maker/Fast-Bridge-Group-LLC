@@ -23640,7 +23640,7 @@ function initNavbarDateTime() {
 
                 if (!settings.silent) {
                     renderResults().catch(() => {
-                        setMapEmptyState(true, 'FAST could not refresh the filtered comps after clearing the drawn area.');
+                        setMapEmptyState(false);
                     });
                 }
             }
