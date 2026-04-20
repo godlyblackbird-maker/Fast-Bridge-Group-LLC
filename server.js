@@ -162,8 +162,11 @@ const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
 const mlsImportSpreadsheetClearedAtByUser = new Map();
 const twilioVoicePresence = new Map();
+const communityVoiceRooms = new Map();
 const TWILIO_VOICE_TOKEN_TTL_SECONDS = 60 * 60;
 const TWILIO_VOICE_PRESENCE_WINDOW_MS = 75 * 1000;
+const COMMUNITY_VOICE_PARTICIPANT_TTL_MS = 70 * 1000;
+const COMMUNITY_VOICE_SIGNAL_TTL_MS = 2 * 60 * 1000;
 
 fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
 fs.mkdirSync(SQLITE_BACKUP_TEMP_DIR, { recursive: true });
@@ -235,6 +238,69 @@ function getFirstConfiguredEnvValue(...names) {
   }
 
   return '';
+}
+
+function sanitizeCommunityVoiceRoomName(value) {
+  const normalized = String(value || 'community-voice-lounge')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized.slice(0, 64) || 'community-voice-lounge';
+}
+
+function getCommunityVoiceRoom(roomName, createIfMissing = false) {
+  const normalizedRoom = sanitizeCommunityVoiceRoomName(roomName);
+  let roomState = communityVoiceRooms.get(normalizedRoom) || null;
+  if (!roomState && createIfMissing) {
+    roomState = {
+      room: normalizedRoom,
+      participants: [],
+      signals: [],
+      nextSignalId: 1
+    };
+    communityVoiceRooms.set(normalizedRoom, roomState);
+  }
+  return roomState;
+}
+
+function serializeCommunityVoiceParticipant(participant) {
+  return {
+    id: participant.id,
+    clientId: participant.clientId,
+    name: participant.name,
+    role: participant.role,
+    joinedAt: participant.joinedAt,
+    lastSeenAt: participant.lastSeenAt
+  };
+}
+
+function pruneCommunityVoiceRoom(roomName, roomState = null) {
+  const normalizedRoom = sanitizeCommunityVoiceRoomName(roomName);
+  const state = roomState || communityVoiceRooms.get(normalizedRoom);
+  if (!state) {
+    return null;
+  }
+
+  const now = Date.now();
+  state.participants = state.participants.filter((participant) => now - Number(participant.lastSeenAt || 0) <= COMMUNITY_VOICE_PARTICIPANT_TTL_MS);
+
+  const activeParticipantIds = new Set(state.participants.map((participant) => participant.id));
+  state.signals = state.signals.filter((signal) => {
+    if (now - Number(signal.createdAt || 0) > COMMUNITY_VOICE_SIGNAL_TTL_MS) {
+      return false;
+    }
+    return activeParticipantIds.has(signal.fromParticipantId) && activeParticipantIds.has(signal.toParticipantId);
+  });
+
+  if (state.participants.length === 0 && state.signals.length === 0) {
+    communityVoiceRooms.delete(normalizedRoom);
+    return null;
+  }
+
+  return state;
 }
 
 function normalizeDocuSignPrivateKey(value) {
@@ -2164,6 +2230,17 @@ function createTwilioVoiceAccessToken(userLike) {
   };
 }
 
+function sanitizeTwilioVoiceRoomName(value) {
+  const normalized = String(value || 'community-voice-lounge')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized.slice(0, 64) || 'community-voice-lounge';
+}
+
 function buildTwilioIncomingVoiceResponse(req) {
   const config = getTwilioVoiceConfig();
   const response = new twilio.twiml.VoiceResponse();
@@ -2187,6 +2264,24 @@ function buildTwilioIncomingVoiceResponse(req) {
     }
     dial.client(entry.identity);
   });
+
+  return response.toString();
+}
+
+function buildTwilioVoiceLoungeResponse(req) {
+  const response = new twilio.twiml.VoiceResponse();
+  const roomName = sanitizeTwilioVoiceRoomName(req.body?.room);
+  const dial = response.dial();
+
+  dial.conference(
+    {
+      startConferenceOnEnter: true,
+      endConferenceOnExit: false,
+      beep: false,
+      maxParticipants: 50
+    },
+    `fast-${roomName}`
+  );
 
   return response.toString();
 }
@@ -2872,6 +2967,167 @@ app.use(express.static(path.join(__dirname), {
   }
 }));
 
+app.post('/api/community/voice/join', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const roomName = sanitizeCommunityVoiceRoomName(req.body?.room);
+  const clientId = String(req.body?.clientId || '').trim().slice(0, 160);
+  if (!clientId) {
+    return res.status(400).json({ error: 'A voice client ID is required.' });
+  }
+
+  const userId = Number(decoded.id) || 0;
+  if (!userId) {
+    return res.status(400).json({ error: 'Unable to resolve the signed-in user for voice chat.' });
+  }
+
+  const displayName = String(decoded.name || decoded.email || 'FAST User').trim() || 'FAST User';
+  const role = String(decoded.role || '').trim() || 'user';
+  const now = Date.now();
+  const roomState = pruneCommunityVoiceRoom(roomName, getCommunityVoiceRoom(roomName, true)) || getCommunityVoiceRoom(roomName, true);
+
+  let participant = roomState.participants.find((entry) => entry.clientId === clientId && Number(entry.userId) === userId) || null;
+  if (!participant) {
+    participant = {
+      id: crypto.randomUUID(),
+      clientId,
+      userId,
+      name: displayName,
+      role,
+      joinedAt: now,
+      lastSeenAt: now
+    };
+    roomState.participants.push(participant);
+  } else {
+    participant.name = displayName;
+    participant.role = role;
+    participant.lastSeenAt = now;
+  }
+
+  return res.json({
+    success: true,
+    room: roomState.room,
+    participant: serializeCommunityVoiceParticipant(participant),
+    participants: roomState.participants.filter((entry) => entry.id !== participant.id).map(serializeCommunityVoiceParticipant),
+    signalCursor: Math.max(0, Number(roomState.nextSignalId || 1) - 1)
+  });
+});
+
+app.get('/api/community/voice/events', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const roomName = sanitizeCommunityVoiceRoomName(req.query?.room);
+  const participantId = String(req.query?.participantId || '').trim();
+  const after = Math.max(0, Number.parseInt(String(req.query?.after || '0'), 10) || 0);
+  const userId = Number(decoded.id) || 0;
+  const roomState = pruneCommunityVoiceRoom(roomName, getCommunityVoiceRoom(roomName, false));
+
+  if (!roomState) {
+    return res.json({ success: true, room: roomName, participants: [], signals: [], signalCursor: after });
+  }
+
+  const participant = roomState.participants.find((entry) => entry.id === participantId && Number(entry.userId) === userId) || null;
+  if (!participant) {
+    return res.status(404).json({ error: 'Voice lounge session not found. Join the room again.' });
+  }
+
+  participant.lastSeenAt = Date.now();
+
+  return res.json({
+    success: true,
+    room: roomState.room,
+    participants: roomState.participants.filter((entry) => entry.id !== participant.id).map(serializeCommunityVoiceParticipant),
+    signals: roomState.signals
+      .filter((signal) => signal.toParticipantId === participant.id && Number(signal.id) > after)
+      .map((signal) => ({
+        id: signal.id,
+        fromParticipantId: signal.fromParticipantId,
+        type: signal.type,
+        payload: signal.payload,
+        createdAt: signal.createdAt
+      })),
+    signalCursor: Math.max(after, Number(roomState.nextSignalId || 1) - 1)
+  });
+});
+
+app.post('/api/community/voice/signal', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const roomName = sanitizeCommunityVoiceRoomName(req.body?.room);
+  const participantId = String(req.body?.participantId || '').trim();
+  const toParticipantId = String(req.body?.toParticipantId || '').trim();
+  const type = String(req.body?.type || '').trim().toLowerCase();
+  const payload = req.body?.payload ?? null;
+  const userId = Number(decoded.id) || 0;
+  const roomState = pruneCommunityVoiceRoom(roomName, getCommunityVoiceRoom(roomName, false));
+
+  if (!roomState) {
+    return res.status(404).json({ error: 'Voice lounge room was not found.' });
+  }
+
+  const sender = roomState.participants.find((entry) => entry.id === participantId && Number(entry.userId) === userId) || null;
+  if (!sender) {
+    return res.status(404).json({ error: 'Voice lounge session not found. Join the room again.' });
+  }
+
+  const recipient = roomState.participants.find((entry) => entry.id === toParticipantId) || null;
+  if (!recipient) {
+    return res.status(404).json({ error: 'The target voice participant is no longer active.' });
+  }
+
+  if (!['offer', 'answer', 'candidate'].includes(type)) {
+    return res.status(400).json({ error: 'Unsupported voice signal type.' });
+  }
+
+  sender.lastSeenAt = Date.now();
+  const signalId = roomState.nextSignalId++;
+  roomState.signals.push({
+    id: signalId,
+    fromParticipantId: sender.id,
+    toParticipantId: recipient.id,
+    type,
+    payload,
+    createdAt: Date.now()
+  });
+
+  return res.json({ success: true, signalId });
+});
+
+app.post('/api/community/voice/leave', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const roomName = sanitizeCommunityVoiceRoomName(req.body?.room);
+  const participantId = String(req.body?.participantId || '').trim();
+  const userId = Number(decoded.id) || 0;
+  const roomState = getCommunityVoiceRoom(roomName, false);
+
+  if (!roomState) {
+    return res.json({ success: true, room: roomName, activeParticipants: 0 });
+  }
+
+  roomState.participants = roomState.participants.filter((entry) => !(entry.id === participantId && Number(entry.userId) === userId));
+  pruneCommunityVoiceRoom(roomName, roomState);
+  const activeRoom = getCommunityVoiceRoom(roomName, false);
+
+  return res.json({
+    success: true,
+    room: roomName,
+    activeParticipants: activeRoom ? activeRoom.participants.length : 0
+  });
+});
+
 app.post('/api/import-listing-by-address', async (req, res) => {
   const rawAddress = String(req.body?.address || '').trim();
   const requestedSource = String(req.body?.source || '').trim().toLowerCase();
@@ -2904,6 +3160,7 @@ app.post('/api/import-listing-by-address', async (req, res) => {
         error: error && error.message ? error.message : 'The listing could not be imported.'
       };
     }
+
   }));
 
   const links = {};

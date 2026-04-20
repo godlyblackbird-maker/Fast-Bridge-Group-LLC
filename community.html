@@ -299,6 +299,79 @@
             gap: 10px;
         }
 
+        .community-voice-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+
+        .community-voice-status::before {
+            content: '';
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            background: #f59e0b;
+            box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.16);
+        }
+
+        .community-voice-status.is-connected::before {
+            background: #22c55e;
+            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.16);
+        }
+
+        .community-voice-status.is-error::before {
+            background: #ef4444;
+            box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16);
+        }
+
+        .community-voice-meta {
+            margin: 0;
+            color: rgba(224, 231, 255, 0.84);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .community-voice-roster {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .community-voice-roster span {
+            display: inline-flex;
+            align-items: center;
+            min-height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: #eff6ff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .community-voice-roster span.is-self {
+            background: rgba(191, 219, 254, 0.26);
+            color: #ffffff;
+        }
+
+        .community-voice-roster span.is-empty {
+            background: rgba(15, 23, 42, 0.18);
+            color: rgba(224, 231, 255, 0.72);
+        }
+
+        .community-voice-audio {
+            display: none;
+        }
+
         .community-voice-link {
             min-height: 48px;
             padding: 0 16px;
@@ -624,7 +697,7 @@
                             </div>
                         </div>
                         <div class="community-hero-actions">
-                            <a class="card-btn community-hero-link primary" href="https://discord.gg/Ef4b8anp" target="_blank" rel="noopener noreferrer">Join Voice Chat</a>
+                            <button class="card-btn community-hero-link primary" type="button" id="community-hero-join-voice">Join Voice Chat</button>
                             <a class="card-btn community-hero-link secondary" href="dashboard.html">Back To Dashboard</a>
                         </div>
                     </section>
@@ -726,15 +799,21 @@
                         <div class="community-voice-card glass-card">
                             <h3 class="card-title">FAST Live Voice Chat</h3>
                             <p>Use this room for fast team huddles, deal reviews, script coaching, escalation calls, and internal handoffs. Keep the room open during active work blocks so anyone can jump in without friction.</p>
+                            <div class="community-voice-status" id="community-voice-status">Voice lounge not joined</div>
+                            <p class="community-voice-meta" id="community-voice-meta">Click Join Voice Lounge to use your microphone inside FAST. When connected, this panel will show that you joined.</p>
+                            <div class="community-voice-roster" id="community-voice-roster">
+                                <span class="is-empty">No one is in the voice lounge yet.</span>
+                            </div>
                             <ul class="community-list">
                                 <li>Best for urgent active deals and real-time support.</li>
                                 <li>Use one room for live coordination, then post takeaways back into the relevant channel.</li>
-                                <li>Discord is the current voice bridge for the community workspace.</li>
+                                <li>Voice uses your browser microphone directly inside FAST.</li>
                             </ul>
                             <div class="community-voice-actions">
-                                <a class="card-btn community-voice-link primary" href="https://discord.gg/Ef4b8anp" target="_blank" rel="noopener noreferrer">Join Voice Chat</a>
-                                <a class="card-btn community-voice-link secondary" href="https://discord.gg/Ef4b8anp" target="_blank" rel="noopener noreferrer">Open Discord Server</a>
+                                <button class="card-btn community-voice-link primary" type="button" id="community-voice-join-btn">Join Voice Lounge</button>
+                                <button class="card-btn community-voice-link secondary" type="button" id="community-voice-leave-btn">Leave Voice Lounge</button>
                             </div>
+                            <div class="community-voice-audio" id="community-voice-audio" aria-hidden="true"></div>
                         </div>
                     </section>
 
@@ -796,6 +875,34 @@
             const buttons = Array.from(document.querySelectorAll('[data-community-target]'));
             const panels = Array.from(document.querySelectorAll('[data-community-panel]'));
             const status = document.getElementById('community-menu-status');
+            const voiceStatus = document.getElementById('community-voice-status');
+            const voiceMeta = document.getElementById('community-voice-meta');
+            const voiceRoster = document.getElementById('community-voice-roster');
+            const voiceAudio = document.getElementById('community-voice-audio');
+            const voiceJoinButton = document.getElementById('community-voice-join-btn');
+            const voiceLeaveButton = document.getElementById('community-voice-leave-btn');
+            const heroJoinButton = document.getElementById('community-hero-join-voice');
+            const VOICE_PANEL = 'voice-lounge';
+            const VOICE_ROOM = 'community-voice-lounge';
+            const VOICE_SIGNAL_POLL_MS = 1200;
+            const VOICE_STORAGE_KEY = 'fastCommunityVoiceClientId';
+            const VOICE_ICE_SERVERS = [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ];
+
+            let voiceClientId = '';
+            let voiceParticipantId = '';
+            let voiceParticipants = [];
+            let voiceLastSignalId = 0;
+            let voiceJoining = false;
+            let voiceJoined = false;
+            let voiceLastError = '';
+            let voiceLocalStream = null;
+            let voicePollHandle = 0;
+            let voicePollInFlight = false;
+            const voicePeerConnections = new Map();
+            const voiceRemoteAudioByParticipant = new Map();
 
             if (!buttons.length || !panels.length) {
                 return;
@@ -821,11 +928,507 @@
                 }
             };
 
+            const safeStorage = {
+                get(key) {
+                    try {
+                        return window.sessionStorage ? window.sessionStorage.getItem(key) : null;
+                    } catch (error) {
+                        return null;
+                    }
+                },
+                set(key, value) {
+                    try {
+                        if (window.sessionStorage) {
+                            window.sessionStorage.setItem(key, value);
+                        }
+                    } catch (error) {
+                        // Ignore storage failures.
+                    }
+                }
+            };
+
+            const getCurrentUserName = () => {
+                const user = window.getCurrentUser ? window.getCurrentUser() : null;
+                return String((user && (user.name || user.email)) || 'You').trim() || 'You';
+            };
+
+            const ensureVoiceClientId = () => {
+                if (voiceClientId) {
+                    return voiceClientId;
+                }
+
+                const stored = String(safeStorage.get(VOICE_STORAGE_KEY) || '').trim();
+                if (stored) {
+                    voiceClientId = stored;
+                    return voiceClientId;
+                }
+
+                const generated = typeof crypto !== 'undefined' && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : `voice-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+                voiceClientId = generated;
+                safeStorage.set(VOICE_STORAGE_KEY, generated);
+                return voiceClientId;
+            };
+
+            const getVoiceHeaders = (includeJson = false) => {
+                const headers = {};
+                const token = window.getAuthToken ? window.getAuthToken() : '';
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+                if (includeJson) {
+                    headers['Content-Type'] = 'application/json';
+                }
+                return headers;
+            };
+
+            const requestVoiceJson = async (url, options = {}) => {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        ...getVoiceHeaders(Boolean(options.body)),
+                        ...(options.headers || {})
+                    }
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(String(data.error || 'Voice lounge request failed.').trim() || 'Voice lounge request failed.');
+                }
+                return data;
+            };
+
+            const scheduleVoicePoll = () => {
+                window.clearTimeout(voicePollHandle);
+                if (!voiceJoined || !voiceParticipantId) {
+                    return;
+                }
+                voicePollHandle = window.setTimeout(() => {
+                    pollVoiceEvents().catch(() => {});
+                }, VOICE_SIGNAL_POLL_MS);
+            };
+
+            const removeRemoteAudio = (participantId) => {
+                const audio = voiceRemoteAudioByParticipant.get(participantId);
+                if (audio && audio.parentNode) {
+                    audio.parentNode.removeChild(audio);
+                }
+                voiceRemoteAudioByParticipant.delete(participantId);
+            };
+
+            const detachPeerConnection = (participantId) => {
+                const connection = voicePeerConnections.get(participantId);
+                if (connection) {
+                    try {
+                        connection.onicecandidate = null;
+                        connection.ontrack = null;
+                        connection.onconnectionstatechange = null;
+                        connection.oniceconnectionstatechange = null;
+                        connection.close();
+                    } catch (error) {
+                        // Ignore already-closed peer connections.
+                    }
+                }
+                voicePeerConnections.delete(participantId);
+                removeRemoteAudio(participantId);
+            };
+
+            const stopLocalVoiceStream = () => {
+                if (!voiceLocalStream) {
+                    return;
+                }
+                voiceLocalStream.getTracks().forEach((track) => {
+                    try {
+                        track.stop();
+                    } catch (error) {
+                        // Ignore track stop failures.
+                    }
+                });
+                voiceLocalStream = null;
+            };
+
+            const renderVoiceRoster = () => {
+                if (!voiceRoster) {
+                    return;
+                }
+
+                const people = [];
+                if (voiceJoined) {
+                    people.push({ label: `${getCurrentUserName()} (you)`, self: true });
+                }
+                voiceParticipants.forEach((participant) => {
+                    people.push({ label: String(participant.name || 'FAST User').trim() || 'FAST User', self: false });
+                });
+
+                voiceRoster.innerHTML = '';
+                if (!people.length) {
+                    const empty = document.createElement('span');
+                    empty.className = 'is-empty';
+                    empty.textContent = 'No one is in the voice lounge yet.';
+                    voiceRoster.appendChild(empty);
+                    return;
+                }
+
+                people.forEach((person) => {
+                    const badge = document.createElement('span');
+                    if (person.self) {
+                        badge.classList.add('is-self');
+                    }
+                    badge.textContent = person.label;
+                    voiceRoster.appendChild(badge);
+                });
+            };
+
+            const renderVoiceState = (state) => {
+                if (!voiceStatus || !voiceMeta || !voiceJoinButton || !voiceLeaveButton) {
+                    return;
+                }
+
+                const detail = state && typeof state === 'object' ? state : {};
+                const lastError = String(detail.lastError || '').trim();
+                const joining = Boolean(detail.joining);
+                const joined = Boolean(detail.joined);
+                const participants = Array.isArray(detail.participants) ? detail.participants : voiceParticipants;
+                const participantCount = participants.length + (joined ? 1 : 0);
+
+                voiceStatus.classList.remove('is-connected', 'is-error');
+                renderVoiceRoster();
+
+                if (joining) {
+                    voiceStatus.textContent = 'Joining voice lounge';
+                    voiceMeta.textContent = 'FAST is connecting your microphone now. Approve browser microphone access if prompted.';
+                    voiceJoinButton.disabled = true;
+                    voiceLeaveButton.disabled = false;
+                    return;
+                }
+
+                if (joined) {
+                    voiceStatus.textContent = 'Joined voice lounge';
+                    voiceStatus.classList.add('is-connected');
+                    voiceMeta.textContent = participantCount > 1
+                        ? `Your microphone is live inside FAST. ${participantCount} people are currently in the voice lounge.`
+                        : 'Your microphone is live inside FAST. You are the first person in the voice lounge.';
+                    voiceJoinButton.disabled = true;
+                    voiceLeaveButton.disabled = false;
+                    return;
+                }
+
+                if (lastError) {
+                    voiceStatus.textContent = 'Voice lounge error';
+                    voiceStatus.classList.add('is-error');
+                    voiceMeta.textContent = lastError;
+                    voiceJoinButton.disabled = false;
+                    voiceLeaveButton.disabled = true;
+                    return;
+                }
+
+                voiceStatus.textContent = 'Voice lounge not joined';
+                voiceMeta.textContent = 'Click Join Voice Lounge to use your microphone inside FAST. When connected, this panel will show that you joined.';
+                voiceJoinButton.disabled = false;
+                voiceLeaveButton.disabled = true;
+            };
+
+            const findParticipant = (participantId) => voiceParticipants.find((entry) => entry.id === participantId) || null;
+
+            const attachRemoteStream = (participantId, stream) => {
+                if (!voiceAudio) {
+                    return;
+                }
+
+                let audio = voiceRemoteAudioByParticipant.get(participantId) || null;
+                if (!audio) {
+                    audio = document.createElement('audio');
+                    audio.autoplay = true;
+                    audio.playsInline = true;
+                    voiceAudio.appendChild(audio);
+                    voiceRemoteAudioByParticipant.set(participantId, audio);
+                }
+
+                if (audio.srcObject !== stream) {
+                    audio.srcObject = stream;
+                }
+            };
+
+            const postVoiceSignal = async (toParticipantId, type, payload) => {
+                await requestVoiceJson('/api/community/voice/signal', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        room: VOICE_ROOM,
+                        participantId: voiceParticipantId,
+                        toParticipantId,
+                        type,
+                        payload
+                    })
+                });
+            };
+
+            const ensurePeerConnection = (participant) => {
+                const existing = voicePeerConnections.get(participant.id);
+                if (existing) {
+                    existing.__participant = participant;
+                    return existing;
+                }
+
+                const connection = new RTCPeerConnection({ iceServers: VOICE_ICE_SERVERS });
+                connection.__participant = participant;
+                connection.__offerCreated = false;
+
+                if (voiceLocalStream) {
+                    voiceLocalStream.getTracks().forEach((track) => {
+                        connection.addTrack(track, voiceLocalStream);
+                    });
+                }
+
+                connection.onicecandidate = (event) => {
+                    if (!event.candidate) {
+                        return;
+                    }
+                    postVoiceSignal(participant.id, 'candidate', event.candidate).catch((error) => {
+                        voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to exchange voice candidates.';
+                        renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                    });
+                };
+
+                connection.ontrack = (event) => {
+                    const [stream] = event.streams || [];
+                    if (stream) {
+                        attachRemoteStream(participant.id, stream);
+                    }
+                };
+
+                connection.onconnectionstatechange = () => {
+                    const state = String(connection.connectionState || '').trim().toLowerCase();
+                    if (state === 'failed' || state === 'closed') {
+                        detachPeerConnection(participant.id);
+                    }
+                };
+
+                connection.oniceconnectionstatechange = () => {
+                    const state = String(connection.iceConnectionState || '').trim().toLowerCase();
+                    if (state === 'failed' || state === 'closed') {
+                        detachPeerConnection(participant.id);
+                    }
+                };
+
+                voicePeerConnections.set(participant.id, connection);
+                return connection;
+            };
+
+            const createOfferForParticipant = async (participant) => {
+                const connection = ensurePeerConnection(participant);
+                if (connection.__offerCreated || connection.signalingState !== 'stable') {
+                    return;
+                }
+
+                connection.__offerCreated = true;
+                const offer = await connection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false });
+                await connection.setLocalDescription(offer);
+                await postVoiceSignal(participant.id, 'offer', connection.localDescription);
+            };
+
+            const handleVoiceSignal = async (signal) => {
+                const participant = findParticipant(signal.fromParticipantId) || {
+                    id: signal.fromParticipantId,
+                    name: 'FAST User'
+                };
+                const connection = ensurePeerConnection(participant);
+
+                if (signal.type === 'offer') {
+                    connection.__offerCreated = true;
+                    await connection.setRemoteDescription(new RTCSessionDescription(signal.payload));
+                    const answer = await connection.createAnswer();
+                    await connection.setLocalDescription(answer);
+                    await postVoiceSignal(participant.id, 'answer', connection.localDescription);
+                    return;
+                }
+
+                if (signal.type === 'answer') {
+                    if (connection.signalingState !== 'closed') {
+                        await connection.setRemoteDescription(new RTCSessionDescription(signal.payload));
+                    }
+                    return;
+                }
+
+                if (signal.type === 'candidate' && signal.payload) {
+                    await connection.addIceCandidate(new RTCIceCandidate(signal.payload));
+                }
+            };
+
+            const syncVoiceParticipants = async (participants) => {
+                const normalizedParticipants = Array.isArray(participants) ? participants : [];
+                const nextIds = new Set(normalizedParticipants.map((participant) => participant.id));
+
+                Array.from(voicePeerConnections.keys()).forEach((participantId) => {
+                    if (!nextIds.has(participantId)) {
+                        detachPeerConnection(participantId);
+                    }
+                });
+
+                voiceParticipants = normalizedParticipants;
+                renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+
+                for (const participant of normalizedParticipants) {
+                    if (!voiceJoined || !voiceParticipantId) {
+                        break;
+                    }
+                    if (voiceParticipantId.localeCompare(String(participant.id || '')) < 0) {
+                        try {
+                            await createOfferForParticipant(participant);
+                        } catch (error) {
+                            voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to connect the voice lounge.';
+                            renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                        }
+                    }
+                }
+            };
+
+            const pollVoiceEvents = async () => {
+                if (!voiceJoined || !voiceParticipantId || voicePollInFlight) {
+                    scheduleVoicePoll();
+                    return;
+                }
+
+                voicePollInFlight = true;
+
+                try {
+                    const params = new URLSearchParams({
+                        room: VOICE_ROOM,
+                        participantId: voiceParticipantId,
+                        after: String(voiceLastSignalId)
+                    });
+                    const data = await requestVoiceJson(`/api/community/voice/events?${params.toString()}`);
+                    voiceLastSignalId = Math.max(voiceLastSignalId, Number(data.signalCursor) || 0);
+                    await syncVoiceParticipants(data.participants || []);
+
+                    for (const signal of (data.signals || [])) {
+                        voiceLastSignalId = Math.max(voiceLastSignalId, Number(signal.id) || 0);
+                        await handleVoiceSignal(signal);
+                    }
+                } catch (error) {
+                    voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to refresh the voice lounge.';
+                    renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                    if (/session not found|join the room again/i.test(voiceLastError)) {
+                        await leaveVoiceLounge({ skipRequest: true });
+                        return;
+                    }
+                } finally {
+                    voicePollInFlight = false;
+                    scheduleVoicePoll();
+                }
+            };
+
+            const leaveVoiceLounge = async ({ skipRequest = false } = {}) => {
+                window.clearTimeout(voicePollHandle);
+                voicePollHandle = 0;
+
+                const activeParticipantId = voiceParticipantId;
+                voiceParticipantId = '';
+                voiceJoined = false;
+                voiceJoining = false;
+                voiceLastSignalId = 0;
+                voiceParticipants = [];
+                voiceLastError = '';
+
+                Array.from(voicePeerConnections.keys()).forEach((participantId) => {
+                    detachPeerConnection(participantId);
+                });
+                stopLocalVoiceStream();
+
+                if (!skipRequest && activeParticipantId) {
+                    try {
+                        await requestVoiceJson('/api/community/voice/leave', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                room: VOICE_ROOM,
+                                participantId: activeParticipantId
+                            })
+                        });
+                    } catch (error) {
+                        // Ignore leave cleanup failures.
+                    }
+                }
+
+                renderVoiceState({ joined: false, joining: false, lastError: '', participants: [] });
+            };
+
+            const joinVoiceLounge = async () => {
+                if (voiceJoining || voiceJoined) {
+                    return;
+                }
+
+                if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                    renderVoiceState({ joined: false, joining: false, lastError: 'This browser does not support live microphone voice chat.', participants: voiceParticipants });
+                    return;
+                }
+
+                setActivePanel(VOICE_PANEL);
+                voiceJoining = true;
+                voiceLastError = '';
+                renderVoiceState({ joined: false, joining: true, lastError: '', participants: voiceParticipants });
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        },
+                        video: false
+                    });
+                    voiceLocalStream = stream;
+
+                    const data = await requestVoiceJson('/api/community/voice/join', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            room: VOICE_ROOM,
+                            clientId: ensureVoiceClientId()
+                        })
+                    });
+
+                    voiceParticipantId = String(data.participant && data.participant.id || '').trim();
+                    voiceJoined = Boolean(voiceParticipantId);
+                    voiceJoining = false;
+                    voiceLastSignalId = Number(data.signalCursor) || 0;
+                    voiceLastError = '';
+
+                    await syncVoiceParticipants(data.participants || []);
+                    renderVoiceState({ joined: voiceJoined, joining: false, lastError: '', participants: voiceParticipants });
+                    scheduleVoicePoll();
+                } catch (error) {
+                    voiceJoining = false;
+                    voiceJoined = false;
+                    voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to join the voice lounge.';
+                    stopLocalVoiceStream();
+                    renderVoiceState({ joined: false, joining: false, lastError: voiceLastError, participants: voiceParticipants });
+                }
+            };
+
             buttons.forEach((button) => {
                 button.addEventListener('click', () => {
                     setActivePanel(button.getAttribute('data-community-target'));
                 });
             });
+
+            if (voiceJoinButton) {
+                voiceJoinButton.addEventListener('click', joinVoiceLounge);
+            }
+
+            if (heroJoinButton) {
+                heroJoinButton.addEventListener('click', joinVoiceLounge);
+            }
+
+            if (voiceLeaveButton) {
+                voiceLeaveButton.addEventListener('click', () => {
+                    leaveVoiceLounge().catch(() => {});
+                });
+            }
+
+            window.addEventListener('pagehide', () => {
+                leaveVoiceLounge().catch(() => {});
+            });
+
+            renderVoiceState({ joined: false, joining: false, lastError: '', participants: [] });
         })();
     </script>
 </body>

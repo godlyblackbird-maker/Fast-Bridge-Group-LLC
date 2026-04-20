@@ -1849,6 +1849,7 @@
     }
 
     const data = await response.json().catch(() => ({}));
+    twilioVoiceIdentity = String(data.identity || twilioVoiceIdentity || '').trim();
     return String(data.token || '').trim();
   }
 
