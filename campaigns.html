@@ -1708,6 +1708,55 @@
                 }
             }
 
+            function normalizeCampaignPhoneValue(value) {
+                const raw = String(value || '').trim();
+                if (!raw) {
+                    return '';
+                }
+
+                if (raw.startsWith('+')) {
+                    const digits = `+${raw.slice(1).replace(/\D/g, '')}`;
+                    return /^\+[1-9]\d{7,14}$/.test(digits) ? digits : raw;
+                }
+
+                const digits = raw.replace(/\D/g, '');
+                if (digits.length === 10) {
+                    return `+1${digits}`;
+                }
+                if (digits.length === 11 && digits.startsWith('1')) {
+                    return `+${digits}`;
+                }
+
+                return raw;
+            }
+
+            function normalizeCampaignRecipientLine(line) {
+                const trimmedLine = String(line || '').trim();
+                if (!trimmedLine) {
+                    return '';
+                }
+
+                const parts = trimmedLine.split('|').map((part) => part.trim());
+                if (parts.length >= 3) {
+                    parts[1] = normalizeCampaignPhoneValue(parts[1]);
+                    return `${parts[0]} | ${parts[1]} | ${parts.slice(2).join(' | ')}`;
+                }
+                if (parts.length === 2) {
+                    parts[1] = normalizeCampaignPhoneValue(parts[1]);
+                    return `${parts[0]} | ${parts[1]}`;
+                }
+
+                return normalizeCampaignPhoneValue(trimmedLine);
+            }
+
+            function normalizeCampaignRecipientsInputValue(value) {
+                return String(value || '')
+                    .split(/\r?\n/)
+                    .map((line) => normalizeCampaignRecipientLine(line))
+                    .filter((line) => line !== '')
+                    .join('\n');
+            }
+
             function formatCampaignReplyTimestamp(value) {
                 const date = value ? new Date(value) : null;
                 if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
@@ -1958,7 +2007,7 @@
             }
 
             function parseCampaignRecipients(text) {
-                return String(text || '')
+                return normalizeCampaignRecipientsInputValue(text)
                     .split(/\r?\n/)
                     .map((line) => line.trim())
                     .filter(Boolean)
@@ -2024,6 +2073,20 @@
                 });
             }
 
+            if (campaignRecipientsInput) {
+                const syncCampaignRecipientsField = () => {
+                    const normalizedValue = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
+                    if (normalizedValue !== campaignRecipientsInput.value) {
+                        campaignRecipientsInput.value = normalizedValue;
+                    }
+                };
+
+                campaignRecipientsInput.addEventListener('blur', syncCampaignRecipientsField);
+                campaignRecipientsInput.addEventListener('paste', () => {
+                    window.setTimeout(syncCampaignRecipientsField, 0);
+                });
+            }
+
             if (campaignTemplateBody) {
                 campaignTemplateBody.addEventListener('input', () => {
                     const currentKey = normalizeCampaignTemplateKey(campaignTemplateSelect ? campaignTemplateSelect.value : campaignTemplateDraft.selectedTemplate);
@@ -2080,6 +2143,9 @@
 
             if (campaignSendButton) {
                 campaignSendButton.addEventListener('click', async () => {
+                    if (campaignRecipientsInput) {
+                        campaignRecipientsInput.value = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
+                    }
                     const recipients = parseCampaignRecipients(campaignRecipientsInput ? campaignRecipientsInput.value : '');
                     const body = campaignBodyInput ? campaignBodyInput.value.trim() : '';
                     const campaignName = campaignNameInput ? campaignNameInput.value.trim() : 'Agent SMS Campaign';

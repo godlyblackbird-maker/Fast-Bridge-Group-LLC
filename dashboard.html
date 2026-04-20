@@ -533,6 +533,107 @@
             word-break: break-all;
         }
 
+        .community-hub-widget {
+            position: relative;
+            overflow: hidden;
+            gap: 16px;
+            border: 1px solid rgba(244, 114, 182, 0.22);
+            background:
+                radial-gradient(circle at top right, rgba(253, 164, 175, 0.24), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(125, 211, 252, 0.18), transparent 38%),
+                linear-gradient(150deg, rgba(76, 29, 149, 0.88), rgba(91, 33, 182, 0.9) 52%, rgba(30, 64, 175, 0.92));
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.24),
+                0 24px 50px rgba(59, 22, 120, 0.28);
+        }
+
+        .community-hub-widget::before,
+        .community-hub-widget::after {
+            content: '';
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+
+        .community-hub-widget::before {
+            top: -58px;
+            right: -34px;
+            width: 188px;
+            height: 188px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.24), transparent 70%);
+        }
+
+        .community-hub-widget::after {
+            left: -86px;
+            bottom: -92px;
+            width: 232px;
+            height: 232px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 72%);
+        }
+
+        .community-hub-copy,
+        .community-hub-action {
+            position: relative;
+            z-index: 1;
+        }
+
+        .community-hub-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            margin-bottom: 10px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: rgba(249, 250, 251, 0.98);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            backdrop-filter: blur(12px);
+        }
+
+        .community-hub-widget .card-title {
+            color: #ffffff;
+            font-size: 22px;
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+        }
+
+        .community-hub-widget .card-subtitle {
+            color: rgba(224, 231, 255, 0.8);
+            font-size: 13px;
+        }
+
+        .community-hub-copy p {
+            margin: 0;
+            color: rgba(238, 242, 255, 0.94);
+            font-size: 14px;
+            line-height: 1.68;
+            max-width: 42ch;
+        }
+
+        .community-hub-action {
+            margin-top: auto;
+        }
+
+        .community-hub-link {
+            width: 100%;
+            justify-content: center;
+            min-height: 52px;
+            border-radius: 16px;
+            background: linear-gradient(145deg, #ffffff, #fbcfe8) !important;
+            color: #4c1d95 !important;
+            box-shadow: 0 16px 28px rgba(15, 23, 42, 0.24);
+        }
+
+        .community-hub-link:hover,
+        .community-hub-link:focus-visible {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 34px rgba(15, 23, 42, 0.32);
+        }
+
         .dashboard-announcement-widget[hidden] {
             display: none;
         }
@@ -640,13 +741,6 @@
             font-weight: 800;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-        }
-
-        .dashboard-release-log-copy {
-            margin: 0;
-            color: var(--text-secondary);
-            line-height: 1.72;
-            max-width: 60ch;
         }
 
         @media (max-width: 900px) {
@@ -1327,6 +1421,17 @@ https://templatemo.com/tm-607-glass-admin
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="community.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                Community
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="users.html" class="nav-link">
                                 <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
                                 Agent workspace
@@ -1453,18 +1558,6 @@ https://templatemo.com/tm-607-glass-admin
                     <div class="dashboard-announcement-actions">
                         <a class="card-btn active" id="dashboard-announcement-link" href="#" hidden>Open Update</a>
                     </div>
-                </div>
-            </section>
-
-            <section class="glass-card widget-card dashboard-release-log-widget" data-widget-id="dashboard-version-history" data-widget-title="Version History">
-                <div class="dashboard-release-log-head card-header">
-                    <div>
-                        <span class="dashboard-release-log-kicker">Version History</span>
-                        <h2 class="card-title">Recent Updates</h2>
-                        <p class="card-subtitle">Open the recent update log with bullet points for each version release right from the dashboard.</p>
-                        <p class="dashboard-release-log-copy">Use the full Version History page to review the latest release notes, product changes, and version-by-version update log.</p>
-                    </div>
-                    <a class="card-btn active" href="version-history.html?source=dashboard">Open Full Log</a>
                 </div>
             </section>
 
@@ -1608,6 +1701,32 @@ https://templatemo.com/tm-607-glass-admin
                     </div>
                 </div>
 
+                <div class="glass-card widget-card outreach-card community-hub-widget" data-widget-id="community-hub" data-widget-title="Community">
+                    <div class="community-hub-copy">
+                        <span class="community-hub-kicker">Community</span>
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">Open The Community</h2>
+                                <p class="card-subtitle">Jump into the FAST community workspace, browse channels, and join the live voice room.</p>
+                            </div>
+                        </div>
+                        <p>Open the community page to move through shared rooms on the right-side channel menu, catch updates, and jump into voice chat without leaving FAST.</p>
+                    </div>
+                    <div class="community-hub-action">
+                        <a class="card-btn active community-hub-link" href="community.html">Open Community</a>
+                    </div>
+                </div>
+
+            </section>
+
+            <section class="glass-card widget-card dashboard-release-log-widget" data-widget-id="dashboard-version-history" data-widget-title="Version History">
+                <div class="dashboard-release-log-head card-header">
+                    <div>
+                        <span class="dashboard-release-log-kicker">Version History</span>
+                        <h2 class="card-title">Recent Updates</h2>
+                    </div>
+                    <a class="card-btn active" href="version-history.html?source=dashboard">Open Full Log</a>
+                </div>
             </section>
         </main>
     </div>
