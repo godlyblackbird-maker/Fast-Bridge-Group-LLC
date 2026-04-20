@@ -6091,6 +6091,10 @@ function initNavbarDateTime() {
     function initCounters() {
         const counters = document.querySelectorAll('.stat-value');
         counters.forEach(counter => {
+            if (counter.dataset.skipCounterAnimation === 'true') {
+                return;
+            }
+
             const text = counter.textContent;
             const value = parseInt(text.replace(/[^0-9]/g, ''), 10);
 
