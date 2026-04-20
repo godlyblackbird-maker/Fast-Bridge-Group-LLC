@@ -18255,6 +18255,78 @@ body.analytics-reboot .analytics-my-file-count {
     line-height: 1.4;
 }
 
+.comps-map-earth-target {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    transform: translate(-50%, -62%);
+    pointer-events: none;
+}
+
+.comps-map-earth-target-label {
+    display: grid;
+    gap: 2px;
+    justify-items: center;
+    min-width: 180px;
+    max-width: min(320px, calc(100vw - 48px));
+    padding: 10px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(8, 15, 28, 0.82);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.26);
+    text-align: center;
+}
+
+.comps-map-earth-target-kicker {
+    color: #c7d2fe;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.comps-map-earth-target-label strong {
+    color: #f8fafc;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.comps-map-earth-target-pin {
+    position: relative;
+    width: 32px;
+    height: 44px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.comps-map-earth-target-pin::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px 20px 20px 2px;
+    background: linear-gradient(180deg, #f59e0b, #ef4444);
+    transform: rotate(45deg);
+    box-shadow: 0 12px 28px rgba(239, 68, 68, 0.3);
+}
+
+.comps-map-earth-target-dot {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    width: 12px;
+    height: 12px;
+    margin-top: 10px;
+    border-radius: 999px;
+    background: #f8fafc;
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.16);
+}
+
 .comps-map-earth-canvas {
     position: absolute;
     inset: 0;

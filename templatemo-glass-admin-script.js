@@ -22367,6 +22367,7 @@ function initNavbarDateTime() {
             const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
             const earthIndicator = document.getElementById('comps-map-earth-indicator');
             const earthIndicatorAddress = document.getElementById('comps-map-earth-indicator-address');
+            const earthTargetAddress = document.getElementById('comps-map-earth-target-address');
             const measureShell = document.getElementById('comps-map-measure-shell');
             const measurePrimary = document.getElementById('comps-map-measure-primary');
             const measureBadge = document.getElementById('comps-map-measure-badge');
@@ -22615,20 +22616,20 @@ function initNavbarDateTime() {
                 const nextCenter = {
                     lat,
                     lng,
-                    altitude: 120
+                    altitude: 70
                 };
 
                 if ('center' in earthMapElement) {
                     earthMapElement.center = nextCenter;
                 }
                 if ('range' in earthMapElement) {
-                    earthMapElement.range = 1400;
+                    earthMapElement.range = 780;
                 }
                 if ('tilt' in earthMapElement) {
-                    earthMapElement.tilt = 67.5;
+                    earthMapElement.tilt = 58;
                 }
                 if ('heading' in earthMapElement) {
-                    earthMapElement.heading = 18;
+                    earthMapElement.heading = 0;
                 }
             }
 
@@ -22656,6 +22657,9 @@ function initNavbarDateTime() {
                 const markerMeta = getSubjectMarkerMeta();
                 const subjectAddress = String(markerMeta && markerMeta.title || detailData.address || 'Subject property').trim() || 'Subject property';
                 earthIndicatorAddress.textContent = subjectAddress;
+                if (earthTargetAddress) {
+                    earthTargetAddress.textContent = subjectAddress;
+                }
             }
 
             function setMeasurementPanelState(options = {}) {
@@ -23008,12 +23012,12 @@ function initNavbarDateTime() {
                     const buildEarthMapElement = (mapId) => new Map3DElement({
                         mapId,
                         mode: earthMapModeValue,
-                        range: 1400,
-                        tilt: 67.5,
-                        heading: 18,
+                        range: 780,
+                        tilt: 58,
+                        heading: 0,
                         center: {
                             ...getEarthFocusLocation(),
-                            altitude: 120
+                            altitude: 70
                         }
                     });
 
