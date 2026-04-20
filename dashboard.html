@@ -642,67 +642,11 @@
             text-transform: uppercase;
         }
 
-        .dashboard-release-log-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 16px;
-        }
-
-        .dashboard-release-entry {
-            display: grid;
-            gap: 12px;
-            padding: 18px;
-            border-radius: 22px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        }
-
-        .dashboard-release-entry-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .dashboard-release-entry-head h3 {
+        .dashboard-release-log-copy {
             margin: 0;
-            font-size: 1.08rem;
-            line-height: 1.1;
-        }
-
-        .dashboard-release-entry-date {
-            display: block;
-            margin-top: 6px;
-            color: rgba(226, 232, 240, 0.64);
-            font-size: 12px;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-        }
-
-        .dashboard-release-chip {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 60px;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: rgba(var(--accent-rgb), 0.16);
-            color: rgba(255, 255, 255, 0.96);
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.06em;
-        }
-
-        .dashboard-release-entry ul {
-            margin: 0;
-            padding-left: 18px;
             color: var(--text-secondary);
-            line-height: 1.68;
-        }
-
-        .dashboard-release-entry li + li {
-            margin-top: 8px;
+            line-height: 1.72;
+            max-width: 60ch;
         }
 
         @media (max-width: 900px) {
@@ -718,9 +662,6 @@
                 flex-direction: column;
             }
 
-            .dashboard-release-log-grid {
-                grid-template-columns: 1fr;
-            }
         }
 
         [data-theme="light"] .discord-meetings-widget {
@@ -1521,52 +1462,9 @@ https://templatemo.com/tm-607-glass-admin
                         <span class="dashboard-release-log-kicker">Version History</span>
                         <h2 class="card-title">Recent Updates</h2>
                         <p class="card-subtitle">Open the recent update log with bullet points for each version release right from the dashboard.</p>
+                        <p class="dashboard-release-log-copy">Use the full Version History page to review the latest release notes, product changes, and version-by-version update log.</p>
                     </div>
                     <a class="card-btn active" href="version-history.html?source=dashboard">Open Full Log</a>
-                </div>
-                <div class="dashboard-release-log-grid">
-                    <article class="dashboard-release-entry">
-                        <div class="dashboard-release-entry-head">
-                            <div>
-                                <h3>Version 1.4.3</h3>
-                                <span class="dashboard-release-entry-date">April 19, 2026</span>
-                            </div>
-                            <span class="dashboard-release-chip">1.4.3</span>
-                        </div>
-                        <ul>
-                            <li>Moved Version History onto the dashboard so recent release bullets are visible without opening Settings.</li>
-                            <li>Fixed the Brokerage Plan Builder scale so the bottom markers line up with the real 1 to 50 slider values.</li>
-                            <li>Simplified brokerage plan copy to focus on selected agent counts while keeping broker access included.</li>
-                        </ul>
-                    </article>
-                    <article class="dashboard-release-entry">
-                        <div class="dashboard-release-entry-head">
-                            <div>
-                                <h3>Version 1.4.2</h3>
-                                <span class="dashboard-release-entry-date">April 15, 2026</span>
-                            </div>
-                            <span class="dashboard-release-chip">1.4.2</span>
-                        </div>
-                        <ul>
-                            <li>Added looping cloud and space video backgrounds to the live theme system.</li>
-                            <li>Brightened heavier Cloud-mode panels so key workspace areas read cleaner.</li>
-                            <li>Cleaned up crowded Settings and subscription surfaces for a smoother layout.</li>
-                        </ul>
-                    </article>
-                    <article class="dashboard-release-entry">
-                        <div class="dashboard-release-entry-head">
-                            <div>
-                                <h3>Version 1.4.1</h3>
-                                <span class="dashboard-release-entry-date">April 12, 2026</span>
-                            </div>
-                            <span class="dashboard-release-chip">1.4.1</span>
-                        </div>
-                        <ul>
-                            <li>Kept the comps ruler hidden until users actually choose Measure Sqft.</li>
-                            <li>Removed advanced-marker config that was breaking address search and Earth markers.</li>
-                            <li>Made the Earth button respond reliably on every click with clearer unavailable states.</li>
-                        </ul>
-                    </article>
                 </div>
             </section>
 
