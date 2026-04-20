@@ -2916,7 +2916,10 @@ function shouldAllowTestUserMutation(pathname) {
   return normalizedPath === '/api/login'
     || normalizedPath === '/api/login/2fa'
     || normalizedPath === '/api/logout'
-    || normalizedPath === '/api/verify';
+    || normalizedPath === '/api/verify'
+    || normalizedPath === '/api/community/voice/join'
+    || normalizedPath === '/api/community/voice/signal'
+    || normalizedPath === '/api/community/voice/leave';
 }
 
 function rejectTestUserWriteAccess(req, res, next) {

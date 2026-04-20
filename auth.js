@@ -930,6 +930,10 @@
       return true;
     }
 
+    if (target.closest('[data-voice-room], #community-voice-join-btn, #community-voice-leave-btn, #community-voice-hangup-btn, #community-voice-invite-btn, #community-voice-tool-mute, #community-voice-tool-deafen')) {
+      return true;
+    }
+
     const link = target.closest('a[href]');
     return isAllowedTestUserNavigationLink(link);
   }

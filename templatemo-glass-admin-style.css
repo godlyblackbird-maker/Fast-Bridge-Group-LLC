@@ -867,7 +867,6 @@
         url("Themes/Wallpaper%20SUNSET.jpg") no-repeat center center;
     background-size: cover;
     opacity: 0.36;
-    filter: blur(1.8px) saturate(1.08) contrast(1.04);
     pointer-events: none;
     z-index: -1;
 }
@@ -4037,9 +4036,11 @@ a {
 }
 
 .nav-icon-mls-spreadsheet {
+    width: 24px;
+    height: 24px;
     background-color: currentColor;
-    -webkit-mask-image: url("Symbols/MLS%20Spreadsheet.svg");
-    mask-image: url("Symbols/MLS%20Spreadsheet.svg");
+    -webkit-mask-image: url("Symbols/file-plus-line-svgrepo-com.svg");
+    mask-image: url("Symbols/file-plus-line-svgrepo-com.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -4049,9 +4050,25 @@ a {
 }
 
 .nav-icon-agent-workspace {
+    width: 24px;
+    height: 24px;
     background-color: currentColor;
-    -webkit-mask-image: url("Symbols/Agent%20Workspace%20Hammer.svg");
-    mask-image: url("Symbols/Agent%20Workspace%20Hammer.svg");
+    -webkit-mask-image: url("Symbols/hammer-svgrepo-com.svg");
+    mask-image: url("Symbols/hammer-svgrepo-com.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.nav-icon-deals {
+    width: 24px;
+    height: 24px;
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/folder-svgrepo-com.svg");
+    mask-image: url("Symbols/folder-svgrepo-com.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -4061,9 +4078,11 @@ a {
 }
 
 .nav-icon-campaigns {
+    width: 24px;
+    height: 24px;
     background-color: currentColor;
-    -webkit-mask-image: url("Symbols/Flag%20for%20campaigns.svg");
-    mask-image: url("Symbols/Flag%20for%20campaigns.svg");
+    -webkit-mask-image: url("Symbols/flag-svgrepo-com.svg");
+    mask-image: url("Symbols/flag-svgrepo-com.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -4074,8 +4093,34 @@ a {
 
 .nav-icon-text-bubble {
     background-color: currentColor;
-    -webkit-mask-image: url("Symbols/text-bubble.svg");
-    mask-image: url("Symbols/text-bubble.svg");
+    -webkit-mask-image: url("Symbols/message-round-svgrepo-com.svg");
+    mask-image: url("Symbols/message-round-svgrepo-com.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.nav-icon-training {
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/knowledge-base-svgrepo-com.svg");
+    mask-image: url("Symbols/knowledge-base-svgrepo-com.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.nav-icon-community {
+    width: 26px;
+    height: 26px;
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/group-svgrepo-com%20(2).svg");
+    mask-image: url("Symbols/group-svgrepo-com%20(2).svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;

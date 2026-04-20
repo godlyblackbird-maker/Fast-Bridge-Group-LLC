@@ -6153,6 +6153,41 @@ function initNavbarDateTime() {
             return;
         }
 
+        const existingCommunityLink = menuList.querySelector('.nav-link[href="community.html"], .nav-link[href="/community.html"]');
+        const communityMarkup = `
+            <a href="community.html" class="nav-link">
+                <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
+                Community
+            </a>
+        `;
+
+        let communityLink = existingCommunityLink;
+        if (!communityLink) {
+            const listItem = document.createElement('li');
+            listItem.className = 'nav-item';
+            listItem.innerHTML = communityMarkup;
+
+            const campaignsItem = Array.from(menuList.querySelectorAll('.nav-item')).find((item) => {
+                const itemLink = item.querySelector('.nav-link');
+                return itemLink && /campaigns\.html$/i.test(String(itemLink.getAttribute('href') || ''));
+            });
+
+            if (campaignsItem && campaignsItem.nextSibling) {
+                menuList.insertBefore(listItem, campaignsItem.nextSibling);
+            } else if (campaignsItem) {
+                menuList.appendChild(listItem);
+            } else {
+                menuList.appendChild(listItem);
+            }
+
+            communityLink = listItem.querySelector('.nav-link');
+        }
+
+        if (communityLink) {
+            const isCommunityActive = /\/community\.html$/.test(currentPath) || currentPath === 'community.html';
+            communityLink.classList.toggle('active', isCommunityActive);
+        }
+
         const existingLink = menuList.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
         const fbgMessagesMarkup = `
             <a href="fbg-messages.html" class="nav-link">
@@ -12893,12 +12928,22 @@ function initNavbarDateTime() {
         let currentUser = null;
 
         try {
-            currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+            currentUser = typeof window.getCurrentUser === 'function'
+                ? window.getCurrentUser()
+                : JSON.parse(localStorage.getItem('user') || 'null');
         } catch (error) {
             currentUser = null;
         }
 
-        if (!currentUser || currentUser.role !== 'admin') {
+        if ((!currentUser || !currentUser.role) && typeof window.getCurrentUser === 'function') {
+            try {
+                currentUser = window.getCurrentUser();
+            } catch (error) {
+                currentUser = currentUser || null;
+            }
+        }
+
+        if (!currentUser || String(currentUser.role || '').trim().toLowerCase() !== 'admin') {
             card.style.display = 'none';
             return;
         }
@@ -13154,6 +13199,20 @@ function initNavbarDateTime() {
             }
         }
 
+        async function loadAnnouncementFromServer(token) {
+            const response = await fetch('/api/admin/announcements', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                cache: 'no-store'
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to load announcement settings');
+            }
+            return data.announcement || {};
+        }
+
         async function saveAnnouncement(options = {}) {
             const token = getAuthToken();
             if (!token) {
@@ -13182,8 +13241,9 @@ function initNavbarDateTime() {
                     throw new Error(data.error || 'Unable to save announcement');
                 }
 
-                applyAnnouncementToForm(data.announcement || {});
-                broadcastAnnouncementUpdate(data.announcement || {});
+                const persistedAnnouncement = await loadAnnouncementFromServer(token);
+                applyAnnouncementToForm(persistedAnnouncement);
+                broadcastAnnouncementUpdate(persistedAnnouncement);
                 showDashboardToast('success', options.clear ? 'Announcement Cleared' : (data.announcement?.status === 'scheduled' ? 'Announcement Scheduled' : 'Announcement Published'), data.message || 'Announcement updated successfully.');
             } catch (error) {
                 showDashboardToast('error', 'Announcement Failed', String(error.message || 'Unable to save announcement.'));
@@ -13295,7 +13355,7 @@ function initNavbarDateTime() {
 
         const ANNOUNCEMENT_CACHE_KEY = 'dashboardAnnouncementState';
         const ANNOUNCEMENT_SYNC_EVENT = 'dashboard-announcement-updated';
-        const ANNOUNCEMENT_REFRESH_INTERVAL_MS = 10000;
+        const ANNOUNCEMENT_REFRESH_INTERVAL_MS = 3000;
 
         const badge = document.getElementById('dashboard-announcement-badge');
         const title = document.getElementById('dashboard-announcement-title');
@@ -13319,6 +13379,35 @@ function initNavbarDateTime() {
                 localStorage.setItem(ANNOUNCEMENT_CACHE_KEY, JSON.stringify(announcement && typeof announcement === 'object' ? announcement : {}));
             } catch (error) {
                 // Ignore local storage errors.
+            }
+        }
+
+        function forceAnnouncementWidgetVisible() {
+            card.classList.remove('widget-minimized');
+
+            const dockItem = document.querySelector('[data-widget-dock="dashboard-announcement"]');
+            if (dockItem && dockItem.parentNode) {
+                dockItem.parentNode.removeChild(dockItem);
+            }
+
+            try {
+                const widgetStateKey = typeof getWidgetStateStorageKey === 'function'
+                    ? getWidgetStateStorageKey()
+                    : null;
+                if (!widgetStateKey) {
+                    return;
+                }
+
+                const widgetState = JSON.parse(localStorage.getItem(widgetStateKey) || '{}');
+                if (widgetState && typeof widgetState === 'object' && widgetState['dashboard-announcement']) {
+                    widgetState['dashboard-announcement'] = {
+                        ...(widgetState['dashboard-announcement'] || {}),
+                        minimized: false
+                    };
+                    localStorage.setItem(widgetStateKey, JSON.stringify(widgetState));
+                }
+            } catch (error) {
+                // Ignore widget-state restore failures.
             }
         }
 
@@ -13404,6 +13493,7 @@ function initNavbarDateTime() {
                 return;
             }
 
+            forceAnnouncementWidgetVisible();
             const tone = String(payload.tone || 'info').trim() || 'info';
             card.dataset.tone = tone;
             badge.textContent = tone;
@@ -13442,7 +13532,7 @@ function initNavbarDateTime() {
 
             loadAnnouncementPromise = (async () => {
                 try {
-                    const response = await fetch('/api/announcements/current', {
+                    const response = await fetch(`/api/announcements/current?_=${Date.now()}`, {
                         cache: 'no-store'
                     });
                     const data = await response.json();
@@ -28896,6 +28986,349 @@ function initNavbarDateTime() {
         }
     }
 
+    function initGlobalCommunityVoiceDock() {
+        return;
+
+        const VOICE_SESSION_STATE_KEY = 'fastCommunityVoiceSessionState';
+        const VOICE_SESSION_COMMAND_KEY = 'fastCommunityVoiceSessionCommand';
+        const VOICE_SESSION_CHANNEL = 'fast-community-voice-session';
+        const VOICE_POPUP_ALLOWED_KEY = 'fastCommunityVoicePopupAllowed';
+        const VOICE_CONTROLLER_WINDOW_NAME = 'fastCommunityVoiceController';
+        const voiceSessionChannel = typeof window.BroadcastChannel === 'function'
+            ? new BroadcastChannel(VOICE_SESSION_CHANNEL)
+            : null;
+        const pageName = String(window.location.pathname.split('/').pop() || '').trim().toLowerCase();
+        const isCommunityPage = pageName === 'community.html';
+        let currentVoiceState = null;
+
+        const isPopupAllowed = () => {
+            try {
+                return window.sessionStorage && window.sessionStorage.getItem(VOICE_POPUP_ALLOWED_KEY) === '1';
+            } catch (error) {
+                return false;
+            }
+        };
+
+        const setPopupAllowed = (allowed) => {
+            try {
+                if (!window.sessionStorage) {
+                    return;
+                }
+
+                if (allowed) {
+                    window.sessionStorage.setItem(VOICE_POPUP_ALLOWED_KEY, '1');
+                } else {
+                    window.sessionStorage.removeItem(VOICE_POPUP_ALLOWED_KEY);
+                }
+            } catch (error) {
+                // Ignore storage failures.
+            }
+        };
+
+        const parseState = (rawValue) => {
+            if (!rawValue) {
+                return null;
+            }
+
+            try {
+                const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        const sendVoiceCommand = (type, payload = {}) => {
+            const command = {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+                type: String(type || '').trim(),
+                createdAt: Date.now(),
+                ...payload
+            };
+
+            try {
+                localStorage.setItem(VOICE_SESSION_COMMAND_KEY, JSON.stringify(command));
+            } catch (error) {
+                // Ignore storage failures.
+            }
+
+            if (voiceSessionChannel) {
+                voiceSessionChannel.postMessage({ type: 'command', command });
+            }
+        };
+
+        const openVoiceControllerPopup = (roomId) => {
+            const popupUrl = new URL('community.html', window.location.href);
+            popupUrl.searchParams.set('communityPanel', 'voice-lounge');
+            popupUrl.searchParams.set('voicePopup', '1');
+            if (roomId) {
+                popupUrl.searchParams.set('voiceRoom', roomId);
+            }
+
+            const popup = window.open(
+                popupUrl.toString(),
+                VOICE_CONTROLLER_WINDOW_NAME,
+                'popup=yes,width=440,height=760,resizable=yes,scrollbars=yes'
+            );
+
+            if (popup && typeof popup.focus === 'function') {
+                popup.focus();
+            }
+
+            return popup;
+        };
+
+        const isVoiceStateActive = (state) => Boolean(state && (state.joined || state.joining));
+
+        const shouldShowDock = (state) => {
+            if (!isVoiceStateActive(state) || isCommunityPage) {
+                return false;
+            }
+
+            return isPopupAllowed();
+        };
+
+        const maybePrepareVoicePopupForNavigation = (targetUrl) => {
+            if (!isVoiceStateActive(currentVoiceState) || isPopupAllowed()) {
+                return true;
+            }
+
+            const message = 'FAST can keep your Community voice call alive on the next page by opening a small floating call popup. Allow it so the red hang-up phone stays available while you browse?';
+            const approved = window.confirm(message);
+            if (!approved) {
+                return true;
+            }
+
+            setPopupAllowed(true);
+            openVoiceControllerPopup(currentVoiceState && currentVoiceState.roomId);
+            sendVoiceCommand('focus');
+
+            if (targetUrl) {
+                window.setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 0);
+                return false;
+            }
+
+            return true;
+        };
+
+        if (!document.getElementById('fast-community-voice-dock-style')) {
+            const style = document.createElement('style');
+            style.id = 'fast-community-voice-dock-style';
+            style.textContent = `
+                .fast-community-voice-dock {
+                    position: fixed;
+                    right: 18px;
+                    bottom: 18px;
+                    z-index: 2147483647;
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) auto;
+                    align-items: center;
+                    gap: 12px;
+                    min-width: min(360px, calc(100vw - 24px));
+                    max-width: min(420px, calc(100vw - 24px));
+                    padding: 12px 14px;
+                    border-radius: 18px;
+                    border: 1px solid rgba(239, 68, 68, 0.26);
+                    background: linear-gradient(135deg, rgba(19, 23, 34, 0.96), rgba(31, 41, 55, 0.96));
+                    box-shadow: 0 26px 42px -26px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+                    backdrop-filter: blur(18px);
+                }
+
+                .fast-community-voice-dock[hidden] {
+                    display: none;
+                }
+
+                .fast-community-voice-dock-copy {
+                    min-width: 0;
+                    display: grid;
+                    gap: 4px;
+                }
+
+                .fast-community-voice-dock-kicker {
+                    color: rgba(248, 113, 113, 0.9);
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                }
+
+                .fast-community-voice-dock-title {
+                    color: #f8fafc;
+                    font-size: 14px;
+                    font-weight: 800;
+                    line-height: 1.2;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                .fast-community-voice-dock-meta {
+                    color: rgba(226, 232, 240, 0.76);
+                    font-size: 12px;
+                    line-height: 1.4;
+                }
+
+                .fast-community-voice-dock-hangup {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 48px;
+                    min-width: 48px;
+                    height: 48px;
+                    padding: 0;
+                    border-radius: 14px;
+                    border: 1px solid rgba(248, 113, 113, 0.32);
+                    background: rgba(239, 68, 68, 0.16);
+                    color: #f87171;
+                    cursor: pointer;
+                }
+
+                .fast-community-voice-dock-hangup:hover,
+                .fast-community-voice-dock-hangup:focus-visible {
+                    border-color: rgba(248, 113, 113, 0.44);
+                    background: rgba(239, 68, 68, 0.22);
+                    color: #ef4444;
+                    outline: none;
+                }
+
+                .fast-community-voice-dock-hangup svg {
+                    width: 20px;
+                    height: 20px;
+                }
+
+                @media (max-width: 640px) {
+                    .fast-community-voice-dock {
+                        right: 12px;
+                        bottom: 12px;
+                        left: 12px;
+                        min-width: 0;
+                        max-width: none;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        let dock = document.getElementById('fast-community-voice-dock');
+        if (!dock) {
+            dock = document.createElement('div');
+            dock.id = 'fast-community-voice-dock';
+            dock.className = 'fast-community-voice-dock';
+            dock.hidden = true;
+            dock.innerHTML = `
+                <div class="fast-community-voice-dock-copy">
+                    <span class="fast-community-voice-dock-kicker">Community Voice</span>
+                    <strong class="fast-community-voice-dock-title" id="fast-community-voice-dock-title">Voice Call Active</strong>
+                    <span class="fast-community-voice-dock-meta" id="fast-community-voice-dock-meta">You are still connected.</span>
+                </div>
+                <button type="button" class="fast-community-voice-dock-hangup" id="fast-community-voice-dock-hangup" aria-label="Hang up community call" title="Hang up community call">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M22 15.46v1.74a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 1.5 2 2 0 0 1 4.11-.68h1.74a2 2 0 0 1 2 1.72c.12.89.33 1.76.62 2.6a2 2 0 0 1-.45 2.11L7 6.14a16 16 0 0 0 6.86 6.86l.39-1.02a2 2 0 0 1 2.11-.45c.84.29 1.71.5 2.6.62a2 2 0 0 1 1.72 2z"></path>
+                        <path d="M23 1 1 23"></path>
+                    </svg>
+                </button>
+            `;
+            document.body.appendChild(dock);
+        }
+
+        const dockTitle = document.getElementById('fast-community-voice-dock-title');
+        const dockMeta = document.getElementById('fast-community-voice-dock-meta');
+        const hangupButton = document.getElementById('fast-community-voice-dock-hangup');
+
+        if (hangupButton) {
+            hangupButton.addEventListener('click', () => {
+                sendVoiceCommand('leave');
+            });
+        }
+
+        const updateDock = (nextState) => {
+            const state = nextState && typeof nextState === 'object' ? nextState : null;
+            currentVoiceState = state;
+            if (!isVoiceStateActive(state)) {
+                setPopupAllowed(false);
+            }
+
+            const isVisible = shouldShowDock(state);
+            dock.hidden = !isVisible;
+            if (!isVisible) {
+                return;
+            }
+
+            const roomLabel = String((state && state.roomLabel) || 'Community Voice').trim() || 'Community Voice';
+            if (dockTitle) {
+                dockTitle.textContent = state.joining ? `Connecting To ${roomLabel}` : `${roomLabel} Active`;
+            }
+            if (dockMeta) {
+                dockMeta.textContent = state.joining
+                    ? 'FAST is keeping your voice call alive while you move through the site.'
+                    : 'You are still connected while browsing FAST. Use the red button to hang up.';
+            }
+        };
+
+        document.addEventListener('click', (event) => {
+            if (!event || event.defaultPrevented || event.button !== 0) {
+                return;
+            }
+
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+            }
+
+            const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+            if (!link) {
+                return;
+            }
+
+            const targetAttr = String(link.getAttribute('target') || '').trim().toLowerCase();
+            if (targetAttr && targetAttr !== '_self') {
+                return;
+            }
+
+            const href = String(link.getAttribute('href') || '').trim();
+            if (!href || href.startsWith('#') || href.toLowerCase().startsWith('javascript:')) {
+                return;
+            }
+
+            let nextUrl = null;
+            try {
+                nextUrl = new URL(href, window.location.href);
+            } catch (error) {
+                nextUrl = null;
+            }
+
+            if (!nextUrl) {
+                return;
+            }
+
+            if (nextUrl.origin !== window.location.origin || nextUrl.href === window.location.href) {
+                return;
+            }
+
+            if (maybePrepareVoicePopupForNavigation(nextUrl.toString()) === false) {
+                event.preventDefault();
+            }
+        }, true);
+
+        if (voiceSessionChannel) {
+            voiceSessionChannel.addEventListener('message', (event) => {
+                const payload = event && event.data && typeof event.data === 'object' ? event.data : null;
+                if (payload && payload.type === 'state') {
+                    updateDock(parseState(payload.state));
+                }
+            });
+        }
+
+        window.addEventListener('storage', (event) => {
+            if (event && event.key === VOICE_SESSION_STATE_KEY) {
+                updateDock(parseState(event.newValue));
+            }
+        });
+
+        updateDock(parseState(localStorage.getItem(VOICE_SESSION_STATE_KEY)));
+    }
+
     function init() {
         [
             ['initSiteLegalFooter', initSiteLegalFooter],
@@ -28908,6 +29341,7 @@ function initNavbarDateTime() {
             ['initNavbarDateTime', initNavbarDateTime],
             ['initNavbarSearch', initNavbarSearch],
             ['initNotificationCenter', initNotificationCenter],
+            ['initGlobalCommunityVoiceDock', initGlobalCommunityVoiceDock],
             ['initMessageNotifications', initMessageNotifications],
             ['initTiltEffect', initTiltEffect],
             ['initCounters', initCounters],

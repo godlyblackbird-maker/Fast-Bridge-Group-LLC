@@ -68,6 +68,106 @@
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
+        :root {
+            --community-hero-border: rgba(129, 140, 248, 0.22);
+            --community-hero-bg:
+                radial-gradient(circle at top right, rgba(165, 180, 252, 0.22), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(125, 211, 252, 0.18), transparent 36%),
+                linear-gradient(150deg, rgba(49, 46, 129, 0.92), rgba(88, 28, 135, 0.9) 56%, rgba(30, 64, 175, 0.92));
+            --community-hero-shadow: 0 24px 52px rgba(37, 25, 92, 0.26);
+            --community-kicker-bg: rgba(255, 255, 255, 0.14);
+            --community-kicker-text: rgba(249, 250, 251, 0.98);
+            --community-hero-title-color: #ffffff;
+            --community-hero-copy-color: rgba(224, 231, 255, 0.88);
+            --community-stat-bg: rgba(255, 255, 255, 0.08);
+            --community-stat-border: rgba(255, 255, 255, 0.08);
+            --community-stat-title: #ffffff;
+            --community-stat-copy: rgba(224, 231, 255, 0.8);
+            --community-hero-secondary-bg: rgba(255, 255, 255, 0.08);
+            --community-hero-secondary-border: rgba(255, 255, 255, 0.18);
+            --community-hero-secondary-text: #f8fafc;
+            --community-feed-item-bg: rgba(255, 255, 255, 0.04);
+            --community-feed-item-border: rgba(255, 255, 255, 0.08);
+            --community-menu-toggle-text: var(--text-secondary);
+            --community-menu-toggle-active: var(--text-primary);
+            --community-menu-label-color: var(--text-muted);
+            --community-menu-chevron-color: var(--text-muted);
+            --community-menu-surface: rgba(255, 255, 255, 0.03);
+            --community-menu-border: transparent;
+            --community-menu-text: rgba(226, 232, 240, 0.86);
+            --community-menu-prefix: rgba(203, 213, 225, 0.88);
+            --community-menu-meta-bg: rgba(255, 255, 255, 0.08);
+            --community-menu-meta-text: rgba(226, 232, 240, 0.84);
+            --community-menu-status-bg: rgba(255, 255, 255, 0.05);
+            --community-menu-status-border: rgba(255, 255, 255, 0.08);
+            --community-sidebar-copy-color: var(--text-secondary);
+            --community-voice-card-border: rgba(96, 165, 250, 0.2);
+            --community-voice-card-bg:
+                radial-gradient(circle at top right, rgba(147, 197, 253, 0.18), transparent 36%),
+                linear-gradient(150deg, rgba(30, 64, 175, 0.88), rgba(29, 78, 216, 0.9));
+            --community-voice-card-text: rgba(239, 246, 255, 0.92);
+            --community-voice-meta-color: rgba(224, 231, 255, 0.84);
+            --community-voice-badge-bg: rgba(255, 255, 255, 0.12);
+            --community-voice-badge-text: rgba(239, 246, 255, 0.96);
+            --community-voice-summary-bg: rgba(255, 255, 255, 0.08);
+            --community-voice-summary-text: rgba(239, 246, 255, 0.92);
+            --community-voice-primary-btn-bg: linear-gradient(145deg, #ffffff, #bfdbfe);
+            --community-voice-primary-btn-text: #0f3d91;
+            --community-voice-secondary-btn-border: rgba(255, 255, 255, 0.18);
+            --community-voice-secondary-btn-bg: rgba(255, 255, 255, 0.08);
+            --community-voice-secondary-btn-text: #f8fafc;
+        }
+
+        [data-theme="beach"] {
+            --community-hero-border: rgba(14, 116, 144, 0.22);
+            --community-hero-bg:
+                radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(253, 224, 71, 0.18), transparent 36%),
+                linear-gradient(145deg, rgba(244, 251, 255, 0.96), rgba(209, 239, 247, 0.94) 48%, rgba(255, 233, 204, 0.95));
+            --community-hero-shadow: 0 24px 48px rgba(13, 58, 82, 0.18);
+            --community-kicker-bg: rgba(13, 58, 82, 0.1);
+            --community-kicker-text: #0f4c63;
+            --community-hero-title-color: #0d3c54;
+            --community-hero-copy-color: rgba(13, 60, 84, 0.8);
+            --community-stat-bg: rgba(255, 255, 255, 0.42);
+            --community-stat-border: rgba(13, 58, 82, 0.1);
+            --community-stat-title: #0d3c54;
+            --community-stat-copy: rgba(13, 60, 84, 0.78);
+            --community-hero-secondary-bg: rgba(255, 255, 255, 0.4);
+            --community-hero-secondary-border: rgba(13, 58, 82, 0.14);
+            --community-hero-secondary-text: #0f4c63;
+            --community-feed-item-bg: rgba(255, 255, 255, 0.46);
+            --community-feed-item-border: rgba(13, 58, 82, 0.12);
+            --community-menu-toggle-text: rgba(13, 60, 84, 0.76);
+            --community-menu-toggle-active: #0d3c54;
+            --community-menu-label-color: rgba(13, 60, 84, 0.68);
+            --community-menu-chevron-color: rgba(13, 60, 84, 0.68);
+            --community-menu-surface: rgba(255, 255, 255, 0.52);
+            --community-menu-border: rgba(13, 58, 82, 0.12);
+            --community-menu-text: #0f4c63;
+            --community-menu-prefix: rgba(13, 60, 84, 0.78);
+            --community-menu-meta-bg: rgba(13, 58, 82, 0.1);
+            --community-menu-meta-text: #0f4c63;
+            --community-menu-status-bg: rgba(255, 255, 255, 0.52);
+            --community-menu-status-border: rgba(13, 58, 82, 0.12);
+            --community-sidebar-copy-color: rgba(13, 60, 84, 0.78);
+            --community-voice-card-border: rgba(13, 58, 82, 0.12);
+            --community-voice-card-bg:
+                radial-gradient(circle at top right, rgba(125, 211, 252, 0.18), transparent 34%),
+                linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(214, 240, 244, 0.94) 48%, rgba(255, 233, 204, 0.9));
+            --community-voice-card-text: rgba(13, 60, 84, 0.82);
+            --community-voice-meta-color: rgba(13, 60, 84, 0.74);
+            --community-voice-badge-bg: rgba(13, 58, 82, 0.1);
+            --community-voice-badge-text: #0f4c63;
+            --community-voice-summary-bg: rgba(255, 255, 255, 0.44);
+            --community-voice-summary-text: rgba(13, 60, 84, 0.82);
+            --community-voice-primary-btn-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(194, 234, 235, 0.92));
+            --community-voice-primary-btn-text: #0f4c63;
+            --community-voice-secondary-btn-border: rgba(13, 58, 82, 0.14);
+            --community-voice-secondary-btn-bg: rgba(255, 255, 255, 0.42);
+            --community-voice-secondary-btn-text: #0f4c63;
+        }
+
         .community-workspace {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 300px;
@@ -85,14 +185,11 @@
             overflow: hidden;
             display: grid;
             gap: 18px;
-            border: 1px solid rgba(129, 140, 248, 0.22);
-            background:
-                radial-gradient(circle at top right, rgba(165, 180, 252, 0.22), transparent 34%),
-                radial-gradient(circle at bottom left, rgba(125, 211, 252, 0.18), transparent 36%),
-                linear-gradient(150deg, rgba(49, 46, 129, 0.92), rgba(88, 28, 135, 0.9) 56%, rgba(30, 64, 175, 0.92));
+            border: 1px solid var(--community-hero-border);
+            background: var(--community-hero-bg);
             box-shadow:
                 inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                0 24px 52px rgba(37, 25, 92, 0.26);
+                var(--community-hero-shadow);
         }
 
         .community-hero::before,
@@ -133,8 +230,8 @@
             width: fit-content;
             padding: 7px 12px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.14);
-            color: rgba(249, 250, 251, 0.98);
+            background: var(--community-kicker-bg);
+            color: var(--community-kicker-text);
             font-size: 11px;
             font-weight: 800;
             letter-spacing: 0.08em;
@@ -144,7 +241,7 @@
 
         .community-hero-title {
             margin: 14px 0 0;
-            color: #ffffff;
+            color: var(--community-hero-title-color);
             font-size: clamp(28px, 4vw, 42px);
             line-height: 1.02;
             letter-spacing: -0.05em;
@@ -153,7 +250,7 @@
         .community-hero-copy {
             margin: 10px 0 0;
             max-width: 60ch;
-            color: rgba(224, 231, 255, 0.88);
+            color: var(--community-hero-copy-color);
             font-size: 15px;
             line-height: 1.7;
         }
@@ -167,14 +264,14 @@
         .community-stat {
             padding: 14px 16px;
             border-radius: 18px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: var(--community-stat-bg);
+            border: 1px solid var(--community-stat-border);
             backdrop-filter: blur(14px);
         }
 
         .community-stat strong {
             display: block;
-            color: #ffffff;
+            color: var(--community-stat-title);
             font-size: 1.35rem;
             line-height: 1.1;
         }
@@ -182,7 +279,7 @@
         .community-stat span {
             display: block;
             margin-top: 6px;
-            color: rgba(224, 231, 255, 0.8);
+            color: var(--community-stat-copy);
             font-size: 12px;
             line-height: 1.5;
         }
@@ -209,9 +306,9 @@
         }
 
         .community-hero-link.secondary {
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            background: rgba(255, 255, 255, 0.08);
-            color: #f8fafc;
+            border: 1px solid var(--community-hero-secondary-border);
+            background: var(--community-hero-secondary-bg);
+            color: var(--community-hero-secondary-text);
         }
 
         .community-panel {
@@ -248,8 +345,8 @@
         .community-feed-item {
             padding: 14px 16px;
             border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--community-feed-item-border);
+            background: var(--community-feed-item-bg);
         }
 
         .community-feed-item strong {
@@ -277,34 +374,107 @@
             margin-top: 8px;
         }
 
-        .community-voice-card {
+        .community-voice-card li {
+            color: var(--community-voice-card-text);
+        }
+
+        .community-voice-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.95fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .community-voice-stage {
+            display: grid;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .community-voice-stage-head {
+            display: grid;
+            gap: 6px;
+        }
+
+        .community-voice-stage-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--community-menu-label-color);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .community-voice-stage-kicker::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #38bdf8;
+            box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.14);
+        }
+
+        .community-voice-stage-title {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .community-voice-stage-copy {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .community-voice-stage-frame {
             position: relative;
             overflow: hidden;
             display: grid;
-            gap: 14px;
-            border: 1px solid rgba(96, 165, 250, 0.2);
+            place-items: center;
+            min-height: 360px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             background:
-                radial-gradient(circle at top right, rgba(147, 197, 253, 0.18), transparent 36%),
-                linear-gradient(150deg, rgba(30, 64, 175, 0.88), rgba(29, 78, 216, 0.9));
+                radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 42%),
+                linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(11, 18, 32, 0.94));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
-        .community-voice-card p,
-        .community-voice-card li {
-            color: rgba(239, 246, 255, 0.92);
+        .community-voice-stage-video {
+            width: 100%;
+            height: 100%;
+            min-height: 360px;
+            object-fit: contain;
+            background: #020617;
+        }
+
+        .community-voice-stage-empty {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: 28px;
+            text-align: center;
+            color: rgba(226, 232, 240, 0.84);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .community-voice-stage-side {
+            display: grid;
+            gap: 12px;
+            min-width: 0;
         }
 
         .community-voice-actions {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-        }
-
-        .community-voice-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            width: fit-content;
-            padding: 8px 12px;
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.12);
             color: #f8fafc;
@@ -332,44 +502,572 @@
             box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16);
         }
 
-        .community-voice-meta {
-            margin: 0;
-            color: rgba(224, 231, 255, 0.84);
-            font-size: 13px;
-            line-height: 1.65;
+        .community-voice-presence {
+            display: grid;
+            gap: 12px;
         }
 
-        .community-voice-roster {
+        .community-voice-presence-actions {
+            display: block;
+        }
+
+        .community-voice-toolbox {
+            display: grid;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(11, 18, 32, 0.88), rgba(15, 23, 42, 0.74));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        .community-voice-toolbox[hidden] {
+            display: none;
+        }
+
+        .community-voice-toolbox-head {
             display: flex;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .community-voice-toolbox-title {
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .community-voice-toolbox-copy {
+            color: var(--community-menu-label-color);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .community-voice-screen-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1600;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .community-voice-screen-modal[hidden] {
+            display: none;
+        }
+
+        .community-voice-screen-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.72);
+            backdrop-filter: blur(8px);
+        }
+
+        .community-voice-screen-dialog {
+            position: relative;
+            z-index: 1;
+            width: min(420px, 100%);
+            display: grid;
+            gap: 16px;
+            padding: 20px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(11, 18, 32, 0.92));
+            box-shadow: 0 28px 64px rgba(2, 6, 23, 0.42);
+        }
+
+        .community-voice-screen-dialog-head {
+            display: grid;
+            gap: 6px;
+        }
+
+        .community-voice-screen-dialog-head h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .community-voice-screen-dialog-head p {
+            margin: 0;
+            color: var(--community-menu-label-color);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .community-voice-screen-options {
+            display: grid;
+            gap: 10px;
+        }
+
+        .community-voice-screen-option {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px;
+            align-items: center;
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            text-align: left;
+        }
+
+        .community-voice-screen-option:hover,
+        .community-voice-screen-option:focus-visible {
+            border-color: rgba(96, 165, 250, 0.42);
+            background: rgba(59, 130, 246, 0.14);
+            outline: none;
+        }
+
+        .community-voice-screen-option-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #dbeafe;
+        }
+
+        .community-voice-screen-option-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .community-voice-screen-option-copy {
+            display: grid;
+            gap: 2px;
+        }
+
+        .community-voice-screen-option-copy strong {
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .community-voice-screen-option-copy span {
+            color: var(--community-menu-label-color);
+            font-size: 12px;
+        }
+
+        .community-voice-screen-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .community-voice-screen-cancel {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 12px;
+        }
+
+        .community-voice-settings-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1600;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .community-voice-settings-modal[hidden] {
+            display: none;
+        }
+
+        .community-voice-settings-dialog {
+            position: relative;
+            z-index: 1;
+            width: min(460px, 100%);
+            display: grid;
+            gap: 16px;
+            padding: 20px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(11, 18, 32, 0.92));
+            box-shadow: 0 28px 64px rgba(2, 6, 23, 0.42);
+        }
+
+        .community-voice-settings-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .community-voice-settings-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .community-voice-settings-copy {
+            display: grid;
+            gap: 3px;
+        }
+
+        .community-voice-settings-copy strong {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .community-voice-settings-copy span {
+            color: var(--community-menu-label-color);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .community-voice-settings-action {
+            min-height: 38px;
+            padding: 0 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .community-voice-settings-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .community-voice-settings-close {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 12px;
+        }
+
+        @media (max-width: 1080px) {
+            .community-voice-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .community-voice-stage-frame,
+            .community-voice-stage-video {
+                min-height: 280px;
+            }
+        }
+
+        .community-voice-presence-card {
+            display: grid;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 16px;
+            border: 1px solid var(--community-menu-status-border);
+            background: var(--community-menu-status-bg);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        .community-voice-presence-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .community-voice-presence-room {
+            display: grid;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .community-voice-presence-room-title {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .community-voice-presence-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--community-menu-label-color);
+        }
+
+        .community-voice-presence-kicker::before {
+            content: '';
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.16);
+        }
+
+        .community-voice-invite-btn {
+            width: 100%;
+            justify-content: flex-start;
+            min-height: 40px;
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1px solid var(--community-menu-border);
+            background: var(--community-menu-surface);
+            color: var(--community-menu-text);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+        }
+
+        .community-voice-invite-btn.is-success {
+            border-color: rgba(34, 197, 94, 0.32);
+            background: rgba(34, 197, 94, 0.14);
+            color: #dcfce7;
+        }
+
+        .community-voice-invite-btn.is-error {
+            border-color: rgba(248, 113, 113, 0.28);
+            background: rgba(239, 68, 68, 0.14);
+            color: #fee2e2;
+        }
+
+        .community-voice-hangup-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            justify-self: end;
+            align-self: flex-start;
+            width: 46px;
+            min-width: 46px;
+            height: 46px;
+            margin: 0;
+            padding: 0;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 59, 48, 0.62);
+            background: linear-gradient(145deg, rgba(255, 59, 48, 0.34), rgba(220, 38, 38, 0.2));
+            color: #ff3b30;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 24px rgba(255, 59, 48, 0.2);
+        }
+
+        .community-voice-hangup-btn:not([hidden]) {
+            display: inline-flex;
+        }
+
+        .community-voice-hangup-btn:hover,
+        .community-voice-hangup-btn:focus-visible {
+            border-color: rgba(255, 59, 48, 0.82);
+            background: linear-gradient(145deg, rgba(255, 59, 48, 0.46), rgba(220, 38, 38, 0.3));
+            color: #ff1f12;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 14px 28px rgba(255, 59, 48, 0.28);
+            outline: none;
+        }
+
+        .community-voice-hangup-btn[hidden] {
+            display: none;
+        }
+
+        .community-voice-hangup-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .community-voice-toolbar {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 8px;
         }
 
-        .community-voice-roster span {
+        .community-voice-toolbar[hidden] {
+            display: none;
+        }
+
+        .community-voice-tool {
             display: inline-flex;
             align-items: center;
-            min-height: 32px;
-            padding: 0 12px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.14);
-            color: #eff6ff;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.02em;
+            justify-content: center;
+            width: 100%;
+            min-width: 0;
+            min-height: 42px;
+            padding: 0;
+            border-radius: 14px;
+            border: 1px solid var(--community-menu-border);
+            background: var(--community-menu-surface);
+            color: var(--community-menu-text);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
 
-        .community-voice-roster span.is-self {
-            background: rgba(191, 219, 254, 0.26);
-            color: #ffffff;
+        .community-voice-tool svg {
+            width: 18px;
+            height: 18px;
         }
 
-        .community-voice-roster span.is-empty {
-            background: rgba(15, 23, 42, 0.18);
-            color: rgba(224, 231, 255, 0.72);
+        .community-voice-tool:hover,
+        .community-voice-tool:focus-visible {
+            border-color: rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            outline: none;
         }
 
-        .community-voice-audio {
+        .community-voice-tool.is-active {
+            border-color: rgba(34, 197, 94, 0.34);
+            background: rgba(34, 197, 94, 0.14);
+            color: #dcfce7;
+            box-shadow: 0 10px 24px rgba(34, 197, 94, 0.12);
+        }
+
+        .community-voice-tool.is-muted {
+            border-color: rgba(239, 68, 68, 0.4);
+            background: rgba(127, 29, 29, 0.26);
+            color: #fecaca;
+            box-shadow: 0 10px 24px rgba(127, 29, 29, 0.2);
+        }
+
+        .community-voice-tool.is-muted:hover,
+        .community-voice-tool.is-muted:focus-visible {
+            border-color: rgba(248, 113, 113, 0.52);
+            background: rgba(153, 27, 27, 0.34);
+            color: #fee2e2;
+        }
+
+        .community-voice-tool.is-pending {
+            border-color: rgba(96, 165, 250, 0.38);
+            background: rgba(30, 64, 175, 0.2);
+            color: #dbeafe;
+            box-shadow: 0 10px 24px rgba(30, 64, 175, 0.16);
+        }
+
+        .community-voice-tool-mute .mute-icon-muted {
             display: none;
+        }
+
+        .community-voice-tool-mute.is-muted .mute-icon-normal {
+            display: none;
+        }
+
+        .community-voice-tool-mute.is-muted .mute-icon-muted {
+            display: block;
+        }
+
+        .community-voice-tool-deafen .deafen-slash {
+            opacity: 0;
+            transition: opacity 0.18s ease;
+        }
+
+        .community-voice-tool-deafen.is-muted .deafen-slash {
+            opacity: 1;
+        }
+
+        .community-voice-tool.is-disabled {
+            opacity: 0.58;
+        }
+
+        .community-voice-member-list {
+            display: grid;
+            gap: 8px;
+        }
+
+
+        .community-voice-member.is-speaking {
+            border-color: rgba(34, 197, 94, 0.38);
+            background: rgba(34, 197, 94, 0.12);
+            box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.1), 0 10px 24px rgba(16, 185, 129, 0.12);
+        }
+
+        .community-voice-member-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(191, 219, 254, 0.72));
+            color: #0f3d91;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            flex-shrink: 0;
+            transition: box-shadow 0.18s ease, transform 0.18s ease;
+        }
+
+        .community-voice-member-avatar.has-image {
+            color: transparent;
+        }
+
+        .community-voice-member.is-speaking .community-voice-member-avatar {
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.92), 0 0 0 7px rgba(34, 197, 94, 0.2);
+            transform: scale(1.03);
+        }
+
+        .community-voice-member-copy {
+            min-width: 0;
+            display: grid;
+            gap: 3px;
+        }
+
+        .community-voice-member-name {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.2;
+            word-break: break-word;
+            transition: color 0.18s ease, text-shadow 0.18s ease;
+        }
+
+        .community-voice-member.is-speaking .community-voice-member-name {
+            color: #dcfce7;
+            text-shadow: 0 0 18px rgba(34, 197, 94, 0.2);
+        }
+
+        .community-voice-member-subtitle {
+            color: var(--text-secondary);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .community-voice-member-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .community-voice-member-badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 8px;
+            border-radius: 999px;
+            background: rgba(191, 219, 254, 0.22);
+            color: #eff6ff;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .community-voice-member-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8fafc;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-decoration: none;
         }
 
         .community-voice-link {
@@ -381,14 +1079,14 @@
         }
 
         .community-voice-link.primary {
-            background: linear-gradient(145deg, #ffffff, #bfdbfe);
-            color: #0f3d91;
+            background: var(--community-voice-primary-btn-bg);
+            color: var(--community-voice-primary-btn-text);
         }
 
         .community-voice-link.secondary {
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            background: rgba(255, 255, 255, 0.08);
-            color: #f8fafc;
+            border: 1px solid var(--community-voice-secondary-btn-border);
+            background: var(--community-voice-secondary-btn-bg);
+            color: var(--community-voice-secondary-btn-text);
         }
 
         .community-sidebar {
@@ -405,7 +1103,7 @@
 
         .community-sidebar-copy {
             margin: 0;
-            color: var(--text-secondary);
+            color: var(--community-sidebar-copy-color);
             line-height: 1.6;
         }
 
@@ -414,24 +1112,73 @@
             gap: 8px;
         }
 
+        .community-menu-group.is-collapsed {
+            gap: 0;
+        }
+
+        .community-menu-group-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--community-menu-toggle-text);
+            cursor: pointer;
+        }
+
+        .community-menu-group-toggle:focus-visible {
+            outline: none;
+            color: var(--community-menu-toggle-active);
+        }
+
+        .community-menu-group-heading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .community-menu-chevron {
+            width: 14px;
+            height: 14px;
+            color: var(--community-menu-chevron-color);
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+        .community-menu-group-toggle[aria-expanded="true"] .community-menu-chevron {
+            transform: rotate(90deg);
+            color: var(--community-menu-toggle-active);
+        }
+
         .community-menu-label {
-            color: var(--text-muted);
+            color: var(--community-menu-label-color);
             font-size: 11px;
             font-weight: 800;
             letter-spacing: 0.08em;
             text-transform: uppercase;
         }
 
+        .community-menu-group-body {
+            display: grid;
+            gap: 6px;
+        }
+
+        .community-menu-group-body[hidden] {
+            display: none;
+        }
+
         .community-menu-btn {
             width: 100%;
             justify-content: flex-start;
             gap: 10px;
-            min-height: 46px;
-            padding: 0 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
+            min-height: 42px;
+            padding: 0 12px;
+            border: 1px solid var(--community-menu-border);
+            border-radius: 12px;
+            background: var(--community-menu-surface);
+            color: var(--community-menu-text);
             cursor: pointer;
             transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
         }
@@ -443,25 +1190,95 @@
             border-color: rgba(var(--accent-light-rgb), 0.28);
             background: rgba(var(--accent-rgb), 0.12);
             outline: none;
-        }
-
-        .community-menu-status {
-            padding: 14px 16px;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .community-menu-status strong {
-            display: block;
             color: var(--text-primary);
-            font-size: 14px;
         }
 
-        .community-menu-status p {
-            margin: 8px 0 0;
-            color: var(--text-secondary);
-            line-height: 1.65;
+        .community-menu-btn.is-active {
+            box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.12);
+        }
+
+        .community-menu-btn-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .community-menu-btn-prefix {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            color: var(--community-menu-prefix);
+            flex-shrink: 0;
+        }
+
+        .community-menu-btn-prefix svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .community-menu-btn-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .community-menu-btn-meta {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 8px;
+            border-radius: 999px;
+            background: var(--community-menu-meta-bg);
+            color: var(--community-menu-meta-text);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+
+        .community-menu-btn.is-active .community-menu-btn-meta {
+            background: rgba(var(--accent-rgb), 0.18);
+            color: var(--text-primary);
+        }
+
+        .community-voice-room-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: var(--community-voice-badge-bg);
+            color: var(--community-voice-badge-text);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .community-voice-room-summary {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .community-voice-room-summary .community-feed-item {
+            min-height: 100%;
+            background: var(--community-voice-summary-bg);
+        }
+
+        .community-voice-room-summary .community-feed-item strong,
+        .community-voice-room-summary .community-feed-item p,
+        .community-voice-room-summary .community-feed-item span {
+            color: var(--community-voice-summary-text);
         }
 
         @media (max-width: 1180px) {
@@ -476,7 +1293,8 @@
 
         @media (max-width: 900px) {
             .community-hero-grid,
-            .community-panel-grid {
+            .community-panel-grid,
+            .community-voice-room-summary {
                 grid-template-columns: 1fr;
             }
         }
@@ -534,9 +1352,7 @@
                         </li>
                         <li class="nav-item">
                             <a href="deals.html" class="nav-link">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                                </svg>
+                                <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
                                 My Deals
                             </a>
                         </li>
@@ -548,12 +1364,7 @@
                         </li>
                         <li class="nav-item">
                             <a href="community.html" class="nav-link active">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="9" cy="7" r="4"/>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                </svg>
+                                <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
                                 Community
                             </a>
                         </li>
@@ -565,11 +1376,7 @@
                         </li>
                         <li class="nav-item">
                             <a href="trainings.html" class="nav-link">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="m22 10-10-5-10 5 10 5 10-5z"/>
-                                    <path d="M6 12v5c3 2 9 2 12 0v-5"/>
-                                    <path d="M22 10v6"/>
-                                </svg>
+                                <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
                                 Trainings
                             </a>
                         </li>
@@ -676,60 +1483,46 @@
 
             <div class="community-workspace">
                 <div class="community-main">
-                    <section class="glass-card community-hero" aria-labelledby="community-hero-title">
-                        <div class="community-hero-top">
-                            <span class="community-kicker">FAST Community</span>
-                            <h2 class="community-hero-title" id="community-hero-title">Shared rooms, live updates, and a voice lounge built into FAST.</h2>
-                            <p class="community-hero-copy">Use the right-side community menu like a Discord channel rail. Click into different rooms, track team updates, and jump into the live voice chat when you need a fast handoff, strategy call, or deal huddle.</p>
-                        </div>
-                        <div class="community-hero-grid">
-                            <div class="community-stat">
-                                <strong>5 rooms</strong>
-                                <span>Welcome, announcements, deal rooms, voice lounge, and resource drops.</span>
-                            </div>
-                            <div class="community-stat">
-                                <strong>Live voice</strong>
-                                <span>Jump straight into the active FAST voice room with one click.</span>
-                            </div>
-                            <div class="community-stat">
-                                <strong>Fast handoffs</strong>
-                                <span>Keep team traffic inside the workspace instead of scattering updates across tabs.</span>
-                            </div>
-                        </div>
-                        <div class="community-hero-actions">
-                            <button class="card-btn community-hero-link primary" type="button" id="community-hero-join-voice">Join Voice Chat</button>
-                            <a class="card-btn community-hero-link secondary" href="dashboard.html">Back To Dashboard</a>
-                        </div>
-                    </section>
-
                     <section class="glass-card community-panel is-active" data-community-panel="welcome" aria-labelledby="community-welcome-title">
                         <div class="card-header">
                             <div>
-                                <h2 class="card-title" id="community-welcome-title">Welcome Hub</h2>
-                                <p class="card-subtitle">Start here for the active community overview and who this workspace is for.</p>
+                                <h2 class="card-title" id="community-welcome-title">Rules & Regulations</h2>
+                                <p class="card-subtitle">Mandatory rules for everyone inside the FAST community workspace.</p>
                             </div>
                         </div>
                         <div class="community-panel-grid">
                             <article class="glass-card community-card">
-                                <h3 class="card-title">How this works</h3>
-                                <p>The right rail behaves like a Discord channel list. Click a room to swap the main panel without leaving the page, then jump into voice when you need live conversation instead of back-and-forth messaging.</p>
+                                <h3 class="card-title">Rules & Regulations (Mandatory)</h3>
                                 <ul class="community-list">
-                                    <li>Use announcements for pinned team updates.</li>
-                                    <li>Use deal rooms for active acquisition or disposition coordination.</li>
-                                    <li>Use resource drops for scripts, links, and call support material.</li>
+                                    <li>Respect is non-negotiable. All members must communicate with professionalism and respect at all times. Disrespect, harassment, or hostility will not be tolerated.</li>
+                                    <li>Stay on topic. This server is for business, meetings, and collaboration. Irrelevant conversations, spam, or off-topic messages are prohibited.</li>
+                                    <li>No interruptions during meetings. When meetings are in session, do not interrupt, talk over others, or create distractions. Wait your turn and contribute when appropriate.</li>
+                                    <li>No spam or self-promotion. Do not flood channels, send repeated messages, or promote unrelated services, products, or links without approval.</li>
+                                    <li>Confidentiality is required. Any business discussions, deals, or shared information must remain private. Leaking or sharing information outside this server is strictly prohibited.</li>
                                 </ul>
                             </article>
                             <article class="glass-card community-card">
-                                <h3 class="card-title">Who should be here</h3>
-                                <p>This workspace is for agents, admins, brokers, and support team members who need a clean place to move from async updates into live calls fast.</p>
+                                <h3 class="card-title">Enforcement</h3>
                                 <div class="community-feed">
                                     <div class="community-feed-item">
-                                        <strong>Acquisitions</strong>
-                                        <p>Bring hot leads, seller hurdles, and offer strategy here before or during live calls.</p>
+                                        <strong>Follow leadership instructions</strong>
+                                        <p>Moderators and leadership decisions are final. Failure to comply will result in immediate action.</p>
                                     </div>
                                     <div class="community-feed-item">
-                                        <strong>Operations</strong>
-                                        <p>Use the rooms to hand off next steps, confirm timelines, and keep the team aligned.</p>
+                                        <strong>No inappropriate content</strong>
+                                        <p>This includes offensive language, explicit material, or anything unprofessional. Keep everything clean and business-focused.</p>
+                                    </div>
+                                    <div class="community-feed-item">
+                                        <strong>Be active and serious</strong>
+                                        <p>This is a results-driven environment. If you are not here to contribute, learn, or execute, you do not belong here.</p>
+                                    </div>
+                                    <div class="community-feed-item">
+                                        <strong>No trolling or disruptive behavior</strong>
+                                        <p>Any attempt to disrupt the server, meetings, or members will result in immediate removal.</p>
+                                    </div>
+                                    <div class="community-feed-item">
+                                        <strong>Zero tolerance enforcement</strong>
+                                        <p>Failure to follow any of these rules will result in immediate removal from the server without warning.</p>
                                     </div>
                                 </div>
                             </article>
@@ -746,7 +1539,7 @@
                         <div class="community-feed">
                             <div class="community-feed-item">
                                 <strong>Daily kickoff window</strong>
-                                <p>Use the voice lounge for a 10-minute live kickoff whenever the team needs quick routing on hot leads, follow-up assignments, or same-day closings.</p>
+                                <p>Use one of the live voice channels for a 10-minute kickoff whenever the team needs quick routing on hot leads, follow-up assignments, or same-day closings.</p>
                                 <span>Team broadcast</span>
                             </div>
                             <div class="community-feed-item">
@@ -792,26 +1585,32 @@
                     <section class="glass-card community-panel" data-community-panel="voice-lounge" aria-labelledby="community-voice-lounge-title">
                         <div class="card-header">
                             <div>
-                                <h2 class="card-title" id="community-voice-lounge-title">Voice Lounge</h2>
-                                <p class="card-subtitle">Join the active FAST call room the moment text threads stop being efficient.</p>
+                                <h2 class="card-title" id="community-voice-lounge-title">Voice Channels</h2>
                             </div>
                         </div>
                         <div class="community-voice-card glass-card">
-                            <h3 class="card-title">FAST Live Voice Chat</h3>
-                            <p>Use this room for fast team huddles, deal reviews, script coaching, escalation calls, and internal handoffs. Keep the room open during active work blocks so anyone can jump in without friction.</p>
-                            <div class="community-voice-status" id="community-voice-status">Voice lounge not joined</div>
-                            <p class="community-voice-meta" id="community-voice-meta">Click Join Voice Lounge to use your microphone inside FAST. When connected, this panel will show that you joined.</p>
-                            <div class="community-voice-roster" id="community-voice-roster">
-                                <span class="is-empty">No one is in the voice lounge yet.</span>
-                            </div>
-                            <ul class="community-list">
-                                <li>Best for urgent active deals and real-time support.</li>
-                                <li>Use one room for live coordination, then post takeaways back into the relevant channel.</li>
-                                <li>Voice uses your browser microphone directly inside FAST.</li>
-                            </ul>
-                            <div class="community-voice-actions">
-                                <button class="card-btn community-voice-link primary" type="button" id="community-voice-join-btn">Join Voice Lounge</button>
-                                <button class="card-btn community-voice-link secondary" type="button" id="community-voice-leave-btn">Leave Voice Lounge</button>
+                            <div class="community-voice-layout">
+                                <div class="community-voice-stage">
+                                    <div class="community-voice-stage-head">
+                                        <span class="community-voice-stage-kicker" id="community-voice-stage-kicker">Meeting Room 1</span>
+                                        <h3 class="community-voice-stage-title" id="community-voice-stage-title">Meeting Room 1 Screen</h3>
+                                        <p class="community-voice-stage-copy" id="community-voice-stage-copy">Anyone sharing their screen in this room will appear here for everyone else in the same meeting room.</p>
+                                    </div>
+                                    <div class="community-voice-stage-frame">
+                                        <video class="community-voice-stage-video" id="community-voice-stage-video" autoplay playsinline hidden></video>
+                                        <div class="community-voice-stage-empty" id="community-voice-stage-empty">No one is sharing their screen in this room yet.</div>
+                                    </div>
+                                </div>
+                                <div class="community-voice-stage-side">
+                                    <span class="community-voice-room-badge" id="community-voice-room-badge" hidden>Selected Voice Channel</span>
+                                    <p id="community-voice-room-copy" hidden></p>
+                                    <div class="community-voice-status" id="community-voice-status" hidden></div>
+                                    <p class="community-voice-meta" id="community-voice-meta" hidden></p>
+                                    <div class="community-voice-actions" hidden>
+                                        <button class="card-btn community-voice-link primary" type="button" id="community-voice-join-btn" hidden>Join Meeting Room 1</button>
+                                        <button class="card-btn community-voice-link secondary" type="button" id="community-voice-leave-btn" hidden>Leave Voice Channel</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="community-voice-audio" id="community-voice-audio" aria-hidden="true"></div>
                         </div>
@@ -845,26 +1644,258 @@
                     <div class="community-sidebar-head">
                         <span class="community-kicker">Community Menu</span>
                         <h2 class="card-title">Channels</h2>
-                        <p class="community-sidebar-copy">Use this right-side rail like a Discord server menu. Click a room to switch the main panel.</p>
                     </div>
-                    <div class="community-menu-group">
-                        <span class="community-menu-label">Text Rooms</span>
-                        <button class="card-btn community-menu-btn is-active" type="button" data-community-target="welcome"># welcome-hub</button>
-                        <button class="card-btn community-menu-btn" type="button" data-community-target="announcements"># announcements</button>
-                        <button class="card-btn community-menu-btn" type="button" data-community-target="deal-rooms"># deal-rooms</button>
-                        <button class="card-btn community-menu-btn" type="button" data-community-target="resource-drops"># resource-drops</button>
+                    <div class="community-menu-group" data-community-group="voice-channels">
+                        <button class="community-menu-group-toggle" type="button" data-community-collapse-toggle="voice-channels" aria-expanded="true">
+                            <span class="community-menu-group-heading">
+                                <svg class="community-menu-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="community-menu-label">Voice Channels</span>
+                            </span>
+                        </button>
+                        <div class="community-menu-group-body" data-community-collapse-body="voice-channels">
+                            <button class="card-btn community-menu-btn" type="button" data-community-target="voice-lounge" data-voice-room="meeting-room">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 5 6 9H3v6h3l5 4V5Z"/>
+                                            <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+                                            <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+                                        </svg>
+                                    </span>
+                                    <span class="community-menu-btn-label">Meeting Room 1</span>
+                                </span>
+                                <span class="community-menu-btn-meta">1</span>
+                            </button>
+                            <button class="card-btn community-menu-btn" type="button" data-community-target="voice-lounge" data-voice-room="meeting-room-2">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 5 6 9H3v6h3l5 4V5Z"/>
+                                            <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+                                            <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+                                        </svg>
+                                    </span>
+                                    <span class="community-menu-btn-label">Meeting Room 2</span>
+                                </span>
+                                <span class="community-menu-btn-meta">2</span>
+                            </button>
+                            <button class="card-btn community-menu-btn" type="button" data-community-target="voice-lounge" data-voice-room="pm-meeting">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 5 6 9H3v6h3l5 4V5Z"/>
+                                            <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+                                            <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+                                        </svg>
+                                    </span>
+                                    <span class="community-menu-btn-label">Meeting Room 3</span>
+                                </span>
+                                <span class="community-menu-btn-meta">3</span>
+                            </button>
+                            <div class="community-voice-roster" id="community-voice-roster" hidden>
+                                <div class="community-voice-presence">
+                                    <div class="community-voice-presence-actions">
+                                        <button class="card-btn community-voice-invite-btn" type="button" id="community-voice-invite-btn">Invite To Voice</button>
+                                    </div>
+                                    <button class="card-btn community-voice-hangup-btn" type="button" id="community-voice-hangup-btn" aria-label="Leave voice channel" title="Leave voice channel" hidden>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M22 15.46v1.74a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 1.5 2 2 0 0 1 4.11-.68h1.74a2 2 0 0 1 2 1.72c.12.89.33 1.76.62 2.6a2 2 0 0 1-.45 2.11L7 6.14a16 16 0 0 0 6.86 6.86l.39-1.02a2 2 0 0 1 2.11-.45c.84.29 1.71.5 2.6.62a2 2 0 0 1 1.72 2z"/>
+                                            <path d="M23 1 1 23"/>
+                                        </svg>
+                                    </button>
+                                    <div class="community-voice-toolbox" id="community-voice-toolbox" hidden>
+                                        <div class="community-voice-toolbox-head">
+                                            <span class="community-voice-toolbox-title">Voice Tools</span>
+                                            <span class="community-voice-toolbox-copy">Screen, camera, mic, audio, settings</span>
+                                        </div>
+                                        <div class="community-voice-toolbar" id="community-voice-toolbar">
+                                            <button class="card-btn community-voice-tool community-voice-tool-screen is-disabled" type="button" id="community-voice-tool-screen" aria-label="Share screen" title="Share screen" aria-pressed="false">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                    <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+                                                    <path d="M8 20h8"></path>
+                                                    <path d="M12 16v4"></path>
+                                                    <path d="M12 13V8"></path>
+                                                    <path d="m9.5 10.5 2.5-2.5 2.5 2.5"></path>
+                                                    <path d="M7 16h10"></path>
+                                                </svg>
+                                            </button>
+                                            <button class="card-btn community-voice-tool community-voice-tool-camera is-disabled" type="button" id="community-voice-tool-camera" aria-label="Turn on camera" title="Turn on camera" aria-pressed="false">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                    <path d="m23 7-7 5 7 5V7z"></path>
+                                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                                    <circle cx="8.5" cy="12" r="2.25"></circle>
+                                                </svg>
+                                            </button>
+                                            <button class="card-btn community-voice-tool community-voice-tool-mute" type="button" id="community-voice-tool-mute" aria-label="Mute microphone" title="Mute microphone" aria-pressed="false">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                    <g class="mute-icon-normal">
+                                                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                                        <path d="M12 19v4"></path>
+                                                        <path d="M8 23h8"></path>
+                                                    </g>
+                                                    <g class="mute-icon-muted">
+                                                        <path d="M15 9.34V4a3 3 0 0 0-5.18-2.08"></path>
+                                                        <path d="M17 16.95A7 7 0 0 1 5 12v-2"></path>
+                                                        <path d="M12 19v4"></path>
+                                                        <path d="M8 23h8"></path>
+                                                        <path d="M1 1l22 22"></path>
+                                                    </g>
+                                                </svg>
+                                            </button>
+                                            <button class="card-btn community-voice-tool community-voice-tool-deafen" type="button" id="community-voice-tool-deafen" aria-label="Deafen audio" title="Deafen audio" aria-pressed="false">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                    <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+                                                    <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                                                    <path d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+                                                    <path class="deafen-slash" d="M4 4l16 16"></path>
+                                                </svg>
+                                            </button>
+                                            <button class="card-btn community-voice-tool community-voice-tool-settings" type="button" id="community-voice-tool-settings" aria-label="Voice settings" title="Voice settings" aria-pressed="false">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="community-voice-presence-card">
+                                        <div class="community-voice-presence-head">
+                                            <div class="community-voice-presence-room">
+                                                <strong class="community-voice-presence-room-title" id="community-voice-presence-room-title">Meeting Room 1</strong>
+                                                <span class="community-voice-presence-kicker">Voice Presence</span>
+                                            </div>
+                                        </div>
+                                        <div class="community-voice-member-list" id="community-voice-member-list"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="community-menu-group">
-                        <span class="community-menu-label">Voice Rooms</span>
-                        <button class="card-btn community-menu-btn" type="button" data-community-target="voice-lounge">Voice Lounge</button>
-                    </div>
-                    <div class="community-menu-status" id="community-menu-status">
-                        <strong>Viewing: Welcome Hub</strong>
-                        <p>Click another room on the right to move through the community workspace.</p>
+                    <div class="community-menu-group" data-community-group="information">
+                        <button class="community-menu-group-toggle" type="button" data-community-collapse-toggle="information" aria-expanded="true">
+                            <span class="community-menu-group-heading">
+                                <svg class="community-menu-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="community-menu-label">Information</span>
+                            </span>
+                        </button>
+                        <div class="community-menu-group-body" data-community-collapse-body="information">
+                            <button class="card-btn community-menu-btn is-active" type="button" data-community-target="welcome">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">#</span>
+                                    <span class="community-menu-btn-label">welcome-and-rules</span>
+                                </span>
+                            </button>
+                            <button class="card-btn community-menu-btn" type="button" data-community-target="announcements">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">#</span>
+                                    <span class="community-menu-btn-label">announcements</span>
+                                </span>
+                            </button>
+                            <button class="card-btn community-menu-btn" type="button" data-community-target="deal-rooms">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">#</span>
+                                    <span class="community-menu-btn-label">deal-rooms</span>
+                                </span>
+                            </button>
+                            <button class="card-btn community-menu-btn" type="button" data-community-target="resource-drops">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">#</span>
+                                    <span class="community-menu-btn-label">resources</span>
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </aside>
             </div>
         </main>
+    </div>
+
+    <div class="community-voice-screen-modal" id="community-voice-screen-modal" hidden>
+        <div class="community-voice-screen-backdrop" data-community-screen-close></div>
+        <div class="community-voice-screen-dialog" role="dialog" aria-modal="true" aria-labelledby="community-voice-screen-title">
+            <div class="community-voice-screen-dialog-head">
+                <h3 id="community-voice-screen-title">Share your screen</h3>
+                <p>Choose what you want to share before the browser opens its screen picker.</p>
+            </div>
+            <div class="community-voice-screen-options">
+                <button class="card-btn community-voice-screen-option" type="button" id="community-voice-screen-window-option">
+                    <span class="community-voice-screen-option-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                            <path d="M3 9h18"></path>
+                        </svg>
+                    </span>
+                    <span class="community-voice-screen-option-copy">
+                        <strong>Window</strong>
+                        <span>Pick a single app window to share.</span>
+                    </span>
+                </button>
+                <button class="card-btn community-voice-screen-option" type="button" id="community-voice-screen-monitor-option">
+                    <span class="community-voice-screen-option-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="4" width="20" height="12" rx="2"></rect>
+                            <path d="M8 20h8"></path>
+                            <path d="M12 16v4"></path>
+                        </svg>
+                    </span>
+                    <span class="community-voice-screen-option-copy">
+                        <strong>Entire Screen</strong>
+                        <span>Share your full display instead of a single window.</span>
+                    </span>
+                </button>
+            </div>
+            <div class="community-voice-screen-actions">
+                <button class="card-btn community-voice-screen-cancel" type="button" id="community-voice-screen-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="community-voice-settings-modal" id="community-voice-settings-modal" hidden>
+        <div class="community-voice-screen-backdrop" data-community-settings-close></div>
+        <div class="community-voice-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="community-voice-settings-title">
+            <div class="community-voice-screen-dialog-head">
+                <h3 id="community-voice-settings-title">Voice settings</h3>
+                <p>Quick voice controls for the room you are in right now.</p>
+            </div>
+            <div class="community-voice-settings-grid">
+                <div class="community-voice-settings-row">
+                    <div class="community-voice-settings-copy">
+                        <strong>Microphone</strong>
+                        <span id="community-voice-settings-mic-state">Mic is live.</span>
+                    </div>
+                    <button class="card-btn community-voice-settings-action" type="button" id="community-voice-settings-mic-action">Mute</button>
+                </div>
+                <div class="community-voice-settings-row">
+                    <div class="community-voice-settings-copy">
+                        <strong>Audio</strong>
+                        <span id="community-voice-settings-audio-state">Room audio is on.</span>
+                    </div>
+                    <button class="card-btn community-voice-settings-action" type="button" id="community-voice-settings-audio-action">Deafen</button>
+                </div>
+                <div class="community-voice-settings-row">
+                    <div class="community-voice-settings-copy">
+                        <strong>Screen share</strong>
+                        <span id="community-voice-settings-screen-state">No screen share is live.</span>
+                    </div>
+                    <button class="card-btn community-voice-settings-action" type="button" id="community-voice-settings-screen-action">Share screen</button>
+                </div>
+                <div class="community-voice-settings-row">
+                    <div class="community-voice-settings-copy">
+                        <strong>Camera</strong>
+                        <span id="community-voice-settings-camera-state">Camera is off.</span>
+                    </div>
+                    <button class="card-btn community-voice-settings-action" type="button" id="community-voice-settings-camera-action">Turn on camera</button>
+                </div>
+            </div>
+            <div class="community-voice-settings-actions">
+                <button class="card-btn community-voice-settings-close" type="button" id="community-voice-settings-close">Close</button>
+            </div>
+        </div>
     </div>
 
     <script src="templatemo-glass-admin-script.js"></script>
@@ -874,23 +1905,99 @@
         (function () {
             const buttons = Array.from(document.querySelectorAll('[data-community-target]'));
             const panels = Array.from(document.querySelectorAll('[data-community-panel]'));
-            const status = document.getElementById('community-menu-status');
+            const collapseToggles = Array.from(document.querySelectorAll('[data-community-collapse-toggle]'));
             const voiceStatus = document.getElementById('community-voice-status');
             const voiceMeta = document.getElementById('community-voice-meta');
             const voiceRoster = document.getElementById('community-voice-roster');
+            const voiceMemberList = document.getElementById('community-voice-member-list');
             const voiceAudio = document.getElementById('community-voice-audio');
             const voiceJoinButton = document.getElementById('community-voice-join-btn');
             const voiceLeaveButton = document.getElementById('community-voice-leave-btn');
+            const voiceStageTitle = document.getElementById('community-voice-stage-title');
+            const voiceStageCopy = document.getElementById('community-voice-stage-copy');
+            const voiceStageVideo = document.getElementById('community-voice-stage-video');
+            const voiceStageEmpty = document.getElementById('community-voice-stage-empty');
+            const voiceStageKicker = document.getElementById('community-voice-stage-kicker');
+            const voiceInviteButton = document.getElementById('community-voice-invite-btn');
+            const voiceHangupButton = document.getElementById('community-voice-hangup-btn');
+            const voiceToolbox = document.getElementById('community-voice-toolbox');
+            const voiceToolbar = document.getElementById('community-voice-toolbar');
+            const voiceScreenShareButton = document.getElementById('community-voice-tool-screen');
+            const voiceScreenShareModal = document.getElementById('community-voice-screen-modal');
+            const voiceScreenShareWindowOption = document.getElementById('community-voice-screen-window-option');
+            const voiceScreenShareMonitorOption = document.getElementById('community-voice-screen-monitor-option');
+            const voiceScreenShareCancelButton = document.getElementById('community-voice-screen-cancel');
+            const voiceSettingsModal = document.getElementById('community-voice-settings-modal');
+            const voiceSettingsCloseButton = document.getElementById('community-voice-settings-close');
+            const voiceSettingsMicState = document.getElementById('community-voice-settings-mic-state');
+            const voiceSettingsMicAction = document.getElementById('community-voice-settings-mic-action');
+            const voiceSettingsAudioState = document.getElementById('community-voice-settings-audio-state');
+            const voiceSettingsAudioAction = document.getElementById('community-voice-settings-audio-action');
+            const voiceSettingsScreenState = document.getElementById('community-voice-settings-screen-state');
+            const voiceSettingsScreenAction = document.getElementById('community-voice-settings-screen-action');
+            const voiceSettingsCameraState = document.getElementById('community-voice-settings-camera-state');
+            const voiceSettingsCameraAction = document.getElementById('community-voice-settings-camera-action');
+            const voiceCameraButton = document.getElementById('community-voice-tool-camera');
+            const voiceMuteButton = document.getElementById('community-voice-tool-mute');
+            const voiceDeafenButton = document.getElementById('community-voice-tool-deafen');
+            const voiceSettingsButton = document.getElementById('community-voice-tool-settings');
+            const voicePresenceRoomTitle = document.getElementById('community-voice-presence-room-title');
             const heroJoinButton = document.getElementById('community-hero-join-voice');
+            const voiceRoomBadge = document.getElementById('community-voice-room-badge');
+            const voiceRoomTitle = document.getElementById('community-voice-room-title');
+            const voiceRoomCopy = document.getElementById('community-voice-room-copy');
+            const voiceRoomPurpose = document.getElementById('community-voice-room-purpose');
+            const voiceRoomCapacity = document.getElementById('community-voice-room-capacity');
+            const voiceRoomBestFor = document.getElementById('community-voice-room-best-for');
+            const voiceRoomSwitching = document.getElementById('community-voice-room-switching');
             const VOICE_PANEL = 'voice-lounge';
-            const VOICE_ROOM = 'community-voice-lounge';
             const VOICE_SIGNAL_POLL_MS = 1200;
             const VOICE_STORAGE_KEY = 'fastCommunityVoiceClientId';
             const VOICE_ICE_SERVERS = [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' }
             ];
+            const VOICE_ROOMS = {
+                'meeting-room': {
+                    id: 'meeting-room',
+                    backendRoom: 'community-voice-meeting-room',
+                    label: 'Meeting Room 1',
+                    description: 'Use this room for fast team huddles, deal reviews, script coaching, escalation calls, and internal handoffs. Keep the room open during active work blocks so anyone can jump in without friction.',
+                    purpose: 'Daily standups, route changes, and urgent same-day deal coordination.',
+                    bestFor: 'Quick live handoffs when the team needs a decision in minutes instead of messages.'
+                },
+                'meeting-room-2': {
+                    id: 'meeting-room-2',
+                    backendRoom: 'community-voice-meeting-room-2',
+                    label: 'Meeting Room 2',
+                    description: 'Use this overflow room when the main channel is busy or when a smaller subgroup needs its own live space without interrupting the primary meeting.',
+                    purpose: 'Parallel call blocks, side training, and smaller breakouts during busy work hours.',
+                    bestFor: 'Second-call overflow so teams can split active topics without leaving FAST.'
+                },
+                'pm-meeting': {
+                    id: 'pm-meeting',
+                    backendRoom: 'community-voice-pm-meeting',
+                    label: 'Meeting Room 3',
+                    description: 'Use this room for afternoon reviews, manager syncs, pipeline resets, and focused decision-making when the team needs a quieter dedicated channel.',
+                    purpose: 'Afternoon check-ins, manager reviews, and follow-up planning after the main push.',
+                    bestFor: 'Focused planning when leadership or operations needs a dedicated voice lane.'
+                }
+            };
+            const initialVoiceSearchParams = new URLSearchParams(window.location.search);
+            const isVoiceControllerPopup = initialVoiceSearchParams.get('voicePopup') === '1';
+            const shouldAutoJoinVoice = initialVoiceSearchParams.get('autoJoinVoice') === '1';
+            const VOICE_SESSION_STATE_KEY = 'fastCommunityVoiceSessionState';
+            const VOICE_SESSION_COMMAND_KEY = 'fastCommunityVoiceSessionCommand';
+            const VOICE_SESSION_CHANNEL = 'fast-community-voice-session';
+            const VOICE_CONTROLLER_WINDOW_NAME = 'fastCommunityVoiceController';
+            const VOICE_SESSION_STATE_STALE_MS = 30000;
+            const voiceSessionChannel = typeof window.BroadcastChannel === 'function'
+                ? new BroadcastChannel(VOICE_SESSION_CHANNEL)
+                : null;
 
+            let activePanelId = 'welcome';
+            let selectedVoiceRoomId = 'meeting-room';
+            let activeVoiceRoomId = '';
             let voiceClientId = '';
             let voiceParticipantId = '';
             let voiceParticipants = [];
@@ -898,15 +2005,601 @@
             let voiceJoining = false;
             let voiceJoined = false;
             let voiceLastError = '';
+            let voiceInviteButtonResetHandle = 0;
+            let voiceSpeakingMonitorHandle = 0;
+            let voiceAudioContext = null;
             let voiceLocalStream = null;
+            let voiceLocalAudioMeter = null;
+            let voiceCameraStream = null;
+            let voiceScreenShareStream = null;
+            let voiceScreenShareMode = '';
+            let voiceSettingsOpen = false;
             let voicePollHandle = 0;
             let voicePollInFlight = false;
+            let voiceLastCommandId = '';
+            let voiceChannelInteracted = false;
+            let voiceMuted = false;
+            let voiceDeafened = false;
+            let voiceScreenSharePending = false;
+            const voiceSpeakingState = new Map();
             const voicePeerConnections = new Map();
             const voiceRemoteAudioByParticipant = new Map();
+            const voiceRemoteVideoByParticipant = new Map();
+            const voiceRemoteAudioMeters = new Map();
 
             if (!buttons.length || !panels.length) {
                 return;
             }
+
+            const getVoiceRoom = (roomId) => VOICE_ROOMS[String(roomId || '').trim()] || VOICE_ROOMS['meeting-room'];
+            const getSelectedVoiceRoom = () => getVoiceRoom(selectedVoiceRoomId);
+            const getActiveVoiceRoom = () => getVoiceRoom(activeVoiceRoomId || selectedVoiceRoomId);
+            const shouldShowVoiceRoster = () => Boolean(voiceChannelInteracted || voiceJoined || voiceJoining);
+            const supportsVoiceScreenShare = () => Boolean(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
+
+            const syncVoiceMuteState = () => {
+                if (!voiceLocalStream) {
+                    return;
+                }
+
+                voiceLocalStream.getAudioTracks().forEach((track) => {
+                    track.enabled = !voiceMuted;
+                });
+            };
+
+            const syncVoiceDeafenState = () => {
+                Array.from(voiceRemoteAudioByParticipant.values()).forEach((audio) => {
+                    audio.muted = voiceDeafened;
+                });
+            };
+
+            const getLiveScreenStream = (stream) => {
+                if (!stream) {
+                    return null;
+                }
+
+                return stream.getVideoTracks().some((track) => track.readyState === 'live') ? stream : null;
+            };
+
+            const detectVisualShareKind = (stream, fallbackKind = 'screen') => {
+                const [videoTrack] = stream && typeof stream.getVideoTracks === 'function' ? stream.getVideoTracks() : [];
+                const settings = videoTrack && typeof videoTrack.getSettings === 'function' ? videoTrack.getSettings() : null;
+                const displaySurface = settings && settings.displaySurface ? String(settings.displaySurface).trim().toLowerCase() : '';
+                if (displaySurface === 'monitor' || displaySurface === 'window' || displaySurface === 'browser') {
+                    return 'screen';
+                }
+                const label = String(videoTrack && videoTrack.label || '').toLowerCase();
+                if (/camera|webcam|facetime|integrated/i.test(label)) {
+                    return 'camera';
+                }
+                if (/screen|window|display|monitor|tab/i.test(label)) {
+                    return 'screen';
+                }
+                if (videoTrack) {
+                    return 'camera';
+                }
+                return fallbackKind;
+            };
+
+            const getActiveLocalVisualShare = () => {
+                if (voiceScreenShareStream && getLiveScreenStream(voiceScreenShareStream)) {
+                    return {
+                        stream: voiceScreenShareStream,
+                        ownerName: `${getCurrentUserName()} (you)`,
+                        kind: 'screen'
+                    };
+                }
+
+                if (voiceCameraStream && getLiveScreenStream(voiceCameraStream)) {
+                    return {
+                        stream: voiceCameraStream,
+                        ownerName: `${getCurrentUserName()} (you)`,
+                        kind: 'camera'
+                    };
+                }
+
+                return null;
+            };
+
+            const getPrimaryVoiceScreenShare = () => {
+                const localShare = getActiveLocalVisualShare();
+                if (localShare) {
+                    return localShare;
+                }
+
+                for (const [participantId, entry] of voiceRemoteVideoByParticipant.entries()) {
+                    const liveStream = getLiveScreenStream(entry && entry.stream ? entry.stream : null);
+                    if (!liveStream) {
+                        continue;
+                    }
+
+                    const participant = findParticipant(participantId);
+                    return {
+                        stream: liveStream,
+                        ownerName: participant ? participant.name : 'FAST User',
+                        kind: entry && entry.kind ? entry.kind : detectVisualShareKind(liveStream, 'screen')
+                    };
+                }
+
+                return null;
+            };
+
+            const renderVoiceScreenStage = () => {
+                if (!voiceStageTitle || !voiceStageCopy || !voiceStageVideo || !voiceStageEmpty) {
+                    return;
+                }
+
+                const room = getActiveVoiceRoom();
+                const activeShare = getPrimaryVoiceScreenShare();
+
+                if (voiceStageKicker) {
+                    voiceStageKicker.textContent = `${room.label} Room`;
+                }
+
+                if (!activeShare) {
+                    voiceStageTitle.textContent = `${room.label} Shared Media`;
+                    voiceStageCopy.textContent = 'Anyone sharing their screen or camera in this room will appear here for everyone else in the same meeting room.';
+                    voiceStageEmpty.hidden = false;
+                    voiceStageVideo.hidden = true;
+                    if (voiceStageVideo.srcObject) {
+                        voiceStageVideo.srcObject = null;
+                    }
+                    return;
+                }
+
+                voiceStageTitle.textContent = activeShare.kind === 'camera'
+                    ? `${room.label}: ${activeShare.ownerName} is sharing camera`
+                    : `${room.label}: ${activeShare.ownerName} is sharing screen`;
+                voiceStageCopy.textContent = activeShare.kind === 'camera'
+                    ? `Live camera in ${room.label}. Everyone in this room can watch here.`
+                    : `Live screen share in ${room.label}. Everyone in this room can watch here.`;
+                voiceStageEmpty.hidden = true;
+                voiceStageVideo.hidden = false;
+                voiceStageVideo.muted = activeShare.stream === voiceScreenShareStream || activeShare.stream === voiceCameraStream;
+                if (voiceStageVideo.srcObject !== activeShare.stream) {
+                    voiceStageVideo.srcObject = activeShare.stream;
+                }
+            };
+
+            const syncPeerConnectionScreenTrack = (connection) => {
+                if (!connection) {
+                    return false;
+                }
+
+                const activeVisualShare = getActiveLocalVisualShare();
+                const nextStream = activeVisualShare && activeVisualShare.stream ? activeVisualShare.stream : null;
+                const nextTrack = activeVisualShare && activeVisualShare.stream
+                    ? activeVisualShare.stream.getVideoTracks()[0] || null
+                    : null;
+                const currentSender = connection.__screenSender || null;
+
+                if (!nextTrack && currentSender) {
+                    connection.removeTrack(currentSender);
+                    connection.__screenSender = null;
+                    return true;
+                }
+
+                if (nextTrack && !currentSender) {
+                    connection.__screenSender = connection.addTrack(nextTrack, nextStream);
+                    return true;
+                }
+
+                if (nextTrack && currentSender && currentSender.track !== nextTrack) {
+                    connection.removeTrack(currentSender);
+                    connection.__screenSender = connection.addTrack(nextTrack, nextStream);
+                    return true;
+                }
+
+                return false;
+            };
+
+            const requestVoicePeerVisualRenegotiation = async (participant) => {
+                const connection = ensurePeerConnection(participant);
+                if (connection.signalingState !== 'stable' || connection.__isNegotiating) {
+                    connection.__pendingVisualUpdate = true;
+                    return false;
+                }
+
+                connection.__pendingVisualUpdate = false;
+                await createOfferForParticipant(participant, { force: true });
+                return true;
+            };
+
+            const syncVoiceScreenShareAcrossPeers = async () => {
+                if (!voiceJoined) {
+                    renderVoiceScreenStage();
+                    return;
+                }
+
+                for (const participant of voiceParticipants) {
+                    const connection = ensurePeerConnection(participant);
+                    const trackChanged = syncPeerConnectionScreenTrack(connection);
+                    if (!trackChanged) {
+                        continue;
+                    }
+
+                    try {
+                        await requestVoicePeerVisualRenegotiation(participant);
+                    } catch (error) {
+                        voiceLastError = error && error.message ? String(error.message).trim() : `Unable to update screen sharing in ${getActiveVoiceRoom().label}.`;
+                        renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                    }
+                }
+
+                renderVoiceScreenStage();
+            };
+
+            const renderVoiceToolbar = () => {
+                const isVisible = shouldShowVoiceRoster();
+                const shouldShowHangup = shouldShowVoiceRoster();
+                if (voiceToolbox) {
+                    voiceToolbox.hidden = !isVisible;
+                }
+                if (voiceToolbar) {
+                    voiceToolbar.hidden = !isVisible;
+                }
+
+                if (voiceHangupButton) {
+                    voiceHangupButton.hidden = !shouldShowHangup;
+                    voiceHangupButton.disabled = !shouldShowHangup;
+                }
+
+                if (voiceScreenShareButton) {
+                    const canShareScreen = voiceJoined && supportsVoiceScreenShare() && !voiceScreenSharePending;
+                    voiceScreenShareButton.disabled = !canShareScreen && !voiceScreenShareStream;
+                    voiceScreenShareButton.classList.toggle('is-disabled', !canShareScreen && !voiceScreenShareStream);
+                    voiceScreenShareButton.classList.toggle('is-pending', voiceScreenSharePending && !voiceScreenShareStream);
+                    voiceScreenShareButton.classList.toggle('is-active', Boolean(voiceScreenShareStream));
+                    voiceScreenShareButton.setAttribute('aria-pressed', voiceScreenShareStream ? 'true' : 'false');
+                    voiceScreenShareButton.setAttribute('aria-label', voiceScreenShareStream ? 'Stop sharing screen' : 'Share screen');
+                    voiceScreenShareButton.title = voiceScreenShareStream
+                        ? `Stop sharing ${voiceScreenShareMode === 'monitor' ? 'entire screen' : 'window'}`
+                        : voiceScreenSharePending
+                            ? 'Opening screen share'
+                            : 'Share screen';
+                }
+
+                if (voiceCameraButton) {
+                    const canShareCamera = voiceJoined && !voiceScreenSharePending;
+                    voiceCameraButton.disabled = !canShareCamera && !voiceCameraStream;
+                    voiceCameraButton.classList.toggle('is-disabled', !canShareCamera && !voiceCameraStream);
+                    voiceCameraButton.classList.toggle('is-pending', voiceScreenSharePending && !voiceCameraStream);
+                    voiceCameraButton.classList.toggle('is-active', Boolean(voiceCameraStream));
+                    voiceCameraButton.setAttribute('aria-pressed', voiceCameraStream ? 'true' : 'false');
+                    voiceCameraButton.setAttribute('aria-label', voiceCameraStream ? 'Stop camera sharing' : 'Turn on camera');
+                    voiceCameraButton.title = voiceCameraStream
+                        ? 'Stop camera sharing'
+                        : voiceScreenSharePending
+                            ? 'Opening media device'
+                            : 'Turn on camera';
+                }
+
+                if (voiceMuteButton) {
+                    voiceMuteButton.classList.toggle('is-active', voiceMuted);
+                    voiceMuteButton.classList.toggle('is-muted', voiceMuted);
+                    voiceMuteButton.setAttribute('aria-pressed', voiceMuted ? 'true' : 'false');
+                    voiceMuteButton.setAttribute('aria-label', voiceMuted ? 'Unmute microphone' : 'Mute microphone');
+                    voiceMuteButton.title = voiceMuted ? 'Unmute microphone' : 'Mute microphone';
+                }
+
+                if (voiceDeafenButton) {
+                    voiceDeafenButton.classList.toggle('is-active', voiceDeafened);
+                    voiceDeafenButton.classList.toggle('is-muted', voiceDeafened);
+                    voiceDeafenButton.setAttribute('aria-pressed', voiceDeafened ? 'true' : 'false');
+                    voiceDeafenButton.setAttribute('aria-label', voiceDeafened ? 'Undeafen audio' : 'Deafen audio');
+                    voiceDeafenButton.title = voiceDeafened ? 'Undeafen audio' : 'Deafen audio';
+                }
+
+                renderVoiceSettingsModal();
+            };
+
+            const hangupVoiceLounge = async () => {
+                voiceChannelInteracted = false;
+                await leaveVoiceLounge();
+            };
+
+            const closeVoiceScreenShareModal = () => {
+                if (voiceScreenShareModal) {
+                    voiceScreenShareModal.hidden = true;
+                }
+            };
+
+            const openVoiceScreenShareModal = () => {
+                if (!voiceScreenShareModal || !voiceJoined || !supportsVoiceScreenShare()) {
+                    return;
+                }
+
+                voiceScreenShareModal.hidden = false;
+            };
+
+            const stopVoiceScreenShare = ({ stopTracks = true } = {}) => {
+                const activeStream = voiceScreenShareStream;
+                voiceScreenShareStream = null;
+                voiceScreenShareMode = '';
+
+                if (activeStream && stopTracks) {
+                    activeStream.getTracks().forEach((track) => {
+                        track.onended = null;
+                        try {
+                            track.stop();
+                        } catch (error) {
+                            // Ignore track stop failures.
+                        }
+                    });
+                }
+
+                renderVoiceToolbar();
+                renderVoiceScreenStage();
+            };
+
+            const stopVoiceCameraShare = ({ stopTracks = true } = {}) => {
+                const activeStream = voiceCameraStream;
+                voiceCameraStream = null;
+
+                if (activeStream && stopTracks) {
+                    activeStream.getTracks().forEach((track) => {
+                        track.onended = null;
+                        try {
+                            track.stop();
+                        } catch (error) {
+                            // Ignore track stop failures.
+                        }
+                    });
+                }
+
+                renderVoiceToolbar();
+                renderVoiceScreenStage();
+            };
+
+            const buildVoiceDisplayMediaOptions = (mode) => {
+                return {
+                    video: {
+                        frameRate: { ideal: 12, max: 20 }
+                    },
+                    audio: false
+                };
+            };
+
+            const getVoiceDisplaySurfaceKind = (track) => {
+                if (!track || typeof track.getSettings !== 'function') {
+                    return '';
+                }
+
+                const settings = track.getSettings();
+                return settings && settings.displaySurface
+                    ? String(settings.displaySurface).trim().toLowerCase()
+                    : '';
+            };
+
+            const doesVoiceDisplaySurfaceMatchMode = (mode, surfaceKind) => {
+                if (!surfaceKind) {
+                    return true;
+                }
+
+                if (mode === 'monitor') {
+                    return surfaceKind === 'monitor';
+                }
+
+                return surfaceKind === 'window';
+            };
+
+            const closeVoiceSettingsModal = () => {
+                voiceSettingsOpen = false;
+                if (voiceSettingsModal) {
+                    voiceSettingsModal.hidden = true;
+                }
+            };
+
+            const renderVoiceSettingsModal = () => {
+                if (voiceSettingsButton) {
+                    voiceSettingsButton.classList.toggle('is-active', voiceSettingsOpen);
+                    voiceSettingsButton.setAttribute('aria-pressed', voiceSettingsOpen ? 'true' : 'false');
+                    voiceSettingsButton.title = voiceSettingsOpen ? 'Close voice settings' : 'Voice settings';
+                }
+
+                if (!voiceSettingsModal) {
+                    return;
+                }
+
+                voiceSettingsModal.hidden = !voiceSettingsOpen;
+                if (!voiceSettingsOpen) {
+                    return;
+                }
+
+                if (voiceSettingsMicState) {
+                    voiceSettingsMicState.textContent = voiceJoined
+                        ? (voiceMuted ? 'Mic is muted for this room.' : 'Mic is live in this room.')
+                        : 'Join a room to use the microphone.';
+                }
+
+                if (voiceSettingsMicAction) {
+                    voiceSettingsMicAction.textContent = voiceMuted ? 'Unmute' : 'Mute';
+                    voiceSettingsMicAction.disabled = !voiceJoined || !voiceLocalStream;
+                }
+
+                if (voiceSettingsAudioState) {
+                    voiceSettingsAudioState.textContent = voiceJoined
+                        ? (voiceDeafened ? 'Room audio is muted on this device.' : 'Room audio is on.')
+                        : 'Join a room to hear channel audio.';
+                }
+
+                if (voiceSettingsAudioAction) {
+                    voiceSettingsAudioAction.textContent = voiceDeafened ? 'Undeafen' : 'Deafen';
+                    voiceSettingsAudioAction.disabled = !voiceJoined;
+                }
+
+                if (voiceSettingsScreenState) {
+                    voiceSettingsScreenState.textContent = voiceScreenShareStream
+                        ? `Sharing ${voiceScreenShareMode === 'monitor' ? 'entire screen' : 'window'} now.`
+                        : 'No screen share is live.';
+                }
+
+                if (voiceSettingsScreenAction) {
+                    voiceSettingsScreenAction.textContent = voiceScreenShareStream ? 'Stop sharing' : 'Share screen';
+                    voiceSettingsScreenAction.disabled = !voiceJoined || voiceScreenSharePending;
+                }
+
+                if (voiceSettingsCameraState) {
+                    voiceSettingsCameraState.textContent = voiceCameraStream
+                        ? 'Camera is live in this room.'
+                        : 'Camera is off.';
+                }
+
+                if (voiceSettingsCameraAction) {
+                    voiceSettingsCameraAction.textContent = voiceCameraStream ? 'Stop camera' : 'Turn on camera';
+                    voiceSettingsCameraAction.disabled = !voiceJoined || voiceScreenSharePending;
+                }
+            };
+
+            const openVoiceSettingsModal = () => {
+                voiceSettingsOpen = true;
+                renderVoiceSettingsModal();
+            };
+
+            const startVoiceScreenShare = async (mode) => {
+                if (!voiceJoined || !supportsVoiceScreenShare()) {
+                    return;
+                }
+
+                voiceScreenSharePending = true;
+                closeVoiceScreenShareModal();
+                renderVoiceToolbar();
+
+                try {
+                    stopVoiceCameraShare();
+                    stopVoiceScreenShare();
+
+                    const stream = await navigator.mediaDevices.getDisplayMedia(buildVoiceDisplayMediaOptions(mode));
+
+                    const [videoTrack] = stream.getVideoTracks();
+                    const displaySurfaceKind = getVoiceDisplaySurfaceKind(videoTrack);
+                    if (!doesVoiceDisplaySurfaceMatchMode(mode, displaySurfaceKind)) {
+                        stream.getTracks().forEach((track) => {
+                            try {
+                                track.stop();
+                            } catch (error) {
+                                // Ignore track stop failures.
+                            }
+                        });
+                        throw new Error(mode === 'monitor'
+                            ? 'Choose Entire Screen in the browser share picker.'
+                            : 'Choose a single window in the browser share picker.');
+                    }
+
+                    if (videoTrack) {
+                        videoTrack.onended = () => {
+                            if (voiceScreenShareStream === stream) {
+                                stopVoiceScreenShare({ stopTracks: false });
+                                syncVoiceScreenShareAcrossPeers().catch(() => {});
+                            }
+                        };
+                    }
+
+                    voiceScreenShareStream = stream;
+                    voiceScreenShareMode = displaySurfaceKind || (mode === 'monitor' ? 'monitor' : 'window');
+                    voiceLastError = '';
+                    renderVoiceScreenStage();
+                    await syncVoiceScreenShareAcrossPeers();
+                } catch (error) {
+                    voiceLastError = error && error.name === 'NotAllowedError'
+                        ? 'Screen share was cancelled.'
+                        : error && error.message
+                            ? String(error.message).trim()
+                            : 'Unable to start screen sharing.';
+                    renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                } finally {
+                    voiceScreenSharePending = false;
+                    renderVoiceToolbar();
+                }
+            };
+
+            const startVoiceCameraShare = async () => {
+                if (!voiceJoined || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                    return;
+                }
+
+                voiceScreenSharePending = true;
+                renderVoiceToolbar();
+
+                try {
+                    stopVoiceScreenShare();
+                    stopVoiceCameraShare();
+
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: false
+                    });
+
+                    const [videoTrack] = stream.getVideoTracks();
+                    if (videoTrack) {
+                        videoTrack.onended = () => {
+                            if (voiceCameraStream === stream) {
+                                stopVoiceCameraShare({ stopTracks: false });
+                                syncVoiceScreenShareAcrossPeers().catch(() => {});
+                            }
+                        };
+                    }
+
+                    voiceCameraStream = stream;
+                    voiceLastError = '';
+                    renderVoiceScreenStage();
+                    await syncVoiceScreenShareAcrossPeers();
+                } catch (error) {
+                    voiceLastError = error && error.name === 'NotAllowedError'
+                        ? 'Camera share was cancelled.'
+                        : error && error.message
+                            ? String(error.message).trim()
+                            : 'Unable to start camera sharing.';
+                    renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                } finally {
+                    voiceScreenSharePending = false;
+                    renderVoiceToolbar();
+                }
+            };
+
+            const positionVoiceRoster = () => {
+                if (!voiceRoster) {
+                    return;
+                }
+
+                voiceRoster.hidden = !shouldShowVoiceRoster();
+                if (voiceRoster.hidden) {
+                    return;
+                }
+
+                const targetRoomId = String((voiceJoined && activeVoiceRoomId) || selectedVoiceRoomId || '').trim();
+                const targetButton = buttons.find((button) => String(button.getAttribute('data-voice-room') || '').trim() === targetRoomId) || null;
+                const targetParent = targetButton && targetButton.parentElement ? targetButton.parentElement : null;
+
+                if (!targetButton || !targetParent) {
+                    return;
+                }
+
+                if (targetButton.nextElementSibling !== voiceRoster) {
+                    targetButton.insertAdjacentElement('afterend', voiceRoster);
+                }
+            };
+
+            const renderMenuState = () => {
+                buttons.forEach((button) => {
+                    const roomId = String(button.getAttribute('data-voice-room') || '').trim();
+                    const target = String(button.getAttribute('data-community-target') || '').trim();
+                    const isActive = roomId
+                        ? activePanelId === VOICE_PANEL && roomId === selectedVoiceRoomId
+                        : target === activePanelId;
+                    button.classList.toggle('is-active', isActive);
+                });
+
+                panels.forEach((panel) => {
+                    panel.classList.toggle('is-active', panel.getAttribute('data-community-panel') === activePanelId);
+                });
+
+                positionVoiceRoster();
+            };
 
             const setActivePanel = (target) => {
                 const normalizedTarget = String(target || '').trim();
@@ -914,18 +2607,8 @@
                     return;
                 }
 
-                buttons.forEach((button) => {
-                    button.classList.toggle('is-active', button.getAttribute('data-community-target') === normalizedTarget);
-                });
-
-                panels.forEach((panel) => {
-                    panel.classList.toggle('is-active', panel.getAttribute('data-community-panel') === normalizedTarget);
-                });
-
-                const activeButton = buttons.find((button) => button.classList.contains('is-active'));
-                if (status && activeButton) {
-                    status.innerHTML = `<strong>Viewing: ${activeButton.textContent.trim()}</strong><p>Use the right rail to move between rooms and jump into voice when you need the team live.</p>`;
-                }
+                activePanelId = normalizedTarget;
+                renderMenuState();
             };
 
             const safeStorage = {
@@ -947,9 +2630,558 @@
                 }
             };
 
+            const parseVoiceSessionPayload = (rawValue) => {
+                if (!rawValue) {
+                    return null;
+                }
+
+                try {
+                    const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+                    return parsed && typeof parsed === 'object' ? parsed : null;
+                } catch (error) {
+                    return null;
+                }
+            };
+
+            const readVoiceSessionState = () => parseVoiceSessionPayload(localStorage.getItem(VOICE_SESSION_STATE_KEY));
+
+            const isVoiceSessionStateFresh = (state) => {
+                if (!state || typeof state !== 'object') {
+                    return false;
+                }
+
+                if (state.joined || state.joining) {
+                    return true;
+                }
+
+                const updatedAt = Number(state.updatedAt) || 0;
+                return updatedAt > 0 && (Date.now() - updatedAt) < VOICE_SESSION_STATE_STALE_MS;
+            };
+
+            const sendVoiceSessionCommand = (type, payload = {}) => {
+                const command = {
+                    id: typeof crypto !== 'undefined' && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : `voice-command-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+                    type: String(type || '').trim(),
+                    createdAt: Date.now(),
+                    ...payload
+                };
+
+                try {
+                    localStorage.setItem(VOICE_SESSION_COMMAND_KEY, JSON.stringify(command));
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+
+                if (voiceSessionChannel) {
+                    voiceSessionChannel.postMessage({ type: 'command', command });
+                }
+
+                return command;
+            };
+
+            const publishVoiceSessionState = () => {
+                if (!isVoiceControllerPopup) {
+                    return;
+                }
+
+                const roomId = String((voiceJoined && activeVoiceRoomId) || selectedVoiceRoomId || '').trim();
+                const room = getVoiceRoom(roomId);
+                const state = {
+                    controllerActive: true,
+                    popup: true,
+                    joined: Boolean(voiceJoined),
+                    joining: Boolean(voiceJoining),
+                    roomId: room.id,
+                    roomLabel: room.label,
+                    participants: Array.isArray(voiceParticipants)
+                        ? voiceParticipants.map((participant) => ({
+                            id: String(participant && participant.id || '').trim(),
+                            name: String(participant && participant.name || 'FAST User').trim() || 'FAST User'
+                        }))
+                        : [],
+                    lastError: String(voiceLastError || '').trim(),
+                    updatedAt: Date.now()
+                };
+
+                try {
+                    localStorage.setItem(VOICE_SESSION_STATE_KEY, JSON.stringify(state));
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+
+                if (voiceSessionChannel) {
+                    voiceSessionChannel.postMessage({ type: 'state', state });
+                }
+            };
+
+            const clearVoiceSessionState = () => {
+                try {
+                    localStorage.removeItem(VOICE_SESSION_STATE_KEY);
+                    localStorage.removeItem(VOICE_SESSION_COMMAND_KEY);
+                } catch (error) {
+                    // Ignore storage cleanup failures.
+                }
+
+                if (voiceSessionChannel) {
+                    voiceSessionChannel.postMessage({
+                        type: 'state',
+                        state: {
+                            joined: false,
+                            joining: false,
+                            roomId: selectedVoiceRoomId,
+                            roomLabel: getVoiceRoom(selectedVoiceRoomId).label,
+                            participants: [],
+                            lastError: '',
+                            updatedAt: Date.now()
+                        }
+                    });
+                }
+            };
+
+            const applyVoiceSessionState = (state) => {
+                const nextState = state && typeof state === 'object' ? state : null;
+                if (!nextState) {
+                    return;
+                }
+
+                const roomId = String(nextState.roomId || selectedVoiceRoomId || '').trim();
+                if (roomId) {
+                    selectedVoiceRoomId = getVoiceRoom(roomId).id;
+                }
+
+                voiceJoined = Boolean(nextState.joined);
+                voiceJoining = Boolean(nextState.joining);
+                activeVoiceRoomId = voiceJoined ? selectedVoiceRoomId : '';
+                voiceParticipants = Array.isArray(nextState.participants) ? nextState.participants : [];
+                voiceLastError = String(nextState.lastError || '').trim();
+                renderMenuState();
+                renderVoiceState({
+                    joined: voiceJoined,
+                    joining: voiceJoining,
+                    lastError: voiceLastError,
+                    participants: voiceParticipants
+                });
+            };
+
+            const openVoiceControllerPopup = (roomId, autoJoin = true) => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('communityPanel', VOICE_PANEL);
+                url.searchParams.set('voiceRoom', roomId);
+                url.searchParams.set('voicePopup', '1');
+                if (autoJoin) {
+                    url.searchParams.set('autoJoinVoice', '1');
+                } else {
+                    url.searchParams.delete('autoJoinVoice');
+                }
+
+                const popup = window.open(
+                    url.toString(),
+                    VOICE_CONTROLLER_WINDOW_NAME,
+                    'popup=yes,width=440,height=760,resizable=yes,scrollbars=yes'
+                );
+
+                if (popup && typeof popup.focus === 'function') {
+                    popup.focus();
+                }
+
+                return popup;
+            };
+
+            const handleVoiceSessionCommand = async (command) => {
+                if (!isVoiceControllerPopup || !command || typeof command !== 'object') {
+                    return;
+                }
+
+                const commandId = String(command.id || '').trim();
+                if (commandId && commandId === voiceLastCommandId) {
+                    return;
+                }
+                voiceLastCommandId = commandId;
+
+                const commandType = String(command.type || '').trim().toLowerCase();
+                const requestedRoom = getVoiceRoom(command.roomId || selectedVoiceRoomId);
+
+                if (commandType === 'sync') {
+                    publishVoiceSessionState();
+                    return;
+                }
+
+                if (commandType === 'focus') {
+                    window.focus();
+                    return;
+                }
+
+                if (commandType === 'leave') {
+                    if (voiceJoined || voiceJoining) {
+                        await leaveVoiceLounge();
+                    } else {
+                        publishVoiceSessionState();
+                    }
+                    return;
+                }
+
+                if (commandType === 'join' || commandType === 'switch-room') {
+                    const roomChanged = requestedRoom.id !== selectedVoiceRoomId;
+                    selectedVoiceRoomId = requestedRoom.id;
+                    syncVoiceRoomInUrl(requestedRoom.id);
+                    setActivePanel(VOICE_PANEL);
+
+                    if (voiceJoined && activeVoiceRoomId !== requestedRoom.id) {
+                        await leaveVoiceLounge();
+                    }
+
+                    renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+
+                    if (!voiceJoined && !voiceJoining) {
+                        await joinVoiceLounge();
+                    }
+                }
+            };
+
+            const syncVoiceSessionStateFromStorage = () => {
+                if (isVoiceControllerPopup) {
+                    return;
+                }
+
+                const state = readVoiceSessionState();
+                if (!isVoiceSessionStateFresh(state)) {
+                    applyVoiceSessionState({
+                        joined: false,
+                        joining: false,
+                        roomId: selectedVoiceRoomId,
+                        participants: [],
+                        lastError: ''
+                    });
+                    return;
+                }
+
+                applyVoiceSessionState(state);
+            };
+
+            if (voiceSessionChannel) {
+                voiceSessionChannel.addEventListener('message', (event) => {
+                    const payload = event && event.data && typeof event.data === 'object' ? event.data : null;
+                    if (!payload) {
+                        return;
+                    }
+
+                    if (payload.type === 'state' && !isVoiceControllerPopup) {
+                        applyVoiceSessionState(payload.state);
+                        return;
+                    }
+
+                    if (payload.type === 'command' && isVoiceControllerPopup) {
+                        handleVoiceSessionCommand(payload.command).catch(() => {});
+                    }
+                });
+            }
+
+            window.addEventListener('storage', (event) => {
+                if (!event) {
+                    return;
+                }
+
+                if (event.key === VOICE_SESSION_STATE_KEY && !isVoiceControllerPopup) {
+                    syncVoiceSessionStateFromStorage();
+                    return;
+                }
+
+                if (event.key === VOICE_SESSION_COMMAND_KEY && isVoiceControllerPopup) {
+                    handleVoiceSessionCommand(parseVoiceSessionPayload(event.newValue)).catch(() => {});
+                }
+            });
+
             const getCurrentUserName = () => {
                 const user = window.getCurrentUser ? window.getCurrentUser() : null;
                 return String((user && (user.name || user.email)) || 'You').trim() || 'You';
+            };
+
+            const getCurrentUserProfile = () => {
+                const user = window.getCurrentUser ? window.getCurrentUser() : null;
+                return {
+                    name: String((user && (user.name || user.email)) || 'You').trim() || 'You',
+                    avatarImage: String((user && user.avatarImage) || '').trim(),
+                    role: String((user && user.role) || '').trim()
+                };
+            };
+
+            const getNameInitials = (name) => {
+                const parts = String(name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+                if (!parts.length) {
+                    return 'FA';
+                }
+                return parts.map((part) => part.charAt(0).toUpperCase()).join('');
+            };
+
+            const getVoiceInviteUrl = (roomId = selectedVoiceRoomId) => {
+                const room = getVoiceRoom(roomId);
+                const url = new URL(window.location.href);
+                url.searchParams.set('communityPanel', VOICE_PANEL);
+                url.searchParams.set('voiceRoom', room.id);
+                return url.toString();
+            };
+
+            const setVoiceInviteButtonState = (label, state = '') => {
+                if (!voiceInviteButton) {
+                    return;
+                }
+
+                window.clearTimeout(voiceInviteButtonResetHandle);
+                voiceInviteButton.textContent = label;
+                voiceInviteButton.classList.toggle('is-success', state === 'success');
+                voiceInviteButton.classList.toggle('is-error', state === 'error');
+
+                if (state) {
+                    voiceInviteButtonResetHandle = window.setTimeout(() => {
+                        voiceInviteButton.textContent = 'Invite To Voice';
+                        voiceInviteButton.classList.remove('is-success', 'is-error');
+                    }, 2200);
+                }
+            };
+
+            const createVoiceMemberElement = (member) => {
+                const item = document.createElement('div');
+                item.className = 'community-voice-member';
+                item.dataset.voiceMemberId = member.memberId;
+                item.classList.toggle('is-speaking', Boolean(voiceSpeakingState.get(member.memberId)));
+
+                const avatar = document.createElement('span');
+                avatar.className = 'community-voice-member-avatar';
+                if (member.avatarImage) {
+                    avatar.classList.add('has-image');
+                    avatar.style.backgroundImage = `url(${member.avatarImage})`;
+                } else {
+                    avatar.textContent = getNameInitials(member.name);
+                }
+
+                const copy = document.createElement('div');
+                copy.className = 'community-voice-member-copy';
+
+                const name = document.createElement('strong');
+                name.className = 'community-voice-member-name';
+                name.textContent = member.name;
+
+                copy.appendChild(name);
+
+                if (member.subtitle) {
+                    const subtitle = document.createElement('span');
+                    subtitle.className = 'community-voice-member-subtitle';
+                    subtitle.textContent = member.subtitle;
+                    copy.appendChild(subtitle);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'community-voice-member-actions';
+
+                if (member.badge) {
+                    const badge = document.createElement('span');
+                    badge.className = 'community-voice-member-badge';
+                    badge.textContent = member.badge;
+                    actions.appendChild(badge);
+                }
+
+                if (member.linkLabel && member.linkHref) {
+                    const link = document.createElement('a');
+                    link.className = 'community-voice-member-link';
+                    link.href = member.linkHref;
+                    link.target = '_blank';
+                    link.rel = 'noreferrer';
+                    link.textContent = member.linkLabel;
+                    actions.appendChild(link);
+                }
+
+                item.appendChild(avatar);
+                item.appendChild(copy);
+                if (actions.childElementCount) {
+                    item.appendChild(actions);
+                }
+                return item;
+            };
+
+            const syncVoiceRoomInUrl = (roomId) => {
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('communityPanel', VOICE_PANEL);
+                    url.searchParams.set('voiceRoom', roomId);
+                    window.history.replaceState({}, '', url.toString());
+                } catch (error) {
+                    // Ignore URL sync failures.
+                }
+            };
+
+            const ensureVoiceAudioContext = () => {
+                const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextCtor) {
+                    return null;
+                }
+
+                if (!voiceAudioContext) {
+                    voiceAudioContext = new AudioContextCtor();
+                }
+
+                if (voiceAudioContext.state === 'suspended') {
+                    voiceAudioContext.resume().catch(() => {});
+                }
+
+                return voiceAudioContext;
+            };
+
+            const destroyAudioMeter = (meter) => {
+                if (!meter) {
+                    return;
+                }
+
+                try {
+                    if (meter.source) {
+                        meter.source.disconnect();
+                    }
+                } catch (error) {
+                    // Ignore disconnect failures.
+                }
+            };
+
+            const readAudioMeterSpeaking = (meter) => {
+                if (!meter || !meter.analyser || !meter.dataArray) {
+                    return false;
+                }
+
+                meter.analyser.getByteTimeDomainData(meter.dataArray);
+                let total = 0;
+                for (let index = 0; index < meter.dataArray.length; index += 1) {
+                    const normalized = (meter.dataArray[index] - 128) / 128;
+                    total += normalized * normalized;
+                }
+
+                const rms = Math.sqrt(total / meter.dataArray.length);
+                const now = Date.now();
+                if (rms >= meter.threshold) {
+                    meter.lastActiveAt = now;
+                    return true;
+                }
+
+                return now - meter.lastActiveAt < meter.holdMs;
+            };
+
+            const updateVoiceSpeakingClass = (memberId, isSpeaking) => {
+                const normalizedMemberId = String(memberId || '').trim();
+                if (!normalizedMemberId) {
+                    return;
+                }
+
+                voiceSpeakingState.set(normalizedMemberId, Boolean(isSpeaking));
+                const member = document.querySelector(`[data-voice-member-id="${normalizedMemberId}"]`);
+                if (member) {
+                    member.classList.toggle('is-speaking', Boolean(isSpeaking));
+                }
+            };
+
+            const stopVoiceSpeakingMonitor = () => {
+                window.clearTimeout(voiceSpeakingMonitorHandle);
+                voiceSpeakingMonitorHandle = 0;
+            };
+
+            const scheduleVoiceSpeakingMonitor = () => {
+                stopVoiceSpeakingMonitor();
+                if (!voiceLocalAudioMeter && !voiceRemoteAudioMeters.size) {
+                    return;
+                }
+
+                voiceSpeakingMonitorHandle = window.setTimeout(() => {
+                    runVoiceSpeakingMonitor();
+                }, 180);
+            };
+
+            const runVoiceSpeakingMonitor = () => {
+                if (voiceLocalAudioMeter) {
+                    updateVoiceSpeakingClass('self', readAudioMeterSpeaking(voiceLocalAudioMeter));
+                } else {
+                    updateVoiceSpeakingClass('self', false);
+                }
+
+                Array.from(voiceRemoteAudioMeters.entries()).forEach(([participantId, meter]) => {
+                    updateVoiceSpeakingClass(participantId, readAudioMeterSpeaking(meter));
+                });
+
+                scheduleVoiceSpeakingMonitor();
+            };
+
+            const createAudioMeter = (stream, { threshold = 0.05, holdMs = 360 } = {}) => {
+                const context = ensureVoiceAudioContext();
+                if (!context || !stream) {
+                    return null;
+                }
+
+                const source = context.createMediaStreamSource(stream);
+                const analyser = context.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.75;
+                source.connect(analyser);
+
+                return {
+                    source,
+                    analyser,
+                    dataArray: new Uint8Array(analyser.fftSize),
+                    threshold,
+                    holdMs,
+                    lastActiveAt: 0
+                };
+            };
+
+            const stopRemoteAudioMeter = (participantId) => {
+                const existingMeter = voiceRemoteAudioMeters.get(participantId);
+                if (existingMeter) {
+                    destroyAudioMeter(existingMeter);
+                    voiceRemoteAudioMeters.delete(participantId);
+                }
+                updateVoiceSpeakingClass(participantId, false);
+            };
+
+            const syncLocalAudioMeter = () => {
+                destroyAudioMeter(voiceLocalAudioMeter);
+                voiceLocalAudioMeter = voiceLocalStream ? createAudioMeter(voiceLocalStream, { threshold: 0.045, holdMs: 320 }) : null;
+                scheduleVoiceSpeakingMonitor();
+            };
+
+            const renderSelectedVoiceRoom = () => {
+                const room = getSelectedVoiceRoom();
+                const activeRoom = getActiveVoiceRoom();
+
+                if (voiceRoomBadge) {
+                    voiceRoomBadge.textContent = voiceJoined ? `Connected To ${activeRoom.label}` : `Selected Voice Channel: ${room.label}`;
+                }
+                if (voiceRoomTitle) {
+                    voiceRoomTitle.textContent = room.label;
+                }
+                if (voiceRoomCopy) {
+                    voiceRoomCopy.textContent = room.description;
+                }
+                if (voiceRoomPurpose) {
+                    voiceRoomPurpose.textContent = room.purpose;
+                }
+                if (voiceRoomCapacity) {
+                    voiceRoomCapacity.textContent = voiceJoined ? `Live in ${activeRoom.label}` : `Ready to join ${room.label}`;
+                }
+                if (voiceRoomBestFor) {
+                    voiceRoomBestFor.textContent = room.bestFor;
+                }
+                if (voiceRoomSwitching) {
+                    voiceRoomSwitching.textContent = voiceJoined
+                        ? `You are currently connected to ${activeRoom.label}. Click another voice channel to move rooms.`
+                        : 'If you click another voice channel while connected, FAST will move you into that room.';
+                }
+                if (voiceJoinButton) {
+                    voiceJoinButton.textContent = `Join ${room.label}`;
+                }
+                if (heroJoinButton) {
+                    heroJoinButton.textContent = `Join ${room.label}`;
+                }
+                if (voicePresenceRoomTitle) {
+                    voicePresenceRoomTitle.textContent = voiceJoined ? activeRoom.label : room.label;
+                }
+
+                renderVoiceScreenStage();
             };
 
             const ensureVoiceClientId = () => {
@@ -994,7 +3226,7 @@
 
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error(String(data.error || 'Voice lounge request failed.').trim() || 'Voice lounge request failed.');
+                    throw new Error(String(data.error || 'Voice unavailable.').trim() || 'Voice unavailable.');
                 }
                 return data;
             };
@@ -1010,6 +3242,7 @@
             };
 
             const removeRemoteAudio = (participantId) => {
+                stopRemoteAudioMeter(participantId);
                 const audio = voiceRemoteAudioByParticipant.get(participantId);
                 if (audio && audio.parentNode) {
                     audio.parentNode.removeChild(audio);
@@ -1032,9 +3265,15 @@
                 }
                 voicePeerConnections.delete(participantId);
                 removeRemoteAudio(participantId);
+                voiceRemoteVideoByParticipant.delete(participantId);
+                renderVoiceScreenStage();
             };
 
             const stopLocalVoiceStream = () => {
+                destroyAudioMeter(voiceLocalAudioMeter);
+                voiceLocalAudioMeter = null;
+                updateVoiceSpeakingClass('self', false);
+                scheduleVoiceSpeakingMonitor();
                 if (!voiceLocalStream) {
                     return;
                 }
@@ -1049,34 +3288,37 @@
             };
 
             const renderVoiceRoster = () => {
-                if (!voiceRoster) {
+                if (!voiceRoster || !voiceMemberList) {
                     return;
                 }
 
-                const people = [];
-                if (voiceJoined) {
-                    people.push({ label: `${getCurrentUserName()} (you)`, self: true });
-                }
+                const room = getActiveVoiceRoom();
+                const currentUser = getCurrentUserProfile();
+                const people = [{
+                    memberId: 'self',
+                    name: currentUser.name,
+                    subtitle: '',
+                    badge: '',
+                    avatarImage: currentUser.avatarImage,
+                    linkLabel: '',
+                    linkHref: ''
+                }];
+
                 voiceParticipants.forEach((participant) => {
-                    people.push({ label: String(participant.name || 'FAST User').trim() || 'FAST User', self: false });
+                    people.push({
+                        memberId: String(participant.id || '').trim() || `member-${people.length + 1}`,
+                        name: String(participant.name || 'FAST User').trim() || 'FAST User',
+                        subtitle: `In ${room.label} now`,
+                        badge: 'Live',
+                        avatarImage: '',
+                        linkLabel: '',
+                        linkHref: ''
+                    });
                 });
 
-                voiceRoster.innerHTML = '';
-                if (!people.length) {
-                    const empty = document.createElement('span');
-                    empty.className = 'is-empty';
-                    empty.textContent = 'No one is in the voice lounge yet.';
-                    voiceRoster.appendChild(empty);
-                    return;
-                }
-
+                voiceMemberList.innerHTML = '';
                 people.forEach((person) => {
-                    const badge = document.createElement('span');
-                    if (person.self) {
-                        badge.classList.add('is-self');
-                    }
-                    badge.textContent = person.label;
-                    voiceRoster.appendChild(badge);
+                    voiceMemberList.appendChild(createVoiceMemberElement(person));
                 });
             };
 
@@ -1091,47 +3333,82 @@
                 const joined = Boolean(detail.joined);
                 const participants = Array.isArray(detail.participants) ? detail.participants : voiceParticipants;
                 const participantCount = participants.length + (joined ? 1 : 0);
+                const selectedRoom = getSelectedVoiceRoom();
+                const activeRoom = getActiveVoiceRoom();
 
                 voiceStatus.classList.remove('is-connected', 'is-error');
+                renderSelectedVoiceRoom();
+                if (voiceRoster) {
+                    voiceRoster.hidden = !shouldShowVoiceRoster();
+                }
                 renderVoiceRoster();
+                renderVoiceToolbar();
+
+                if (isVoiceControllerPopup) {
+                    publishVoiceSessionState();
+                }
 
                 if (joining) {
-                    voiceStatus.textContent = 'Joining voice lounge';
-                    voiceMeta.textContent = 'FAST is connecting your microphone now. Approve browser microphone access if prompted.';
+                    voiceStatus.textContent = `Joining ${selectedRoom.label}`;
+                    voiceMeta.textContent = '';
                     voiceJoinButton.disabled = true;
                     voiceLeaveButton.disabled = false;
                     return;
                 }
 
                 if (joined) {
-                    voiceStatus.textContent = 'Joined voice lounge';
+                    voiceStatus.textContent = `Joined ${activeRoom.label}`;
                     voiceStatus.classList.add('is-connected');
-                    voiceMeta.textContent = participantCount > 1
-                        ? `Your microphone is live inside FAST. ${participantCount} people are currently in the voice lounge.`
-                        : 'Your microphone is live inside FAST. You are the first person in the voice lounge.';
+                    voiceMeta.textContent = '';
                     voiceJoinButton.disabled = true;
                     voiceLeaveButton.disabled = false;
                     return;
                 }
 
                 if (lastError) {
-                    voiceStatus.textContent = 'Voice lounge error';
+                    voiceStatus.textContent = 'Voice unavailable';
                     voiceStatus.classList.add('is-error');
-                    voiceMeta.textContent = lastError;
+                    voiceMeta.textContent = '';
                     voiceJoinButton.disabled = false;
                     voiceLeaveButton.disabled = true;
                     return;
                 }
 
-                voiceStatus.textContent = 'Voice lounge not joined';
-                voiceMeta.textContent = 'Click Join Voice Lounge to use your microphone inside FAST. When connected, this panel will show that you joined.';
+                voiceStatus.textContent = selectedRoom.label;
+                voiceMeta.textContent = '';
                 voiceJoinButton.disabled = false;
                 voiceLeaveButton.disabled = true;
             };
 
             const findParticipant = (participantId) => voiceParticipants.find((entry) => entry.id === participantId) || null;
 
-            const attachRemoteStream = (participantId, stream) => {
+            const attachRemoteStream = (participantId, stream, trackKind = 'audio') => {
+                if (!stream) {
+                    return;
+                }
+
+                if (trackKind === 'video') {
+                    voiceRemoteVideoByParticipant.set(participantId, {
+                        stream,
+                        kind: detectVisualShareKind(stream, 'screen')
+                    });
+                    const [videoTrack] = stream.getVideoTracks();
+                    if (videoTrack && !videoTrack.__fastScreenBound) {
+                        videoTrack.__fastScreenBound = true;
+                        const rerenderScreenStage = () => {
+                            if (!getLiveScreenStream(stream)) {
+                                voiceRemoteVideoByParticipant.delete(participantId);
+                            }
+                            renderVoiceScreenStage();
+                        };
+                        videoTrack.addEventListener('ended', rerenderScreenStage);
+                        videoTrack.addEventListener('mute', rerenderScreenStage);
+                        videoTrack.addEventListener('unmute', rerenderScreenStage);
+                    }
+                    renderVoiceScreenStage();
+                    return;
+                }
+
                 if (!voiceAudio) {
                     return;
                 }
@@ -1148,13 +3425,24 @@
                 if (audio.srcObject !== stream) {
                     audio.srcObject = stream;
                 }
+
+                audio.muted = voiceDeafened;
+
+                if (stream.getAudioTracks().length) {
+                    stopRemoteAudioMeter(participantId);
+                    const meter = createAudioMeter(stream, { threshold: 0.05, holdMs: 360 });
+                    if (meter) {
+                        voiceRemoteAudioMeters.set(participantId, meter);
+                        scheduleVoiceSpeakingMonitor();
+                    }
+                }
             };
 
             const postVoiceSignal = async (toParticipantId, type, payload) => {
                 await requestVoiceJson('/api/community/voice/signal', {
                     method: 'POST',
                     body: JSON.stringify({
-                        room: VOICE_ROOM,
+                        room: getActiveVoiceRoom().backendRoom,
                         participantId: voiceParticipantId,
                         toParticipantId,
                         type,
@@ -1173,12 +3461,17 @@
                 const connection = new RTCPeerConnection({ iceServers: VOICE_ICE_SERVERS });
                 connection.__participant = participant;
                 connection.__offerCreated = false;
+                connection.__isNegotiating = false;
+                connection.__pendingVisualUpdate = false;
+                connection.__screenSender = null;
 
                 if (voiceLocalStream) {
                     voiceLocalStream.getTracks().forEach((track) => {
                         connection.addTrack(track, voiceLocalStream);
                     });
                 }
+
+                syncPeerConnectionScreenTrack(connection);
 
                 connection.onicecandidate = (event) => {
                     if (!event.candidate) {
@@ -1193,7 +3486,7 @@
                 connection.ontrack = (event) => {
                     const [stream] = event.streams || [];
                     if (stream) {
-                        attachRemoteStream(participant.id, stream);
+                        attachRemoteStream(participant.id, stream, event.track && event.track.kind ? event.track.kind : 'audio');
                     }
                 };
 
@@ -1215,16 +3508,28 @@
                 return connection;
             };
 
-            const createOfferForParticipant = async (participant) => {
+            const createOfferForParticipant = async (participant, { force = false } = {}) => {
                 const connection = ensurePeerConnection(participant);
-                if (connection.__offerCreated || connection.signalingState !== 'stable') {
+                if ((!force && connection.__offerCreated) || connection.signalingState !== 'stable' || connection.__isNegotiating) {
                     return;
                 }
 
-                connection.__offerCreated = true;
-                const offer = await connection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false });
-                await connection.setLocalDescription(offer);
-                await postVoiceSignal(participant.id, 'offer', connection.localDescription);
+                connection.__isNegotiating = true;
+                if (!force) {
+                    connection.__offerCreated = true;
+                }
+
+                try {
+                    const offer = await connection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+                    await connection.setLocalDescription(offer);
+                    await postVoiceSignal(participant.id, 'offer', connection.localDescription);
+                } catch (error) {
+                    connection.__isNegotiating = false;
+                    if (!force) {
+                        connection.__offerCreated = false;
+                    }
+                    throw error;
+                }
             };
 
             const handleVoiceSignal = async (signal) => {
@@ -1235,17 +3540,27 @@
                 const connection = ensurePeerConnection(participant);
 
                 if (signal.type === 'offer') {
-                    connection.__offerCreated = true;
+                    connection.__isNegotiating = true;
                     await connection.setRemoteDescription(new RTCSessionDescription(signal.payload));
                     const answer = await connection.createAnswer();
                     await connection.setLocalDescription(answer);
                     await postVoiceSignal(participant.id, 'answer', connection.localDescription);
+                    connection.__isNegotiating = false;
+                    if (connection.__pendingVisualUpdate && connection.signalingState === 'stable') {
+                        connection.__pendingVisualUpdate = false;
+                        await createOfferForParticipant(participant, { force: true });
+                    }
                     return;
                 }
 
                 if (signal.type === 'answer') {
                     if (connection.signalingState !== 'closed') {
                         await connection.setRemoteDescription(new RTCSessionDescription(signal.payload));
+                    }
+                    connection.__isNegotiating = false;
+                    if (connection.__pendingVisualUpdate && connection.signalingState === 'stable') {
+                        connection.__pendingVisualUpdate = false;
+                        await createOfferForParticipant(participant, { force: true });
                     }
                     return;
                 }
@@ -1276,7 +3591,7 @@
                         try {
                             await createOfferForParticipant(participant);
                         } catch (error) {
-                            voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to connect the voice lounge.';
+                            voiceLastError = error && error.message ? String(error.message).trim() : `Unable to connect ${getActiveVoiceRoom().label}.`;
                             renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
                         }
                     }
@@ -1293,7 +3608,7 @@
 
                 try {
                     const params = new URLSearchParams({
-                        room: VOICE_ROOM,
+                        room: getActiveVoiceRoom().backendRoom,
                         participantId: voiceParticipantId,
                         after: String(voiceLastSignalId)
                     });
@@ -1306,7 +3621,7 @@
                         await handleVoiceSignal(signal);
                     }
                 } catch (error) {
-                    voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to refresh the voice lounge.';
+                    voiceLastError = error && error.message ? String(error.message).trim() : `Unable to refresh ${getActiveVoiceRoom().label}.`;
                     renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
                     if (/session not found|join the room again/i.test(voiceLastError)) {
                         await leaveVoiceLounge({ skipRequest: true });
@@ -1321,18 +3636,30 @@
             const leaveVoiceLounge = async ({ skipRequest = false } = {}) => {
                 window.clearTimeout(voicePollHandle);
                 voicePollHandle = 0;
+                stopVoiceSpeakingMonitor();
 
                 const activeParticipantId = voiceParticipantId;
+                const activeRoom = getActiveVoiceRoom();
                 voiceParticipantId = '';
                 voiceJoined = false;
                 voiceJoining = false;
                 voiceLastSignalId = 0;
                 voiceParticipants = [];
                 voiceLastError = '';
+                activeVoiceRoomId = '';
+                voiceMuted = false;
+                voiceDeafened = false;
+
+                Array.from(voiceRemoteAudioMeters.keys()).forEach((participantId) => {
+                    stopRemoteAudioMeter(participantId);
+                });
 
                 Array.from(voicePeerConnections.keys()).forEach((participantId) => {
                     detachPeerConnection(participantId);
                 });
+                voiceRemoteVideoByParticipant.clear();
+                stopVoiceCameraShare();
+                stopVoiceScreenShare();
                 stopLocalVoiceStream();
 
                 if (!skipRequest && activeParticipantId) {
@@ -1340,7 +3667,7 @@
                         await requestVoiceJson('/api/community/voice/leave', {
                             method: 'POST',
                             body: JSON.stringify({
-                                room: VOICE_ROOM,
+                                room: activeRoom.backendRoom,
                                 participantId: activeParticipantId
                             })
                         });
@@ -1349,14 +3676,18 @@
                     }
                 }
 
+                clearVoiceSessionState();
                 renderVoiceState({ joined: false, joining: false, lastError: '', participants: [] });
             };
 
-            const joinVoiceLounge = async () => {
+            const joinVoiceLounge = async (requestedRoomId = selectedVoiceRoomId) => {
                 if (voiceJoining || voiceJoined) {
                     return;
                 }
 
+                const room = getVoiceRoom(requestedRoomId);
+                selectedVoiceRoomId = room.id;
+                syncVoiceRoomInUrl(room.id);
                 if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
                     renderVoiceState({ joined: false, joining: false, lastError: 'This browser does not support live microphone voice chat.', participants: voiceParticipants });
                     return;
@@ -1377,50 +3708,307 @@
                         video: false
                     });
                     voiceLocalStream = stream;
+                    syncVoiceMuteState();
+                    syncLocalAudioMeter();
 
                     const data = await requestVoiceJson('/api/community/voice/join', {
                         method: 'POST',
                         body: JSON.stringify({
-                            room: VOICE_ROOM,
+                            room: room.backendRoom,
                             clientId: ensureVoiceClientId()
                         })
                     });
 
                     voiceParticipantId = String(data.participant && data.participant.id || '').trim();
+                    activeVoiceRoomId = room.id;
                     voiceJoined = Boolean(voiceParticipantId);
                     voiceJoining = false;
                     voiceLastSignalId = Number(data.signalCursor) || 0;
                     voiceLastError = '';
 
                     await syncVoiceParticipants(data.participants || []);
+                    renderVoiceScreenStage();
                     renderVoiceState({ joined: voiceJoined, joining: false, lastError: '', participants: voiceParticipants });
                     scheduleVoicePoll();
                 } catch (error) {
                     voiceJoining = false;
                     voiceJoined = false;
-                    voiceLastError = error && error.message ? String(error.message).trim() : 'Unable to join the voice lounge.';
+                    activeVoiceRoomId = '';
+                    voiceLastError = error && error.message ? String(error.message).trim() : `Unable to join ${room.label}.`;
                     stopLocalVoiceStream();
                     renderVoiceState({ joined: false, joining: false, lastError: voiceLastError, participants: voiceParticipants });
                 }
             };
 
+            const setSelectedVoiceRoom = async (roomId) => {
+                const room = getVoiceRoom(roomId);
+                const roomChanged = room.id !== selectedVoiceRoomId;
+                selectedVoiceRoomId = room.id;
+                syncVoiceRoomInUrl(room.id);
+                setActivePanel(VOICE_PANEL);
+                renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+
+                if (!voiceJoined && !voiceJoining) {
+                    await joinVoiceLounge(room.id);
+                    return;
+                }
+
+                if (voiceJoined && roomChanged && activeVoiceRoomId !== room.id) {
+                    await leaveVoiceLounge();
+                    await joinVoiceLounge(room.id);
+                }
+            };
+
+            collapseToggles.forEach((toggle) => {
+                toggle.addEventListener('click', () => {
+                    const groupId = String(toggle.getAttribute('data-community-collapse-toggle') || '').trim();
+                    const group = document.querySelector(`[data-community-group="${groupId}"]`);
+                    const body = document.querySelector(`[data-community-collapse-body="${groupId}"]`);
+                    if (!group || !body) {
+                        return;
+                    }
+
+                    const expanded = toggle.getAttribute('aria-expanded') !== 'false';
+                    toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                    body.hidden = expanded;
+                    group.classList.toggle('is-collapsed', expanded);
+                });
+            });
+
             buttons.forEach((button) => {
-                button.addEventListener('click', () => {
+                button.addEventListener('click', async () => {
+                    const roomId = String(button.getAttribute('data-voice-room') || '').trim();
+                    if (roomId) {
+                        voiceChannelInteracted = true;
+                        await setSelectedVoiceRoom(roomId);
+                        return;
+                    }
                     setActivePanel(button.getAttribute('data-community-target'));
                 });
             });
 
             if (voiceJoinButton) {
-                voiceJoinButton.addEventListener('click', joinVoiceLounge);
+                voiceJoinButton.addEventListener('click', () => {
+                    voiceChannelInteracted = true;
+                    joinVoiceLounge().catch(() => {});
+                });
             }
 
             if (heroJoinButton) {
-                heroJoinButton.addEventListener('click', joinVoiceLounge);
+                heroJoinButton.addEventListener('click', () => {
+                    voiceChannelInteracted = true;
+                    joinVoiceLounge().catch(() => {});
+                });
             }
 
             if (voiceLeaveButton) {
                 voiceLeaveButton.addEventListener('click', () => {
-                    leaveVoiceLounge().catch(() => {});
+                    hangupVoiceLounge().catch(() => {});
+                });
+            }
+
+            if (voiceHangupButton) {
+                voiceHangupButton.addEventListener('click', () => {
+                    hangupVoiceLounge().catch(() => {});
+                });
+            }
+
+            if (voiceInviteButton) {
+                voiceInviteButton.addEventListener('click', async () => {
+                    const inviteUrl = getVoiceInviteUrl(voiceJoined ? getActiveVoiceRoom().id : getSelectedVoiceRoom().id);
+                    try {
+                        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                            await navigator.clipboard.writeText(inviteUrl);
+                        } else {
+                            const helperInput = document.createElement('input');
+                            helperInput.value = inviteUrl;
+                            document.body.appendChild(helperInput);
+                            helperInput.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(helperInput);
+                        }
+                        setVoiceInviteButtonState('Invite Copied', 'success');
+                    } catch (error) {
+                        setVoiceInviteButtonState('Copy Failed', 'error');
+                    }
+                });
+            }
+
+            if (voiceMuteButton) {
+                voiceMuteButton.addEventListener('click', () => {
+                    if (!voiceJoined || !voiceLocalStream) {
+                        return;
+                    }
+
+                    voiceMuted = !voiceMuted;
+                    syncVoiceMuteState();
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceDeafenButton) {
+                voiceDeafenButton.addEventListener('click', () => {
+                    if (!voiceJoined) {
+                        return;
+                    }
+
+                    voiceDeafened = !voiceDeafened;
+                    syncVoiceDeafenState();
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceScreenShareButton) {
+                voiceScreenShareButton.addEventListener('click', () => {
+                    if (voiceScreenShareStream) {
+                        stopVoiceScreenShare();
+                        syncVoiceScreenShareAcrossPeers().catch(() => {});
+                        return;
+                    }
+
+                    openVoiceScreenShareModal();
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceScreenShareWindowOption) {
+                voiceScreenShareWindowOption.addEventListener('click', () => {
+                    startVoiceScreenShare('window').catch(() => {});
+                });
+            }
+
+            if (voiceScreenShareMonitorOption) {
+                voiceScreenShareMonitorOption.addEventListener('click', () => {
+                    startVoiceScreenShare('monitor').catch(() => {});
+                });
+            }
+
+            if (voiceScreenShareCancelButton) {
+                voiceScreenShareCancelButton.addEventListener('click', () => {
+                    closeVoiceScreenShareModal();
+                });
+            }
+
+            if (voiceScreenShareModal) {
+                voiceScreenShareModal.addEventListener('click', (event) => {
+                    const target = event.target;
+                    if (target instanceof Element && target.hasAttribute('data-community-screen-close')) {
+                        closeVoiceScreenShareModal();
+                    }
+                });
+            }
+
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && voiceScreenShareModal && !voiceScreenShareModal.hidden) {
+                    closeVoiceScreenShareModal();
+                    return;
+                }
+
+                if (event.key === 'Escape' && voiceSettingsModal && !voiceSettingsModal.hidden) {
+                    closeVoiceSettingsModal();
+                    renderVoiceToolbar();
+                }
+            });
+
+            if (voiceCameraButton) {
+                voiceCameraButton.addEventListener('click', () => {
+                    if (voiceCameraStream) {
+                        stopVoiceCameraShare();
+                        syncVoiceScreenShareAcrossPeers().catch(() => {});
+                        return;
+                    }
+
+                    startVoiceCameraShare().catch(() => {});
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceSettingsButton) {
+                voiceSettingsButton.addEventListener('click', () => {
+                    if (voiceSettingsOpen) {
+                        closeVoiceSettingsModal();
+                    } else {
+                        openVoiceSettingsModal();
+                    }
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceSettingsCloseButton) {
+                voiceSettingsCloseButton.addEventListener('click', () => {
+                    closeVoiceSettingsModal();
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceSettingsModal) {
+                voiceSettingsModal.addEventListener('click', (event) => {
+                    const target = event.target;
+                    if (target instanceof Element && target.hasAttribute('data-community-settings-close')) {
+                        closeVoiceSettingsModal();
+                        renderVoiceToolbar();
+                    }
+                });
+            }
+
+            if (voiceSettingsMicAction) {
+                voiceSettingsMicAction.addEventListener('click', () => {
+                    if (!voiceJoined || !voiceLocalStream) {
+                        return;
+                    }
+
+                    voiceMuted = !voiceMuted;
+                    syncVoiceMuteState();
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceSettingsAudioAction) {
+                voiceSettingsAudioAction.addEventListener('click', () => {
+                    if (!voiceJoined) {
+                        return;
+                    }
+
+                    voiceDeafened = !voiceDeafened;
+                    syncVoiceDeafenState();
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceSettingsScreenAction) {
+                voiceSettingsScreenAction.addEventListener('click', () => {
+                    if (!voiceJoined || voiceScreenSharePending) {
+                        return;
+                    }
+
+                    if (voiceScreenShareStream) {
+                        stopVoiceScreenShare();
+                        syncVoiceScreenShareAcrossPeers().catch(() => {});
+                        renderVoiceToolbar();
+                        return;
+                    }
+
+                    closeVoiceSettingsModal();
+                    openVoiceScreenShareModal();
+                    renderVoiceToolbar();
+                });
+            }
+
+            if (voiceSettingsCameraAction) {
+                voiceSettingsCameraAction.addEventListener('click', () => {
+                    if (!voiceJoined || voiceScreenSharePending) {
+                        return;
+                    }
+
+                    if (voiceCameraStream) {
+                        stopVoiceCameraShare();
+                        syncVoiceScreenShareAcrossPeers().catch(() => {});
+                        renderVoiceToolbar();
+                        return;
+                    }
+
+                    startVoiceCameraShare().catch(() => {});
+                    renderVoiceToolbar();
                 });
             }
 
@@ -1428,7 +4016,23 @@
                 leaveVoiceLounge().catch(() => {});
             });
 
+            try {
+                const requestedPanel = String(initialVoiceSearchParams.get('communityPanel') || '').trim();
+                const requestedRoom = String(initialVoiceSearchParams.get('voiceRoom') || '').trim();
+                if (requestedRoom) {
+                    selectedVoiceRoomId = getVoiceRoom(requestedRoom).id;
+                }
+                if (requestedPanel === VOICE_PANEL || requestedRoom) {
+                    activePanelId = VOICE_PANEL;
+                }
+            } catch (error) {
+                // Ignore malformed URL params.
+            }
+
+            renderMenuState();
+            clearVoiceSessionState();
             renderVoiceState({ joined: false, joining: false, lastError: '', participants: [] });
+            renderVoiceToolbar();
         })();
     </script>
 </body>
