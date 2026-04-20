@@ -24,6 +24,7 @@ require('dotenv').config();
 const { sendNewLeadEmail, sendAgentEmail } = require('./sendEmail.js/sendEmail');
 
 const app = express();
+app.set('trust proxy', true);
 // Build last updated endpoint
 app.get('/api/build-last-updated', (req, res) => {
   try {
@@ -2254,6 +2255,56 @@ function buildTwilioWebhookUrl(req, pathName) {
   }
 }
 
+function listTwilioWebhookValidationUrls(req) {
+  const originalUrl = String(req.originalUrl || req.url || '').trim();
+  if (!originalUrl) {
+    return [];
+  }
+
+  const candidates = new Set();
+  const directUrl = getTwilioWebhookRequestUrl(req);
+  if (directUrl) {
+    candidates.add(directUrl);
+  }
+
+  const hostCandidates = [
+    String(req.headers['x-forwarded-host'] || '').split(',')[0].trim(),
+    String(req.get('host') || '').trim()
+  ].filter(Boolean);
+  const protocolCandidates = [
+    String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim(),
+    String(req.protocol || '').trim(),
+    'https'
+  ].filter(Boolean);
+  const baseUrlCandidates = [
+    String(process.env.PUBLIC_APP_URL || '').trim(),
+    String(process.env.APP_URL || '').trim(),
+    String(process.env.RENDER_EXTERNAL_URL || '').trim(),
+    'https://fastbridgegroupllc.com',
+    'https://fast-bridge-group-llc.onrender.com'
+  ].filter(Boolean);
+
+  protocolCandidates.forEach((protocol) => {
+    hostCandidates.forEach((host) => {
+      try {
+        candidates.add(new URL(originalUrl, `${protocol}://${host}`).toString());
+      } catch (error) {
+        // Ignore malformed candidate URLs.
+      }
+    });
+  });
+
+  baseUrlCandidates.forEach((baseUrl) => {
+    try {
+      candidates.add(new URL(originalUrl, baseUrl).toString());
+    } catch (error) {
+      // Ignore malformed candidate URLs.
+    }
+  });
+
+  return Array.from(candidates);
+}
+
 function isTwilioWebhookRequestValid(req) {
   const config = getTwilioMessagingConfig();
   if (!config.authToken) {
@@ -2265,13 +2316,13 @@ function isTwilioWebhookRequestValid(req) {
     return String(process.env.NODE_ENV || '').trim().toLowerCase() !== 'production';
   }
 
-  const requestUrl = getTwilioWebhookRequestUrl(req);
-  if (!requestUrl) {
+  const requestUrls = listTwilioWebhookValidationUrls(req);
+  if (requestUrls.length === 0) {
     return false;
   }
 
   try {
-    return twilio.validateRequest(config.authToken, signature, requestUrl, req.body || {});
+    return requestUrls.some((requestUrl) => twilio.validateRequest(config.authToken, signature, requestUrl, req.body || {}));
   } catch (error) {
     return false;
   }
