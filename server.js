@@ -8064,11 +8064,9 @@ app.get('/api/feature-access', async (req, res) => {
   }
 });
 
-app.get('/api/announcements/current', async (req, res) => {
-  const decoded = requireAuth(req, res);
-  if (!decoded) {
-    return;
-  }
+app.get('/api/announcements/current', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
 
   try {
     const announcement = await getAnnouncementSettings();

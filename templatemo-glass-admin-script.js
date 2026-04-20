@@ -13291,7 +13291,7 @@ function initNavbarDateTime() {
 
         const ANNOUNCEMENT_CACHE_KEY = 'dashboardAnnouncementState';
         const ANNOUNCEMENT_SYNC_EVENT = 'dashboard-announcement-updated';
-        const ANNOUNCEMENT_REFRESH_INTERVAL_MS = 30000;
+        const ANNOUNCEMENT_REFRESH_INTERVAL_MS = 10000;
 
         const badge = document.getElementById('dashboard-announcement-badge');
         const title = document.getElementById('dashboard-announcement-title');
@@ -13301,10 +13301,6 @@ function initNavbarDateTime() {
         let announcementLifecycleTimer = 0;
         let announcementRefreshTimer = 0;
         let loadAnnouncementPromise = null;
-
-        function getAuthToken() {
-            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-        }
 
         function readCachedAnnouncement() {
             try {
@@ -13440,18 +13436,10 @@ function initNavbarDateTime() {
                 return loadAnnouncementPromise;
             }
 
-            const token = getAuthToken();
-            if (!token) {
-                card.hidden = true;
-                return Promise.resolve();
-            }
-
             loadAnnouncementPromise = (async () => {
                 try {
                     const response = await fetch('/api/announcements/current', {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
+                        cache: 'no-store'
                     });
                     const data = await response.json();
                     if (!response.ok) {
