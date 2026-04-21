@@ -6054,8 +6054,8 @@ body.analytics-reboot .main-content {
 }
 
 body.analytics-reboot .analytics-navbar {
-    position: sticky;
-    top: 18px;
+    position: relative;
+    top: 0;
     z-index: 12;
     margin-bottom: 22px;
     padding: 18px 22px;
@@ -6706,7 +6706,6 @@ body.analytics-reboot .analytics-my-file-count {
     }
 
     body.analytics-reboot .analytics-navbar {
-        top: 12px;
         gap: 14px;
     }
 

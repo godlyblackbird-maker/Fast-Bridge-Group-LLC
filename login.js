@@ -21,6 +21,17 @@ const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
 const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
 const ISAAC_ADMIN_BYPASS_CODE = '315598';
 const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
+const LOGIN_HOMEPAGE_THEME_KEY = 'homepageTheme';
+const LOGIN_THEME_STORAGE_KEY = 'dashboardThemeByUser';
+const LOGIN_THEME_OPTIONS = Object.freeze(['beach', 'sunset', 'cyberpunk']);
+const LOGIN_THEME_LABELS = Object.freeze({
+  beach: 'Beach',
+  sunset: 'Sunset',
+  cyberpunk: 'Cyberpunk'
+});
+const LOGIN_THEME_LOGO_PATHS = Object.freeze({
+  cyberpunk: 'png photos/CYBERPUNK LOGO.png'
+});
 const ISAAC_ADMIN_BYPASS_USER = Object.freeze({
   email: 'isaac.haro@fastbridgegroupllc.com',
   name: 'Isaac Haro',
@@ -46,6 +57,68 @@ function readLocalJson(key) {
   } catch (error) {
     return null;
   }
+}
+
+function resolveLoginTheme(theme) {
+  const normalizedTheme = String(theme || '').trim().toLowerCase();
+  return LOGIN_THEME_OPTIONS.includes(normalizedTheme) ? normalizedTheme : 'beach';
+}
+
+function getLoginThemeUserKey() {
+  const storedUser = readLocalJson('user');
+  const storedProfile = readLocalJson('userProfile');
+  const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+  const userEmail = String(storedUser && storedUser.email || '').trim().toLowerCase();
+  const profileEmail = String(storedProfile && storedProfile.email || '').trim().toLowerCase();
+  const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+  const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+  const name = String(storedUser && storedUser.name || (canUseProfileIdentity && storedProfile && storedProfile.name) || 'User').trim();
+  return email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+}
+
+function persistLoginTheme(theme) {
+  const resolvedTheme = resolveLoginTheme(theme);
+  const themeStore = readLocalJson(LOGIN_THEME_STORAGE_KEY) || {};
+  const userKey = getLoginThemeUserKey();
+  const currentEntry = themeStore[userKey] && typeof themeStore[userKey] === 'object'
+    ? themeStore[userKey]
+    : {};
+  themeStore[userKey] = {
+    ...currentEntry,
+    value: resolvedTheme,
+    updatedAt: Date.now()
+  };
+  localStorage.setItem(LOGIN_THEME_STORAGE_KEY, JSON.stringify(themeStore));
+  localStorage.setItem(LOGIN_HOMEPAGE_THEME_KEY, resolvedTheme);
+  localStorage.setItem('theme', resolvedTheme);
+  return resolvedTheme;
+}
+
+function applyLoginTheme(theme) {
+  const resolvedTheme = resolveLoginTheme(theme);
+  document.documentElement.setAttribute('data-theme', resolvedTheme);
+
+  const logoPath = LOGIN_THEME_LOGO_PATHS[resolvedTheme] || 'png photos/FAST LOGO 777.png';
+  document.documentElement.setAttribute('data-theme-logo-path', logoPath);
+
+  document.querySelectorAll('.login-logo-image, .logo-img, .ecard-logo-image, .flyer-logo-image').forEach((image) => {
+    if (image && image.getAttribute('src') !== logoPath) {
+      image.setAttribute('src', logoPath);
+    }
+  });
+
+  const loginThemeLabel = document.getElementById('login-theme-label');
+  const loginThemeSwitch = document.getElementById('login-theme-switch');
+  if (loginThemeLabel) {
+    loginThemeLabel.textContent = LOGIN_THEME_LABELS[resolvedTheme] || 'Beach';
+  }
+  if (loginThemeSwitch) {
+    loginThemeSwitch.setAttribute('data-theme-choice', resolvedTheme);
+    loginThemeSwitch.setAttribute('aria-label', `Switch login page theme. Current theme: ${LOGIN_THEME_LABELS[resolvedTheme] || 'Beach'}`);
+  }
+
+  persistLoginTheme(resolvedTheme);
+  return resolvedTheme;
 }
 
 function clearStoredAuthState() {
@@ -201,6 +274,7 @@ function startIsaacAdminBypass() {
 
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
+  const loginThemeSwitchButton = document.getElementById('login-theme-switch');
   const loginForm = document.getElementById('login-form');
   const loginBtn = document.getElementById('login-btn');
   const twoFactorForm = document.getElementById('two-factor-form');
@@ -218,6 +292,24 @@ document.addEventListener('DOMContentLoaded', function() {
   const isaacAdminBypassLink = document.getElementById('isaac-admin-bypass-link');
   const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
   let pendingTwoFactorChallenge = '';
+
+  if (loginThemeSwitchButton) {
+    applyLoginTheme(resolveLoginTheme(document.documentElement.getAttribute('data-theme')));
+    loginThemeSwitchButton.addEventListener('click', function () {
+      const activeTheme = resolveLoginTheme(document.documentElement.getAttribute('data-theme'));
+      const activeIndex = LOGIN_THEME_OPTIONS.indexOf(activeTheme);
+      const nextTheme = LOGIN_THEME_OPTIONS[(activeIndex + 1 + LOGIN_THEME_OPTIONS.length) % LOGIN_THEME_OPTIONS.length] || 'beach';
+      applyLoginTheme(nextTheme);
+    });
+
+    window.addEventListener('storage', function (event) {
+      if (!event || (event.key && ![LOGIN_THEME_STORAGE_KEY, 'homepageTheme'].includes(event.key))) {
+        return;
+      }
+
+      applyLoginTheme(resolveLoginTheme(document.documentElement.getAttribute('data-theme')));
+    });
+  }
 
   function showLoginError(message) {
     if (!errorDiv) {

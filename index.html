@@ -19,6 +19,9 @@
     <script>
         (function () {
             try {
+                const HOMEPAGE_THEME_KEY = 'homepageTheme';
+                const USER_THEME_KEY = 'dashboardThemeByUser';
+                const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
                 const readJson = (key) => {
                     try {
                         return JSON.parse(localStorage.getItem(key) || '{}');
@@ -37,16 +40,24 @@
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const isAuthenticated = Boolean(authToken && (email || name));
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
-                const themeStore = readJson('dashboardThemeByUser');
-                let theme = isAuthenticated
-                    ? ((themeStore[userKey] && themeStore[userKey].value) || 'beach')
-                    : 'beach';
+                const themeStore = readJson(USER_THEME_KEY);
+                const publicThemeValue = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
+                const storedThemeValue = String(
+                    isAuthenticated
+                        ? ((themeStore[userKey] && themeStore[userKey].value) || '')
+                        : (((themeStore['default-user'] && themeStore['default-user'].value) || publicThemeValue || ''))
+                ).trim().toLowerCase();
+                let theme = storedThemeValue || 'beach';
 
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
-                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
+                if (isAuthenticated && !/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
+                    theme = 'beach';
+                }
+
+                if (!isAuthenticated && !PUBLIC_HOMEPAGE_THEMES.includes(theme)) {
                     theme = 'beach';
                 }
 
@@ -366,36 +377,36 @@
             --border: rgba(255, 203, 167, 0.22);
             --text: #fff2df;
             --muted: rgba(255, 242, 223, 0.76);
-            --accent: #ff8c69;
-            --accent-soft: #ffb07c;
+            --accent: #3b82f6;
+            --accent-soft: #7dd3fc;
             --sand: #ffd28a;
             --shadow: 0 30px 80px rgba(42, 15, 41, 0.34);
             --surface-top: rgba(255, 255, 255, 0.12);
             --surface-bottom: rgba(255, 255, 255, 0.05);
-            --hero-orb: radial-gradient(circle, rgba(255, 176, 124, 0.28), transparent 70%);
-            --body-glow-a: rgba(255, 140, 105, 0.22);
-            --body-glow-b: rgba(255, 210, 138, 0.16);
-            --body-glow-c: #44204d;
-            --body-glow-d: #6c3157;
-            --body-glow-e: #f08a5d;
-            --orb-a: rgba(255, 140, 105, 0.2);
-            --orb-b: rgba(255, 210, 138, 0.18);
-            --login-border: rgba(255, 186, 146, 0.34);
+            --hero-orb: radial-gradient(circle, rgba(125, 211, 252, 0.28), transparent 70%);
+            --body-glow-a: rgba(59, 130, 246, 0.22);
+            --body-glow-b: rgba(125, 211, 252, 0.16);
+            --body-glow-c: #1e1b4b;
+            --body-glow-d: #1d4ed8;
+            --body-glow-e: #7dd3fc;
+            --orb-a: rgba(59, 130, 246, 0.2);
+            --orb-b: rgba(125, 211, 252, 0.18);
+            --login-border: rgba(125, 211, 252, 0.34);
             --login-shadow: 0 16px 34px rgba(73, 24, 61, 0.24);
-            --login-hover-border: rgba(255, 204, 163, 0.54);
+            --login-hover-border: rgba(147, 197, 253, 0.54);
             --login-hover-shadow: 0 20px 38px rgba(73, 24, 61, 0.3);
-            --eyebrow-border: rgba(255, 186, 146, 0.24);
+            --eyebrow-border: rgba(125, 211, 252, 0.24);
             --eyebrow-bg: rgba(93, 39, 77, 0.48);
-            --secondary-border: rgba(255, 203, 167, 0.2);
+            --secondary-border: rgba(125, 211, 252, 0.2);
             --secondary-bg: rgba(255, 255, 255, 0.08);
             --metric-bg: rgba(255, 255, 255, 0.12);
-            --metric-border: rgba(255, 203, 167, 0.18);
+            --metric-border: rgba(125, 211, 252, 0.18);
             --ops-bg: rgba(255, 255, 255, 0.08);
-            --ops-border: rgba(255, 203, 167, 0.14);
+            --ops-border: rgba(125, 211, 252, 0.14);
             --footer-text: rgba(255, 242, 223, 0.66);
             --brand-shadow: rgba(73, 24, 61, 0.28);
-            --primary-cta-start: rgba(255, 140, 105, 1);
-            --primary-cta-end: rgba(255, 210, 138, 0.92);
+            --primary-cta-start: rgba(59, 130, 246, 1);
+            --primary-cta-end: rgba(125, 211, 252, 0.92);
         }
 
         html[data-theme='space'] {
@@ -441,39 +452,39 @@
             color-scheme: dark;
             --bg: #05010c;
             --panel: rgba(14, 7, 28, 0.78);
-            --border: rgba(66, 243, 255, 0.42);
+            --border: rgba(168, 85, 247, 0.42);
             --text: #fcf5ff;
             --muted: rgba(252, 245, 255, 0.84);
-            --accent: #36f3ff;
-            --accent-soft: #ff2fbd;
-            --sand: #ffd166;
-            --shadow: 0 30px 80px rgba(3, 2, 12, 0.6), 0 0 42px rgba(255, 47, 189, 0.16);
+            --accent: #a855f7;
+            --accent-soft: #d946ef;
+            --sand: #c084fc;
+            --shadow: 0 30px 80px rgba(3, 2, 12, 0.6), 0 0 42px rgba(168, 85, 247, 0.16);
             --surface-top: rgba(255, 255, 255, 0.12);
             --surface-bottom: rgba(255, 255, 255, 0.04);
-            --hero-orb: radial-gradient(circle, rgba(255, 47, 189, 0.4), transparent 70%);
-            --body-glow-a: rgba(66, 243, 255, 0.24);
-            --body-glow-b: rgba(255, 47, 189, 0.24);
+            --hero-orb: radial-gradient(circle, rgba(217, 70, 239, 0.4), transparent 70%);
+            --body-glow-a: rgba(168, 85, 247, 0.24);
+            --body-glow-b: rgba(217, 70, 239, 0.24);
             --body-glow-c: #10001f;
             --body-glow-d: #190534;
             --body-glow-e: #2d005a;
-            --orb-a: rgba(66, 243, 255, 0.26);
-            --orb-b: rgba(255, 47, 189, 0.24);
-            --login-border: rgba(66, 243, 255, 0.44);
-            --login-shadow: 0 16px 34px rgba(5, 3, 18, 0.44), 0 0 24px rgba(66, 243, 255, 0.14);
-            --login-hover-border: rgba(255, 47, 189, 0.62);
-            --login-hover-shadow: 0 20px 38px rgba(8, 4, 25, 0.54), 0 0 34px rgba(255, 47, 189, 0.18);
-            --eyebrow-border: rgba(66, 243, 255, 0.28);
+            --orb-a: rgba(168, 85, 247, 0.26);
+            --orb-b: rgba(217, 70, 239, 0.24);
+            --login-border: rgba(168, 85, 247, 0.44);
+            --login-shadow: 0 16px 34px rgba(5, 3, 18, 0.44), 0 0 24px rgba(168, 85, 247, 0.14);
+            --login-hover-border: rgba(217, 70, 239, 0.62);
+            --login-hover-shadow: 0 20px 38px rgba(8, 4, 25, 0.54), 0 0 34px rgba(217, 70, 239, 0.18);
+            --eyebrow-border: rgba(168, 85, 247, 0.28);
             --eyebrow-bg: rgba(10, 4, 24, 0.82);
-            --secondary-border: rgba(66, 243, 255, 0.24);
+            --secondary-border: rgba(168, 85, 247, 0.24);
             --secondary-bg: rgba(255, 255, 255, 0.1);
             --metric-bg: rgba(255, 255, 255, 0.1);
-            --metric-border: rgba(255, 47, 189, 0.24);
+            --metric-border: rgba(217, 70, 239, 0.24);
             --ops-bg: rgba(255, 255, 255, 0.08);
-            --ops-border: rgba(66, 243, 255, 0.22);
+            --ops-border: rgba(168, 85, 247, 0.22);
             --footer-text: rgba(252, 245, 255, 0.72);
             --brand-shadow: rgba(5, 3, 18, 0.32);
-            --primary-cta-start: rgba(66, 243, 255, 1);
-            --primary-cta-end: rgba(255, 47, 189, 0.96);
+            --primary-cta-start: rgba(168, 85, 247, 1);
+            --primary-cta-end: rgba(217, 70, 239, 0.96);
         }
 
         html[data-theme='japan'] {
@@ -813,14 +824,14 @@
         html[data-theme='cyberpunk'] .access-request-modal {
             background:
                 linear-gradient(160deg, rgba(12, 6, 26, 0.9), rgba(31, 8, 54, 0.8)),
-                linear-gradient(135deg, rgba(66, 243, 255, 0.08), rgba(255, 47, 189, 0.08));
-            border-color: rgba(66, 243, 255, 0.34);
-            box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.08), 0 0 24px rgba(66, 243, 255, 0.14), 0 0 38px rgba(255, 47, 189, 0.12);
+                linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(217, 70, 239, 0.08));
+            border-color: rgba(168, 85, 247, 0.34);
+            box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.08), 0 0 24px rgba(168, 85, 247, 0.14), 0 0 38px rgba(217, 70, 239, 0.12);
         }
 
         html[data-theme='cyberpunk'] .hero-panel::after,
         html[data-theme='cyberpunk'] .ops-item::after {
-            background: linear-gradient(90deg, transparent, rgba(66, 243, 255, 0.46), rgba(255, 47, 189, 0.42), transparent);
+            background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.46), rgba(217, 70, 239, 0.42), transparent);
             opacity: 0.82;
         }
 
@@ -832,29 +843,51 @@
             color: rgba(252, 245, 255, 0.82);
         }
 
+        html[data-theme='cyberpunk'] .brand-kicker,
+        html[data-theme='cyberpunk'] .eyebrow,
+        html[data-theme='cyberpunk'] .broker-hero-kicker,
+        html[data-theme='cyberpunk'] .seller-cta-kicker,
+        html[data-theme='cyberpunk'] .seller-cta-side-label,
+        html[data-theme='cyberpunk'] .seller-cta-pill,
+        html[data-theme='cyberpunk'] .social-card span,
+        html[data-theme='cyberpunk'] .theme-switch-btn .theme-switch-current {
+            color: #d946ef;
+            text-shadow: 0 0 10px rgba(217, 70, 239, 0.34), 0 0 22px rgba(168, 85, 247, 0.22);
+        }
+
+        html[data-theme='cyberpunk'] .eyebrow,
+        html[data-theme='cyberpunk'] .seller-cta-pill {
+            border-color: rgba(168, 85, 247, 0.34);
+            box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.08), 0 0 16px rgba(217, 70, 239, 0.14);
+        }
+
+        html[data-theme='cyberpunk'] .theme-switch-btn::before {
+            box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.12), 0 0 14px rgba(217, 70, 239, 0.44);
+        }
+
         html[data-theme='cyberpunk'] .hero-panel h1,
         html[data-theme='cyberpunk'] .hero-panel strong,
         html[data-theme='cyberpunk'] .metric strong,
         html[data-theme='cyberpunk'] .ops-item strong,
         html[data-theme='cyberpunk'] .brand-wordmark,
         html[data-theme='cyberpunk'] .login-card h2 {
-            color: #54f6ff;
-            text-shadow: 0 0 12px rgba(84, 246, 255, 0.44), 0 0 28px rgba(255, 47, 189, 0.18);
+            color: #d8b4fe;
+            text-shadow: 0 0 12px rgba(216, 180, 254, 0.44), 0 0 28px rgba(217, 70, 239, 0.18);
         }
 
         html[data-theme='cyberpunk'] .primary-cta,
         html[data-theme='cyberpunk'] .login-btn,
         html[data-theme='cyberpunk'] .theme-switch-btn,
         html[data-theme='cyberpunk'] .access-request-close {
-            border-color: rgba(66, 243, 255, 0.42);
-            box-shadow: 0 0 0 1px rgba(66, 243, 255, 0.08), 0 0 18px rgba(66, 243, 255, 0.18), 0 0 30px rgba(255, 47, 189, 0.16);
+            border-color: rgba(168, 85, 247, 0.42);
+            box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.08), 0 0 18px rgba(168, 85, 247, 0.18), 0 0 30px rgba(217, 70, 239, 0.16);
         }
 
         html[data-theme='cyberpunk'] .primary-cta:hover,
         html[data-theme='cyberpunk'] .login-btn:hover,
         html[data-theme='cyberpunk'] .theme-switch-btn:hover,
         html[data-theme='cyberpunk'] .access-request-close:hover {
-            box-shadow: 0 0 22px rgba(66, 243, 255, 0.24), 0 0 42px rgba(255, 47, 189, 0.22);
+            box-shadow: 0 0 22px rgba(168, 85, 247, 0.24), 0 0 42px rgba(217, 70, 239, 0.22);
             transform: translateY(-2px);
         }
 
@@ -863,9 +896,9 @@
         html[data-theme='cyberpunk'] .access-request-form textarea,
         html[data-theme='cyberpunk'] .access-request-form select {
             background: linear-gradient(135deg, rgba(13, 7, 26, 0.92), rgba(31, 8, 54, 0.82));
-            border-color: rgba(66, 243, 255, 0.34);
+            border-color: rgba(168, 85, 247, 0.34);
             color: #fcf5ff;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 16px rgba(66, 243, 255, 0.08);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 16px rgba(168, 85, 247, 0.08);
         }
 
         html[data-theme='cyberpunk'] .access-request-form select {
@@ -893,9 +926,11 @@
             --border: var(--glass-border);
             --text: var(--text-primary);
             --muted: var(--text-secondary);
-            --accent: var(--emerald);
-            --accent-soft: var(--emerald-light);
+            --accent: #f97316;
+            --accent-soft: #fb923c;
             --sand: var(--gold);
+            --accent-rgb: 249, 115, 22;
+            --accent-light-rgb: 251, 146, 60;
             --shadow: 0 30px 80px var(--glass-shadow);
             --surface-top: rgba(255, 255, 255, 0.12);
             --surface-bottom: rgba(255, 255, 255, 0.04);
@@ -1209,12 +1244,24 @@
             display: flex;
             align-items: center;
             gap: 18px;
+            margin-top: 20px;
             margin-bottom: 22px;
             padding: 16px 18px;
             border-radius: 24px;
             border: 1px solid rgba(255, 255, 255, 0.24);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.16));
             box-shadow: 0 18px 34px rgba(8, 47, 73, 0.12);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .broker-hero-card:hover,
+        .broker-hero-card:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(14, 165, 233, 0.3);
+            box-shadow: 0 22px 40px rgba(8, 47, 73, 0.16);
+            outline: none;
         }
 
         .broker-hero-logo-wrap {
@@ -1547,24 +1594,36 @@
         }
 
         .seller-cta-section {
-            padding: 8px 0 36px;
+            padding: 14px 0 42px;
         }
 
         .seller-cta-card {
             display: grid;
-            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
-            gap: 24px;
-            align-items: center;
-            padding: 28px;
-            border-radius: 24px;
+            grid-template-columns: minmax(0, 1.22fr) minmax(300px, 0.78fr);
+            gap: 28px;
+            align-items: stretch;
+            padding: 34px;
+            border-radius: 30px;
             border: 1px solid var(--border);
-            background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            background:
+                linear-gradient(140deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.08)),
+                linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             box-shadow: var(--shadow);
             transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
             overflow: hidden;
             position: relative;
+        }
+
+        .seller-cta-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.18), transparent 26%),
+                radial-gradient(circle at 88% 84%, rgba(14, 165, 233, 0.14), transparent 28%);
+            pointer-events: none;
         }
 
         .seller-cta-card::after {
@@ -1585,10 +1644,17 @@
             z-index: 1;
         }
 
+        .seller-cta-copy {
+            display: grid;
+            align-content: start;
+            gap: 0;
+        }
+
         .seller-cta-copy p {
             margin: 0;
             color: var(--muted);
             line-height: 1.75;
+            font-size: 15px;
         }
 
         .seller-cta-kicker {
@@ -1609,45 +1675,157 @@
         .seller-cta-copy h2 {
             margin: 0 0 12px;
             font-size: clamp(28px, 4vw, 44px);
+            line-height: 1.02;
             letter-spacing: -0.04em;
             color: var(--text);
+            max-width: 11ch;
+        }
+
+        .seller-cta-lead {
+            max-width: 60ch;
+        }
+
+        .seller-cta-pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .seller-cta-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 9px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(12, 74, 110, 0.12);
+            background: rgba(255, 255, 255, 0.28);
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
         }
 
         .seller-cta-points {
             display: grid;
-            gap: 12px;
-            margin-top: 20px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 22px;
         }
 
         .seller-cta-point {
-            display: flex;
+            display: grid;
             gap: 10px;
             align-items: flex-start;
             color: var(--text);
+            padding: 16px 16px 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(12, 74, 110, 0.12);
+            background: rgba(255, 255, 255, 0.22);
+            box-shadow: 0 16px 30px rgba(8, 47, 73, 0.08);
         }
 
         .seller-cta-point strong {
-            flex-shrink: 0;
-            color: var(--accent-soft);
+            display: inline-grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-light-rgb), 0.24));
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            letter-spacing: 0.08em;
+        }
+
+        .seller-cta-point span {
+            color: rgba(19, 32, 43, 0.82);
+            font-size: 14px;
+            line-height: 1.65;
         }
 
         .seller-cta-actions {
             display: grid;
-            gap: 12px;
-            justify-items: start;
+            align-content: start;
+            gap: 14px;
+            padding: 24px;
+            border-radius: 24px;
+            border: 1px solid rgba(12, 74, 110, 0.14);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.18));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+        }
+
+        .seller-cta-side-label {
+            margin: 0;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent-soft);
+        }
+
+        .seller-cta-side-title {
+            margin: 0;
+            font-size: 28px;
+            line-height: 1.04;
+            letter-spacing: -0.04em;
+            color: var(--text);
+        }
+
+        .seller-cta-side-copy {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .seller-cta-side-list {
+            display: grid;
+            gap: 10px;
+            margin: 2px 0 4px;
+            padding: 0;
+            list-style: none;
+        }
+
+        .seller-cta-side-list li {
+            position: relative;
+            padding-left: 18px;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .seller-cta-side-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--accent), var(--sand));
+            box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
+        }
+
+        .seller-cta-actions .primary-cta {
+            width: 100%;
         }
 
         .seller-cta-note {
             margin: 0;
             color: var(--muted);
             line-height: 1.7;
+            font-size: 13px;
         }
 
         .section-card {
+            display: block;
             border-radius: 24px;
             padding: 24px;
             position: relative;
             overflow: hidden;
+            color: var(--text);
+            text-decoration: none;
             transform-style: preserve-3d;
             will-change: transform;
             transition: transform 0.4s cubic-bezier(0.03, 0.98, 0.52, 0.99), box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
@@ -2104,6 +2282,14 @@
                 grid-template-columns: 1fr;
             }
 
+            .seller-cta-copy h2 {
+                max-width: none;
+            }
+
+            .seller-cta-points {
+                grid-template-columns: 1fr;
+            }
+
             .social-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -2222,7 +2408,7 @@
                 grid-template-columns: 1fr;
                 display: grid;
                 gap: 14px;
-                margin-top: 10px;
+                margin-top: 18px;
                 padding: 14px 16px;
             }
 
@@ -2366,6 +2552,10 @@
                 padding: 22px;
                 border-radius: 24px;
             }
+
+            .seller-cta-actions {
+                padding: 20px;
+            }
         }
 
         @media (max-width: 420px) {
@@ -2437,7 +2627,6 @@
                     </p>
                     <div class="hero-actions">
                         <button class="primary-cta" id="open-access-request" type="button">Access FAST</button>
-                        <a class="secondary-cta download-app-cta" href="/download/windows">Download App</a>
                     </div>
                     <div class="hero-metrics">
                         <div class="metric">
@@ -2453,7 +2642,7 @@
                             <span>Run a deal from your phone, get answers immediately, and keep momentum while you are still in front of the property or client.</span>
                         </div>
                     </div>
-                    <div class="broker-hero-card">
+                    <a class="broker-hero-card" href="legal-loria-rigby.html" aria-label="Open Loria Rigby contact page">
                         <div class="broker-hero-logo-wrap">
                             <img class="broker-hero-logo" src="png%20photos/61b2d47c47614c21230894e5_LOGO%202%20Dark.png" alt="Loria Rigby broker logo">
                         </div>
@@ -2461,7 +2650,7 @@
                             <span class="broker-hero-kicker">Broker</span>
                             <strong class="broker-hero-name">Loria Rigby</strong>
                         </div>
-                    </div>
+                    </a>
                 </div>
 
                 <aside class="hero-side">
@@ -2502,26 +2691,44 @@
                         From first look to final move, FAST helps agents and investors stay organized, react faster, and get real answers quickly so they can show up with more confidence in every deal conversation.
                     </p>
                 </article>
+                <a class="section-card" href="legal-contact-us.html" aria-label="Open FAST contact page">
+                    <h2>Contact FAST</h2>
+                    <p>
+                        Reach the right FAST contact quickly for leadership, broker, privacy, or general company questions.
+                    </p>
+                </a>
             </section>
 
             <section class="seller-cta-section" aria-labelledby="seller-cta-title">
                 <article class="seller-cta-card">
                     <div class="seller-cta-copy">
                         <span class="seller-cta-kicker">Selling your home?</span>
-                        <h2 id="seller-cta-title">Send the property to FAST and let us review it.</h2>
-                        <p>
-                            If you have a house to sell, submit the property details directly to our team.
-                            Tell us about the house, what you hope to get for it, and what issues it has so we can review it faster.
+                        <h2 id="seller-cta-title">Send the property to FAST.</h2>
+                        <p class="seller-cta-lead">
+                            Submit the property details and our team will review it.
                         </p>
+                        <div class="seller-cta-pill-row" aria-label="FAST seller intake highlights">
+                            <span class="seller-cta-pill">Fast Intake</span>
+                            <span class="seller-cta-pill">Clear Notes</span>
+                            <span class="seller-cta-pill">Fast Review</span>
+                        </div>
                         <div class="seller-cta-points">
-                            <div class="seller-cta-point"><strong>01</strong><span>Share your contact info and full property address.</span></div>
-                            <div class="seller-cta-point"><strong>02</strong><span>Tell us your target price and what condition the property is in.</span></div>
-                            <div class="seller-cta-point"><strong>03</strong><span>Your inquiry routes straight into the FAST admin review queue.</span></div>
+                            <div class="seller-cta-point"><strong>01</strong><span>Add your contact info and property address.</span></div>
+                            <div class="seller-cta-point"><strong>02</strong><span>Add your price and the property condition.</span></div>
+                            <div class="seller-cta-point"><strong>03</strong><span>We review it in the FAST admin queue.</span></div>
                         </div>
                     </div>
                     <div class="seller-cta-actions">
+                        <p class="seller-cta-side-label">Next</p>
+                        <h3 class="seller-cta-side-title">Send it in and we review it.</h3>
+                        <p class="seller-cta-side-copy">The form keeps everything clear from the start.</p>
+                        <ul class="seller-cta-side-list">
+                            <li>Use checkboxes for repairs and issues.</li>
+                            <li>Use notes for extra details.</li>
+                            <li>Your submission goes straight to review.</li>
+                        </ul>
                         <a class="primary-cta" href="submit-property.html">Submit Property</a>
-                        <p class="seller-cta-note">You will be able to explain what is wrong with the property using checkboxes and a notes field, so the team sees the situation clearly from the start.</p>
+                        <p class="seller-cta-note">Add the basics, note the issues, and send it in.</p>
                     </div>
                 </article>
             </section>
@@ -2633,6 +2840,8 @@
                     <a href="legal-terms-of-use.html">Terms of Use</a>
                     <span class="footer-note-separator" aria-hidden="true">|</span>
                     <a href="legal-broker-information.html">Broker Information</a>
+                    <span class="footer-note-separator" aria-hidden="true">|</span>
+                    <a href="legal-contact-us.html">Contact Us</a>
                 </div>
             </div>
             <a href="login.html">Go to login</a>
@@ -2684,8 +2893,15 @@
             };
 
             const getStoredThemeValue = () => {
+                const themeStore = readJson(USER_THEME_KEY);
+                const { isAuthenticated, userKey } = getUserThemeContext();
                 const homepageTheme = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
-                return homepageTheme || 'beach';
+                const storedTheme = String(
+                    isAuthenticated
+                        ? ((themeStore[userKey] && themeStore[userKey].value) || '')
+                        : (((themeStore['default-user'] && themeStore['default-user'].value) || homepageTheme || ''))
+                ).trim().toLowerCase();
+                return storedTheme || 'beach';
             };
 
             const getHomepageTheme = () => {
@@ -2694,6 +2910,20 @@
 
             const saveThemePreference = (theme) => {
                 const normalized = resolveTheme(theme);
+                const themeStore = readJson(USER_THEME_KEY);
+                const { userKey } = getUserThemeContext();
+                const themeEntryKey = userKey || 'default-user';
+                const currentEntry = themeStore[themeEntryKey] && typeof themeStore[themeEntryKey] === 'object'
+                    ? themeStore[themeEntryKey]
+                    : {};
+
+                themeStore[themeEntryKey] = {
+                    ...currentEntry,
+                    value: normalized,
+                    updatedAt: Date.now()
+                };
+
+                localStorage.setItem(USER_THEME_KEY, JSON.stringify(themeStore));
                 localStorage.setItem(HOMEPAGE_THEME_KEY, normalized);
                 localStorage.setItem('theme', normalized);
             };

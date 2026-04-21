@@ -635,19 +635,20 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             let releaseThreshold = 0;
+            let floatOnFirstScroll = false;
 
             function measureThreshold() {
                 const primaryButton = uniqueButtons[0];
                 const anchor = primaryButton.closest('.navbar') || primaryButton;
                 const anchorRect = anchor.getBoundingClientRect();
+                floatOnFirstScroll = Boolean(primaryButton.closest('.analytics-navbar'));
                 releaseThreshold = Math.max(0, window.scrollY + anchorRect.bottom);
             }
 
             function syncFloatingState() {
-                const shouldFloat = window.scrollY > releaseThreshold;
+                const shouldFloat = floatOnFirstScroll ? window.scrollY > 0 : window.scrollY > releaseThreshold;
                 uniqueButtons.forEach((button) => {
-                    const isStickyAnalyticsTrigger = Boolean(button.closest('.analytics-navbar'));
-                    button.classList.toggle('notification-following', shouldFloat && !isStickyAnalyticsTrigger);
+                    button.classList.toggle('notification-following', shouldFloat);
                 });
             }
 
