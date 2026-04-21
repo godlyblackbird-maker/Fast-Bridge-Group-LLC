@@ -44,6 +44,32 @@
         .legal-contact-page .legal-hero {
             border-radius: 0;
         }
+
+        .legal-ecard-card {
+            display: grid;
+            gap: 18px;
+        }
+
+        .legal-ecard-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .legal-ecard-image {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 18px;
+            border: 1px solid rgba(var(--accent-rgb), 0.16);
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: 0 18px 36px -28px rgba(15, 23, 42, 0.45);
+        }
+
+        .legal-ecard-note {
+            font-size: 14px;
+            color: var(--legal-panel-text);
+        }
     </style>
 </head>
 <body class="legal-page legal-contact-page">
@@ -74,6 +100,16 @@
                 </div>
                 <p class="legal-card-lead legal-contact-profile-copy">Contact Isaac Haro directly for privacy questions, FAST BRIDGE GROUP questions, workflow issues, and internal coordination that needs a clear owner.</p>
                 <p class="legal-contact-profile-copy">Email <a href="mailto:isaac.haro@fastbridgegroupllc.com">isaac.haro@fastbridgegroupllc.com</a> or call <a href="tel:9518189668">951-818-9668</a> for privacy-related requests, general FAST BRIDGE GROUP contact, and operations follow-through.</p>
+            </article>
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card legal-ecard-card" tabindex="0">
+                <div class="legal-contact-profile-head">
+                    <span class="legal-contact-profile-kicker">Digital E-Card</span>
+                    <h2>Isaac Haro E-Card</h2>
+                </div>
+                <a class="legal-ecard-link" href="USERS/Isaac%20Haro%20(ADMIN)/E%20CARD.jpg" target="_blank" rel="noopener noreferrer" aria-label="Open Isaac Haro E-Card image in a new tab">
+                    <img class="legal-ecard-image" src="USERS/Isaac%20Haro%20(ADMIN)/E%20CARD.jpg" alt="Isaac Haro FAST BRIDGE GROUP E-Card with phone, email, buying box, and service areas">
+                </a>
+                <p class="legal-ecard-note">Open the full-size E-card for quick sharing or reference.</p>
             </article>
         </section>
     </main>
