@@ -6899,8 +6899,10 @@ function initNavbarDateTime() {
         }
 
         root.dataset.pageTransitionsBound = 'true';
+        let pendingNavigationHref = '';
 
         const markUiReady = () => {
+            pendingNavigationHref = '';
             root.removeAttribute('data-page-nav');
             root.setAttribute('data-ui-ready', 'true');
         };
@@ -6956,7 +6958,30 @@ function initNavbarDateTime() {
                 return;
             }
 
+            event.preventDefault();
+            if (root.getAttribute('data-page-nav') === 'pending') {
+                return;
+            }
+
+            pendingNavigationHref = link.href;
             root.setAttribute('data-page-nav', 'pending');
+
+            const continueNavigation = () => {
+                if (!pendingNavigationHref) {
+                    return;
+                }
+                window.location.href = pendingNavigationHref;
+            };
+
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        window.setTimeout(continueNavigation, 70);
+                    });
+                });
+            } else {
+                window.setTimeout(continueNavigation, 90);
+            }
         }, true);
 
         window.addEventListener('beforeunload', () => {

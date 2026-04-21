@@ -35,11 +35,15 @@
                 const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
-                const storedSubmitTheme = String(localStorage.getItem('submitPropertyTheme') || '').trim().toLowerCase();
                 const themeStore = readJson('dashboardThemeByUser');
+                const storedSubmitTheme = String(localStorage.getItem('submitPropertyTheme') || '').trim().toLowerCase();
                 let theme = storedSubmitTheme || (themeStore[userKey] && themeStore[userKey].value) || 'beach';
 
-                if (!/^(beach|sunset|cyberpunk)$/.test(theme)) {
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
                     theme = 'beach';
                 }
 
@@ -49,33 +53,10 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
         :root {
             color-scheme: light;
             --submit-bg: url("Themes/Wallpaper Beach Mode.jpg") center center / cover no-repeat;
-            --submit-backdrop: linear-gradient(180deg, rgba(225, 244, 248, 0.8), rgba(225, 244, 248, 0.58) 28%, rgba(255, 244, 230, 0.7) 100%);
-            --submit-panel: rgba(255, 255, 255, 0.72);
-            --submit-border: rgba(12, 74, 110, 0.16);
-            --submit-soft: rgba(255, 255, 255, 0.4);
-            --submit-copy: rgba(11, 58, 82, 0.78);
-            --submit-copy-muted: rgba(11, 58, 82, 0.64);
-            --submit-accent: #0ea5e9;
-            --submit-accent-strong: #0284c7;
-            --submit-danger: #e11d48;
-            --submit-text: #0b3a52;
-            --submit-control-border: rgba(12, 74, 110, 0.14);
-            --submit-control-bg: rgba(255, 255, 255, 0.58);
-            --submit-chip-border: rgba(12, 74, 110, 0.12);
-            --submit-chip-bg: rgba(255, 255, 255, 0.4);
-            --submit-success-border: rgba(12, 74, 110, 0.14);
-            --submit-success-bg: rgba(255, 255, 255, 0.44);
-            --submit-button-text: #f8fbff;
-            --submit-button-shadow: 0 20px 40px rgba(8, 47, 73, 0.18);
-        }
-
-        html[data-theme='light'] {
-            color-scheme: light;
             --submit-backdrop: linear-gradient(180deg, rgba(247, 251, 255, 0.9) 0%, rgba(237, 246, 255, 0.78) 54%, rgba(226, 236, 255, 0.84) 100%);
             --submit-panel: rgba(255, 255, 255, 0.72);
             --submit-border: rgba(56, 92, 130, 0.14);
@@ -94,6 +75,69 @@
             --submit-success-bg: rgba(255, 255, 255, 0.66);
             --submit-button-text: #ffffff;
             --submit-button-shadow: 0 20px 40px rgba(37, 99, 235, 0.18);
+        }
+
+        .theme-switch-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 6px 10px 6px 12px;
+            border-radius: 18px;
+            border: 1px solid var(--submit-border);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+            color: var(--submit-text);
+            text-decoration: none;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 14px 30px rgba(8, 28, 43, 0.12);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .theme-switch-btn::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--submit-accent), var(--submit-accent-strong));
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+        }
+
+        .theme-switch-btn:hover,
+        .theme-switch-btn:focus-visible {
+            outline: none;
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.26);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.1));
+            box-shadow: 0 16px 30px rgba(8, 28, 43, 0.14);
+        }
+
+        .theme-switch-btn .theme-switch-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--submit-copy-muted);
+        }
+
+        .theme-switch-btn .theme-switch-current {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: var(--submit-text);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            opacity: 1;
         }
 
         html[data-theme='dark'] {
@@ -338,34 +382,52 @@
         .submit-brand {
             display: inline-flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
             color: inherit;
             text-decoration: none;
         }
 
         .submit-brand img {
-            width: 54px;
-            height: 54px;
+            width: 64px;
+            height: 64px;
             object-fit: contain;
+            filter: drop-shadow(0 10px 16px rgba(8, 28, 43, 0.16));
         }
 
         .submit-brand-copy {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 4px;
         }
 
-        .submit-brand-copy strong {
-            font-size: 14px;
+        .submit-brand-kicker,
+        .submit-brand-name,
+        .submit-brand-tagline {
+            margin: 0;
+        }
+
+        .submit-brand-kicker {
             font-family: 'Space Mono', monospace;
+            font-size: 14px;
             font-weight: 700;
-            letter-spacing: 0.22em;
+            letter-spacing: 0.24em;
             text-transform: uppercase;
+            color: var(--submit-accent);
         }
 
-        .submit-brand-copy span {
+        .submit-brand-name {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            color: var(--submit-text);
+            line-height: 1;
+        }
+
+        .submit-brand-tagline {
             color: var(--submit-copy-muted);
             font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
         }
 
         .submit-back-link {
@@ -833,20 +895,57 @@
             .submit-topbar {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 14px;
+            }
+
+            .submit-brand {
+                width: 100%;
+                justify-content: center;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .submit-brand img {
+                width: 52px;
+                height: 52px;
+            }
+
+            .submit-brand-copy {
+                flex: 1 1 auto;
+                min-width: 0;
+                gap: 2px;
+            }
+
+            .submit-brand-kicker {
+                font-size: 10px;
+                letter-spacing: 0.18em;
+            }
+
+            .submit-brand-name {
+                font-size: clamp(20px, 7vw, 26px);
+                letter-spacing: 0.03em;
+                line-height: 1.05;
+            }
+
+            .submit-brand-tagline {
+                font-size: 11px;
+                letter-spacing: 0.04em;
             }
 
             .submit-topbar-actions,
-            .submit-theme-toggle {
+            .theme-switch-btn {
                 width: 100%;
             }
 
             .submit-topbar-actions {
                 justify-content: stretch;
+                flex-direction: column;
+                gap: 10px;
             }
 
-            .submit-theme-option,
+            .theme-switch-btn,
             .submit-back-link {
-                flex: 1 1 0;
+                flex: 1 1 auto;
             }
 
             .submit-grid,
@@ -873,16 +972,16 @@
             <a class="submit-brand" href="index.html" aria-label="Return to FAST BRIDGE GROUP home page">
                 <img src="png photos/FAST LOGO 777.png" alt="FAST BRIDGE GROUP logo">
                 <div class="submit-brand-copy">
-                    <strong>FAST BRIDGE GROUP</strong>
-                    <span>Seller Property Intake</span>
+                    <p class="submit-brand-kicker">Seller Property Intake</p>
+                    <p class="submit-brand-name">FAST BRIDGE GROUP</p>
+                    <p class="submit-brand-tagline">Where Relationships Meet Opportunities</p>
                 </div>
             </a>
             <div class="submit-topbar-actions">
-                <div class="submit-theme-toggle" role="group" aria-label="Choose submit property page theme">
-                    <button class="submit-theme-option" type="button" data-submit-theme="beach">Beach</button>
-                    <button class="submit-theme-option" type="button" data-submit-theme="sunset">Sunset</button>
-                    <button class="submit-theme-option" type="button" data-submit-theme="cyberpunk">Cyber</button>
-                </div>
+                <button class="theme-switch-btn" id="submit-theme-switch" type="button" aria-label="Switch submit property page theme between Beach, Sunset, and Cyberpunk">
+                    <span class="theme-switch-label">Theme</span>
+                    <span class="theme-switch-current" id="submit-theme-label">Beach</span>
+                </button>
                 <a class="submit-back-link" href="index.html">Back To Home</a>
             </div>
         </div>
@@ -1060,13 +1159,15 @@
         (function () {
             const SUBMIT_THEME_KEY = 'submitPropertyTheme';
             const ALLOWED_SUBMIT_THEMES = ['beach', 'sunset', 'cyberpunk'];
+            const SUBMIT_THEME_LABELS = Object.freeze({ beach: 'Beach', sunset: 'Sunset', cyberpunk: 'Cyberpunk' });
             const form = document.getElementById('seller-property-form');
             const feedback = document.getElementById('seller-property-feedback');
             const submitButton = document.getElementById('seller-property-submit-btn');
             const formPanel = document.getElementById('seller-property-form-panel');
             const successCard = document.getElementById('seller-property-success-card');
             const sellerPhoneInput = document.getElementById('seller-phone');
-            const themeButtons = Array.from(document.querySelectorAll('[data-submit-theme]'));
+            const themeSwitchButton = document.getElementById('submit-theme-switch');
+            const themeLabel = document.getElementById('submit-theme-label');
 
             if (!form || !feedback || !submitButton || !formPanel || !successCard) {
                 return;
@@ -1078,11 +1179,13 @@
             }
 
             function updateSubmitThemeUi(activeTheme) {
-                themeButtons.forEach(function (button) {
-                    const isActive = button.getAttribute('data-submit-theme') === activeTheme;
-                    button.classList.toggle('is-active', isActive);
-                    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-                });
+                if (themeLabel) {
+                    themeLabel.textContent = SUBMIT_THEME_LABELS[activeTheme] || 'Beach';
+                }
+                if (themeSwitchButton) {
+                    themeSwitchButton.setAttribute('data-submit-theme', activeTheme);
+                    themeSwitchButton.setAttribute('aria-label', `Switch submit property page theme. Current theme: ${SUBMIT_THEME_LABELS[activeTheme] || 'Beach'}`);
+                }
             }
 
             function applySubmitTheme(theme) {
@@ -1094,11 +1197,14 @@
 
             updateSubmitThemeUi(resolveSubmitTheme(document.documentElement.getAttribute('data-theme')));
 
-            themeButtons.forEach(function (button) {
-                button.addEventListener('click', function () {
-                    applySubmitTheme(button.getAttribute('data-submit-theme'));
+            if (themeSwitchButton) {
+                themeSwitchButton.addEventListener('click', function () {
+                    const currentTheme = resolveSubmitTheme(document.documentElement.getAttribute('data-theme'));
+                    const currentIndex = ALLOWED_SUBMIT_THEMES.indexOf(currentTheme);
+                    const nextTheme = ALLOWED_SUBMIT_THEMES[(currentIndex + 1) % ALLOWED_SUBMIT_THEMES.length];
+                    applySubmitTheme(nextTheme);
                 });
-            });
+            }
 
             function setFeedback(message, state) {
                 feedback.textContent = String(message || '');

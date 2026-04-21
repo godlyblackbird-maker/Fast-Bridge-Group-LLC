@@ -3765,10 +3765,7 @@ html:not([data-ui-ready="true"]) {
 
 html:not([data-ui-ready="true"]) *,
 html:not([data-ui-ready="true"]) *::before,
-html:not([data-ui-ready="true"]) *::after,
-html[data-page-nav="pending"] *,
-html[data-page-nav="pending"] *::before,
-html[data-page-nav="pending"] *::after {
+html:not([data-ui-ready="true"]) *::after {
     transition: none !important;
     animation: none !important;
 }
@@ -3780,6 +3777,13 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     line-height: 1.6;
+    opacity: 1;
+    transition: opacity 0.16s ease;
+}
+
+html[data-page-nav="pending"] body {
+    opacity: 0.72;
+    pointer-events: none;
 }
 
 a {
@@ -3893,7 +3897,6 @@ a {
     border-right: 1px solid var(--glass-border);
     padding: 24px;
     z-index: 100;
-    transition: width var(--transition-normal), padding var(--transition-normal), transform var(--transition-normal), background var(--transition-normal), border-color var(--transition-normal);
     overflow-y: auto;
     overflow-anchor: none;
     scrollbar-gutter: stable;
@@ -3983,7 +3986,6 @@ a {
     color: var(--text-secondary);
     text-decoration: none;
     border-radius: 12px;
-    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
     position: relative;
     overflow: hidden;
 }
@@ -4020,7 +4022,6 @@ a {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     will-change: opacity;
-    transition: opacity var(--transition-fast), color var(--transition-fast), filter var(--transition-fast);
 }
 
 .nav-icon-fire {
@@ -4155,7 +4156,6 @@ a {
     box-shadow: 0 0 0 3px rgba(29, 161, 255, 0.18), 0 0 18px rgba(29, 161, 255, 0.82);
     opacity: 0;
     transform: translateY(-50%) scale(0.8);
-    transition: opacity var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
     pointer-events: none;
 }
 
@@ -4253,7 +4253,6 @@ a {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
     cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .sidebar-collapse-button:hover,
@@ -4336,7 +4335,6 @@ a {
     margin-left: var(--sidebar-width);
     padding: 30px;
     min-height: 100vh;
-    transition: margin-left var(--transition-normal);
 }
 
 @media (min-width: 993px) {
