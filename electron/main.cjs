@@ -4,10 +4,11 @@ const http = require('http');
 const path = require('path');
 
 const appRoot = path.resolve(__dirname, '..');
-const iconPath = path.join(appRoot, 'favicon.ico');
+const iconPath = path.join(appRoot, 'build', 'app-icon.ico');
 const serverEntry = path.join(appRoot, 'server.js');
 const desktopPort = Number.parseInt(String(process.env.ELECTRON_APP_PORT || process.env.PORT || '3000'), 10) || 3000;
 const desktopUrl = `http://127.0.0.1:${desktopPort}`;
+const APP_USER_MODEL_ID = 'com.fastbridgegroup.desktop';
 
 let mainWindow = null;
 let serverProcess = null;
@@ -126,6 +127,7 @@ const createMainWindow = async () => {
 
 app.whenReady().then(async () => {
   try {
+    app.setAppUserModelId(APP_USER_MODEL_ID);
     await startLocalServer();
     await createMainWindow();
   } catch (error) {

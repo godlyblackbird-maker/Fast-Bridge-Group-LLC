@@ -7,11 +7,12 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "share": "node scripts/share-link.js",
+    "desktop:icon": "node scripts/generate-desktop-icon.js",
     "desktop": "electron .",
     "desktop:dev": "electron .",
     "desktop:pack": "electron-builder --dir",
     "desktop:dist": "electron-builder --win nsis",
-    "desktop:bundle": "electron-packager . \"FAST BRIDGE GROUP\" --platform=win32 --arch=x64 --icon=favicon.ico --out=dist/electron-packager --overwrite --ignore=dist --ignore=node_modules/.cache --ignore=temp --ignore=.git"
+    "desktop:bundle": "electron-packager . \"FAST BRIDGE GROUP\" --platform=win32 --arch=x64 --icon=build/app-icon.ico --out=dist/electron-packager --overwrite --ignore=dist --ignore=node_modules/.cache --ignore=temp --ignore=.git"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1021.0",
@@ -33,7 +34,9 @@
     "electron": "^41.2.1",
     "electron-builder": "^26.8.1",
     "electron-packager": "^17.1.2",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
   },
   "keywords": [],
   "author": "",
@@ -63,6 +66,7 @@
       "*.svg",
       "*.ico",
       "*.png",
+      "build/**/*",
       "favicon*",
       "fast-logo.svg",
       "Fast Logo.png",
@@ -103,7 +107,7 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "favicon.ico",
+      "icon": "build/app-icon.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
