@@ -2116,82 +2116,202 @@
 
         @media (max-width: 640px) {
             .site-shell {
-                width: min(100% - 20px, 1180px);
+                width: min(100% - 18px, 1180px);
             }
 
             .topbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 14px;
                 padding-top: 12px;
-                padding-bottom: 4px;
+                padding-bottom: 2px;
+            }
+
+            .topbar-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                justify-content: stretch;
+            }
+
+            .brand {
+                align-items: center;
+                gap: 12px;
+            }
+
+            .brand-copy {
+                gap: 4px;
+                min-width: 0;
             }
 
             .brand img {
-                width: 128px;
-                height: 128px;
+                width: 96px;
+                height: 96px;
             }
 
             .brand-kicker {
-                font-size: 14px;
-                letter-spacing: 0.2em;
+                font-size: 11px;
+                letter-spacing: 0.18em;
             }
 
             .brand-name {
-                font-size: 28px;
+                font-size: 20px;
+                line-height: 1.02;
+                letter-spacing: 0.02em;
             }
 
             .brand-tagline {
-                font-size: 12px;
-                letter-spacing: 0.06em;
+                font-size: 10px;
+                line-height: 1.35;
+                letter-spacing: 0.04em;
+            }
+
+            .login-btn,
+            .topbar-download-btn {
+                width: 100%;
+                min-height: 44px;
+                padding: 0 14px;
+                font-size: 15px;
+            }
+
+            .topbar-download-btn {
+                border-radius: 14px;
+                letter-spacing: 0.05em;
             }
 
             .theme-switch-btn {
-                min-height: 34px;
-                padding: 5px 8px 5px 10px;
-                gap: 6px;
+                grid-column: 1 / -1;
+                width: 100%;
+                min-height: 40px;
+                padding: 6px 10px;
+                justify-content: space-between;
+                gap: 8px;
+                border-radius: 20px;
             }
 
             .theme-switch-btn .theme-switch-label {
-                display: none;
+                display: inline-flex;
             }
 
             .theme-switch-btn .theme-switch-current {
-                min-height: 22px;
-                padding: 0 8px;
-                font-size: 10px;
+                min-height: 24px;
+                padding: 0 10px;
+                font-size: 11px;
             }
 
             .hero-panel,
             .hero-side,
             .section-card {
-                border-radius: 24px;
+                border-radius: 26px;
             }
 
             .hero-panel,
             .hero-side {
-                padding: 22px;
+                padding: 24px 20px;
+            }
+
+            .hero-panel::after {
+                left: 50%;
+                bottom: -86px;
+                width: 240px;
+                height: 240px;
+                transform: translateX(-50%);
             }
 
             .broker-hero-card {
                 grid-template-columns: 1fr;
                 display: grid;
                 gap: 14px;
+                margin-top: 10px;
+                padding: 14px 16px;
             }
 
             .broker-hero-logo-wrap {
-                width: min(100%, 168px);
+                width: min(100%, 160px);
+                margin: 0 auto;
+            }
+
+            .broker-hero-copy {
+                text-align: center;
+            }
+
+            .hero-title {
+                max-width: none;
+                font-size: clamp(40px, 16vw, 58px);
+                line-height: 0.96;
+                text-wrap: pretty;
+            }
+
+            .hero-title span {
+                margin-top: 6px;
+            }
+
+            .hero-copy {
+                margin-top: 16px;
+                font-size: 16px;
+                line-height: 1.6;
+                max-width: none;
             }
 
             .hero-metrics {
                 grid-template-columns: 1fr;
+                gap: 10px;
+                margin-top: 22px;
+            }
+
+            .metric {
+                padding: 14px 14px 15px;
+            }
+
+            .metric strong {
+                font-size: 20px;
+            }
+
+            .metric span {
+                font-size: 12px;
+            }
+
+            .hero-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-top: 22px;
+            }
+
+            .primary-cta,
+            .secondary-cta,
+            .download-app-cta {
+                width: 100%;
+                min-height: 52px;
+                padding: 0 16px;
+                border-radius: 18px;
+                font-size: 15px;
+                letter-spacing: 0.04em;
+            }
+
+            .hero-side {
+                gap: 14px;
+            }
+
+            .ops-item {
+                padding: 14px 14px 14px 16px;
+            }
+
+            .background,
+            .orb {
+                opacity: 0.6;
             }
 
             html[data-theme='beach'] body::before {
-                background-position: center center;
+                background-position: 58% center;
                 background-size: cover;
-                opacity: 0.78;
+                opacity: 0.44;
+                filter: saturate(0.9) blur(1px);
+                transform: scale(1.04);
             }
 
             html[data-theme='beach'] body::after {
-                opacity: 1;
+                opacity: 0.36;
             }
 
             html[data-theme='swamp'] body::before {
@@ -2244,6 +2364,40 @@
             .seller-cta-card {
                 padding: 22px;
                 border-radius: 24px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .brand {
+                align-items: flex-start;
+            }
+
+            .brand img {
+                width: 88px;
+                height: 88px;
+            }
+
+            .brand-name {
+                font-size: 18px;
+            }
+
+            .hero-panel,
+            .hero-side,
+            .section-card {
+                border-radius: 22px;
+            }
+
+            .hero-panel,
+            .hero-side {
+                padding: 20px 16px;
+            }
+
+            .hero-title {
+                font-size: clamp(36px, 15vw, 50px);
+            }
+
+            .hero-copy {
+                font-size: 15px;
             }
         }
     </style>
