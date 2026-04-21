@@ -12,6 +12,29 @@ npm install
 npm start
 ```
 
+### Desktop App
+```bash
+npm run desktop
+```
+
+This launches the existing FAST server locally and opens it in an Electron desktop shell.
+
+To build a Windows installer:
+
+```bash
+npm run desktop:dist
+```
+
+Installer output is written to `dist/electron/`.
+
+If Windows blocks the installer build because of local symlink permissions, build a runnable app folder instead:
+
+```bash
+npm run desktop:bundle
+```
+
+That output is written to `dist/electron-packager/`.
+
 If you are running this in production, set one of these before starting the server so SQLite uses persistent storage instead of the app folder:
 
 ```env

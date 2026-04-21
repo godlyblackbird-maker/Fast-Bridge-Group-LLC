@@ -2,11 +2,16 @@
   "name": "fast-investments-dashboard",
   "version": "1.4.1",
   "description": "Secure Investment Dashboard",
-  "main": "server.js",
+  "main": "electron/main.cjs",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "share": "node scripts/share-link.js"
+    "share": "node scripts/share-link.js",
+    "desktop": "electron .",
+    "desktop:dev": "electron .",
+    "desktop:pack": "electron-builder --dir",
+    "desktop:dist": "electron-builder --win nsis",
+    "desktop:bundle": "electron-packager . \"FAST BRIDGE GROUP\" --platform=win32 --arch=x64 --icon=favicon.ico --out=dist/electron-packager --overwrite --ignore=dist --ignore=node_modules/.cache --ignore=temp --ignore=.git"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1021.0",
@@ -25,6 +30,9 @@
     "twilio": "^5.13.0"
   },
   "devDependencies": {
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1",
+    "electron-packager": "^17.1.2",
     "nodemon": "^3.1.14"
   },
   "keywords": [],
@@ -38,5 +46,70 @@
   "bugs": {
     "url": "https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/issues"
   },
-  "homepage": "https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC#readme"
+  "homepage": "https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC#readme",
+  "build": {
+    "appId": "com.fastbridgegroup.desktop",
+    "productName": "FAST BRIDGE GROUP",
+    "asar": false,
+    "directories": {
+      "output": "dist/electron"
+    },
+    "files": [
+      "electron/**/*",
+      "*.html",
+      "*.js",
+      "*.css",
+      "*.json",
+      "*.svg",
+      "*.ico",
+      "*.png",
+      "favicon*",
+      "fast-logo.svg",
+      "Fast Logo.png",
+      "site.webmanifest",
+      "render.yaml",
+      "README.md",
+      "SETUP_GUIDE.md",
+      "Themes/**/*",
+      "Symbols/**/*",
+      "Fonts/**/*",
+      "scripts/**/*",
+      "sendEmail.js/**/*",
+      "CRMLS/**/*",
+      "png photos/**/*",
+      "2026 Real Estate Laws/**/*",
+      "Apprasial Rules/**/*",
+      "Bible Verse/**/*",
+      "Calculator/**/*",
+      "Contracts/**/*",
+      "Counties - Cities - Buying Box/**/*",
+      "Email - Offer Terms/**/*",
+      "Investors Attatchments/**/*",
+      "PDF Example/**/*",
+      "Sound FX/**/*",
+      "USERS/**/*",
+      "Youtube/**/*",
+      "package.json",
+      "package-lock.json",
+      "server.js",
+      "auth.js",
+      "login.js",
+      "profile.js",
+      "register.js",
+      ".env"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "android-chrome-512x512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
 }
