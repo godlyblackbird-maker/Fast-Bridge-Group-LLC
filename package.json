@@ -103,7 +103,7 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "android-chrome-512x512.png",
+      "icon": "favicon.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
