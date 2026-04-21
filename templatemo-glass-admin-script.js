@@ -892,7 +892,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.4.3';
+                versionLabel.textContent = 'v1.4.4';
             });
     }
 
@@ -8329,11 +8329,20 @@ function initNavbarDateTime() {
             const widgetId = widget.dataset.widgetId;
             const title = widget.dataset.widgetTitle || widget.querySelector('.card-title')?.textContent?.trim() || 'Widget';
             const header = widget.querySelector('.card-header, .calendar-header');
+            const controlsEnabled = String(widget.dataset.widgetControls || '').trim().toLowerCase() !== 'off';
             if (!widgetId || !header) {
                 return;
             }
 
             widget.dataset.widgetTitle = title;
+
+            if (!controlsEnabled) {
+                const existingControls = header.querySelector('.widget-controls');
+                if (existingControls) {
+                    existingControls.remove();
+                }
+                return;
+            }
 
             let actionCluster = header.querySelector('.card-actions');
             if (!actionCluster) {
@@ -8598,6 +8607,9 @@ function initNavbarDateTime() {
             button.type = 'button';
             button.className = 'calendar-day';
             const plannerItems = getPlannerItemsForDate(date);
+            const completedItems = plannerItems.filter((item) => item && item.completed);
+            const hasCompletedItems = completedItems.length > 0;
+            const allItemsCompleted = plannerItems.length > 0 && completedItems.length === plannerItems.length;
             const accessiblePreviewLabel = getCalendarPreviewLabel(plannerItems);
 
             if (accessiblePreviewLabel) {
@@ -8621,6 +8633,12 @@ function initNavbarDateTime() {
 
             if (plannerItems.length > 0) {
                 button.classList.add('has-event');
+                if (hasCompletedItems) {
+                    button.classList.add('has-completed-event');
+                }
+                if (allItemsCompleted) {
+                    button.classList.add('calendar-day-all-complete');
+                }
                 const dayPriority = getCalendarDayPriority(plannerItems);
                 if (dayPriority) {
                     button.classList.add(`calendar-day-priority-${dayPriority}`);
@@ -8652,6 +8670,13 @@ function initNavbarDateTime() {
             dayNumber.className = 'calendar-day-number';
             dayNumber.textContent = String(date.getDate());
             button.appendChild(dayNumber);
+
+            if (hasCompletedItems) {
+                const completedBadge = document.createElement('span');
+                completedBadge.className = 'calendar-day-complete-badge';
+                completedBadge.setAttribute('aria-hidden', 'true');
+                button.appendChild(completedBadge);
+            }
 
             button.addEventListener('click', () => {
                 if (!inCurrentMonth) {

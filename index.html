@@ -1072,6 +1072,25 @@
             box-shadow: var(--login-hover-shadow);
         }
 
+        .topbar-download-btn {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 14px;
+            border-color: rgba(11, 58, 82, 0.24);
+            background: rgba(255, 255, 255, 0.78);
+            color: #0b3a52;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            box-shadow: 0 10px 22px rgba(8, 47, 73, 0.12);
+        }
+
+        .topbar-download-btn:hover,
+        .topbar-download-btn:focus-visible {
+            border-color: rgba(14, 165, 233, 0.42);
+            background: #ffffff;
+            box-shadow: 0 14px 24px rgba(8, 47, 73, 0.16);
+        }
+
         .theme-switch-btn {
             display: inline-flex;
             align-items: center;
@@ -2249,6 +2268,7 @@
                     <span class="theme-switch-label">Theme</span>
                     <span class="theme-switch-current" id="homepage-theme-label">Beach</span>
                 </button>
+                <a class="login-btn topbar-download-btn" href="dist/electron-packager/FAST%20BRIDGE%20GROUP-win32-x64/FAST%20BRIDGE%20GROUP.exe" download="FAST BRIDGE GROUP.exe">Download App</a>
                 <a class="login-btn" href="login.html">Log In</a>
             </div>
         </header>
@@ -2256,16 +2276,6 @@
         <main>
             <section class="hero">
                 <div class="hero-panel">
-                    <div class="broker-hero-card">
-                        <div class="broker-hero-logo-wrap">
-                            <img class="broker-hero-logo" src="png%20photos/61b2d47c47614c21230894e5_LOGO%202%20Dark.png" alt="Loria Rigby broker logo">
-                        </div>
-                        <div class="broker-hero-copy">
-                            <span class="broker-hero-kicker">Broker</span>
-                            <strong class="broker-hero-name">Loria Rigby</strong>
-                            <span class="broker-hero-note">Broker leadership is front and center from the moment visitors land on FAST.</span>
-                        </div>
-                    </div>
                     <h1 class="hero-title">The Bridge Between <span>Agents, Sellers and Investors!</span></h1>
                     <p class="hero-copy">
                         A platform centered around relationships, opportunities and being a bridge between agents, and investors
@@ -2286,6 +2296,15 @@
                         <div class="metric">
                             <strong>Field-Ready Speed</strong>
                             <span>Run a deal from your phone, get answers immediately, and keep momentum while you are still in front of the property or client.</span>
+                        </div>
+                    </div>
+                    <div class="broker-hero-card">
+                        <div class="broker-hero-logo-wrap">
+                            <img class="broker-hero-logo" src="png%20photos/61b2d47c47614c21230894e5_LOGO%202%20Dark.png" alt="Loria Rigby broker logo">
+                        </div>
+                        <div class="broker-hero-copy">
+                            <span class="broker-hero-kicker">Broker</span>
+                            <strong class="broker-hero-name">Loria Rigby</strong>
                         </div>
                     </div>
                 </div>

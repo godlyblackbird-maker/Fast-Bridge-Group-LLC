@@ -12050,6 +12050,50 @@ body.analytics-reboot .analytics-my-file-count {
     box-shadow: 0 0 14px color-mix(in srgb, var(--calendar-day-flag-color, var(--gold)) 60%, transparent);
 }
 
+.calendar-day.has-completed-event::before {
+    content: '';
+    position: absolute;
+    top: calc(50% - 16px);
+    left: calc(50% + 8px);
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: linear-gradient(145deg, rgba(74, 222, 128, 0.98), rgba(34, 197, 94, 0.96));
+    border: 1px solid rgba(220, 252, 231, 0.92);
+    box-shadow:
+        0 10px 18px rgba(34, 197, 94, 0.32),
+        0 0 0 2px rgba(6, 12, 20, 0.2);
+    z-index: 2;
+}
+
+.calendar-day.has-completed-event .calendar-day-complete-badge {
+    position: absolute;
+    top: calc(50% - 16px);
+    left: calc(50% + 8px);
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.calendar-day.has-completed-event .calendar-day-complete-badge::before {
+    content: '';
+    width: 8px;
+    height: 4px;
+    border-left: 2px solid #f0fdf4;
+    border-bottom: 2px solid #f0fdf4;
+    transform: translateY(-1px) rotate(-45deg);
+}
+
+.calendar-day.calendar-day-all-complete {
+    --calendar-day-flag-color: #22c55e;
+    --calendar-day-flag-opacity: 0.96;
+    --calendar-day-outline: #4ade80;
+}
+
 .calendar-day.calendar-day-priority-p1 {
     --calendar-day-flag-color: #ff4d5d;
     --calendar-day-flag-opacity: 1;

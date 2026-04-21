@@ -44,7 +44,8 @@ app.get('/api/build-last-updated', (req, res) => {
 // Build version endpoint
 app.get('/api/build-version', (req, res) => {
   try {
-    const pkg = require('./package.json');
+    const pkgPath = path.join(__dirname, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
     res.json({ version: pkg.version });
   } catch (e) {
     res.json({ version: null });
