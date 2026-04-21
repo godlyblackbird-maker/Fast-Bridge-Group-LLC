@@ -5,7 +5,7 @@ const pngToIcoModule = require('png-to-ico');
 const pngToIco = pngToIcoModule.default || pngToIcoModule.imagesToIco || pngToIcoModule;
 
 const projectRoot = path.resolve(__dirname, '..');
-const sourcePng = path.join(projectRoot, 'png photos', 'FAST LOGO 777.png');
+const sourcePng = path.join(projectRoot, 'png photos', 'favicon', 'APP LOGO.png');
 const buildDir = path.join(projectRoot, 'build');
 const outputIco = path.join(buildDir, 'app-icon.ico');
 const tempDir = path.join(buildDir, '.icon-work');
