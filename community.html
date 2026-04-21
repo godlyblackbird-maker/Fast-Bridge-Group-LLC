@@ -501,6 +501,7 @@
         .community-voice-stage-tile {
             position: relative;
             overflow: hidden;
+            display: grid;
             min-height: 220px;
             border-radius: 18px;
             border: 1px solid rgba(148, 163, 184, 0.2);
@@ -508,8 +509,32 @@
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
 
+        .community-voice-stage-tile.is-expanded {
+            min-height: 560px;
+        }
+
         .community-voice-stage-media[data-tile-count="1"] .community-voice-stage-tile {
             min-height: 336px;
+        }
+
+        .community-voice-stage-media.is-expanded {
+            grid-template-columns: 1fr;
+        }
+
+        .community-voice-stage-media.is-expanded .community-voice-stage-group {
+            display: none;
+        }
+
+        .community-voice-stage-media.is-expanded .community-voice-stage-group.has-expanded-tile {
+            display: grid;
+        }
+
+        .community-voice-stage-media.is-expanded .community-voice-stage-group-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .community-voice-stage-media.is-expanded .community-voice-stage-tile:not(.is-expanded) {
+            display: none;
         }
 
         .community-voice-stage-video {
@@ -523,6 +548,122 @@
         .community-voice-stage-media[data-tile-count="1"] .community-voice-stage-video {
             min-height: 336px;
             object-fit: contain;
+        }
+
+        .community-voice-stage-tile.is-expanded .community-voice-stage-video {
+            min-height: 560px;
+            object-fit: contain;
+        }
+
+        .community-voice-stage-tile.has-preview-strip .community-voice-stage-tile-label {
+            bottom: 104px;
+        }
+
+        .community-voice-stage-tile-controls {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 2;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            max-width: calc(100% - 24px);
+        }
+
+        .community-voice-stage-control {
+            border: 1px solid rgba(148, 163, 184, 0.26);
+            background: rgba(15, 23, 42, 0.82);
+            color: #f8fafc;
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+        }
+
+        .community-voice-stage-control:hover,
+        .community-voice-stage-control:focus-visible {
+            background: rgba(30, 41, 59, 0.95);
+            border-color: rgba(191, 219, 254, 0.4);
+            transform: translateY(-1px);
+            outline: none;
+        }
+
+        .community-voice-stage-control[hidden] {
+            display: none;
+        }
+
+        .community-voice-stage-preview-strip {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            z-index: 2;
+            display: none;
+            align-items: flex-end;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.72));
+            backdrop-filter: blur(10px);
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+
+        .community-voice-stage-preview-strip::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .community-voice-stage-preview-strip::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4);
+            border-radius: 999px;
+        }
+
+        .community-voice-stage-tile.has-preview-strip .community-voice-stage-preview-strip {
+            display: inline-flex;
+        }
+
+        .community-voice-stage-preview-card {
+            position: relative;
+            flex: 0 0 148px;
+            width: 148px;
+            height: 84px;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid rgba(191, 219, 254, 0.26);
+            background: rgba(2, 6, 23, 0.96);
+            box-shadow: 0 18px 36px rgba(2, 6, 23, 0.26);
+        }
+
+        .community-voice-stage-preview-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #020617;
+        }
+
+        .community-voice-stage-preview-label {
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            padding: 6px 8px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.78);
+            color: #e2e8f0;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            backdrop-filter: blur(8px);
         }
 
         .community-voice-stage-tile-label {
@@ -1055,16 +1196,15 @@
             justify-content: center;
             justify-self: end;
             align-self: flex-start;
-            width: 46px;
-            min-width: 46px;
-            height: 46px;
+            width: 24px;
+            min-width: 24px;
+            height: 24px;
             margin: 0;
             padding: 0;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 59, 48, 0.62);
-            background: linear-gradient(145deg, rgba(255, 59, 48, 0.34), rgba(220, 38, 38, 0.2));
+            border: 0;
+            background: transparent;
             color: #ff3b30;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 24px rgba(255, 59, 48, 0.2);
+            box-shadow: none;
         }
 
         .community-voice-hangup-btn:not([hidden]) {
@@ -1073,10 +1213,8 @@
 
         .community-voice-hangup-btn:hover,
         .community-voice-hangup-btn:focus-visible {
-            border-color: rgba(255, 59, 48, 0.82);
-            background: linear-gradient(145deg, rgba(255, 59, 48, 0.46), rgba(220, 38, 38, 0.3));
             color: #ff1f12;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 14px 28px rgba(255, 59, 48, 0.28);
+            filter: drop-shadow(0 0 10px rgba(255, 59, 48, 0.24));
             outline: none;
         }
 
@@ -1085,8 +1223,8 @@
         }
 
         .community-voice-hangup-btn svg {
-            width: 18px;
-            height: 18px;
+            width: 22px;
+            height: 22px;
         }
 
         .community-voice-toolbar {
@@ -1843,7 +1981,7 @@
                                         <h3 class="community-voice-stage-title" id="community-voice-stage-title">Meeting Room 1 Shared Media</h3>
                                         <p class="community-voice-stage-copy" id="community-voice-stage-copy">Anyone sharing their screen or camera in this room will appear here for everyone else in the same meeting room.</p>
                                     </div>
-                                    <div class="community-voice-stage-frame">
+                                    <div class="community-voice-stage-frame" id="community-voice-stage-frame" hidden>
                                         <div class="community-voice-stage-media" id="community-voice-stage-media" hidden></div>
                                         <div class="community-voice-stage-empty" id="community-voice-stage-empty"></div>
                                     </div>
@@ -1946,7 +2084,7 @@
                                     <div class="community-voice-presence-actions">
                                         <button class="card-btn community-voice-invite-btn" type="button" id="community-voice-invite-btn">Invite To Voice</button>
                                     </div>
-                                    <button class="card-btn community-voice-hangup-btn" type="button" id="community-voice-hangup-btn" aria-label="Leave voice channel" title="Leave voice channel" hidden>
+                                    <button class="community-voice-hangup-btn" type="button" id="community-voice-hangup-btn" aria-label="Leave voice channel" title="Leave voice channel" hidden>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             <path d="M22 15.46v1.74a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 1.5 2 2 0 0 1 4.11-.68h1.74a2 2 0 0 1 2 1.72c.12.89.33 1.76.62 2.6a2 2 0 0 1-.45 2.11L7 6.14a16 16 0 0 0 6.86 6.86l.39-1.02a2 2 0 0 1 2.11-.45c.84.29 1.71.5 2.6.62a2 2 0 0 1 1.72 2z"/>
                                             <path d="M23 1 1 23"/>
@@ -1955,7 +2093,6 @@
                                     <div class="community-voice-toolbox" id="community-voice-toolbox" hidden>
                                         <div class="community-voice-toolbox-head">
                                             <span class="community-voice-toolbox-title">Voice Tools</span>
-                                            <span class="community-voice-toolbox-copy">Screen, camera, mic, audio, settings</span>
                                         </div>
                                         <div class="community-voice-toolbar" id="community-voice-toolbar">
                                             <button class="card-btn community-voice-tool community-voice-tool-screen is-disabled" type="button" id="community-voice-tool-screen" aria-label="Share screen" title="Share screen" aria-pressed="false">
@@ -2205,6 +2342,7 @@
             const voiceLeaveButton = document.getElementById('community-voice-leave-btn');
             const voiceStageTitle = document.getElementById('community-voice-stage-title');
             const voiceStageCopy = document.getElementById('community-voice-stage-copy');
+            const voiceStageFrame = document.getElementById('community-voice-stage-frame');
             const voiceStageMedia = document.getElementById('community-voice-stage-media');
             const voiceStageEmpty = document.getElementById('community-voice-stage-empty');
             const voiceStageKicker = document.getElementById('community-voice-stage-kicker');
@@ -2337,6 +2475,8 @@
             let voiceSelectedOutputDeviceId = '';
             let voiceDeviceRefreshPending = false;
             let voiceDeviceChangePending = false;
+            let voiceStageExpandedShareKey = '';
+            let voiceStageRenderSignature = '';
             const voiceSpeakingState = new Map();
             const voiceLocallyMutedParticipants = new Set();
             const voicePeerConnections = new Map();
@@ -2354,6 +2494,7 @@
             const shouldShowVoiceRoster = () => Boolean(voiceChannelInteracted || voiceJoined || voiceJoining);
             const supportsVoiceScreenShare = () => Boolean(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
             const supportsVoiceOutputSelection = () => Boolean(typeof HTMLMediaElement !== 'undefined' && HTMLMediaElement.prototype && typeof HTMLMediaElement.prototype.setSinkId === 'function');
+            const supportsStageFullscreen = () => Boolean(document.fullscreenEnabled && typeof HTMLElement !== 'undefined' && HTMLElement.prototype && typeof HTMLElement.prototype.requestFullscreen === 'function');
 
             const syncVoiceMuteState = () => {
                 if (!voiceLocalStream) {
@@ -2451,6 +2592,11 @@
                 return shares;
             };
 
+            const hasActiveLocalVisualShare = () => Boolean(
+                getLiveScreenStream(voiceScreenShareStream)
+                || getLiveScreenStream(voiceCameraStream)
+            );
+
             const getAllVoiceVisualShares = () => {
                 const shares = getActiveLocalVisualShares();
 
@@ -2482,6 +2628,20 @@
                 return shares;
             };
 
+            const buildVoiceStageRenderSignature = (shares) => (Array.isArray(shares) ? shares : [])
+                .map((share) => {
+                    const [videoTrack] = share && share.stream && typeof share.stream.getVideoTracks === 'function'
+                        ? share.stream.getVideoTracks()
+                        : [];
+                    return [
+                        String(share && share.key || ''),
+                        String(share && share.kind || ''),
+                        String(share && share.ownerName || ''),
+                        String(videoTrack && videoTrack.id || '')
+                    ].join(':');
+                })
+                .join('|');
+
             const clearVoiceStageMedia = () => {
                 if (!voiceStageMedia) {
                     return;
@@ -2495,7 +2655,146 @@
                 voiceStageMedia.replaceChildren();
                 voiceStageMedia.hidden = true;
                 voiceStageMedia.dataset.tileCount = '0';
+                if (voiceStageFrame) {
+                    voiceStageFrame.hidden = true;
+                }
+                voiceStageExpandedShareKey = '';
+                voiceStageRenderSignature = '';
             };
+
+            const getVoiceStageTileByShareKey = (shareKey) => {
+                if (!voiceStageMedia || !shareKey) {
+                    return null;
+                }
+
+                return voiceStageMedia.querySelector(`.community-voice-stage-tile[data-share-key="${CSS.escape(String(shareKey))}"]`);
+            };
+
+            const getVoiceStageFullscreenTile = () => {
+                const fullscreenElement = document.fullscreenElement;
+                if (!fullscreenElement || !(fullscreenElement instanceof Element)) {
+                    return null;
+                }
+
+                return fullscreenElement.closest('.community-voice-stage-tile');
+            };
+
+            const syncVoiceStagePreviewStrip = (tile, shares, focusedShareKey) => {
+                if (!tile) {
+                    return;
+                }
+
+                const previewStrip = tile.querySelector('.community-voice-stage-preview-strip');
+                if (!previewStrip) {
+                    return;
+                }
+
+                const previewShares = (Array.isArray(shares) ? shares : []).filter((share) => share && share.key !== focusedShareKey && getLiveScreenStream(share.stream));
+                tile.classList.toggle('has-preview-strip', previewShares.length > 0);
+                previewStrip.replaceChildren();
+
+                previewShares.forEach((share) => {
+                    const card = document.createElement('div');
+                    card.className = 'community-voice-stage-preview-card';
+                    card.dataset.shareKey = share.key;
+
+                    const video = document.createElement('video');
+                    video.className = 'community-voice-stage-preview-video';
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.muted = true;
+                    video.srcObject = share.stream;
+
+                    const label = document.createElement('div');
+                    label.className = 'community-voice-stage-preview-label';
+                    label.textContent = `${share.ownerName} · ${share.kind === 'camera' ? 'Camera' : 'Screen'}`;
+
+                    card.appendChild(video);
+                    card.appendChild(label);
+                    previewStrip.appendChild(card);
+                });
+            };
+
+            const syncVoiceStagePresentation = () => {
+                if (!voiceStageMedia) {
+                    return;
+                }
+
+                const tiles = Array.from(voiceStageMedia.querySelectorAll('.community-voice-stage-tile'));
+                const groups = Array.from(voiceStageMedia.querySelectorAll('.community-voice-stage-group'));
+                const activeShares = getAllVoiceVisualShares();
+
+                if (voiceStageExpandedShareKey && !tiles.some((tile) => tile.dataset.shareKey === voiceStageExpandedShareKey)) {
+                    voiceStageExpandedShareKey = '';
+                }
+
+                const fullscreenTile = getVoiceStageFullscreenTile();
+                const fullscreenShareKey = fullscreenTile ? String(fullscreenTile.dataset.shareKey || '') : '';
+                const isExpanded = Boolean(voiceStageExpandedShareKey);
+
+                voiceStageMedia.classList.toggle('is-expanded', isExpanded);
+
+                tiles.forEach((tile) => {
+                    const shareKey = String(tile.dataset.shareKey || '');
+                    const expandButton = tile.querySelector('[data-stage-action="expand"]');
+                    const fullscreenButton = tile.querySelector('[data-stage-action="fullscreen"]');
+                    const tileIsExpanded = isExpanded && shareKey === voiceStageExpandedShareKey;
+                    const tileIsFullscreen = Boolean(fullscreenShareKey) && shareKey === fullscreenShareKey;
+
+                    tile.classList.toggle('is-expanded', tileIsExpanded);
+
+                    if (expandButton) {
+                        expandButton.textContent = tileIsExpanded ? 'Back to Grid' : 'Expand View';
+                        expandButton.setAttribute('aria-pressed', tileIsExpanded ? 'true' : 'false');
+                        expandButton.setAttribute('aria-label', tileIsExpanded ? 'Return this shared media to the normal grid view' : 'Expand this shared media for a larger view');
+                    }
+
+                    if (fullscreenButton) {
+                        fullscreenButton.hidden = !supportsStageFullscreen();
+                        fullscreenButton.textContent = tileIsFullscreen ? 'Exit Full Screen' : 'Full Screen';
+                        fullscreenButton.setAttribute('aria-pressed', tileIsFullscreen ? 'true' : 'false');
+                        fullscreenButton.setAttribute('aria-label', tileIsFullscreen ? 'Exit full screen for this shared media' : 'Show this shared media in full screen');
+                    }
+
+                    syncVoiceStagePreviewStrip(tile, (tileIsExpanded || tileIsFullscreen) ? activeShares : [], shareKey);
+                });
+
+                groups.forEach((group) => {
+                    const hasExpandedTile = Boolean(voiceStageExpandedShareKey) && Boolean(group.querySelector(`.community-voice-stage-tile[data-share-key="${CSS.escape(String(voiceStageExpandedShareKey))}"]`));
+                    group.classList.toggle('has-expanded-tile', hasExpandedTile);
+                });
+            };
+
+            const setVoiceStageExpandedShare = (shareKey = '') => {
+                const normalizedShareKey = String(shareKey || '').trim();
+                voiceStageExpandedShareKey = normalizedShareKey && voiceStageExpandedShareKey !== normalizedShareKey
+                    ? normalizedShareKey
+                    : '';
+                syncVoiceStagePresentation();
+            };
+
+            const toggleVoiceStageFullscreen = async (shareKey) => {
+                const tile = getVoiceStageTileByShareKey(shareKey);
+                if (!tile || !supportsStageFullscreen()) {
+                    return;
+                }
+
+                const fullscreenTile = getVoiceStageFullscreenTile();
+                if (fullscreenTile && fullscreenTile.dataset.shareKey === tile.dataset.shareKey) {
+                    await document.exitFullscreen();
+                    return;
+                }
+
+                if (document.fullscreenElement && document.exitFullscreen) {
+                    await document.exitFullscreen();
+                }
+
+                await tile.requestFullscreen();
+            };
+
+            document.addEventListener('fullscreenchange', () => {
+                syncVoiceStagePresentation();
+            });
 
             const renderVoiceScreenStage = () => {
                 if (!voiceStageTitle || !voiceStageCopy || !voiceStageEmpty || !voiceStageMedia) {
@@ -2525,9 +2824,19 @@
                         ? `Live camera in ${room.label}. Everyone in this room can watch here.`
                         : `Live screen share in ${room.label}. Everyone in this room can watch here.`)
                     : `Live screen shares and cameras in ${room.label}. Everyone in this room can watch both here.`;
+                if (voiceStageFrame) {
+                    voiceStageFrame.hidden = false;
+                }
                 voiceStageEmpty.hidden = true;
                 voiceStageMedia.hidden = false;
                 voiceStageMedia.dataset.tileCount = String(activeShares.length);
+
+                const nextStageSignature = buildVoiceStageRenderSignature(activeShares);
+                if (voiceStageRenderSignature === nextStageSignature) {
+                    return;
+                }
+
+                voiceStageRenderSignature = nextStageSignature;
                 voiceStageMedia.replaceChildren();
 
                 const groupedShares = {
@@ -2541,6 +2850,26 @@
                     tile.dataset.kind = share.kind;
                     tile.dataset.shareKey = share.key;
 
+                    const controls = document.createElement('div');
+                    controls.className = 'community-voice-stage-tile-controls';
+
+                    const expandButton = document.createElement('button');
+                    expandButton.type = 'button';
+                    expandButton.className = 'community-voice-stage-control';
+                    expandButton.dataset.stageAction = 'expand';
+                    expandButton.addEventListener('click', () => {
+                        setVoiceStageExpandedShare(share.key);
+                    });
+
+                    const fullscreenButton = document.createElement('button');
+                    fullscreenButton.type = 'button';
+                    fullscreenButton.className = 'community-voice-stage-control';
+                    fullscreenButton.dataset.stageAction = 'fullscreen';
+                    fullscreenButton.hidden = !supportsStageFullscreen();
+                    fullscreenButton.addEventListener('click', () => {
+                        toggleVoiceStageFullscreen(share.key).catch(() => {});
+                    });
+
                     const video = document.createElement('video');
                     video.className = 'community-voice-stage-video';
                     video.autoplay = true;
@@ -2548,11 +2877,18 @@
                     video.muted = true;
                     video.srcObject = share.stream;
 
+                    const previewStrip = document.createElement('div');
+                    previewStrip.className = 'community-voice-stage-preview-strip';
+
                     const label = document.createElement('div');
                     label.className = 'community-voice-stage-tile-label';
                     label.textContent = `${share.ownerName} · ${share.kind === 'camera' ? 'Camera' : 'Screen'}`;
 
+                    controls.appendChild(expandButton);
+                    controls.appendChild(fullscreenButton);
+                    tile.appendChild(controls);
                     tile.appendChild(video);
+                    tile.appendChild(previewStrip);
                     tile.appendChild(label);
                     return tile;
                 };
@@ -2595,6 +2931,7 @@
 
                 appendShareGroup('screen', 'Screen Shares');
                 appendShareGroup('camera', 'Camera Feeds');
+                syncVoiceStagePresentation();
             };
 
             const syncPeerConnectionVisualTrack = (connection, kind) => {
@@ -4503,7 +4840,10 @@
 
             const syncVoiceParticipants = async (participants) => {
                 const normalizedParticipants = Array.isArray(participants) ? participants : [];
+                const previousIds = new Set(voiceParticipants.map((participant) => participant.id));
                 const nextIds = new Set(normalizedParticipants.map((participant) => participant.id));
+                const participantsChanged = previousIds.size !== nextIds.size
+                    || normalizedParticipants.some((participant) => !previousIds.has(participant.id));
 
                 Array.from(voicePeerConnections.keys()).forEach((participantId) => {
                     if (!nextIds.has(participantId)) {
@@ -4525,6 +4865,15 @@
                             voiceLastError = error && error.message ? String(error.message).trim() : `Unable to connect ${getActiveVoiceRoom().label}.`;
                             renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
                         }
+                    }
+                }
+
+                if (participantsChanged && voiceJoined && hasActiveLocalVisualShare()) {
+                    try {
+                        await syncVoiceScreenShareAcrossPeers();
+                    } catch (error) {
+                        voiceLastError = error && error.message ? String(error.message).trim() : `Unable to update live media in ${getActiveVoiceRoom().label}.`;
+                        renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
                     }
                 }
             };
