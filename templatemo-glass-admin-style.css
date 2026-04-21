@@ -16700,6 +16700,11 @@ body.analytics-reboot .analytics-my-file-count {
 @media (max-width: 992px) {
     :root {
         --sidebar-width: 0px;
+        --card-padding: 22px;
+    }
+
+    body {
+        overflow-x: hidden;
     }
 
     body.sidebar-collapsed .main-content {
@@ -16708,7 +16713,22 @@ body.analytics-reboot .analytics-my-file-count {
     
     .sidebar {
         transform: translateX(-100%);
-        width: 280px;
+        width: min(86vw, 320px);
+        padding: calc(env(safe-area-inset-top, 0px) + 20px) 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
+        border-top-right-radius: 28px;
+        border-bottom-right-radius: 28px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 96%, rgba(255, 255, 255, 0.08) 4%), color-mix(in srgb, var(--glass-bg) 98%, rgba(6, 78, 59, 0.05) 2%));
+        box-shadow: 0 28px 72px rgba(5, 12, 24, 0.34);
+    }
+
+    .sidebar-header {
+        padding-bottom: 16px;
+        margin-bottom: 18px;
+    }
+
+    .logo-img {
+        width: min(192px, 100%);
+        height: 96px;
     }
     
     .sidebar.open {
@@ -16717,12 +16737,15 @@ body.analytics-reboot .analytics-my-file-count {
     
     .main-content {
         margin-left: 0;
+        padding: calc(env(safe-area-inset-top, 0px) + 18px) 18px calc(env(safe-area-inset-bottom, 0px) + 96px);
     }
     
     .mobile-menu-toggle {
         display: flex;
         align-items: center;
         justify-content: center;
+        right: 18px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
     }
 
     .sidebar-collapse-button {
@@ -16774,10 +16797,21 @@ body.analytics-reboot .analytics-my-file-count {
 @media (max-width: 768px) {
     .stats-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 
     .analytics-stats-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .background::before {
+        opacity: 0.74;
+    }
+
+    .orb {
+        opacity: 0.22;
+        filter: blur(96px);
     }
 
     .widget-dock {
@@ -16826,31 +16860,74 @@ body.analytics-reboot .analytics-my-file-count {
     }
     
     .navbar {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        margin-bottom: 22px;
+        padding: 18px 16px;
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 95%, rgba(255, 255, 255, 0.08) 5%), color-mix(in srgb, var(--glass-bg) 98%, rgba(255, 255, 255, 0.02) 2%));
+        box-shadow: 0 22px 42px -30px var(--glass-shadow);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+    }
+
+    .page-header {
+        width: 100%;
+        gap: 8px;
+        margin-bottom: 0;
     }
     
     .search-box {
         order: 3;
         width: 100%;
+        flex: 1 1 100%;
     }
     
     .search-input {
         width: 100%;
+        min-height: 52px;
+        border-radius: 14px;
     }
     
     .page-title {
-        font-size: 22px;
+        font-size: clamp(26px, 7vw, 32px);
+        line-height: 1.08;
     }
 
     .page-title-group {
-        gap: 8px;
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .page-breadcrumb {
+        max-width: 100%;
+        padding: 9px 12px;
+        border-radius: 16px;
+    }
+
+    .navbar-right {
+        width: 100%;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .navbar-datetime {
+        min-width: 0;
+        width: 100%;
+        text-align: left;
+        font-size: 11px;
     }
 
     .mls-source-badge-row {
         width: 100%;
         gap: 12px;
-        margin-top: -2px;
-        margin-bottom: 20px;
+        margin-top: 0;
+        margin-bottom: 18px;
     }
 
     .mls-source-badge {
@@ -16861,8 +16938,27 @@ body.analytics-reboot .analytics-my-file-count {
         height: 30px;
     }
 
-    .navbar-datetime {
-        font-size: 12px;
+    .glass-card {
+        padding: 22px 18px;
+        border-radius: 24px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .card-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .card-actions .card-btn {
+        flex: 1 1 140px;
+        justify-content: center;
+        min-height: 42px;
     }
     
     .donut-container {
@@ -16928,7 +17024,42 @@ body.analytics-reboot .analytics-my-file-count {
 
 @media (max-width: 480px) {
     .main-content {
-        padding: 20px 15px;
+        padding: calc(env(safe-area-inset-top, 0px) + 16px) 14px calc(env(safe-area-inset-bottom, 0px) + 88px);
+    }
+
+    .sidebar {
+        width: min(88vw, 300px);
+        padding: calc(env(safe-area-inset-top, 0px) + 18px) 14px calc(env(safe-area-inset-bottom, 0px) + 18px);
+    }
+
+    .logo-img {
+        width: min(170px, 100%);
+        height: 84px;
+    }
+
+    .navbar {
+        padding: 16px 14px;
+        border-radius: 22px;
+    }
+
+    .page-title {
+        font-size: 24px;
+    }
+
+    .glass-card {
+        padding: 20px 16px;
+        border-radius: 22px;
+    }
+
+    .card-actions .card-btn {
+        flex-basis: 100%;
+    }
+
+    .mobile-menu-toggle {
+        right: 14px;
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
     }
 
     .widget-controls {
