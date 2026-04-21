@@ -13681,6 +13681,16 @@ body.analytics-reboot .analytics-my-file-count {
     box-shadow: 0 12px 32px rgba(5, 150, 105, 0.4);
 }
 
+[data-theme="cyberpunk"] .btn-primary {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 1), rgba(217, 70, 239, 0.96));
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(168, 85, 247, 0.3), 0 0 24px rgba(217, 70, 239, 0.16);
+}
+
+[data-theme="cyberpunk"] .btn-primary:hover {
+    box-shadow: 0 12px 32px rgba(168, 85, 247, 0.4), 0 0 32px rgba(217, 70, 239, 0.22);
+}
+
 @keyframes accessFastHoverSway {
     0% {
         transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0) scale(1);

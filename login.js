@@ -21,6 +21,8 @@ const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
 const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
 const ISAAC_ADMIN_BYPASS_CODE = '315598';
 const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
+const STEVE_ADMIN_BYPASS_CODE = '123777';
+const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
 const LOGIN_HOMEPAGE_THEME_KEY = 'homepageTheme';
 const LOGIN_THEME_STORAGE_KEY = 'dashboardThemeByUser';
 const LOGIN_THEME_OPTIONS = Object.freeze(['beach', 'sunset', 'cyberpunk']);
@@ -37,6 +39,12 @@ const ISAAC_ADMIN_BYPASS_USER = Object.freeze({
   name: 'Isaac Haro',
   role: 'admin',
   id: 'admin-bypass-isaac'
+});
+const STEVE_ADMIN_BYPASS_USER = Object.freeze({
+  email: 'steve.medina@fastbridgegroupllc.com',
+  name: 'Steve Medina',
+  role: 'admin',
+  id: 'admin-bypass-steve'
 });
 
 KNOWN_EMAIL_GROUPS.forEach((group) => {
@@ -272,6 +280,25 @@ function startIsaacAdminBypass() {
   return { ok: true };
 }
 
+function startSteveAdminBypass() {
+  const enteredCode = String(window.prompt('Enter Steve Medina admin bypass code:', '') || '').trim();
+  if (!enteredCode) {
+    return { ok: false, reason: 'cancelled' };
+  }
+
+  if (enteredCode !== STEVE_ADMIN_BYPASS_CODE) {
+    return { ok: false, reason: 'invalid' };
+  }
+
+  localStorage.setItem('authToken', STEVE_ADMIN_BYPASS_TOKEN);
+  localStorage.setItem('bypassAuth', 'true');
+  localStorage.setItem('bypassProfile', JSON.stringify(STEVE_ADMIN_BYPASS_USER));
+  persistAuthenticatedUser(STEVE_ADMIN_BYPASS_USER);
+  persistAuthLock(STEVE_ADMIN_BYPASS_USER, STEVE_ADMIN_BYPASS_TOKEN);
+  localStorage.removeItem('registeredEmail');
+  return { ok: true };
+}
+
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
   const loginThemeSwitchButton = document.getElementById('login-theme-switch');
@@ -290,6 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const termsModal = document.getElementById('terms-modal');
   const termsContinueBtn = document.getElementById('terms-continue-btn');
   const isaacAdminBypassLink = document.getElementById('isaac-admin-bypass-link');
+  const steveAdminBypassLink = document.getElementById('steve-admin-bypass-link');
   const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
   let pendingTwoFactorChallenge = '';
 
@@ -529,6 +557,21 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!bypassResult.ok) {
         if (bypassResult.reason === 'invalid') {
           showLoginError('Invalid Isaac admin bypass code.');
+        }
+        return;
+      }
+
+      window.location.href = '/dashboard.html';
+    });
+  }
+
+  if (steveAdminBypassLink) {
+    steveAdminBypassLink.addEventListener('click', function() {
+      clearLoginError();
+      const bypassResult = startSteveAdminBypass();
+      if (!bypassResult.ok) {
+        if (bypassResult.reason === 'invalid') {
+          showLoginError('Invalid Steve admin bypass code.');
         }
         return;
       }
