@@ -25,6 +25,12 @@ const { sendNewLeadEmail, sendAgentEmail } = require('./sendEmail.js/sendEmail')
 
 const app = express();
 app.set('trust proxy', true);
+
+function readPackageMetadata() {
+  const pkgPath = path.join(__dirname, 'package.json');
+  return JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+}
+
 // Build last updated endpoint
 app.get('/api/build-last-updated', (req, res) => {
   try {
@@ -44,8 +50,7 @@ app.get('/api/build-last-updated', (req, res) => {
 // Build version endpoint
 app.get('/api/build-version', (req, res) => {
   try {
-    const pkgPath = path.join(__dirname, 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const pkg = readPackageMetadata();
     res.json({ version: pkg.version });
   } catch (e) {
     res.json({ version: null });
@@ -14078,6 +14083,66 @@ app.post('/api/agent-property-memory', async (req, res) => {
 });
 
 // Serve HTML pages
+app.get('/download/windows', (req, res) => {
+  const hostedDownloadUrl = String(
+    process.env.WINDOWS_APP_DOWNLOAD_URL
+      || process.env.DESKTOP_WINDOWS_DOWNLOAD_URL
+      || process.env.ELECTRON_WINDOWS_DOWNLOAD_URL
+      || ''
+  ).trim();
+
+  if (hostedDownloadUrl) {
+    res.redirect(hostedDownloadUrl);
+    return;
+  }
+
+  let pkgVersion = '';
+  try {
+    pkgVersion = String(readPackageMetadata()?.version || '').trim();
+  } catch (error) {
+    pkgVersion = '';
+  }
+
+  const installerCandidates = [
+    pkgVersion ? path.join(__dirname, 'dist', 'electron', `FAST BRIDGE GROUP Setup ${pkgVersion}.exe`) : '',
+    path.join(__dirname, 'dist', 'electron', 'FAST BRIDGE GROUP Setup 1.4.1.exe'),
+    path.join(__dirname, 'dist', 'electron-packager', 'FAST BRIDGE GROUP-win32-x64', 'FAST BRIDGE GROUP.exe')
+  ].filter(Boolean);
+
+  const installerPath = installerCandidates.find((candidatePath) => fs.existsSync(candidatePath));
+  if (installerPath) {
+    res.download(installerPath, path.basename(installerPath));
+    return;
+  }
+
+  res.status(503).type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desktop Download Unavailable</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f4f7fb; color: #123047; }
+    main { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    section { max-width: 560px; background: #ffffff; border-radius: 20px; padding: 32px; box-shadow: 0 22px 48px rgba(18, 48, 71, 0.14); }
+    h1 { margin: 0 0 12px; font-size: 28px; }
+    p { margin: 0 0 12px; line-height: 1.6; }
+    a { color: #0f6fa8; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>Desktop download is not available right now.</h1>
+      <p>The deployed site does not currently have a hosted Windows installer attached to it.</p>
+      <p>Add a hosted installer URL to <strong>WINDOWS_APP_DOWNLOAD_URL</strong> and this route will start working automatically.</p>
+      <p><a href="/">Return to homepage</a></p>
+    </section>
+  </main>
+</body>
+</html>`);
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
