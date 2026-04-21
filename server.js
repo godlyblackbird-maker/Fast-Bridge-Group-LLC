@@ -1003,6 +1003,19 @@ function normalizeKnownEmail(email) {
   return LEGACY_EMAIL_ALIASES.get(normalizedEmail) || normalizedEmail;
 }
 
+function resolveWorkspaceLoginEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) {
+    return '';
+  }
+
+  const emailCandidate = normalizedEmail.includes('@')
+    ? normalizedEmail
+    : `${normalizedEmail}@fastbridgegroupllc.com`;
+
+  return normalizeKnownEmail(emailCandidate);
+}
+
 function normalizeSuppressedIdentityText(value) {
   return String(value || '')
     .trim()
@@ -8262,10 +8275,18 @@ app.post('/api/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const normalizedEmail = normalizeKnownEmail(email);
+  const normalizedEmail = resolveWorkspaceLoginEmail(email);
 
   if (!isFastBridgeWorkspaceEmail(normalizedEmail)) {
     return res.status(403).json({ error: 'Only @fastbridgegroupllc.com accounts can sign in.' });
+  }
+
+  if (normalizedEmail === CANONICAL_ISAAC_EMAIL) {
+    await syncIsaacAdminAccount();
+  }
+
+  if (normalizedEmail === CANONICAL_STEVE_EMAIL) {
+    await syncSteveAdminAccount();
   }
 
   if (normalizedEmail === CANONICAL_LORIA_EMAIL) {
