@@ -27,6 +27,8 @@ npm run desktop:dist
 
 Installer output is written to `dist/electron/`.
 
+This project disables Electron Builder's Windows executable resource-edit step so installer builds can complete on Windows environments that do not allow the legacy `winCodeSign` archive to extract symlinks.
+
 If Windows blocks the installer build because of local symlink permissions, build a runnable app folder instead:
 
 ```bash
