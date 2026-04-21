@@ -31,6 +31,31 @@ function readPackageMetadata() {
   return JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 }
 
+function getGithubRepositoryBaseUrl() {
+  try {
+    const pkg = readPackageMetadata();
+    const repositoryUrl = String(
+      pkg?.repository?.url
+      || pkg?.homepage
+      || ''
+    ).trim();
+
+    if (!repositoryUrl) {
+      return '';
+    }
+
+    const normalizedUrl = repositoryUrl
+      .replace(/^git\+/, '')
+      .replace(/\.git$/i, '')
+      .replace(/#.*$/, '');
+
+    const githubMatch = normalizedUrl.match(/^https:\/\/github\.com\/[^/]+\/[^/]+/i);
+    return githubMatch ? githubMatch[0] : '';
+  } catch (error) {
+    return '';
+  }
+}
+
 // Build last updated endpoint
 app.get('/api/build-last-updated', (req, res) => {
   try {
@@ -14124,6 +14149,16 @@ app.get('/download/windows', (req, res) => {
     pkgVersion = '';
   }
 
+  const resolvedVersion = pkgVersion || '1.4.5';
+  const installerFileNames = [
+    `FAST.BRIDGE.GROUP.Setup.${resolvedVersion}.exe`,
+    `FAST BRIDGE GROUP Setup ${resolvedVersion}.exe`
+  ];
+  const githubRepositoryBaseUrl = getGithubRepositoryBaseUrl();
+  const githubLatestDownloadUrls = githubRepositoryBaseUrl
+    ? installerFileNames.map((fileName) => `${githubRepositoryBaseUrl}/releases/latest/download/${encodeURIComponent(fileName)}`)
+    : [];
+
   const installerCandidates = [
     pkgVersion ? path.join(__dirname, 'dist', 'electron', `FAST BRIDGE GROUP Setup ${pkgVersion}.exe`) : '',
     path.join(__dirname, 'dist', 'electron', 'FAST BRIDGE GROUP Setup 1.4.5.exe'),
@@ -14133,6 +14168,11 @@ app.get('/download/windows', (req, res) => {
   const installerPath = installerCandidates.find((candidatePath) => fs.existsSync(candidatePath));
   if (installerPath) {
     res.download(installerPath, path.basename(installerPath));
+    return;
+  }
+
+  if (githubLatestDownloadUrls.length > 0) {
+    res.redirect(githubLatestDownloadUrls[0]);
     return;
   }
 
@@ -14156,7 +14196,7 @@ app.get('/download/windows', (req, res) => {
     <section>
       <h1>Desktop download is not available right now.</h1>
       <p>The deployed site does not currently have a hosted Windows installer attached to it.</p>
-      <p>Add a hosted installer URL to <strong>WINDOWS_APP_DOWNLOAD_URL</strong> and this route will start working automatically.</p>
+      <p>Add a hosted installer URL to <strong>WINDOWS_APP_DOWNLOAD_URL</strong> or publish the matching installer on the latest GitHub release and this route will start working automatically.</p>
       <p><a href="/">Return to homepage</a></p>
     </section>
   </main>
