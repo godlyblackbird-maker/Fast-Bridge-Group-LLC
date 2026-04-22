@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOW Terms of Use - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="Virtual Office Website Terms of Use and acceptance flow for FAST BRIDGE GROUP VOW registrants.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = storedHomepageTheme || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
+                    theme = 'beach';
+                }
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .vow-terms-shell {
+            display: grid;
+            gap: 20px;
+        }
+
+        .vow-terms-status {
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+        }
+
+        .vow-terms-status.is-error {
+            border-color: rgba(248, 113, 113, 0.35);
+            background: rgba(127, 29, 29, 0.2);
+            color: #fecaca;
+        }
+
+        .vow-terms-status.is-success {
+            border-color: rgba(74, 222, 128, 0.3);
+            background: rgba(20, 83, 45, 0.24);
+            color: #dcfce7;
+        }
+
+        .vow-terms-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .vow-terms-meta-card {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .vow-terms-meta-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .vow-terms-meta-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .vow-terms-note-list,
+        .vow-terms-checklist {
+            display: grid;
+            gap: 12px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .vow-terms-note-item,
+        .vow-terms-check-item {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .vow-terms-check-label {
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            gap: 12px;
+            align-items: flex-start;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .vow-terms-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .vow-terms-workflow-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .vow-terms-field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .vow-terms-field label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .vow-terms-field select,
+        .vow-terms-field textarea {
+            width: 100%;
+            min-height: 46px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font: inherit;
+        }
+
+        .vow-terms-field textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .vow-terms-accept-btn {
+            min-height: 48px;
+            padding: 12px 18px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.35);
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.95), rgba(var(--accent-light-rgb), 0.82));
+            color: #f8fffc;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .vow-terms-accept-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+        <section class="legal-hero">
+            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <h1>VOW Terms of Use</h1>
+            <p>This page is used to review and affirm the Terms of Use required before a registrant is permitted to access broker-supervised Virtual Office Website listing information.</p>
+        </section>
+        <nav class="legal-top-links" aria-label="Legal pages">
+            <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
+            <a href="legal-privacy-policy.html">Privacy Policy</a>
+            <a href="legal-terms-of-use.html">General Terms of Use</a>
+            <a href="vow-terms-of-use.html">VOW Terms of Use</a>
+        </nav>
+        <section class="legal-grid vow-terms-shell" aria-label="VOW terms details">
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
+                <h2>Required VOW acceptance</h2>
+                <p class="legal-card-lead">A VOW registrant must affirmatively accept the statements below before broker-supervised MLS listing information may be made available through the VOW.</p>
+                <div id="vow-status" class="vow-terms-status">Loading VOW terms details.</div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Registrant summary</h2>
+                <div id="vow-meta" class="vow-terms-meta"></div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Important notes</h2>
+                <ul id="vow-notes" class="vow-terms-note-list"></ul>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Required statements</h2>
+                <form id="vow-acceptance-form">
+                    <div class="vow-terms-workflow-grid" style="margin-bottom: 18px;">
+                        <div class="vow-terms-field">
+                            <label for="vow-relationship-type">Relationship request type</label>
+                            <select id="vow-relationship-type" name="relationshipType">
+                                <option value="prospective buyer">Prospective buyer</option>
+                                <option value="prospective seller">Prospective seller</option>
+                                <option value="prospective landlord">Prospective landlord</option>
+                                <option value="prospective tenant">Prospective tenant</option>
+                                <option value="investor">Investor</option>
+                            </select>
+                        </div>
+                        <div class="vow-terms-check-item">
+                            <label class="vow-terms-check-label">
+                                <input type="checkbox" id="vow-agency-disclosure-ack" name="agencyDisclosureAcknowledged" value="1">
+                                <span>I understand this VOW click-through does not replace separate agency, non-agency, or other broker-consumer disclosures that may still need to be completed under state law before brokerage services continue.</span>
+                            </label>
+                        </div>
+                        <div class="vow-terms-field">
+                            <label for="vow-relationship-note">Optional note to broker</label>
+                            <textarea id="vow-relationship-note" name="relationshipNote" placeholder="Add anything helpful for the broker reviewing your VOW relationship request, such as the type of property or market you are focused on."></textarea>
+                        </div>
+                    </div>
+                    <div id="vow-checklist" class="vow-terms-checklist"></div>
+                    <div class="vow-terms-actions" style="margin-top: 18px;">
+                        <button id="vow-accept-button" class="vow-terms-accept-btn" type="submit" disabled>Accept VOW Terms</button>
+                        <span id="vow-action-copy" class="vow-terms-status">Open this page from a valid acceptance link to complete the VOW terms flow.</span>
+                    </div>
+                </form>
+            </article>
+        </section>
+    </main>
+    <script>
+        (function () {
+            const token = new URLSearchParams(window.location.search).get('token') || '';
+            const statusEl = document.getElementById('vow-status');
+            const metaEl = document.getElementById('vow-meta');
+            const notesEl = document.getElementById('vow-notes');
+            const checklistEl = document.getElementById('vow-checklist');
+            const formEl = document.getElementById('vow-acceptance-form');
+            const buttonEl = document.getElementById('vow-accept-button');
+            const actionCopyEl = document.getElementById('vow-action-copy');
+            const relationshipTypeEl = document.getElementById('vow-relationship-type');
+            const agencyDisclosureAckEl = document.getElementById('vow-agency-disclosure-ack');
+            const relationshipNoteEl = document.getElementById('vow-relationship-note');
+            let requiredStatements = [];
+
+            function setStatus(message, kind) {
+                statusEl.textContent = message;
+                statusEl.className = 'vow-terms-status' + (kind ? ` is-${kind}` : '');
+            }
+
+            function renderMetaCard(label, value) {
+                const card = document.createElement('div');
+                card.className = 'vow-terms-meta-card';
+                card.innerHTML = `<span class="vow-terms-meta-label">${label}</span><span class="vow-terms-meta-value">${value || 'Not available'}</span>`;
+                return card;
+            }
+
+            function renderRegistrantMeta(registrant) {
+                metaEl.innerHTML = '';
+                metaEl.appendChild(renderMetaCard('Registrant', registrant.fullName || 'Not available'));
+                metaEl.appendChild(renderMetaCard('Email', registrant.email || 'Not available'));
+                metaEl.appendChild(renderMetaCard('Relationship', registrant.relationshipType || 'Not available'));
+                metaEl.appendChild(renderMetaCard('Relationship Status', registrant.relationshipStatus || 'Not available'));
+                metaEl.appendChild(renderMetaCard(
+                    'Password Rotation',
+                    registrant.passwordRotationRequired
+                        ? 'Required now'
+                        : (registrant.passwordExpiresAt ? `Due ${new Date(registrant.passwordExpiresAt).toLocaleDateString()}` : 'Not available')
+                ));
+                metaEl.appendChild(renderMetaCard('Broker', registrant.brokerName || 'Not available'));
+                metaEl.appendChild(renderMetaCard('Broker Email', registrant.brokerEmail || 'Not available'));
+                metaEl.appendChild(renderMetaCard('Link Expires', registrant.expiresAt ? new Date(registrant.expiresAt).toLocaleString() : 'Not available'));
+            }
+
+            function renderNotes(notes) {
+                notesEl.innerHTML = '';
+                (Array.isArray(notes) ? notes : []).forEach((note) => {
+                    const item = document.createElement('li');
+                    item.className = 'vow-terms-note-item';
+                    item.textContent = note;
+                    notesEl.appendChild(item);
+                });
+            }
+
+            function renderChecklist(statements) {
+                checklistEl.innerHTML = '';
+                requiredStatements = Array.isArray(statements) ? statements : [];
+                requiredStatements.forEach((statement) => {
+                    const item = document.createElement('div');
+                    item.className = 'vow-terms-check-item';
+                    item.innerHTML = `
+                        <label class="vow-terms-check-label">
+                            <input type="checkbox" name="${statement.key}" value="1">
+                            <span>${statement.label}</span>
+                        </label>
+                    `;
+                    checklistEl.appendChild(item);
+                });
+            }
+
+            async function loadTerms() {
+                if (!token) {
+                    setStatus('This VOW terms page needs a valid acceptance link token.', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/vow/terms/${encodeURIComponent(token)}`);
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load VOW terms.');
+                    }
+
+                    renderRegistrantMeta(data.registrant || {});
+                    renderNotes(data.notes || []);
+                    renderChecklist(data.requiredStatements || []);
+                    if (data.registrant && data.registrant.relationshipType) {
+                        relationshipTypeEl.value = data.registrant.relationshipType;
+                    }
+                    if (data.registrant && data.registrant.agencyDisclosureAcknowledgedAt) {
+                        agencyDisclosureAckEl.checked = true;
+                    }
+                    setStatus(
+                        data.registrant && data.registrant.termsAcceptedAt
+                            ? 'These VOW terms have already been accepted for this registrant.'
+                            : 'Review each required statement and affirm acceptance to complete the VOW terms flow.',
+                        data.registrant && data.registrant.termsAcceptedAt ? 'success' : ''
+                    );
+                    buttonEl.disabled = Boolean(data.registrant && data.registrant.termsAcceptedAt);
+                    actionCopyEl.textContent = data.registrant && data.registrant.termsAcceptedAt
+                        ? 'This acceptance link has already been completed.'
+                        : `Terms version: ${data.termsVersion || 'Not available'}`;
+                } catch (error) {
+                    setStatus(error.message || 'Unable to load VOW terms.', 'error');
+                }
+            }
+
+            formEl.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                if (!token || buttonEl.disabled) {
+                    return;
+                }
+
+                const acknowledgements = {};
+                requiredStatements.forEach((statement) => {
+                    const checkbox = formEl.querySelector(`input[name="${statement.key}"]`);
+                    acknowledgements[statement.key] = Boolean(checkbox && checkbox.checked);
+                });
+                const relationshipWorkflow = {
+                    relationshipType: relationshipTypeEl.value,
+                    agencyDisclosureAcknowledged: Boolean(agencyDisclosureAckEl.checked),
+                    relationshipNote: relationshipNoteEl.value.trim()
+                };
+
+                buttonEl.disabled = true;
+                actionCopyEl.textContent = 'Recording VOW terms acceptance.';
+                try {
+                    const response = await fetch(`/api/vow/terms/${encodeURIComponent(token)}/accept`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ acknowledgements, relationshipWorkflow })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to record VOW terms acceptance.');
+                    }
+
+                    const emailVerification = data.emailVerification || {};
+                    const deliveryMessage = emailVerification.sent
+                        ? `A confirmation email was sent and expires ${emailVerification.expiresAt ? new Date(emailVerification.expiresAt).toLocaleString() : 'soon'}.`
+                        : (emailVerification.error || 'The VOW terms were accepted, but the confirmation email could not be sent automatically.');
+                    setStatus('VOW terms accepted successfully. Your broker-supervised VOW record was updated.', 'success');
+                    actionCopyEl.textContent = data.termsAcceptedAt
+                        ? `Accepted at ${new Date(data.termsAcceptedAt).toLocaleString()}. Relationship workflow status: ${data.relationshipWorkflow?.relationshipStatus || 'pending-broker-review'}. ${deliveryMessage}`
+                        : deliveryMessage;
+                } catch (error) {
+                    buttonEl.disabled = false;
+                    setStatus(error.message || 'Unable to record VOW terms acceptance.', 'error');
+                    actionCopyEl.textContent = 'Please review the required statements and try again.';
+                }
+            });
+
+            loadTerms();
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="beach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOW Email Verification - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="Email verification page for FAST BRIDGE GROUP VOW registrants.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const storedHomepageTheme = String(localStorage.getItem('homepageTheme') || '').trim().toLowerCase();
+                let theme = storedHomepageTheme || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
+                    theme = 'beach';
+                }
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .vow-verify-status {
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+        }
+
+        .vow-verify-status.is-error {
+            border-color: rgba(248, 113, 113, 0.35);
+            background: rgba(127, 29, 29, 0.2);
+            color: #fecaca;
+        }
+
+        .vow-verify-status.is-success {
+            border-color: rgba(74, 222, 128, 0.3);
+            background: rgba(20, 83, 45, 0.24);
+            color: #dcfce7;
+        }
+
+        .vow-verify-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .vow-verify-meta-card {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .vow-verify-meta-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .vow-verify-meta-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .vow-verify-button {
+            min-height: 48px;
+            padding: 12px 18px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.35);
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.95), rgba(var(--accent-light-rgb), 0.82));
+            color: #f8fffc;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .vow-verify-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="legal-page">
+    <main class="legal-page-main">
+        <header class="legal-page-header">
+            <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
+            <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
+        </header>
+        <section class="legal-hero">
+            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <h1>VOW Email Verification</h1>
+            <p>This page confirms that the email address used for the VOW registrant record belongs to the registrant who completed the broker-supervised VOW onboarding flow.</p>
+        </section>
+        <nav class="legal-top-links" aria-label="Legal pages">
+            <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
+            <a href="vow-terms-of-use.html">VOW Terms of Use</a>
+            <a href="legal-privacy-policy.html">Privacy Policy</a>
+            <a href="legal-terms-of-use.html">General Terms of Use</a>
+        </nav>
+        <section class="legal-grid" aria-label="VOW email verification details">
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
+                <h2>Email verification status</h2>
+                <div id="vow-verify-status" class="vow-verify-status">Loading verification details.</div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Registrant summary</h2>
+                <div id="vow-verify-meta" class="vow-verify-meta"></div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Complete verification</h2>
+                <p>Click the button below to confirm this email address for the VOW registrant record.</p>
+                <div style="margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <button id="vow-verify-button" class="vow-verify-button" type="button" disabled>Verify Email</button>
+                    <span id="vow-verify-copy" class="vow-verify-status">Open this page from a valid email verification link to continue.</span>
+                </div>
+            </article>
+        </section>
+    </main>
+    <script>
+        (function () {
+            const token = new URLSearchParams(window.location.search).get('token') || '';
+            const statusEl = document.getElementById('vow-verify-status');
+            const metaEl = document.getElementById('vow-verify-meta');
+            const buttonEl = document.getElementById('vow-verify-button');
+            const copyEl = document.getElementById('vow-verify-copy');
+            let alreadyVerified = false;
+
+            function setStatus(message, kind) {
+                statusEl.textContent = message;
+                statusEl.className = 'vow-verify-status' + (kind ? ` is-${kind}` : '');
+            }
+
+            function renderMetaCard(label, value) {
+                const card = document.createElement('div');
+                card.className = 'vow-verify-meta-card';
+                card.innerHTML = `<span class="vow-verify-meta-label">${label}</span><span class="vow-verify-meta-value">${value || 'Not available'}</span>`;
+                return card;
+            }
+
+            async function loadVerification() {
+                if (!token) {
+                    setStatus('This VOW email verification page needs a valid token.', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/vow/email-verify/${encodeURIComponent(token)}`);
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load VOW email verification.');
+                    }
+
+                    const registrant = data.registrant || {};
+                    alreadyVerified = Boolean(registrant.emailVerifiedAt);
+                    metaEl.innerHTML = '';
+                    metaEl.appendChild(renderMetaCard('Registrant', registrant.fullName || 'Not available'));
+                    metaEl.appendChild(renderMetaCard('Email', registrant.email || 'Not available'));
+                    metaEl.appendChild(renderMetaCard('Broker', registrant.brokerName || 'Not available'));
+                    metaEl.appendChild(renderMetaCard('Broker Email', registrant.brokerEmail || 'Not available'));
+                    metaEl.appendChild(renderMetaCard('Link Expires', registrant.expiresAt ? new Date(registrant.expiresAt).toLocaleString() : 'Not available'));
+                    metaEl.appendChild(renderMetaCard('Verified', registrant.emailVerifiedAt ? new Date(registrant.emailVerifiedAt).toLocaleString() : 'Pending'));
+
+                    setStatus(
+                        alreadyVerified
+                            ? 'This VOW registrant email address has already been verified.'
+                            : 'Review the registrant details and click Verify Email to confirm the address.',
+                        alreadyVerified ? 'success' : ''
+                    );
+                    buttonEl.disabled = alreadyVerified;
+                    copyEl.textContent = alreadyVerified
+                        ? 'Verification is already complete.'
+                        : 'This will confirm the email address used for the VOW registrant record.';
+                } catch (error) {
+                    setStatus(error.message || 'Unable to load VOW email verification.', 'error');
+                }
+            }
+
+            buttonEl.addEventListener('click', async function () {
+                if (!token || buttonEl.disabled) {
+                    return;
+                }
+
+                buttonEl.disabled = true;
+                copyEl.textContent = 'Verifying email address.';
+                try {
+                    const response = await fetch(`/api/vow/email-verify/${encodeURIComponent(token)}/confirm`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to verify email address.');
+                    }
+
+                    setStatus('Email verified successfully for the VOW registrant record.', 'success');
+                    copyEl.textContent = data.emailVerifiedAt
+                        ? `Verified at ${new Date(data.emailVerifiedAt).toLocaleString()}.`
+                        : 'Verification complete.';
+                } catch (error) {
+                    buttonEl.disabled = false;
+                    setStatus(error.message || 'Unable to verify email address.', 'error');
+                    copyEl.textContent = 'Please try the verification link again.';
+                }
+            });
+
+            loadVerification();
+        })();
+    </script>
+</body>
+</html>

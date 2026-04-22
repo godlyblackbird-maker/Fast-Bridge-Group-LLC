@@ -149,6 +149,13 @@ const FEATURE_ACCESS_DEFAULTS = Object.freeze({
 });
 const AUTH_SESSION_TTL = '24h';
 const TWO_FACTOR_CHALLENGE_TTL = '10m';
+const VOW_PASSWORD_ROTATION_DAYS = 90;
+const VOW_TERMS_VERSION = 'crmls-vow-v1';
+const VOW_ACCEPTANCE_TOKEN_TTL_DAYS = 7;
+const VOW_EMAIL_VERIFICATION_TOKEN_TTL_DAYS = 7;
+const VOW_COMPLIANCE_REQUEST_TYPES = Object.freeze(['seller-opt-out', 'disable-comments', 'disable-avm', 'compliance-review-access']);
+const VOW_COMPLIANCE_REQUEST_STATUSES = Object.freeze(['open', 'in-review', 'approved', 'denied', 'fulfilled', 'cancelled']);
+const VOW_COMPLIANCE_REQUEST_SOURCES = Object.freeze(['internal', 'seller', 'broker', 'admin', 'participant', 'mls', 'compliance']);
 const ONLINE_USER_ACTIVITY_WINDOW_MINUTES = 5;
 const TOTP_WINDOW = 1;
 const TOTP_PERIOD_SECONDS = 30;
@@ -1541,6 +1548,56 @@ function normalizeListingCurrency(value) {
   }
 
   return `$${Math.round(amount).toLocaleString()}`;
+}
+
+const MLS_COMPENSATION_FIELD_PATTERNS = Object.freeze([
+  /\bcompensation\b/i,
+  /\bcommission\b/i,
+  /\bbuyer\s*agent\s*comp\b/i,
+  /\bbuyer\s*broker\s*comp\b/i,
+  /\bco\s*op\b/i,
+  /\bcoop\b/i,
+  /\bcooperative\s*comp\b/i,
+  /\bsub\s*agent\s*comp\b/i,
+  /\btransaction\s*broker\s*comp\b/i,
+  /\bvariable\s*rate\b/i,
+  /\bdual\s*variable\b/i,
+  /\bbonus\s*comp\b/i,
+  /\bseller\s*compensation\b/i,
+  /\bbac\b/i,
+  /\bsoc\b/i
+]);
+
+function isCompensationFieldName(fieldName) {
+  const normalizedFieldName = String(fieldName || '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim();
+
+  if (!normalizedFieldName) {
+    return false;
+  }
+
+  return MLS_COMPENSATION_FIELD_PATTERNS.some((pattern) => pattern.test(normalizedFieldName));
+}
+
+function stripCompensationFieldsFromFeedData(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripCompensationFieldsFromFeedData(entry));
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  return Object.entries(value).reduce((accumulator, [key, entryValue]) => {
+    if (isCompensationFieldName(key)) {
+      return accumulator;
+    }
+
+    accumulator[key] = stripCompensationFieldsFromFeedData(entryValue);
+    return accumulator;
+  }, {});
 }
 
 function extractListingFactsFromText(text) {
@@ -3358,6 +3415,133 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS vow_registrants (
+      id TEXT PRIMARY KEY,
+      broker_user_id INTEGER NOT NULL,
+      full_name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      relationship_type TEXT NOT NULL DEFAULT 'prospective buyer',
+      relationship_acknowledged_at DATETIME,
+      relationship_requested_at DATETIME,
+      relationship_status TEXT NOT NULL DEFAULT 'awaiting-consumer',
+      relationship_confirmed_at DATETIME,
+      relationship_confirmed_by_user_id INTEGER,
+      agency_disclosure_acknowledged_at DATETIME,
+      relationship_workflow_version TEXT,
+      terms_accepted_at DATETIME,
+      terms_version TEXT,
+      email_verified_at DATETIME,
+      last_verification_email_sent_at DATETIME,
+      email_verification_token TEXT,
+      email_verification_expires_at DATETIME,
+      password_changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      password_expires_at DATETIME,
+      last_login_at DATETIME,
+      acceptance_token TEXT,
+      acceptance_token_expires_at DATETIME,
+      status TEXT NOT NULL DEFAULT 'pending',
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(broker_user_id) REFERENCES users(id),
+      FOREIGN KEY(relationship_confirmed_by_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating vow_registrants table:', err);
+    } else {
+      console.log('VOW registrants table ready');
+      db.run('ALTER TABLE vow_registrants ADD COLUMN acceptance_token TEXT', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN acceptance_token_expires_at DATETIME', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN email_verification_token TEXT', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN email_verification_expires_at DATETIME', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN relationship_requested_at DATETIME', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN relationship_status TEXT NOT NULL DEFAULT \'awaiting-consumer\'', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN relationship_confirmed_at DATETIME', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN relationship_confirmed_by_user_id INTEGER', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN agency_disclosure_acknowledged_at DATETIME', () => {});
+      db.run('ALTER TABLE vow_registrants ADD COLUMN relationship_workflow_version TEXT', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrants_broker_updated ON vow_registrants(broker_user_id, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrants_status ON vow_registrants(status, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrants_relationship_status ON vow_registrants(relationship_status, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrants_email ON vow_registrants(email)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrants_username ON vow_registrants(username)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrants_acceptance_token ON vow_registrants(acceptance_token)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrants_email_verification_token ON vow_registrants(email_verification_token)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS vow_registrant_audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      registrant_id TEXT NOT NULL,
+      actor_user_id INTEGER,
+      event_type TEXT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      details_json TEXT NOT NULL DEFAULT '{}',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(registrant_id) REFERENCES vow_registrants(id),
+      FOREIGN KEY(actor_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating vow_registrant_audit_log table:', err);
+    } else {
+      console.log('VOW registrant audit log table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_registrant_audit_registrant_created ON vow_registrant_audit_log(registrant_id, created_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS vow_compliance_requests (
+      id TEXT PRIMARY KEY,
+      broker_user_id INTEGER NOT NULL,
+      registrant_id TEXT,
+      request_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open',
+      request_source TEXT NOT NULL DEFAULT 'internal',
+      property_address TEXT,
+      listing_source TEXT,
+      listing_id TEXT,
+      mls_id TEXT,
+      requested_by_name TEXT,
+      requested_by_email TEXT,
+      requested_reason TEXT,
+      internal_notes TEXT,
+      access_scope TEXT,
+      access_expires_at DATETIME,
+      requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at DATETIME,
+      reviewed_by_user_id INTEGER,
+      effective_start_at DATETIME,
+      effective_end_at DATETIME,
+      seller_opt_out INTEGER NOT NULL DEFAULT 0,
+      comments_disabled INTEGER NOT NULL DEFAULT 0,
+      avm_disabled INTEGER NOT NULL DEFAULT 0,
+      compliance_review_access_granted INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(broker_user_id) REFERENCES users(id),
+      FOREIGN KEY(registrant_id) REFERENCES vow_registrants(id),
+      FOREIGN KEY(reviewed_by_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating vow_compliance_requests table:', err);
+    } else {
+      console.log('VOW compliance requests table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_compliance_requests_broker_updated ON vow_compliance_requests(broker_user_id, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_compliance_requests_status ON vow_compliance_requests(status, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_compliance_requests_type ON vow_compliance_requests(request_type, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_compliance_requests_listing ON vow_compliance_requests(mls_id, listing_id, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_vow_compliance_requests_registrant ON vow_compliance_requests(registrant_id, updated_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS access_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -3845,7 +4029,7 @@ function hasMeaningfulMlsImportSpreadsheetRow(rowLike) {
 }
 
 function normalizeMlsImportSpreadsheetRow(rowLike, defaults = {}) {
-  const row = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  const row = stripCompensationFieldsFromFeedData(rowLike && typeof rowLike === 'object' ? rowLike : {});
   return {
     id: Number.isInteger(Number(row.id)) ? Number(row.id) : null,
     matchKey: normalizeMlsImportSpreadsheetValue(row.matchKey || defaults.matchKey || ''),
@@ -6224,6 +6408,552 @@ function serializeUser(userLike) {
     avatarUploadId,
     avatarImage: buildProfileAvatarContentPath(avatarUploadId)
   };
+}
+
+function normalizeVowRegistrantName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 160);
+}
+
+function normalizeVowRegistrantUsername(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9._-]+/g, '')
+    .slice(0, 80);
+}
+
+function normalizeVowRelationshipType(value) {
+  return String(value || 'prospective buyer').trim().replace(/\s+/g, ' ').slice(0, 120) || 'prospective buyer';
+}
+
+function normalizeVowRegistrantStatus(value) {
+  const normalized = String(value || 'pending').trim().toLowerCase();
+  return ['pending', 'active', 'suspended', 'revoked', 'expired'].includes(normalized)
+    ? normalized
+    : 'pending';
+}
+
+function normalizeVowRelationshipStatus(value) {
+  const normalized = String(value || 'awaiting-consumer').trim().toLowerCase();
+  return ['awaiting-consumer', 'pending-broker-review', 'established', 'declined', 'expired'].includes(normalized)
+    ? normalized
+    : 'awaiting-consumer';
+}
+
+function normalizeVowRegistrantNotes(value) {
+  return String(value || '').trim().slice(0, 2000);
+}
+
+function buildVowPasswordExpiryDate(fromDate = new Date()) {
+  const nextDate = new Date(fromDate);
+  nextDate.setDate(nextDate.getDate() + VOW_PASSWORD_ROTATION_DAYS);
+  return nextDate.toISOString();
+}
+
+function parseOptionalDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getVowPasswordRotationState(rowLike, referenceDate = new Date()) {
+  const passwordChangedAt = rowLike?.password_changed_at || rowLike?.passwordChangedAt || null;
+  const storedPasswordExpiresAt = rowLike?.password_expires_at || rowLike?.passwordExpiresAt || null;
+  const effectivePasswordExpiresAt = storedPasswordExpiresAt
+    || (passwordChangedAt ? buildVowPasswordExpiryDate(new Date(passwordChangedAt)) : null);
+  const expiryDate = parseOptionalDate(effectivePasswordExpiresAt);
+  const referenceTime = referenceDate instanceof Date ? referenceDate.getTime() : Date.now();
+  const passwordRotationRequired = !expiryDate || expiryDate.getTime() <= referenceTime;
+
+  return {
+    passwordChangedAt,
+    passwordExpiresAt: expiryDate ? expiryDate.toISOString() : null,
+    passwordRotationRequired,
+    passwordRotationIntervalDays: VOW_PASSWORD_ROTATION_DAYS
+  };
+}
+
+function buildVowAcceptanceTokenExpiryDate(fromDate = new Date()) {
+  const nextDate = new Date(fromDate);
+  nextDate.setDate(nextDate.getDate() + VOW_ACCEPTANCE_TOKEN_TTL_DAYS);
+  return nextDate.toISOString();
+}
+
+function buildVowEmailVerificationExpiryDate(fromDate = new Date()) {
+  const nextDate = new Date(fromDate);
+  nextDate.setDate(nextDate.getDate() + VOW_EMAIL_VERIFICATION_TOKEN_TTL_DAYS);
+  return nextDate.toISOString();
+}
+
+function generateVowAcceptanceToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+function generateVowEmailVerificationToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+function getVowRequiredTermsStatements() {
+  return [
+    {
+      key: 'brokerRelationship',
+      label: 'I acknowledge that I am entering into or continuing a lawful consumer-broker relationship with the Participant in connection with this VOW access.'
+    },
+    {
+      key: 'personalUse',
+      label: 'I understand that all information obtained from the VOW is intended only for my personal, non-commercial use.'
+    },
+    {
+      key: 'bonaFideInterest',
+      label: 'I represent that I have a bona fide interest in the purchase, sale, or lease of real estate of the type being offered through the VOW.'
+    },
+    {
+      key: 'noRedistribution',
+      label: 'I will not copy, redistribute, or retransmit any information provided through the VOW except in connection with my consideration of the purchase, sale, or lease of an individual property.'
+    },
+    {
+      key: 'mlsCopyright',
+      label: 'I acknowledge the MLS ownership of, and the validity of the MLS copyright in, the MLS database and related listing information.'
+    },
+    {
+      key: 'complianceAccess',
+      label: 'I authorize the MLS, other MLS Participants, and their duly authorized representatives to access this VOW for purposes of verifying compliance with MLS rules and policies.'
+    }
+  ];
+}
+
+function normalizeVowComplianceRequestType(value) {
+  const normalized = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  if (['seller-opt-out', 'seller-optout', 'opt-out', 'optout'].includes(normalized)) {
+    return 'seller-opt-out';
+  }
+  if (['disable-comments', 'comments-disable', 'comment-disable', 'comments-off'].includes(normalized)) {
+    return 'disable-comments';
+  }
+  if (['disable-avm', 'avm-disable', 'disable-automated-valuation-model'].includes(normalized)) {
+    return 'disable-avm';
+  }
+  if (['compliance-review-access', 'review-access', 'compliance-access'].includes(normalized)) {
+    return 'compliance-review-access';
+  }
+  return VOW_COMPLIANCE_REQUEST_TYPES.includes(normalized) ? normalized : 'seller-opt-out';
+}
+
+function normalizeVowComplianceRequestStatus(value) {
+  const normalized = String(value || 'open').trim().toLowerCase();
+  return VOW_COMPLIANCE_REQUEST_STATUSES.includes(normalized) ? normalized : 'open';
+}
+
+function normalizeVowComplianceRequestSource(value) {
+  const normalized = String(value || 'internal').trim().toLowerCase();
+  return VOW_COMPLIANCE_REQUEST_SOURCES.includes(normalized) ? normalized : 'internal';
+}
+
+function normalizeVowComplianceText(value, maxLength = 500) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
+}
+
+function normalizeVowComplianceMultilineText(value, maxLength = 4000) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function normalizeVowComplianceIdentifier(value, maxLength = 160) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function normalizeVowComplianceRequestDate(value) {
+  const parsed = parseOptionalDate(value);
+  return parsed ? parsed.toISOString() : null;
+}
+
+function normalizeVowComplianceBoolean(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+
+  return /^(1|true|yes|on)$/i.test(String(value || '').trim());
+}
+
+function buildVowComplianceRequestControlDefaults(requestType) {
+  const normalizedType = normalizeVowComplianceRequestType(requestType);
+  return {
+    sellerOptOut: normalizedType === 'seller-opt-out',
+    commentsDisabled: ['seller-opt-out', 'disable-comments'].includes(normalizedType),
+    avmDisabled: ['seller-opt-out', 'disable-avm'].includes(normalizedType),
+    complianceReviewAccessGranted: normalizedType === 'compliance-review-access'
+  };
+}
+
+function isVowComplianceRequestActive(rowLike, referenceDate = new Date()) {
+  const status = normalizeVowComplianceRequestStatus(rowLike?.status);
+  if (!['approved', 'fulfilled'].includes(status)) {
+    return false;
+  }
+
+  const referenceTime = referenceDate instanceof Date ? referenceDate.getTime() : Date.now();
+  const startDate = parseOptionalDate(rowLike?.effective_start_at || rowLike?.effectiveStartAt || rowLike?.requested_at || rowLike?.requestedAt);
+  const endDate = parseOptionalDate(rowLike?.effective_end_at || rowLike?.effectiveEndAt || rowLike?.access_expires_at || rowLike?.accessExpiresAt);
+
+  if (startDate && startDate.getTime() > referenceTime) {
+    return false;
+  }
+
+  if (endDate && endDate.getTime() < referenceTime) {
+    return false;
+  }
+
+  return true;
+}
+
+function buildVowComplianceRequestControls(rowLike) {
+  const defaults = buildVowComplianceRequestControlDefaults(rowLike?.request_type || rowLike?.requestType);
+  return {
+    sellerOptOut: normalizeVowComplianceBoolean(rowLike?.seller_opt_out ?? rowLike?.sellerOptOut ?? defaults.sellerOptOut),
+    commentsDisabled: normalizeVowComplianceBoolean(rowLike?.comments_disabled ?? rowLike?.commentsDisabled ?? defaults.commentsDisabled),
+    avmDisabled: normalizeVowComplianceBoolean(rowLike?.avm_disabled ?? rowLike?.avmDisabled ?? defaults.avmDisabled),
+    complianceReviewAccessGranted: normalizeVowComplianceBoolean(rowLike?.compliance_review_access_granted ?? rowLike?.complianceReviewAccessGranted ?? defaults.complianceReviewAccessGranted)
+  };
+}
+
+function serializeVowComplianceRequest(rowLike) {
+  if (!rowLike || typeof rowLike !== 'object') {
+    return null;
+  }
+
+  const controls = buildVowComplianceRequestControls(rowLike);
+  const active = isVowComplianceRequestActive(rowLike);
+
+  return {
+    id: String(rowLike.id || '').trim(),
+    brokerUserId: Number(rowLike.broker_user_id || rowLike.brokerUserId) || 0,
+    registrantId: String(rowLike.registrant_id || rowLike.registrantId || '').trim() || null,
+    requestType: normalizeVowComplianceRequestType(rowLike.request_type || rowLike.requestType),
+    status: normalizeVowComplianceRequestStatus(rowLike.status),
+    requestSource: normalizeVowComplianceRequestSource(rowLike.request_source || rowLike.requestSource),
+    propertyAddress: normalizeVowComplianceText(rowLike.property_address || rowLike.propertyAddress, 300),
+    listingSource: normalizeVowComplianceIdentifier(rowLike.listing_source || rowLike.listingSource, 120),
+    listingId: normalizeVowComplianceIdentifier(rowLike.listing_id || rowLike.listingId, 160),
+    mlsId: normalizeVowComplianceIdentifier(rowLike.mls_id || rowLike.mlsId, 160),
+    requestedByName: normalizeVowComplianceText(rowLike.requested_by_name || rowLike.requestedByName, 200),
+    requestedByEmail: normalizeKnownEmail(rowLike.requested_by_email || rowLike.requestedByEmail || ''),
+    requestedReason: normalizeVowComplianceMultilineText(rowLike.requested_reason || rowLike.requestedReason, 4000),
+    internalNotes: normalizeVowComplianceMultilineText(rowLike.internal_notes || rowLike.internalNotes, 4000),
+    accessScope: normalizeVowComplianceMultilineText(rowLike.access_scope || rowLike.accessScope, 1000),
+    accessExpiresAt: rowLike.access_expires_at || rowLike.accessExpiresAt || null,
+    requestedAt: rowLike.requested_at || rowLike.requestedAt || null,
+    reviewedAt: rowLike.reviewed_at || rowLike.reviewedAt || null,
+    reviewedByUserId: Number(rowLike.reviewed_by_user_id || rowLike.reviewedByUserId) || null,
+    effectiveStartAt: rowLike.effective_start_at || rowLike.effectiveStartAt || null,
+    effectiveEndAt: rowLike.effective_end_at || rowLike.effectiveEndAt || null,
+    controls,
+    isActive: active,
+    effectiveControls: active
+      ? controls
+      : {
+          sellerOptOut: false,
+          commentsDisabled: false,
+          avmDisabled: false,
+          complianceReviewAccessGranted: false
+        },
+    createdAt: rowLike.created_at || rowLike.createdAt || null,
+    updatedAt: rowLike.updated_at || rowLike.updatedAt || null
+  };
+}
+
+async function loadVowComplianceRequestById(requestId) {
+  const normalizedRequestId = String(requestId || '').trim();
+  if (!normalizedRequestId) {
+    return null;
+  }
+
+  return dbGet('SELECT * FROM vow_compliance_requests WHERE id = ?', [normalizedRequestId]);
+}
+
+async function ensureVowComplianceRequestOwnershipOrAdmin(decoded, requestId) {
+  const row = await loadVowComplianceRequestById(requestId);
+  if (!row) {
+    return { allowed: false, row: null, statusCode: 404, error: 'VOW compliance request not found.' };
+  }
+
+  if (decoded.role === 'admin' || Number(row.broker_user_id) === Number(decoded.id)) {
+    return { allowed: true, row, statusCode: 200, error: '' };
+  }
+
+  return { allowed: false, row, statusCode: 403, error: 'Broker or admin access required.' };
+}
+
+function doesVowComplianceRequestMatchSelectors(rowLike, selectors = {}) {
+  const normalizedPropertyAddress = normalizeVowComplianceText(selectors.propertyAddress, 300).toLowerCase();
+  const normalizedListingId = normalizeVowComplianceIdentifier(selectors.listingId, 160).toLowerCase();
+  const normalizedMlsId = normalizeVowComplianceIdentifier(selectors.mlsId, 160).toLowerCase();
+  const normalizedRegistrantId = normalizeVowComplianceIdentifier(selectors.registrantId, 80).toLowerCase();
+  const requestedSelectors = [normalizedPropertyAddress, normalizedListingId, normalizedMlsId, normalizedRegistrantId].filter(Boolean);
+
+  if (requestedSelectors.length === 0) {
+    return false;
+  }
+
+  const rowPropertyAddress = normalizeVowComplianceText(rowLike?.property_address || rowLike?.propertyAddress, 300).toLowerCase();
+  const rowListingId = normalizeVowComplianceIdentifier(rowLike?.listing_id || rowLike?.listingId, 160).toLowerCase();
+  const rowMlsId = normalizeVowComplianceIdentifier(rowLike?.mls_id || rowLike?.mlsId, 160).toLowerCase();
+  const rowRegistrantId = normalizeVowComplianceIdentifier(rowLike?.registrant_id || rowLike?.registrantId, 80).toLowerCase();
+
+  return (
+    (normalizedPropertyAddress && rowPropertyAddress && normalizedPropertyAddress === rowPropertyAddress)
+    || (normalizedListingId && rowListingId && normalizedListingId === rowListingId)
+    || (normalizedMlsId && rowMlsId && normalizedMlsId === rowMlsId)
+    || (normalizedRegistrantId && rowRegistrantId && normalizedRegistrantId === rowRegistrantId)
+  );
+}
+
+function buildEffectiveVowComplianceControls(rows) {
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const matchingActiveRows = sourceRows.filter((row) => isVowComplianceRequestActive(row));
+  const accessExpirations = matchingActiveRows
+    .map((row) => row?.access_expires_at || row?.accessExpiresAt || row?.effective_end_at || row?.effectiveEndAt || null)
+    .filter(Boolean)
+    .sort();
+
+  return {
+    sellerOptOut: matchingActiveRows.some((row) => buildVowComplianceRequestControls(row).sellerOptOut),
+    commentsDisabled: matchingActiveRows.some((row) => buildVowComplianceRequestControls(row).commentsDisabled),
+    avmDisabled: matchingActiveRows.some((row) => buildVowComplianceRequestControls(row).avmDisabled),
+    complianceReviewAccessGranted: matchingActiveRows.some((row) => buildVowComplianceRequestControls(row).complianceReviewAccessGranted),
+    complianceReviewScopes: matchingActiveRows
+      .map((row) => normalizeVowComplianceMultilineText(row?.access_scope || row?.accessScope || '', 1000))
+      .filter(Boolean),
+    accessExpiresAt: accessExpirations.length > 0 ? accessExpirations[accessExpirations.length - 1] : null,
+    matchedRequestIds: matchingActiveRows.map((row) => String(row.id || '').trim()).filter(Boolean)
+  };
+}
+
+function serializeVowRegistrant(rowLike) {
+  if (!rowLike || typeof rowLike !== 'object') {
+    return null;
+  }
+
+  const passwordState = getVowPasswordRotationState(rowLike);
+
+  return {
+    id: String(rowLike.id || '').trim(),
+    brokerUserId: Number(rowLike.broker_user_id || rowLike.brokerUserId) || 0,
+    fullName: String(rowLike.full_name || rowLike.fullName || '').trim(),
+    email: String(rowLike.email || '').trim().toLowerCase(),
+    username: String(rowLike.username || '').trim().toLowerCase(),
+    relationshipType: String(rowLike.relationship_type || rowLike.relationshipType || '').trim(),
+    relationshipAcknowledgedAt: rowLike.relationship_acknowledged_at || rowLike.relationshipAcknowledgedAt || null,
+    relationshipRequestedAt: rowLike.relationship_requested_at || rowLike.relationshipRequestedAt || null,
+    relationshipStatus: normalizeVowRelationshipStatus(rowLike.relationship_status || rowLike.relationshipStatus),
+    relationshipConfirmedAt: rowLike.relationship_confirmed_at || rowLike.relationshipConfirmedAt || null,
+    relationshipConfirmedByUserId: Number(rowLike.relationship_confirmed_by_user_id || rowLike.relationshipConfirmedByUserId) || null,
+    agencyDisclosureAcknowledgedAt: rowLike.agency_disclosure_acknowledged_at || rowLike.agencyDisclosureAcknowledgedAt || null,
+    relationshipWorkflowVersion: String(rowLike.relationship_workflow_version || rowLike.relationshipWorkflowVersion || '').trim(),
+    termsAcceptedAt: rowLike.terms_accepted_at || rowLike.termsAcceptedAt || null,
+    termsVersion: String(rowLike.terms_version || rowLike.termsVersion || '').trim(),
+    emailVerifiedAt: rowLike.email_verified_at || rowLike.emailVerifiedAt || null,
+    lastVerificationEmailSentAt: rowLike.last_verification_email_sent_at || rowLike.lastVerificationEmailSentAt || null,
+    emailVerificationExpiresAt: rowLike.email_verification_expires_at || rowLike.emailVerificationExpiresAt || null,
+    passwordChangedAt: passwordState.passwordChangedAt,
+    passwordExpiresAt: passwordState.passwordExpiresAt,
+    passwordRotationRequired: passwordState.passwordRotationRequired,
+    passwordRotationIntervalDays: passwordState.passwordRotationIntervalDays,
+    lastLoginAt: rowLike.last_login_at || rowLike.lastLoginAt || null,
+    acceptanceTokenExpiresAt: rowLike.acceptance_token_expires_at || rowLike.acceptanceTokenExpiresAt || null,
+    status: normalizeVowRegistrantStatus(rowLike.status),
+    notes: String(rowLike.notes || '').trim(),
+    createdAt: rowLike.created_at || rowLike.createdAt || null,
+    updatedAt: rowLike.updated_at || rowLike.updatedAt || null
+  };
+}
+
+async function logVowRegistrantAuditEvent(registrantId, actorUserId, eventType, req, details = {}) {
+  const normalizedRegistrantId = String(registrantId || '').trim();
+  const normalizedEventType = String(eventType || '').trim().toLowerCase();
+  if (!normalizedRegistrantId || !normalizedEventType) {
+    return;
+  }
+
+  await dbRun(
+    `INSERT INTO vow_registrant_audit_log (
+      registrant_id,
+      actor_user_id,
+      event_type,
+      ip_address,
+      user_agent,
+      details_json
+    ) VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      normalizedRegistrantId,
+      Number(actorUserId) || null,
+      normalizedEventType,
+      String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').slice(0, 255),
+      String(req.headers['user-agent'] || '').slice(0, 500),
+      JSON.stringify(details && typeof details === 'object' ? details : {})
+    ]
+  );
+}
+
+async function loadVowRegistrantById(registrantId) {
+  const normalizedRegistrantId = String(registrantId || '').trim();
+  if (!normalizedRegistrantId) {
+    return null;
+  }
+
+  return dbGet('SELECT * FROM vow_registrants WHERE id = ?', [normalizedRegistrantId]);
+}
+
+async function loadVowRegistrantByAcceptanceToken(token) {
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedToken) {
+    return null;
+  }
+
+  return dbGet('SELECT * FROM vow_registrants WHERE acceptance_token = ?', [normalizedToken]);
+}
+
+async function loadVowRegistrantByEmailVerificationToken(token) {
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedToken) {
+    return null;
+  }
+
+  return dbGet('SELECT * FROM vow_registrants WHERE email_verification_token = ?', [normalizedToken]);
+}
+
+function buildAbsoluteUrl(req, pathnameWithQuery) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const protocol = forwardedProto || req.protocol || 'http';
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  return `${protocol}://${host}${pathnameWithQuery}`;
+}
+
+async function buildVowEmailVerificationContext(registrantId, req, options = {}) {
+  const registrant = await loadVowRegistrantById(registrantId);
+  if (!registrant) {
+    throw new Error('VOW registrant not found.');
+  }
+
+  const brokerRow = await dbGet('SELECT id, name, email, smtp_user, smtp_pass, smtp_signature FROM users WHERE id = ?', [Number(registrant.broker_user_id) || 0]);
+  if (!brokerRow) {
+    throw new Error('Broker account not found for this VOW registrant.');
+  }
+
+  const smtpConfig = await resolveEffectiveSmtpConfigForUser({
+    userId: brokerRow.id,
+    email: brokerRow.email,
+    smtpUser: brokerRow.smtp_user,
+    smtpPass: brokerRow.smtp_pass,
+    smtpSignature: brokerRow.smtp_signature
+  });
+
+  if (!smtpConfig.smtpUser || !smtpConfig.smtpPass) {
+    throw new Error('Broker Gmail outbox is not configured for VOW verification email delivery.');
+  }
+
+  const nowIso = new Date().toISOString();
+  const token = options.reuseExistingToken && String(registrant.email_verification_token || '').trim()
+    ? String(registrant.email_verification_token || '').trim()
+    : generateVowEmailVerificationToken();
+  const expiresAt = options.reuseExistingToken && String(registrant.email_verification_expires_at || '').trim()
+    ? String(registrant.email_verification_expires_at || '').trim()
+    : buildVowEmailVerificationExpiryDate(new Date(nowIso));
+  const verificationUrl = buildAbsoluteUrl(req, `/vow-email-verify.html?token=${encodeURIComponent(token)}`);
+
+  return {
+    registrant,
+    brokerRow,
+    smtpConfig,
+    token,
+    expiresAt,
+    nowIso,
+    verificationUrl
+  };
+}
+
+async function sendVowEmailVerificationMessage(context) {
+  const registrantName = String(context.registrant.full_name || '').trim() || 'Registrant';
+  const brokerName = String(context.brokerRow.name || '').trim() || 'Your broker';
+  const brokerEmail = String(context.brokerRow.email || '').trim().toLowerCase();
+  const expirationLabel = context.expiresAt ? new Date(context.expiresAt).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) : 'soon';
+  const subject = 'Confirm your FAST BRIDGE GROUP VOW email address';
+  const htmlBody = `
+    <p>Hello ${registrantName},</p>
+    <p>You recently accepted the Virtual Office Website Terms of Use for broker-supervised MLS access through FAST BRIDGE GROUP.</p>
+    <p>Please confirm that this email address belongs to you by opening the verification link below:</p>
+    <p><a href="${context.verificationUrl}">${context.verificationUrl}</a></p>
+    <p>This verification link expires on ${escapeHtml(expirationLabel)}.</p>
+    <p>If you did not request or complete this VOW registration step, do not use the link and contact ${escapeHtml(brokerName)} at <a href="mailto:${escapeHtml(brokerEmail)}">${escapeHtml(brokerEmail)}</a>.</p>
+  `;
+  const textBody = [
+    `Hello ${registrantName},`,
+    '',
+    'You recently accepted the Virtual Office Website Terms of Use for broker-supervised MLS access through FAST BRIDGE GROUP.',
+    '',
+    'Please confirm that this email address belongs to you by opening the verification link below:',
+    context.verificationUrl,
+    '',
+    `This verification link expires on ${expirationLabel}.`,
+    '',
+    `If you did not request or complete this VOW registration step, contact ${brokerName} at ${brokerEmail}.`
+  ].join('\n');
+
+  await sendAgentEmail({
+    fromName: brokerName,
+    fromEmail: context.smtpConfig.smtpUser,
+    toName: registrantName,
+    toEmail: context.registrant.email,
+    subject,
+    body: textBody,
+    htmlBody,
+    smtpSignature: context.smtpConfig.smtpSignature,
+    smtpUser: context.smtpConfig.smtpUser,
+    smtpPass: context.smtpConfig.smtpPass
+  });
+}
+
+async function issueAndSendVowEmailVerification(registrantId, req, options = {}) {
+  const context = await buildVowEmailVerificationContext(registrantId, req, options);
+  await dbRun(
+    `UPDATE vow_registrants
+     SET email_verification_token = ?,
+         email_verification_expires_at = ?,
+         last_verification_email_sent_at = ?,
+         updated_at = ?
+     WHERE id = ?`,
+    [context.token, context.expiresAt, context.nowIso, context.nowIso, String(context.registrant.id || '').trim()]
+  );
+
+  await sendVowEmailVerificationMessage(context);
+  await logVowRegistrantAuditEvent(String(context.registrant.id || '').trim(), Number(context.brokerRow.id) || null, 'email-verification-sent', req, {
+    expiresAt: context.expiresAt
+  });
+
+  return {
+    verificationUrl: context.verificationUrl,
+    expiresAt: context.expiresAt,
+    sentAt: context.nowIso
+  };
+}
+
+async function ensureVowRegistrantOwnershipOrAdmin(decoded, registrantId) {
+  const row = await loadVowRegistrantById(registrantId);
+  if (!row) {
+    return { allowed: false, row: null, statusCode: 404, error: 'VOW registrant not found.' };
+  }
+
+  if (decoded.role === 'admin' || Number(row.broker_user_id) === Number(decoded.id)) {
+    return { allowed: true, row, statusCode: 200, error: '' };
+  }
+
+  return { allowed: false, row, statusCode: 403, error: 'Broker or admin access required.' };
 }
 
 function issueAuthToken(userLike, sessionId = '') {
@@ -9320,6 +10050,1221 @@ function requireAdmin(req, res) {
   return decoded;
 }
 
+function requireBrokerOrAdmin(req, res) {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return null;
+  }
+
+  if (!['admin', 'broker'].includes(String(decoded.role || '').trim().toLowerCase())) {
+    res.status(403).json({ error: 'Broker or admin access required' });
+    return null;
+  }
+
+  return decoded;
+}
+
+app.get('/api/vow/registrants', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const limit = Math.max(1, Math.min(Number(req.query?.limit) || 100, 250));
+    const includeAll = decoded.role === 'admin' && /^(1|true|yes)$/i.test(String(req.query?.all || '').trim());
+    const rows = includeAll
+      ? await dbAll(
+          `SELECT *
+           FROM vow_registrants
+           ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC
+           LIMIT ?`,
+          [limit]
+        )
+      : await dbAll(
+          `SELECT *
+           FROM vow_registrants
+           WHERE broker_user_id = ?
+           ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC
+           LIMIT ?`,
+          [Number(decoded.id) || 0, limit]
+        );
+
+    return res.json({
+      success: true,
+      registrants: rows.map(serializeVowRegistrant).filter(Boolean)
+    });
+  } catch (error) {
+    console.error('VOW registrants load error:', error);
+    return res.status(500).json({ error: 'Unable to load VOW registrants.' });
+  }
+});
+
+app.post('/api/vow/registrants', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const fullName = normalizeVowRegistrantName(req.body?.fullName || req.body?.name);
+    const email = normalizeKnownEmail(req.body?.email);
+    const username = normalizeVowRegistrantUsername(req.body?.username);
+    const password = String(req.body?.password || '');
+    const relationshipType = normalizeVowRelationshipType(req.body?.relationshipType);
+    const status = normalizeVowRegistrantStatus(req.body?.status || 'pending');
+    const notes = normalizeVowRegistrantNotes(req.body?.notes);
+    const termsVersion = String(req.body?.termsVersion || 'v1').trim().slice(0, 40) || 'v1';
+    const relationshipAcknowledged = Boolean(req.body?.relationshipAcknowledged);
+    const termsAccepted = Boolean(req.body?.termsAccepted);
+    const emailVerified = Boolean(req.body?.emailVerified);
+
+    if (!fullName || !email || !username || !password) {
+      return res.status(400).json({ error: 'Full name, email, username, and password are required.' });
+    }
+
+    if (!/^.+@.+\..+$/.test(email)) {
+      return res.status(400).json({ error: 'A valid email address is required.' });
+    }
+
+    if (username.length < 4) {
+      return res.status(400).json({ error: 'Username must be at least 4 characters.' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+
+    const existingByEmail = await dbGet('SELECT id FROM vow_registrants WHERE LOWER(email) = ?', [email]);
+    if (existingByEmail) {
+      return res.status(400).json({ error: 'A VOW registrant with that email already exists.' });
+    }
+
+    const existingByUsername = await dbGet('SELECT id FROM vow_registrants WHERE LOWER(username) = ?', [username]);
+    if (existingByUsername) {
+      return res.status(400).json({ error: 'A VOW registrant with that username already exists.' });
+    }
+
+    const nowIso = new Date().toISOString();
+    const registrantId = crypto.randomUUID();
+    const passwordHash = await bcrypt.hash(password, 10);
+    await dbRun(
+      `INSERT INTO vow_registrants (
+        id,
+        broker_user_id,
+        full_name,
+        email,
+        username,
+        password_hash,
+        relationship_type,
+        relationship_acknowledged_at,
+        relationship_requested_at,
+        relationship_status,
+        relationship_confirmed_at,
+        relationship_confirmed_by_user_id,
+        agency_disclosure_acknowledged_at,
+        relationship_workflow_version,
+        terms_accepted_at,
+        terms_version,
+        email_verified_at,
+        password_changed_at,
+        password_expires_at,
+        status,
+        notes,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        registrantId,
+        Number(decoded.id) || 0,
+        fullName,
+        email,
+        username,
+        passwordHash,
+        relationshipType,
+        relationshipAcknowledged ? nowIso : null,
+        relationshipAcknowledged ? nowIso : null,
+        relationshipAcknowledged ? 'pending-broker-review' : 'awaiting-consumer',
+        null,
+        null,
+        null,
+        VOW_TERMS_VERSION,
+        termsAccepted ? nowIso : null,
+        termsVersion,
+        emailVerified ? nowIso : null,
+        nowIso,
+        buildVowPasswordExpiryDate(new Date(nowIso)),
+        status,
+        notes,
+        nowIso
+      ]
+    );
+
+    await logVowRegistrantAuditEvent(registrantId, decoded.id, 'created', req, {
+      termsAccepted,
+      relationshipAcknowledged,
+      emailVerified,
+      status
+    });
+
+    const createdRegistrant = await loadVowRegistrantById(registrantId);
+    return res.status(201).json({ success: true, registrant: serializeVowRegistrant(createdRegistrant) });
+  } catch (error) {
+    console.error('VOW registrant create error:', error);
+    return res.status(500).json({ error: 'Unable to create VOW registrant.' });
+  }
+});
+
+app.patch('/api/vow/registrants/:id', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowRegistrantOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const currentRegistrant = ownership.row;
+    const nextFullName = req.body?.fullName !== undefined
+      ? normalizeVowRegistrantName(req.body.fullName)
+      : String(currentRegistrant.full_name || '').trim();
+    const nextEmail = req.body?.email !== undefined
+      ? normalizeKnownEmail(req.body.email)
+      : String(currentRegistrant.email || '').trim().toLowerCase();
+    const nextUsername = req.body?.username !== undefined
+      ? normalizeVowRegistrantUsername(req.body.username)
+      : String(currentRegistrant.username || '').trim().toLowerCase();
+    const nextRelationshipType = req.body?.relationshipType !== undefined
+      ? normalizeVowRelationshipType(req.body.relationshipType)
+      : String(currentRegistrant.relationship_type || '').trim();
+    const nextRelationshipStatus = req.body?.relationshipStatus !== undefined
+      ? normalizeVowRelationshipStatus(req.body.relationshipStatus)
+      : normalizeVowRelationshipStatus(currentRegistrant.relationship_status);
+    const nextStatus = req.body?.status !== undefined
+      ? normalizeVowRegistrantStatus(req.body.status)
+      : normalizeVowRegistrantStatus(currentRegistrant.status);
+    const nextNotes = req.body?.notes !== undefined
+      ? normalizeVowRegistrantNotes(req.body.notes)
+      : String(currentRegistrant.notes || '').trim();
+    const nextTermsVersion = req.body?.termsVersion !== undefined
+      ? String(req.body.termsVersion || '').trim().slice(0, 40)
+      : String(currentRegistrant.terms_version || '').trim();
+    const nowIso = new Date().toISOString();
+
+    if (!nextFullName || !nextEmail || !nextUsername) {
+      return res.status(400).json({ error: 'Full name, email, and username are required.' });
+    }
+
+    const emailConflict = await dbGet(
+      'SELECT id FROM vow_registrants WHERE LOWER(email) = ? AND id != ?',
+      [nextEmail, String(currentRegistrant.id)]
+    );
+    if (emailConflict) {
+      return res.status(400).json({ error: 'A different VOW registrant already uses that email.' });
+    }
+
+    const usernameConflict = await dbGet(
+      'SELECT id FROM vow_registrants WHERE LOWER(username) = ? AND id != ?',
+      [nextUsername, String(currentRegistrant.id)]
+    );
+    if (usernameConflict) {
+      return res.status(400).json({ error: 'A different VOW registrant already uses that username.' });
+    }
+
+    let nextPasswordHash = currentRegistrant.password_hash;
+    let nextPasswordChangedAt = currentRegistrant.password_changed_at;
+    let nextPasswordExpiresAt = currentRegistrant.password_expires_at;
+    const nextPassword = String(req.body?.password || '');
+    if (nextPassword) {
+      if (nextPassword.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+      }
+      nextPasswordHash = await bcrypt.hash(nextPassword, 10);
+      nextPasswordChangedAt = nowIso;
+      nextPasswordExpiresAt = buildVowPasswordExpiryDate(new Date(nowIso));
+    }
+
+    const relationshipAcknowledgedAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'relationshipAcknowledged')
+      ? (req.body.relationshipAcknowledged ? nowIso : null)
+      : currentRegistrant.relationship_acknowledged_at;
+    const relationshipRequestedAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'relationshipRequested')
+      ? (req.body.relationshipRequested ? nowIso : null)
+      : currentRegistrant.relationship_requested_at;
+    const agencyDisclosureAcknowledgedAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'agencyDisclosureAcknowledged')
+      ? (req.body.agencyDisclosureAcknowledged ? nowIso : null)
+      : currentRegistrant.agency_disclosure_acknowledged_at;
+    const relationshipConfirmedAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'relationshipConfirmed')
+      ? (req.body.relationshipConfirmed ? nowIso : null)
+      : currentRegistrant.relationship_confirmed_at;
+    const relationshipConfirmedByUserId = Object.prototype.hasOwnProperty.call(req.body || {}, 'relationshipConfirmed')
+      ? (req.body.relationshipConfirmed ? Number(decoded.id) || null : null)
+      : (Number(currentRegistrant.relationship_confirmed_by_user_id) || null);
+    const relationshipWorkflowVersion = req.body?.relationshipWorkflowVersion !== undefined
+      ? String(req.body.relationshipWorkflowVersion || '').trim().slice(0, 40)
+      : String(currentRegistrant.relationship_workflow_version || '').trim();
+    const termsAcceptedAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'termsAccepted')
+      ? (req.body.termsAccepted ? nowIso : null)
+      : currentRegistrant.terms_accepted_at;
+    const emailVerifiedAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'emailVerified')
+      ? (req.body.emailVerified ? nowIso : null)
+      : currentRegistrant.email_verified_at;
+    const lastVerificationEmailSentAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'verificationEmailSent')
+      ? (req.body.verificationEmailSent ? nowIso : null)
+      : currentRegistrant.last_verification_email_sent_at;
+    const acceptanceToken = req.body?.resetAcceptanceToken
+      ? null
+      : currentRegistrant.acceptance_token;
+    const acceptanceTokenExpiresAt = req.body?.resetAcceptanceToken
+      ? null
+      : currentRegistrant.acceptance_token_expires_at;
+
+    await dbRun(
+      `UPDATE vow_registrants
+       SET full_name = ?,
+           email = ?,
+           username = ?,
+           password_hash = ?,
+           relationship_type = ?,
+           relationship_acknowledged_at = ?,
+           relationship_requested_at = ?,
+           relationship_status = ?,
+           relationship_confirmed_at = ?,
+           relationship_confirmed_by_user_id = ?,
+           agency_disclosure_acknowledged_at = ?,
+           relationship_workflow_version = ?,
+           terms_accepted_at = ?,
+           terms_version = ?,
+           email_verified_at = ?,
+           last_verification_email_sent_at = ?,
+           password_changed_at = ?,
+           password_expires_at = ?,
+           acceptance_token = ?,
+           acceptance_token_expires_at = ?,
+           status = ?,
+           notes = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      [
+        nextFullName,
+        nextEmail,
+        nextUsername,
+        nextPasswordHash,
+        nextRelationshipType,
+        relationshipAcknowledgedAt,
+        relationshipRequestedAt,
+        nextRelationshipStatus,
+        relationshipConfirmedAt,
+        relationshipConfirmedByUserId,
+        agencyDisclosureAcknowledgedAt,
+        relationshipWorkflowVersion,
+        termsAcceptedAt,
+        nextTermsVersion,
+        emailVerifiedAt,
+        lastVerificationEmailSentAt,
+        nextPasswordChangedAt,
+        nextPasswordExpiresAt,
+        acceptanceToken,
+        acceptanceTokenExpiresAt,
+        nextStatus,
+        nextNotes,
+        nowIso,
+        String(currentRegistrant.id)
+      ]
+    );
+
+    await logVowRegistrantAuditEvent(String(currentRegistrant.id), decoded.id, 'updated', req, {
+      status: nextStatus,
+      relationshipStatus: nextRelationshipStatus,
+      passwordRotated: Boolean(nextPassword),
+      emailVerified: Boolean(emailVerifiedAt),
+      termsAccepted: Boolean(termsAcceptedAt)
+    });
+
+    const updatedRegistrant = await loadVowRegistrantById(String(currentRegistrant.id));
+    return res.json({ success: true, registrant: serializeVowRegistrant(updatedRegistrant) });
+  } catch (error) {
+    console.error('VOW registrant update error:', error);
+    return res.status(500).json({ error: 'Unable to update VOW registrant.' });
+  }
+});
+
+app.get('/api/vow/registrants/:id/audit', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowRegistrantOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const limit = Math.max(1, Math.min(Number(req.query?.limit) || 50, 200));
+    const rows = await dbAll(
+      `SELECT id, registrant_id, actor_user_id, event_type, ip_address, user_agent, details_json, created_at
+       FROM vow_registrant_audit_log
+       WHERE registrant_id = ?
+       ORDER BY datetime(created_at) DESC, id DESC
+       LIMIT ?`,
+      [String(req.params.id || '').trim(), limit]
+    );
+
+    return res.json({
+      success: true,
+      auditLog: rows.map((row) => ({
+        id: Number(row.id) || 0,
+        registrantId: String(row.registrant_id || '').trim(),
+        actorUserId: Number(row.actor_user_id) || null,
+        eventType: String(row.event_type || '').trim(),
+        ipAddress: String(row.ip_address || '').trim(),
+        userAgent: String(row.user_agent || '').trim(),
+        details: (() => {
+          try {
+            return JSON.parse(String(row.details_json || '{}'));
+          } catch (error) {
+            return {};
+          }
+        })(),
+        createdAt: row.created_at || null
+      }))
+    });
+  } catch (error) {
+    console.error('VOW registrant audit load error:', error);
+    return res.status(500).json({ error: 'Unable to load VOW registrant audit log.' });
+  }
+});
+
+app.get('/api/vow/compliance-requests', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const limit = Math.max(1, Math.min(Number(req.query?.limit) || 100, 250));
+    const includeAll = decoded.role === 'admin' && /^(1|true|yes)$/i.test(String(req.query?.all || '').trim());
+    const rows = includeAll
+      ? await dbAll(
+          `SELECT *
+           FROM vow_compliance_requests
+           ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC
+           LIMIT ?`,
+          [limit]
+        )
+      : await dbAll(
+          `SELECT *
+           FROM vow_compliance_requests
+           WHERE broker_user_id = ?
+           ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC
+           LIMIT ?`,
+          [Number(decoded.id) || 0, limit]
+        );
+
+    const requestedType = String(req.query?.type || '').trim();
+    const requestedStatus = String(req.query?.status || '').trim();
+    const requestedPropertyAddress = normalizeVowComplianceText(req.query?.propertyAddress, 300).toLowerCase();
+    const requestedMlsId = normalizeVowComplianceIdentifier(req.query?.mlsId, 160).toLowerCase();
+    const requestedListingId = normalizeVowComplianceIdentifier(req.query?.listingId, 160).toLowerCase();
+
+    const filteredRows = rows.filter((row) => {
+      if (requestedType && normalizeVowComplianceRequestType(requestedType) !== normalizeVowComplianceRequestType(row.request_type)) {
+        return false;
+      }
+      if (requestedStatus && normalizeVowComplianceRequestStatus(requestedStatus) !== normalizeVowComplianceRequestStatus(row.status)) {
+        return false;
+      }
+      if (requestedPropertyAddress && normalizeVowComplianceText(row.property_address, 300).toLowerCase() !== requestedPropertyAddress) {
+        return false;
+      }
+      if (requestedMlsId && normalizeVowComplianceIdentifier(row.mls_id, 160).toLowerCase() !== requestedMlsId) {
+        return false;
+      }
+      if (requestedListingId && normalizeVowComplianceIdentifier(row.listing_id, 160).toLowerCase() !== requestedListingId) {
+        return false;
+      }
+      return true;
+    });
+
+    return res.json({
+      success: true,
+      requests: filteredRows.map(serializeVowComplianceRequest).filter(Boolean)
+    });
+  } catch (error) {
+    console.error('VOW compliance requests load error:', error);
+    return res.status(500).json({ error: 'Unable to load VOW compliance requests.' });
+  }
+});
+
+app.post('/api/vow/compliance-requests', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const brokerUserId = decoded.role === 'admin'
+      ? Math.max(1, Number(req.body?.brokerUserId) || 0)
+      : Number(decoded.id) || 0;
+    const requestType = normalizeVowComplianceRequestType(req.body?.requestType);
+    const status = normalizeVowComplianceRequestStatus(req.body?.status || 'open');
+    const requestSource = normalizeVowComplianceRequestSource(req.body?.requestSource || (decoded.role === 'admin' ? 'admin' : 'broker'));
+    const registrantId = normalizeVowComplianceIdentifier(req.body?.registrantId, 80);
+    const propertyAddress = normalizeVowComplianceText(req.body?.propertyAddress, 300);
+    const listingSource = normalizeVowComplianceIdentifier(req.body?.listingSource, 120);
+    const listingId = normalizeVowComplianceIdentifier(req.body?.listingId, 160);
+    const mlsId = normalizeVowComplianceIdentifier(req.body?.mlsId, 160);
+    const requestedByName = normalizeVowComplianceText(req.body?.requestedByName, 200);
+    const requestedByEmail = normalizeKnownEmail(req.body?.requestedByEmail || '');
+    const requestedReason = normalizeVowComplianceMultilineText(req.body?.requestedReason, 4000);
+    const internalNotes = normalizeVowComplianceMultilineText(req.body?.internalNotes, 4000);
+    const accessScope = normalizeVowComplianceMultilineText(req.body?.accessScope, 1000);
+    const accessExpiresAt = normalizeVowComplianceRequestDate(req.body?.accessExpiresAt);
+    const effectiveStartAt = normalizeVowComplianceRequestDate(req.body?.effectiveStartAt);
+    const effectiveEndAt = normalizeVowComplianceRequestDate(req.body?.effectiveEndAt);
+    const defaults = buildVowComplianceRequestControlDefaults(requestType);
+    const controls = {
+      sellerOptOut: Object.prototype.hasOwnProperty.call(req.body || {}, 'sellerOptOut') ? normalizeVowComplianceBoolean(req.body?.sellerOptOut) : defaults.sellerOptOut,
+      commentsDisabled: Object.prototype.hasOwnProperty.call(req.body || {}, 'commentsDisabled') ? normalizeVowComplianceBoolean(req.body?.commentsDisabled) : defaults.commentsDisabled,
+      avmDisabled: Object.prototype.hasOwnProperty.call(req.body || {}, 'avmDisabled') ? normalizeVowComplianceBoolean(req.body?.avmDisabled) : defaults.avmDisabled,
+      complianceReviewAccessGranted: Object.prototype.hasOwnProperty.call(req.body || {}, 'complianceReviewAccessGranted') ? normalizeVowComplianceBoolean(req.body?.complianceReviewAccessGranted) : defaults.complianceReviewAccessGranted
+    };
+
+    if (!brokerUserId) {
+      return res.status(400).json({ error: 'A brokerUserId is required.' });
+    }
+
+    if (!requestedReason && !internalNotes) {
+      return res.status(400).json({ error: 'Provide a request reason or internal notes for the compliance request.' });
+    }
+
+    if (!propertyAddress && !listingId && !mlsId && !registrantId) {
+      return res.status(400).json({ error: 'Attach the compliance request to a property address, listing ID, MLS ID, or registrant ID.' });
+    }
+
+    if (registrantId) {
+      const registrant = await loadVowRegistrantById(registrantId);
+      if (!registrant) {
+        return res.status(404).json({ error: 'Referenced VOW registrant was not found.' });
+      }
+      if (decoded.role !== 'admin' && Number(registrant.broker_user_id) !== Number(decoded.id)) {
+        return res.status(403).json({ error: 'Broker or admin access required for the referenced registrant.' });
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    const requestId = crypto.randomUUID();
+    const reviewedAt = ['approved', 'denied', 'fulfilled', 'cancelled'].includes(status) ? nowIso : null;
+    const reviewedByUserId = reviewedAt ? Number(decoded.id) || null : null;
+
+    await dbRun(
+      `INSERT INTO vow_compliance_requests (
+        id,
+        broker_user_id,
+        registrant_id,
+        request_type,
+        status,
+        request_source,
+        property_address,
+        listing_source,
+        listing_id,
+        mls_id,
+        requested_by_name,
+        requested_by_email,
+        requested_reason,
+        internal_notes,
+        access_scope,
+        access_expires_at,
+        requested_at,
+        reviewed_at,
+        reviewed_by_user_id,
+        effective_start_at,
+        effective_end_at,
+        seller_opt_out,
+        comments_disabled,
+        avm_disabled,
+        compliance_review_access_granted,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        requestId,
+        brokerUserId,
+        registrantId || null,
+        requestType,
+        status,
+        requestSource,
+        propertyAddress,
+        listingSource,
+        listingId,
+        mlsId,
+        requestedByName,
+        requestedByEmail,
+        requestedReason,
+        internalNotes,
+        accessScope,
+        accessExpiresAt,
+        nowIso,
+        reviewedAt,
+        reviewedByUserId,
+        effectiveStartAt,
+        effectiveEndAt,
+        controls.sellerOptOut ? 1 : 0,
+        controls.commentsDisabled ? 1 : 0,
+        controls.avmDisabled ? 1 : 0,
+        controls.complianceReviewAccessGranted ? 1 : 0,
+        nowIso
+      ]
+    );
+
+    const createdRequest = await loadVowComplianceRequestById(requestId);
+    return res.status(201).json({ success: true, request: serializeVowComplianceRequest(createdRequest) });
+  } catch (error) {
+    console.error('VOW compliance request create error:', error);
+    return res.status(500).json({ error: 'Unable to create VOW compliance request.' });
+  }
+});
+
+app.get('/api/vow/compliance-requests/:id', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowComplianceRequestOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    return res.json({ success: true, request: serializeVowComplianceRequest(ownership.row) });
+  } catch (error) {
+    console.error('VOW compliance request load error:', error);
+    return res.status(500).json({ error: 'Unable to load VOW compliance request.' });
+  }
+});
+
+app.patch('/api/vow/compliance-requests/:id', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowComplianceRequestOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const currentRequest = ownership.row;
+    const nextStatus = req.body?.status !== undefined
+      ? normalizeVowComplianceRequestStatus(req.body.status)
+      : normalizeVowComplianceRequestStatus(currentRequest.status);
+    const nextRequestSource = req.body?.requestSource !== undefined
+      ? normalizeVowComplianceRequestSource(req.body.requestSource)
+      : normalizeVowComplianceRequestSource(currentRequest.request_source);
+    const nextPropertyAddress = req.body?.propertyAddress !== undefined
+      ? normalizeVowComplianceText(req.body.propertyAddress, 300)
+      : normalizeVowComplianceText(currentRequest.property_address, 300);
+    const nextListingSource = req.body?.listingSource !== undefined
+      ? normalizeVowComplianceIdentifier(req.body.listingSource, 120)
+      : normalizeVowComplianceIdentifier(currentRequest.listing_source, 120);
+    const nextListingId = req.body?.listingId !== undefined
+      ? normalizeVowComplianceIdentifier(req.body.listingId, 160)
+      : normalizeVowComplianceIdentifier(currentRequest.listing_id, 160);
+    const nextMlsId = req.body?.mlsId !== undefined
+      ? normalizeVowComplianceIdentifier(req.body.mlsId, 160)
+      : normalizeVowComplianceIdentifier(currentRequest.mls_id, 160);
+    const nextRequestedByName = req.body?.requestedByName !== undefined
+      ? normalizeVowComplianceText(req.body.requestedByName, 200)
+      : normalizeVowComplianceText(currentRequest.requested_by_name, 200);
+    const nextRequestedByEmail = req.body?.requestedByEmail !== undefined
+      ? normalizeKnownEmail(req.body.requestedByEmail || '')
+      : normalizeKnownEmail(currentRequest.requested_by_email || '');
+    const nextRequestedReason = req.body?.requestedReason !== undefined
+      ? normalizeVowComplianceMultilineText(req.body.requestedReason, 4000)
+      : normalizeVowComplianceMultilineText(currentRequest.requested_reason, 4000);
+    const nextInternalNotes = req.body?.internalNotes !== undefined
+      ? normalizeVowComplianceMultilineText(req.body.internalNotes, 4000)
+      : normalizeVowComplianceMultilineText(currentRequest.internal_notes, 4000);
+    const nextAccessScope = req.body?.accessScope !== undefined
+      ? normalizeVowComplianceMultilineText(req.body.accessScope, 1000)
+      : normalizeVowComplianceMultilineText(currentRequest.access_scope, 1000);
+    const nextAccessExpiresAt = req.body?.accessExpiresAt !== undefined
+      ? normalizeVowComplianceRequestDate(req.body.accessExpiresAt)
+      : (currentRequest.access_expires_at || null);
+    const nextEffectiveStartAt = req.body?.effectiveStartAt !== undefined
+      ? normalizeVowComplianceRequestDate(req.body.effectiveStartAt)
+      : (currentRequest.effective_start_at || null);
+    const nextEffectiveEndAt = req.body?.effectiveEndAt !== undefined
+      ? normalizeVowComplianceRequestDate(req.body.effectiveEndAt)
+      : (currentRequest.effective_end_at || null);
+    const currentControls = buildVowComplianceRequestControls(currentRequest);
+    const nextControls = {
+      sellerOptOut: Object.prototype.hasOwnProperty.call(req.body || {}, 'sellerOptOut') ? normalizeVowComplianceBoolean(req.body?.sellerOptOut) : currentControls.sellerOptOut,
+      commentsDisabled: Object.prototype.hasOwnProperty.call(req.body || {}, 'commentsDisabled') ? normalizeVowComplianceBoolean(req.body?.commentsDisabled) : currentControls.commentsDisabled,
+      avmDisabled: Object.prototype.hasOwnProperty.call(req.body || {}, 'avmDisabled') ? normalizeVowComplianceBoolean(req.body?.avmDisabled) : currentControls.avmDisabled,
+      complianceReviewAccessGranted: Object.prototype.hasOwnProperty.call(req.body || {}, 'complianceReviewAccessGranted') ? normalizeVowComplianceBoolean(req.body?.complianceReviewAccessGranted) : currentControls.complianceReviewAccessGranted
+    };
+    const nowIso = new Date().toISOString();
+    const reviewTriggered = req.body?.reviewed === true || ['approved', 'denied', 'fulfilled', 'cancelled'].includes(nextStatus);
+    const nextReviewedAt = reviewTriggered ? (currentRequest.reviewed_at || nowIso) : null;
+    const nextReviewedByUserId = reviewTriggered ? (Number(currentRequest.reviewed_by_user_id) || Number(decoded.id) || null) : null;
+
+    await dbRun(
+      `UPDATE vow_compliance_requests
+       SET status = ?,
+           request_source = ?,
+           property_address = ?,
+           listing_source = ?,
+           listing_id = ?,
+           mls_id = ?,
+           requested_by_name = ?,
+           requested_by_email = ?,
+           requested_reason = ?,
+           internal_notes = ?,
+           access_scope = ?,
+           access_expires_at = ?,
+           reviewed_at = ?,
+           reviewed_by_user_id = ?,
+           effective_start_at = ?,
+           effective_end_at = ?,
+           seller_opt_out = ?,
+           comments_disabled = ?,
+           avm_disabled = ?,
+           compliance_review_access_granted = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      [
+        nextStatus,
+        nextRequestSource,
+        nextPropertyAddress,
+        nextListingSource,
+        nextListingId,
+        nextMlsId,
+        nextRequestedByName,
+        nextRequestedByEmail,
+        nextRequestedReason,
+        nextInternalNotes,
+        nextAccessScope,
+        nextAccessExpiresAt,
+        nextReviewedAt,
+        nextReviewedByUserId,
+        nextEffectiveStartAt,
+        nextEffectiveEndAt,
+        nextControls.sellerOptOut ? 1 : 0,
+        nextControls.commentsDisabled ? 1 : 0,
+        nextControls.avmDisabled ? 1 : 0,
+        nextControls.complianceReviewAccessGranted ? 1 : 0,
+        nowIso,
+        String(currentRequest.id || '').trim()
+      ]
+    );
+
+    const updatedRequest = await loadVowComplianceRequestById(String(currentRequest.id || '').trim());
+    return res.json({ success: true, request: serializeVowComplianceRequest(updatedRequest) });
+  } catch (error) {
+    console.error('VOW compliance request update error:', error);
+    return res.status(500).json({ error: 'Unable to update VOW compliance request.' });
+  }
+});
+
+app.get('/api/vow/compliance-controls', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const propertyAddress = normalizeVowComplianceText(req.query?.propertyAddress, 300);
+    const listingId = normalizeVowComplianceIdentifier(req.query?.listingId, 160);
+    const mlsId = normalizeVowComplianceIdentifier(req.query?.mlsId, 160);
+    const registrantId = normalizeVowComplianceIdentifier(req.query?.registrantId, 80);
+    const includeAll = decoded.role === 'admin' && /^(1|true|yes)$/i.test(String(req.query?.all || '').trim());
+    const brokerUserId = includeAll
+      ? 0
+      : Math.max(1, Number(req.query?.brokerUserId) || Number(decoded.id) || 0);
+
+    if (!propertyAddress && !listingId && !mlsId && !registrantId) {
+      return res.status(400).json({ error: 'Provide a propertyAddress, listingId, mlsId, or registrantId to load VOW compliance controls.' });
+    }
+
+    const rows = includeAll
+      ? await dbAll('SELECT * FROM vow_compliance_requests ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC LIMIT 500')
+      : await dbAll(
+          `SELECT *
+           FROM vow_compliance_requests
+           WHERE broker_user_id = ?
+           ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC
+           LIMIT 500`,
+          [brokerUserId]
+        );
+
+    const matchingRows = rows.filter((row) => doesVowComplianceRequestMatchSelectors(row, {
+      propertyAddress,
+      listingId,
+      mlsId,
+      registrantId
+    }));
+
+    return res.json({
+      success: true,
+      selectors: {
+        propertyAddress: propertyAddress || null,
+        listingId: listingId || null,
+        mlsId: mlsId || null,
+        registrantId: registrantId || null
+      },
+      effectiveControls: buildEffectiveVowComplianceControls(matchingRows),
+      requests: matchingRows.map(serializeVowComplianceRequest).filter(Boolean)
+    });
+  } catch (error) {
+    console.error('VOW compliance controls load error:', error);
+    return res.status(500).json({ error: 'Unable to load VOW compliance controls.' });
+  }
+});
+
+app.post('/api/vow/registrants/:id/acceptance-link', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowRegistrantOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const token = generateVowAcceptanceToken();
+    const nowIso = new Date().toISOString();
+    const expiresAt = buildVowAcceptanceTokenExpiryDate(new Date(nowIso));
+    const registrantId = String(req.params.id || '').trim();
+
+    await dbRun(
+      `UPDATE vow_registrants
+       SET acceptance_token = ?,
+           acceptance_token_expires_at = ?,
+           last_verification_email_sent_at = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      [token, expiresAt, nowIso, nowIso, registrantId]
+    );
+
+    await logVowRegistrantAuditEvent(registrantId, decoded.id, 'acceptance-link-issued', req, {
+      expiresAt,
+      termsVersion: VOW_TERMS_VERSION
+    });
+
+    return res.json({
+      success: true,
+      token,
+      expiresAt,
+      termsVersion: VOW_TERMS_VERSION,
+      acceptanceUrl: buildAbsoluteUrl(req, `/vow-terms-of-use.html?token=${encodeURIComponent(token)}`)
+    });
+  } catch (error) {
+    console.error('VOW acceptance link error:', error);
+    return res.status(500).json({ error: 'Unable to create VOW acceptance link.' });
+  }
+});
+
+app.post('/api/vow/registrants/:id/send-email-verification', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowRegistrantOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const delivery = await issueAndSendVowEmailVerification(String(req.params.id || '').trim(), req);
+    return res.json({ success: true, verification: delivery });
+  } catch (error) {
+    console.error('VOW email verification send error:', error);
+    return res.status(500).json({ error: error && error.message ? error.message : 'Unable to send VOW email verification.' });
+  }
+});
+
+app.get('/api/vow/terms/:token', async (req, res) => {
+  try {
+    const registrant = await loadVowRegistrantByAcceptanceToken(req.params.token);
+    if (!registrant) {
+      return res.status(404).json({ error: 'VOW terms link is invalid.' });
+    }
+
+    const expiresAt = registrant.acceptance_token_expires_at ? new Date(registrant.acceptance_token_expires_at) : null;
+    if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      return res.status(410).json({ error: 'VOW terms link has expired.' });
+    }
+
+    const brokerRow = await dbGet('SELECT id, name, email FROM users WHERE id = ?', [Number(registrant.broker_user_id) || 0]);
+    const passwordState = getVowPasswordRotationState(registrant);
+    return res.json({
+      success: true,
+      termsVersion: VOW_TERMS_VERSION,
+      registrant: {
+        id: String(registrant.id || '').trim(),
+        fullName: String(registrant.full_name || '').trim(),
+        email: String(registrant.email || '').trim().toLowerCase(),
+        relationshipType: String(registrant.relationship_type || '').trim(),
+        relationshipStatus: normalizeVowRelationshipStatus(registrant.relationship_status),
+        relationshipRequestedAt: registrant.relationship_requested_at || null,
+        agencyDisclosureAcknowledgedAt: registrant.agency_disclosure_acknowledged_at || null,
+        termsAcceptedAt: registrant.terms_accepted_at || null,
+        passwordChangedAt: passwordState.passwordChangedAt,
+        passwordExpiresAt: passwordState.passwordExpiresAt,
+        passwordRotationRequired: passwordState.passwordRotationRequired,
+        passwordRotationIntervalDays: passwordState.passwordRotationIntervalDays,
+        expiresAt: registrant.acceptance_token_expires_at || null,
+        brokerName: String(brokerRow?.name || '').trim(),
+        brokerEmail: String(brokerRow?.email || '').trim().toLowerCase()
+      },
+      requiredStatements: getVowRequiredTermsStatements(),
+      notes: [
+        'These Terms of Use govern access to MLS listing information through a broker-supervised Virtual Office Website.',
+        'This VOW Terms acceptance does not itself create a financial obligation or representation agreement.',
+        'Any separate brokerage representation agreement must be established separately and cannot be accepted solely by click-through assent.',
+        'Your broker-consumer relationship workflow will move to broker review after you complete these acknowledgments.',
+        `VOW passwords must be reconfirmed or changed at least every ${VOW_PASSWORD_ROTATION_DAYS} days.`
+      ],
+      passwordPolicy: passwordState
+    });
+  } catch (error) {
+    console.error('VOW terms load error:', error);
+    return res.status(500).json({ error: 'Unable to load VOW terms.' });
+  }
+});
+
+app.post('/api/vow/terms/:token/accept', async (req, res) => {
+  try {
+    const registrant = await loadVowRegistrantByAcceptanceToken(req.params.token);
+    if (!registrant) {
+      return res.status(404).json({ error: 'VOW terms link is invalid.' });
+    }
+
+    const expiresAt = registrant.acceptance_token_expires_at ? new Date(registrant.acceptance_token_expires_at) : null;
+    if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      return res.status(410).json({ error: 'VOW terms link has expired.' });
+    }
+
+    const acknowledgements = req.body?.acknowledgements && typeof req.body.acknowledgements === 'object'
+      ? req.body.acknowledgements
+      : {};
+    const requiredStatements = getVowRequiredTermsStatements();
+    const missingKeys = requiredStatements
+      .filter((statement) => !Boolean(acknowledgements[statement.key]))
+      .map((statement) => statement.key);
+    const relationshipWorkflow = req.body?.relationshipWorkflow && typeof req.body.relationshipWorkflow === 'object'
+      ? req.body.relationshipWorkflow
+      : {};
+    const selectedRelationshipType = normalizeVowRelationshipType(relationshipWorkflow.relationshipType || registrant.relationship_type || 'prospective buyer');
+    const agencyDisclosureAcknowledged = Boolean(relationshipWorkflow.agencyDisclosureAcknowledged);
+
+    if (missingKeys.length > 0) {
+      return res.status(400).json({ error: 'All required VOW terms statements must be accepted.', missingKeys });
+    }
+
+    if (!agencyDisclosureAcknowledged) {
+      return res.status(400).json({ error: 'Agency and disclosure workflow acknowledgment is required before VOW access can continue.' });
+    }
+
+    const nowIso = new Date().toISOString();
+    const nextStatus = normalizeVowRegistrantStatus(registrant.status) === 'pending' ? 'active' : normalizeVowRegistrantStatus(registrant.status);
+    await dbRun(
+      `UPDATE vow_registrants
+       SET relationship_acknowledged_at = COALESCE(relationship_acknowledged_at, ?),
+           relationship_requested_at = COALESCE(relationship_requested_at, ?),
+           relationship_type = ?,
+           relationship_status = ?,
+           agency_disclosure_acknowledged_at = ?,
+           relationship_workflow_version = ?,
+           terms_accepted_at = ?,
+           terms_version = ?,
+           acceptance_token = NULL,
+           acceptance_token_expires_at = NULL,
+           status = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      [
+        nowIso,
+        nowIso,
+        selectedRelationshipType,
+        'pending-broker-review',
+        nowIso,
+        VOW_TERMS_VERSION,
+        nowIso,
+        VOW_TERMS_VERSION,
+        nextStatus,
+        nowIso,
+        String(registrant.id || '').trim()
+      ]
+    );
+
+    await logVowRegistrantAuditEvent(String(registrant.id || '').trim(), null, 'terms-accepted', req, {
+      termsVersion: VOW_TERMS_VERSION,
+      acknowledgements: requiredStatements.map((statement) => statement.key),
+      relationshipType: selectedRelationshipType,
+      relationshipStatus: 'pending-broker-review',
+      agencyDisclosureAcknowledged: true
+    });
+
+    let verificationDelivery = null;
+    let verificationError = '';
+    try {
+      verificationDelivery = await issueAndSendVowEmailVerification(String(registrant.id || '').trim(), req);
+    } catch (error) {
+      verificationError = error && error.message ? error.message : 'Unable to send VOW email verification.';
+      await logVowRegistrantAuditEvent(String(registrant.id || '').trim(), Number(registrant.broker_user_id) || null, 'email-verification-send-failed', req, {
+        error: verificationError
+      });
+    }
+
+    const refreshedRegistrant = await loadVowRegistrantById(String(registrant.id || '').trim());
+    const passwordState = getVowPasswordRotationState(refreshedRegistrant || registrant);
+
+    return res.json({
+      success: true,
+      message: 'VOW terms accepted successfully.',
+      termsAcceptedAt: nowIso,
+      status: nextStatus,
+      termsVersion: VOW_TERMS_VERSION,
+      relationshipWorkflow: {
+        relationshipType: selectedRelationshipType,
+        relationshipStatus: 'pending-broker-review',
+        relationshipRequestedAt: nowIso,
+        agencyDisclosureAcknowledgedAt: nowIso
+      },
+      passwordPolicy: passwordState,
+      emailVerification: {
+        required: true,
+        sent: Boolean(verificationDelivery),
+        sentAt: verificationDelivery?.sentAt || null,
+        expiresAt: verificationDelivery?.expiresAt || null,
+        error: verificationError || null
+      }
+    });
+  } catch (error) {
+    console.error('VOW terms acceptance error:', error);
+    return res.status(500).json({ error: 'Unable to record VOW terms acceptance.' });
+  }
+});
+
+app.post('/api/vow/registrants/:id/password-rotation', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowRegistrantOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const nextPassword = String(req.body?.password || '');
+    if (nextPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+
+    const nowIso = new Date().toISOString();
+    const passwordHash = await bcrypt.hash(nextPassword, 10);
+    const passwordExpiresAt = buildVowPasswordExpiryDate(new Date(nowIso));
+
+    await dbRun(
+      `UPDATE vow_registrants
+       SET password_hash = ?,
+           password_changed_at = ?,
+           password_expires_at = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      [
+        passwordHash,
+        nowIso,
+        passwordExpiresAt,
+        nowIso,
+        String(ownership.row.id || '').trim()
+      ]
+    );
+
+    await logVowRegistrantAuditEvent(String(ownership.row.id || '').trim(), decoded.id, 'password-rotated', req, {
+      passwordExpiresAt,
+      passwordRotationIntervalDays: VOW_PASSWORD_ROTATION_DAYS
+    });
+
+    const updatedRegistrant = await loadVowRegistrantById(String(ownership.row.id || '').trim());
+    return res.json({
+      success: true,
+      registrant: serializeVowRegistrant(updatedRegistrant),
+      passwordPolicy: getVowPasswordRotationState(updatedRegistrant)
+    });
+  } catch (error) {
+    console.error('VOW password rotation error:', error);
+    return res.status(500).json({ error: 'Unable to rotate VOW registrant password.' });
+  }
+});
+
+app.get('/api/vow/email-verify/:token', async (req, res) => {
+  try {
+    const registrant = await loadVowRegistrantByEmailVerificationToken(req.params.token);
+    if (!registrant) {
+      return res.status(404).json({ error: 'VOW email verification link is invalid.' });
+    }
+
+    const expiresAt = registrant.email_verification_expires_at ? new Date(registrant.email_verification_expires_at) : null;
+    if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      return res.status(410).json({ error: 'VOW email verification link has expired.' });
+    }
+
+    const brokerRow = await dbGet('SELECT id, name, email FROM users WHERE id = ?', [Number(registrant.broker_user_id) || 0]);
+    return res.json({
+      success: true,
+      registrant: {
+        id: String(registrant.id || '').trim(),
+        fullName: String(registrant.full_name || '').trim(),
+        email: String(registrant.email || '').trim().toLowerCase(),
+        emailVerifiedAt: registrant.email_verified_at || null,
+        expiresAt: registrant.email_verification_expires_at || null,
+        brokerName: String(brokerRow?.name || '').trim(),
+        brokerEmail: String(brokerRow?.email || '').trim().toLowerCase()
+      }
+    });
+  } catch (error) {
+    console.error('VOW email verification load error:', error);
+    return res.status(500).json({ error: 'Unable to load VOW email verification.' });
+  }
+});
+
+app.patch('/api/vow/registrants/:id/relationship', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowRegistrantOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const currentRegistrant = ownership.row;
+    const nextRelationshipType = req.body?.relationshipType !== undefined
+      ? normalizeVowRelationshipType(req.body.relationshipType)
+      : String(currentRegistrant.relationship_type || '').trim();
+    const nextRelationshipStatus = req.body?.relationshipStatus !== undefined
+      ? normalizeVowRelationshipStatus(req.body.relationshipStatus)
+      : normalizeVowRelationshipStatus(currentRegistrant.relationship_status);
+    const nextNotes = req.body?.notes !== undefined
+      ? normalizeVowRegistrantNotes(req.body.notes)
+      : String(currentRegistrant.notes || '').trim();
+    const nowIso = new Date().toISOString();
+    const relationshipConfirmedAt = nextRelationshipStatus === 'established'
+      ? (currentRegistrant.relationship_confirmed_at || nowIso)
+      : (nextRelationshipStatus === 'declined' ? null : currentRegistrant.relationship_confirmed_at);
+    const relationshipConfirmedByUserId = nextRelationshipStatus === 'established'
+      ? Number(decoded.id) || null
+      : (nextRelationshipStatus === 'declined' ? null : (Number(currentRegistrant.relationship_confirmed_by_user_id) || null));
+
+    await dbRun(
+      `UPDATE vow_registrants
+       SET relationship_type = ?,
+           relationship_status = ?,
+           relationship_confirmed_at = ?,
+           relationship_confirmed_by_user_id = ?,
+           notes = ?,
+           updated_at = ?
+       WHERE id = ?`,
+      [
+        nextRelationshipType,
+        nextRelationshipStatus,
+        relationshipConfirmedAt,
+        relationshipConfirmedByUserId,
+        nextNotes,
+        nowIso,
+        String(currentRegistrant.id || '').trim()
+      ]
+    );
+
+    await logVowRegistrantAuditEvent(String(currentRegistrant.id || '').trim(), decoded.id, 'relationship-workflow-updated', req, {
+      relationshipType: nextRelationshipType,
+      relationshipStatus: nextRelationshipStatus,
+      relationshipConfirmedAt,
+      notesUpdated: nextNotes !== String(currentRegistrant.notes || '').trim()
+    });
+
+    const updatedRegistrant = await loadVowRegistrantById(String(currentRegistrant.id || '').trim());
+    return res.json({ success: true, registrant: serializeVowRegistrant(updatedRegistrant) });
+  } catch (error) {
+    console.error('VOW relationship workflow update error:', error);
+    return res.status(500).json({ error: 'Unable to update broker-consumer relationship workflow.' });
+  }
+});
+
+app.post('/api/vow/email-verify/:token/confirm', async (req, res) => {
+  try {
+    const registrant = await loadVowRegistrantByEmailVerificationToken(req.params.token);
+    if (!registrant) {
+      return res.status(404).json({ error: 'VOW email verification link is invalid.' });
+    }
+
+    const expiresAt = registrant.email_verification_expires_at ? new Date(registrant.email_verification_expires_at) : null;
+    if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+      return res.status(410).json({ error: 'VOW email verification link has expired.' });
+    }
+
+    const nowIso = new Date().toISOString();
+    await dbRun(
+      `UPDATE vow_registrants
+       SET email_verified_at = ?,
+           email_verification_token = NULL,
+           email_verification_expires_at = NULL,
+           updated_at = ?
+       WHERE id = ?`,
+      [nowIso, nowIso, String(registrant.id || '').trim()]
+    );
+
+    await logVowRegistrantAuditEvent(String(registrant.id || '').trim(), null, 'email-verified', req, {});
+    return res.json({
+      success: true,
+      message: 'Email verified successfully.',
+      emailVerifiedAt: nowIso
+    });
+  } catch (error) {
+    console.error('VOW email verification confirm error:', error);
+    return res.status(500).json({ error: 'Unable to verify VOW email address.' });
+  }
+});
+
+app.post('/api/vow/registrants/:id/audit', async (req, res) => {
+  const decoded = requireBrokerOrAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownership = await ensureVowRegistrantOwnershipOrAdmin(decoded, req.params.id);
+    if (!ownership.allowed) {
+      return res.status(ownership.statusCode).json({ error: ownership.error });
+    }
+
+    const eventType = String(req.body?.eventType || '').trim().toLowerCase();
+    const details = req.body?.details && typeof req.body.details === 'object' ? req.body.details : {};
+    if (!eventType) {
+      return res.status(400).json({ error: 'An eventType is required.' });
+    }
+
+    await logVowRegistrantAuditEvent(String(req.params.id || '').trim(), decoded.id, eventType, req, details);
+    return res.status(201).json({ success: true });
+  } catch (error) {
+    console.error('VOW registrant audit create error:', error);
+    return res.status(500).json({ error: 'Unable to add VOW registrant audit entry.' });
+  }
+});
+
 app.get('/api/admin/storage-status', async (req, res) => {
   const decoded = requireAdmin(req, res);
   if (!decoded) {
@@ -9698,7 +11643,7 @@ function waitForMlsImportAnalysisTurn() {
 }
 
 function sanitizeMlsImportAiRow(rowLike) {
-  const source = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  const source = stripCompensationFieldsFromFeedData(rowLike && typeof rowLike === 'object' ? rowLike : {});
   const rawAddress = normalizePdfPropertyAddressValue(source.propertyAddress || source.address || source.property || '');
   const normalizedAddress = extractPropertyAddressCandidateFromLine(rawAddress);
   const normalizedName = formatPersonName(source.laName || source.agentName || source.listingAgent || source.name || '');
@@ -11078,7 +13023,7 @@ function splitMlsImportTextIntoBlocks(text) {
 }
 
 function normalizeMlsImportRow(row) {
-  const source = row && typeof row === 'object' ? row : {};
+  const source = stripCompensationFieldsFromFeedData(row && typeof row === 'object' ? row : {});
   const normalizedRow = {
     propertyAddress: String(source.propertyAddress || '').trim(),
     laName: String(source.laName || '').trim(),

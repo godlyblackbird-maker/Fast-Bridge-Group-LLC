@@ -15400,17 +15400,75 @@ function initNavbarDateTime() {
         const listingsGrid = document.getElementById('mls-listings-grid');
         if (!listingsGrid) return;
 
+        const MLS_CURRENT_RESULT_CAP = 500;
+        const MLS_SOLD_RESULT_CAP = 500;
         const sortSelect = document.getElementById('mls-sort-select');
         const countyFilter = document.getElementById('mls-county-filter');
         const keywordCategoryFilter = document.getElementById('mls-keyword-category');
         const searchInput = document.getElementById('mls-search-input');
         const statusFilter = document.getElementById('mls-listing-status');
         const alertStatus = document.getElementById('mls-alert-status');
+        const resultCapNote = document.getElementById('mls-result-cap-note');
         const emptyState = document.getElementById('mls-empty-state');
         const pagination = document.getElementById('mls-pagination');
         const cards = Array.from(listingsGrid.querySelectorAll('.mls-property-card'));
         const pageSize = 10;
         let currentPage = 1;
+
+        function isSoldListing(card) {
+            return normalizeStatus(card?.dataset?.status) === 'closed';
+        }
+
+        function applyResultCaps(sortedCards, selectedStatus) {
+            const normalizedStatus = String(selectedStatus || 'all').trim().toLowerCase();
+            const limitedCards = [];
+            let currentCount = 0;
+            let soldCount = 0;
+
+            sortedCards.forEach((card) => {
+                if (isSoldListing(card)) {
+                    if (soldCount >= MLS_SOLD_RESULT_CAP) {
+                        return;
+                    }
+                    soldCount += 1;
+                    limitedCards.push(card);
+                    return;
+                }
+
+                if (currentCount >= MLS_CURRENT_RESULT_CAP) {
+                    return;
+                }
+                currentCount += 1;
+                limitedCards.push(card);
+            });
+
+            const truncated = limitedCards.length < sortedCards.length;
+            const caps = {
+                current: normalizedStatus === 'closed' ? 0 : MLS_CURRENT_RESULT_CAP,
+                sold: ['all', 'closed'].includes(normalizedStatus) ? MLS_SOLD_RESULT_CAP : 0
+            };
+
+            return {
+                cards: limitedCards,
+                truncated,
+                currentCount,
+                soldCount,
+                caps
+            };
+        }
+
+        function updateResultCapNote(meta, totalMatches) {
+            if (!resultCapNote) {
+                return;
+            }
+
+            if (!meta || !meta.truncated) {
+                resultCapNote.textContent = 'Result caps: up to 500 current listings and 500 sold listings are shown per search.';
+                return;
+            }
+
+            resultCapNote.textContent = `Showing ${meta.cards.length} of ${totalMatches} matching results due to the 500-current / 500-sold result caps.`;
+        }
 
         function getListingNotificationStore() {
             const workspaceUser = getWorkspaceUserContext();
@@ -16031,13 +16089,17 @@ function initNavbarDateTime() {
                 return Number(right.dataset.roi || 0) - Number(left.dataset.roi || 0);
             });
 
-            const totalPages = Math.max(1, Math.ceil(sortedCards.length / pageSize));
+            const cappedResults = applyResultCaps(sortedCards, selectedStatus);
+            const cappedCards = cappedResults.cards;
+            updateResultCapNote(cappedResults, sortedCards.length);
+
+            const totalPages = Math.max(1, Math.ceil(cappedCards.length / pageSize));
             if (currentPage > totalPages) {
                 currentPage = 1;
             }
 
             const startIndex = (currentPage - 1) * pageSize;
-            const pageCards = sortedCards.slice(startIndex, startIndex + pageSize);
+            const pageCards = cappedCards.slice(startIndex, startIndex + pageSize);
 
             cards.forEach(card => {
                 card.hidden = true;
@@ -16049,10 +16111,10 @@ function initNavbarDateTime() {
             });
 
             if (emptyState) {
-                emptyState.hidden = sortedCards.length !== 0;
+                emptyState.hidden = cappedCards.length !== 0;
             }
 
-            renderPagination(sortedCards.length);
+            renderPagination(cappedCards.length);
         }
 
         if (sortSelect) {
