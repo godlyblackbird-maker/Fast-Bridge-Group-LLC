@@ -16100,8 +16100,11 @@ app.get('/download/windows', (req, res) => {
     `FAST BRIDGE GROUP Setup ${resolvedVersion}.exe`
   ];
   const githubRepositoryBaseUrl = getGithubRepositoryBaseUrl();
-  const githubLatestDownloadUrls = githubRepositoryBaseUrl
-    ? installerFileNames.map((fileName) => `${githubRepositoryBaseUrl}/releases/latest/download/${encodeURIComponent(fileName)}`)
+  const githubReleaseDownloadUrls = githubRepositoryBaseUrl
+    ? installerFileNames.flatMap((fileName) => [
+      `${githubRepositoryBaseUrl}/releases/download/${encodeURIComponent(resolvedVersion)}/${encodeURIComponent(fileName)}`,
+      `${githubRepositoryBaseUrl}/releases/latest/download/${encodeURIComponent(fileName)}`
+    ])
     : [];
 
   const installerCandidates = [
@@ -16116,8 +16119,8 @@ app.get('/download/windows', (req, res) => {
     return;
   }
 
-  if (githubLatestDownloadUrls.length > 0) {
-    res.redirect(githubLatestDownloadUrls[0]);
+  if (githubReleaseDownloadUrls.length > 0) {
+    res.redirect(githubReleaseDownloadUrls[0]);
     return;
   }
 
