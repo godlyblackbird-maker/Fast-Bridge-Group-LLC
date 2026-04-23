@@ -18112,8 +18112,20 @@ body.analytics-reboot .analytics-my-file-count {
 
 .comps-map-head-actions {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.comps-map-frame-toolbar {
+    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+    margin-bottom: -10px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .comps-map-toggle-group {
@@ -18315,6 +18327,10 @@ body.analytics-reboot .analytics-my-file-count {
     background:
         radial-gradient(circle at top, rgba(var(--accent-light-rgb), 0.18), transparent 36%),
         rgba(15, 23, 42, 0.22);
+}
+
+.comps-map-frame-toolbar + .comps-map-wrap {
+    border-radius: 0 0 14px 14px;
 }
 
 .comps-map-empty-state {
@@ -19095,6 +19111,11 @@ body.analytics-reboot .analytics-my-file-count {
 
     .comps-map-head-actions {
         grid-template-columns: 1fr;
+    }
+
+    .comps-map-frame-toolbar {
+        grid-template-columns: 1fr;
+        margin-bottom: -10px;
     }
 
     .comps-map-control-cluster-search {

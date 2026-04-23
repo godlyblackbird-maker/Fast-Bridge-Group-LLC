@@ -22476,6 +22476,9 @@ function initNavbarDateTime() {
             const compsMapStatusBadge = document.getElementById('comps-map-status-badge');
             const compsMapStatusBadgeTitle = document.getElementById('comps-map-status-badge-title');
             const compsMapStatusBadgeText = document.getElementById('comps-map-status-badge-text');
+            const compsMapDiagnosticsSummary = document.getElementById('comps-map-diagnostics-summary');
+            const compsMapDiagnosticsSummaryTitle = document.getElementById('comps-map-diagnostics-summary-title');
+            const compsMapDiagnosticsSummaryText = document.getElementById('comps-map-diagnostics-summary-text');
             const compsMapStyleSource = document.getElementById('comps-map-style-source');
             const clearAreaButton = document.getElementById('comps-map-clear-area-btn');
             const earthIndicator = document.getElementById('comps-map-earth-indicator');
@@ -22671,6 +22674,14 @@ function initNavbarDateTime() {
                 compsMapStatusBadge.hidden = false;
                 compsMapStatusBadgeTitle.textContent = title;
                 compsMapStatusBadgeText.textContent = message;
+
+                if (compsMapDiagnosticsSummary && compsMapDiagnosticsSummaryTitle && compsMapDiagnosticsSummaryText) {
+                    const styleSource = compsMapStyleSource ? String(compsMapStyleSource.textContent || '').trim() : 'JSON Style';
+                    compsMapDiagnosticsSummary.dataset.state = state;
+                    compsMapDiagnosticsSummary.hidden = false;
+                    compsMapDiagnosticsSummaryTitle.textContent = `Diagnostics ${styleSource}`.trim();
+                    compsMapDiagnosticsSummaryText.textContent = `${title} ${message}`.trim();
+                }
             }
 
             function getSearchProviderNote(provider) {

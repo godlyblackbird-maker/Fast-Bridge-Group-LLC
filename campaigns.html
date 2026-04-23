@@ -711,9 +711,9 @@
 
         .campaign-reply-message.is-outgoing {
             justify-self: end;
-            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.92), rgba(15, 23, 42, 0.94));
+            background: linear-gradient(135deg, #2f95ff 0%, #007aff 100%);
             color: #f8fafc;
-            border-color: rgba(var(--accent-rgb), 0.42);
+            border-color: rgba(0, 122, 255, 0.42);
         }
 
         .campaign-reply-message-body {
@@ -760,6 +760,50 @@
             background: rgba(255, 255, 255, 0.94);
             color: #0f172a;
             border-color: rgba(148, 163, 184, 0.22);
+        }
+
+        #campaign-reply-send {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border-radius: 999px;
+            border: 0;
+            background: linear-gradient(180deg, #2f95ff 0%, #007aff 100%);
+            color: #ffffff;
+            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.24);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        }
+
+        #campaign-reply-send svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            stroke-width: 2.25;
+            fill: none;
+            transform: translateX(1px);
+        }
+
+        #campaign-reply-send:hover:not(:disabled),
+        #campaign-reply-send:focus-visible:not(:disabled) {
+            filter: brightness(1.06);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.16), 0 14px 28px rgba(0, 122, 255, 0.32);
+            transform: translateY(-1px);
+        }
+
+        #campaign-reply-send:disabled {
+            background: #cbd5e1;
+            color: #ffffff;
+            box-shadow: none;
+            transform: none;
+        }
+
+        [data-theme="sunset"] .campaign-reply-message.is-outgoing {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-color: rgba(37, 99, 235, 0.48);
         }
 
         .campaign-reply-thread-empty,
@@ -1323,7 +1367,11 @@
                                         <div id="campaign-reply-status" class="campaign-reply-status"></div>
                                         <div class="campaign-reply-form-row">
                                             <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
-                                            <button id="campaign-reply-send" type="submit" class="card-btn active" disabled>Send Reply</button>
+                                            <button id="campaign-reply-send" type="submit" class="card-btn active" aria-label="Send reply" title="Send reply" disabled>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
+                                                </svg>
+                                            </button>
                                         </div>
                                     </form>
                                 </section>
