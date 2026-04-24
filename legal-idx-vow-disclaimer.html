@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IDX/VOW Disclaimer - FAST BRIDGE GROUP</title>
+    <title>IDX/VOW Disclaimer - Broker-Operated MLS Access</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
     <link rel="manifest" href="/site.webmanifest?v=20260327g">
-    <meta name="description" content="Detailed IDX and VOW disclaimer information for FAST BRIDGE GROUP users.">
+    <meta name="description" content="Detailed IDX and VOW disclaimer information for the broker-operated MLS access experience under Loria Rigby's brokerage supervision.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -50,6 +50,36 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .legal-operator-card {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.24);
+            background: rgba(var(--accent-rgb), 0.08);
+        }
+
+        .legal-operator-card p {
+            margin: 10px 0 0;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .legal-operator-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .legal-operator-meta strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 <body class="legal-page">
     <main class="legal-page-main">
@@ -58,9 +88,9 @@
             <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
         </header>
         <section class="legal-hero">
-            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <div id="legal-idx-vow-eyebrow" class="legal-eyebrow">Broker-Operated MLS Access</div>
             <h1>IDX/VOW Disclaimer</h1>
-            <p>IDX and VOW data carries use restrictions designed to protect consumers, MLS participants, and the integrity of listing content across digital platforms.</p>
+            <p id="legal-idx-vow-copy">IDX and VOW data carries use restrictions designed to protect consumers, MLS participants, and the integrity of listing content across broker-operated digital platforms.</p>
         </section>
         <nav class="legal-top-links" aria-label="Legal pages">
             <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
@@ -93,6 +123,10 @@
                 <p>FAST is designed to help users move faster with property data, but faster access does not create permission to copy, export, or commercialize IDX or VOW content beyond the rules that govern the original feed. If a use case is unclear, the user should treat the data as restricted until confirmed otherwise.</p>
             </article>
             <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Participant broker operator</h2>
+                <div id="legal-operator-card" class="legal-operator-card">Loading participant broker information.</div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
                 <h2>Required VOW assent</h2>
                 <p>A VOW registrant must separately and affirmatively accept VOW-specific Terms of Use before broker-supervised MLS listing information is made available through the VOW. That acceptance is distinct from the site's general Terms of Use.</p>
                 <p style="margin-top:14px;"><a href="vow-terms-of-use.html">Open the VOW Terms of Use page</a>.</p>
@@ -100,5 +134,45 @@
         </section>
     </main>
     <script src="templatemo-glass-admin-script.js"></script>
+    <script>
+        (function () {
+            const operatorCardEl = document.getElementById('legal-operator-card');
+            const eyebrowEl = document.getElementById('legal-idx-vow-eyebrow');
+            const heroCopyEl = document.getElementById('legal-idx-vow-copy');
+
+            fetch('/api/vow/participant-broker')
+                .then((response) => response.json().catch(() => ({})).then((data) => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) {
+                        throw new Error(data.error || 'Unable to load participant broker details.');
+                    }
+
+                    const profile = data.participantBroker || {};
+                    if (eyebrowEl && profile.operatorLabel) {
+                        eyebrowEl.textContent = profile.operatorLabel;
+                    }
+                    if (heroCopyEl) {
+                        heroCopyEl.textContent = `${profile.brokerageName || 'This brokerage'} provides the participant-broker supervision for this MLS/VOW experience. FAST BRIDGE supplies platform technology, but data display and consumer-facing VOW access remain under the brokerage operator.`;
+                    }
+                    if (operatorCardEl) {
+                        operatorCardEl.innerHTML = `
+                            <strong>${profile.brokerageName || 'Brokerage operator not configured'}</strong>
+                            <p>${profile.complianceStatement || 'Participant broker details are not configured yet.'}</p>
+                            <div class="legal-operator-meta">
+                                <div><strong>Broker</strong><span>${profile.name || 'Not available'}</span></div>
+                                <div><strong>Email</strong><span>${profile.email || 'Not available'}</span></div>
+                                <div><strong>Phone</strong><span>${profile.phone || 'Not available'}</span></div>
+                                <div><strong>License #</strong><span>${profile.licenseNumber || 'Not provided'}</span></div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(() => {
+                    if (operatorCardEl) {
+                        operatorCardEl.textContent = 'Participant broker information is not available right now.';
+                    }
+                });
+        })();
+    </script>
 </body>
 </html>

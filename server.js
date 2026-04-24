@@ -252,6 +252,11 @@ const LEGACY_EMAIL_ALIASES = new Map([
 const CANONICAL_LORIA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('LORIA_BROKER_EMAIL') || 'loria.rigby@fastbridgegroupllc.com');
 const CANONICAL_LORIA_PASSWORD = String(process.env.LORIA_BROKER_PASSWORD || 'Password123').trim() || 'Password123';
 const CANONICAL_LORIA_NAME = String(process.env.LORIA_BROKER_NAME || 'Loria Rigby').trim() || 'Loria Rigby';
+const LORIA_BROKERAGE_NAME = String(process.env.LORIA_BROKERAGE_NAME || `${CANONICAL_LORIA_NAME} Brokerage`).trim() || `${CANONICAL_LORIA_NAME} Brokerage`;
+const LORIA_BROKER_LICENSE_NUMBER = String(process.env.LORIA_BROKER_LICENSE_NUMBER || '').trim();
+const LORIA_BROKER_PHONE = String(process.env.LORIA_BROKER_PHONE || '').trim();
+const LORIA_BROKER_WEBSITE = String(process.env.LORIA_BROKER_WEBSITE || '').trim();
+const LORIA_VOW_OPERATOR_LABEL = String(process.env.LORIA_VOW_OPERATOR_LABEL || 'Broker-Operated VOW').trim() || 'Broker-Operated VOW';
 const CANONICAL_STEVEN_CASTILLO_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('STEVEN_CASTILLO_EMAIL') || 'steve.castillo@fastbridgegroupllc.com');
 const CANONICAL_STEVEN_CASTILLO_PASSWORD = String(process.env.STEVEN_CASTILLO_PASSWORD || 'Password123').trim() || 'Password123';
 const CANONICAL_STEVEN_CASTILLO_NAME = String(process.env.STEVEN_CASTILLO_NAME || 'Steven Castillo').trim() || 'Steven Castillo';
@@ -6557,6 +6562,19 @@ function serializeUser(userLike) {
   };
 }
 
+function getVowParticipantBrokerProfile() {
+  return {
+    name: CANONICAL_LORIA_NAME,
+    email: CANONICAL_LORIA_EMAIL,
+    brokerageName: LORIA_BROKERAGE_NAME,
+    licenseNumber: LORIA_BROKER_LICENSE_NUMBER,
+    phone: LORIA_BROKER_PHONE,
+    website: LORIA_BROKER_WEBSITE,
+    operatorLabel: LORIA_VOW_OPERATOR_LABEL,
+    complianceStatement: `${LORIA_BROKERAGE_NAME} is the participant-broker operator for this MLS/VOW experience. FAST BRIDGE provides platform technology, while brokerage-facing MLS supervision, consumer relationship handling, and VOW compliance remain under ${CANONICAL_LORIA_NAME}.`
+  };
+}
+
 function normalizeVowRegistrantName(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 160);
 }
@@ -10245,6 +10263,12 @@ app.get('/api/vow/registrants', async (req, res) => {
     console.error('VOW registrants load error:', error);
     return res.status(500).json({ error: 'Unable to load VOW registrants.' });
   }
+});
+
+app.get('/api/vow/participant-broker', (_req, res) => {
+  return res.json({
+    participantBroker: getVowParticipantBrokerProfile()
+  });
 });
 
 app.post('/api/vow/registrants', async (req, res) => {

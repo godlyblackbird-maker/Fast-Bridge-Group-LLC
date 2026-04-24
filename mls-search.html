@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLS Search - FAST BRIDGE GROUP</title>
+    <title>MLS Search - Loria Rigby Brokerage | FAST BRIDGE GROUP</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -655,6 +655,63 @@
             line-height: 1.55;
         }
 
+        .mls-source-badge-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 28px;
+            padding-top: 10px;
+        }
+
+        .mls-source-badge {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mls-source-badge img {
+            flex: 0 0 auto;
+            width: 58px;
+            max-height: 42px;
+            object-fit: contain;
+        }
+
+        .mls-source-badge-text {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .mls-source-badge-label {
+            display: block;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .mls-source-badge-name {
+            display: block;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .mls-source-disclaimer {
+            margin: 16px 0 0;
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.65;
+        }
+
         .mls-search-source-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -734,6 +791,7 @@
             .mls-search-brief-grid,
             .mls-search-stat-grid,
             .mls-search-mini-stats,
+            .mls-source-badge-row,
             .mls-quick-field-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -753,6 +811,7 @@
             .mls-search-brief-grid,
             .mls-search-stat-grid,
             .mls-search-mini-stats,
+            .mls-source-badge-row,
             .mls-quick-field-grid {
                 grid-template-columns: 1fr;
             }
@@ -842,14 +901,38 @@
                 <section class="glass-card mls-search-hero">
                     <div class="mls-search-hero-grid">
                         <div>
-                            <div class="mls-search-kicker"><span class="mls-search-kicker-dot"></span>Investor Search Desk</div>
-                            <h2>Build sharper MLS hunts without fighting the page.</h2>
-                            <p class="mls-search-hero-copy">Turn a rough buy box into a clean search brief and keep your criteria organized so you can move faster on fix-and-flip, rental, or distress opportunities.</p>
+                            <div class="mls-search-kicker"><span class="mls-search-kicker-dot"></span>Loria Rigby Brokerage Search Desk</div>
+                            <h2>Build sharper MLS/VOW hunts under Loria Rigby Brokerage.</h2>
+                            <p class="mls-search-hero-copy">Turn a rough buy box into a clean search brief and keep your criteria organized while searching inventory presented through the Loria Rigby Brokerage MLS/VOW workflow.</p>
                             <div class="mls-search-jump-links">
                                 <a class="mls-jump-link" href="#mls-search-builder">Search Builder</a>
                                 <a class="mls-jump-link" href="#mls-search-preview">Results</a>
                             </div>
                         </div>
+                        <aside class="mls-search-hero-aside" aria-label="Broker-operated MLS disclosure">
+                            <div>
+                                <span class="mls-search-panel-label" id="mls-operator-label">Loria Rigby Brokerage MLS/VOW Operator</span>
+                                <p id="mls-operator-copy" class="mls-search-hero-copy" style="max-width:none; margin:0;">This MLS and VOW experience is presented under Loria Rigby Brokerage. FAST BRIDGE provides the platform workflow, while brokerage-facing MLS compliance remains under the participant broker and brokerage operator.</p>
+                            </div>
+                            <div class="mls-search-stat-grid">
+                                <div class="mls-search-stat">
+                                    <strong id="mls-operator-brokerage">Loading...</strong>
+                                    <span>Brokerage operator</span>
+                                </div>
+                                <div class="mls-search-stat">
+                                    <strong id="mls-operator-name">Loading...</strong>
+                                    <span>Participant broker</span>
+                                </div>
+                                <div class="mls-search-stat">
+                                    <strong id="mls-operator-license">Pending</strong>
+                                    <span>License</span>
+                                </div>
+                            </div>
+                            <div class="mls-search-action-row">
+                                <a class="mls-source-link" href="legal-idx-vow-disclaimer.html">IDX/VOW Rules</a>
+                                <a class="mls-source-link" href="vow-terms-of-use.html">VOW Terms</a>
+                            </div>
+                        </aside>
                     </div>
                 </section>
 
@@ -1018,8 +1101,8 @@
                     <div class="mls-source-badge" aria-label="FAST BRIDGE GROUP broker information">
                         <img src="CRMLS/BROKER%20LOGO.png" alt="FAST BRIDGE GROUP logo">
                         <div class="mls-source-badge-text">
-                            <span class="mls-source-badge-label">Broker</span>
-                            <span class="mls-source-badge-name">Loria Ribgy</span>
+                            <span class="mls-source-badge-label">Brokerage Operator</span>
+                            <span class="mls-source-badge-name">Loria Rigby Brokerage</span>
                         </div>
                     </div>
 
@@ -1030,7 +1113,7 @@
                         </div>
                     </div>
                 </div>
-                <p class="mls-source-disclaimer">CRMLS VOW Disclaimer: All information obtained from this Virtual Office Website is intended only for the personal, non-commercial use of consumers who have a bona fide interest in the purchase, sale, or lease of real estate of the type being offered through this VOW. This information is not intended for any other purpose and may not be used except to identify prospective properties consumers may be interested in purchasing or leasing. Displayed information is deemed reliable but is not guaranteed accurate by CRMLS, the listing broker, or FAST BRIDGE GROUP, and should be independently verified. CRMLS, Participants, and brokers may review, audit, and inspect the VOW and its records for compliance with applicable MLS rules and policies.</p>
+                <p class="mls-source-disclaimer">CRMLS VOW Disclaimer: All information obtained from this Virtual Office Website is intended only for the personal, non-commercial use of consumers who have a bona fide interest in the purchase, sale, or lease of real estate of the type being offered through this VOW. This information is not intended for any other purpose and may not be used except to identify prospective properties consumers may be interested in purchasing or leasing. Displayed information is deemed reliable but is not guaranteed accurate by CRMLS, the listing broker, Loria Rigby Brokerage, or FAST BRIDGE GROUP, and should be independently verified. CRMLS, Participants, and brokers may review, audit, and inspect the VOW and its records for compliance with applicable MLS rules and policies.</p>
             </div>
 
         </main>
@@ -1084,6 +1167,44 @@
             const generateBtn = document.getElementById('mls-search-generate');
             const resultsTabButtons = Array.from(document.querySelectorAll('[data-mls-results-tab]'));
             const resultsTabPanels = Array.from(document.querySelectorAll('[data-mls-results-panel]'));
+            const operatorLabelEl = document.getElementById('mls-operator-label');
+            const operatorCopyEl = document.getElementById('mls-operator-copy');
+            const operatorBrokerageEl = document.getElementById('mls-operator-brokerage');
+            const operatorNameEl = document.getElementById('mls-operator-name');
+            const operatorLicenseEl = document.getElementById('mls-operator-license');
+
+            fetch('/api/vow/participant-broker')
+                .then((response) => response.json().catch(() => ({})).then((data) => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) {
+                        throw new Error(data.error || 'Unable to load participant broker details.');
+                    }
+
+                    const profile = data.participantBroker || {};
+                    if (operatorLabelEl && profile.operatorLabel) {
+                        operatorLabelEl.textContent = profile.operatorLabel;
+                    }
+                    if (operatorCopyEl) {
+                        operatorCopyEl.textContent = `${profile.brokerageName || 'This brokerage'} is the participant-broker operator for this MLS/VOW search surface. FAST BRIDGE provides the investor workflow and software infrastructure, but consumer-facing MLS supervision remains under ${profile.name || 'the participant broker'}.`;
+                    }
+                    if (operatorBrokerageEl) {
+                        operatorBrokerageEl.textContent = profile.brokerageName || 'Not configured';
+                    }
+                    if (operatorNameEl) {
+                        operatorNameEl.textContent = profile.name || 'Not configured';
+                    }
+                    if (operatorLicenseEl) {
+                        operatorLicenseEl.textContent = profile.licenseNumber || 'Not provided';
+                    }
+                })
+                .catch(() => {
+                    if (operatorBrokerageEl) {
+                        operatorBrokerageEl.textContent = 'Unavailable';
+                    }
+                    if (operatorNameEl) {
+                        operatorNameEl.textContent = 'Unavailable';
+                    }
+                });
 
             const presets = {
                 flip: {

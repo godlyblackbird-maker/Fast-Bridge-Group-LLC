@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOW Terms of Use - FAST BRIDGE GROUP</title>
+    <title>VOW Terms of Use - Broker-Operated MLS Access</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
     <link rel="manifest" href="/site.webmanifest?v=20260327g">
-    <meta name="description" content="Virtual Office Website Terms of Use and acceptance flow for FAST BRIDGE GROUP VOW registrants.">
+    <meta name="description" content="Virtual Office Website terms and acceptance flow for the broker-operated MLS/VOW experience under Loria Rigby's brokerage supervision.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -70,6 +70,21 @@
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.04);
+        }
+
+        .vow-operator-callout {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.24);
+            background: rgba(var(--accent-rgb), 0.08);
+            color: var(--text-primary);
+        }
+
+        .vow-operator-callout strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            letter-spacing: 0.02em;
         }
 
         .vow-terms-meta-label {
@@ -178,9 +193,9 @@
             <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
         </header>
         <section class="legal-hero">
-            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <div id="vow-hero-eyebrow" class="legal-eyebrow">Broker-Operated VOW</div>
             <h1>VOW Terms of Use</h1>
-            <p>This page is used to review and affirm the Terms of Use required before a registrant is permitted to access broker-supervised Virtual Office Website listing information.</p>
+            <p id="vow-hero-copy">This page is used to review and affirm the Terms of Use required before a registrant is permitted to access broker-operated Virtual Office Website listing information under participant-broker supervision.</p>
         </section>
         <nav class="legal-top-links" aria-label="Legal pages">
             <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
@@ -196,12 +211,17 @@
                 <div id="vow-status" class="vow-terms-status">Loading VOW terms details.</div>
             </article>
             <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Participant broker</h2>
+                <div id="vow-broker-profile" class="vow-terms-meta"></div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
                 <h2>Registrant summary</h2>
                 <div id="vow-meta" class="vow-terms-meta"></div>
             </article>
             <article class="legal-card legal-hover-card" tabindex="0">
                 <h2>Important notes</h2>
                 <ul id="vow-notes" class="vow-terms-note-list"></ul>
+                <div id="vow-operator-callout" class="vow-operator-callout" style="margin-top:14px; display:none;"></div>
             </article>
             <article class="legal-card legal-hover-card" tabindex="0">
                 <h2>Required statements</h2>
@@ -243,6 +263,8 @@
             const statusEl = document.getElementById('vow-status');
             const metaEl = document.getElementById('vow-meta');
             const notesEl = document.getElementById('vow-notes');
+            const brokerProfileEl = document.getElementById('vow-broker-profile');
+            const operatorCalloutEl = document.getElementById('vow-operator-callout');
             const checklistEl = document.getElementById('vow-checklist');
             const formEl = document.getElementById('vow-acceptance-form');
             const buttonEl = document.getElementById('vow-accept-button');
@@ -250,6 +272,8 @@
             const relationshipTypeEl = document.getElementById('vow-relationship-type');
             const agencyDisclosureAckEl = document.getElementById('vow-agency-disclosure-ack');
             const relationshipNoteEl = document.getElementById('vow-relationship-note');
+            const heroEyebrowEl = document.getElementById('vow-hero-eyebrow');
+            const heroCopyEl = document.getElementById('vow-hero-copy');
             let requiredStatements = [];
 
             function setStatus(message, kind) {
@@ -279,6 +303,43 @@
                 metaEl.appendChild(renderMetaCard('Broker', registrant.brokerName || 'Not available'));
                 metaEl.appendChild(renderMetaCard('Broker Email', registrant.brokerEmail || 'Not available'));
                 metaEl.appendChild(renderMetaCard('Link Expires', registrant.expiresAt ? new Date(registrant.expiresAt).toLocaleString() : 'Not available'));
+            }
+
+            function renderParticipantBroker(profile) {
+                if (!brokerProfileEl || !profile) {
+                    return;
+                }
+
+                brokerProfileEl.innerHTML = '';
+                brokerProfileEl.appendChild(renderMetaCard('Operator', profile.name || 'Not available'));
+                brokerProfileEl.appendChild(renderMetaCard('Brokerage', profile.brokerageName || 'Not available'));
+                brokerProfileEl.appendChild(renderMetaCard('Broker Email', profile.email || 'Not available'));
+                brokerProfileEl.appendChild(renderMetaCard('Broker Phone', profile.phone || 'Not available'));
+                brokerProfileEl.appendChild(renderMetaCard('License #', profile.licenseNumber || 'Not provided'));
+
+                if (heroEyebrowEl && profile.operatorLabel) {
+                    heroEyebrowEl.textContent = profile.operatorLabel;
+                }
+                if (heroCopyEl) {
+                    heroCopyEl.textContent = `${profile.brokerageName || 'This brokerage'} operates this VOW experience under participant-broker supervision. FAST BRIDGE provides the software platform, but MLS/VOW access is presented under ${profile.name || 'the participant broker'}.`;
+                }
+                if (operatorCalloutEl && profile.complianceStatement) {
+                    operatorCalloutEl.style.display = '';
+                    operatorCalloutEl.innerHTML = `<strong>Brokerage control statement</strong><span>${profile.complianceStatement}</span>`;
+                }
+            }
+
+            async function loadParticipantBroker() {
+                try {
+                    const response = await fetch('/api/vow/participant-broker');
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load participant broker details.');
+                    }
+                    renderParticipantBroker(data.participantBroker || null);
+                } catch (error) {
+                    // Keep the VOW flow usable even if broker-profile copy cannot load.
+                }
             }
 
             function renderNotes(notes) {
@@ -391,6 +452,7 @@
                 }
             });
 
+            loadParticipantBroker();
             loadTerms();
         })();
     </script>

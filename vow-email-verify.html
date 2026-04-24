@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOW Email Verification - FAST BRIDGE GROUP</title>
+    <title>VOW Email Verification - Broker-Operated MLS Access</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
     <link rel="manifest" href="/site.webmanifest?v=20260327g">
-    <meta name="description" content="Email verification page for FAST BRIDGE GROUP VOW registrants.">
+    <meta name="description" content="Email verification page for the broker-operated MLS/VOW experience under Loria Rigby's brokerage supervision.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -107,9 +107,9 @@
             <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
         </header>
         <section class="legal-hero">
-            <div class="legal-eyebrow">FAST BRIDGE GROUP</div>
+            <div id="vow-verify-eyebrow" class="legal-eyebrow">Broker-Operated VOW</div>
             <h1>VOW Email Verification</h1>
-            <p>This page confirms that the email address used for the VOW registrant record belongs to the registrant who completed the broker-supervised VOW onboarding flow.</p>
+            <p id="vow-verify-hero-copy">This page confirms that the email address used for the VOW registrant record belongs to the registrant who completed the broker-operated VOW onboarding flow.</p>
         </section>
         <nav class="legal-top-links" aria-label="Legal pages">
             <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
@@ -121,6 +121,10 @@
             <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
                 <h2>Email verification status</h2>
                 <div id="vow-verify-status" class="vow-verify-status">Loading verification details.</div>
+            </article>
+            <article class="legal-card legal-hover-card" tabindex="0">
+                <h2>Participant broker</h2>
+                <div id="vow-verify-broker-meta" class="vow-verify-meta"></div>
             </article>
             <article class="legal-card legal-hover-card" tabindex="0">
                 <h2>Registrant summary</h2>
@@ -141,8 +145,11 @@
             const token = new URLSearchParams(window.location.search).get('token') || '';
             const statusEl = document.getElementById('vow-verify-status');
             const metaEl = document.getElementById('vow-verify-meta');
+            const brokerMetaEl = document.getElementById('vow-verify-broker-meta');
             const buttonEl = document.getElementById('vow-verify-button');
             const copyEl = document.getElementById('vow-verify-copy');
+            const eyebrowEl = document.getElementById('vow-verify-eyebrow');
+            const heroCopyEl = document.getElementById('vow-verify-hero-copy');
             let alreadyVerified = false;
 
             function setStatus(message, kind) {
@@ -155,6 +162,39 @@
                 card.className = 'vow-verify-meta-card';
                 card.innerHTML = `<span class="vow-verify-meta-label">${label}</span><span class="vow-verify-meta-value">${value || 'Not available'}</span>`;
                 return card;
+            }
+
+            function renderParticipantBroker(profile) {
+                if (!brokerMetaEl || !profile) {
+                    return;
+                }
+
+                brokerMetaEl.innerHTML = '';
+                brokerMetaEl.appendChild(renderMetaCard('Operator', profile.name || 'Not available'));
+                brokerMetaEl.appendChild(renderMetaCard('Brokerage', profile.brokerageName || 'Not available'));
+                brokerMetaEl.appendChild(renderMetaCard('Broker Email', profile.email || 'Not available'));
+                brokerMetaEl.appendChild(renderMetaCard('Broker Phone', profile.phone || 'Not available'));
+                brokerMetaEl.appendChild(renderMetaCard('License #', profile.licenseNumber || 'Not provided'));
+
+                if (eyebrowEl && profile.operatorLabel) {
+                    eyebrowEl.textContent = profile.operatorLabel;
+                }
+                if (heroCopyEl) {
+                    heroCopyEl.textContent = `${profile.brokerageName || 'This brokerage'} operates this VOW email verification flow. FAST BRIDGE provides the software platform, while VOW compliance remains under ${profile.name || 'the participant broker'}.`;
+                }
+            }
+
+            async function loadParticipantBroker() {
+                try {
+                    const response = await fetch('/api/vow/participant-broker');
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load participant broker details.');
+                    }
+                    renderParticipantBroker(data.participantBroker || null);
+                } catch (error) {
+                    // Leave the verification flow usable if the operator profile cannot load.
+                }
             }
 
             async function loadVerification() {
@@ -225,6 +265,7 @@
                 }
             });
 
+            loadParticipantBroker();
             loadVerification();
         })();
     </script>
