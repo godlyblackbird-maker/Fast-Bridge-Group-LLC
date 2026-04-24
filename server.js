@@ -169,6 +169,7 @@ const SQLITE_BACKUP_INTERVAL_HOURS = Math.max(1, Number.parseInt(String(process.
 const SQLITE_BACKUP_INTERVAL_MS = SQLITE_BACKUP_INTERVAL_HOURS * 60 * 60 * 1000;
 const SQLITE_BACKUP_STARTUP_DELAY_MS = Math.max(15 * 1000, Number.parseInt(String(process.env.SQLITE_BACKUP_STARTUP_DELAY_MS || 2 * 60 * 1000), 10) || (2 * 60 * 1000));
 const SQLITE_BACKUP_S3_PREFIX = String(process.env.SQLITE_BACKUP_S3_PREFIX || 'database-backups/sqlite').trim().replace(/\/+$/g, '');
+const ACTIVE_BUYERS_SHEET_ROW_ID = 1;
 const MLS_IMPORT_PDF_BODY_LIMIT = '260mb';
 const MLS_IMPORT_PDF_MAX_BYTES = 180 * 1024 * 1024;
 const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
@@ -3836,6 +3837,25 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS active_buyers_sheet (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      rows_json TEXT NOT NULL DEFAULT '[]',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by_user_id INTEGER,
+      updated_by_name TEXT,
+      updated_by_email TEXT,
+      revision INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(updated_by_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating active_buyers_sheet table:', err);
+    } else {
+      console.log('Active buyers sheet table ready');
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS auth_sessions (
       id TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,
@@ -3955,6 +3975,133 @@ function dbGet(sql, params) {
 
 function normalizeMlsImportSpreadsheetValue(value) {
   return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeActiveBuyersSheetCell(value, maxLength = 4000) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .slice(0, maxLength)
+    .trim();
+}
+
+function normalizeActiveBuyersSheetRow(row) {
+  const source = row && typeof row === 'object' ? row : {};
+  return {
+    activeBuyer: normalizeActiveBuyersSheetCell(source.activeBuyer, 80),
+    name: normalizeActiveBuyersSheetCell(source.name, 300),
+    emailCategories: normalizeActiveBuyersSheetCell(source.emailCategories, 600),
+    cellPhone: normalizeActiveBuyersSheetCell(source.cellPhone, 120),
+    companyName: normalizeActiveBuyersSheetCell(source.companyName, 300),
+    contact: normalizeActiveBuyersSheetCell(source.contact, 300),
+    comments: normalizeActiveBuyersSheetCell(source.comments, 4000),
+    notes: normalizeActiveBuyersSheetCell(source.notes, 4000)
+  };
+}
+
+function normalizeActiveBuyersSheetRows(rows) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows
+    .slice(0, 5000)
+    .map((row) => normalizeActiveBuyersSheetRow(row))
+    .filter((row) => Object.values(row).some(Boolean));
+}
+
+function parseActiveBuyersSheetRows(rowsJson) {
+  try {
+    return normalizeActiveBuyersSheetRows(JSON.parse(String(rowsJson || '[]')));
+  } catch (error) {
+    return [];
+  }
+}
+
+function serializeActiveBuyersSheetRow(row) {
+  const normalizedRow = normalizeActiveBuyersSheetRow(row);
+  return {
+    ...normalizedRow,
+    active: /^buyer$/i.test(normalizedRow.activeBuyer)
+  };
+}
+
+function serializeActiveBuyersSheet(sheetRow) {
+  const row = sheetRow && typeof sheetRow === 'object' ? sheetRow : {};
+  const updatedByName = String(row.updated_by_name || '').trim();
+  const updatedByEmail = String(row.updated_by_email || '').trim().toLowerCase();
+  const updatedByLabel = updatedByName || updatedByEmail || '';
+
+  return {
+    rows: parseActiveBuyersSheetRows(row.rows_json).map((entry) => serializeActiveBuyersSheetRow(entry)),
+    revision: Math.max(0, Number(row.revision) || 0),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+    updatedBy: updatedByLabel
+      ? {
+          id: Number(row.updated_by_user_id) || null,
+          name: updatedByName,
+          email: updatedByEmail,
+          label: updatedByLabel
+        }
+      : null
+  };
+}
+
+async function loadActiveBuyersSheet() {
+  const row = await dbGet(
+    `SELECT id, rows_json, updated_at, updated_by_user_id, updated_by_name, updated_by_email, revision
+       FROM active_buyers_sheet
+      WHERE id = ?`,
+    [ACTIVE_BUYERS_SHEET_ROW_ID]
+  );
+
+  if (!row) {
+    return {
+      rows: [],
+      revision: 0,
+      updatedAt: null,
+      updatedBy: null
+    };
+  }
+
+  return serializeActiveBuyersSheet(row);
+}
+
+async function saveActiveBuyersSheet(rows, actor) {
+  const normalizedRows = normalizeActiveBuyersSheetRows(rows);
+  const actorUserId = Number(actor && actor.id) || null;
+  const actorName = String(actor && actor.name || '').trim();
+  const actorEmail = normalizeKnownEmail(actor && actor.email || '');
+  const updatedAt = new Date().toISOString();
+
+  await dbRun(
+    `INSERT INTO active_buyers_sheet (
+      id,
+      rows_json,
+      updated_at,
+      updated_by_user_id,
+      updated_by_name,
+      updated_by_email,
+      revision
+    ) VALUES (?, ?, ?, ?, ?, ?, 1)
+    ON CONFLICT(id) DO UPDATE SET
+      rows_json = excluded.rows_json,
+      updated_at = excluded.updated_at,
+      updated_by_user_id = excluded.updated_by_user_id,
+      updated_by_name = excluded.updated_by_name,
+      updated_by_email = excluded.updated_by_email,
+      revision = active_buyers_sheet.revision + 1`,
+    [
+      ACTIVE_BUYERS_SHEET_ROW_ID,
+      JSON.stringify(normalizedRows),
+      updatedAt,
+      actorUserId,
+      actorName,
+      actorEmail
+    ]
+  );
+
+  return loadActiveBuyersSheet();
 }
 
 function normalizeMlsImportStatusLabel(value) {
@@ -13587,6 +13734,37 @@ app.post('/api/admin/mls-imports/rows/batch', express.json({ limit: '5mb' }), as
   } catch (error) {
     console.error('Failed to save MLS import rows:', error);
     return res.status(500).json({ error: 'Failed to save MLS import rows.' });
+  }
+});
+
+app.get('/api/admin/active-buyers', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const sheet = await loadActiveBuyersSheet();
+    return res.json({ sheet });
+  } catch (error) {
+    console.error('Failed to load active buyers sheet:', error);
+    return res.status(500).json({ error: 'Failed to load the active buyers sheet.' });
+  }
+});
+
+app.put('/api/admin/active-buyers', express.json({ limit: '5mb' }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : [];
+    const sheet = await saveActiveBuyersSheet(rows, decoded);
+    return res.json({ success: true, sheet });
+  } catch (error) {
+    console.error('Failed to save active buyers sheet:', error);
+    return res.status(500).json({ error: 'Failed to save the active buyers sheet.' });
   }
 });
 

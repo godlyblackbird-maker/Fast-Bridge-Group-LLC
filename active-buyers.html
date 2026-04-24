@@ -322,6 +322,24 @@
             color: var(--buyers-note);
         }
 
+        .buyers-sheet-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem 1rem;
+            margin-top: 0.45rem;
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
+        .buyers-sync-status.is-error {
+            color: #fca5a5;
+        }
+
+        [data-theme="light"] .buyers-sync-status.is-error,
+        [data-theme="beach"] .buyers-sync-status.is-error {
+            color: #b91c1c;
+        }
+
         .buyers-sheet-table td.active-buyer-cell.is-buyer {
             color: var(--success);
             font-weight: 700;
@@ -549,6 +567,10 @@
                         <div>
                             <h2 class="card-title">Active Buyers Spreadsheet</h2>
                             <p class="card-subtitle">Track current buyer contacts and notes.</p>
+                            <div class="buyers-sheet-meta">
+                                <span id="buyers-last-edited">Last update: Loading...</span>
+                                <span id="buyers-sync-status" class="buyers-sync-status">Syncing shared admin sheet...</span>
+                            </div>
                         </div>
                         <div class="buyers-sheet-actions">
                             <button id="buyers-add-row" class="card-btn active" type="button">Add Row</button>
@@ -663,7 +685,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <p class="buyers-sheet-note">Tip: Click into any cell to edit. Data is saved automatically in this browser.</p>
+                    <p class="buyers-sheet-note">Tip: Only admins can use this list. Changes save to one shared admin sheet and refresh across admin sessions automatically.</p>
                 </div>
             </section>
         </main>
@@ -728,7 +750,7 @@
                     }
 
                     function getAuthHeader() {
-                        const token = String(localStorage.getItem('authToken') || '').trim();
+                        const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
                         return token ? { Authorization: `Bearer ${token}` } : {};
                     }
 
@@ -992,10 +1014,20 @@
             const body = document.getElementById('buyers-sheet-body');
             const addRowBtn = document.getElementById('buyers-add-row');
             const saveCsvBtn = document.getElementById('buyers-save-csv');
+            const syncStatus = document.getElementById('buyers-sync-status');
+            const lastEdited = document.getElementById('buyers-last-edited');
 
-            if (!body || !addRowBtn || !saveCsvBtn) {
+            if (!body || !addRowBtn || !saveCsvBtn || !syncStatus || !lastEdited) {
                 return;
             }
+
+            let currentRevision = 0;
+            let lastAppliedSignature = '';
+            let pendingSaveTimer = null;
+            let saveInFlight = null;
+            let pendingPollPromise = null;
+            let isDirty = false;
+            let pollingHandle = null;
 
             const CSV_HEADERS = [
                 'Active Buyer?',
@@ -1008,6 +1040,148 @@
                 'NOTES'
             ];
 
+            function safeReadJson(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || '{}');
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function getStoredUser() {
+                const localUser = safeReadJson('user');
+                if (localUser && typeof localUser === 'object' && Object.keys(localUser).length) {
+                    return localUser;
+                }
+                return safeReadJson('userProfile');
+            }
+
+            function getAuthToken() {
+                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function decodeJwtPayload(token) {
+                const parts = String(token || '').split('.');
+                if (parts.length < 2) {
+                    return null;
+                }
+
+                try {
+                    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                    return JSON.parse(atob(base64));
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function getCurrentAdmin() {
+                const token = getAuthToken();
+                const decoded = decodeJwtPayload(token) || {};
+                const storedUser = getStoredUser();
+                const role = String(storedUser.role || decoded.role || '').trim().toLowerCase();
+
+                if (!token || role !== 'admin') {
+                    return null;
+                }
+
+                return {
+                    id: decoded.id || storedUser.id || null,
+                    name: String(storedUser.name || decoded.name || 'Admin').trim(),
+                    email: String(storedUser.email || decoded.email || '').trim().toLowerCase(),
+                    role
+                };
+            }
+
+            function redirectUnauthorized() {
+                window.location.replace(getAuthToken() ? '/dashboard.html' : '/login.html');
+            }
+
+            function setSyncStatus(message, tone) {
+                syncStatus.textContent = message;
+                syncStatus.classList.toggle('is-error', tone === 'error');
+            }
+
+            function formatEditedAt(value) {
+                if (!value) {
+                    return 'Not saved yet';
+                }
+
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) {
+                    return 'Unknown time';
+                }
+
+                return date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            }
+
+            function updateLastEditedMeta(sheet) {
+                if (!sheet || !sheet.updatedAt) {
+                    lastEdited.textContent = 'Last update: Not saved yet';
+                    return;
+                }
+
+                const editorLabel = sheet.updatedBy && sheet.updatedBy.label ? sheet.updatedBy.label : 'an admin';
+                lastEdited.textContent = `Last update: ${editorLabel} on ${formatEditedAt(sheet.updatedAt)}`;
+            }
+
+            function getStoredFallbackRows() {
+                try {
+                    const profile = safeReadJson('userProfile');
+                    const user = safeReadJson('user');
+                    const authToken = getAuthToken();
+                    const userEmail = String(user.email || '').trim().toLowerCase();
+                    const profileEmail = String(profile.email || '').trim().toLowerCase();
+                    const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                    const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                    const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'default-user').trim().toLowerCase();
+                    const userKey = email || name.replace(/\s+/g, '-') || 'default-user';
+                    const scopedStorageKey = `${STORAGE_KEY_BASE}:${userKey}`;
+                    const scopedStored = localStorage.getItem(scopedStorageKey);
+                    if (scopedStored) {
+                        return JSON.parse(scopedStored);
+                    }
+
+                    const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
+                    return legacyStored ? JSON.parse(legacyStored) : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            function getAuthorizedHeaders(extraHeaders) {
+                const token = getAuthToken();
+                return {
+                    ...(extraHeaders || {}),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                };
+            }
+
+            async function fetchJson(url, options) {
+                const response = await fetch(url, {
+                    cache: 'no-store',
+                    ...options,
+                    headers: getAuthorizedHeaders(options && options.headers)
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    redirectUnauthorized();
+                    throw new Error('Admin access required');
+                }
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Request failed.');
+                }
+
+                return payload;
+            }
+
             function createRow(data) {
                 const tr = document.createElement('tr');
 
@@ -1019,7 +1193,7 @@
                 applyActiveBuyerCellStyle(activeCell);
                 activeCell.addEventListener('input', () => {
                     applyActiveBuyerCellStyle(activeCell);
-                    saveRows();
+                    scheduleSaveRows();
                 });
                 tr.appendChild(activeCell);
 
@@ -1028,7 +1202,7 @@
                     td.contentEditable = 'true';
                     td.spellcheck = false;
                     td.textContent = (data && data[key]) || '';
-                    td.addEventListener('input', saveRows);
+                    td.addEventListener('input', scheduleSaveRows);
                     tr.appendChild(td);
                 });
 
@@ -1063,9 +1237,15 @@
                 });
             }
 
-            function saveRows() {
-                const rows = getRowsFromDom();
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+            function getRowSignature(rows) {
+                return JSON.stringify(Array.isArray(rows) ? rows : []);
+            }
+
+            function renderRows(rows) {
+                body.innerHTML = '';
+                rows.forEach((row) => {
+                    body.appendChild(createRow(row));
+                });
             }
 
             function escapeCsvValue(value) {
@@ -1132,22 +1312,8 @@
                 return currentRows;
             }
 
-            function loadRows() {
-                let rows = [];
-                try {
-                    const stored = localStorage.getItem(STORAGE_KEY);
-                    if (stored) {
-                        rows = JSON.parse(stored);
-                    } else {
-                        const legacyStored = localStorage.getItem(LEGACY_STORAGE_KEY);
-                        rows = legacyStored ? JSON.parse(legacyStored) : [];
-                        if (Array.isArray(rows) && rows.length > 0) {
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-                        }
-                    }
-                } catch (error) {
-                    rows = [];
-                }
+            function getInitialRowsFallback() {
+                let rows = getStoredFallbackRows();
 
                 if (!Array.isArray(rows) || rows.length === 0) {
                     rows = SEEDED_ROWS;
@@ -1169,21 +1335,150 @@
                     }
                 }
 
-                rows = mergeMissingSeedRows(rows);
-
-                body.innerHTML = '';
-                rows.forEach(row => {
-                    body.appendChild(createRow(row));
-                });
+                return mergeMissingSeedRows(rows);
             }
+
+            function canApplyRemoteSheet() {
+                const activeElement = document.activeElement;
+                return !isDirty && !(activeElement && activeElement.closest && activeElement.closest('#buyers-sheet-body'));
+            }
+
+            function applySheet(sheet, options) {
+                const config = options && typeof options === 'object' ? options : {};
+                const normalizedRows = mergeMissingSeedRows(Array.isArray(sheet && sheet.rows) ? sheet.rows : []);
+                const nextSignature = getRowSignature(normalizedRows);
+
+                currentRevision = Math.max(0, Number(sheet && sheet.revision) || 0);
+                updateLastEditedMeta(sheet);
+
+                if (config.force || nextSignature !== lastAppliedSignature) {
+                    renderRows(normalizedRows);
+                    lastAppliedSignature = nextSignature;
+                }
+            }
+
+            async function saveRowsToServer() {
+                if (saveInFlight) {
+                    return saveInFlight;
+                }
+
+                const rows = getRowsFromDom();
+                const currentSignature = getRowSignature(rows);
+                setSyncStatus('Saving shared admin changes...', 'info');
+
+                saveInFlight = fetchJson('/api/admin/active-buyers', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rows })
+                }).then((payload) => {
+                    const sheet = payload && payload.sheet ? payload.sheet : { rows, revision: currentRevision };
+                    isDirty = false;
+                    applySheet(sheet, { force: currentSignature !== lastAppliedSignature });
+                    setSyncStatus('All admin sessions are up to date.', 'info');
+                    return sheet;
+                }).catch((error) => {
+                    setSyncStatus(error && error.message ? error.message : 'Failed to save the shared admin sheet.', 'error');
+                    throw error;
+                }).finally(() => {
+                    saveInFlight = null;
+                });
+
+                return saveInFlight;
+            }
+
+            function scheduleSaveRows() {
+                isDirty = true;
+                setSyncStatus('Waiting to save changes...', 'info');
+                if (pendingSaveTimer) {
+                    window.clearTimeout(pendingSaveTimer);
+                }
+                pendingSaveTimer = window.setTimeout(() => {
+                    pendingSaveTimer = null;
+                    void saveRowsToServer();
+                }, 500);
+            }
+
+            async function loadRowsFromServer(options) {
+                const config = options && typeof options === 'object' ? options : {};
+                if (pendingPollPromise) {
+                    return pendingPollPromise;
+                }
+
+                pendingPollPromise = fetchJson('/api/admin/active-buyers')
+                    .then(async (payload) => {
+                        const sheet = payload && payload.sheet ? payload.sheet : null;
+                        if (!sheet) {
+                            throw new Error('The active buyers sheet payload was missing.');
+                        }
+
+                        const remoteRows = Array.isArray(sheet.rows) ? sheet.rows : [];
+                        if (!remoteRows.length && config.allowSeed !== false) {
+                            const seedRows = getInitialRowsFallback();
+                            const seedPayload = await fetchJson('/api/admin/active-buyers', {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ rows: seedRows })
+                            });
+                            const seededSheet = seedPayload && seedPayload.sheet ? seedPayload.sheet : { rows: seedRows, revision: 1 };
+                            applySheet(seededSheet, { force: true });
+                            setSyncStatus('Shared admin sheet initialized.', 'info');
+                            return seededSheet;
+                        }
+
+                        if (config.force || Number(sheet.revision) !== currentRevision) {
+                            if (config.force || canApplyRemoteSheet()) {
+                                applySheet(sheet, { force: true });
+                                if (!isDirty) {
+                                    setSyncStatus('All admin sessions are up to date.', 'info');
+                                }
+                            } else {
+                                setSyncStatus('Another admin changed the list. Their update will appear after your save finishes.', 'info');
+                            }
+                        }
+
+                        return sheet;
+                    })
+                    .catch((error) => {
+                        setSyncStatus(error && error.message ? error.message : 'Failed to sync the shared admin sheet.', 'error');
+                        throw error;
+                    })
+                    .finally(() => {
+                        pendingPollPromise = null;
+                    });
+
+                return pendingPollPromise;
+            }
+
+            if (!getCurrentAdmin()) {
+                redirectUnauthorized();
+                return;
+            }
+
+            renderRows(getInitialRowsFallback());
+            lastAppliedSignature = getRowSignature(getRowsFromDom());
+            setSyncStatus('Syncing shared admin sheet...', 'info');
 
             addRowBtn.addEventListener('click', function () {
                 body.appendChild(createRow({ activeBuyer: '' }));
-                saveRows();
+                scheduleSaveRows();
             });
 
-            saveCsvBtn.addEventListener('click', function () {
-                saveRows();
+            saveCsvBtn.addEventListener('click', async function () {
+                if (pendingSaveTimer) {
+                    window.clearTimeout(pendingSaveTimer);
+                    pendingSaveTimer = null;
+                }
+
+                try {
+                    await saveRowsToServer();
+                } catch (error) {
+                    return;
+                }
+
                 const rows = getRowsFromDom();
                 const csvText = buildCsvFromRows(rows);
                 downloadCsvFile(csvText);
@@ -1192,10 +1487,31 @@
                 }
             });
 
-            window.addEventListener('beforeunload', saveRows);
-            window.addEventListener('pagehide', saveRows);
+            void loadRowsFromServer({ force: true, allowSeed: true });
 
-            loadRows();
+            pollingHandle = window.setInterval(() => {
+                void loadRowsFromServer({ force: false, allowSeed: false });
+            }, 3000);
+
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') {
+                    void loadRowsFromServer({ force: false, allowSeed: false });
+                }
+            });
+
+            window.addEventListener('beforeunload', function () {
+                if (pendingSaveTimer) {
+                    window.clearTimeout(pendingSaveTimer);
+                    pendingSaveTimer = null;
+                }
+            });
+
+            window.addEventListener('pagehide', function () {
+                if (pollingHandle) {
+                    window.clearInterval(pollingHandle);
+                    pollingHandle = null;
+                }
+            });
         })();
     </script>
 </body>
