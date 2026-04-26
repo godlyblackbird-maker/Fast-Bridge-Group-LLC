@@ -5345,8 +5345,9 @@ body.sidebar-collapsed .main-content {
 
 .mls-source-badge img {
     display: block;
-    width: auto;
-    height: 34px;
+    width: 58px;
+    max-height: 42px;
+    height: auto;
     object-fit: contain;
     flex-shrink: 0;
 }
@@ -16942,7 +16943,9 @@ body.analytics-reboot .analytics-my-file-count {
     }
 
     .mls-source-badge img {
-        height: 30px;
+        width: 46px;
+        max-height: 34px;
+        height: auto;
     }
 
     .glass-card {

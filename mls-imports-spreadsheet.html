@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLS Spreadsheet - FAST BRIDGE GROUP</title>
+    <title>MLS Spreadsheet | Rigby &amp; Associates - FAST BRIDGE GROUP</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -157,6 +157,21 @@
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
+        .mls-sheet-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .mls-sheet-title-logo {
+                width: clamp(52px, 6vw, 74px);
+            height: auto;
+            display: block;
+                flex-shrink: 0;
+                object-fit: contain;
+        }
+
         .buyers-sheet-wrap {
             margin-top: 24px;
             --buyers-border: color-mix(in srgb, var(--glass-border) 72%, rgb(var(--accent-light-rgb) / 0.22) 28%);
@@ -414,10 +429,23 @@
         }
 
         .buyers-sheet-copy-cell {
-            min-width: 72px;
-            width: 72px;
+            min-width: 116px;
+            width: 116px;
             text-align: center;
             vertical-align: middle;
+        }
+
+        .buyers-sheet-action-group {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .buyers-sheet-action-cell-inner {
+            display: grid;
+            justify-items: center;
+            gap: 8px;
         }
 
         .buyers-sheet-copy-btn {
@@ -446,6 +474,59 @@
         .buyers-sheet-copy-btn svg {
             width: 16px;
             height: 16px;
+        }
+
+        .buyers-sheet-send-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.42);
+            border-radius: 10px;
+            background: rgba(var(--accent-rgb), 0.16);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+        }
+
+        .buyers-sheet-send-btn:hover,
+        .buyers-sheet-send-btn:focus-visible {
+            border-color: var(--buyers-focus-ring);
+            background: rgba(var(--accent-rgb), 0.24);
+            transform: translateY(-1px);
+            outline: none;
+        }
+
+        .buyers-sheet-send-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .buyers-sheet-send-btn.is-sent {
+            border-color: var(--buyers-success-border);
+            background: var(--buyers-success-bg);
+        }
+
+        .buyers-sheet-send-btn:disabled {
+            opacity: 0.68;
+            cursor: wait;
+            transform: none;
+        }
+
+        .buyers-sheet-send-meta {
+            min-height: 14px;
+            max-width: 108px;
+            font-size: 10px;
+            line-height: 1.35;
+            color: var(--buyers-note);
+            text-align: center;
+        }
+
+        .buyers-sheet-send-meta.is-sent {
+            color: var(--buyers-success-text);
+            font-weight: 700;
         }
 
         .buyers-sheet-copy-btn.is-copied {
@@ -1126,8 +1207,9 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <div class="page-title-group">
-                    <h1 class="page-title">MLS Spreadsheet</h1>
+                <div class="page-title-group mls-sheet-title-group">
+                    <img class="mls-sheet-title-logo" src="png photos/Rigby &amp; Associates.png" alt="Rigby & Associates logo">
+                    <h1 class="page-title">MLS Spreadsheet | Rigby &amp; Associates</h1>
                     <p class="navbar-datetime" id="navbar-datetime" aria-live="polite"></p>
                 </div>
                 <div class="navbar-right">
@@ -1139,7 +1221,7 @@
                 <div class="glass-card buyers-sheet-card">
                     <div class="buyers-sheet-header">
                         <div>
-                            <h2 class="card-title">MLS Spreadsheet</h2>
+                            <h2 class="card-title">MLS Spreadsheet | Rigby &amp; Associates</h2>
                             <p class="card-subtitle">Upload an MLS PDF and extract the property address, LA name, LO phone, offers email, LA direct, LA email, and LA cell into this admin-only sheet.</p>
                         </div>
                         <div class="buyers-sheet-actions">
@@ -1195,7 +1277,7 @@
                                     <th>LA Cell</th>
                                     <th>Status</th>
                                     <th>PDF File</th>
-                                    <th>Copy</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="mls-imports-sheet-body"></tbody>
@@ -1314,6 +1396,8 @@
         (function () {
             const COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetCopiedRows';
             const PHONE_COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetPhoneCopiedRows';
+            const SENT_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetSentRows';
+            const SMS_PHONE_PREFERENCE_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetSmsPhonePreference';
             const MY_AGENTS_STORAGE_KEY_BASE = 'myAgentsSheetRows';
             const ROWS_PAGE_SIZE = 150;
             const JOB_HISTORY_LIMIT = 25;
@@ -1345,6 +1429,14 @@
 
             function getPhoneCopiedStorageKey() {
                 return `${PHONE_COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function getSentStorageKey() {
+                return `${SENT_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
+            }
+
+            function getSmsPhonePreferenceStorageKey() {
+                return `${SMS_PHONE_PREFERENCE_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
             function getMyAgentsStorageKey() {
@@ -2277,6 +2369,37 @@
 
             const copiedRowSignatures = loadCopiedRowSignatures();
 
+            function loadSentRowRecords() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getSentStorageKey()) || '{}');
+                    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function persistSentRowRecords(records) {
+                const nextRecords = records && typeof records === 'object' && !Array.isArray(records) ? records : {};
+                localStorage.setItem(getSentStorageKey(), JSON.stringify(nextRecords));
+            }
+
+            function loadSmsPhonePreferences() {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(getSmsPhonePreferenceStorageKey()) || '{}');
+                    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function persistSmsPhonePreferences(records) {
+                const nextRecords = records && typeof records === 'object' && !Array.isArray(records) ? records : {};
+                localStorage.setItem(getSmsPhonePreferenceStorageKey(), JSON.stringify(nextRecords));
+            }
+
+            const sentRowRecords = loadSentRowRecords();
+            const smsPhonePreferences = loadSmsPhonePreferences();
+
             function createPhoneCopiedSignature(row, key) {
                 const source = row && typeof row === 'object' ? row : {};
                 const normalizedKey = String(key || '').trim();
@@ -2362,6 +2485,224 @@
                 rowElement.querySelectorAll('td.is-phone-cell').forEach((cellElement) => {
                     syncPhoneCopyButtonState(cellElement, cellElement.dataset.phoneFieldKey || '');
                 });
+            }
+
+            function formatSentTimestamp(value) {
+                const parsed = value ? new Date(value) : null;
+                if (!parsed || Number.isNaN(parsed.getTime())) {
+                    return 'just now';
+                }
+
+                return parsed.toLocaleString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            }
+
+            function getSmsPhoneOptions(rowData) {
+                const source = rowData && typeof rowData === 'object' ? rowData : {};
+                const candidates = [
+                    { key: 'laCell', label: 'LA Cell', value: source.laCell },
+                    { key: 'laDirect', label: 'LA Direct', value: source.laDirect },
+                    { key: 'loPhone', label: 'LO Phone', value: source.loPhone }
+                ];
+                const seen = new Set();
+                const options = [];
+
+                candidates.forEach((candidate) => {
+                    splitUniqueParts(candidate.value).forEach((part) => {
+                        const normalizedPhone = normalizePhoneMatchValue(part);
+                        if (!normalizedPhone || seen.has(normalizedPhone)) {
+                            return;
+                        }
+                        seen.add(normalizedPhone);
+                        options.push({
+                            key: candidate.key,
+                            label: candidate.label,
+                            phone: part,
+                            normalizedPhone
+                        });
+                    });
+                });
+
+                return options;
+            }
+
+            function chooseSmsPhoneOption(rowData) {
+                const options = getSmsPhoneOptions(rowData);
+                if (!options.length) {
+                    return null;
+                }
+
+                const rowSignature = createCopiedRowSignature(rowData);
+                const preferredPhone = rowSignature ? String(smsPhonePreferences[rowSignature] || '').trim() : '';
+                const preferredOption = preferredPhone
+                    ? options.find((option) => option.normalizedPhone === preferredPhone) || null
+                    : null;
+
+                if (options.length === 1) {
+                    if (rowSignature) {
+                        smsPhonePreferences[rowSignature] = options[0].normalizedPhone;
+                        persistSmsPhonePreferences(smsPhonePreferences);
+                    }
+                    return options[0];
+                }
+
+                const defaultOption = preferredOption || options[0];
+                const selection = window.prompt(
+                    `Choose which number to text for ${getSmsRecipientName(rowData)}:\n\n${options.map((option, index) => `${index + 1}. ${option.label}: ${option.phone}`).join('\n')}\n\nEnter 1-${options.length}.`,
+                    String(Math.max(1, options.indexOf(defaultOption) + 1))
+                );
+
+                if (selection === null) {
+                    return null;
+                }
+
+                const selectedIndex = Number.parseInt(String(selection).trim(), 10);
+                const selectedOption = Number.isInteger(selectedIndex) && selectedIndex >= 1 && selectedIndex <= options.length
+                    ? options[selectedIndex - 1]
+                    : null;
+
+                if (!selectedOption) {
+                    throw new Error(`Choose a valid phone option between 1 and ${options.length}.`);
+                }
+
+                if (rowSignature) {
+                    smsPhonePreferences[rowSignature] = selectedOption.normalizedPhone;
+                    persistSmsPhonePreferences(smsPhonePreferences);
+                }
+
+                return selectedOption;
+            }
+
+            function syncSendButtonState(rowElement) {
+                if (!rowElement) {
+                    return;
+                }
+
+                const button = rowElement.querySelector('.buyers-sheet-send-btn');
+                const meta = rowElement.querySelector('.buyers-sheet-send-meta');
+                if (!button || !meta) {
+                    return;
+                }
+
+                const rowData = getRowDataFromElement(rowElement);
+                const rowSignature = createCopiedRowSignature(rowData);
+                const sentRecord = rowSignature ? sentRowRecords[rowSignature] : null;
+                const phoneOptions = getSmsPhoneOptions(rowData);
+                const hasMultiplePhones = phoneOptions.length > 1;
+                const preferredPhone = rowSignature ? String(smsPhonePreferences[rowSignature] || '').trim() : '';
+                const preferredOption = preferredPhone
+                    ? phoneOptions.find((option) => option.normalizedPhone === preferredPhone) || null
+                    : null;
+
+                button.classList.toggle('is-sent', Boolean(sentRecord));
+                if (sentRecord) {
+                    button.title = `Send through Twilio again${sentRecord.phone ? ` to ${sentRecord.phone}` : ''}`;
+                    meta.textContent = `Sent ${sentRecord.label || 'via Twilio'} ${formatSentTimestamp(sentRecord.sentAt)}`;
+                    meta.classList.add('is-sent');
+                    return;
+                }
+
+                button.title = hasMultiplePhones
+                    ? `Send through Twilio${preferredOption ? ` to ${preferredOption.label}: ${preferredOption.phone}` : ' and choose a phone number'}`
+                    : phoneOptions[0]
+                        ? `Send through Twilio to ${phoneOptions[0].phone}`
+                        : 'Send through Twilio';
+                meta.textContent = hasMultiplePhones
+                    ? (preferredOption ? `Using ${preferredOption.label}` : 'Choose number')
+                    : phoneOptions[0]
+                        ? `Using ${phoneOptions[0].label}`
+                        : 'No phone ready';
+                meta.classList.remove('is-sent');
+            }
+
+            function getPreferredSmsPhone(rowData) {
+                const source = rowData && typeof rowData === 'object' ? rowData : {};
+                return normalizeCellValue(source.laCell)
+                    || normalizeCellValue(source.laDirect)
+                    || normalizeCellValue(source.loPhone)
+                    || '';
+            }
+
+            function getSmsRecipientName(rowData) {
+                const laName = normalizeCellValue(rowData && rowData.laName);
+                return laName || 'Listing Agent';
+            }
+
+            async function sendMlsTemplateToAgent(rowData, button) {
+                const authToken = getAuthToken();
+                if (!authToken) {
+                    throw new Error('Sign in again before sending MLS outreach through Twilio.');
+                }
+
+                const phoneOption = chooseSmsPhoneOption(rowData);
+                const recipientPhone = normalizeCellValue(phoneOption && phoneOption.phone);
+                if (!recipientPhone) {
+                    throw new Error('Add the agent cell, direct, or office phone number before sending a Twilio message.');
+                }
+
+                const messageBody = buildStatusTemplate(rowData);
+                if (!messageBody) {
+                    throw new Error('The outreach template for this row is empty.');
+                }
+
+                if (button) {
+                    button.disabled = true;
+                }
+
+                try {
+                    const response = await fetch('/api/twilio/send-sms', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            campaignName: 'MLS Spreadsheet Outreach',
+                            body: messageBody,
+                            recipients: [
+                                {
+                                    name: getSmsRecipientName(rowData),
+                                    phone: recipientPhone,
+                                    area: normalizeCellValue(rowData && rowData.propertyAddress)
+                                }
+                            ]
+                        })
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload.error || 'The Twilio message could not be sent.');
+                    }
+
+                    const rowSignature = createCopiedRowSignature(rowData);
+                    if (rowSignature) {
+                        sentRowRecords[rowSignature] = {
+                            phone: recipientPhone,
+                            normalizedPhone: String(phoneOption && phoneOption.normalizedPhone || normalizePhoneMatchValue(recipientPhone)),
+                            label: String(phoneOption && phoneOption.label || 'via Twilio').trim(),
+                            sentAt: new Date().toISOString()
+                        };
+                        persistSentRowRecords(sentRowRecords);
+                    }
+
+                    if (button) {
+                        button.classList.add('is-sent');
+                    }
+
+                    return {
+                        phone: recipientPhone,
+                        label: String(phoneOption && phoneOption.label || '').trim(),
+                        sentCount: Array.isArray(payload.sent) ? payload.sent.length : 0
+                    };
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                    }
+                }
             }
 
             function getTimeOfDayGreeting() {
@@ -2665,6 +3006,11 @@
                 const td = document.createElement('td');
                 td.className = 'buyers-sheet-copy-cell';
 
+                const actionGroup = document.createElement('div');
+                actionGroup.className = 'buyers-sheet-action-group';
+                const actionCellInner = document.createElement('div');
+                actionCellInner.className = 'buyers-sheet-action-cell-inner';
+
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'buyers-sheet-copy-btn';
@@ -2690,7 +3036,34 @@
                     }
                 });
 
-                td.appendChild(button);
+                const sendButton = document.createElement('button');
+                sendButton.type = 'button';
+                sendButton.className = 'buyers-sheet-send-btn';
+                sendButton.setAttribute('aria-label', 'Send MLS outreach template through Twilio');
+                sendButton.title = 'Send through Twilio';
+                sendButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg>';
+                sendButton.addEventListener('click', async () => {
+                    const row = sendButton.closest('tr');
+                    const rowData = getRowDataFromElement(row);
+
+                    try {
+                        const result = await sendMlsTemplateToAgent(rowData, sendButton);
+                        syncSendButtonState(row);
+                        showToast('success', 'Twilio Message Sent', `Sent the MLS outreach template to ${rowData.laName || 'this agent'} at ${result.phone}${result.label ? ` using ${result.label}` : ''}.`);
+                    } catch (error) {
+                        showToast('error', 'Twilio Send Failed', error && error.message ? error.message : 'The Twilio message could not be sent.');
+                    }
+                });
+
+                const sendMeta = document.createElement('div');
+                sendMeta.className = 'buyers-sheet-send-meta';
+                sendMeta.setAttribute('aria-live', 'polite');
+
+                actionGroup.appendChild(button);
+                actionGroup.appendChild(sendButton);
+                actionCellInner.appendChild(actionGroup);
+                actionCellInner.appendChild(sendMeta);
+                td.appendChild(actionCellInner);
                 return td;
             }
 
@@ -2706,13 +3079,16 @@
                 tr.addEventListener('input', () => {
                     syncCopyButtonState(tr);
                     syncPhoneCopyButtonStates(tr);
+                    syncSendButtonState(tr);
                 });
                 tr.addEventListener('blur', () => {
                     syncCopyButtonState(tr);
                     syncPhoneCopyButtonStates(tr);
+                    syncSendButtonState(tr);
                 }, true);
                 syncCopyButtonState(tr);
                 syncPhoneCopyButtonStates(tr);
+                syncSendButtonState(tr);
                 return tr;
             }
 
@@ -2838,7 +3214,15 @@
                     activePdfUploadRequest = null;
                 }
                 localStorage.removeItem(getCopiedStorageKey());
+                localStorage.removeItem(getSentStorageKey());
+                localStorage.removeItem(getSmsPhonePreferenceStorageKey());
                 copiedRowSignatures.clear();
+                Object.keys(sentRowRecords).forEach((key) => {
+                    delete sentRowRecords[key];
+                });
+                Object.keys(smsPhonePreferences).forEach((key) => {
+                    delete smsPhonePreferences[key];
+                });
                 totalRowsCount = 0;
                 currentRowsPage = 1;
                 lastLoadedRows = [];

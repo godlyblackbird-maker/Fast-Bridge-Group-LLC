@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLS Hot Deals - Loria Rigby Brokerage | FAST BRIDGE GROUP</title>
+    <title>MLS Hot Deals - Rigby & Associates | FAST BRIDGE GROUP</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -163,6 +163,33 @@
         .mls-hot-deals-source-disclaimer {
             margin-top: 2px;
         }
+
+        .mls-page-title-group {
+            min-width: 0;
+        }
+
+        .mls-page-brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .mls-page-title-group .page-title {
+            margin: 0;
+        }
+
+        .mls-page-logo {
+            width: clamp(52px, 6vw, 74px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
+        @media (max-width: 720px) {
+            .mls-page-logo {
+                width: 46px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -317,7 +344,10 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <h1 class="page-title">MLS Hot Deals | Loria Rigby Brokerage</h1>
+                <a class="page-title-group mls-page-title-group mls-page-brand-link" href="https://www.rigbyandassociates.net/" target="_blank" rel="noopener noreferrer">
+                    <img class="mls-page-logo" src="png photos/Rigby &amp; Associates.png" alt="Rigby & Associates logo">
+                    <h1 class="page-title">MLS Hot Deals | Rigby &amp; Associates</h1>
+                </a>
                 <div class="navbar-right">
                     <div class="search-box">
                         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

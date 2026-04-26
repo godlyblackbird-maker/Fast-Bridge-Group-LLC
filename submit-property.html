@@ -1028,6 +1028,10 @@
                                 <label for="seller-phone">Phone</label>
                                 <input id="seller-phone" name="sellerPhone" type="tel" placeholder="+1 (555) 123-4567" required>
                             </div>
+                                <div class="submit-field">
+                                    <label for="referred-by">Who Referred You?</label>
+                                    <input id="referred-by" name="referredBy" type="text" placeholder="Name, company, or source">
+                                </div>
                             <div class="submit-field">
                                 <label for="property-type">Property Type</label>
                                 <select id="property-type" name="propertyType">
@@ -1330,6 +1334,7 @@
                     sellerName: String(formData.get('sellerName') || '').trim(),
                     sellerEmail: String(formData.get('sellerEmail') || '').trim(),
                     sellerPhone: normalizedSellerPhone || String(formData.get('sellerPhone') || '').trim(),
+                        referredBy: String(formData.get('referredBy') || '').trim(),
                     smsConsent: formData.get('smsConsent') === 'yes',
                     propertyAddress: String(formData.get('propertyAddress') || '').trim(),
                     propertyCity: String(formData.get('propertyCity') || '').trim(),

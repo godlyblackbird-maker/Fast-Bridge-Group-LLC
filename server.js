@@ -206,6 +206,8 @@ const TWILIO_VOICE_TOKEN_TTL_SECONDS = 60 * 60;
 const TWILIO_VOICE_PRESENCE_WINDOW_MS = 75 * 1000;
 const COMMUNITY_VOICE_PARTICIPANT_TTL_MS = 70 * 1000;
 const COMMUNITY_VOICE_SIGNAL_TTL_MS = 2 * 60 * 1000;
+const COMMUNITY_TEXT_CHANNEL_DEFAULT = 'global-chat';
+const COMMUNITY_TEXT_MESSAGE_MAX_LENGTH = 2000;
 
 fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
 fs.mkdirSync(SQLITE_BACKUP_TEMP_DIR, { recursive: true });
@@ -293,6 +295,160 @@ function sanitizeCommunityVoiceRoomName(value) {
     .replace(/^-+|-+$/g, '');
 
   return normalized.slice(0, 64) || 'community-voice-lounge';
+}
+
+function sanitizeCommunityTextChannelName(value) {
+  const normalized = String(value || COMMUNITY_TEXT_CHANNEL_DEFAULT)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized.slice(0, 64) || COMMUNITY_TEXT_CHANNEL_DEFAULT;
+}
+
+function normalizeCommunityTextMessage(value) {
+  return String(value || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, COMMUNITY_TEXT_MESSAGE_MAX_LENGTH);
+}
+
+function isCommunityTextMessageOwner(messageRow, userLike) {
+  const messageUserId = Number(messageRow?.user_id ?? messageRow?.userId) || 0;
+  const userId = Number(userLike?.id) || 0;
+  return Boolean(messageUserId && userId && messageUserId === userId);
+}
+
+function serializeCommunityTextMessage(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: Number(row.id) || 0,
+    channelName: sanitizeCommunityTextChannelName(row.channel_name || row.channelName),
+    userId: Number(row.user_id) || 0,
+    userName: String(row.user_name || row.userName || 'FAST User').trim() || 'FAST User',
+    userEmail: String(row.user_email || row.userEmail || '').trim().toLowerCase(),
+    userRole: String(row.user_role || row.userRole || 'user').trim().toLowerCase() || 'user',
+    message: String(row.message || '').trim(),
+    createdAt: String(row.created_at || row.createdAt || '').trim(),
+    editedAt: String(row.edited_at || row.editedAt || '').trim()
+  };
+}
+
+async function getCommunityTextMessageById(messageId) {
+  const normalizedMessageId = Number(messageId) || 0;
+  if (!normalizedMessageId) {
+    return null;
+  }
+
+  return dbGet(
+    `SELECT id, channel_name, user_id, user_name, user_email, user_role, message, created_at, edited_at
+       FROM community_channel_messages
+      WHERE id = ?`,
+    [normalizedMessageId]
+  );
+}
+
+async function listCommunityTextMessages(channelName, limit = 150) {
+  const normalizedChannel = sanitizeCommunityTextChannelName(channelName);
+  const normalizedLimit = Math.max(1, Math.min(Number(limit) || 150, 250));
+  const rows = await dbAll(
+    `SELECT *
+       FROM (
+         SELECT id, channel_name, user_id, user_name, user_email, user_role, message, created_at, edited_at
+           FROM community_channel_messages
+          WHERE channel_name = ?
+          ORDER BY datetime(created_at) DESC, id DESC
+          LIMIT ?
+       ) recent
+      ORDER BY datetime(created_at) ASC, id ASC`,
+    [normalizedChannel, normalizedLimit]
+  );
+
+  return rows.map(serializeCommunityTextMessage).filter(Boolean);
+}
+
+async function createCommunityTextMessage(channelName, userLike, messageText) {
+  const normalizedChannel = sanitizeCommunityTextChannelName(channelName);
+  const normalizedMessage = normalizeCommunityTextMessage(messageText);
+  const userId = Number(userLike?.id) || 0;
+  const userName = String(userLike?.name || userLike?.email || 'FAST User').trim() || 'FAST User';
+  const userEmail = String(userLike?.email || '').trim().toLowerCase();
+  const userRole = String(userLike?.role || 'user').trim().toLowerCase() || 'user';
+  const createdAt = new Date().toISOString();
+
+  if (!userId) {
+    throw new Error('Unable to resolve the signed-in user for community chat.');
+  }
+
+  if (!normalizedMessage) {
+    throw new Error('A message is required before posting to global chat.');
+  }
+
+  const result = await dbRun(
+    `INSERT INTO community_channel_messages (
+       channel_name,
+       user_id,
+       user_name,
+       user_email,
+       user_role,
+       message,
+       created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [normalizedChannel, userId, userName, userEmail, userRole, normalizedMessage, createdAt]
+  );
+
+  return dbGet(
+    `SELECT id, channel_name, user_id, user_name, user_email, user_role, message, created_at, edited_at
+       FROM community_channel_messages
+      WHERE id = ?`,
+    [result.lastID]
+  ).then(serializeCommunityTextMessage);
+}
+
+async function updateCommunityTextMessage(messageId, userLike, messageText) {
+  const existingMessage = await getCommunityTextMessageById(messageId);
+  if (!existingMessage) {
+    throw new Error('That chat message no longer exists.');
+  }
+
+  if (!isCommunityTextMessageOwner(existingMessage, userLike)) {
+    throw new Error('You can only edit your own chat messages.');
+  }
+
+  const normalizedMessage = normalizeCommunityTextMessage(messageText);
+  if (!normalizedMessage) {
+    throw new Error('A message is required before saving your edit.');
+  }
+
+  await dbRun(
+    `UPDATE community_channel_messages
+        SET message = ?,
+            edited_at = ?
+      WHERE id = ?`,
+    [normalizedMessage, new Date().toISOString(), existingMessage.id]
+  );
+
+  return getCommunityTextMessageById(existingMessage.id).then(serializeCommunityTextMessage);
+}
+
+async function deleteCommunityTextMessage(messageId, userLike) {
+  const existingMessage = await getCommunityTextMessageById(messageId);
+  if (!existingMessage) {
+    throw new Error('That chat message no longer exists.');
+  }
+
+  if (!isCommunityTextMessageOwner(existingMessage, userLike)) {
+    throw new Error('You can only delete your own chat messages.');
+  }
+
+  await dbRun('DELETE FROM community_channel_messages WHERE id = ?', [existingMessage.id]);
+  return { id: Number(existingMessage.id) || 0 };
 }
 
 function getCommunityVoiceRoom(roomName, createIfMissing = false) {
@@ -3024,6 +3180,8 @@ function shouldAllowTestUserMutation(pathname) {
     || normalizedPath === '/api/login/2fa'
     || normalizedPath === '/api/logout'
     || normalizedPath === '/api/verify'
+    || normalizedPath === '/api/community/messages'
+    || normalizedPath.startsWith('/api/community/messages/')
     || normalizedPath === '/api/community/voice/join'
     || normalizedPath === '/api/community/voice/signal'
     || normalizedPath === '/api/community/voice/leave';
@@ -3076,6 +3234,87 @@ app.use(express.static(path.join(__dirname), {
     }
   }
 }));
+
+app.get('/api/community/messages', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const channelName = sanitizeCommunityTextChannelName(req.query?.channel);
+    const limit = Math.max(1, Math.min(Number.parseInt(String(req.query?.limit || '150'), 10) || 150, 250));
+    const messages = await listCommunityTextMessages(channelName, limit);
+    return res.json({ success: true, channelName, messages });
+  } catch (error) {
+    console.error('Community message load error:', error);
+    return res.status(500).json({ error: 'Unable to load community chat messages.' });
+  }
+});
+
+app.post('/api/community/messages', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const channelName = sanitizeCommunityTextChannelName(req.body?.channel);
+    const message = await createCommunityTextMessage(channelName, decoded, req.body?.message);
+    return res.status(201).json({ success: true, message });
+  } catch (error) {
+    const errorMessage = String(error?.message || '').trim();
+    const isValidationError = /required|resolve the signed-in user/i.test(errorMessage);
+    if (!isValidationError) {
+      console.error('Community message send error:', error);
+    }
+    return res.status(isValidationError ? 400 : 500).json({
+      error: errorMessage || 'Unable to send the community chat message.'
+    });
+  }
+});
+
+app.patch('/api/community/messages/:messageId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const message = await updateCommunityTextMessage(req.params?.messageId, decoded, req.body?.message);
+    return res.json({ success: true, message });
+  } catch (error) {
+    const errorMessage = String(error?.message || '').trim();
+    const isClientError = /required|own chat messages|no longer exists/i.test(errorMessage);
+    if (!isClientError) {
+      console.error('Community message edit error:', error);
+    }
+    return res.status(isClientError ? 400 : 500).json({
+      error: errorMessage || 'Unable to edit the community chat message.'
+    });
+  }
+});
+
+app.delete('/api/community/messages/:messageId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const deleted = await deleteCommunityTextMessage(req.params?.messageId, decoded);
+    return res.json({ success: true, deleted });
+  } catch (error) {
+    const errorMessage = String(error?.message || '').trim();
+    const isClientError = /own chat messages|no longer exists/i.test(errorMessage);
+    if (!isClientError) {
+      console.error('Community message delete error:', error);
+    }
+    return res.status(isClientError ? 400 : 500).json({
+      error: errorMessage || 'Unable to delete the community chat message.'
+    });
+  }
+});
 
 app.post('/api/community/voice/join', async (req, res) => {
   const decoded = requireAuth(req, res);
@@ -3572,6 +3811,7 @@ function initializeDatabase() {
       seller_name TEXT NOT NULL,
       seller_email TEXT NOT NULL,
       seller_phone TEXT,
+        referred_by TEXT,
       sms_consent INTEGER DEFAULT 0,
       sms_consent_text TEXT,
       sms_consent_at DATETIME,
@@ -3601,6 +3841,7 @@ function initializeDatabase() {
   db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent INTEGER DEFAULT 0`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent_text TEXT`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent_at DATETIME`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN referred_by TEXT`, () => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS smtp_requests (
@@ -3838,6 +4079,40 @@ function initializeDatabase() {
       console.error('Error creating app_feature_settings table:', err);
     } else {
       console.log('App feature settings table ready');
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS community_channel_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel_name TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      user_name TEXT NOT NULL,
+      user_email TEXT,
+      user_role TEXT NOT NULL DEFAULT 'user',
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      edited_at DATETIME,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating community_channel_messages table:', err);
+    } else {
+      console.log('Community channel messages table ready');
+      db.run('ALTER TABLE community_channel_messages ADD COLUMN edited_at DATETIME', (alterErr) => {
+        if (alterErr && !/duplicate column name/i.test(String(alterErr.message || ''))) {
+          console.error('Error ensuring community_channel_messages.edited_at column:', alterErr);
+        }
+      });
+      db.run(`
+        CREATE INDEX IF NOT EXISTS idx_community_channel_messages_channel_created
+        ON community_channel_messages(channel_name, created_at)
+      `, (indexErr) => {
+        if (indexErr) {
+          console.error('Error creating community_channel_messages index:', indexErr);
+        }
+      });
     }
   });
 
@@ -10207,7 +10482,7 @@ function requireAdmin(req, res) {
     return null;
   }
 
-  if (decoded.role !== 'admin') {
+  if (String(decoded.role || '').trim().toLowerCase() !== 'admin') {
     res.status(403).json({ error: 'Admin access required' });
     return null;
   }
@@ -14168,6 +14443,7 @@ app.post('/api/property-submissions', (req, res) => {
   const smsConsentText = smsConsent
     ? 'By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is not a condition of purchase.'
     : '';
+  const referredBy = String(req.body?.referredBy || '').trim();
   const propertyAddress = String(req.body?.propertyAddress || '').trim();
   const propertyCity = String(req.body?.propertyCity || '').trim();
   const propertyState = String(req.body?.propertyState || '').trim();
@@ -14206,6 +14482,7 @@ app.post('/api/property-submissions', (req, res) => {
       seller_name,
       seller_email,
       seller_phone,
+      referred_by,
       sms_consent,
       sms_consent_text,
       sms_consent_at,
@@ -14221,11 +14498,12 @@ app.post('/api/property-submissions', (req, res) => {
       timeline,
       condition_issues,
       issue_notes
-    ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
     [
       sellerName,
       sellerEmail,
       sellerPhone,
+      referredBy,
       smsConsent ? 1 : 0,
       smsConsentText,
       propertyAddress,
@@ -14255,6 +14533,7 @@ app.post('/api/property-submissions', (req, res) => {
           sellerName,
           sellerEmail,
           sellerPhone,
+          referredBy,
           smsConsent,
           smsConsentText,
           propertyAddress,
@@ -14288,6 +14567,7 @@ app.get('/api/property-submissions', (req, res) => {
       seller_name,
       seller_email,
       seller_phone,
+      referred_by,
       sms_consent,
       sms_consent_text,
       sms_consent_at,
@@ -14328,6 +14608,7 @@ app.get('/api/property-submissions', (req, res) => {
               sellerName: String(row.seller_name || ''),
               sellerEmail: String(row.seller_email || ''),
               sellerPhone: String(row.seller_phone || ''),
+              referredBy: String(row.referred_by || ''),
               smsConsent: Number(row.sms_consent || 0) === 1,
               smsConsentText: String(row.sms_consent_text || ''),
               smsConsentAt: row.sms_consent_at || null,

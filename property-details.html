@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Detail - FAST BRIDGE GROUP</title>
+    <title>Property Details | Rigby &amp; Associates - FAST BRIDGE GROUP</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -139,6 +139,26 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css?v=20260418a">
+    <style>
+        .property-page-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .property-page-title-logo {
+                width: clamp(52px, 6vw, 74px);
+            height: auto;
+            display: block;
+                flex-shrink: 0;
+                object-fit: contain;
+        }
+
+        .property-page-title-logo[hidden] {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <div class="background"></div>
@@ -293,8 +313,9 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <div class="page-title-group">
-                    <h1 class="page-title">Property Details</h1>
+                <div class="page-title-group property-page-title-group">
+                    <img id="property-page-title-logo" class="property-page-title-logo" src="png photos/Rigby &amp; Associates.png" alt="Rigby & Associates logo">
+                    <h1 id="property-page-title" class="page-title">Property Details | Rigby &amp; Associates</h1>
                     <p class="navbar-datetime" id="navbar-datetime" aria-live="polite"></p>
                 </div>
                 <div class="navbar-right">
@@ -382,7 +403,7 @@
 
         <section class="property-detail-grid">
             <article class="glass-card glass-card-3d property-detail-card">
-                <h2>Property Details</h2>
+                <h2 id="property-details-card-title">Property Details | Rigby &amp; Associates</h2>
                 <p id="property-details-line">Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 ft² / 170,320 ft² / Pool: None</p>
             </article>
 

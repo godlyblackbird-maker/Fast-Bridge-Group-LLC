@@ -16,6 +16,108 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
+                const themeLogoPaths = {
+                    christmas: 'png photos/Christmas Theme Logo.png',
+                    swamp: 'png photos/Swamp Theme Logo.png',
+                    cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    japan: 'png photos/Japan Theme Mode Logo.png'
+                };
+                const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
+                root.setAttribute('data-theme-logo-path', themeLogoPath);
+
+                const preloadThemeLogo = new Image();
+                preloadThemeLogo.src = themeLogoPath;
+
+                const applyThemeLogos = (scope) => {
+                    if (!scope || typeof scope.querySelectorAll !== 'function') {
+                        return;
+                    }
+
+                    if (scope.matches && scope.matches('img.logo-img, img.ecard-logo-image, img.flyer-logo-image') && scope.getAttribute('src') !== themeLogoPath) {
+                        scope.setAttribute('src', themeLogoPath);
+                    }
+
+                    scope.querySelectorAll('img.logo-img, img.ecard-logo-image, img.flyer-logo-image').forEach((image) => {
+                        if (image.getAttribute('src') !== themeLogoPath) {
+                            image.setAttribute('src', themeLogoPath);
+                        }
+                    });
+                };
+
+                const themeLogoObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node && node.nodeType === 1) {
+                                applyThemeLogos(node);
+                            }
+                        });
+                    });
+                });
+
+                themeLogoObserver.observe(document.documentElement, { childList: true, subtree: true });
+                document.addEventListener('DOMContentLoaded', () => {
+                    applyThemeLogos(document);
+                    themeLogoObserver.disconnect();
+                }, { once: true });
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
                     pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
                     magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
                     copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
@@ -27,13 +129,13 @@
                     if (value.length !== 6) {
                         return '5, 150, 105';
                     }
-                    const r = Number.parseInt(value.slice(0, 2), 16);
-                    const g = Number.parseInt(value.slice(2, 4), 16);
-                    const b = Number.parseInt(value.slice(4, 6), 16);
-                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                    const red = Number.parseInt(value.slice(0, 2), 16);
+                    const green = Number.parseInt(value.slice(2, 4), 16);
+                    const blue = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(red) || !Number.isFinite(green) || !Number.isFinite(blue)) {
                         return '5, 150, 105';
                     }
-                    return `${r}, ${g}, ${b}`;
+                    return `${red}, ${green}, ${blue}`;
                 };
 
                 const palette = palettes[accentChoice] || palettes.emerald;
@@ -49,7 +151,7 @@
                 root.setAttribute('data-accent-color', palettes[accentChoice] ? accentChoice : 'emerald');
                 root.setAttribute('data-accent-glow', accentGlow ? 'on' : 'off');
             } catch (error) {
-                // Ignore pre-load theme errors and allow default styles.
+                document.documentElement.setAttribute('data-theme', 'beach');
             }
         })();
     </script>

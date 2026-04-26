@@ -973,6 +973,7 @@
     const displayEmail = (profileData.ecardDisplayEmail || profileData.email || '').trim();
     const title = toRoleLabel(profileData.jobTitle || profileData.role);
     const license = (profileData.licenseNumber || '').trim();
+    const website = (profileData.ecardWebsite || '').trim();
     const buyBox = (profileData.buyBox || '').trim();
     const targetAreas = (profileData.targetAreas || '').trim();
 
@@ -981,6 +982,7 @@
     const emailField = document.getElementById('ecard-display-email');
     const titleField = document.getElementById('ecard-display-title');
     const licenseField = document.getElementById('ecard-license');
+    const websiteField = document.getElementById('ecard-website');
     const buyBoxField = document.getElementById('ecard-buy-box');
     const targetAreasField = document.getElementById('ecard-target-areas');
 
@@ -1000,6 +1002,9 @@
     if (licenseField) {
       licenseField.value = license;
     }
+    if (websiteField) {
+      websiteField.value = website;
+    }
     if (buyBoxField) {
       buyBoxField.value = buyBox;
     }
@@ -1018,6 +1023,7 @@
     const emailField = document.getElementById('ecard-display-email');
     const titleField = document.getElementById('ecard-display-title');
     const licenseField = document.getElementById('ecard-license');
+    const websiteField = document.getElementById('ecard-website');
     const buyBoxField = document.getElementById('ecard-buy-box');
     const targetAreasField = document.getElementById('ecard-target-areas');
 
@@ -1026,6 +1032,7 @@
     const displayEmail = emailField ? emailField.value.trim() : (profileData.ecardDisplayEmail || profileData.email || '').trim();
     const displayTitle = titleField ? titleField.value.trim() : toRoleLabel(profileData.jobTitle || profileData.role);
     const displayLicense = licenseField ? licenseField.value.trim() : (profileData.licenseNumber || '').trim();
+    const displayWebsite = websiteField ? websiteField.value.trim() : (profileData.ecardWebsite || '').trim();
     const displayBuyBox = buyBoxField ? buyBoxField.value.trim() : (profileData.buyBox || '').trim();
     const displayTargetAreas = targetAreasField ? targetAreasField.value.trim() : (profileData.targetAreas || '').trim();
 
@@ -1033,6 +1040,7 @@
     const rolePreview = document.getElementById('ecard-role');
     const phonePreview = document.getElementById('ecard-phone');
     const emailPreview = document.getElementById('ecard-email');
+    const websitePreview = document.getElementById('ecard-website-preview');
     const licensePreview = document.getElementById('ecard-license-preview');
     const buyBoxPreview = document.getElementById('ecard-buy-box-preview');
     const targetAreasPreview = document.getElementById('ecard-target-areas-preview');
@@ -1058,6 +1066,7 @@
     }
     setOptionalPreviewRow(phonePreview, displayPhone);
     setOptionalPreviewRow(emailPreview, displayEmail);
+    setOptionalPreviewRow(websitePreview, displayWebsite);
     setOptionalPreviewRow(licensePreview, displayLicense);
     setOptionalPreviewRow(buyBoxPreview, displayBuyBox);
     setOptionalPreviewRow(targetAreasPreview, displayTargetAreas);
@@ -1077,6 +1086,7 @@
       ecardDisplayEmail: document.getElementById('ecard-display-email').value.trim(),
       jobTitle: document.getElementById('ecard-display-title').value.trim(),
       licenseNumber: document.getElementById('ecard-license').value.trim(),
+      ecardWebsite: document.getElementById('ecard-website').value.trim(),
       buyBox: document.getElementById('ecard-buy-box').value.trim(),
       targetAreas: document.getElementById('ecard-target-areas').value.trim(),
       updatedAt: new Date().toISOString()
@@ -1101,6 +1111,7 @@
       ecardDisplayEmail: document.getElementById('ecard-display-email').value.trim(),
       jobTitle: document.getElementById('ecard-display-title').value.trim(),
       licenseNumber: document.getElementById('ecard-license').value.trim(),
+      ecardWebsite: document.getElementById('ecard-website').value.trim(),
       buyBox: document.getElementById('ecard-buy-box').value.trim(),
       targetAreas: document.getElementById('ecard-target-areas').value.trim(),
       updatedAt: new Date().toISOString()

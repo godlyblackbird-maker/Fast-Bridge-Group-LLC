@@ -365,6 +365,211 @@
             font-size: 12px;
         }
 
+        .community-chat-shell {
+            display: grid;
+            gap: 16px;
+            min-height: 640px;
+        }
+
+        .community-chat-stream {
+            display: grid;
+            align-content: start;
+            gap: 12px;
+            min-height: 420px;
+            max-height: 620px;
+            padding: 16px;
+            overflow-y: auto;
+            border-radius: 18px;
+            border: 1px solid var(--community-feed-item-border);
+            background: rgba(15, 23, 42, 0.34);
+        }
+
+        .community-chat-empty {
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px dashed rgba(var(--accent-light-rgb), 0.24);
+            background: rgba(var(--accent-rgb), 0.08);
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .community-chat-message {
+            position: relative;
+            display: grid;
+            gap: 8px;
+            max-width: min(720px, 100%);
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid var(--community-feed-item-border);
+            background: var(--community-feed-item-bg);
+        }
+
+        .community-chat-message.is-own {
+            justify-self: end;
+            border-color: rgba(var(--accent-light-rgb), 0.28);
+            background: rgba(var(--accent-rgb), 0.16);
+        }
+
+        .community-chat-message-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .community-chat-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.18);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+
+        .community-chat-author {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .community-chat-meta {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .community-chat-message-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease;
+        }
+
+        .community-chat-message.is-own:hover .community-chat-message-actions,
+        .community-chat-message.is-own:focus-within .community-chat-message-actions,
+        .community-chat-message.is-editing .community-chat-message-actions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .community-chat-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.42);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .community-chat-icon-btn:hover,
+        .community-chat-icon-btn:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-light-rgb), 0.42);
+            background: rgba(var(--accent-rgb), 0.16);
+            outline: none;
+        }
+
+        .community-chat-icon-btn.is-danger:hover,
+        .community-chat-icon-btn.is-danger:focus-visible {
+            border-color: rgba(248, 113, 113, 0.5);
+            background: rgba(127, 29, 29, 0.28);
+        }
+
+        .community-chat-icon-btn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+            transform: none;
+        }
+
+        .community-chat-icon-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .community-chat-body {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.72;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .community-chat-edit-shell {
+            display: grid;
+            gap: 10px;
+        }
+
+        .community-chat-edit-input {
+            width: 100%;
+            min-height: 108px;
+            resize: vertical;
+        }
+
+        .community-chat-edit-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .community-chat-meta-edited {
+            font-style: italic;
+        }
+
+        .community-chat-status {
+            min-height: 20px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .community-chat-composer {
+            display: grid;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid var(--community-feed-item-border);
+            background: rgba(15, 23, 42, 0.28);
+        }
+
+        .community-chat-input {
+            width: 100%;
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .community-chat-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .community-chat-note {
+            color: var(--text-muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
         .community-list {
             margin: 0;
             padding-left: 18px;
@@ -443,6 +648,10 @@
                 radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 42%),
                 linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(11, 18, 32, 0.94));
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .community-voice-stage-frame[hidden] {
+            display: none;
         }
 
         .community-voice-stage-media {
@@ -563,13 +772,14 @@
             position: absolute;
             top: 12px;
             right: 12px;
-            z-index: 2;
+            z-index: 3;
             display: inline-flex;
             align-items: center;
             gap: 8px;
             flex-wrap: wrap;
             justify-content: flex-end;
             max-width: calc(100% - 24px);
+            pointer-events: auto;
         }
 
         .community-voice-stage-control {
@@ -627,6 +837,25 @@
 
         .community-voice-stage-tile.has-preview-strip .community-voice-stage-preview-strip {
             display: inline-flex;
+        }
+
+        .community-voice-stage-tile:fullscreen .community-voice-stage-preview-strip,
+        .community-voice-stage-tile:-webkit-full-screen .community-voice-stage-preview-strip {
+            left: auto;
+            right: 24px;
+            bottom: 24px;
+            width: auto;
+            max-width: min(360px, calc(100% - 48px));
+            padding: 0;
+            border-radius: 0;
+            background: none;
+            backdrop-filter: none;
+            overflow: visible;
+        }
+
+        .community-voice-stage-tile:fullscreen .community-voice-stage-preview-card,
+        .community-voice-stage-tile:-webkit-full-screen .community-voice-stage-preview-card {
+            box-shadow: 0 20px 44px rgba(2, 6, 23, 0.42);
         }
 
         .community-voice-stage-preview-card {
@@ -918,9 +1147,12 @@
             position: relative;
             z-index: 1;
             width: min(460px, 100%);
+            max-height: calc(100vh - 48px);
             display: grid;
             gap: 16px;
             padding: 20px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
             border-radius: 22px;
             border: 1px solid rgba(255, 255, 255, 0.12);
             background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(11, 18, 32, 0.92));
@@ -946,6 +1178,7 @@
         .community-voice-settings-copy {
             display: grid;
             gap: 3px;
+            min-width: 0;
         }
 
         .community-voice-settings-copy strong {
@@ -970,10 +1203,13 @@
 
         .community-voice-settings-device {
             align-items: start;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 228px);
         }
 
         .community-voice-settings-device-controls {
-            width: min(260px, 100%);
+            width: 100%;
+            max-width: 228px;
+            min-width: 0;
             display: grid;
             gap: 6px;
             justify-items: stretch;
@@ -1223,8 +1459,9 @@
         }
 
         .community-voice-hangup-btn svg {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
+            overflow: visible;
         }
 
         .community-voice-toolbar {
@@ -1940,6 +2177,31 @@
                         </div>
                     </section>
 
+                    <section class="glass-card community-panel" data-community-panel="global-chat" aria-labelledby="community-global-chat-title">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title" id="community-global-chat-title">Global Chat</h2>
+                                <p class="card-subtitle">Open server-style chat for the full FAST community. Everyone signed in can talk here in one shared room.</p>
+                            </div>
+                        </div>
+                        <div class="community-chat-shell">
+                            <div class="community-chat-stream" id="community-global-chat-stream" role="log" aria-live="polite" aria-relevant="additions text">
+                                <div class="community-chat-empty" id="community-global-chat-empty">No one has posted in <strong># global-chat</strong> yet. Be the first to start the room.</div>
+                            </div>
+                            <div class="community-chat-status" id="community-global-chat-status">Loading global chat…</div>
+                            <form class="community-chat-composer" id="community-global-chat-form">
+                                <div class="form-group" style="margin:0;">
+                                    <label for="community-global-chat-input">Message # global-chat</label>
+                                    <textarea id="community-global-chat-input" class="form-input community-chat-input" placeholder="Message the full community here…"></textarea>
+                                </div>
+                                <div class="community-chat-actions">
+                                    <span class="community-chat-note">This room works like a shared Discord-style channel for all signed-in users.</span>
+                                    <button class="card-btn active" type="submit" id="community-global-chat-send">Send Message</button>
+                                </div>
+                            </form>
+                        </div>
+                    </section>
+
                     <section class="glass-card community-panel" data-community-panel="deal-rooms" aria-labelledby="community-deal-rooms-title">
                         <div class="card-header">
                             <div>
@@ -2180,6 +2442,13 @@
                                     <span class="community-menu-btn-label">announcements</span>
                                 </span>
                             </button>
+                            <button class="card-btn community-menu-btn" type="button" data-community-target="global-chat">
+                                <span class="community-menu-btn-content">
+                                    <span class="community-menu-btn-prefix" aria-hidden="true">#</span>
+                                    <span class="community-menu-btn-label">global-chat</span>
+                                </span>
+                                <span class="community-menu-btn-meta" id="community-global-chat-count">0</span>
+                            </button>
                             <button class="card-btn community-menu-btn" type="button" data-community-target="deal-rooms">
                                 <span class="community-menu-btn-content">
                                     <span class="community-menu-btn-prefix" aria-hidden="true">#</span>
@@ -2391,6 +2660,9 @@
             const voiceRoomBestFor = document.getElementById('community-voice-room-best-for');
             const voiceRoomSwitching = document.getElementById('community-voice-room-switching');
             const VOICE_PANEL = 'voice-lounge';
+            const GLOBAL_CHAT_PANEL = 'global-chat';
+            const GLOBAL_CHAT_CHANNEL = 'global-chat';
+            const GLOBAL_CHAT_POLL_MS = 3000;
             const VOICE_SIGNAL_POLL_MS = 1200;
             const VOICE_STORAGE_KEY = 'fastCommunityVoiceClientId';
             const VOICE_ICE_SERVERS = [
@@ -2441,6 +2713,13 @@
             let activePanelId = 'welcome';
             let selectedVoiceRoomId = 'meeting-room';
             let activeVoiceRoomId = '';
+            let globalChatMessages = [];
+            let globalChatEditingMessageId = 0;
+            let globalChatEditingDraft = '';
+            let globalChatPendingMessageId = 0;
+            let globalChatPendingAction = '';
+            let globalChatPollTimer = 0;
+            let globalChatLoadPromise = null;
             let voiceClientId = '';
             let voiceParticipantId = '';
             let voiceParticipants = [];
@@ -2494,7 +2773,65 @@
             const shouldShowVoiceRoster = () => Boolean(voiceChannelInteracted || voiceJoined || voiceJoining);
             const supportsVoiceScreenShare = () => Boolean(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
             const supportsVoiceOutputSelection = () => Boolean(typeof HTMLMediaElement !== 'undefined' && HTMLMediaElement.prototype && typeof HTMLMediaElement.prototype.setSinkId === 'function');
-            const supportsStageFullscreen = () => Boolean(document.fullscreenEnabled && typeof HTMLElement !== 'undefined' && HTMLElement.prototype && typeof HTMLElement.prototype.requestFullscreen === 'function');
+            const getStageFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+
+            const supportsStageFullscreen = () => {
+                if (typeof document === 'undefined' || typeof HTMLElement === 'undefined' || !HTMLElement.prototype) {
+                    return false;
+                }
+
+                return Boolean(
+                    document.fullscreenEnabled
+                    || document.webkitFullscreenEnabled
+                    || document.msFullscreenEnabled
+                ) && Boolean(
+                    typeof HTMLElement.prototype.requestFullscreen === 'function'
+                    || typeof HTMLElement.prototype.webkitRequestFullscreen === 'function'
+                    || typeof HTMLElement.prototype.msRequestFullscreen === 'function'
+                );
+            };
+
+            const requestStageFullscreen = async (element) => {
+                if (!element) {
+                    return false;
+                }
+
+                if (typeof element.requestFullscreen === 'function') {
+                    await element.requestFullscreen();
+                    return true;
+                }
+
+                if (typeof element.webkitRequestFullscreen === 'function') {
+                    await element.webkitRequestFullscreen();
+                    return true;
+                }
+
+                if (typeof element.msRequestFullscreen === 'function') {
+                    await element.msRequestFullscreen();
+                    return true;
+                }
+
+                return false;
+            };
+
+            const exitStageFullscreen = async () => {
+                if (typeof document.exitFullscreen === 'function') {
+                    await document.exitFullscreen();
+                    return true;
+                }
+
+                if (typeof document.webkitExitFullscreen === 'function') {
+                    await document.webkitExitFullscreen();
+                    return true;
+                }
+
+                if (typeof document.msExitFullscreen === 'function') {
+                    await document.msExitFullscreen();
+                    return true;
+                }
+
+                return false;
+            };
 
             const syncVoiceMuteState = () => {
                 if (!voiceLocalStream) {
@@ -2543,7 +2880,9 @@
                     return null;
                 }
 
-                return stream.getVideoTracks().some((track) => track.readyState === 'live') ? stream : null;
+                return stream.getVideoTracks().some((track) => track.readyState === 'live' && !track.muted && track.enabled !== false)
+                    ? stream
+                    : null;
             };
 
             const detectVisualShareKind = (stream, fallbackKind = 'screen') => {
@@ -2573,6 +2912,7 @@
                     shares.push({
                         stream: voiceScreenShareStream,
                         ownerName: `${getCurrentUserName()} (you)`,
+                        ownerId: 'local',
                         kind: 'screen',
                         key: 'local-screen',
                         isLocal: true
@@ -2583,6 +2923,7 @@
                     shares.push({
                         stream: voiceCameraStream,
                         ownerName: `${getCurrentUserName()} (you)`,
+                        ownerId: 'local',
                         kind: 'camera',
                         key: 'local-camera',
                         isLocal: true
@@ -2605,6 +2946,10 @@
                         continue;
                     }
 
+                    if (participantId === voiceParticipantId) {
+                        continue;
+                    }
+
                     const participant = findParticipant(participantId);
                     const ownerName = participant ? participant.name : 'FAST User';
 
@@ -2618,6 +2963,7 @@
                         shares.push({
                             stream: liveStream,
                             ownerName,
+                            ownerId: participantId,
                             kind,
                             key: `${participantId}-${kind}`,
                             isLocal: false
@@ -2671,7 +3017,7 @@
             };
 
             const getVoiceStageFullscreenTile = () => {
-                const fullscreenElement = document.fullscreenElement;
+                const fullscreenElement = getStageFullscreenElement();
                 if (!fullscreenElement || !(fullscreenElement instanceof Element)) {
                     return null;
                 }
@@ -2689,7 +3035,12 @@
                     return;
                 }
 
-                const previewShares = (Array.isArray(shares) ? shares : []).filter((share) => share && share.key !== focusedShareKey && getLiveScreenStream(share.stream));
+                const availableShares = (Array.isArray(shares) ? shares : []).filter((share) => share && share.key !== focusedShareKey && getLiveScreenStream(share.stream));
+                const focusedShare = (Array.isArray(shares) ? shares : []).find((share) => share && share.key === focusedShareKey) || null;
+                const matchingOwnerShares = focusedShare
+                    ? availableShares.filter((share) => share.ownerId && share.ownerId === focusedShare.ownerId)
+                    : [];
+                const previewShares = matchingOwnerShares.length ? matchingOwnerShares : availableShares;
                 tile.classList.toggle('has-preview-strip', previewShares.length > 0);
                 previewStrip.replaceChildren();
 
@@ -2781,15 +3132,15 @@
 
                 const fullscreenTile = getVoiceStageFullscreenTile();
                 if (fullscreenTile && fullscreenTile.dataset.shareKey === tile.dataset.shareKey) {
-                    await document.exitFullscreen();
+                    await exitStageFullscreen();
                     return;
                 }
 
-                if (document.fullscreenElement && document.exitFullscreen) {
-                    await document.exitFullscreen();
+                if (getStageFullscreenElement()) {
+                    await exitStageFullscreen();
                 }
 
-                await tile.requestFullscreen();
+                await requestStageFullscreen(tile);
             };
 
             document.addEventListener('fullscreenchange', () => {
@@ -3417,6 +3768,10 @@
 
                 activePanelId = normalizedTarget;
                 renderMenuState();
+
+                if (normalizedTarget === GLOBAL_CHAT_PANEL) {
+                    void loadGlobalChatMessages(true);
+                }
             };
 
             const safeStorage = {
@@ -3437,6 +3792,481 @@
                     }
                 }
             };
+
+            const globalChatStream = document.getElementById('community-global-chat-stream');
+            const globalChatEmpty = document.getElementById('community-global-chat-empty');
+            const globalChatStatus = document.getElementById('community-global-chat-status');
+            const globalChatForm = document.getElementById('community-global-chat-form');
+            const globalChatInput = document.getElementById('community-global-chat-input');
+            const globalChatSendButton = document.getElementById('community-global-chat-send');
+            const globalChatCount = document.getElementById('community-global-chat-count');
+
+            const getCommunityAuthToken = () => String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            const getCommunityCurrentUser = () => {
+                try {
+                    if (typeof window.getCurrentUser === 'function') {
+                        const currentUser = window.getCurrentUser();
+                        if (currentUser && typeof currentUser === 'object') {
+                            return currentUser;
+                        }
+                    }
+                } catch (error) {
+                    // Ignore current-user access failures and fall back to storage.
+                }
+
+                try {
+                    return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');
+                } catch (error) {
+                    return null;
+                }
+            };
+
+            const formatGlobalChatTimestamp = (value) => {
+                const parsed = value ? new Date(value) : null;
+                if (!parsed || Number.isNaN(parsed.getTime())) {
+                    return 'Just now';
+                }
+
+                return parsed.toLocaleString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            };
+
+            const createGlobalChatIcon = (kind) => {
+                const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                icon.setAttribute('viewBox', '0 0 24 24');
+                icon.setAttribute('aria-hidden', 'true');
+
+                if (kind === 'edit') {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', 'M12 20h9');
+                    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path2.setAttribute('d', 'M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z');
+                    icon.appendChild(path);
+                    icon.appendChild(path2);
+                    return icon;
+                }
+
+                const trashPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                trashPath.setAttribute('d', 'M3 6h18');
+                const trashPath2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                trashPath2.setAttribute('d', 'M8 6V4h8v2');
+                const trashPath3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                trashPath3.setAttribute('d', 'M19 6l-1 14H6L5 6');
+                const trashPath4 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                trashPath4.setAttribute('d', 'M10 11v6');
+                const trashPath5 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                trashPath5.setAttribute('d', 'M14 11v6');
+                icon.appendChild(trashPath);
+                icon.appendChild(trashPath2);
+                icon.appendChild(trashPath3);
+                icon.appendChild(trashPath4);
+                icon.appendChild(trashPath5);
+                return icon;
+            };
+
+            const isOwnGlobalChatMessage = (entry, currentUser) => {
+                const currentUserId = Number(currentUser && currentUser.id) || 0;
+                const currentUserEmail = String(currentUser && currentUser.email || '').trim().toLowerCase();
+                return (currentUserId && Number(entry.userId) === currentUserId)
+                    || (currentUserEmail && String(entry.userEmail || '').trim().toLowerCase() === currentUserEmail);
+            };
+
+            const startGlobalChatEdit = (entry) => {
+                globalChatEditingMessageId = Number(entry && entry.id) || 0;
+                globalChatEditingDraft = String(entry && entry.message || '').trim();
+                renderGlobalChatMessages();
+            };
+
+            const cancelGlobalChatEdit = () => {
+                globalChatEditingMessageId = 0;
+                globalChatEditingDraft = '';
+                globalChatPendingMessageId = 0;
+                globalChatPendingAction = '';
+                renderGlobalChatMessages();
+            };
+
+            const saveGlobalChatEdit = async (messageId) => {
+                const normalizedMessageId = Number(messageId) || 0;
+                if (!normalizedMessageId || !globalChatStatus) {
+                    return;
+                }
+
+                const token = getCommunityAuthToken();
+                if (!token) {
+                    globalChatStatus.textContent = 'Sign in again before editing a message.';
+                    return;
+                }
+
+                const nextMessage = String(globalChatEditingDraft || '').trim();
+                if (!nextMessage) {
+                    globalChatStatus.textContent = 'Type a message before saving your edit.';
+                    return;
+                }
+
+                globalChatPendingMessageId = normalizedMessageId;
+                globalChatPendingAction = 'edit';
+                globalChatStatus.textContent = 'Saving edit…';
+                renderGlobalChatMessages();
+
+                try {
+                    const response = await fetch(`/api/community/messages/${encodeURIComponent(String(normalizedMessageId))}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            message: nextMessage
+                        })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to save the message edit.');
+                    }
+
+                    globalChatEditingMessageId = 0;
+                    globalChatEditingDraft = '';
+                    globalChatPendingMessageId = 0;
+                    globalChatPendingAction = '';
+                    await loadGlobalChatMessages(true);
+                    globalChatStatus.textContent = 'Message updated for everyone in # global-chat.';
+                } catch (error) {
+                    globalChatPendingMessageId = 0;
+                    globalChatPendingAction = '';
+                    globalChatStatus.textContent = String(error.message || 'Unable to save the message edit.');
+                    renderGlobalChatMessages();
+                }
+            };
+
+            const deleteGlobalChatMessage = async (messageId) => {
+                const normalizedMessageId = Number(messageId) || 0;
+                if (!normalizedMessageId || !globalChatStatus) {
+                    return;
+                }
+
+                const token = getCommunityAuthToken();
+                if (!token) {
+                    globalChatStatus.textContent = 'Sign in again before deleting a message.';
+                    return;
+                }
+
+                if (!window.confirm('Delete this message for everyone in # global-chat?')) {
+                    return;
+                }
+
+                globalChatPendingMessageId = normalizedMessageId;
+                globalChatPendingAction = 'delete';
+                globalChatStatus.textContent = 'Deleting message…';
+                renderGlobalChatMessages();
+
+                try {
+                    const response = await fetch(`/api/community/messages/${encodeURIComponent(String(normalizedMessageId))}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to delete the message.');
+                    }
+
+                    if (globalChatEditingMessageId === normalizedMessageId) {
+                        globalChatEditingMessageId = 0;
+                        globalChatEditingDraft = '';
+                    }
+                    globalChatPendingMessageId = 0;
+                    globalChatPendingAction = '';
+                    await loadGlobalChatMessages(true);
+                    globalChatStatus.textContent = 'Message deleted for everyone in # global-chat.';
+                } catch (error) {
+                    globalChatPendingMessageId = 0;
+                    globalChatPendingAction = '';
+                    globalChatStatus.textContent = String(error.message || 'Unable to delete the message.');
+                    renderGlobalChatMessages();
+                }
+            };
+
+            const renderGlobalChatMessages = () => {
+                if (!globalChatStream || !globalChatStatus) {
+                    return;
+                }
+
+                const currentUser = getCommunityCurrentUser();
+                const messages = Array.isArray(globalChatMessages) ? globalChatMessages : [];
+
+                if (globalChatCount) {
+                    globalChatCount.textContent = String(messages.length);
+                }
+
+                globalChatStream.replaceChildren();
+
+                if (!messages.length) {
+                    if (globalChatEmpty) {
+                        globalChatEmpty.hidden = false;
+                        globalChatStream.appendChild(globalChatEmpty);
+                    }
+                    globalChatStatus.textContent = 'No messages yet in # global-chat.';
+                    return;
+                }
+
+                if (globalChatEmpty) {
+                    globalChatEmpty.hidden = true;
+                }
+
+                messages.forEach((entry) => {
+                    const messageCard = document.createElement('article');
+                    const isOwnMessage = isOwnGlobalChatMessage(entry, currentUser);
+                    const isEditing = globalChatEditingMessageId === Number(entry.id);
+                    const isPending = globalChatPendingMessageId === Number(entry.id);
+                    messageCard.className = isOwnMessage ? 'community-chat-message is-own' : 'community-chat-message';
+                    if (isEditing) {
+                        messageCard.classList.add('is-editing');
+                    }
+
+                    const head = document.createElement('div');
+                    head.className = 'community-chat-message-head';
+
+                    const avatar = document.createElement('span');
+                    avatar.className = 'community-chat-avatar';
+                    avatar.textContent = String(entry.userName || 'U').trim().charAt(0).toUpperCase() || 'U';
+
+                    const author = document.createElement('strong');
+                    author.className = 'community-chat-author';
+                    author.textContent = String(entry.userName || 'FAST User').trim() || 'FAST User';
+
+                    const meta = document.createElement('span');
+                    meta.className = 'community-chat-meta';
+                    const metaBits = [
+                        String(entry.userRole || 'user').trim() || 'user',
+                        formatGlobalChatTimestamp(entry.createdAt)
+                    ];
+                    if (entry.editedAt) {
+                        metaBits.push('edited');
+                        meta.classList.add('community-chat-meta-edited');
+                    }
+                    meta.textContent = metaBits.join(' • ');
+
+                    head.appendChild(avatar);
+                    head.appendChild(author);
+                    head.appendChild(meta);
+
+                    if (isOwnMessage) {
+                        const actions = document.createElement('div');
+                        actions.className = 'community-chat-message-actions';
+
+                        const editButton = document.createElement('button');
+                        editButton.type = 'button';
+                        editButton.className = 'community-chat-icon-btn';
+                        editButton.setAttribute('aria-label', 'Edit your message');
+                        editButton.title = 'Edit message';
+                        editButton.disabled = isPending;
+                        editButton.appendChild(createGlobalChatIcon('edit'));
+                        editButton.addEventListener('click', () => {
+                            if (isEditing) {
+                                return;
+                            }
+                            startGlobalChatEdit(entry);
+                        });
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.type = 'button';
+                        deleteButton.className = 'community-chat-icon-btn is-danger';
+                        deleteButton.setAttribute('aria-label', 'Delete your message');
+                        deleteButton.title = 'Delete message';
+                        deleteButton.disabled = isPending;
+                        deleteButton.appendChild(createGlobalChatIcon('delete'));
+                        deleteButton.addEventListener('click', () => {
+                            void deleteGlobalChatMessage(entry.id);
+                        });
+
+                        actions.appendChild(editButton);
+                        actions.appendChild(deleteButton);
+                        head.appendChild(actions);
+                    }
+
+                    if (isEditing) {
+                        const editShell = document.createElement('div');
+                        editShell.className = 'community-chat-edit-shell';
+
+                        const editInput = document.createElement('textarea');
+                        editInput.className = 'form-input community-chat-edit-input';
+                        editInput.value = globalChatEditingDraft;
+                        editInput.disabled = isPending;
+                        editInput.addEventListener('input', (event) => {
+                            globalChatEditingDraft = String(event.target && event.target.value || '');
+                        });
+
+                        const editActions = document.createElement('div');
+                        editActions.className = 'community-chat-edit-actions';
+
+                        const cancelButton = document.createElement('button');
+                        cancelButton.type = 'button';
+                        cancelButton.className = 'card-btn';
+                        cancelButton.textContent = 'Cancel';
+                        cancelButton.disabled = isPending;
+                        cancelButton.addEventListener('click', () => {
+                            cancelGlobalChatEdit();
+                        });
+
+                        const saveButton = document.createElement('button');
+                        saveButton.type = 'button';
+                        saveButton.className = 'card-btn active';
+                        saveButton.textContent = isPending && globalChatPendingAction === 'edit' ? 'Saving…' : 'Save';
+                        saveButton.disabled = isPending;
+                        saveButton.addEventListener('click', () => {
+                            void saveGlobalChatEdit(entry.id);
+                        });
+
+                        editActions.appendChild(cancelButton);
+                        editActions.appendChild(saveButton);
+                        editShell.appendChild(editInput);
+                        editShell.appendChild(editActions);
+                        messageCard.appendChild(head);
+                        messageCard.appendChild(editShell);
+                        globalChatStream.appendChild(messageCard);
+                        window.requestAnimationFrame(() => {
+                            editInput.focus();
+                            editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+                        });
+                        return;
+                    }
+
+                    const body = document.createElement('p');
+                    body.className = 'community-chat-body';
+                    body.textContent = String(entry.message || '').trim();
+
+                    messageCard.appendChild(head);
+                    messageCard.appendChild(body);
+                    globalChatStream.appendChild(messageCard);
+                });
+
+                globalChatStatus.textContent = `${messages.length} message${messages.length === 1 ? '' : 's'} in # global-chat.`;
+                globalChatStream.scrollTop = globalChatStream.scrollHeight;
+            };
+
+            const loadGlobalChatMessages = (force = false) => {
+                if (globalChatLoadPromise && !force) {
+                    return globalChatLoadPromise;
+                }
+
+                globalChatLoadPromise = (async () => {
+                    const token = getCommunityAuthToken();
+                    if (!token) {
+                        globalChatMessages = [];
+                        if (globalChatStatus) {
+                            globalChatStatus.textContent = 'Sign in to view and send messages in # global-chat.';
+                        }
+                        renderGlobalChatMessages();
+                        return [];
+                    }
+
+                    try {
+                        const response = await fetch(`/api/community/messages?channel=${encodeURIComponent(GLOBAL_CHAT_CHANNEL)}&limit=150`, {
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            },
+                            cache: 'no-store'
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || 'Unable to load global chat messages.');
+                        }
+
+                        globalChatMessages = Array.isArray(data.messages) ? data.messages : [];
+                        renderGlobalChatMessages();
+                        return globalChatMessages;
+                    } catch (error) {
+                        if (globalChatStatus) {
+                            globalChatStatus.textContent = String(error.message || 'Unable to load global chat messages.');
+                        }
+                        renderGlobalChatMessages();
+                        return globalChatMessages;
+                    } finally {
+                        globalChatLoadPromise = null;
+                    }
+                })();
+
+                return globalChatLoadPromise;
+            };
+
+            const sendGlobalChatMessage = async () => {
+                if (!globalChatInput || !globalChatSendButton || !globalChatStatus) {
+                    return;
+                }
+
+                const token = getCommunityAuthToken();
+                if (!token) {
+                    globalChatStatus.textContent = 'Sign in again before sending a message.';
+                    return;
+                }
+
+                const messageText = String(globalChatInput.value || '').trim();
+                if (!messageText) {
+                    globalChatStatus.textContent = 'Type a message before sending it to # global-chat.';
+                    return;
+                }
+
+                globalChatSendButton.disabled = true;
+                globalChatInput.disabled = true;
+                globalChatStatus.textContent = 'Sending message…';
+
+                try {
+                    const response = await fetch('/api/community/messages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            channel: GLOBAL_CHAT_CHANNEL,
+                            message: messageText
+                        })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to send the message.');
+                    }
+
+                    globalChatInput.value = '';
+                    await loadGlobalChatMessages(true);
+                    globalChatStatus.textContent = 'Message sent to # global-chat.';
+                } catch (error) {
+                    globalChatStatus.textContent = String(error.message || 'Unable to send the message.');
+                } finally {
+                    globalChatSendButton.disabled = false;
+                    globalChatInput.disabled = false;
+                    globalChatInput.focus();
+                }
+            };
+
+            if (globalChatForm) {
+                globalChatForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    void sendGlobalChatMessage();
+                });
+            }
+
+            if (!globalChatPollTimer) {
+                globalChatPollTimer = window.setInterval(() => {
+                    if (document.visibilityState === 'visible') {
+                        void loadGlobalChatMessages();
+                    }
+                }, GLOBAL_CHAT_POLL_MS);
+            }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    void loadGlobalChatMessages(true);
+                }
+            });
+
+            renderGlobalChatMessages();
+            void loadGlobalChatMessages();
 
             voiceSelectedInputDeviceId = String(safeStorage.get(VOICE_INPUT_DEVICE_KEY) || '').trim();
             voiceMicGainDb = Number.parseInt(String(safeStorage.get(VOICE_MIC_GAIN_DB_KEY) || '0').trim(), 10);

@@ -19521,6 +19521,9 @@ function initNavbarDateTime() {
     async function initPropertyDetailPage() {
         const addressEl = document.getElementById('property-address-title');
         if (!addressEl) return;
+        const propertyPageTitleEl = document.getElementById('property-page-title');
+        const propertyPageTitleLogoEl = document.getElementById('property-page-title-logo');
+        const propertyDetailsCardTitleEl = document.getElementById('property-details-card-title');
 
         const tabButtons = Array.from(document.querySelectorAll('.property-tab-btn[data-tab]'));
         const tabPanels = Array.from(document.querySelectorAll('.property-tab-panel[data-panel]'));
@@ -19726,6 +19729,26 @@ function initNavbarDateTime() {
         const mlsNavLink = document.querySelector('.sidebar .nav-link[href="mls.html"], .sidebar .nav-link[href="/mls.html"]');
         const dealsNavLink = document.querySelector('.sidebar .nav-link[href="deals.html"], .sidebar .nav-link[href="/deals.html"]');
         const propertyDetailOrigin = detailData.propertyDetailOrigin === 'deals' ? 'deals' : 'mls';
+        const isImportedPropertyDetail = propertyDetailOrigin === 'deals';
+        const propertyPageTitleText = isImportedPropertyDetail
+            ? 'Property Details (IMPORT)'
+            : 'Property Details | Rigby & Associates';
+
+        if (propertyPageTitleEl) {
+            propertyPageTitleEl.textContent = propertyPageTitleText;
+        }
+
+        if (propertyDetailsCardTitleEl) {
+            propertyDetailsCardTitleEl.textContent = propertyPageTitleText;
+        }
+
+        if (propertyPageTitleLogoEl) {
+            propertyPageTitleLogoEl.hidden = isImportedPropertyDetail;
+        }
+
+        document.title = isImportedPropertyDetail
+            ? 'Property Details (IMPORT) - FAST BRIDGE GROUP'
+            : 'Property Details | Rigby & Associates - FAST BRIDGE GROUP';
 
         [mlsNavLink, dealsNavLink].forEach((link) => {
             if (link) {
@@ -26624,6 +26647,7 @@ function initNavbarDateTime() {
                 const role = String(profile.jobTitle || profile.role || 'Broker / Investor').trim();
                 const phone = String(profile.ecardDisplayPhone || profile.phone || '').trim();
                 const email = String(profile.email || '').trim();
+                const website = String(profile.ecardWebsite || '').trim();
                 const license = String(profile.licenseNumber || '').trim();
                 const address = String(profile.address || '').trim();
                 const buyBox = String(profile.buyBox || '').trim();
@@ -26636,6 +26660,7 @@ function initNavbarDateTime() {
 
                 if (phone) lines.push(`Phone: ${phone}`);
                 if (email) lines.push(`Email: ${email}`);
+                if (website) lines.push(`Website: ${website}`);
                 if (license) lines.push(`License: ${license}`);
                 if (address) lines.push(`Address: ${address}`);
                 if (buyBox) lines.push(`Buying Box: ${buyBox}`);

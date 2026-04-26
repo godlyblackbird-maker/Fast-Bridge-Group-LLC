@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLS Search - Loria Rigby Brokerage | FAST BRIDGE GROUP</title>
+    <title>MLS Search - Rigby & Associates | FAST BRIDGE GROUP</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -102,6 +102,27 @@
             gap: 18px;
         }
 
+        .mls-page-title-group {
+            min-width: 0;
+        }
+
+        .mls-page-brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .mls-page-title-group .page-title {
+            margin: 0;
+        }
+
+        .mls-page-logo {
+            width: clamp(52px, 6vw, 74px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
         .mls-search-hero {
             position: relative;
             overflow: hidden;
@@ -149,6 +170,12 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
+        }
+
+        @media (max-width: 720px) {
+            .mls-page-logo {
+                width: 46px;
+            }
         }
 
         .mls-search-kicker-dot {
@@ -678,6 +705,7 @@
             flex: 0 0 auto;
             width: 58px;
             max-height: 42px;
+            height: auto;
             object-fit: contain;
         }
 
@@ -820,6 +848,12 @@
                 font-size: 30px;
             }
 
+            .mls-source-badge img {
+                width: 46px;
+                max-height: 34px;
+                height: auto;
+            }
+
             .mls-nearby-card-head {
                 flex-direction: column;
             }
@@ -878,7 +912,10 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <h1 class="page-title">MLS Search</h1>
+                <a class="page-title-group mls-page-title-group mls-page-brand-link" href="https://www.rigbyandassociates.net/" target="_blank" rel="noopener noreferrer">
+                    <img class="mls-page-logo" src="png photos/Rigby &amp; Associates.png" alt="Rigby & Associates logo">
+                    <h1 class="page-title">MLS Search | Rigby &amp; Associates</h1>
+                </a>
                 <div class="navbar-right">
                     <div class="search-box">
                         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -898,44 +935,6 @@
             </nav>
 
             <div class="mls-search-page">
-                <section class="glass-card mls-search-hero">
-                    <div class="mls-search-hero-grid">
-                        <div>
-                            <div class="mls-search-kicker"><span class="mls-search-kicker-dot"></span>Loria Rigby Brokerage Search Desk</div>
-                            <h2>Build sharper MLS/VOW hunts under Loria Rigby Brokerage.</h2>
-                            <p class="mls-search-hero-copy">Turn a rough buy box into a clean search brief and keep your criteria organized while searching inventory presented through the Loria Rigby Brokerage MLS/VOW workflow.</p>
-                            <div class="mls-search-jump-links">
-                                <a class="mls-jump-link" href="#mls-search-builder">Search Builder</a>
-                                <a class="mls-jump-link" href="#mls-search-preview">Results</a>
-                            </div>
-                        </div>
-                        <aside class="mls-search-hero-aside" aria-label="Broker-operated MLS disclosure">
-                            <div>
-                                <span class="mls-search-panel-label" id="mls-operator-label">Loria Rigby Brokerage MLS/VOW Operator</span>
-                                <p id="mls-operator-copy" class="mls-search-hero-copy" style="max-width:none; margin:0;">This MLS and VOW experience is presented under Loria Rigby Brokerage. FAST BRIDGE provides the platform workflow, while brokerage-facing MLS compliance remains under the participant broker and brokerage operator.</p>
-                            </div>
-                            <div class="mls-search-stat-grid">
-                                <div class="mls-search-stat">
-                                    <strong id="mls-operator-brokerage">Loading...</strong>
-                                    <span>Brokerage operator</span>
-                                </div>
-                                <div class="mls-search-stat">
-                                    <strong id="mls-operator-name">Loading...</strong>
-                                    <span>Participant broker</span>
-                                </div>
-                                <div class="mls-search-stat">
-                                    <strong id="mls-operator-license">Pending</strong>
-                                    <span>License</span>
-                                </div>
-                            </div>
-                            <div class="mls-search-action-row">
-                                <a class="mls-source-link" href="legal-idx-vow-disclaimer.html">IDX/VOW Rules</a>
-                                <a class="mls-source-link" href="vow-terms-of-use.html">VOW Terms</a>
-                            </div>
-                        </aside>
-                    </div>
-                </section>
-
                 <section class="mls-search-grid">
                     <div class="mls-search-left">
                         <div id="mls-search-builder" class="glass-card outreach-card mls-controls-card mls-search-anchor">

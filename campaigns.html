@@ -168,15 +168,16 @@
             position: relative;
             min-height: 132px;
             display: grid;
-            place-items: center;
-            padding: 10px 24px 0;
+            align-items: center;
+            justify-items: end;
+            padding: 10px 10px 0 24px;
             overflow: visible;
         }
 
         .campaign-brand-strip::before {
             content: '';
             position: absolute;
-            inset: 8px 14% 0;
+            inset: 8px 3% 0 38%;
             border-radius: 999px;
             background: radial-gradient(circle at center, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03) 62%, transparent 78%);
             filter: blur(10px);
@@ -184,7 +185,7 @@
         }
 
         .campaign-brand-logo {
-            width: clamp(120px, 18vw, 172px);
+            width: clamp(180px, 26vw, 280px);
             height: auto;
             display: block;
             animation: campaignTwilioBreathing 5.4s ease-in-out infinite;
@@ -1060,6 +1061,16 @@
             .campaign-brand-strip {
                 min-height: 108px;
                 padding-top: 0;
+                padding-right: 4px;
+                justify-items: end;
+            }
+
+            .campaign-brand-strip::before {
+                inset: 8px 0 0 24%;
+            }
+
+            .campaign-brand-logo {
+                width: clamp(156px, 52vw, 220px);
             }
 
             .campaign-copy-top,
