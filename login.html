@@ -48,7 +48,7 @@
                 }
                 root.setAttribute('data-theme', theme);
 
-                const defaultThemeLogoPath = 'png photos/Rigby & Associates 777.png';
+                const defaultThemeLogoPath = '';
                 const themeLogoPaths = {
                     christmas: 'png photos/Christmas Theme Logo.png',
                     swamp: 'png photos/Swamp Theme Logo.png',
@@ -56,10 +56,12 @@
                     japan: 'png photos/Japan Theme Mode Logo.png'
                 };
                 const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
-                root.setAttribute('data-theme-logo-path', themeLogoPath);
+                if (themeLogoPath) {
+                    root.setAttribute('data-theme-logo-path', themeLogoPath);
 
-                const preloadThemeLogo = new Image();
-                preloadThemeLogo.src = themeLogoPath;
+                    const preloadThemeLogo = new Image();
+                    preloadThemeLogo.src = themeLogoPath;
+                }
 
                 const applyThemeLogos = (scope) => {
                     if (!scope || typeof scope.querySelectorAll !== 'function') {
@@ -248,9 +250,6 @@ https://templatemo.com/tm-607-glass-admin
                     </a>
                 </div>
                 <div class="login-header">
-                    <div class="login-logo">
-                        <img src="png%20photos/Rigby%20%26%20Associates%20777.png" alt="" class="login-logo-image">
-                    </div>
                     <h1 class="login-title">Welcome Back</h1>
                     <p class="login-subtitle">Sign in to continue to Rigby &amp; Asscociates + FAST BRIDGE GROUP</p>
                 </div>
