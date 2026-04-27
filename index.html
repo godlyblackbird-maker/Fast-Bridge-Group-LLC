@@ -14,7 +14,7 @@
     <meta name="description" content="FAST BRIDGE GROUP connects agents, sellers, and cash buyers, with MLS/VOW access presented through Loria Rigby Brokerage for FAST BRIDGE GROUP LLC.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <script>
         (function () {
@@ -1084,31 +1084,37 @@
         .brand-copy {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 2px;
         }
 
         .brand-kicker {
             margin: 0;
             font-family: 'Space Mono', monospace;
-            font-size: 18px;
-            letter-spacing: 0.28em;
+            font-size: 13px;
+            letter-spacing: 0.24em;
             text-transform: uppercase;
             color: var(--accent-soft);
+            opacity: 0.9;
         }
 
         .brand-name {
             margin: 0;
-            font-size: 40px;
-            font-weight: 800;
-            letter-spacing: 0.05em;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 52px;
+            font-weight: 600;
+            line-height: 0.92;
+            letter-spacing: 0.015em;
+            text-wrap: balance;
         }
 
         .brand-tagline {
             margin: 0;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
             color: var(--muted);
+            opacity: 0.9;
         }
 
         .login-btn {
@@ -1524,7 +1530,8 @@
             font-family: 'Space Mono', monospace;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: var(--sand);
+            color: #ff9a3d;
+            text-shadow: 0 0 18px rgba(255, 154, 61, 0.18);
         }
 
         .ops-list {
@@ -1629,6 +1636,97 @@
         .broker-feature-section .broker-hero-card {
             margin-top: 0;
             margin-bottom: 0;
+        }
+
+        .meet-loria-section {
+            padding: 0 0 24px;
+        }
+
+        .meet-loria-card {
+            display: grid;
+            grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.18fr);
+            gap: 28px;
+            align-items: stretch;
+            padding: 28px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            background:
+                linear-gradient(140deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+                linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .meet-loria-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.18), transparent 24%),
+                radial-gradient(circle at 88% 82%, rgba(14, 165, 233, 0.1), transparent 26%);
+            pointer-events: none;
+        }
+
+        .meet-loria-photo-wrap,
+        .meet-loria-copy {
+            position: relative;
+            z-index: 1;
+        }
+
+        .meet-loria-photo-wrap {
+            min-width: 0;
+        }
+
+        .meet-loria-photo {
+            display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 360px;
+            object-fit: cover;
+            object-position: center top;
+            border-radius: 24px;
+            box-shadow: 0 18px 34px rgba(8, 47, 73, 0.16);
+        }
+
+        .meet-loria-copy {
+            display: grid;
+            align-content: center;
+            gap: 14px;
+        }
+
+        .meet-loria-kicker {
+            margin: 0;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--accent-soft);
+        }
+
+        .meet-loria-title {
+            margin: 0;
+            font-size: clamp(30px, 4.2vw, 48px);
+            line-height: 0.98;
+            letter-spacing: -0.04em;
+        }
+
+        .meet-loria-copy p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.75;
+            max-width: 58ch;
+        }
+
+        .meet-loria-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 4px;
         }
 
         .seller-cta-section {
@@ -2331,6 +2429,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .meet-loria-card {
+                grid-template-columns: 1fr;
+            }
+
             .seller-cta-card {
                 grid-template-columns: 1fr;
             }
@@ -2379,7 +2481,7 @@
             }
 
             .brand-copy {
-                gap: 4px;
+                gap: 2px;
                 min-width: 0;
             }
 
@@ -2389,20 +2491,20 @@
             }
 
             .brand-kicker {
-                font-size: 11px;
-                letter-spacing: 0.18em;
+                font-size: 10px;
+                letter-spacing: 0.16em;
             }
 
             .brand-name {
-                font-size: 20px;
-                line-height: 1.02;
-                letter-spacing: 0.02em;
+                font-size: 30px;
+                line-height: 0.94;
+                letter-spacing: 0.01em;
             }
 
             .brand-tagline {
-                font-size: 10px;
-                line-height: 1.35;
-                letter-spacing: 0.04em;
+                font-size: 9px;
+                line-height: 1.3;
+                letter-spacing: 0.12em;
             }
 
             .login-btn,
@@ -2474,6 +2576,15 @@
             .broker-hero-copy {
                 text-align: left;
                 justify-items: start;
+            }
+
+            .meet-loria-card {
+                padding: 22px 20px;
+                gap: 18px;
+            }
+
+            .meet-loria-photo {
+                min-height: 300px;
             }
 
             .hero-title {
@@ -2623,7 +2734,7 @@
             }
 
             .brand-name {
-                font-size: 18px;
+                font-size: 26px;
             }
 
             .hero-panel,
@@ -2657,9 +2768,9 @@
             <a class="brand" href="index.html" aria-label="Rigby &amp; Associates home page">
                 <img src="png photos/Rigby &amp; Associates.png" alt="Rigby &amp; Associates logo">
                 <div class="brand-copy">
-                    <p class="brand-kicker">Rigby &amp; Associates</p>
+                    <p class="brand-kicker">Califronia Real Estate Brokerage</p>
                     <p class="brand-name">Rigby &amp; Associates</p>
-                    <p class="brand-tagline">Where Relationships Meet Opportunities</p>
+                    <p class="brand-tagline">Parterned with Fast Bridge Group</p>
                 </div>
             </a>
             <div class="topbar-actions">
@@ -2677,10 +2788,10 @@
                 <div class="hero-panel">
                     <h1 class="hero-title">The Bridge Between <span>Agents, Sellers and Investors!</span></h1>
                     <p class="hero-copy">
-                        A platform centered around relationships, opportunities and being a bridge between agents and investors, with MLS/VOW access presented through Loria Rigby Brokerage.
+                        A platform centered around relationships and opportunities, built to be a bridge between agents and investors, with MLS/VOW access presented through Loria Rigby Brokerage, and owned and partnered with Fast Bridge Group.
                     </p>
                     <div class="hero-actions">
-                        <button class="primary-cta" id="open-access-request" type="button">Access FAST</button>
+                        <button class="primary-cta" id="open-access-request" type="button">Access R&amp;A + FBG</button>
                     </div>
                     <div class="hero-metrics">
                         <div class="metric">
@@ -2699,7 +2810,7 @@
                 </div>
 
                 <aside class="hero-side">
-                    <p class="side-heading">Why agents want FAST</p>
+                    <p class="side-heading">Why you want to use R&amp;A - FAST</p>
                     <div class="ops-list">
                         <div class="ops-item">
                             <strong>F - Flow of Opportunities</strong>
@@ -2736,8 +2847,25 @@
                     <div class="broker-hero-copy">
                         <span class="broker-hero-kicker">Loria Rigby Brokerage</span>
                         <strong class="broker-hero-name">Partnered with Fast Bridge Group</strong>
+                        <p class="broker-hero-note">FAST BRIDGE GROUP develops many of the tools across this site and works in partnership with Loria Rigby and her brokerage, Rigby &amp; Associates, to deliver workflow support with MLS/VOW access presented through Loria Rigby Brokerage.</p>
                     </div>
                 </a>
+            </section>
+
+            <section class="meet-loria-section" aria-labelledby="meet-loria-title">
+                <div class="meet-loria-card">
+                    <div class="meet-loria-photo-wrap">
+                        <img class="meet-loria-photo" src="USERS/Loria%20Rigby%20(BROKER)/Loria%20Rigby%20-%20Broker%202%20(fastbridegroupllc).jpeg" alt="Loria Rigby broker portrait">
+                    </div>
+                    <div class="meet-loria-copy">
+                        <p class="meet-loria-kicker">Rigby &amp; Associates</p>
+                        <h2 id="meet-loria-title" class="meet-loria-title">Meet Loria Rigby</h2>
+                        <p>Loria Rigby brings the brokerage relationship behind the MLS/VOW side of this experience, helping connect trusted real estate guidance with the FAST workflow, tools, and investor-focused momentum across the platform.</p>
+                        <div class="meet-loria-actions">
+                            <a class="primary-cta" href="legal-loria-rigby.html">View Loria Rigby</a>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section id="platform" class="content-grid">
