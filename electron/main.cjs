@@ -1,5 +1,6 @@
-const { app, BrowserWindow, dialog, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { fork } = require('child_process');
+const fs = require('fs/promises');
 const http = require('http');
 const path = require('path');
 
@@ -13,6 +14,33 @@ const APP_USER_MODEL_ID = 'com.fastbridgegroup.desktop';
 let mainWindow = null;
 let serverProcess = null;
 let serverStartedByDesktop = false;
+
+ipcMain.handle('fast-desktop:save-file', async (_event, options = {}) => {
+  const defaultPath = typeof options.defaultPath === 'string' && options.defaultPath.trim()
+    ? options.defaultPath.trim()
+    : 'document.pdf';
+
+  const saveResult = await dialog.showSaveDialog(mainWindow || undefined, {
+    defaultPath,
+    filters: [
+      { name: 'PDF Files', extensions: ['pdf'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
+  if (saveResult.canceled || !saveResult.filePath) {
+    return { canceled: true };
+  }
+
+  const bytes = options && options.bytes;
+  if (!bytes) {
+    throw new Error('No file data was provided to save.');
+  }
+
+  const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  await fs.writeFile(saveResult.filePath, buffer);
+  return { canceled: false, filePath: saveResult.filePath };
+});
 
 const canReachUrl = (url) => new Promise((resolve) => {
   const request = http.get(url, (response) => {

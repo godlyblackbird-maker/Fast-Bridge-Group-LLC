@@ -1773,7 +1773,7 @@
             const TEMPLATE_DEFAULT_BODIES = {
                 active: 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} and wanted to reach out directly. I am actively buying in that area, can close quickly, and I am happy to let you represent me. If the seller is open to a cash offer, I would love to take a look. {timeGreeting}',
                 pending: 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list. {timeGreeting}',
-                'active-under-contract': 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list. {timeGreeting}',
+                'active-under-contract': 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list.',
                 'coming-soon': 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} is marked coming soon. If the seller is open to a pre-market cash option, I would love to take a quick look before it goes fully live. {timeGreeting}',
                 closed: 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. Congrats on closing {propertyAddress}. If you get another seller who wants a clean cash offer or fast close, keep me in mind. I would love to be a reliable buyer resource for your next one. {timeGreeting}',
                 hold: 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. Checking in on {propertyAddress}. If the seller is still weighing options, I can make a clean cash offer and move quickly if that helps get the deal done. {timeGreeting}',
@@ -2260,12 +2260,17 @@
                 const raw = String(value || '').replace(/\r/g, '');
                 const normalized = raw.trim();
                 const fallback = TEMPLATE_DEFAULT_BODIES[templateStatusKey] || TEMPLATE_DEFAULT_BODIES.active;
+                const legacyActiveUnderContractDefault = 'Hi {agentFirstName}, I am {senderName}, an investor/cash buyer. I saw {propertyAddress} is {status}. If it shakes loose or the seller needs a serious backup cash buyer, I would love a shot at it. I can move quick and would let you represent me if that works. Save me in your contacts/list. {timeGreeting}';
 
                 if (!normalized) {
                     return fallback;
                 }
 
                 if (normalized === (TEMPLATE_LEGACY_DEFAULT_BODIES[templateStatusKey] || '')) {
+                    return fallback;
+                }
+
+                 if (templateStatusKey === 'active-under-contract' && normalized === legacyActiveUnderContractDefault) {
                     return fallback;
                 }
 

@@ -673,6 +673,36 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.16s ease, visibility 0.16s ease, background 0.18s ease;
+        }
+
+        .pdf-editor-text-item.is-active .pdf-editor-overlay-handle,
+        .pdf-editor-text-item.is-active .pdf-editor-overlay-size,
+        .pdf-editor-text-item.is-active .pdf-editor-overlay-remove,
+        .pdf-editor-signature-item.is-active .pdf-editor-overlay-handle,
+        .pdf-editor-signature-item.is-active .pdf-editor-overlay-size,
+        .pdf-editor-signature-item.is-active .pdf-editor-overlay-remove,
+        .pdf-editor-initials-item.is-active .pdf-editor-overlay-handle,
+        .pdf-editor-initials-item.is-active .pdf-editor-overlay-size,
+        .pdf-editor-initials-item.is-active .pdf-editor-overlay-remove,
+        .pdf-editor-image-item.is-active .pdf-editor-overlay-handle,
+        .pdf-editor-image-item.is-active .pdf-editor-overlay-remove,
+        .pdf-editor-image-item.is-active .pdf-editor-image-rotate,
+        .pdf-editor-image-item.is-active .pdf-editor-image-resize,
+        .pdf-editor-image-item.is-transforming .pdf-editor-overlay-handle,
+        .pdf-editor-image-item.is-transforming .pdf-editor-overlay-remove,
+        .pdf-editor-image-item.is-transforming .pdf-editor-image-rotate,
+        .pdf-editor-image-item.is-transforming .pdf-editor-image-resize,
+        .pdf-editor-text-item.is-dragging .pdf-editor-overlay-handle,
+        .pdf-editor-signature-item.is-dragging .pdf-editor-overlay-handle,
+        .pdf-editor-initials-item.is-dragging .pdf-editor-overlay-handle,
+        .pdf-editor-image-item.is-dragging .pdf-editor-overlay-handle {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
         }
 
         .pdf-editor-overlay-handle {
@@ -929,13 +959,16 @@
                                     <span>Download With Changes</span>
                                 </button>
                             </div>
+                            <div class="pdf-editor-toolbar-note">Click a page to target it, place your text, images, or signatures, then download the actual edited PDF with those changes embedded.</div>
+                        </div>
+
+                        <div id="pdf-editor-image-panel" class="pdf-editor-signature-panel" hidden>
                             <div class="pdf-editor-style-grid">
                                 <div class="pdf-editor-field">
                                     <label for="pdf-editor-image-opacity-input">Image Opacity <span id="pdf-editor-image-opacity-value" class="pdf-editor-range-value">100%</span></label>
                                     <input id="pdf-editor-image-opacity-input" type="range" min="0" max="100" step="1" value="100">
                                 </div>
                             </div>
-                            <div class="pdf-editor-toolbar-note">Click a page to target it, place your text, images, or signatures, then download the actual edited PDF with those changes embedded.</div>
                         </div>
 
                         <div id="pdf-editor-text-panel" class="pdf-editor-signature-panel" hidden>
@@ -1020,7 +1053,7 @@
                             <div class="pdf-editor-style-grid">
                                 <div class="pdf-editor-field">
                                     <label for="pdf-editor-signature-color-input">Signature Color</label>
-                                    <input id="pdf-editor-signature-color-input" type="color" value="#ffffff">
+                                    <input id="pdf-editor-signature-color-input" type="color" value="#000000">
                                 </div>
                                 <div class="pdf-editor-field">
                                     <label for="pdf-editor-signature-stroke-color-input">Signature stroke</label>
@@ -1127,6 +1160,7 @@
             const signatureOpacityValue = document.getElementById('pdf-editor-signature-opacity-value');
             const imageOpacityInput = document.getElementById('pdf-editor-image-opacity-input');
             const imageOpacityValue = document.getElementById('pdf-editor-image-opacity-value');
+            const imagePanel = document.getElementById('pdf-editor-image-panel');
             const textPanel = document.getElementById('pdf-editor-text-panel');
             const signaturePanel = document.getElementById('pdf-editor-signature-panel');
             const signatureInput = document.getElementById('pdf-editor-signature-input');
@@ -1142,7 +1176,7 @@
             const previewStage = document.getElementById('pdf-editor-preview-stage');
             const previewPages = document.getElementById('pdf-editor-preview-pages');
 
-            if (!fileInput || !imageInput || !dropzone || !selectButton || !clearButton || !status || !previewMeta || !previewName || !previewDetails || !previewToolbar || !addTextButton || !addImageButton || !addSignatureButton || !addInitialsButton || !downloadButton || !bottomActions || !downloadButtonBottom || !textFontSelect || !textColorInput || !textStrokeColorInput || !textStrokeWidthInput || !textStrokeWidthValue || !textOpacityInput || !textOpacityValue || !signatureColorInput || !signatureStrokeColorInput || !signatureStrokeWidthInput || !signatureStrokeWidthValue || !signatureOpacityInput || !signatureOpacityValue || !imageOpacityInput || !imageOpacityValue || !textPanel || !signaturePanel || !signatureInput || !signatureFontSelect || !insertSignatureButton || !signaturePreview || !initialsPanel || !initialsInput || !initialsFontSelect || !insertInitialsButton || !initialsPreview || !previewEmpty || !previewStage || !previewPages) {
+            if (!fileInput || !imageInput || !dropzone || !selectButton || !clearButton || !status || !previewMeta || !previewName || !previewDetails || !previewToolbar || !addTextButton || !addImageButton || !addSignatureButton || !addInitialsButton || !downloadButton || !bottomActions || !downloadButtonBottom || !textFontSelect || !textColorInput || !textStrokeColorInput || !textStrokeWidthInput || !textStrokeWidthValue || !textOpacityInput || !textOpacityValue || !signatureColorInput || !signatureStrokeColorInput || !signatureStrokeWidthInput || !signatureStrokeWidthValue || !signatureOpacityInput || !signatureOpacityValue || !imageOpacityInput || !imageOpacityValue || !imagePanel || !textPanel || !signaturePanel || !signatureInput || !signatureFontSelect || !insertSignatureButton || !signaturePreview || !initialsPanel || !initialsInput || !initialsFontSelect || !insertInitialsButton || !initialsPreview || !previewEmpty || !previewStage || !previewPages) {
                 return;
             }
 
@@ -1173,11 +1207,12 @@
                 });
 
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
+                    imagePanel.hidden = true;
                     textPanel.hidden = false;
                     const content = activeOverlayItem.querySelector('.pdf-editor-text-content');
                     if (content instanceof HTMLElement) {
                         textFontSelect.value = normalizeTextFontValue(window.getComputedStyle(content).fontFamily);
-                        textColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#ffffff');
+                        textColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#000000');
                         textStrokeColorInput.value = normalizeColorValue(content.dataset.strokeColor, '#000000');
                         textStrokeWidthInput.value = normalizeStrokeWidth(content.dataset.strokeWidth, '0');
                         updateRangeLabel(textStrokeWidthInput, textStrokeWidthValue, 'px');
@@ -1187,9 +1222,10 @@
                 }
 
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
+                    imagePanel.hidden = true;
                     const content = activeOverlayItem.querySelector('.pdf-editor-signature-content');
                     if (content instanceof HTMLElement) {
-                        signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#ffffff');
+                        signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#000000');
                         signatureStrokeColorInput.value = normalizeColorValue(content.dataset.strokeColor, '#000000');
                         signatureStrokeWidthInput.value = normalizeStrokeWidth(content.dataset.strokeWidth, '0');
                         updateRangeLabel(signatureStrokeWidthInput, signatureStrokeWidthValue, 'px');
@@ -1199,9 +1235,10 @@
                 }
 
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
+                    imagePanel.hidden = true;
                     const content = activeOverlayItem.querySelector('.pdf-editor-initials-content');
                     if (content instanceof HTMLElement) {
-                        signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#ffffff');
+                        signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#000000');
                         signatureStrokeColorInput.value = normalizeColorValue(content.dataset.strokeColor, '#000000');
                         signatureStrokeWidthInput.value = normalizeStrokeWidth(content.dataset.strokeWidth, '0');
                         updateRangeLabel(signatureStrokeWidthInput, signatureStrokeWidthValue, 'px');
@@ -1211,6 +1248,10 @@
                 }
 
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-image-item')) {
+                    imagePanel.hidden = false;
+                    textPanel.hidden = true;
+                    signaturePanel.hidden = true;
+                    initialsPanel.hidden = true;
                     imageOpacityInput.value = normalizeOpacityPercent(window.getComputedStyle(activeOverlayItem).opacity, 100);
                     updateOpacityLabel(imageOpacityInput, imageOpacityValue);
                 }
@@ -1448,7 +1489,7 @@
                 const value = String(signatureInput.value || '').trim();
                 signaturePreview.textContent = value || 'Type a signature to preview it here.';
                 signaturePreview.style.fontFamily = value ? String(signatureFontSelect.value || "'Great Vibes', cursive") : "'Outfit', sans-serif";
-                signaturePreview.style.color = signatureColorInput.value || '#ffffff';
+                signaturePreview.style.color = signatureColorInput.value || '#000000';
                 signaturePreview.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
                 signaturePreview.style.backgroundColor = 'transparent';
                 applyContentStroke(signaturePreview, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
@@ -1458,7 +1499,7 @@
                 const value = String(initialsInput.value || '').trim().toUpperCase();
                 initialsPreview.textContent = value || 'Type initials to preview them here.';
                 initialsPreview.style.fontFamily = value ? String(initialsFontSelect.value || "'Great Vibes', cursive") : "'Outfit', sans-serif";
-                initialsPreview.style.color = signatureColorInput.value || '#ffffff';
+                initialsPreview.style.color = signatureColorInput.value || '#000000';
                 initialsPreview.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
                 initialsPreview.style.backgroundColor = 'transparent';
                 applyContentStroke(initialsPreview, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
@@ -1633,7 +1674,7 @@
                 content.setAttribute('aria-label', 'Editable text');
                 content.style.fontFamily = textFontSelect.value || "'Outfit', sans-serif";
                 content.style.fontSize = '18px';
-                content.style.color = textColorInput.value || '#ffffff';
+                content.style.color = textColorInput.value || '#000000';
                 content.textContent = 'Add text';
                 item.style.backgroundColor = 'transparent';
                 item.style.opacity = String(clampValue(Number.parseFloat(textOpacityInput.value || '82') / 100, 0, 1));
@@ -1678,6 +1719,15 @@
                     }
                     item.remove();
                 });
+                content.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' || event.shiftKey) {
+                        return;
+                    }
+                    event.preventDefault();
+                    content.blur();
+                    setActiveOverlayItem(null);
+                    status.textContent = 'Text added. Click it again if you want to move or edit it.';
+                });
 
                 window.requestAnimationFrame(() => {
                     content.focus();
@@ -1719,7 +1769,7 @@
                 content.className = 'pdf-editor-signature-content';
                 content.style.fontFamily = String(signatureFontSelect.value || "'Great Vibes', cursive");
                 content.style.fontSize = '42px';
-                content.style.color = signatureColorInput.value || '#ffffff';
+                content.style.color = signatureColorInput.value || '#000000';
                 content.textContent = signatureText;
                 item.style.backgroundColor = 'transparent';
                 item.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
@@ -1758,7 +1808,8 @@
                     item.remove();
                 });
 
-                status.textContent = 'Signature added. Drag it anywhere on top of the PDF preview.';
+                setActiveOverlayItem(null);
+                status.textContent = 'Signature added. Click it again if you want to move or edit it.';
             }
 
             function createInitialsItem() {
@@ -1787,7 +1838,7 @@
                 content.className = 'pdf-editor-initials-content';
                 content.style.fontFamily = String(initialsFontSelect.value || "'Great Vibes', cursive");
                 content.style.fontSize = '36px';
-                content.style.color = signatureColorInput.value || '#ffffff';
+                content.style.color = signatureColorInput.value || '#000000';
                 content.textContent = initialsText;
                 item.style.backgroundColor = 'transparent';
                 item.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
@@ -1826,7 +1877,8 @@
                     item.remove();
                 });
 
-                status.textContent = 'Initials added. Drag them anywhere on top of the PDF preview.';
+                setActiveOverlayItem(null);
+                status.textContent = 'Initials added. Click them again if you want to move or edit them.';
             }
 
             function createImageItem(file) {
@@ -1988,7 +2040,8 @@
                     item.remove();
                 });
 
-                status.textContent = 'Image overlay added. Drag, resize, or rotate it on top of the PDF.';
+                setActiveOverlayItem(null);
+                status.textContent = 'Image added. Click it again if you want to move, resize, or rotate it.';
             }
 
             function formatFileSize(bytes) {
@@ -2008,6 +2061,97 @@
                     return rawName.replace(/\.pdf$/i, ' (with changes).pdf');
                 }
                 return `${rawName} (with changes).pdf`;
+            }
+
+            async function preparePdfSaveTarget() {
+                const downloadName = getDownloadName();
+
+                if (window.fastDesktop && typeof window.fastDesktop.saveFile === 'function') {
+                    return {
+                        save: async (savedPdfBytes) => {
+                            const saveResult = await window.fastDesktop.saveFile({
+                                defaultPath: downloadName,
+                                bytes: Array.from(savedPdfBytes)
+                            });
+
+                            if (saveResult && saveResult.canceled) {
+                                status.textContent = 'Download canceled.';
+                                return false;
+                            }
+
+                            return true;
+                        },
+                        cleanup: () => {}
+                    };
+                }
+
+                if (typeof window.showSaveFilePicker === 'function') {
+                    try {
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: downloadName,
+                            types: [{
+                                description: 'PDF Files',
+                                accept: { 'application/pdf': ['.pdf'] }
+                            }]
+                        });
+
+                        return {
+                            save: async (savedPdfBytes) => {
+                                const writable = await fileHandle.createWritable();
+                                await writable.write(new Blob([savedPdfBytes], { type: activePdfMimeType || 'application/pdf' }));
+                                await writable.close();
+                                return true;
+                            },
+                            cleanup: () => {}
+                        };
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            status.textContent = 'Download canceled.';
+                            return null;
+                        }
+                        throw error;
+                    }
+                }
+
+                const pendingWindow = typeof window.open === 'function'
+                    ? window.open('', '_blank', 'noopener,noreferrer')
+                    : null;
+
+                if (pendingWindow && !pendingWindow.closed) {
+                    try {
+                        pendingWindow.document.title = 'Preparing PDF download';
+                        pendingWindow.document.body.textContent = 'Preparing your PDF download...';
+                    } catch (_error) {
+                        // Ignore cross-window access issues.
+                    }
+                }
+
+                return {
+                    save: async (savedPdfBytes) => {
+                        const pdfBlob = new Blob([savedPdfBytes], { type: activePdfMimeType || 'application/pdf' });
+                        const downloadUrl = URL.createObjectURL(pdfBlob);
+
+                        if (pendingWindow && !pendingWindow.closed) {
+                            pendingWindow.location.href = downloadUrl;
+                        } else {
+                            const anchor = document.createElement('a');
+                            anchor.href = downloadUrl;
+                            anchor.download = downloadName;
+                            anchor.rel = 'noopener';
+                            document.body.appendChild(anchor);
+                            anchor.click();
+                            anchor.remove();
+                        }
+
+                        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                        return true;
+                    },
+                    cleanup: () => {
+                        if (pendingWindow && !pendingWindow.closed) {
+                            pendingWindow.close();
+                        }
+                    }
+                };
             }
 
             function clearRenderedPages() {
@@ -2270,6 +2414,11 @@
                     return;
                 }
 
+                const saveTarget = await preparePdfSaveTarget();
+                if (!saveTarget) {
+                    return;
+                }
+
                 exportInProgress = true;
                 setEditorEnabledState(true);
                 status.textContent = 'Building your edited PDF with the current changes...';
@@ -2317,18 +2466,15 @@
                     }
 
                     const savedPdfBytes = await pdfDocument.save();
-                    const pdfBlob = new Blob([savedPdfBytes], { type: activePdfMimeType || 'application/pdf' });
-                    const downloadUrl = URL.createObjectURL(pdfBlob);
-                    const anchor = document.createElement('a');
-                    anchor.href = downloadUrl;
-                    anchor.download = getDownloadName();
-                    document.body.appendChild(anchor);
-                    anchor.click();
-                    anchor.remove();
-                    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-                    status.textContent = 'Your edited PDF downloaded successfully.';
+                    const didSave = await saveTarget.save(savedPdfBytes);
+                    if (didSave) {
+                        status.textContent = 'Your edited PDF downloaded successfully.';
+                    }
                 } catch (error) {
-                    status.textContent = 'Could not build the edited PDF. Try uploading the file again.';
+                    console.error('PDF export failed:', error);
+                    saveTarget.cleanup();
+                    const message = error && error.message ? error.message : 'Unknown export error.';
+                    status.textContent = `Could not build the edited PDF. ${message}`;
                 } finally {
                     exportInProgress = false;
                     setEditorEnabledState(Boolean(activePdfBytes));
@@ -2342,6 +2488,7 @@
                 activePdfMimeType = 'application/pdf';
                 previewMeta.hidden = true;
                 previewToolbar.hidden = true;
+                imagePanel.hidden = true;
                 textPanel.hidden = true;
                 signaturePanel.hidden = true;
                 initialsPanel.hidden = true;
@@ -2361,11 +2508,11 @@
                 textFontSelect.value = "'Outfit', sans-serif";
                 signatureFontSelect.value = "'Great Vibes', cursive";
                 initialsFontSelect.value = "'Great Vibes', cursive";
-                textColorInput.value = '#ffffff';
+                textColorInput.value = '#000000';
                 textStrokeColorInput.value = '#000000';
                 textStrokeWidthInput.value = '0';
                 textOpacityInput.value = '82';
-                signatureColorInput.value = '#ffffff';
+                signatureColorInput.value = '#000000';
                 signatureStrokeColorInput.value = '#000000';
                 signatureStrokeWidthInput.value = '0';
                 signatureOpacityInput.value = '68';
@@ -2428,7 +2575,10 @@
                 }
             }
 
-            selectButton.addEventListener('click', () => fileInput.click());
+            selectButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                fileInput.click();
+            });
             clearButton.addEventListener('click', () => resetPreview());
             downloadButton.addEventListener('click', () => {
                 void downloadPdfWithChanges();
@@ -2438,6 +2588,7 @@
             });
             addTextButton.addEventListener('click', () => {
                 if (!addTextButton.disabled && !previewStage.hidden) {
+                    imagePanel.hidden = true;
                     textPanel.hidden = false;
                     signaturePanel.hidden = true;
                     initialsPanel.hidden = true;
@@ -2446,6 +2597,10 @@
             });
             addImageButton.addEventListener('click', () => {
                 if (!addImageButton.disabled && !previewStage.hidden) {
+                    imagePanel.hidden = false;
+                    textPanel.hidden = true;
+                    signaturePanel.hidden = true;
+                    initialsPanel.hidden = true;
                     imageInput.click();
                 }
             });
@@ -2453,6 +2608,7 @@
                 if (addSignatureButton.disabled || previewStage.hidden) {
                     return;
                 }
+                imagePanel.hidden = true;
                 textPanel.hidden = true;
                 initialsPanel.hidden = true;
                 signaturePanel.hidden = !signaturePanel.hidden;
@@ -2465,6 +2621,7 @@
                 if (addInitialsButton.disabled || previewStage.hidden) {
                     return;
                 }
+                imagePanel.hidden = true;
                 textPanel.hidden = true;
                 signaturePanel.hidden = true;
                 initialsPanel.hidden = !initialsPanel.hidden;
@@ -2507,7 +2664,7 @@
             });
             textColorInput.addEventListener('input', () => {
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
-                    applyOverlayTextColor(activeOverlayItem, textColorInput.value || '#ffffff');
+                    applyOverlayTextColor(activeOverlayItem, textColorInput.value || '#000000');
                 }
             });
             textStrokeColorInput.addEventListener('input', () => {
@@ -2531,10 +2688,10 @@
                 updateSignaturePreview();
                 updateInitialsPreview();
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
-                    applyOverlayTextColor(activeOverlayItem, signatureColorInput.value || '#ffffff');
+                    applyOverlayTextColor(activeOverlayItem, signatureColorInput.value || '#000000');
                 }
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
-                    applyOverlayTextColor(activeOverlayItem, signatureColorInput.value || '#ffffff');
+                    applyOverlayTextColor(activeOverlayItem, signatureColorInput.value || '#000000');
                 }
             });
             signatureStrokeColorInput.addEventListener('input', () => {

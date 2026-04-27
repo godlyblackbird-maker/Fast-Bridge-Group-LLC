@@ -1463,8 +1463,14 @@
             setSyncStatus('Syncing shared admin sheet...', 'info');
 
             addRowBtn.addEventListener('click', function () {
-                body.appendChild(createRow({ activeBuyer: '' }));
+                const newRow = createRow({ activeBuyer: 'BUYER' });
+                body.appendChild(newRow);
                 scheduleSaveRows();
+
+                const editableCells = newRow.querySelectorAll('td');
+                if (editableCells[1] && typeof editableCells[1].focus === 'function') {
+                    editableCells[1].focus();
+                }
             });
 
             saveCsvBtn.addEventListener('click', async function () {

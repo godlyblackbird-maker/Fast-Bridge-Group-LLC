@@ -195,27 +195,61 @@
         .admin-quick-link {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            padding: 11px 14px;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            padding: 0;
             border-radius: 14px;
             border: 1px solid var(--glass-border);
             background: var(--glass-hover);
             color: var(--text-primary);
             text-decoration: none;
-            font-size: 12px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            font-weight: 700;
             transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
         }
 
         .admin-quick-link::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 999px;
-            background: rgba(var(--accent-light-rgb), 0.95);
-            box-shadow: 0 0 12px rgba(var(--accent-light-rgb), 0.42);
+            content: none;
+        }
+
+        .admin-quick-link-icon,
+        .admin-card-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .admin-quick-link-icon {
+            width: 18px;
+            height: 18px;
+            color: rgba(var(--accent-light-rgb), 0.96);
+        }
+
+        .admin-quick-link-label {
+            display: none;
+        }
+
+        .admin-quick-link-icon svg,
+        .admin-card-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .admin-title-with-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .admin-card-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            color: rgba(var(--accent-light-rgb), 0.98);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-light-rgb), 0.16));
+            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
+            box-shadow: 0 12px 26px rgba(var(--accent-rgb), 0.18);
         }
 
         .admin-quick-link:hover,
@@ -712,18 +746,18 @@
             </nav>
             <div class="admin-sticky-toolbar">
                 <nav class="admin-quick-rail" aria-label="Admin quick navigation">
-                    <a class="admin-quick-link" href="#online-users-card">Online Users</a>
-                    <a class="admin-quick-link" href="#requested-access-card">Access Queue</a>
-                    <a class="admin-quick-link" href="#property-submissions-card">Seller Leads</a>
-                    <a class="admin-quick-link" href="#admin-announcement-card">Announcements</a>
-                    <a class="admin-quick-link" href="#smtp-approval-card">Gmail Approvals</a>
-                    <a class="admin-quick-link" href="#admin-feature-access-card">Feature Access</a>
-                    <a class="admin-quick-link" href="#pdf-editor-card">PDF Editor</a>
-                    <a class="admin-quick-link" href="mls-imports-spreadsheet.html">MLS Spreadsheet</a>
-                    <a class="admin-quick-link" href="#admin-account-manager-card">Account Manager</a>
-                    <a class="admin-quick-link" href="#digital-ecard-card">E Card</a>
-                    <a class="admin-quick-link" href="#contracts-card">Contracts</a>
-                    <a class="admin-quick-link" href="#flyer-maker-card">Flyer Maker</a>
+                    <a class="admin-quick-link" href="#online-users-card" aria-label="Online Users" title="Online Users"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span><span class="admin-quick-link-label">Online Users</span></a>
+                    <a class="admin-quick-link" href="#requested-access-card" aria-label="Access Queue" title="Access Queue"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span><span class="admin-quick-link-label">Access Queue</span></a>
+                    <a class="admin-quick-link" href="#property-submissions-card" aria-label="Seller Leads" title="Seller Leads"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span><span class="admin-quick-link-label">Seller Leads</span></a>
+                    <a class="admin-quick-link" href="#admin-announcement-card" aria-label="Announcements" title="Announcements"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l11-5v12L3 13z"></path><path d="M14 8h4a3 3 0 0 1 0 6h-4"></path><path d="M6 13v5a2 2 0 0 0 2 2h1"></path></svg></span><span class="admin-quick-link-label">Announcements</span></a>
+                    <a class="admin-quick-link" href="#smtp-approval-card" aria-label="Gmail Approvals" title="Gmail Approvals"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 6l-10 7L2 6"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M19 11l-5 5-2-2"></path></svg></span><span class="admin-quick-link-label">Gmail Approvals</span></a>
+                    <a class="admin-quick-link" href="#admin-feature-access-card" aria-label="Feature Access" title="Feature Access"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2"></path><path d="M7.5 7.5l-4 4a2.12 2.12 0 0 0 3 3l4-4"></path><path d="M14 6l4 4"></path><path d="M10 14l-2 2"></path><path d="M16 8l5-5"></path></svg></span><span class="admin-quick-link-label">Feature Access</span></a>
+                    <a class="admin-quick-link" href="#pdf-editor-card" aria-label="PDF Editor" title="PDF Editor"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M12 18h4"></path><path d="M8 14h8"></path></svg></span><span class="admin-quick-link-label">PDF Editor</span></a>
+                    <a class="admin-quick-link" href="mls-imports-spreadsheet.html" aria-label="MLS Spreadsheet" title="MLS Spreadsheet"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 4v16"></path><path d="M16 4v16"></path></svg></span><span class="admin-quick-link-label">MLS Spreadsheet</span></a>
+                    <a class="admin-quick-link" href="#admin-account-manager-card" aria-label="Account Manager" title="Account Manager"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M6 20a6 6 0 0 1 12 0"></path><path d="M19 8h3"></path><path d="M20.5 6.5v3"></path></svg></span><span class="admin-quick-link-label">Account Manager</span></a>
+                    <a class="admin-quick-link" href="#digital-ecard-card" aria-label="E Card" title="E Card"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M7 9h6"></path><path d="M7 13h4"></path><circle cx="17" cy="12" r="2.5"></circle></svg></span><span class="admin-quick-link-label">E Card</span></a>
+                    <a class="admin-quick-link" href="#contracts-card" aria-label="Contracts" title="Contracts"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3h8a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg></span><span class="admin-quick-link-label">Contracts</span></a>
+                    <a class="admin-quick-link" href="#flyer-maker-card" aria-label="Flyer Maker" title="Flyer Maker"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 8h10"></path><path d="M7 12h6"></path><path d="M7 16h10"></path></svg></span><span class="admin-quick-link-label">Flyer Maker</span></a>
                 </nav>
                 <button class="nav-btn" aria-label="Notifications shortcut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notification-dot"></span></button>
             </div>
@@ -733,7 +767,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Broadcast Center</div>
-                            <h2 class="card-title">Dashboard Announcements</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l11-5v12L3 13z"></path><path d="M14 8h4a3 3 0 0 1 0 6h-4"></path><path d="M6 13v5a2 2 0 0 0 2 2h1"></path></svg></span><span>Dashboard Announcements</span></h2>
                             <p class="card-subtitle" id="admin-announcement-subtitle">Publish a message at the top of the dashboard so every signed-in user sees the update.</p>
                         </div>
                     </div>
@@ -813,7 +847,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Live Presence</div>
-                            <h2 class="card-title">Online Users</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span><span>Online Users</span></h2>
                             <p class="card-subtitle" id="admin-online-users-subtitle">Tracking who has been active in the last few minutes.</p>
                         </div>
                         <button id="admin-online-users-refresh" type="button" class="card-btn">Refresh</button>
@@ -828,7 +862,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Approval Queue</div>
-                            <h2 class="card-title">Requested Access</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span><span>Requested Access</span></h2>
                             <p class="card-subtitle" id="access-requests-subtitle">Admin-only review queue for new FAST access requests</p>
                         </div>
                     </div>
@@ -842,7 +876,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Seller Intake</div>
-                            <h2 class="card-title">Property Submissions</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span><span>Property Submissions</span></h2>
                             <p class="card-subtitle" id="property-submissions-subtitle">Seller inquiries submitted from the public homepage form</p>
                         </div>
                     </div>
@@ -856,7 +890,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Outbound Mail</div>
-                            <h2 class="card-title">Gmail Outbox Approvals</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 6l-10 7L2 6"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M19 11l-5 5-2-2"></path></svg></span><span>Gmail Outbox Approvals</span></h2>
                             <p class="card-subtitle" id="smtp-approval-subtitle">Approve submitted Gmail emails and app passwords for outgoing mail</p>
                         </div>
                     </div>
@@ -870,7 +904,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Navigation Control</div>
-                            <h2 class="card-title">Feature Access</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2"></path><path d="M7.5 7.5l-4 4a2.12 2.12 0 0 0 3 3l4-4"></path><path d="M14 6l4 4"></path><path d="M10 14l-2 2"></path><path d="M16 8l5-5"></path></svg></span><span>Feature Access</span></h2>
                             <p class="card-subtitle" id="admin-feature-access-subtitle">Control which account roles can access restricted main-menu tabs.</p>
                         </div>
                     </div>
@@ -891,7 +925,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Document Tools</div>
-                            <h2 class="card-title">PDF Editor</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M12 18h4"></path><path d="M8 14h8"></path></svg></span><span>PDF Editor</span></h2>
                             <p class="card-subtitle">Open the dedicated PDF editor workspace for uploads, review, and document prep tasks.</p>
                         </div>
                     </div>
@@ -906,7 +940,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">User Ops</div>
-                            <h2 class="card-title">Account Manager</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M6 20a6 6 0 0 1 12 0"></path><path d="M19 8h3"></path><path d="M20.5 6.5v3"></path></svg></span><span>Account Manager</span></h2>
                             <p class="card-subtitle" id="account-manager-subtitle">Admin-only account creation and user access control</p>
                         </div>
                     </div>
@@ -951,7 +985,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Asset Studio</div>
-                            <h2 class="card-title">Digital E Card</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M7 9h6"></path><path d="M7 13h4"></path><circle cx="17" cy="12" r="2.5"></circle></svg></span><span>Digital E Card</span></h2>
                             <p class="card-subtitle">Your personal card is generated from your profile and branded as FAST BRIDGE GROUP, LLC.</p>
                         </div>
                     </div>
@@ -1027,7 +1061,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Legal Buildout</div>
-                            <h2 class="card-title">Contracts</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3h8a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg></span><span>Contracts</span></h2>
                             <p class="card-subtitle">License Agreement / Data Use Agreement draft for MLS-only brokerage access with FAST BRIDGE ownership retained and broker authority limited to compliance matters.</p>
                         </div>
                     </div>
@@ -1284,7 +1318,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Creative Output</div>
-                            <h2 class="card-title">Flyer Maker</h2>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 8h10"></path><path d="M7 12h6"></path><path d="M7 16h10"></path></svg></span><span>Flyer Maker</span></h2>
                             <p class="card-subtitle">Create branded flyers with a large FAST logo, red title, and custom text.</p>
                         </div>
                     </div>
