@@ -1,0 +1,2624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Editor - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="FAST BRIDGE GROUP PDF editor workspace for uploads, review, and document prep.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Alex+Brush&family=Allura&family=Bebas+Neue&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=Great+Vibes&family=Kaushan+Script&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600;700&family=Marck+Script&family=Merienda:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Mrs+Saint+Delafield&family=Oswald:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Pacifico&family=Parisienne&family=Petit+Formal+Script&family=Playball&family=Playfair+Display:wght@400;500;600;700&family=Sacramento&family=Satisfy&family=Seaweed+Script&family=Space+Mono:wght@400;700&family=Tangerine:wght@400;700&family=Yellowtail&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
+                const themeLogoPaths = {
+                    christmas: 'png photos/Christmas Theme Logo.png',
+                    swamp: 'png photos/Swamp Theme Logo.png',
+                    cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    japan: 'png photos/Japan Theme Mode Logo.png'
+                };
+                const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
+                root.setAttribute('data-theme-logo-path', themeLogoPath);
+
+                const preloadThemeLogo = new Image();
+                preloadThemeLogo.src = themeLogoPath;
+
+                const applyThemeLogos = (scope) => {
+                    if (!scope || typeof scope.querySelectorAll !== 'function') {
+                        return;
+                    }
+
+                    if (scope.matches && scope.matches('img.logo-img, img.ecard-logo-image, img.flyer-logo-image') && scope.getAttribute('src') !== themeLogoPath) {
+                        scope.setAttribute('src', themeLogoPath);
+                    }
+
+                    scope.querySelectorAll('img.logo-img, img.ecard-logo-image, img.flyer-logo-image').forEach((image) => {
+                        if (image.getAttribute('src') !== themeLogoPath) {
+                            image.setAttribute('src', themeLogoPath);
+                        }
+                    });
+                };
+
+                const themeLogoObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node && node.nodeType === 1) {
+                                applyThemeLogos(node);
+                            }
+                        });
+                    });
+                });
+
+                themeLogoObserver.observe(document.documentElement, { childList: true, subtree: true });
+                document.addEventListener('DOMContentLoaded', () => {
+                    applyThemeLogos(document);
+                    themeLogoObserver.disconnect();
+                }, { once: true });
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                const accentGlow = Object.prototype.hasOwnProperty.call(controls, 'id:accent-glow-toggle')
+                    ? Boolean(controls['id:accent-glow-toggle'])
+                    : /^(on|true|1)$/i.test(String(localStorage.getItem('accentGlow') || ''));
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+                root.setAttribute('data-accent-color', palettes[accentChoice] ? accentChoice : 'emerald');
+                root.setAttribute('data-accent-glow', accentGlow ? 'on' : 'off');
+            } catch (error) {
+                // Ignore pre-load theme errors and allow default styles.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css?v=20260418a">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .pdf-editor-page .navbar {
+            margin-bottom: 24px;
+        }
+
+        .pdf-editor-shell {
+            width: min(1180px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 12px 0 72px;
+        }
+
+        .pdf-editor-hero,
+        .pdf-editor-panel {
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
+                var(--glass-bg);
+            box-shadow: 0 24px 54px var(--glass-shadow);
+            backdrop-filter: blur(20px);
+        }
+
+        .pdf-editor-hero {
+            display: grid;
+            gap: 22px;
+            padding: 36px;
+            margin-bottom: 24px;
+        }
+
+        .pdf-editor-kicker {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.18);
+            color: var(--text-primary);
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .pdf-editor-kicker::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(var(--accent-light-rgb), 0.96);
+            box-shadow: 0 0 12px rgba(var(--accent-light-rgb), 0.42);
+        }
+
+        .pdf-editor-title {
+            margin: 0;
+            font-size: clamp(2.2rem, 4vw, 3.7rem);
+            line-height: 1.02;
+        }
+
+        .pdf-editor-copy {
+            margin: 0;
+            max-width: 62ch;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.75;
+        }
+
+        .pdf-editor-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pdf-editor-link,
+        .pdf-editor-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 46px;
+            padding: 0 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(var(--accent-rgb), 0.28);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.26), rgba(var(--accent-light-rgb), 0.18));
+            color: var(--text-primary);
+            text-decoration: none;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .pdf-editor-link:hover,
+        .pdf-editor-link:focus-visible,
+        .pdf-editor-button:hover,
+        .pdf-editor-button:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-light-rgb), 0.44);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.34), rgba(var(--accent-light-rgb), 0.24));
+            outline: none;
+        }
+
+        .pdf-editor-link.is-secondary,
+        .pdf-editor-button.is-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--glass-border);
+        }
+
+        .pdf-editor-button[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .pdf-editor-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .pdf-editor-panel {
+            display: grid;
+            gap: 18px;
+            padding: 28px;
+        }
+
+        .pdf-editor-panel h2,
+        .pdf-editor-panel p {
+            margin: 0;
+        }
+
+        .pdf-editor-panel p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .pdf-editor-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .pdf-editor-dropzone {
+            display: grid;
+            gap: 12px;
+            place-items: center;
+            min-height: 220px;
+            padding: 28px;
+            border-radius: 24px;
+            border: 1px dashed rgba(var(--accent-light-rgb), 0.34);
+            background: rgba(255, 255, 255, 0.04);
+            text-align: center;
+        }
+
+        .pdf-editor-dropzone.is-dragover {
+            border-color: rgba(var(--accent-light-rgb), 0.72);
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-light-rgb), 0.12));
+        }
+
+        .pdf-editor-dropzone strong {
+            font-size: 1.05rem;
+        }
+
+        .pdf-editor-upload-actions,
+        .pdf-editor-preview-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pdf-editor-status {
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .pdf-editor-preview-shell {
+            display: grid;
+            gap: 14px;
+        }
+
+        .pdf-editor-bottom-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding-top: 4px;
+        }
+
+        .pdf-editor-preview-meta,
+        .pdf-editor-preview-toolbar,
+        .pdf-editor-signature-panel {
+            display: grid;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(var(--accent-light-rgb), 0.14);
+        }
+
+        .pdf-editor-signature-panel[hidden] {
+            display: none;
+        }
+
+        .pdf-editor-preview-name {
+            font-weight: 700;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .pdf-editor-preview-details,
+        .pdf-editor-toolbar-note {
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .pdf-editor-signature-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.8fr) auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .pdf-editor-field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .pdf-editor-field label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .pdf-editor-field input,
+        .pdf-editor-field select {
+            width: 100%;
+            min-height: 46px;
+            padding: 0 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
+            background: rgba(15, 23, 42, 0.32);
+            color: var(--text-primary);
+            font: inherit;
+        }
+
+        .pdf-editor-field input[type="color"] {
+            padding: 6px;
+            min-width: 68px;
+            cursor: pointer;
+        }
+
+        .pdf-editor-field input[type="range"] {
+            padding: 0;
+        }
+
+        .pdf-editor-style-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .pdf-editor-range-value {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .pdf-editor-field input:focus,
+        .pdf-editor-field select:focus {
+            outline: 1px solid rgba(var(--accent-light-rgb), 0.48);
+            border-color: rgba(var(--accent-light-rgb), 0.48);
+        }
+
+        .pdf-editor-signature-preview {
+            padding: 14px 18px;
+            border-radius: 16px;
+            border: 1px dashed rgba(var(--accent-light-rgb), 0.24);
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 34px;
+            line-height: 1.2;
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            overflow-wrap: anywhere;
+        }
+
+        .pdf-editor-preview-empty {
+            min-height: 0;
+        }
+
+        .pdf-editor-preview-stage {
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.16);
+            background: rgba(15, 23, 42, 0.46);
+            min-height: 780px;
+        }
+
+        .pdf-editor-preview-pages {
+            display: grid;
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .pdf-editor-page-stage {
+            position: relative;
+            width: fit-content;
+            max-width: 100%;
+            margin: 0 auto;
+            border-radius: 18px;
+            overflow: visible;
+            box-shadow: 0 24px 54px rgba(15, 23, 42, 0.24);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+        }
+
+        .pdf-editor-page-stage.is-active {
+            box-shadow: 0 0 0 1px rgba(var(--accent-light-rgb), 0.45), 0 24px 54px rgba(15, 23, 42, 0.24);
+        }
+
+        .pdf-editor-page-stage canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            background: #ffffff;
+        }
+
+        .pdf-editor-overlay-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .pdf-editor-page-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.76);
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        .pdf-editor-text-item,
+        .pdf-editor-signature-item,
+        .pdf-editor-initials-item,
+        .pdf-editor-image-item {
+            position: absolute;
+            color: #ffffff;
+            pointer-events: auto;
+            touch-action: none;
+            user-select: none;
+        }
+
+        .pdf-editor-text-item.is-active,
+        .pdf-editor-signature-item.is-active,
+        .pdf-editor-initials-item.is-active,
+        .pdf-editor-image-item.is-active {
+            border-color: rgba(var(--accent-light-rgb), 0.58);
+            box-shadow: 0 18px 40px rgba(var(--accent-rgb), 0.28);
+        }
+
+        .pdf-editor-text-item {
+            top: 28px;
+            left: 28px;
+            min-width: 180px;
+            max-width: min(360px, calc(100% - 32px));
+            display: grid;
+            grid-template-columns: auto auto auto 1fr auto;
+            align-items: start;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 16px;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+        }
+
+        .pdf-editor-signature-item {
+            top: 40px;
+            left: 40px;
+            min-width: 220px;
+            max-width: min(420px, calc(100% - 32px));
+            display: grid;
+            grid-template-columns: auto auto auto 1fr auto;
+            align-items: start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+        }
+
+        .pdf-editor-initials-item {
+            top: 40px;
+            left: 40px;
+            min-width: 140px;
+            max-width: min(240px, calc(100% - 32px));
+            display: grid;
+            grid-template-columns: auto auto auto 1fr auto;
+            align-items: start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+        }
+
+        .pdf-editor-text-item.is-active,
+        .pdf-editor-signature-item.is-active,
+        .pdf-editor-initials-item.is-active {
+            border: 0;
+            box-shadow: none;
+        }
+
+        .pdf-editor-text-item .pdf-editor-overlay-handle,
+        .pdf-editor-text-item .pdf-editor-overlay-size,
+        .pdf-editor-signature-item .pdf-editor-overlay-handle,
+        .pdf-editor-signature-item .pdf-editor-overlay-size,
+        .pdf-editor-initials-item .pdf-editor-overlay-handle,
+        .pdf-editor-initials-item .pdf-editor-overlay-size,
+        .pdf-editor-signature-item .pdf-editor-overlay-remove,
+        .pdf-editor-initials-item .pdf-editor-overlay-remove {
+            color: #000000;
+        }
+
+        .pdf-editor-text-item .pdf-editor-overlay-remove,
+        .pdf-editor-signature-item .pdf-editor-overlay-remove,
+        .pdf-editor-initials-item .pdf-editor-overlay-remove {
+            width: 36px;
+            height: 36px;
+            color: #dc2626;
+            font-size: 18px;
+            font-weight: 800;
+            background: rgba(254, 226, 226, 0.92);
+        }
+
+        .pdf-editor-text-item .pdf-editor-overlay-remove:hover,
+        .pdf-editor-text-item .pdf-editor-overlay-remove:focus-visible,
+        .pdf-editor-signature-item .pdf-editor-overlay-remove:hover,
+        .pdf-editor-signature-item .pdf-editor-overlay-remove:focus-visible,
+        .pdf-editor-initials-item .pdf-editor-overlay-remove:hover,
+        .pdf-editor-initials-item .pdf-editor-overlay-remove:focus-visible {
+            background: rgba(252, 165, 165, 0.96);
+            color: #991b1b;
+        }
+
+        .pdf-editor-image-item {
+            border: 1px solid rgba(var(--accent-light-rgb), 0.22);
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.28);
+        }
+
+        .pdf-editor-image-item {
+            top: 48px;
+            left: 48px;
+            width: 220px;
+            height: 160px;
+            padding: 12px;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.7);
+            transform-origin: center center;
+        }
+
+        .pdf-editor-image-item.is-dragging,
+        .pdf-editor-image-item.is-transforming {
+            z-index: 3;
+        }
+
+        .pdf-editor-overlay-handle,
+        .pdf-editor-overlay-size,
+        .pdf-editor-overlay-remove,
+        .pdf-editor-image-rotate,
+        .pdf-editor-image-resize {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            margin-top: 2px;
+            border: 0;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.92);
+            font: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .pdf-editor-overlay-handle {
+            cursor: grab;
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        .pdf-editor-text-item.is-dragging .pdf-editor-overlay-handle,
+        .pdf-editor-signature-item.is-dragging .pdf-editor-overlay-handle,
+        .pdf-editor-initials-item.is-dragging .pdf-editor-overlay-handle,
+        .pdf-editor-image-item.is-dragging .pdf-editor-overlay-handle {
+            cursor: grabbing;
+        }
+
+        .pdf-editor-overlay-handle:hover,
+        .pdf-editor-overlay-handle:focus-visible,
+        .pdf-editor-overlay-size:hover,
+        .pdf-editor-overlay-size:focus-visible,
+        .pdf-editor-overlay-remove:hover,
+        .pdf-editor-overlay-remove:focus-visible,
+        .pdf-editor-image-rotate:hover,
+        .pdf-editor-image-rotate:focus-visible,
+        .pdf-editor-image-resize:hover,
+        .pdf-editor-image-resize:focus-visible {
+            background: rgba(255, 255, 255, 0.16);
+            outline: none;
+        }
+
+        .pdf-editor-text-content {
+            min-width: 0;
+            min-height: 28px;
+            padding: 4px 0;
+            outline: none;
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.4;
+            color: inherit;
+            word-break: break-word;
+            cursor: text;
+            user-select: text;
+        }
+
+        .pdf-editor-signature-content {
+            min-width: 0;
+            min-height: 54px;
+            padding: 2px 0;
+            color: inherit;
+            font-size: 42px;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+            user-select: text;
+        }
+
+        .pdf-editor-initials-content {
+            min-width: 0;
+            min-height: 42px;
+            padding: 2px 0;
+            color: inherit;
+            font-size: 36px;
+            line-height: 1.1;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+            user-select: text;
+        }
+
+        .pdf-editor-image-body {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .pdf-editor-image-preview {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .pdf-editor-image-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .pdf-editor-image-handle-group {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .pdf-editor-image-rotate {
+            cursor: alias;
+        }
+
+        .pdf-editor-image-resize {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            pointer-events: auto;
+            cursor: nwse-resize;
+        }
+
+        @media (max-width: 900px) {
+            .pdf-editor-shell {
+                width: min(100% - 24px, 1180px);
+            }
+
+            .pdf-editor-hero,
+            .pdf-editor-panel {
+                border-radius: 22px;
+                padding: 24px;
+            }
+
+            .pdf-editor-signature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pdf-editor-preview-pages {
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body class="pdf-editor-page">
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item"><a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
+                        <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics<span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span></a></li>
+                        <li class="nav-item"><a href="mls.html" class="nav-link"><span class="nav-icon nav-icon-fire" aria-hidden="true"></span>MLS Hot Deals</a></li>
+                        <li class="nav-item"><a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>MLS Search</a></li>
+                        <li class="nav-item"><a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a></li>
+                        <li class="nav-item"><a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Campaigns</a></li>
+                        <li class="nav-item"><a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent workspace</a></li>
+                        <li class="nav-item"><a href="trainings.html" class="nav-link"><span class="nav-icon nav-icon-training" aria-hidden="true"></span>Trainings</a></li>
+                        <li class="nav-item"><a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
+                    </ul>
+                </li>
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item"><a href="admin-controls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>Admin Controls</a></li>
+                        <li class="nav-item"><a href="pdf-editor.html" class="nav-link active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><path d="M9 15h6"/><path d="M9 11h3"/></svg>PDF Editor</a></li>
+                        <li class="nav-item"><a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My agents</a></li>
+                        <li class="nav-item"><a href="active-buyers.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"/><path d="M3 12h18"/><path d="M3 19h18"/></svg>Active Buyers</a></li>
+                        <li class="nav-item"><a href="login.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-title-group">
+                    <h1 class="page-title">PDF Editor</h1>
+                    <p class="navbar-datetime">Document editor workspace</p>
+                </div>
+            </nav>
+
+            <div class="pdf-editor-shell">
+                <section class="pdf-editor-hero" aria-label="PDF editor overview">
+                    <span class="pdf-editor-kicker">Document Tools</span>
+                    <div>
+                        <h2 class="pdf-editor-title">PDF Editor</h2>
+                        <p class="pdf-editor-copy">Upload a PDF, preview it in place, and layer text, signatures, and images directly on top of the page.</p>
+                    </div>
+                    <div class="pdf-editor-actions">
+                        <a class="pdf-editor-link is-secondary" href="admin-controls.html">Go back to admin page</a>
+                    </div>
+                </section>
+
+                <section class="pdf-editor-panel" aria-label="PDF upload workspace">
+                    <div>
+                        <h2>PDF workspace</h2>
+                        <p>Upload a PDF here and the page will show the file you selected right inside the editor workspace.</p>
+                    </div>
+
+                    <input id="pdf-editor-input" class="pdf-editor-input" type="file" accept=".pdf,application/pdf">
+                    <input id="pdf-editor-image-input" class="pdf-editor-input" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif">
+
+                    <div id="pdf-editor-dropzone" class="pdf-editor-dropzone" role="button" tabindex="0" aria-controls="pdf-editor-input" aria-label="Upload PDF">
+                        <strong>Drop a PDF here or click to upload.</strong>
+                        <p>Select a PDF from your device and this page will preview it immediately.</p>
+                        <div class="pdf-editor-upload-actions">
+                            <button id="pdf-editor-select-button" class="pdf-editor-button" type="button">Choose PDF</button>
+                            <button id="pdf-editor-clear-button" class="pdf-editor-button is-secondary" type="button" disabled>Clear PDF</button>
+                        </div>
+                        <p id="pdf-editor-status" class="pdf-editor-status">No PDF selected yet.</p>
+                    </div>
+
+                    <div class="pdf-editor-preview-shell" aria-live="polite">
+                        <div id="pdf-editor-preview-meta" class="pdf-editor-preview-meta" hidden>
+                            <div>
+                                <div id="pdf-editor-preview-name" class="pdf-editor-preview-name"></div>
+                                <div id="pdf-editor-preview-details" class="pdf-editor-preview-details"></div>
+                            </div>
+                        </div>
+
+                        <div id="pdf-editor-preview-toolbar" class="pdf-editor-preview-toolbar" hidden>
+                            <div class="pdf-editor-preview-tools">
+                                <button id="pdf-editor-add-text-button" class="pdf-editor-button" type="button" disabled>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7V4h16v3"></path><path d="M9 20h6"></path><path d="M12 4v16"></path><path d="M17 13h4"></path><path d="M19 11v4"></path></svg>
+                                    <span>Add Text</span>
+                                </button>
+                                <button id="pdf-editor-add-image-button" class="pdf-editor-button" type="button" disabled>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="M21 16l-5.2-5.2a1 1 0 0 0-1.4 0L7 18"></path><path d="M16 3v4"></path><path d="M14 5h4"></path></svg>
+                                    <span>Add Image</span>
+                                </button>
+                                <button id="pdf-editor-add-signature-button" class="pdf-editor-button" type="button" disabled>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 17c2.5 0 2.5-5 5-5 1.4 0 1.8 1.2 2.3 2.4.6 1.4 1.2 2.8 3.1 2.8 2.4 0 2.7-3.2 4.6-3.2 1 0 1.5.6 2 1.4"></path><path d="M3 21h18"></path><path d="M15 6c.8-1.3 2.1-2 3.7-2 1.5 0 2.3.7 2.3 1.8 0 2.4-3.3 2.9-5.1 4.7"></path></svg>
+                                    <span>Add Signature</span>
+                                </button>
+                                <button id="pdf-editor-add-initials-button" class="pdf-editor-button" type="button" disabled>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 9h3"></path><path d="M7 13h2"></path><path d="M14 9v6"></path><path d="M17 9v6"></path></svg>
+                                    <span>Add Initials</span>
+                                </button>
+                                <button id="pdf-editor-download-button" class="pdf-editor-button is-secondary" type="button" disabled>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    <span>Download With Changes</span>
+                                </button>
+                            </div>
+                            <div class="pdf-editor-style-grid">
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-image-opacity-input">Image Opacity <span id="pdf-editor-image-opacity-value" class="pdf-editor-range-value">100%</span></label>
+                                    <input id="pdf-editor-image-opacity-input" type="range" min="0" max="100" step="1" value="100">
+                                </div>
+                            </div>
+                            <div class="pdf-editor-toolbar-note">Click a page to target it, place your text, images, or signatures, then download the actual edited PDF with those changes embedded.</div>
+                        </div>
+
+                        <div id="pdf-editor-text-panel" class="pdf-editor-signature-panel" hidden>
+                            <div class="pdf-editor-style-grid">
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-text-font-select">Text Font</label>
+                                    <select id="pdf-editor-text-font-select">
+                                        <option value="'Outfit', sans-serif">Outfit</option>
+                                        <option value="'DM Sans', sans-serif">DM Sans</option>
+                                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                                        <option value="Arial, sans-serif">Arial</option>
+                                        <option value="Verdana, sans-serif">Verdana</option>
+                                        <option value="Tahoma, sans-serif">Tahoma</option>
+                                        <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                                        <option value="'Space Mono', monospace">Space Mono</option>
+                                        <option value="'Oswald', sans-serif">Oswald</option>
+                                        <option value="'Bebas Neue', sans-serif">Bebas Neue</option>
+                                        <option value="'Cinzel', serif">Cinzel</option>
+                                        <option value="'Abril Fatface', serif">Abril Fatface</option>
+                                        <option value="'Playfair Display', serif">Playfair Display</option>
+                                        <option value="'Merriweather', serif">Merriweather</option>
+                                        <option value="'Lora', serif">Lora</option>
+                                        <option value="'Libre Baskerville', serif">Libre Baskerville</option>
+                                        <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+                                        <option value="Georgia, serif">Georgia</option>
+                                        <option value="'Times New Roman', serif">Times New Roman</option>
+                                        <option value="Garamond, serif">Garamond</option>
+                                        <option value="'Palatino Linotype', serif">Palatino Linotype</option>
+                                        <option value="'Book Antiqua', serif">Book Antiqua</option>
+                                        <option value="'Courier New', monospace">Courier New</option>
+                                    </select>
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-text-color-input">Text Color</label>
+                                    <input id="pdf-editor-text-color-input" type="color" value="#ffffff">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-text-stroke-color-input">Text stroke</label>
+                                    <input id="pdf-editor-text-stroke-color-input" type="color" value="#000000">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-text-stroke-width-input">Text stroke <span id="pdf-editor-text-stroke-width-value" class="pdf-editor-range-value">0px</span></label>
+                                    <input id="pdf-editor-text-stroke-width-input" type="range" min="0" max="8" step="0.5" value="0">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-text-opacity-input">Text Opacity <span id="pdf-editor-text-opacity-value" class="pdf-editor-range-value">82%</span></label>
+                                    <input id="pdf-editor-text-opacity-input" type="range" min="0" max="100" step="1" value="82">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="pdf-editor-signature-panel" class="pdf-editor-signature-panel" hidden>
+                            <div class="pdf-editor-signature-grid">
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-signature-input">Signature Text</label>
+                                    <input id="pdf-editor-signature-input" type="text" maxlength="120" placeholder="Type the name you want to sign with">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-signature-font-select">Cursive Font</label>
+                                    <select id="pdf-editor-signature-font-select">
+                                        <option value="'Great Vibes', cursive">Great Vibes</option>
+                                        <option value="'Allura', cursive">Allura</option>
+                                        <option value="'Dancing Script', cursive">Dancing Script</option>
+                                        <option value="'Pacifico', cursive">Pacifico</option>
+                                        <option value="'Parisienne', cursive">Parisienne</option>
+                                        <option value="'Sacramento', cursive">Sacramento</option>
+                                        <option value="'Satisfy', cursive">Satisfy</option>
+                                        <option value="'Marck Script', cursive">Marck Script</option>
+                                        <option value="'Alex Brush', cursive">Alex Brush</option>
+                                        <option value="'Kaushan Script', cursive">Kaushan Script</option>
+                                        <option value="'Merienda', cursive">Merienda</option>
+                                        <option value="'Mrs Saint Delafield', cursive">Mrs Saint Delafield</option>
+                                        <option value="'Petit Formal Script', cursive">Petit Formal Script</option>
+                                        <option value="'Playball', cursive">Playball</option>
+                                        <option value="'Seaweed Script', cursive">Seaweed Script</option>
+                                        <option value="'Tangerine', cursive">Tangerine</option>
+                                        <option value="'Yellowtail', cursive">Yellowtail</option>
+                                    </select>
+                                </div>
+                                <button id="pdf-editor-insert-signature-button" class="pdf-editor-button" type="button">Insert Signature</button>
+                            </div>
+                            <div class="pdf-editor-style-grid">
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-signature-color-input">Signature Color</label>
+                                    <input id="pdf-editor-signature-color-input" type="color" value="#ffffff">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-signature-stroke-color-input">Signature stroke</label>
+                                    <input id="pdf-editor-signature-stroke-color-input" type="color" value="#000000">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-signature-stroke-width-input">Signature stroke <span id="pdf-editor-signature-stroke-width-value" class="pdf-editor-range-value">0px</span></label>
+                                    <input id="pdf-editor-signature-stroke-width-input" type="range" min="0" max="8" step="0.5" value="0">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-signature-opacity-input">Signature Opacity <span id="pdf-editor-signature-opacity-value" class="pdf-editor-range-value">68%</span></label>
+                                    <input id="pdf-editor-signature-opacity-input" type="range" min="0" max="100" step="1" value="68">
+                                </div>
+                            </div>
+                            <div id="pdf-editor-signature-preview" class="pdf-editor-signature-preview">Type a signature to preview it here.</div>
+                        </div>
+
+                        <div id="pdf-editor-initials-panel" class="pdf-editor-signature-panel" hidden>
+                            <div class="pdf-editor-signature-grid">
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-initials-input">Initials</label>
+                                    <input id="pdf-editor-initials-input" type="text" maxlength="4" placeholder="Type initials">
+                                </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-initials-font-select">Initials Font</label>
+                                    <select id="pdf-editor-initials-font-select">
+                                        <option value="'Great Vibes', cursive">Great Vibes</option>
+                                        <option value="'Allura', cursive">Allura</option>
+                                        <option value="'Dancing Script', cursive">Dancing Script</option>
+                                        <option value="'Pacifico', cursive">Pacifico</option>
+                                        <option value="'Parisienne', cursive">Parisienne</option>
+                                        <option value="'Sacramento', cursive">Sacramento</option>
+                                        <option value="'Satisfy', cursive">Satisfy</option>
+                                        <option value="'Alex Brush', cursive">Alex Brush</option>
+                                        <option value="'Kaushan Script', cursive">Kaushan Script</option>
+                                        <option value="'Playball', cursive">Playball</option>
+                                        <option value="'Tangerine', cursive">Tangerine</option>
+                                        <option value="'Yellowtail', cursive">Yellowtail</option>
+                                        <option value="'Outfit', sans-serif">Outfit</option>
+                                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                                        <option value="'Times New Roman', serif">Times New Roman</option>
+                                    </select>
+                                </div>
+                                <button id="pdf-editor-insert-initials-button" class="pdf-editor-button" type="button">Insert Initials</button>
+                            </div>
+                            <div id="pdf-editor-initials-preview" class="pdf-editor-signature-preview">Type initials to preview them here.</div>
+                        </div>
+
+                        <div id="pdf-editor-preview-empty" class="pdf-editor-preview-empty"></div>
+
+                        <div id="pdf-editor-preview-stage" class="pdf-editor-preview-stage" hidden>
+                            <div id="pdf-editor-preview-pages" class="pdf-editor-preview-pages" aria-label="PDF pages preview"></div>
+                        </div>
+
+                        <div id="pdf-editor-bottom-actions" class="pdf-editor-bottom-actions" hidden>
+                            <button id="pdf-editor-download-button-bottom" class="pdf-editor-button is-secondary" type="button" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <span>Download With Changes</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            if (!window.pdfjsLib || !window.PDFLib) {
+                return;
+            }
+
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+            const fileInput = document.getElementById('pdf-editor-input');
+            const imageInput = document.getElementById('pdf-editor-image-input');
+            const dropzone = document.getElementById('pdf-editor-dropzone');
+            const selectButton = document.getElementById('pdf-editor-select-button');
+            const clearButton = document.getElementById('pdf-editor-clear-button');
+            const status = document.getElementById('pdf-editor-status');
+            const previewMeta = document.getElementById('pdf-editor-preview-meta');
+            const previewName = document.getElementById('pdf-editor-preview-name');
+            const previewDetails = document.getElementById('pdf-editor-preview-details');
+            const previewToolbar = document.getElementById('pdf-editor-preview-toolbar');
+            const addTextButton = document.getElementById('pdf-editor-add-text-button');
+            const addImageButton = document.getElementById('pdf-editor-add-image-button');
+            const addSignatureButton = document.getElementById('pdf-editor-add-signature-button');
+            const addInitialsButton = document.getElementById('pdf-editor-add-initials-button');
+            const downloadButton = document.getElementById('pdf-editor-download-button');
+            const bottomActions = document.getElementById('pdf-editor-bottom-actions');
+            const downloadButtonBottom = document.getElementById('pdf-editor-download-button-bottom');
+            const textFontSelect = document.getElementById('pdf-editor-text-font-select');
+            const textColorInput = document.getElementById('pdf-editor-text-color-input');
+            const textStrokeColorInput = document.getElementById('pdf-editor-text-stroke-color-input');
+            const textStrokeWidthInput = document.getElementById('pdf-editor-text-stroke-width-input');
+            const textStrokeWidthValue = document.getElementById('pdf-editor-text-stroke-width-value');
+            const textOpacityInput = document.getElementById('pdf-editor-text-opacity-input');
+            const textOpacityValue = document.getElementById('pdf-editor-text-opacity-value');
+            const signatureColorInput = document.getElementById('pdf-editor-signature-color-input');
+            const signatureStrokeColorInput = document.getElementById('pdf-editor-signature-stroke-color-input');
+            const signatureStrokeWidthInput = document.getElementById('pdf-editor-signature-stroke-width-input');
+            const signatureStrokeWidthValue = document.getElementById('pdf-editor-signature-stroke-width-value');
+            const signatureOpacityInput = document.getElementById('pdf-editor-signature-opacity-input');
+            const signatureOpacityValue = document.getElementById('pdf-editor-signature-opacity-value');
+            const imageOpacityInput = document.getElementById('pdf-editor-image-opacity-input');
+            const imageOpacityValue = document.getElementById('pdf-editor-image-opacity-value');
+            const textPanel = document.getElementById('pdf-editor-text-panel');
+            const signaturePanel = document.getElementById('pdf-editor-signature-panel');
+            const signatureInput = document.getElementById('pdf-editor-signature-input');
+            const signatureFontSelect = document.getElementById('pdf-editor-signature-font-select');
+            const insertSignatureButton = document.getElementById('pdf-editor-insert-signature-button');
+            const signaturePreview = document.getElementById('pdf-editor-signature-preview');
+            const initialsPanel = document.getElementById('pdf-editor-initials-panel');
+            const initialsInput = document.getElementById('pdf-editor-initials-input');
+            const initialsFontSelect = document.getElementById('pdf-editor-initials-font-select');
+            const insertInitialsButton = document.getElementById('pdf-editor-insert-initials-button');
+            const initialsPreview = document.getElementById('pdf-editor-initials-preview');
+            const previewEmpty = document.getElementById('pdf-editor-preview-empty');
+            const previewStage = document.getElementById('pdf-editor-preview-stage');
+            const previewPages = document.getElementById('pdf-editor-preview-pages');
+
+            if (!fileInput || !imageInput || !dropzone || !selectButton || !clearButton || !status || !previewMeta || !previewName || !previewDetails || !previewToolbar || !addTextButton || !addImageButton || !addSignatureButton || !addInitialsButton || !downloadButton || !bottomActions || !downloadButtonBottom || !textFontSelect || !textColorInput || !textStrokeColorInput || !textStrokeWidthInput || !textStrokeWidthValue || !textOpacityInput || !textOpacityValue || !signatureColorInput || !signatureStrokeColorInput || !signatureStrokeWidthInput || !signatureStrokeWidthValue || !signatureOpacityInput || !signatureOpacityValue || !imageOpacityInput || !imageOpacityValue || !textPanel || !signaturePanel || !signatureInput || !signatureFontSelect || !insertSignatureButton || !signaturePreview || !initialsPanel || !initialsInput || !initialsFontSelect || !insertInitialsButton || !initialsPreview || !previewEmpty || !previewStage || !previewPages) {
+                return;
+            }
+
+            let activeOverlayItem = null;
+            let activeImageUrls = [];
+            let activePdfBytes = null;
+            let activePdfName = '';
+            let activePdfMimeType = 'application/pdf';
+            let renderedPages = [];
+            let activePageIndex = 0;
+            let textCounter = 0;
+            let signatureCounter = 0;
+            let initialsCounter = 0;
+            let renderSequence = 0;
+            let exportInProgress = false;
+
+            function clampValue(value, min, max) {
+                if (!Number.isFinite(value)) {
+                    return min;
+                }
+                return Math.min(Math.max(value, min), max);
+            }
+
+            function setActiveOverlayItem(item) {
+                activeOverlayItem = item instanceof HTMLElement ? item : null;
+                previewPages.querySelectorAll('.pdf-editor-text-item, .pdf-editor-signature-item, .pdf-editor-initials-item, .pdf-editor-image-item').forEach((node) => {
+                    node.classList.toggle('is-active', node === activeOverlayItem);
+                });
+
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
+                    textPanel.hidden = false;
+                    const content = activeOverlayItem.querySelector('.pdf-editor-text-content');
+                    if (content instanceof HTMLElement) {
+                        textFontSelect.value = normalizeTextFontValue(window.getComputedStyle(content).fontFamily);
+                        textColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#ffffff');
+                        textStrokeColorInput.value = normalizeColorValue(content.dataset.strokeColor, '#000000');
+                        textStrokeWidthInput.value = normalizeStrokeWidth(content.dataset.strokeWidth, '0');
+                        updateRangeLabel(textStrokeWidthInput, textStrokeWidthValue, 'px');
+                    }
+                    textOpacityInput.value = normalizeOpacityPercent(window.getComputedStyle(activeOverlayItem).opacity, 82);
+                    updateOpacityLabel(textOpacityInput, textOpacityValue);
+                }
+
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
+                    const content = activeOverlayItem.querySelector('.pdf-editor-signature-content');
+                    if (content instanceof HTMLElement) {
+                        signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#ffffff');
+                        signatureStrokeColorInput.value = normalizeColorValue(content.dataset.strokeColor, '#000000');
+                        signatureStrokeWidthInput.value = normalizeStrokeWidth(content.dataset.strokeWidth, '0');
+                        updateRangeLabel(signatureStrokeWidthInput, signatureStrokeWidthValue, 'px');
+                    }
+                    signatureOpacityInput.value = normalizeOpacityPercent(window.getComputedStyle(activeOverlayItem).opacity, 68);
+                    updateOpacityLabel(signatureOpacityInput, signatureOpacityValue);
+                }
+
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
+                    const content = activeOverlayItem.querySelector('.pdf-editor-initials-content');
+                    if (content instanceof HTMLElement) {
+                        signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#ffffff');
+                        signatureStrokeColorInput.value = normalizeColorValue(content.dataset.strokeColor, '#000000');
+                        signatureStrokeWidthInput.value = normalizeStrokeWidth(content.dataset.strokeWidth, '0');
+                        updateRangeLabel(signatureStrokeWidthInput, signatureStrokeWidthValue, 'px');
+                    }
+                    signatureOpacityInput.value = normalizeOpacityPercent(window.getComputedStyle(activeOverlayItem).opacity, 68);
+                    updateOpacityLabel(signatureOpacityInput, signatureOpacityValue);
+                }
+
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-image-item')) {
+                    imageOpacityInput.value = normalizeOpacityPercent(window.getComputedStyle(activeOverlayItem).opacity, 100);
+                    updateOpacityLabel(imageOpacityInput, imageOpacityValue);
+                }
+            }
+
+            function normalizeColorValue(colorValue, fallback) {
+                const raw = String(colorValue || '').trim();
+                if (/^#[0-9a-f]{6}$/i.test(raw)) {
+                    return raw;
+                }
+
+                const rgbMatch = raw.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+                if (!rgbMatch) {
+                    return fallback;
+                }
+
+                const toHex = (value) => Number.parseInt(value, 10).toString(16).padStart(2, '0');
+                return `#${toHex(rgbMatch[1])}${toHex(rgbMatch[2])}${toHex(rgbMatch[3])}`;
+            }
+
+            function applyOverlayTextColor(item, colorValue) {
+                if (!(item instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (item.classList.contains('pdf-editor-text-item')) {
+                    const content = item.querySelector('.pdf-editor-text-content');
+                    if (content instanceof HTMLElement) {
+                        content.style.color = colorValue;
+                    }
+                    return;
+                }
+
+                if (item.classList.contains('pdf-editor-signature-item')) {
+                    const content = item.querySelector('.pdf-editor-signature-content');
+                    if (content instanceof HTMLElement) {
+                        content.style.color = colorValue;
+                    }
+                    return;
+                }
+
+                if (item.classList.contains('pdf-editor-initials-item')) {
+                    const content = item.querySelector('.pdf-editor-initials-content');
+                    if (content instanceof HTMLElement) {
+                        content.style.color = colorValue;
+                    }
+                }
+            }
+
+            function normalizeStrokeWidth(strokeWidthValue, fallback) {
+                const parsed = Number.parseFloat(String(strokeWidthValue || ''));
+                if (!Number.isFinite(parsed)) {
+                    return String(fallback);
+                }
+                return String(clampValue(parsed, 0, 8));
+            }
+
+            function updateRangeLabel(input, label, suffix) {
+                label.textContent = `${input.value}${suffix}`;
+            }
+
+            function applyOverlayFontFamily(item, fontValue) {
+                if (!(item instanceof HTMLElement) || !item.classList.contains('pdf-editor-text-item')) {
+                    return;
+                }
+                const content = item.querySelector('.pdf-editor-text-content');
+                if (content instanceof HTMLElement) {
+                    content.style.fontFamily = fontValue;
+                }
+            }
+
+            function normalizeTextFontValue(fontFamilyValue) {
+                const normalized = String(fontFamilyValue || '').toLowerCase();
+                if (normalized.includes('dm sans')) {
+                    return "'DM Sans', sans-serif";
+                }
+                if (normalized.includes('montserrat')) {
+                    return "'Montserrat', sans-serif";
+                }
+                if (normalized.includes('verdana')) {
+                    return 'Verdana, sans-serif';
+                }
+                if (normalized.includes('tahoma')) {
+                    return 'Tahoma, sans-serif';
+                }
+                if (normalized.includes('trebuchet ms')) {
+                    return "'Trebuchet MS', sans-serif";
+                }
+                if (normalized.includes('space mono')) {
+                    return "'Space Mono', monospace";
+                }
+                if (normalized.includes('oswald')) {
+                    return "'Oswald', sans-serif";
+                }
+                if (normalized.includes('bebas neue')) {
+                    return "'Bebas Neue', sans-serif";
+                }
+                if (normalized.includes('cinzel')) {
+                    return "'Cinzel', serif";
+                }
+                if (normalized.includes('abril fatface')) {
+                    return "'Abril Fatface', serif";
+                }
+                if (normalized.includes('playfair display')) {
+                    return "'Playfair Display', serif";
+                }
+                if (normalized.includes('merriweather')) {
+                    return "'Merriweather', serif";
+                }
+                if (normalized.includes('lora')) {
+                    return "'Lora', serif";
+                }
+                if (normalized.includes('libre baskerville')) {
+                    return "'Libre Baskerville', serif";
+                }
+                if (normalized.includes('cormorant garamond')) {
+                    return "'Cormorant Garamond', serif";
+                }
+                if (normalized.includes('georgia')) {
+                    return 'Georgia, serif';
+                }
+                if (normalized.includes('times new roman')) {
+                    return "'Times New Roman', serif";
+                }
+                if (normalized.includes('garamond')) {
+                    return 'Garamond, serif';
+                }
+                if (normalized.includes('palatino linotype')) {
+                    return "'Palatino Linotype', serif";
+                }
+                if (normalized.includes('book antiqua')) {
+                    return "'Book Antiqua', serif";
+                }
+                if (normalized.includes('arial')) {
+                    return 'Arial, sans-serif';
+                }
+                if (normalized.includes('courier new')) {
+                    return "'Courier New', monospace";
+                }
+                return "'Outfit', sans-serif";
+            }
+
+            function applyContentStroke(content, colorValue, widthValue) {
+                if (!(content instanceof HTMLElement)) {
+                    return;
+                }
+
+                const strokeWidth = normalizeStrokeWidth(widthValue, '0');
+                content.dataset.strokeColor = colorValue;
+                content.dataset.strokeWidth = strokeWidth;
+                content.style.webkitTextStrokeColor = colorValue;
+                content.style.webkitTextStrokeWidth = `${strokeWidth}px`;
+                content.style.paintOrder = 'stroke fill';
+            }
+
+            function applyOverlayStroke(item, colorValue, widthValue) {
+                if (!(item instanceof HTMLElement)) {
+                    return;
+                }
+
+                const content = item.querySelector('.pdf-editor-text-content, .pdf-editor-signature-content, .pdf-editor-initials-content');
+                applyContentStroke(content, colorValue, widthValue);
+            }
+
+            function normalizeOpacityPercent(opacityValue, fallback) {
+                const parsed = Number.parseFloat(String(opacityValue || ''));
+                if (!Number.isFinite(parsed)) {
+                    return String(fallback);
+                }
+                return String(Math.round(clampValue(parsed, 0, 1) * 100));
+            }
+
+            function updateOpacityLabel(input, label) {
+                label.textContent = `${input.value}%`;
+            }
+
+            function applyOverlayOpacity(item, percentValue) {
+                if (!(item instanceof HTMLElement)) {
+                    return;
+                }
+                const nextOpacity = clampValue(Number.parseFloat(String(percentValue || '100')) / 100, 0, 1);
+                item.style.opacity = String(nextOpacity);
+            }
+
+            function getPageStageForItem(item) {
+                return item instanceof HTMLElement ? item.closest('.pdf-editor-page-stage') : null;
+            }
+
+            function getOverlayLayerForItem(item) {
+                const pageStage = getPageStageForItem(item);
+                return pageStage ? pageStage.querySelector('.pdf-editor-overlay-layer') : null;
+            }
+
+            function getPageRecordAtPoint(clientX, clientY) {
+                return renderedPages.find((pageRecord) => {
+                    const rect = pageRecord.wrapper.getBoundingClientRect();
+                    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+                }) || null;
+            }
+
+            function getActivePageRecord() {
+                if (!renderedPages.length) {
+                    return null;
+                }
+                return renderedPages[activePageIndex] || renderedPages[0] || null;
+            }
+
+            function revokeImageUrls() {
+                activeImageUrls.forEach((url) => URL.revokeObjectURL(url));
+                activeImageUrls = [];
+            }
+
+            function setActivePage(index) {
+                activePageIndex = clampValue(index, 0, Math.max(renderedPages.length - 1, 0));
+                renderedPages.forEach((pageRecord, pageRecordIndex) => {
+                    pageRecord.wrapper.classList.toggle('is-active', pageRecordIndex === activePageIndex);
+                });
+            }
+
+            function getOverlayItems() {
+                return Array.from(previewPages.querySelectorAll('.pdf-editor-text-item, .pdf-editor-signature-item, .pdf-editor-initials-item, .pdf-editor-image-item'));
+            }
+
+            function setEditorEnabledState(isEnabled) {
+                clearButton.disabled = !isEnabled;
+                addTextButton.disabled = !isEnabled;
+                addImageButton.disabled = !isEnabled;
+                addSignatureButton.disabled = !isEnabled;
+                addInitialsButton.disabled = !isEnabled;
+                downloadButton.disabled = !isEnabled || exportInProgress;
+                downloadButtonBottom.disabled = !isEnabled || exportInProgress;
+            }
+
+            function updateSignaturePreview() {
+                const value = String(signatureInput.value || '').trim();
+                signaturePreview.textContent = value || 'Type a signature to preview it here.';
+                signaturePreview.style.fontFamily = value ? String(signatureFontSelect.value || "'Great Vibes', cursive") : "'Outfit', sans-serif";
+                signaturePreview.style.color = signatureColorInput.value || '#ffffff';
+                signaturePreview.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
+                signaturePreview.style.backgroundColor = 'transparent';
+                applyContentStroke(signaturePreview, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+            }
+
+            function updateInitialsPreview() {
+                const value = String(initialsInput.value || '').trim().toUpperCase();
+                initialsPreview.textContent = value || 'Type initials to preview them here.';
+                initialsPreview.style.fontFamily = value ? String(initialsFontSelect.value || "'Great Vibes', cursive") : "'Outfit', sans-serif";
+                initialsPreview.style.color = signatureColorInput.value || '#ffffff';
+                initialsPreview.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
+                initialsPreview.style.backgroundColor = 'transparent';
+                applyContentStroke(initialsPreview, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+            }
+
+            function attachDragBehavior(item, handle, options) {
+                if (!(item instanceof HTMLElement) || !(handle instanceof HTMLElement)) {
+                    return;
+                }
+
+                const dragOptions = options && typeof options === 'object' ? options : {};
+                const dragRoot = dragOptions.dragRoot instanceof HTMLElement ? dragOptions.dragRoot : handle;
+                const shouldStartDrag = typeof dragOptions.shouldStartDrag === 'function'
+                    ? dragOptions.shouldStartDrag
+                    : () => true;
+                const allowPageTransfer = Boolean(dragOptions.allowPageTransfer);
+
+                dragRoot.addEventListener('pointerdown', (event) => {
+                    if (!shouldStartDrag(event)) {
+                        return;
+                    }
+                    event.preventDefault();
+                    setActiveOverlayItem(item);
+                    item.classList.add('is-dragging');
+
+                    const pageStage = getPageStageForItem(item);
+                    if (!pageStage) {
+                        item.classList.remove('is-dragging');
+                        return;
+                    }
+                    let overlayLayer = getOverlayLayerForItem(item);
+                    if (!overlayLayer) {
+                        item.classList.remove('is-dragging');
+                        return;
+                    }
+
+                    setActivePage(Number(item.dataset.pageIndex || '0'));
+
+                    let stageRect = overlayLayer.getBoundingClientRect();
+                    const currentLeft = Number.parseFloat(item.style.left) || 0;
+                    const currentTop = Number.parseFloat(item.style.top) || 0;
+                    const offsetX = event.clientX - stageRect.left - currentLeft;
+                    const offsetY = event.clientY - stageRect.top - currentTop;
+
+                    const handleMove = (moveEvent) => {
+                        if (allowPageTransfer) {
+                            const targetPageRecord = getPageRecordAtPoint(moveEvent.clientX, moveEvent.clientY);
+                            if (targetPageRecord && targetPageRecord.overlayLayer !== overlayLayer) {
+                                targetPageRecord.overlayLayer.appendChild(item);
+                                item.dataset.pageIndex = String(targetPageRecord.pageIndex);
+                                overlayLayer = targetPageRecord.overlayLayer;
+                                stageRect = overlayLayer.getBoundingClientRect();
+                                setActivePage(targetPageRecord.pageIndex);
+                            }
+                        }
+
+                        const minLeft = -Math.max(item.offsetWidth - 8, 0);
+                        const minTop = -Math.max(item.offsetHeight - 8, 0);
+                        const maxLeft = Math.max(overlayLayer.clientWidth - 8, 0);
+                        const maxTop = Math.max(overlayLayer.clientHeight - 8, 0);
+                        const nextLeft = clampValue(moveEvent.clientX - stageRect.left - offsetX, minLeft, maxLeft);
+                        const nextTop = clampValue(moveEvent.clientY - stageRect.top - offsetY, minTop, maxTop);
+                        item.style.left = `${nextLeft}px`;
+                        item.style.top = `${nextTop}px`;
+                    };
+
+                    const stop = () => {
+                        item.classList.remove('is-dragging');
+                        window.removeEventListener('pointermove', handleMove);
+                        window.removeEventListener('pointerup', stop);
+                    };
+
+                    window.addEventListener('pointermove', handleMove);
+                    window.addEventListener('pointerup', stop);
+                });
+            }
+
+            function attachSizeControls(item, content, decreaseButton, increaseButton, config) {
+                const defaultSize = config.defaultSize;
+                const step = config.step;
+                const minSize = config.minSize;
+                const maxSize = config.maxSize;
+
+                const readSize = () => {
+                    const inlineValue = Number.parseFloat(content.style.fontSize);
+                    if (Number.isFinite(inlineValue)) {
+                        return inlineValue;
+                    }
+                    const computedValue = Number.parseFloat(window.getComputedStyle(content).fontSize);
+                    return Number.isFinite(computedValue) ? computedValue : defaultSize;
+                };
+
+                const applySize = (nextSize) => {
+                    content.style.fontSize = `${clampValue(nextSize, minSize, maxSize)}px`;
+                };
+
+                decreaseButton.addEventListener('click', () => {
+                    setActiveOverlayItem(item);
+                    applySize(readSize() - step);
+                });
+
+                increaseButton.addEventListener('click', () => {
+                    setActiveOverlayItem(item);
+                    applySize(readSize() + step);
+                });
+            }
+
+            function createOverlayChrome(item, options) {
+                const dragHandle = document.createElement('button');
+                dragHandle.type = 'button';
+                dragHandle.className = 'pdf-editor-overlay-handle';
+                dragHandle.setAttribute('aria-label', options.dragLabel);
+                dragHandle.textContent = '::';
+
+                const decreaseButton = document.createElement('button');
+                decreaseButton.type = 'button';
+                decreaseButton.className = 'pdf-editor-overlay-size';
+                decreaseButton.setAttribute('aria-label', options.decreaseLabel);
+                decreaseButton.textContent = 'A-';
+
+                const increaseButton = document.createElement('button');
+                increaseButton.type = 'button';
+                increaseButton.className = 'pdf-editor-overlay-size';
+                increaseButton.setAttribute('aria-label', options.increaseLabel);
+                increaseButton.textContent = 'A+';
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'pdf-editor-overlay-remove';
+                removeButton.setAttribute('aria-label', options.removeLabel);
+                removeButton.textContent = 'x';
+
+                item.appendChild(dragHandle);
+                item.appendChild(decreaseButton);
+                item.appendChild(increaseButton);
+
+                return { dragHandle, decreaseButton, increaseButton, removeButton };
+            }
+
+            function appendItemToActivePage(item) {
+                const pageRecord = getActivePageRecord();
+                if (!pageRecord) {
+                    status.textContent = 'Upload a PDF before adding changes.';
+                    return false;
+                }
+
+                item.dataset.pageIndex = String(pageRecord.pageIndex);
+                pageRecord.overlayLayer.appendChild(item);
+                setActivePage(pageRecord.pageIndex);
+                return true;
+            }
+
+            function createTextItem() {
+                textCounter += 1;
+
+                const item = document.createElement('div');
+                item.className = 'pdf-editor-text-item';
+                item.style.left = '28px';
+                item.style.top = `${28 + ((textCounter - 1) % 5) * 18}px`;
+
+                const controls = createOverlayChrome(item, {
+                    dragLabel: 'Drag text box',
+                    decreaseLabel: 'Decrease text size',
+                    increaseLabel: 'Increase text size',
+                    removeLabel: 'Remove text box'
+                });
+
+                const content = document.createElement('div');
+                content.className = 'pdf-editor-text-content';
+                content.contentEditable = 'true';
+                content.spellcheck = false;
+                content.setAttribute('aria-label', 'Editable text');
+                content.style.fontFamily = textFontSelect.value || "'Outfit', sans-serif";
+                content.style.fontSize = '18px';
+                content.style.color = textColorInput.value || '#ffffff';
+                content.textContent = 'Add text';
+                item.style.backgroundColor = 'transparent';
+                item.style.opacity = String(clampValue(Number.parseFloat(textOpacityInput.value || '82') / 100, 0, 1));
+                applyContentStroke(content, textStrokeColorInput.value || '#000000', textStrokeWidthInput.value || '0');
+
+                item.appendChild(content);
+                item.appendChild(controls.removeButton);
+                if (!appendItemToActivePage(item)) {
+                    return;
+                }
+                setActiveOverlayItem(item);
+
+                attachDragBehavior(item, controls.dragHandle, {
+                    dragRoot: item,
+                    allowPageTransfer: true,
+                    shouldStartDrag: (event) => {
+                        const target = event.target instanceof HTMLElement ? event.target : null;
+                        if (!target) {
+                            return false;
+                        }
+                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size')) {
+                            return false;
+                        }
+                        if (target.closest('.pdf-editor-text-content')) {
+                            return false;
+                        }
+                        return true;
+                    }
+                });
+                attachSizeControls(item, content, controls.decreaseButton, controls.increaseButton, {
+                    defaultSize: 18,
+                    minSize: 12,
+                    maxSize: 72,
+                    step: 2
+                });
+
+                item.addEventListener('pointerdown', () => setActiveOverlayItem(item));
+                content.addEventListener('focus', () => setActiveOverlayItem(item));
+                controls.removeButton.addEventListener('click', () => {
+                    if (activeOverlayItem === item) {
+                        setActiveOverlayItem(null);
+                    }
+                    item.remove();
+                });
+
+                window.requestAnimationFrame(() => {
+                    content.focus();
+                    const selection = window.getSelection();
+                    if (!selection) {
+                        return;
+                    }
+                    const range = document.createRange();
+                    range.selectNodeContents(content);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                });
+            }
+
+            function createSignatureItem() {
+                const signatureText = String(signatureInput.value || '').trim();
+                if (!signatureText) {
+                    status.textContent = 'Enter signature text before inserting a signature.';
+                    signatureInput.focus();
+                    return;
+                }
+
+                signatureCounter += 1;
+
+                const item = document.createElement('div');
+                item.className = 'pdf-editor-signature-item';
+                item.style.left = '40px';
+                item.style.top = `${40 + ((signatureCounter - 1) % 5) * 22}px`;
+
+                const controls = createOverlayChrome(item, {
+                    dragLabel: 'Drag signature',
+                    decreaseLabel: 'Decrease signature size',
+                    increaseLabel: 'Increase signature size',
+                    removeLabel: 'Remove signature'
+                });
+
+                const content = document.createElement('div');
+                content.className = 'pdf-editor-signature-content';
+                content.style.fontFamily = String(signatureFontSelect.value || "'Great Vibes', cursive");
+                content.style.fontSize = '42px';
+                content.style.color = signatureColorInput.value || '#ffffff';
+                content.textContent = signatureText;
+                item.style.backgroundColor = 'transparent';
+                item.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
+                applyContentStroke(content, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+
+                item.appendChild(content);
+                item.appendChild(controls.removeButton);
+                if (!appendItemToActivePage(item)) {
+                    return;
+                }
+                setActiveOverlayItem(item);
+
+                attachDragBehavior(item, controls.dragHandle, {
+                    dragRoot: item,
+                    allowPageTransfer: true,
+                    shouldStartDrag: (event) => {
+                        const target = event.target instanceof HTMLElement ? event.target : null;
+                        if (!target) {
+                            return false;
+                        }
+                        return !target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size');
+                    }
+                });
+                attachSizeControls(item, content, controls.decreaseButton, controls.increaseButton, {
+                    defaultSize: 42,
+                    minSize: 20,
+                    maxSize: 96,
+                    step: 3
+                });
+
+                item.addEventListener('pointerdown', () => setActiveOverlayItem(item));
+                controls.removeButton.addEventListener('click', () => {
+                    if (activeOverlayItem === item) {
+                        setActiveOverlayItem(null);
+                    }
+                    item.remove();
+                });
+
+                status.textContent = 'Signature added. Drag it anywhere on top of the PDF preview.';
+            }
+
+            function createInitialsItem() {
+                const initialsText = String(initialsInput.value || '').trim().toUpperCase();
+                if (!initialsText) {
+                    status.textContent = 'Enter initials before inserting them.';
+                    initialsInput.focus();
+                    return;
+                }
+
+                initialsCounter += 1;
+
+                const item = document.createElement('div');
+                item.className = 'pdf-editor-initials-item';
+                item.style.left = '40px';
+                item.style.top = `${40 + ((initialsCounter - 1) % 5) * 22}px`;
+
+                const controls = createOverlayChrome(item, {
+                    dragLabel: 'Drag initials',
+                    decreaseLabel: 'Decrease initials size',
+                    increaseLabel: 'Increase initials size',
+                    removeLabel: 'Remove initials'
+                });
+
+                const content = document.createElement('div');
+                content.className = 'pdf-editor-initials-content';
+                content.style.fontFamily = String(initialsFontSelect.value || "'Great Vibes', cursive");
+                content.style.fontSize = '36px';
+                content.style.color = signatureColorInput.value || '#ffffff';
+                content.textContent = initialsText;
+                item.style.backgroundColor = 'transparent';
+                item.style.opacity = String(clampValue(Number.parseFloat(signatureOpacityInput.value || '68') / 100, 0, 1));
+                applyContentStroke(content, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+
+                item.appendChild(content);
+                item.appendChild(controls.removeButton);
+                if (!appendItemToActivePage(item)) {
+                    return;
+                }
+                setActiveOverlayItem(item);
+
+                attachDragBehavior(item, controls.dragHandle, {
+                    dragRoot: item,
+                    allowPageTransfer: true,
+                    shouldStartDrag: (event) => {
+                        const target = event.target instanceof HTMLElement ? event.target : null;
+                        if (!target) {
+                            return false;
+                        }
+                        return !target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size');
+                    }
+                });
+                attachSizeControls(item, content, controls.decreaseButton, controls.increaseButton, {
+                    defaultSize: 36,
+                    minSize: 18,
+                    maxSize: 84,
+                    step: 3
+                });
+
+                item.addEventListener('pointerdown', () => setActiveOverlayItem(item));
+                controls.removeButton.addEventListener('click', () => {
+                    if (activeOverlayItem === item) {
+                        setActiveOverlayItem(null);
+                    }
+                    item.remove();
+                });
+
+                status.textContent = 'Initials added. Drag them anywhere on top of the PDF preview.';
+            }
+
+            function createImageItem(file) {
+                if (!(file instanceof File)) {
+                    return;
+                }
+
+                const fileName = String(file.name || '').toLowerCase();
+                const mimeType = String(file.type || '').toLowerCase();
+                const isImage = mimeType.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/.test(fileName);
+                if (!isImage) {
+                    status.textContent = 'Please choose an image file.';
+                    return;
+                }
+
+                const imageUrl = URL.createObjectURL(file);
+                activeImageUrls.push(imageUrl);
+
+                const item = document.createElement('div');
+                item.className = 'pdf-editor-image-item';
+                item.style.left = '48px';
+                item.style.top = '48px';
+                item.style.width = '220px';
+                item.style.height = '160px';
+                item.dataset.rotation = '0';
+                item.style.opacity = String(clampValue(Number.parseFloat(imageOpacityInput.value || '100') / 100, 0, 1));
+
+                const body = document.createElement('div');
+                body.className = 'pdf-editor-image-body';
+
+                const image = document.createElement('img');
+                image.className = 'pdf-editor-image-preview';
+                image.alt = file.name || 'Overlay image';
+                image.src = imageUrl;
+
+                const controls = document.createElement('div');
+                controls.className = 'pdf-editor-image-controls';
+
+                const handleGroup = document.createElement('div');
+                handleGroup.className = 'pdf-editor-image-handle-group';
+
+                const dragHandle = document.createElement('button');
+                dragHandle.type = 'button';
+                dragHandle.className = 'pdf-editor-overlay-handle';
+                dragHandle.setAttribute('aria-label', 'Drag image');
+                dragHandle.textContent = '::';
+
+                const rotateButton = document.createElement('button');
+                rotateButton.type = 'button';
+                rotateButton.className = 'pdf-editor-image-rotate';
+                rotateButton.setAttribute('aria-label', 'Rotate image');
+                rotateButton.textContent = 'o';
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'pdf-editor-overlay-remove';
+                removeButton.setAttribute('aria-label', 'Remove image');
+                removeButton.textContent = 'x';
+
+                const resizeButton = document.createElement('button');
+                resizeButton.type = 'button';
+                resizeButton.className = 'pdf-editor-image-resize';
+                resizeButton.setAttribute('aria-label', 'Resize image');
+                resizeButton.textContent = '<>';
+
+                handleGroup.appendChild(dragHandle);
+                handleGroup.appendChild(rotateButton);
+                controls.appendChild(handleGroup);
+                controls.appendChild(removeButton);
+                body.appendChild(image);
+                body.appendChild(controls);
+                body.appendChild(resizeButton);
+                item.appendChild(body);
+                if (!appendItemToActivePage(item)) {
+                    URL.revokeObjectURL(imageUrl);
+                    activeImageUrls = activeImageUrls.filter((url) => url !== imageUrl);
+                    return;
+                }
+                setActiveOverlayItem(item);
+
+                attachDragBehavior(item, dragHandle, {
+                    allowPageTransfer: true
+                });
+
+                resizeButton.addEventListener('pointerdown', (event) => {
+                    event.preventDefault();
+                    setActiveOverlayItem(item);
+                    item.classList.add('is-transforming');
+                    setActivePage(Number(item.dataset.pageIndex || '0'));
+
+                    const startWidth = item.offsetWidth;
+                    const startHeight = item.offsetHeight;
+                    const startX = event.clientX;
+                    const aspectRatio = startWidth / Math.max(startHeight, 1);
+                    const overlayLayer = getOverlayLayerForItem(item);
+                    if (!overlayLayer) {
+                        item.classList.remove('is-transforming');
+                        return;
+                    }
+
+                    const handleMove = (moveEvent) => {
+                        const deltaX = moveEvent.clientX - startX;
+                        const maxWidth = Math.max(80, overlayLayer.clientWidth - item.offsetLeft - 8);
+                        const nextWidth = clampValue(startWidth + deltaX, 80, maxWidth);
+                        const nextHeight = clampValue(nextWidth / Math.max(aspectRatio, 0.1), 60, overlayLayer.clientHeight - item.offsetTop - 8);
+                        item.style.width = `${nextWidth}px`;
+                        item.style.height = `${nextHeight}px`;
+                    };
+
+                    const stop = () => {
+                        item.classList.remove('is-transforming');
+                        window.removeEventListener('pointermove', handleMove);
+                        window.removeEventListener('pointerup', stop);
+                    };
+
+                    window.addEventListener('pointermove', handleMove);
+                    window.addEventListener('pointerup', stop);
+                });
+
+                rotateButton.addEventListener('pointerdown', (event) => {
+                    event.preventDefault();
+                    setActiveOverlayItem(item);
+                    item.classList.add('is-transforming');
+                    setActivePage(Number(item.dataset.pageIndex || '0'));
+
+                    const startRotation = Number(item.dataset.rotation || '0') || 0;
+                    const overlayLayer = getOverlayLayerForItem(item);
+                    if (!overlayLayer) {
+                        item.classList.remove('is-transforming');
+                        return;
+                    }
+                    const overlayRect = overlayLayer.getBoundingClientRect();
+                    const centerX = overlayRect.left + (Number.parseFloat(item.style.left) || 0) + (item.offsetWidth / 2);
+                    const centerY = overlayRect.top + (Number.parseFloat(item.style.top) || 0) + (item.offsetHeight / 2);
+
+                    const handleMove = (moveEvent) => {
+                        const angle = Math.atan2(moveEvent.clientY - centerY, moveEvent.clientX - centerX);
+                        const nextRotation = startRotation + Math.round((angle * 180 / Math.PI) + 90);
+                        item.dataset.rotation = String(nextRotation);
+                        item.style.transform = `rotate(${nextRotation}deg)`;
+                    };
+
+                    const stop = () => {
+                        item.classList.remove('is-transforming');
+                        window.removeEventListener('pointermove', handleMove);
+                        window.removeEventListener('pointerup', stop);
+                    };
+
+                    window.addEventListener('pointermove', handleMove);
+                    window.addEventListener('pointerup', stop);
+                });
+
+                removeButton.addEventListener('click', () => {
+                    if (activeOverlayItem === item) {
+                        setActiveOverlayItem(null);
+                    }
+                    URL.revokeObjectURL(imageUrl);
+                    activeImageUrls = activeImageUrls.filter((url) => url !== imageUrl);
+                    item.remove();
+                });
+
+                status.textContent = 'Image overlay added. Drag, resize, or rotate it on top of the PDF.';
+            }
+
+            function formatFileSize(bytes) {
+                const size = Number(bytes);
+                if (!Number.isFinite(size) || size <= 0) {
+                    return 'Size unavailable';
+                }
+                if (size < 1024 * 1024) {
+                    return `${(size / 1024).toFixed(1)} KB`;
+                }
+                return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+            }
+
+            function getDownloadName() {
+                const rawName = activePdfName || 'document.pdf';
+                if (/\.pdf$/i.test(rawName)) {
+                    return rawName.replace(/\.pdf$/i, ' (with changes).pdf');
+                }
+                return `${rawName} (with changes).pdf`;
+            }
+
+            function clearRenderedPages() {
+                previewPages.replaceChildren();
+                renderedPages = [];
+                activePageIndex = 0;
+            }
+
+            function createPageRecord(pageIndex, cssWidth, cssHeight) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'pdf-editor-page-stage';
+                wrapper.dataset.pageIndex = String(pageIndex);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(cssWidth * window.devicePixelRatio);
+                canvas.height = Math.round(cssHeight * window.devicePixelRatio);
+                canvas.style.width = `${cssWidth}px`;
+                canvas.style.height = `${cssHeight}px`;
+
+                const overlayLayer = document.createElement('div');
+                overlayLayer.className = 'pdf-editor-overlay-layer';
+                overlayLayer.setAttribute('aria-label', `Overlay layer for page ${pageIndex + 1}`);
+
+                const badge = document.createElement('div');
+                badge.className = 'pdf-editor-page-badge';
+                badge.textContent = `Page ${pageIndex + 1}`;
+
+                wrapper.appendChild(canvas);
+                wrapper.appendChild(overlayLayer);
+                wrapper.appendChild(badge);
+
+                wrapper.addEventListener('pointerdown', () => {
+                    setActivePage(pageIndex);
+                });
+
+                return { pageIndex, wrapper, canvas, overlayLayer, cssWidth, cssHeight };
+            }
+
+            async function renderPdfPreview(pdfBytes) {
+                const currentRenderSequence = ++renderSequence;
+                const pdfDocument = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                clearRenderedPages();
+
+                const availableWidth = Math.max(320, Math.floor(previewStage.clientWidth || previewPages.clientWidth || 900) - 64);
+
+                for (let pageIndex = 0; pageIndex < pdfDocument.numPages; pageIndex += 1) {
+                    const page = await pdfDocument.getPage(pageIndex + 1);
+                    if (currentRenderSequence !== renderSequence) {
+                        return;
+                    }
+
+                    const baseViewport = page.getViewport({ scale: 1 });
+                    const cssScale = Math.min(1.6, availableWidth / baseViewport.width);
+                    const renderScale = cssScale * window.devicePixelRatio;
+                    const renderViewport = page.getViewport({ scale: renderScale });
+                    const cssWidth = renderViewport.width / window.devicePixelRatio;
+                    const cssHeight = renderViewport.height / window.devicePixelRatio;
+                    const pageRecord = createPageRecord(pageIndex, cssWidth, cssHeight);
+                    previewPages.appendChild(pageRecord.wrapper);
+                    renderedPages.push(pageRecord);
+
+                    const context = pageRecord.canvas.getContext('2d');
+                    if (!context) {
+                        continue;
+                    }
+
+                    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
+                }
+
+                if (renderedPages.length) {
+                    setActivePage(0);
+                }
+            }
+
+            function getRelativeContentRect(item, content) {
+                const itemRect = item.getBoundingClientRect();
+                const contentRect = content.getBoundingClientRect();
+                return {
+                    x: contentRect.left - itemRect.left,
+                    y: contentRect.top - itemRect.top,
+                    width: contentRect.width,
+                    height: contentRect.height
+                };
+            }
+
+            function drawRoundedRect(context, x, y, width, height, radius, fillStyle) {
+                const appliedRadius = Math.min(radius, width / 2, height / 2);
+                context.beginPath();
+                context.moveTo(x + appliedRadius, y);
+                context.lineTo(x + width - appliedRadius, y);
+                context.quadraticCurveTo(x + width, y, x + width, y + appliedRadius);
+                context.lineTo(x + width, y + height - appliedRadius);
+                context.quadraticCurveTo(x + width, y + height, x + width - appliedRadius, y + height);
+                context.lineTo(x + appliedRadius, y + height);
+                context.quadraticCurveTo(x, y + height, x, y + height - appliedRadius);
+                context.lineTo(x, y + appliedRadius);
+                context.quadraticCurveTo(x, y, x + appliedRadius, y);
+                context.closePath();
+                context.fillStyle = fillStyle;
+                context.fill();
+            }
+
+            function wrapText(context, text, maxWidth) {
+                const sourceLines = String(text || '').split(/\r?\n/);
+                const wrappedLines = [];
+
+                sourceLines.forEach((sourceLine) => {
+                    const words = sourceLine.split(/\s+/).filter(Boolean);
+                    if (!words.length) {
+                        wrappedLines.push('');
+                        return;
+                    }
+
+                    let currentLine = words[0];
+                    for (let index = 1; index < words.length; index += 1) {
+                        const word = words[index];
+                        const candidate = `${currentLine} ${word}`;
+                        if (context.measureText(candidate).width <= maxWidth) {
+                            currentLine = candidate;
+                        } else {
+                            wrappedLines.push(currentLine);
+                            currentLine = word;
+                        }
+                    }
+                    wrappedLines.push(currentLine);
+                });
+
+                return wrappedLines.length ? wrappedLines : [''];
+            }
+
+            function canvasToPngBytes(canvas) {
+                return new Promise((resolve, reject) => {
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            reject(new Error('Could not serialize canvas.'));
+                            return;
+                        }
+                        blob.arrayBuffer().then((buffer) => {
+                            resolve(new Uint8Array(buffer));
+                        }).catch(reject);
+                    }, 'image/png');
+                });
+            }
+
+            async function renderTextLikeOverlayToPng(item, contentSelector) {
+                const content = item.querySelector(contentSelector);
+                if (!(content instanceof HTMLElement)) {
+                    return null;
+                }
+
+                const width = Math.max(1, Math.round(item.offsetWidth));
+                const height = Math.max(1, Math.round(item.offsetHeight));
+                const scale = 2;
+                const canvas = document.createElement('canvas');
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                const context = canvas.getContext('2d');
+                if (!context) {
+                    return null;
+                }
+
+                context.scale(scale, scale);
+                const itemStyle = window.getComputedStyle(item);
+                const contentStyle = window.getComputedStyle(content);
+                const contentRect = getRelativeContentRect(item, content);
+                context.globalAlpha = clampValue(Number.parseFloat(itemStyle.opacity || '1') || 1, 0, 1);
+                const fontSize = Number.parseFloat(contentStyle.fontSize) || 18;
+                const lineHeight = (Number.parseFloat(contentStyle.lineHeight) || (fontSize * 1.25));
+                context.fillStyle = contentStyle.color || '#ffffff';
+                context.textBaseline = 'top';
+                context.font = `${fontSize}px ${contentStyle.fontFamily || 'Outfit, sans-serif'}`;
+                const strokeWidth = Number.parseFloat(content.dataset.strokeWidth || '0') || 0;
+                const strokeColor = content.dataset.strokeColor || '#000000';
+                context.lineJoin = 'round';
+                context.strokeStyle = strokeColor;
+                context.lineWidth = strokeWidth;
+
+                const lines = wrapText(context, content.innerText || content.textContent || '', Math.max(10, contentRect.width));
+                let cursorY = contentRect.y;
+                lines.forEach((line) => {
+                    if (strokeWidth > 0) {
+                        context.strokeText(line, contentRect.x, cursorY, Math.max(10, contentRect.width));
+                    }
+                    context.fillText(line, contentRect.x, cursorY, Math.max(10, contentRect.width));
+                    cursorY += lineHeight;
+                });
+
+                return canvasToPngBytes(canvas);
+            }
+
+            async function renderImageOverlayToPng(item) {
+                const image = item.querySelector('.pdf-editor-image-preview');
+                if (!(image instanceof HTMLImageElement)) {
+                    return null;
+                }
+
+                const width = Math.max(1, Math.round(item.offsetWidth));
+                const height = Math.max(1, Math.round(item.offsetHeight));
+                const rotationDegrees = Number(item.dataset.rotation || '0') || 0;
+                const scale = 2;
+                const canvas = document.createElement('canvas');
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                const context = canvas.getContext('2d');
+                if (!context) {
+                    return null;
+                }
+
+                if (!image.complete) {
+                    try {
+                        await image.decode();
+                    } catch (error) {
+                        return null;
+                    }
+                }
+
+                context.scale(scale, scale);
+                const itemStyle = window.getComputedStyle(item);
+                context.globalAlpha = clampValue(Number.parseFloat(itemStyle.opacity || '1') || 1, 0, 1);
+                drawRoundedRect(context, 0, 0, width, height, 18, itemStyle.backgroundColor || 'rgba(15, 23, 42, 0.70)');
+
+                const padding = 12;
+                const innerWidth = Math.max(10, width - (padding * 2));
+                const innerHeight = Math.max(10, height - (padding * 2));
+                const imageRatio = image.naturalWidth / Math.max(image.naturalHeight, 1);
+                const boxRatio = innerWidth / Math.max(innerHeight, 1);
+                let drawWidth = innerWidth;
+                let drawHeight = innerHeight;
+
+                if (imageRatio > boxRatio) {
+                    drawHeight = innerWidth / Math.max(imageRatio, 0.1);
+                } else {
+                    drawWidth = innerHeight * imageRatio;
+                }
+
+                context.save();
+                context.translate(width / 2, height / 2);
+                context.rotate((rotationDegrees * Math.PI) / 180);
+                context.drawImage(image, -(drawWidth / 2), -(drawHeight / 2), drawWidth, drawHeight);
+                context.restore();
+
+                return canvasToPngBytes(canvas);
+            }
+
+            async function renderOverlayItemToPng(item) {
+                if (item.classList.contains('pdf-editor-image-item')) {
+                    return renderImageOverlayToPng(item);
+                }
+                if (item.classList.contains('pdf-editor-signature-item')) {
+                    return renderTextLikeOverlayToPng(item, '.pdf-editor-signature-content');
+                }
+                if (item.classList.contains('pdf-editor-initials-item')) {
+                    return renderTextLikeOverlayToPng(item, '.pdf-editor-initials-content');
+                }
+                return renderTextLikeOverlayToPng(item, '.pdf-editor-text-content');
+            }
+
+            async function downloadPdfWithChanges() {
+                if (!activePdfBytes || exportInProgress) {
+                    return;
+                }
+
+                exportInProgress = true;
+                setEditorEnabledState(true);
+                status.textContent = 'Building your edited PDF with the current changes...';
+
+                try {
+                    if (document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable) {
+                        document.activeElement.blur();
+                    }
+
+                    if (document.fonts && typeof document.fonts.ready === 'object') {
+                        await document.fonts.ready;
+                    }
+
+                    const pdfDocument = await window.PDFLib.PDFDocument.load(activePdfBytes.slice());
+                    const pdfPages = pdfDocument.getPages();
+                    const overlayItems = getOverlayItems();
+
+                    for (const item of overlayItems) {
+                        const pageIndex = Number(item.dataset.pageIndex || '0');
+                        const pdfPage = pdfPages[pageIndex];
+                        const pageRecord = renderedPages[pageIndex];
+                        if (!pdfPage || !pageRecord) {
+                            continue;
+                        }
+
+                        const pngBytes = await renderOverlayItemToPng(item);
+                        if (!pngBytes) {
+                            continue;
+                        }
+
+                        const embeddedPng = await pdfDocument.embedPng(pngBytes);
+                        const pdfPageSize = pdfPage.getSize();
+                        const overlayWidth = pageRecord.overlayLayer.clientWidth || pageRecord.cssWidth;
+                        const overlayHeight = pageRecord.overlayLayer.clientHeight || pageRecord.cssHeight;
+                        const itemLeft = Number.parseFloat(item.style.left) || 0;
+                        const itemTop = Number.parseFloat(item.style.top) || 0;
+                        const itemWidth = item.offsetWidth;
+                        const itemHeight = item.offsetHeight;
+                        const x = (itemLeft / Math.max(overlayWidth, 1)) * pdfPageSize.width;
+                        const y = pdfPageSize.height - (((itemTop + itemHeight) / Math.max(overlayHeight, 1)) * pdfPageSize.height);
+                        const width = (itemWidth / Math.max(overlayWidth, 1)) * pdfPageSize.width;
+                        const height = (itemHeight / Math.max(overlayHeight, 1)) * pdfPageSize.height;
+
+                        pdfPage.drawImage(embeddedPng, { x, y, width, height });
+                    }
+
+                    const savedPdfBytes = await pdfDocument.save();
+                    const pdfBlob = new Blob([savedPdfBytes], { type: activePdfMimeType || 'application/pdf' });
+                    const downloadUrl = URL.createObjectURL(pdfBlob);
+                    const anchor = document.createElement('a');
+                    anchor.href = downloadUrl;
+                    anchor.download = getDownloadName();
+                    document.body.appendChild(anchor);
+                    anchor.click();
+                    anchor.remove();
+                    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                    status.textContent = 'Your edited PDF downloaded successfully.';
+                } catch (error) {
+                    status.textContent = 'Could not build the edited PDF. Try uploading the file again.';
+                } finally {
+                    exportInProgress = false;
+                    setEditorEnabledState(Boolean(activePdfBytes));
+                }
+            }
+
+            function resetPreview() {
+                revokeImageUrls();
+                activePdfBytes = null;
+                activePdfName = '';
+                activePdfMimeType = 'application/pdf';
+                previewMeta.hidden = true;
+                previewToolbar.hidden = true;
+                textPanel.hidden = true;
+                signaturePanel.hidden = true;
+                initialsPanel.hidden = true;
+                previewStage.hidden = true;
+                bottomActions.hidden = true;
+                previewName.textContent = '';
+                previewDetails.textContent = '';
+                previewEmpty.hidden = false;
+                status.textContent = 'No PDF selected yet.';
+                clearRenderedPages();
+                setEditorEnabledState(false);
+                setActiveOverlayItem(null);
+                fileInput.value = '';
+                imageInput.value = '';
+                signatureInput.value = '';
+                initialsInput.value = '';
+                textFontSelect.value = "'Outfit', sans-serif";
+                signatureFontSelect.value = "'Great Vibes', cursive";
+                initialsFontSelect.value = "'Great Vibes', cursive";
+                textColorInput.value = '#ffffff';
+                textStrokeColorInput.value = '#000000';
+                textStrokeWidthInput.value = '0';
+                textOpacityInput.value = '82';
+                signatureColorInput.value = '#ffffff';
+                signatureStrokeColorInput.value = '#000000';
+                signatureStrokeWidthInput.value = '0';
+                signatureOpacityInput.value = '68';
+                imageOpacityInput.value = '100';
+                updateOpacityLabel(textOpacityInput, textOpacityValue);
+                updateOpacityLabel(signatureOpacityInput, signatureOpacityValue);
+                updateOpacityLabel(imageOpacityInput, imageOpacityValue);
+                updateRangeLabel(textStrokeWidthInput, textStrokeWidthValue, 'px');
+                updateRangeLabel(signatureStrokeWidthInput, signatureStrokeWidthValue, 'px');
+                updateSignaturePreview();
+                updateInitialsPreview();
+            }
+
+            async function setPreview(file) {
+                if (!(file instanceof File)) {
+                    resetPreview();
+                    return;
+                }
+
+                const mimeType = String(file.type || '').toLowerCase();
+                const fileName = String(file.name || '').toLowerCase();
+                const isPdf = mimeType === 'application/pdf' || fileName.endsWith('.pdf');
+                if (!isPdf) {
+                    status.textContent = 'Please upload a PDF file.';
+                    return;
+                }
+
+                status.textContent = 'Loading PDF preview...';
+                previewEmpty.hidden = true;
+                previewMeta.hidden = false;
+                previewToolbar.hidden = false;
+                previewStage.hidden = false;
+                bottomActions.hidden = false;
+                previewName.textContent = file.name || 'Uploaded PDF';
+                previewDetails.textContent = `${formatFileSize(file.size)} · ${file.type || 'application/pdf'}`;
+                revokeImageUrls();
+                clearRenderedPages();
+                setActiveOverlayItem(null);
+
+                try {
+                    const fileBuffer = await file.arrayBuffer();
+                    activePdfBytes = new Uint8Array(fileBuffer);
+                    activePdfName = file.name || 'Uploaded PDF';
+                    activePdfMimeType = file.type || 'application/pdf';
+                    await renderPdfPreview(activePdfBytes);
+                    setEditorEnabledState(true);
+                    status.textContent = renderedPages.length
+                        ? 'PDF loaded successfully. Click a page, add your changes, then download the edited PDF.'
+                        : 'The PDF loaded, but no pages were rendered.';
+                } catch (error) {
+                    resetPreview();
+                    status.textContent = 'This PDF could not be rendered. Try a different file.';
+                }
+            }
+
+            function handleFiles(fileList) {
+                const file = fileList && fileList[0];
+                if (file) {
+                    void setPreview(file);
+                }
+            }
+
+            selectButton.addEventListener('click', () => fileInput.click());
+            clearButton.addEventListener('click', () => resetPreview());
+            downloadButton.addEventListener('click', () => {
+                void downloadPdfWithChanges();
+            });
+            downloadButtonBottom.addEventListener('click', () => {
+                void downloadPdfWithChanges();
+            });
+            addTextButton.addEventListener('click', () => {
+                if (!addTextButton.disabled && !previewStage.hidden) {
+                    textPanel.hidden = false;
+                    signaturePanel.hidden = true;
+                    initialsPanel.hidden = true;
+                    createTextItem();
+                }
+            });
+            addImageButton.addEventListener('click', () => {
+                if (!addImageButton.disabled && !previewStage.hidden) {
+                    imageInput.click();
+                }
+            });
+            addSignatureButton.addEventListener('click', () => {
+                if (addSignatureButton.disabled || previewStage.hidden) {
+                    return;
+                }
+                textPanel.hidden = true;
+                initialsPanel.hidden = true;
+                signaturePanel.hidden = !signaturePanel.hidden;
+                if (!signaturePanel.hidden) {
+                    updateSignaturePreview();
+                    signatureInput.focus();
+                }
+            });
+            addInitialsButton.addEventListener('click', () => {
+                if (addInitialsButton.disabled || previewStage.hidden) {
+                    return;
+                }
+                textPanel.hidden = true;
+                signaturePanel.hidden = true;
+                initialsPanel.hidden = !initialsPanel.hidden;
+                if (!initialsPanel.hidden) {
+                    updateInitialsPreview();
+                    initialsInput.focus();
+                }
+            });
+            insertSignatureButton.addEventListener('click', () => {
+                if (!insertSignatureButton.disabled && !previewStage.hidden) {
+                    createSignatureItem();
+                }
+            });
+            insertInitialsButton.addEventListener('click', () => {
+                if (!insertInitialsButton.disabled && !previewStage.hidden) {
+                    createInitialsItem();
+                }
+            });
+
+            fileInput.addEventListener('change', (event) => handleFiles(event.target.files));
+            imageInput.addEventListener('change', (event) => {
+                const file = event.target.files && event.target.files[0];
+                if (file) {
+                    createImageItem(file);
+                }
+                imageInput.value = '';
+            });
+
+            signatureInput.addEventListener('input', updateSignaturePreview);
+            signatureFontSelect.addEventListener('change', updateSignaturePreview);
+            initialsInput.addEventListener('input', () => {
+                initialsInput.value = String(initialsInput.value || '').replace(/[^a-z]/gi, '').slice(0, 4).toUpperCase();
+                updateInitialsPreview();
+            });
+            initialsFontSelect.addEventListener('change', updateInitialsPreview);
+            textFontSelect.addEventListener('change', () => {
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
+                    applyOverlayFontFamily(activeOverlayItem, textFontSelect.value || "'Outfit', sans-serif");
+                }
+            });
+            textColorInput.addEventListener('input', () => {
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
+                    applyOverlayTextColor(activeOverlayItem, textColorInput.value || '#ffffff');
+                }
+            });
+            textStrokeColorInput.addEventListener('input', () => {
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
+                    applyOverlayStroke(activeOverlayItem, textStrokeColorInput.value || '#000000', textStrokeWidthInput.value || '0');
+                }
+            });
+            textStrokeWidthInput.addEventListener('input', () => {
+                updateRangeLabel(textStrokeWidthInput, textStrokeWidthValue, 'px');
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
+                    applyOverlayStroke(activeOverlayItem, textStrokeColorInput.value || '#000000', textStrokeWidthInput.value || '0');
+                }
+            });
+            textOpacityInput.addEventListener('input', () => {
+                updateOpacityLabel(textOpacityInput, textOpacityValue);
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-text-item')) {
+                    applyOverlayOpacity(activeOverlayItem, textOpacityInput.value || '82');
+                }
+            });
+            signatureColorInput.addEventListener('input', () => {
+                updateSignaturePreview();
+                updateInitialsPreview();
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
+                    applyOverlayTextColor(activeOverlayItem, signatureColorInput.value || '#ffffff');
+                }
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
+                    applyOverlayTextColor(activeOverlayItem, signatureColorInput.value || '#ffffff');
+                }
+            });
+            signatureStrokeColorInput.addEventListener('input', () => {
+                updateSignaturePreview();
+                updateInitialsPreview();
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
+                    applyOverlayStroke(activeOverlayItem, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+                }
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
+                    applyOverlayStroke(activeOverlayItem, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+                }
+            });
+            signatureStrokeWidthInput.addEventListener('input', () => {
+                updateRangeLabel(signatureStrokeWidthInput, signatureStrokeWidthValue, 'px');
+                updateSignaturePreview();
+                updateInitialsPreview();
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
+                    applyOverlayStroke(activeOverlayItem, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+                }
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
+                    applyOverlayStroke(activeOverlayItem, signatureStrokeColorInput.value || '#000000', signatureStrokeWidthInput.value || '0');
+                }
+            });
+            signatureOpacityInput.addEventListener('input', () => {
+                updateOpacityLabel(signatureOpacityInput, signatureOpacityValue);
+                updateSignaturePreview();
+                updateInitialsPreview();
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
+                    applyOverlayOpacity(activeOverlayItem, signatureOpacityInput.value || '68');
+                }
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
+                    applyOverlayOpacity(activeOverlayItem, signatureOpacityInput.value || '68');
+                }
+            });
+            imageOpacityInput.addEventListener('input', () => {
+                updateOpacityLabel(imageOpacityInput, imageOpacityValue);
+                if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-image-item')) {
+                    applyOverlayOpacity(activeOverlayItem, imageOpacityInput.value || '100');
+                }
+            });
+
+            dropzone.addEventListener('click', () => fileInput.click());
+            dropzone.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    fileInput.click();
+                }
+            });
+
+            ['dragenter', 'dragover'].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    dropzone.classList.add('is-dragover');
+                });
+            });
+
+            ['dragleave', 'dragend', 'drop'].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    dropzone.classList.remove('is-dragover');
+                });
+            });
+
+            dropzone.addEventListener('drop', (event) => {
+                handleFiles(event.dataTransfer && event.dataTransfer.files);
+            });
+
+            document.addEventListener('pointerdown', (event) => {
+                if (!(event.target instanceof HTMLElement)) {
+                    return;
+                }
+                if (!event.target.closest('.pdf-editor-text-item') && !event.target.closest('.pdf-editor-signature-item') && !event.target.closest('.pdf-editor-initials-item') && !event.target.closest('.pdf-editor-image-item')) {
+                    setActiveOverlayItem(null);
+                }
+            });
+
+            window.addEventListener('beforeunload', () => {
+                revokeImageUrls();
+            });
+
+            updateSignaturePreview();
+            updateInitialsPreview();
+            resetPreview();
+        })();
+    </script>
+</body>
+</html>

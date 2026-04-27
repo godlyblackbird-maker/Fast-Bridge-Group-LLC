@@ -462,6 +462,18 @@
             font-size: 13px;
         }
 
+        .admin-tool-launch {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 16px;
+        }
+
+        .admin-tool-launch .card-btn {
+            width: fit-content;
+            text-decoration: none;
+        }
+
         .admin-announcement-form {
             display: grid;
             gap: 14px;
@@ -706,6 +718,7 @@
                     <a class="admin-quick-link" href="#admin-announcement-card">Announcements</a>
                     <a class="admin-quick-link" href="#smtp-approval-card">Gmail Approvals</a>
                     <a class="admin-quick-link" href="#admin-feature-access-card">Feature Access</a>
+                    <a class="admin-quick-link" href="#pdf-editor-card">PDF Editor</a>
                     <a class="admin-quick-link" href="mls-imports-spreadsheet.html">MLS Spreadsheet</a>
                     <a class="admin-quick-link" href="#admin-account-manager-card">Account Manager</a>
                     <a class="admin-quick-link" href="#digital-ecard-card">E Card</a>
@@ -873,7 +886,22 @@
                     </div>
                 </div>
 
-                <div id="admin-account-manager-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="8" data-widget-id="admin-account-manager" data-widget-title="Account Manager" style="--panel-index:5;">
+                <div id="pdf-editor-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="4" data-widget-id="pdf-editor" data-widget-title="PDF Editor" style="--panel-index:5;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
+                    <div class="card-header">
+                        <div>
+                            <div class="admin-panel-eyebrow">Document Tools</div>
+                            <h2 class="card-title">PDF Editor</h2>
+                            <p class="card-subtitle">Open the dedicated PDF editor workspace for uploads, review, and document prep tasks.</p>
+                        </div>
+                    </div>
+                    <div class="admin-tool-launch">
+                        <p class="admin-section-note">Use the standalone page when you want a focused PDF workflow instead of the full admin controls board.</p>
+                        <a class="card-btn active" href="pdf-editor.html">Open PDF Editor</a>
+                    </div>
+                </div>
+
+                <div id="admin-account-manager-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="8" data-widget-id="admin-account-manager" data-widget-title="Account Manager" style="--panel-index:6;">
                     <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
@@ -918,7 +946,7 @@
                     </div>
                 </div>
 
-                <div id="digital-ecard-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="6" data-widget-id="digital-ecard" data-widget-title="Digital E Card" style="--panel-index:6;">
+                <div id="digital-ecard-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="6" data-widget-id="digital-ecard" data-widget-title="Digital E Card" style="--panel-index:7;">
                     <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
@@ -994,7 +1022,7 @@
                     </div>
                 </div>
 
-                <div id="contracts-card" class="glass-card glass-card-3d widget-card outreach-card contracts-widget admin-control-panel" data-span="12" data-widget-id="contracts-agreements" data-widget-title="Contracts" style="--panel-index:7;">
+                <div id="contracts-card" class="glass-card glass-card-3d widget-card outreach-card contracts-widget admin-control-panel" data-span="12" data-widget-id="contracts-agreements" data-widget-title="Contracts" style="--panel-index:8;">
                     <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
@@ -1251,7 +1279,7 @@
                     </div>
                 </div>
 
-                <div id="flyer-maker-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="12" data-widget-id="flyer-maker" data-widget-title="Flyer Maker" style="--panel-index:8;">
+                <div id="flyer-maker-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="12" data-widget-id="flyer-maker" data-widget-title="Flyer Maker" style="--panel-index:9;">
                     <span class="admin-panel-accent" aria-hidden="true"></span>
                     <div class="card-header">
                         <div>
