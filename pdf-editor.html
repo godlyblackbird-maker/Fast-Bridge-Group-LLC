@@ -2071,7 +2071,7 @@
                         save: async (savedPdfBytes) => {
                             const saveResult = await window.fastDesktop.saveFile({
                                 defaultPath: downloadName,
-                                bytes: Array.from(savedPdfBytes)
+                                bytes: savedPdfBytes
                             });
 
                             if (saveResult && saveResult.canceled) {

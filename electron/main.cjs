@@ -37,7 +37,11 @@ ipcMain.handle('fast-desktop:save-file', async (_event, options = {}) => {
     throw new Error('No file data was provided to save.');
   }
 
-  const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  const buffer = Buffer.isBuffer(bytes)
+    ? bytes
+    : ArrayBuffer.isView(bytes)
+      ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      : Buffer.from(bytes);
   await fs.writeFile(saveResult.filePath, buffer);
   return { canceled: false, filePath: saveResult.filePath };
 });
