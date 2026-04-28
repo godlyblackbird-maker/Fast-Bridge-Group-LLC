@@ -1541,6 +1541,40 @@
                 return Array.from(previewPages.querySelectorAll('.pdf-editor-text-item, .pdf-editor-signature-item, .pdf-editor-initials-item, .pdf-editor-image-item, .pdf-editor-eraser-item'));
             }
 
+            function getPageOverlayItems(pageIndex) {
+                return getOverlayItems().filter((item) => Number(item.dataset.pageIndex || '0') === pageIndex);
+            }
+
+            function getNextOverlayPlacement(config) {
+                const pageRecord = getActivePageRecord();
+                const fallbackLeft = Number(config.baseLeft) || 0;
+                const fallbackTop = Number(config.baseTop) || 0;
+                if (!pageRecord || !(pageRecord.overlayLayer instanceof HTMLElement)) {
+                    return { left: fallbackLeft, top: fallbackTop };
+                }
+
+                const overlayCount = getPageOverlayItems(pageRecord.pageIndex).length;
+                const stepX = Math.max(12, Number(config.stepX) || 24);
+                const stepY = Math.max(12, Number(config.stepY) || 20);
+                const itemWidth = Math.max(60, Number(config.width) || 180);
+                const itemHeight = Math.max(28, Number(config.height) || 48);
+                const availableWidth = Math.max(pageRecord.overlayLayer.clientWidth - fallbackLeft - itemWidth - 8, 0);
+                const availableHeight = Math.max(pageRecord.overlayLayer.clientHeight - fallbackTop - itemHeight - 8, 0);
+                const columns = Math.max(1, Math.floor(availableWidth / stepX) + 1);
+                const rows = Math.max(1, Math.floor(availableHeight / stepY) + 1);
+                const slotCount = Math.max(1, columns * rows);
+                const slotIndex = overlayCount % slotCount;
+                const columnIndex = slotIndex % columns;
+                const rowIndex = Math.floor(slotIndex / columns);
+                const maxLeft = Math.max(pageRecord.overlayLayer.clientWidth - itemWidth - 8, 0);
+                const maxTop = Math.max(pageRecord.overlayLayer.clientHeight - itemHeight - 8, 0);
+
+                return {
+                    left: clampValue(fallbackLeft + (columnIndex * stepX), 0, maxLeft),
+                    top: clampValue(fallbackTop + (rowIndex * stepY), 0, maxTop)
+                };
+            }
+
             function setEditorEnabledState(isEnabled) {
                 clearButton.disabled = !isEnabled;
                 addTextButton.disabled = !isEnabled;
@@ -1810,11 +1844,19 @@
 
             function createTextItem() {
                 textCounter += 1;
+                const placement = getNextOverlayPlacement({
+                    baseLeft: 28,
+                    baseTop: 28,
+                    stepX: 28,
+                    stepY: 22,
+                    width: 180,
+                    height: 54
+                });
 
                 const item = document.createElement('div');
                 item.className = 'pdf-editor-text-item';
-                item.style.left = '28px';
-                item.style.top = `${28 + ((textCounter - 1) % 5) * 18}px`;
+                item.style.left = `${placement.left}px`;
+                item.style.top = `${placement.top}px`;
 
                 const controls = createOverlayChrome(item, {
                     dragLabel: 'Drag text box',
@@ -1908,11 +1950,19 @@
                 }
 
                 signatureCounter += 1;
+                const placement = getNextOverlayPlacement({
+                    baseLeft: 40,
+                    baseTop: 40,
+                    stepX: 34,
+                    stepY: 28,
+                    width: 220,
+                    height: 74
+                });
 
                 const item = document.createElement('div');
                 item.className = 'pdf-editor-signature-item';
-                item.style.left = '40px';
-                item.style.top = `${40 + ((signatureCounter - 1) % 5) * 22}px`;
+                item.style.left = `${placement.left}px`;
+                item.style.top = `${placement.top}px`;
 
                 const controls = createOverlayChrome(item, {
                     dragLabel: 'Drag signature',
@@ -1977,11 +2027,19 @@
                 }
 
                 initialsCounter += 1;
+                const placement = getNextOverlayPlacement({
+                    baseLeft: 40,
+                    baseTop: 40,
+                    stepX: 30,
+                    stepY: 24,
+                    width: 140,
+                    height: 62
+                });
 
                 const item = document.createElement('div');
                 item.className = 'pdf-editor-initials-item';
-                item.style.left = '40px';
-                item.style.top = `${40 + ((initialsCounter - 1) % 5) * 22}px`;
+                item.style.left = `${placement.left}px`;
+                item.style.top = `${placement.top}px`;
 
                 const controls = createOverlayChrome(item, {
                     dragLabel: 'Drag initials',
@@ -2038,10 +2096,19 @@
             }
 
             function createEraserItem() {
+                const placement = getNextOverlayPlacement({
+                    baseLeft: 48,
+                    baseTop: 48,
+                    stepX: 40,
+                    stepY: 30,
+                    width: 176,
+                    height: 40
+                });
+
                 const item = document.createElement('div');
                 item.className = 'pdf-editor-eraser-item';
-                item.style.left = '48px';
-                item.style.top = '48px';
+                item.style.left = `${placement.left}px`;
+                item.style.top = `${placement.top}px`;
                 item.style.width = '176px';
                 item.style.height = '40px';
                 item.style.opacity = '1';
@@ -2131,11 +2198,19 @@
 
                 const imageUrl = URL.createObjectURL(file);
                 activeImageUrls.push(imageUrl);
+                const placement = getNextOverlayPlacement({
+                    baseLeft: 48,
+                    baseTop: 48,
+                    stepX: 40,
+                    stepY: 34,
+                    width: 220,
+                    height: 160
+                });
 
                 const item = document.createElement('div');
                 item.className = 'pdf-editor-image-item';
-                item.style.left = '48px';
-                item.style.top = '48px';
+                item.style.left = `${placement.left}px`;
+                item.style.top = `${placement.top}px`;
                 item.style.width = '220px';
                 item.style.height = '160px';
                 item.dataset.rotation = '0';
