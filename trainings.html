@@ -390,7 +390,7 @@
                         <p class="training-video-description">Quick navigation training for moving through the FAST dashboard, workspace tools, and daily workflow sections.</p>
                         <div class="training-video-stage" data-training-stage="true">
                             <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-id="qtYdp32lPY8" aria-label="Play FAST BRIDGE GROUP navigation training video on this page">
-                                <img src="https://i.ytimg.com/vi/qtYdp32lPY8/hqdefault.jpg" alt="FAST BRIDGE GROUP first training video thumbnail">
+                                <img src="https://i.ytimg.com/vi/qtYdp32lPY8/maxresdefault.jpg" alt="FAST BRIDGE GROUP first training video thumbnail">
                             </button>
                             <div class="training-video-frame" data-training-player="true">
                                 <iframe src="about:blank" title="FAST BRIDGE GROUP navigation training video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -411,7 +411,7 @@
                         <p class="training-video-description">Focused license training content with the same inline thumbnail-to-player flow as the rest of the training library.</p>
                         <div class="training-video-stage" data-training-stage="true">
                             <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-id="0Dn0Wip6udA" aria-label="Play Real Estate License Training video on this page">
-                                <img src="https://i.ytimg.com/vi/0Dn0Wip6udA/hqdefault.jpg" alt="Real Estate License Training video thumbnail">
+                                <img src="https://i.ytimg.com/vi/0Dn0Wip6udA/maxresdefault.jpg" alt="Real Estate License Training video thumbnail">
                             </button>
                             <div class="training-video-frame" data-training-player="true">
                                 <iframe src="about:blank" title="Real Estate License Training video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -442,17 +442,47 @@
                 return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
             };
 
+            const buildThumbnailCandidates = (videoId) => ([
+                `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+                `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`,
+                `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+            ]);
+
+            const applyBestThumbnail = (image, videoId) => {
+                if (!(image instanceof HTMLImageElement) || !videoId) {
+                    return;
+                }
+
+                const candidates = buildThumbnailCandidates(videoId);
+                let candidateIndex = 0;
+
+                const tryNextCandidate = () => {
+                    if (candidateIndex >= candidates.length) {
+                        image.removeEventListener('error', tryNextCandidate);
+                        return;
+                    }
+
+                    image.src = candidates[candidateIndex];
+                    candidateIndex += 1;
+                };
+
+                image.addEventListener('error', tryNextCandidate);
+                tryNextCandidate();
+            };
+
             playButtons.forEach((button) => {
                 const videoId = String(button.getAttribute('data-training-video-id') || '').trim();
                 const videoStage = button.closest('[data-training-stage="true"]');
                 const playerContainer = videoStage instanceof HTMLElement ? videoStage.querySelector('[data-training-player="true"]') : null;
                 const videoFrame = playerContainer instanceof HTMLElement ? playerContainer.querySelector('iframe') : null;
+                const thumbnailImage = button.querySelector('img');
 
                 if (!videoId || !(videoStage instanceof HTMLElement) || !(playerContainer instanceof HTMLElement) || !(videoFrame instanceof HTMLIFrameElement)) {
                     return;
                 }
 
                 const autoplaySrc = buildVideoSrc(videoId, true);
+                applyBestThumbnail(thumbnailImage, videoId);
 
                 button.addEventListener('click', () => {
                     videoStage.classList.add('is-playing');
