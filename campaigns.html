@@ -724,6 +724,94 @@
             font-size: 14px;
         }
 
+        .campaign-reply-attachments {
+            display: grid;
+            gap: 10px;
+        }
+
+        .campaign-reply-attachment-image-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            flex-wrap: nowrap;
+        }
+
+        .campaign-reply-attachment-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            max-width: 100%;
+            padding: 10px 12px;
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.06);
+            color: inherit;
+            text-decoration: none;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-attachment-link {
+            background: rgba(248, 250, 252, 0.14);
+            border-color: rgba(248, 250, 252, 0.18);
+            color: #f8fafc;
+        }
+
+        .campaign-reply-attachment-image {
+            display: block;
+            width: min(100%, 320px);
+            max-height: 280px;
+            object-fit: cover;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .campaign-reply-attachment-download {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            min-width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(255, 255, 255, 0.9);
+            color: #0f172a;
+            text-decoration: none;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .campaign-reply-attachment-download:hover,
+        .campaign-reply-attachment-download:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-rgb), 0.34);
+            box-shadow: 0 16px 28px rgba(15, 23, 42, 0.14);
+        }
+
+        .campaign-reply-attachment-download svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-attachment-download {
+            background: rgba(248, 250, 252, 0.16);
+            border-color: rgba(248, 250, 252, 0.18);
+            color: #f8fafc;
+        }
+
+        .campaign-reply-attachment-meta {
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #6b7280;
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-attachment-meta {
+            color: rgba(248, 250, 252, 0.82);
+        }
+
         .campaign-reply-message-foot {
             display: flex;
             align-items: center;
@@ -756,6 +844,12 @@
             align-items: flex-end;
         }
 
+        .campaign-reply-action-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .campaign-reply-form .outreach-textarea {
             min-height: 110px;
             background: rgba(255, 255, 255, 0.94);
@@ -763,6 +857,7 @@
             border-color: rgba(148, 163, 184, 0.22);
         }
 
+        #campaign-reply-newline,
         #campaign-reply-send {
             width: 48px;
             height: 48px;
@@ -779,23 +874,47 @@
             transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
         }
 
+        #campaign-reply-newline {
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(255, 255, 255, 0.96);
+            color: #0f172a;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+        }
+
+        #campaign-reply-newline svg,
         #campaign-reply-send svg {
             width: 20px;
             height: 20px;
             stroke: currentColor;
             stroke-width: 2.25;
             fill: none;
+        }
+
+        #campaign-reply-send svg {
             transform: translateX(1px);
+        }
+
+        #campaign-reply-newline:hover:not(:disabled),
+        #campaign-reply-newline:focus-visible:not(:disabled),
+        #campaign-reply-send:hover:not(:disabled),
+        #campaign-reply-send:focus-visible:not(:disabled) {
+            filter: brightness(1.06);
+            transform: translateY(-1px);
+        }
+
+        #campaign-reply-newline:hover:not(:disabled),
+        #campaign-reply-newline:focus-visible:not(:disabled) {
+            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14), 0 14px 28px rgba(15, 23, 42, 0.18);
         }
 
         #campaign-reply-send:hover:not(:disabled),
         #campaign-reply-send:focus-visible:not(:disabled) {
-            filter: brightness(1.06);
             box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.16), 0 14px 28px rgba(0, 122, 255, 0.32);
-            transform: translateY(-1px);
         }
 
+        #campaign-reply-newline:disabled,
         #campaign-reply-send:disabled {
+            border-color: transparent;
             background: #cbd5e1;
             color: #ffffff;
             box-shadow: none;
@@ -1378,11 +1497,21 @@
                                         <div id="campaign-reply-status" class="campaign-reply-status"></div>
                                         <div class="campaign-reply-form-row">
                                             <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
-                                            <button id="campaign-reply-send" type="submit" class="card-btn active" aria-label="Send reply" title="Send reply" disabled>
-                                                <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
-                                                </svg>
-                                            </button>
+                                            <div class="campaign-reply-action-group">
+                                                <button id="campaign-reply-newline" type="button" class="card-btn" aria-label="Insert line break" title="Insert line break" disabled>
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M4 7h12"></path>
+                                                        <path d="M4 12h8"></path>
+                                                        <path d="M4 17h12"></path>
+                                                        <path d="M13 9l4 3-4 3"></path>
+                                                    </svg>
+                                                </button>
+                                                <button id="campaign-reply-send" type="submit" class="card-btn active" aria-label="Send reply" title="Send reply" disabled>
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </form>
                                 </section>
@@ -1566,6 +1695,7 @@
             const campaignReplyThread = document.getElementById('campaign-reply-thread');
             const campaignReplyForm = document.getElementById('campaign-reply-form');
             const campaignReplyInput = document.getElementById('campaign-reply-input');
+            const campaignReplyNewlineButton = document.getElementById('campaign-reply-newline');
             const campaignReplySendButton = document.getElementById('campaign-reply-send');
             const campaignReplyStatus = document.getElementById('campaign-reply-status');
             const campaignTemplateBlocks = {
@@ -1838,9 +1968,25 @@
                 if (campaignReplyInput) {
                     campaignReplyInput.disabled = !enabled;
                 }
+                if (campaignReplyNewlineButton) {
+                    campaignReplyNewlineButton.disabled = !enabled;
+                }
                 if (campaignReplySendButton) {
                     campaignReplySendButton.disabled = !enabled;
                 }
+            }
+
+            function insertCampaignReplyLineBreak() {
+                if (!campaignReplyInput || campaignReplyInput.disabled) {
+                    return;
+                }
+
+                const start = Number(campaignReplyInput.selectionStart || 0);
+                const end = Number(campaignReplyInput.selectionEnd || start);
+                const currentValue = String(campaignReplyInput.value || '');
+                campaignReplyInput.value = `${currentValue.slice(0, start)}\n${currentValue.slice(end)}`;
+                campaignReplyInput.focus();
+                campaignReplyInput.setSelectionRange(start + 1, start + 1);
             }
 
             function renderTwilioReplyConversations() {
@@ -1881,7 +2027,7 @@
 
                     const preview = document.createElement('p');
                     preview.className = 'campaign-reply-conversation-preview';
-                    preview.textContent = conversation.lastMessageBody || 'No preview available.';
+                    preview.textContent = conversation.lastMessagePreview || conversation.lastMessageBody || 'No preview available.';
 
                     const bottom = document.createElement('div');
                     bottom.className = 'campaign-reply-conversation-bottom';
@@ -1910,6 +2056,97 @@
 
                     campaignReplyConversations.appendChild(button);
                 });
+            }
+
+            function renderTwilioMessageAttachments(message, bubble) {
+                const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+                if (!attachments.length || !bubble) {
+                    return;
+                }
+
+                const wrap = document.createElement('div');
+                wrap.className = 'campaign-reply-attachments';
+
+                const buildAttachmentDownloadName = (attachment, index) => {
+                    const kind = String(attachment?.kind || '').trim().toLowerCase() || 'attachment';
+                    const contentType = String(attachment?.contentType || '').trim().toLowerCase();
+                    const extensionMap = {
+                        'image/jpeg': 'jpg',
+                        'image/jpg': 'jpg',
+                        'image/png': 'png',
+                        'image/gif': 'gif',
+                        'image/webp': 'webp',
+                        'image/heic': 'heic',
+                        'video/mp4': 'mp4',
+                        'audio/mpeg': 'mp3',
+                        'audio/mp3': 'mp3',
+                        'audio/wav': 'wav',
+                        'application/pdf': 'pdf'
+                    };
+                    const extension = extensionMap[contentType] || '';
+                    return extension ? `twilio-${kind}-${index + 1}.${extension}` : `twilio-${kind}-${index + 1}`;
+                };
+
+                attachments.forEach((attachment, index) => {
+                    const kind = String(attachment?.kind || '').trim().toLowerCase();
+                    const contentType = String(attachment?.contentType || '').trim();
+                    const url = String(attachment?.url || '').trim();
+                    if (!url) {
+                        return;
+                    }
+
+                    if (kind === 'image') {
+                        const row = document.createElement('div');
+                        row.className = 'campaign-reply-attachment-image-row';
+
+                        const link = document.createElement('a');
+                        link.className = 'campaign-reply-attachment-link';
+                        link.href = url;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.setAttribute('aria-label', `Open photo ${index + 1}`);
+
+                        const image = document.createElement('img');
+                        image.className = 'campaign-reply-attachment-image';
+                        image.src = url;
+                        image.alt = message.direction === 'outgoing' ? 'Sent photo attachment' : 'Received photo attachment';
+                        image.loading = 'lazy';
+
+                        link.appendChild(image);
+
+                        const download = document.createElement('a');
+                        download.className = 'campaign-reply-attachment-download';
+                        download.href = url;
+                        download.download = buildAttachmentDownloadName(attachment, index);
+                        download.setAttribute('aria-label', `Download photo ${index + 1}`);
+                        download.title = 'Download image';
+                        download.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.41L11 12.59V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"></path></svg>';
+
+                        row.append(link, download);
+                        wrap.appendChild(row);
+                        return;
+                    }
+
+                    const link = document.createElement('a');
+                    link.className = 'campaign-reply-attachment-link';
+                    link.href = url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+
+                    const label = document.createElement('strong');
+                    label.textContent = kind ? `${kind.charAt(0).toUpperCase()}${kind.slice(1)} attachment` : 'Attachment';
+
+                    const meta = document.createElement('span');
+                    meta.className = 'campaign-reply-attachment-meta';
+                    meta.textContent = contentType || 'Open file';
+
+                    link.append(label, meta);
+                    wrap.appendChild(link);
+                });
+
+                if (wrap.childElementCount > 0) {
+                    bubble.appendChild(wrap);
+                }
             }
 
             function renderTwilioReplyThread(messages, conversation) {
@@ -1948,9 +2185,14 @@
                     const bubble = document.createElement('article');
                     bubble.className = `campaign-reply-message ${message.direction === 'outgoing' ? 'is-outgoing' : 'is-incoming'}`;
 
-                    const body = document.createElement('p');
-                    body.className = 'campaign-reply-message-body';
-                    body.textContent = message.body || '';
+                    if (message.body) {
+                        const body = document.createElement('p');
+                        body.className = 'campaign-reply-message-body';
+                        body.textContent = message.body || '';
+                        bubble.appendChild(body);
+                    }
+
+                    renderTwilioMessageAttachments(message, bubble);
 
                     const foot = document.createElement('div');
                     foot.className = 'campaign-reply-message-foot';
@@ -1970,7 +2212,7 @@
                         foot.appendChild(status);
                     }
 
-                    bubble.append(body, foot);
+                    bubble.appendChild(foot);
                     campaignReplyThread.appendChild(bubble);
                 });
 
@@ -2301,6 +2543,25 @@
             }
 
             if (campaignReplyForm) {
+                if (campaignReplyInput) {
+                    campaignReplyInput.addEventListener('keydown', (event) => {
+                        if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        if (campaignReplySendButton && !campaignReplySendButton.disabled) {
+                            campaignReplyForm.requestSubmit(campaignReplySendButton);
+                        }
+                    });
+                }
+
+                if (campaignReplyNewlineButton) {
+                    campaignReplyNewlineButton.addEventListener('click', () => {
+                        insertCampaignReplyLineBreak();
+                    });
+                }
+
                 campaignReplyForm.addEventListener('submit', async (event) => {
                     event.preventDefault();
 

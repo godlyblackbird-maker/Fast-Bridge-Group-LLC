@@ -2694,6 +2694,90 @@ function safeJsonStringify(value, fallback = '{}') {
   }
 }
 
+function safeJsonParse(value, fallback = null) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function normalizeTwilioMediaContentType(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function classifyTwilioMediaKind(contentType) {
+  const normalized = normalizeTwilioMediaContentType(contentType);
+  if (!normalized) {
+    return 'file';
+  }
+  if (normalized.startsWith('image/')) {
+    return 'image';
+  }
+  if (normalized.startsWith('video/')) {
+    return 'video';
+  }
+  if (normalized.startsWith('audio/')) {
+    return 'audio';
+  }
+  if (normalized === 'application/pdf') {
+    return 'pdf';
+  }
+  return 'file';
+}
+
+function getTwilioMessageMediaAttachments(rowOrPayload) {
+  const payload = rowOrPayload && typeof rowOrPayload === 'object' && typeof rowOrPayload.raw_payload_json === 'string'
+    ? safeJsonParse(rowOrPayload.raw_payload_json, {})
+    : rowOrPayload;
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const messageSid = String(source.MessageSid || source.SmsSid || rowOrPayload?.message_sid || rowOrPayload?.messageSid || '').trim();
+  const mediaCount = Math.max(0, Number.parseInt(String(source.NumMedia || 0), 10) || 0);
+  const attachments = [];
+
+  for (let index = 0; index < mediaCount; index += 1) {
+    const mediaUrl = String(source[`MediaUrl${index}`] || '').trim();
+    if (!mediaUrl) {
+      continue;
+    }
+
+    const contentType = normalizeTwilioMediaContentType(source[`MediaContentType${index}`]);
+    attachments.push({
+      index,
+      messageSid,
+      contentType,
+      kind: classifyTwilioMediaKind(contentType),
+      sourceUrl: mediaUrl,
+      url: messageSid ? `/api/twilio/inbox/media/${encodeURIComponent(messageSid)}/${index}` : mediaUrl
+    });
+  }
+
+  return attachments;
+}
+
+function summarizeTwilioMessageContent(body, attachments) {
+  const normalizedBody = String(body || '').trim();
+  if (normalizedBody) {
+    return normalizedBody;
+  }
+
+  const mediaItems = Array.isArray(attachments) ? attachments : [];
+  if (!mediaItems.length) {
+    return '';
+  }
+
+  const imageCount = mediaItems.filter((item) => item.kind === 'image').length;
+  if (imageCount === mediaItems.length) {
+    return imageCount === 1 ? 'Photo' : `${imageCount} photos`;
+  }
+
+  return mediaItems.length === 1 ? 'Attachment' : `${mediaItems.length} attachments`;
+}
+
 function getTwilioConversationDetails({ contactPhone, platformIdentity }) {
   const normalizedContactPhone = normalizeSmsPhone(contactPhone);
   const normalizedPlatformIdentity = normalizeTwilioPlatformIdentity(platformIdentity);
@@ -2716,6 +2800,9 @@ function serializeTwilioInboxMessage(row) {
     return null;
   }
 
+  const attachments = getTwilioMessageMediaAttachments(row);
+  const body = String(row.body || '').trim();
+
   return {
     id: Number(row.id) || 0,
     messageSid: String(row.message_sid || '').trim(),
@@ -2725,7 +2812,9 @@ function serializeTwilioInboxMessage(row) {
     contactPhone: String(row.contact_phone || '').trim(),
     platformIdentity: String(row.platform_identity || '').trim(),
     direction: String(row.direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
-    body: String(row.body || '').trim(),
+    body,
+    preview: summarizeTwilioMessageContent(body, attachments),
+    attachments,
     status: String(row.status || '').trim(),
     errorCode: String(row.error_code || '').trim(),
     errorMessage: String(row.error_message || '').trim(),
@@ -15391,9 +15480,10 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
     const payload = req.body || {};
     const messageSid = String(payload.MessageSid || payload.SmsSid || '').trim();
     const body = String(payload.Body || '').trim();
+    const attachments = getTwilioMessageMediaAttachments(payload);
     const details = getTwilioConversationDetailsFromPayload(payload, 'inbound');
 
-    if (!messageSid || !details.conversationKey || !body) {
+    if (!messageSid || !details.conversationKey || (!body && attachments.length === 0)) {
       return res.type('text/xml').send('<Response></Response>');
     }
 
@@ -15470,17 +15560,22 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
 
   try {
     const rows = await listTwilioInboxConversations();
-    const conversations = rows.map((row) => ({
-      conversationKey: String(row.conversation_key || '').trim(),
-      campaignName: String(row.campaign_name || '').trim(),
-      contactName: String(row.contact_name || '').trim() || String(row.contact_phone || '').trim(),
-      contactPhone: String(row.contact_phone || '').trim(),
-      platformIdentity: String(row.platform_identity || '').trim(),
-      lastMessageBody: String(row.last_message_body || '').trim(),
-      lastMessageAt: normalizeApiTimestamp(row.last_message_at) || null,
-      lastDirection: String(row.last_direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
-      lastStatus: String(row.last_status || '').trim(),
-      unreadCount: Math.max(0, Number(row.unread_count) || 0)
+    const conversations = await Promise.all(rows.map(async (row) => {
+      const latestRow = await getLatestTwilioConversationRow(row.conversation_key);
+      const serializedLatestMessage = serializeTwilioInboxMessage(latestRow);
+      return {
+        conversationKey: String(row.conversation_key || '').trim(),
+        campaignName: String(row.campaign_name || '').trim(),
+        contactName: String(row.contact_name || '').trim() || String(row.contact_phone || '').trim(),
+        contactPhone: String(row.contact_phone || '').trim(),
+        platformIdentity: String(row.platform_identity || '').trim(),
+        lastMessageBody: String(row.last_message_body || '').trim(),
+        lastMessagePreview: String(serializedLatestMessage?.preview || row.last_message_body || '').trim(),
+        lastMessageAt: normalizeApiTimestamp(row.last_message_at) || null,
+        lastDirection: String(row.last_direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
+        lastStatus: String(row.last_status || '').trim(),
+        unreadCount: Math.max(0, Number(row.unread_count) || 0)
+      };
     }));
 
     return res.json({ conversations });
@@ -15510,6 +15605,58 @@ app.get('/api/twilio/inbox/messages', async (req, res) => {
   } catch (error) {
     console.error('Failed to load Twilio inbox messages:', error);
     return res.status(500).json({ error: 'Unable to load Twilio inbox messages.' });
+  }
+});
+
+app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const messageSid = String(req.params?.messageSid || '').trim();
+  const mediaIndex = Math.max(0, Number.parseInt(String(req.params?.mediaIndex || ''), 10) || 0);
+  if (!messageSid) {
+    return res.status(400).json({ error: 'messageSid is required.' });
+  }
+
+  const row = await dbGet('SELECT * FROM twilio_inbox_messages WHERE message_sid = ?', [messageSid]);
+  if (!row) {
+    return res.status(404).json({ error: 'Twilio media was not found.' });
+  }
+
+  const attachments = getTwilioMessageMediaAttachments(row);
+  const attachment = attachments.find((item) => item.index === mediaIndex);
+  if (!attachment || !attachment.sourceUrl) {
+    return res.status(404).json({ error: 'Twilio media was not found.' });
+  }
+
+  const config = getTwilioMessagingConfig();
+  if (!config.accountSid || !config.authToken) {
+    return res.status(503).json({ error: 'Twilio media proxy is not configured.' });
+  }
+
+  try {
+    const authHeader = `Basic ${Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')}`;
+    const response = await fetch(attachment.sourceUrl, {
+      headers: {
+        Authorization: authHeader
+      }
+    });
+
+    if (!response.ok) {
+      const statusCode = response.status === 401 || response.status === 403 ? 502 : response.status;
+      return res.status(statusCode).json({ error: 'Unable to load Twilio media.' });
+    }
+
+    const contentType = String(response.headers.get('content-type') || attachment.contentType || 'application/octet-stream').trim();
+    const arrayBuffer = await response.arrayBuffer();
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.send(Buffer.from(arrayBuffer));
+  } catch (error) {
+    console.error('Failed to proxy Twilio media:', error);
+    return res.status(502).json({ error: 'Unable to load Twilio media.' });
   }
 });
 
