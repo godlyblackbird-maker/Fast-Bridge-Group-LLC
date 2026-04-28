@@ -6328,6 +6328,107 @@ function initNavbarDateTime() {
         }, { once: true });
     }
 
+    function initTwilioMessagingNavUnreadIndicator() {
+        const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        let pollTimer = 0;
+        let isPolling = false;
+
+        function getLinks() {
+            return Array.from(document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]'));
+        }
+
+        function ensureDot(link) {
+            if (!(link instanceof HTMLElement)) {
+                return null;
+            }
+
+            let dot = link.querySelector('[data-twilio-unread-dot="true"]');
+            if (!dot) {
+                dot = document.createElement('span');
+                dot.className = 'nav-unread-dot';
+                dot.dataset.twilioUnreadDot = 'true';
+                dot.setAttribute('aria-hidden', 'true');
+                link.appendChild(dot);
+            }
+
+            return dot;
+        }
+
+        function applyUnreadState(hasUnread) {
+            getLinks().forEach((link) => {
+                ensureDot(link);
+                link.dataset.hasUnreadMessages = hasUnread ? 'true' : 'false';
+            });
+        }
+
+        async function refreshUnreadState() {
+            if (isPolling) {
+                return;
+            }
+
+            const links = getLinks();
+            if (!links.length) {
+                return;
+            }
+
+            links.forEach(ensureDot);
+
+            if (!token) {
+                applyUnreadState(false);
+                return;
+            }
+
+            isPolling = true;
+            try {
+                const response = await fetch('/api/twilio/inbox/conversations', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json().catch(() => ({}));
+                const conversations = Array.isArray(payload && payload.conversations) ? payload.conversations : [];
+                const hasUnread = conversations.some((conversation) => (Number(conversation && conversation.unreadCount) || 0) > 0);
+                applyUnreadState(hasUnread);
+            } catch (error) {
+                // Ignore temporary polling failures and keep the last known indicator state.
+            } finally {
+                isPolling = false;
+            }
+        }
+
+        if (!getLinks().length) {
+            return;
+        }
+
+        applyUnreadState(false);
+
+        window.addEventListener('twiliomessages:unreadchange', (event) => {
+            const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+            applyUnreadState(Boolean(detail.hasUnread));
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                refreshUnreadState();
+            }
+        });
+        window.addEventListener('focus', refreshUnreadState);
+
+        refreshUnreadState();
+        pollTimer = window.setInterval(refreshUnreadState, MESSAGE_NOTIFICATION_POLL_MS);
+
+        window.addEventListener('beforeunload', () => {
+            if (pollTimer) {
+                window.clearInterval(pollTimer);
+            }
+        }, { once: true });
+    }
+
     function initSidebarCollapse() {
         const sidebar = document.getElementById('sidebar');
         if (!sidebar) {
@@ -29501,6 +29602,7 @@ function initNavbarDateTime() {
             ['initMobileMenu', initMobileMenu],
             ['initSharedSidebarLinks', initSharedSidebarLinks],
             ['initFbgMessagesNavUnreadIndicator', initFbgMessagesNavUnreadIndicator],
+            ['initTwilioMessagingNavUnreadIndicator', initTwilioMessagingNavUnreadIndicator],
             ['initSidebarCollapse', initSidebarCollapse],
             ['initSidebarScrollState', initSidebarScrollState],
             ['initMenuSoundEffects', initMenuSoundEffects],

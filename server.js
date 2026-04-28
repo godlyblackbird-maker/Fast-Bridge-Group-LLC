@@ -6401,7 +6401,7 @@ function isInlineMessageAttachmentType(fileName, fileType = '') {
 
 function sanitizeUserUploadScope(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar', 'fbg-message', 'property-detail'].includes(normalized)
+  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar', 'fbg-message', 'property-detail', 'twilio-media'].includes(normalized)
     ? normalized
     : '';
 }
@@ -6422,6 +6422,15 @@ function buildUserUploadContentPath(documentId, download = false) {
   }
 
   return `/api/user-uploads/${encodeURIComponent(normalizedDocumentId)}/content?download=${download ? '1' : '0'}`;
+}
+
+function buildTwilioMediaUploadContentPath(documentId) {
+  const normalizedDocumentId = String(documentId || '').trim();
+  if (!normalizedDocumentId) {
+    return '';
+  }
+
+  return `/api/twilio/media-uploads/${encodeURIComponent(normalizedDocumentId)}/content`;
 }
 
 function sanitizeUserUploadContextKey(value, fallback = 'default') {
@@ -6590,6 +6599,28 @@ async function getUserUploadByIdForOwner(ownerUserId, documentId) {
   );
 }
 
+async function getUserUploadById(documentId) {
+  return dbGet(
+    `SELECT *
+       FROM user_uploads
+      WHERE id = ?`,
+    [String(documentId || '').trim()]
+  );
+}
+
+async function listTwilioMediaUploadsForOwner(ownerUserId, documentIds) {
+  const normalizedIds = Array.from(new Set((Array.isArray(documentIds) ? documentIds : [])
+    .map((documentId) => String(documentId || '').trim())
+    .filter(Boolean)));
+
+  if (!normalizedIds.length) {
+    return [];
+  }
+
+  const uploads = await Promise.all(normalizedIds.map((documentId) => getUserUploadByIdForOwner(ownerUserId, documentId)));
+  return uploads.filter((row) => String(row?.scope || '').trim() === 'twilio-media');
+}
+
 async function getProfileAvatarUploadRecordForUser(ownerUserId) {
   const userRow = await dbGet('SELECT avatar_upload_id FROM users WHERE id = ?', [ownerUserId]);
   const avatarUploadId = String(userRow?.avatar_upload_id || '').trim();
@@ -6707,6 +6738,55 @@ function serializeUserUpload(row) {
     downloadPath: buildUserUploadContentPath(row.id, true),
     createdAt: Number(row.created_at) || Date.now(),
     updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+function serializeTwilioMediaUpload(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: String(row.id || '').trim(),
+    fileName: String(row.original_file_name || '').trim() || 'Image',
+    fileSize: Math.max(Number(row.file_size) || 0, 0),
+    fileType: String(row.file_type || '').trim() || getContentTypeForFileName(row.original_file_name),
+    contentPath: buildTwilioMediaUploadContentPath(row.id),
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+function isAllowedTwilioMediaUpload(extension, mimeType = '') {
+  const normalizedExtension = String(extension || '').trim().toLowerCase();
+  const normalizedMimeType = String(mimeType || '').trim().toLowerCase();
+  return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.avif', '.heic', '.heif', '.jfif'].includes(normalizedExtension)
+    || normalizedMimeType.startsWith('image/');
+}
+
+function buildTwilioOutgoingMediaPayload(uploadRecords, req) {
+  const uploads = Array.isArray(uploadRecords) ? uploadRecords : [];
+  const mediaUrls = [];
+  const rawPayload = {
+    NumMedia: '0'
+  };
+
+  uploads.forEach((uploadRecord, index) => {
+    const contentPath = buildTwilioMediaUploadContentPath(uploadRecord?.id);
+    const absoluteUrl = buildTwilioWebhookUrl(req, contentPath);
+    if (!absoluteUrl) {
+      return;
+    }
+
+    mediaUrls.push(absoluteUrl);
+    rawPayload[`MediaUrl${index}`] = absoluteUrl;
+    rawPayload[`MediaContentType${index}`] = String(uploadRecord?.file_type || getContentTypeForFileName(uploadRecord?.original_file_name || '') || '').trim();
+  });
+
+  rawPayload.NumMedia = String(mediaUrls.length);
+  return {
+    mediaUrls,
+    rawPayload
   };
 }
 
@@ -10563,6 +10643,41 @@ function requireAuth(req, res) {
     res.status(401).json({ error: 'Invalid or expired token' });
     return null;
   }
+}
+
+function verifyAuthTokenValue(token) {
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedToken) {
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(normalizedToken, JWT_SECRET);
+    const sessionId = String(decoded?.sessionId || '').trim();
+    if (sessionId && revokedSessionIds.has(sessionId)) {
+      return null;
+    }
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+}
+
+function requireAssetAuth(req, res) {
+  const headerToken = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  const queryToken = String(req.query?.token || '').trim();
+  const decoded = verifyAuthTokenValue(headerToken || queryToken);
+  if (!decoded) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return null;
+  }
+
+  const sessionId = String(decoded?.sessionId || '').trim();
+  if (sessionId) {
+    db.run('UPDATE auth_sessions SET last_seen_at = ? WHERE id = ? AND revoked_at IS NULL', [new Date().toISOString(), sessionId], () => {});
+  }
+
+  return decoded;
 }
 
 function requireAdmin(req, res) {
@@ -15104,6 +15219,96 @@ app.post('/api/user-uploads', (req, res) => {
   });
 });
 
+app.post('/api/twilio/media-uploads', (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  userUploadMemory.single('file')(req, res, async (uploadError) => {
+    if (uploadError) {
+      const uploadMessage = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'Images must be 15 MB or smaller.'
+        : (uploadError && uploadError.message ? uploadError.message : 'Failed to upload the image.');
+      return res.status(400).json({ error: uploadMessage });
+    }
+
+    try {
+      const uploadedFile = req.file;
+      const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(uploadedFile?.originalname || '').trim()));
+      const extension = path.extname(fileName).toLowerCase();
+      const contextKey = sanitizeUserUploadContextKey(req.body?.contextKey || 'draft', 'draft');
+
+      if (!uploadedFile || !fileName) {
+        return res.status(400).json({ error: 'An image file is required.' });
+      }
+
+      if (!isAllowedTwilioMediaUpload(extension, uploadedFile.mimetype || '')) {
+        return res.status(400).json({ error: 'Only image uploads are allowed for Twilio media.' });
+      }
+
+      if (!uploadedFile.buffer || !uploadedFile.buffer.length) {
+        return res.status(400).json({ error: 'The uploaded image was empty.' });
+      }
+
+      const createdRecord = await createUserUploadRecord({
+        ownerUserId: Number(decoded.id) || 0,
+        scope: 'twilio-media',
+        contextKey,
+        fileName,
+        fileSize: uploadedFile.size,
+        fileType: getContentTypeForFileName(fileName, uploadedFile.mimetype),
+        buffer: uploadedFile.buffer
+      });
+
+      return res.status(201).json({ document: serializeTwilioMediaUpload(createdRecord) });
+    } catch (error) {
+      console.error('Failed to save Twilio media upload:', error);
+      return res.status(500).json({ error: 'Failed to save the uploaded image.' });
+    }
+  });
+});
+
+app.get('/api/twilio/media-uploads/:documentId/content', async (req, res) => {
+  try {
+    const uploadRecord = await getUserUploadById(req.params.documentId);
+    if (!uploadRecord || String(uploadRecord.scope || '').trim() !== 'twilio-media') {
+      return res.status(404).json({ error: 'Image not found.' });
+    }
+
+    const fileName = String(uploadRecord.original_file_name || 'image').trim() || 'image';
+    res.setHeader('Content-Type', getContentTypeForFileName(fileName, uploadRecord.file_type));
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Content-Disposition', `inline; filename="${fileName.replace(/"/g, '')}"`);
+    await streamStoredUserUploadToResponse(uploadRecord, res);
+    return;
+  } catch (error) {
+    console.error('Failed to stream Twilio media upload:', error);
+    return res.status(500).json({ error: 'Failed to open the requested image.' });
+  }
+});
+
+app.delete('/api/twilio/media-uploads/:documentId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const uploadRecord = await getUserUploadByIdForOwner(Number(decoded.id) || 0, req.params.documentId);
+    if (!uploadRecord || String(uploadRecord.scope || '').trim() !== 'twilio-media') {
+      return res.status(404).json({ error: 'Image not found.' });
+    }
+
+    await deleteStoredUserUpload(uploadRecord);
+    await dbRun('DELETE FROM user_uploads WHERE id = ? AND owner_user_id = ?', [String(uploadRecord.id || '').trim(), Number(decoded.id) || 0]);
+    return res.json({ success: true, documentId: String(uploadRecord.id || '').trim() });
+  } catch (error) {
+    console.error('Failed to delete Twilio media upload:', error);
+    return res.status(500).json({ error: 'Failed to delete the uploaded image.' });
+  }
+});
+
 app.get('/api/user-uploads/:documentId/content', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
@@ -15609,7 +15814,7 @@ app.get('/api/twilio/inbox/messages', async (req, res) => {
 });
 
 app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
-  const decoded = requireAuth(req, res);
+  const decoded = requireAssetAuth(req, res);
   if (!decoded) {
     return;
   }
@@ -15694,8 +15899,10 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
   const conversationKey = String(req.body?.conversationKey || '').trim();
   const body = String(req.body?.body || '').trim();
   const campaignName = String(req.body?.campaignName || '').trim();
-  if (!conversationKey || !body) {
-    return res.status(400).json({ error: 'conversationKey and body are required.' });
+  const mediaUploadIds = Array.isArray(req.body?.mediaUploadIds) ? req.body.mediaUploadIds : [];
+  const twilioMediaUploads = await listTwilioMediaUploadsForOwner(Number(decoded.id) || 0, mediaUploadIds);
+  if (!conversationKey || (!body && twilioMediaUploads.length === 0)) {
+    return res.status(400).json({ error: 'conversationKey and either a body or image upload are required.' });
   }
 
   const latestRow = await getLatestTwilioConversationRow(conversationKey);
@@ -15709,10 +15916,18 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
   }
 
   try {
+    const mediaPayload = buildTwilioOutgoingMediaPayload(twilioMediaUploads, req);
     const payload = {
-      body: body.slice(0, 1600),
       to: String(latestRow.contact_phone || '').trim()
     };
+
+    if (body) {
+      payload.body = body.slice(0, 1600);
+    }
+
+    if (mediaPayload.mediaUrls.length > 0) {
+      payload.mediaUrl = mediaPayload.mediaUrls;
+    }
 
     if (config.messagingServiceSid) {
       payload.messagingServiceSid = config.messagingServiceSid;
@@ -15738,7 +15953,7 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
       ownerName: String(decoded.name || '').trim(),
       ownerEmail: String(decoded.email || '').trim().toLowerCase(),
       direction: 'outgoing',
-      body: payload.body,
+      body: String(payload.body || '').trim(),
       status: String(message.status || 'queued').trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -15748,7 +15963,8 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
         status: message.status,
         to: payload.to,
         from: payload.from || '',
-        messagingServiceSid: payload.messagingServiceSid || ''
+        messagingServiceSid: payload.messagingServiceSid || '',
+        ...mediaPayload.rawPayload
       }
     });
 
@@ -15774,10 +15990,7 @@ app.post('/api/twilio/send-sms', async (req, res) => {
   const body = String(req.body?.body || '').trim();
   const campaignName = String(req.body?.campaignName || 'Untitled SMS Campaign').trim();
   const providedRecipients = Array.isArray(req.body?.recipients) ? req.body.recipients : [];
-
-  if (!body) {
-    return res.status(400).json({ error: 'SMS body is required.' });
-  }
+  const mediaUploadIds = Array.isArray(req.body?.mediaUploadIds) ? req.body.mediaUploadIds : [];
 
   if (providedRecipients.length === 0) {
     return res.status(400).json({ error: 'At least one recipient is required.' });
@@ -15789,6 +16002,15 @@ app.post('/api/twilio/send-sms', async (req, res) => {
     senderName = String(authenticatedUser.name || '').trim();
   }
 
+  if (mediaUploadIds.length > 0 && !authenticatedUser) {
+    return res.status(401).json({ error: 'Sign in again before sending uploaded Twilio images.' });
+  }
+
+  const twilioMediaUploads = await listTwilioMediaUploadsForOwner(Number(authenticatedUser?.id) || 0, mediaUploadIds);
+  if (!body && twilioMediaUploads.length === 0) {
+    return res.status(400).json({ error: 'Either an SMS body or at least one image is required.' });
+  }
+
   const client = getTwilioClient();
   if (!client) {
     return res.status(500).json({ error: 'Twilio client could not be initialized.' });
@@ -15797,6 +16019,7 @@ app.post('/api/twilio/send-sms', async (req, res) => {
   const sent = [];
   const failed = [];
   const statusCallbackUrl = buildTwilioWebhookUrl(req, '/api/twilio/webhook/status');
+  const mediaPayload = buildTwilioOutgoingMediaPayload(twilioMediaUploads, req);
 
   for (const entry of providedRecipients) {
     const recipient = typeof entry === 'string'
@@ -15817,13 +16040,20 @@ app.post('/api/twilio/send-sms', async (req, res) => {
       continue;
     }
 
-    const personalizedBody = personalizeSmsBody(body, recipient, senderName).slice(0, 1600);
+    const personalizedBody = body ? personalizeSmsBody(body, recipient, senderName).slice(0, 1600) : '';
 
     try {
       const payload = {
-        body: personalizedBody,
         to: normalizedPhone
       };
+
+      if (personalizedBody) {
+        payload.body = personalizedBody;
+      }
+
+      if (mediaPayload.mediaUrls.length > 0) {
+        payload.mediaUrl = mediaPayload.mediaUrls;
+      }
 
       if (config.messagingServiceSid) {
         payload.messagingServiceSid = config.messagingServiceSid;
@@ -15862,7 +16092,8 @@ app.post('/api/twilio/send-sms', async (req, res) => {
           status: message.status,
           to: payload.to,
           from: payload.from || '',
-          messagingServiceSid: payload.messagingServiceSid || ''
+          messagingServiceSid: payload.messagingServiceSid || '',
+          ...mediaPayload.rawPayload
         }
       });
       sent.push({

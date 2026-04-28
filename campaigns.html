@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campaigns - FAST BRIDGE GROUP Dashboard</title>
+    <title>Twilio Messaging - FAST BRIDGE GROUP Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -483,6 +483,101 @@
             font-size: 13px;
         }
 
+        .campaign-media-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .campaign-media-input {
+            display: none;
+        }
+
+        .campaign-media-note {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .campaign-media-pending {
+            display: none;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .campaign-media-pending.active {
+            display: flex;
+        }
+
+        .campaign-media-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            max-width: min(100%, 320px);
+            padding: 8px 10px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(255, 255, 255, 0.94);
+            color: #111827;
+        }
+
+        .campaign-media-thumb {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(241, 245, 249, 0.92);
+            flex-shrink: 0;
+        }
+
+        .campaign-media-copy {
+            display: grid;
+            min-width: 0;
+            gap: 4px;
+        }
+
+        .campaign-media-name,
+        .campaign-media-meta {
+            margin: 0;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .campaign-media-name {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .campaign-media-meta {
+            font-size: 11px;
+            color: #6b7280;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .campaign-media-remove {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            border-radius: 999px;
+            border: 0;
+            background: rgba(239, 68, 68, 0.12);
+            color: #b91c1c;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .campaign-media-remove:hover,
+        .campaign-media-remove:focus-visible {
+            background: rgba(239, 68, 68, 0.18);
+        }
+
         .campaign-webhook-panel {
             display: grid;
             gap: 10px;
@@ -561,7 +656,7 @@
         .campaign-replies-shell {
             display: grid;
             grid-template-columns: 320px minmax(0, 1fr);
-            min-height: 640px;
+            height: clamp(560px, 72vh, 760px);
             margin-top: 18px;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
             background: linear-gradient(180deg, rgba(245, 247, 250, 0.98) 0%, rgba(232, 236, 242, 0.98) 100%);
@@ -570,9 +665,12 @@
         .campaign-replies-list,
         .campaign-replies-thread-shell {
             min-width: 0;
+            min-height: 0;
         }
 
         .campaign-replies-list {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
             border-right: 1px solid rgba(15, 23, 42, 0.08);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 246, 250, 0.98) 100%);
         }
@@ -603,7 +701,7 @@
             display: grid;
             gap: 8px;
             padding: 14px;
-            max-height: 560px;
+            min-height: 0;
             overflow: auto;
         }
 
@@ -695,7 +793,7 @@
             gap: 14px;
             padding: 20px;
             overflow: auto;
-            min-height: 320px;
+            min-height: 0;
         }
 
         .campaign-reply-message {
@@ -857,6 +955,7 @@
             border-color: rgba(148, 163, 184, 0.22);
         }
 
+        #campaign-reply-attach,
         #campaign-reply-newline,
         #campaign-reply-send {
             width: 48px;
@@ -874,6 +973,7 @@
             transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
         }
 
+        #campaign-reply-attach,
         #campaign-reply-newline {
             border: 1px solid rgba(148, 163, 184, 0.24);
             background: rgba(255, 255, 255, 0.96);
@@ -881,6 +981,7 @@
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
         }
 
+        #campaign-reply-attach svg,
         #campaign-reply-newline svg,
         #campaign-reply-send svg {
             width: 20px;
@@ -890,10 +991,19 @@
             fill: none;
         }
 
+        #campaign-reply-newline img {
+            width: 20px;
+            height: 20px;
+            display: block;
+            object-fit: contain;
+        }
+
         #campaign-reply-send svg {
             transform: translateX(1px);
         }
 
+        #campaign-reply-attach:hover:not(:disabled),
+        #campaign-reply-attach:focus-visible:not(:disabled),
         #campaign-reply-newline:hover:not(:disabled),
         #campaign-reply-newline:focus-visible:not(:disabled),
         #campaign-reply-send:hover:not(:disabled),
@@ -902,6 +1012,8 @@
             transform: translateY(-1px);
         }
 
+        #campaign-reply-attach:hover:not(:disabled),
+        #campaign-reply-attach:focus-visible:not(:disabled),
         #campaign-reply-newline:hover:not(:disabled),
         #campaign-reply-newline:focus-visible:not(:disabled) {
             box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14), 0 14px 28px rgba(15, 23, 42, 0.18);
@@ -912,6 +1024,7 @@
             box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.16), 0 14px 28px rgba(0, 122, 255, 0.32);
         }
 
+        #campaign-reply-attach:disabled,
         #campaign-reply-newline:disabled,
         #campaign-reply-send:disabled {
             border-color: transparent;
@@ -1282,7 +1395,7 @@
                         <li class="nav-item">
                             <a href="campaigns.html" class="nav-link active">
                                 <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
-                                Campaigns
+                                Twilio Messaging
                             </a>
                         </li>
                         <li class="nav-item">
@@ -1374,11 +1487,11 @@
         <main class="main-content">
             <nav class="navbar">
                 <div class="page-header">
-                    <h1 class="page-title">Campaigns</h1>
+                    <h1 class="page-title">Twilio Messaging</h1>
                     <div class="page-breadcrumb">
                         <a href="dashboard.html">Dashboard</a>
                         <span>/</span>
-                        <span>Campaigns</span>
+                        <span>Twilio Messaging</span>
                     </div>
                 </div>
                 <div class="navbar-right">
@@ -1456,6 +1569,14 @@
                                         <label for="campaign-sms-body">Message</label>
                                         <textarea id="campaign-sms-body" class="form-input outreach-textarea" placeholder="Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out."></textarea>
                                     </div>
+                                    <div class="form-group outreach-full-width">
+                                        <div class="campaign-media-toolbar">
+                                            <input id="campaign-media-input" class="campaign-media-input" type="file" accept="image/*" multiple>
+                                            <button id="campaign-media-attach" type="button" class="card-btn">Add Images</button>
+                                            <span class="campaign-media-note">Upload photos to send alongside your Twilio message.</span>
+                                        </div>
+                                        <div id="campaign-media-pending" class="campaign-media-pending" hidden></div>
+                                    </div>
                                 </div>
                                 <div class="outreach-actions">
                                     <button id="campaign-load-template-1" type="button" class="card-btn">Load First Touch</button>
@@ -1495,16 +1616,18 @@
                                     </div>
                                     <form id="campaign-reply-form" class="campaign-reply-form">
                                         <div id="campaign-reply-status" class="campaign-reply-status"></div>
+                                        <input id="campaign-reply-media-input" class="campaign-media-input" type="file" accept="image/*" multiple>
+                                        <div id="campaign-reply-media-pending" class="campaign-media-pending" hidden></div>
                                         <div class="campaign-reply-form-row">
                                             <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
                                             <div class="campaign-reply-action-group">
-                                                <button id="campaign-reply-newline" type="button" class="card-btn" aria-label="Insert line break" title="Insert line break" disabled>
+                                                <button id="campaign-reply-attach" type="button" class="card-btn" aria-label="Attach image" title="Attach image" disabled>
                                                     <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path d="M4 7h12"></path>
-                                                        <path d="M4 12h8"></path>
-                                                        <path d="M4 17h12"></path>
-                                                        <path d="M13 9l4 3-4 3"></path>
+                                                        <path d="M9 7.5V6a3 3 0 1 1 6 0v8a5 5 0 1 1-10 0V7a1 1 0 0 1 2 0v7a3 3 0 1 0 6 0V6a1 1 0 1 0-2 0v8.5a1.5 1.5 0 0 1-3 0V8.5"></path>
                                                     </svg>
+                                                </button>
+                                                <button id="campaign-reply-newline" type="button" class="card-btn" aria-label="Insert line break" title="Insert line break" disabled>
+                                                    <img src="Symbols/insert down space.svg" alt="" aria-hidden="true">
                                                 </button>
                                                 <button id="campaign-reply-send" type="submit" class="card-btn active" aria-label="Send reply" title="Send reply" disabled>
                                                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1679,6 +1802,9 @@
             const campaignNameInput = document.getElementById('campaign-sms-name');
             const campaignRecipientsInput = document.getElementById('campaign-sms-recipients');
             const campaignBodyInput = document.getElementById('campaign-sms-body');
+            const campaignMediaInput = document.getElementById('campaign-media-input');
+            const campaignMediaAttachButton = document.getElementById('campaign-media-attach');
+            const campaignMediaPending = document.getElementById('campaign-media-pending');
             const campaignSendButton = document.getElementById('campaign-send-sms-btn');
             const campaignManageTemplatesButton = document.getElementById('campaign-manage-templates');
             const campaignTemplateModal = document.getElementById('campaign-template-modal');
@@ -1695,6 +1821,9 @@
             const campaignReplyThread = document.getElementById('campaign-reply-thread');
             const campaignReplyForm = document.getElementById('campaign-reply-form');
             const campaignReplyInput = document.getElementById('campaign-reply-input');
+            const campaignReplyMediaInput = document.getElementById('campaign-reply-media-input');
+            const campaignReplyMediaPending = document.getElementById('campaign-reply-media-pending');
+            const campaignReplyAttachButton = document.getElementById('campaign-reply-attach');
             const campaignReplyNewlineButton = document.getElementById('campaign-reply-newline');
             const campaignReplySendButton = document.getElementById('campaign-reply-send');
             const campaignReplyStatus = document.getElementById('campaign-reply-status');
@@ -1714,6 +1843,8 @@
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
             let twilioInboxRefreshHandle = null;
+            let pendingCampaignMediaItems = [];
+            let pendingReplyMediaItems = [];
 
             function setTwilioWebhookUiState(data = {}) {
                 const configured = Boolean(data.configured);
@@ -1891,6 +2022,21 @@
                 }
             }
 
+            function formatFileSize(bytes) {
+                const size = Math.max(Number(bytes) || 0, 0);
+                if (size < 1024) {
+                    return `${size} B`;
+                }
+                const units = ['KB', 'MB', 'GB'];
+                let value = size / 1024;
+                let unitIndex = 0;
+                while (value >= 1024 && unitIndex < units.length - 1) {
+                    value /= 1024;
+                    unitIndex += 1;
+                }
+                return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+            }
+
             function normalizeCampaignPhoneValue(value) {
                 const raw = String(value || '').trim();
                 if (!raw) {
@@ -1968,11 +2114,160 @@
                 if (campaignReplyInput) {
                     campaignReplyInput.disabled = !enabled;
                 }
+                if (campaignReplyAttachButton) {
+                    campaignReplyAttachButton.disabled = !enabled;
+                }
                 if (campaignReplyNewlineButton) {
                     campaignReplyNewlineButton.disabled = !enabled;
                 }
                 if (campaignReplySendButton) {
                     campaignReplySendButton.disabled = !enabled;
+                }
+            }
+
+            function renderTwilioPendingMedia(items, container, onRemove) {
+                if (!container) {
+                    return;
+                }
+
+                container.replaceChildren();
+                if (!Array.isArray(items) || !items.length) {
+                    container.classList.remove('active');
+                    container.setAttribute('hidden', 'hidden');
+                    return;
+                }
+
+                container.classList.add('active');
+                container.removeAttribute('hidden');
+
+                items.forEach((item, index) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'campaign-media-chip';
+
+                    const thumb = document.createElement('img');
+                    thumb.className = 'campaign-media-thumb';
+                    thumb.src = String(item?.contentPath || '').trim();
+                    thumb.alt = String(item?.fileName || 'Image').trim() || 'Image';
+                    thumb.loading = 'lazy';
+
+                    const copy = document.createElement('div');
+                    copy.className = 'campaign-media-copy';
+
+                    const name = document.createElement('p');
+                    name.className = 'campaign-media-name';
+                    name.textContent = String(item?.fileName || 'Image').trim() || 'Image';
+
+                    const meta = document.createElement('p');
+                    meta.className = 'campaign-media-meta';
+                    meta.textContent = [formatFileSize(item?.fileSize), String(item?.fileType || '').trim()].filter(Boolean).join(' • ');
+
+                    const removeButton = document.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.className = 'campaign-media-remove';
+                    removeButton.setAttribute('aria-label', `Remove ${name.textContent}`);
+                    removeButton.textContent = '×';
+                    removeButton.addEventListener('click', () => {
+                        onRemove(index);
+                    });
+
+                    copy.append(name, meta);
+                    chip.append(thumb, copy, removeButton);
+                    container.appendChild(chip);
+                });
+            }
+
+            function renderPendingCampaignMedia() {
+                renderTwilioPendingMedia(pendingCampaignMediaItems, campaignMediaPending, async (index) => {
+                    const removedItem = pendingCampaignMediaItems[index] || null;
+                    pendingCampaignMediaItems = pendingCampaignMediaItems.filter((_, itemIndex) => itemIndex !== index);
+                    renderPendingCampaignMedia();
+                    if (removedItem?.id && token) {
+                        await fetch(`/api/twilio/media-uploads/${encodeURIComponent(removedItem.id)}`, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${token}` }
+                        }).catch(() => {});
+                    }
+                });
+            }
+
+            function renderPendingReplyMedia() {
+                renderTwilioPendingMedia(pendingReplyMediaItems, campaignReplyMediaPending, async (index) => {
+                    const removedItem = pendingReplyMediaItems[index] || null;
+                    pendingReplyMediaItems = pendingReplyMediaItems.filter((_, itemIndex) => itemIndex !== index);
+                    renderPendingReplyMedia();
+                    if (removedItem?.id && token) {
+                        await fetch(`/api/twilio/media-uploads/${encodeURIComponent(removedItem.id)}`, {
+                            method: 'DELETE',
+                            headers: { Authorization: `Bearer ${token}` }
+                        }).catch(() => {});
+                    }
+                });
+            }
+
+            async function uploadTwilioMediaFile(file, contextKey) {
+                if (!token) {
+                    throw new Error('Sign in again before uploading Twilio images.');
+                }
+
+                const formData = new FormData();
+                formData.append('contextKey', contextKey || 'draft');
+                formData.append('file', file);
+
+                const response = await fetch('/api/twilio/media-uploads', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Unable to upload the selected image.');
+                }
+
+                return payload && payload.document ? payload.document : null;
+            }
+
+            async function queueTwilioMediaFiles(fileList, options = {}) {
+                const files = Array.from(fileList || []);
+                const config = options && typeof options === 'object' ? options : {};
+                if (!files.length) {
+                    return;
+                }
+
+                const statusElement = config.statusElement || null;
+                const render = typeof config.render === 'function' ? config.render : () => {};
+                const getItems = typeof config.getItems === 'function' ? config.getItems : () => [];
+                const setItems = typeof config.setItems === 'function' ? config.setItems : () => {};
+                const input = config.input || null;
+                const contextKey = String(config.contextKey || 'draft').trim() || 'draft';
+
+                if (statusElement) {
+                    statusElement.textContent = files.length === 1 ? 'Uploading image...' : `Uploading ${files.length} images...`;
+                }
+
+                try {
+                    const uploaded = [];
+                    for (const file of files.slice(0, 10)) {
+                        const nextItem = await uploadTwilioMediaFile(file, contextKey);
+                        if (nextItem) {
+                            uploaded.push(nextItem);
+                        }
+                    }
+                    setItems([...(getItems() || []), ...uploaded]);
+                    render();
+                    if (statusElement) {
+                        statusElement.textContent = uploaded.length === 1 ? 'Image ready to send.' : `${uploaded.length} images ready to send.`;
+                    }
+                } catch (error) {
+                    if (statusElement) {
+                        statusElement.textContent = error.message || 'Unable to upload the selected image.';
+                    }
+                } finally {
+                    if (input) {
+                        input.value = '';
+                    }
                 }
             }
 
@@ -1987,6 +2282,19 @@
                 campaignReplyInput.value = `${currentValue.slice(0, start)}\n${currentValue.slice(end)}`;
                 campaignReplyInput.focus();
                 campaignReplyInput.setSelectionRange(start + 1, start + 1);
+            }
+
+            function publishTwilioUnreadState(conversations) {
+                const unreadTotal = (Array.isArray(conversations) ? conversations : []).reduce((total, conversation) => {
+                    return total + Math.max(0, Number(conversation && conversation.unreadCount) || 0);
+                }, 0);
+
+                window.dispatchEvent(new CustomEvent('twiliomessages:unreadchange', {
+                    detail: {
+                        hasUnread: unreadTotal > 0,
+                        unreadTotal
+                    }
+                }));
             }
 
             function renderTwilioReplyConversations() {
@@ -2067,6 +2375,26 @@
                 const wrap = document.createElement('div');
                 wrap.className = 'campaign-reply-attachments';
 
+                const buildAuthenticatedAttachmentUrl = (rawUrl) => {
+                    const baseUrl = String(rawUrl || '').trim();
+                    if (!baseUrl) {
+                        return '';
+                    }
+
+                    const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                    if (!authToken) {
+                        return baseUrl;
+                    }
+
+                    try {
+                        const url = new URL(baseUrl, window.location.origin);
+                        url.searchParams.set('token', authToken);
+                        return url.toString();
+                    } catch (error) {
+                        return baseUrl;
+                    }
+                };
+
                 const buildAttachmentDownloadName = (attachment, index) => {
                     const kind = String(attachment?.kind || '').trim().toLowerCase() || 'attachment';
                     const contentType = String(attachment?.contentType || '').trim().toLowerCase();
@@ -2090,7 +2418,7 @@
                 attachments.forEach((attachment, index) => {
                     const kind = String(attachment?.kind || '').trim().toLowerCase();
                     const contentType = String(attachment?.contentType || '').trim();
-                    const url = String(attachment?.url || '').trim();
+                    const url = buildAuthenticatedAttachmentUrl(attachment?.url || '');
                     if (!url) {
                         return;
                     }
@@ -2226,6 +2554,7 @@
 
                 if (!token) {
                     setCampaignRepliesStatus('Sign in to load Twilio replies', 'offline');
+                    publishTwilioUnreadState([]);
                     renderTwilioReplyThread([], null);
                     return;
                 }
@@ -2240,6 +2569,7 @@
                     }
 
                     twilioInboxConversations = Array.isArray(data.conversations) ? data.conversations : [];
+                    publishTwilioUnreadState(twilioInboxConversations);
                     if (!activeTwilioConversationKey || !twilioInboxConversations.some((item) => item.conversationKey === activeTwilioConversationKey)) {
                         activeTwilioConversationKey = options.preferredConversationKey || (twilioInboxConversations[0]?.conversationKey || '');
                     }
@@ -2258,6 +2588,7 @@
                 } catch (error) {
                     setCampaignRepliesStatus(error.message || 'Twilio inbox unavailable', 'offline');
                     twilioInboxConversations = [];
+                    publishTwilioUnreadState([]);
                     activeTwilioConversationKey = '';
                     renderTwilioReplyConversations();
                     renderTwilioReplyThread([], null);
@@ -2436,6 +2767,25 @@
                 campaignNameInput.value = 'Agent SMS Campaign';
             }
 
+            if (campaignMediaAttachButton && campaignMediaInput) {
+                campaignMediaAttachButton.addEventListener('click', () => {
+                    campaignMediaInput.click();
+                });
+
+                campaignMediaInput.addEventListener('change', () => {
+                    queueTwilioMediaFiles(campaignMediaInput.files, {
+                        statusElement: campaignSendStatus,
+                        input: campaignMediaInput,
+                        contextKey: 'campaign-draft',
+                        getItems: () => pendingCampaignMediaItems,
+                        setItems: (items) => {
+                            pendingCampaignMediaItems = items;
+                        },
+                        render: renderPendingCampaignMedia
+                    });
+                });
+            }
+
             if (campaignSendButton) {
                 campaignSendButton.addEventListener('click', async () => {
                     if (campaignRecipientsInput) {
@@ -2450,8 +2800,8 @@
                         return;
                     }
 
-                    if (!body) {
-                        campaignSendStatus.textContent = 'Enter an SMS body before sending.';
+                    if (!body && !pendingCampaignMediaItems.length) {
+                        campaignSendStatus.textContent = 'Enter an SMS body or add at least one image before sending.';
                         return;
                     }
 
@@ -2468,12 +2818,15 @@
                                 campaignName,
                                 body,
                                 senderName: getCurrentSenderName(),
-                                recipients
+                                recipients,
+                                mediaUploadIds: pendingCampaignMediaItems.map((item) => item.id).filter(Boolean)
                             })
                         });
                         const data = await response.json();
                         if (response.ok && data.success) {
                             const failedCount = Array.isArray(data.failed) ? data.failed.length : 0;
+                            pendingCampaignMediaItems = [];
+                            renderPendingCampaignMedia();
                             campaignSendStatus.textContent = failedCount > 0
                                 ? `Queued ${data.sent.length} SMS. ${failedCount} failed.`
                                 : `Queued ${data.sent.length} SMS successfully.`;
@@ -2543,6 +2896,27 @@
             }
 
             if (campaignReplyForm) {
+                if (campaignReplyAttachButton && campaignReplyMediaInput) {
+                    campaignReplyAttachButton.addEventListener('click', () => {
+                        if (!campaignReplyAttachButton.disabled) {
+                            campaignReplyMediaInput.click();
+                        }
+                    });
+
+                    campaignReplyMediaInput.addEventListener('change', () => {
+                        queueTwilioMediaFiles(campaignReplyMediaInput.files, {
+                            statusElement: campaignReplyStatus,
+                            input: campaignReplyMediaInput,
+                            contextKey: activeTwilioConversationKey || 'reply-draft',
+                            getItems: () => pendingReplyMediaItems,
+                            setItems: (items) => {
+                                pendingReplyMediaItems = items;
+                            },
+                            render: renderPendingReplyMedia
+                        });
+                    });
+                }
+
                 if (campaignReplyInput) {
                     campaignReplyInput.addEventListener('keydown', (event) => {
                         if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) {
@@ -2571,8 +2945,8 @@
                         return;
                     }
 
-                    if (!body) {
-                        campaignReplyStatus.textContent = 'Type a reply before sending.';
+                    if (!body && !pendingReplyMediaItems.length) {
+                        campaignReplyStatus.textContent = 'Type a reply or attach at least one image before sending.';
                         return;
                     }
 
@@ -2589,7 +2963,8 @@
                             body: JSON.stringify({
                                 conversationKey: activeTwilioConversationKey,
                                 body,
-                                campaignName: conversation?.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply'
+                                campaignName: conversation?.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply',
+                                mediaUploadIds: pendingReplyMediaItems.map((item) => item.id).filter(Boolean)
                             })
                         });
                         const data = await response.json().catch(() => ({}));
@@ -2600,6 +2975,8 @@
                         if (campaignReplyInput) {
                             campaignReplyInput.value = '';
                         }
+                        pendingReplyMediaItems = [];
+                        renderPendingReplyMedia();
                         campaignReplyStatus.textContent = 'Twilio reply sent.';
                         await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
                         await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
