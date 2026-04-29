@@ -771,6 +771,47 @@
             font-size: 18px;
         }
 
+        .campaign-reply-search {
+            margin-top: 12px;
+            position: relative;
+        }
+
+        .campaign-reply-search input {
+            width: 100%;
+            min-height: 42px;
+            padding: 10px 14px 10px 40px;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(248, 250, 252, 0.96);
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 600;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .campaign-reply-search input::placeholder {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .campaign-reply-search input:focus {
+            outline: none;
+            border-color: rgba(var(--accent-rgb), 0.34);
+            box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
+            background: #ffffff;
+        }
+
+        .campaign-reply-search svg {
+            position: absolute;
+            top: 50%;
+            left: 14px;
+            width: 16px;
+            height: 16px;
+            color: #64748b;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
         .campaign-reply-title-row {
             display: flex;
             align-items: flex-start;
@@ -817,6 +858,8 @@
         }
 
         .campaign-reply-edit-name,
+        .campaign-reply-block-contact,
+        .campaign-reply-delete-thread,
         .campaign-reply-copy-address {
             width: 34px;
             height: 34px;
@@ -831,6 +874,32 @@
         }
 
         .campaign-reply-edit-name:disabled {
+            opacity: 0.58;
+            cursor: not-allowed;
+        }
+
+        .campaign-reply-delete-thread {
+            margin-left: auto;
+            color: #b91c1c;
+        }
+
+        .campaign-reply-block-contact {
+            color: #b45309;
+        }
+
+        .campaign-reply-block-contact.is-blocked {
+            border-color: rgba(249, 115, 22, 0.34);
+            background: rgba(255, 237, 213, 0.92);
+            color: #c2410c;
+            box-shadow: 0 10px 20px rgba(154, 52, 18, 0.14);
+        }
+
+        .campaign-reply-block-contact:disabled {
+            opacity: 0.58;
+            cursor: not-allowed;
+        }
+
+        .campaign-reply-delete-thread:disabled {
             opacity: 0.58;
             cursor: not-allowed;
         }
@@ -854,6 +923,10 @@
 
         .campaign-reply-edit-name:hover,
         .campaign-reply-edit-name:focus-visible,
+        .campaign-reply-block-contact:hover,
+        .campaign-reply-block-contact:focus-visible,
+        .campaign-reply-delete-thread:hover,
+        .campaign-reply-delete-thread:focus-visible,
         .campaign-reply-copy-address:hover,
         .campaign-reply-copy-address:focus-visible {
             border-color: rgba(var(--accent-rgb), 0.28);
@@ -861,7 +934,23 @@
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
         }
 
+        .campaign-reply-block-contact:hover,
+        .campaign-reply-block-contact:focus-visible {
+            border-color: rgba(249, 115, 22, 0.34);
+            color: #9a3412;
+            box-shadow: 0 10px 20px rgba(154, 52, 18, 0.14);
+        }
+
+        .campaign-reply-delete-thread:hover,
+        .campaign-reply-delete-thread:focus-visible {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #991b1b;
+            box-shadow: 0 10px 20px rgba(127, 29, 29, 0.14);
+        }
+
         .campaign-reply-edit-name svg,
+        .campaign-reply-block-contact svg,
+        .campaign-reply-delete-thread svg,
         .campaign-reply-copy-address svg {
             width: 16px;
             height: 16px;
@@ -893,14 +982,13 @@
 
         .campaign-reply-conversation {
             display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: start;
             gap: 8px;
             padding: 14px;
             border: 1px solid rgba(148, 163, 184, 0.18);
             border-radius: 18px;
             background: rgba(255, 255, 255, 0.88);
-            color: #0f172a;
-            text-align: left;
-            cursor: pointer;
             transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
             transform: translateZ(0);
         }
@@ -910,6 +998,48 @@
             transform: translateY(-1px);
             border-color: rgba(var(--accent-rgb), 0.34);
             box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+        }
+
+        .campaign-reply-conversation-main {
+            display: grid;
+            gap: 8px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #0f172a;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .campaign-reply-conversation-delete {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 113, 113, 0.24);
+            background: rgba(255, 255, 255, 0.96);
+            color: #b91c1c;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .campaign-reply-conversation-delete:hover,
+        .campaign-reply-conversation-delete:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(239, 68, 68, 0.36);
+            color: #991b1b;
+            box-shadow: 0 14px 24px rgba(127, 29, 29, 0.14);
+        }
+
+        .campaign-reply-conversation-delete svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
 
         .campaign-reply-conversation-top,
@@ -1049,6 +1179,16 @@
             border-radius: 18px;
             border: 1px solid rgba(148, 163, 184, 0.22);
             background: rgba(255, 255, 255, 0.8);
+        }
+
+        .campaign-reply-attachment-video {
+            display: block;
+            width: min(100%, 360px);
+            max-height: 360px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: #020617;
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
         }
 
         .campaign-reply-attachment-download {
@@ -1795,6 +1935,13 @@
                                     <div class="campaign-replies-list-head">
                                         <h4>Active Threads</h4>
                                         <p>Twilio responses grouped by contact number.</p>
+                                        <label class="campaign-reply-search" for="campaign-reply-search-input">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                <circle cx="11" cy="11" r="7"></circle>
+                                                <path d="M20 20l-3.5-3.5"></path>
+                                            </svg>
+                                            <input id="campaign-reply-search-input" type="search" placeholder="Search name, phone, address, campaign, or message">
+                                        </label>
                                     </div>
                                     <div id="campaign-reply-conversations" class="campaign-replies-list-body">
                                         <p class="campaign-reply-empty">No Twilio reply threads yet.</p>
@@ -1812,6 +1959,12 @@
                                                             <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path>
                                                         </svg>
                                                     </button>
+                                                    <button id="campaign-reply-block-contact" type="button" class="campaign-reply-block-contact" aria-label="Block contact" title="Block contact" disabled>
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <circle cx="12" cy="12" r="9"></circle>
+                                                            <path d="M8.5 8.5l7 7"></path>
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                                 <div id="campaign-reply-address-group" class="campaign-reply-address-group" hidden>
                                                     <span id="campaign-reply-address" class="campaign-reply-address-chip"></span>
@@ -1823,6 +1976,15 @@
                                                     </button>
                                                 </div>
                                             </div>
+                                            <button id="campaign-reply-delete-thread" type="button" class="campaign-reply-delete-thread" aria-label="Delete conversation" title="Delete conversation" disabled>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M3 6h18"></path>
+                                                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                                    <path d="M10 11v6"></path>
+                                                    <path d="M14 11v6"></path>
+                                                </svg>
+                                            </button>
                                         </div>
                                         <p id="campaign-reply-subtitle">Open a contact on the left to review replies and send a direct response.</p>
                                     </div>
@@ -2151,8 +2313,11 @@
             const campaignTemplateCloseButtons = document.querySelectorAll('[data-campaign-template-close]');
             const campaignRepliesStatus = document.getElementById('campaign-replies-status');
             const campaignReplyConversations = document.getElementById('campaign-reply-conversations');
+            const campaignReplySearchInput = document.getElementById('campaign-reply-search-input');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
             const campaignReplyEditNameButton = document.getElementById('campaign-reply-edit-name');
+            const campaignReplyBlockContactButton = document.getElementById('campaign-reply-block-contact');
+            const campaignReplyDeleteThreadButton = document.getElementById('campaign-reply-delete-thread');
             const campaignReplyAddressGroup = document.getElementById('campaign-reply-address-group');
             const campaignReplyAddress = document.getElementById('campaign-reply-address');
             const campaignReplyCopyAddressButton = document.getElementById('campaign-reply-copy-address');
@@ -2187,6 +2352,8 @@
             let pendingReplyMediaItems = [];
             let pendingCampaignScheduleAt = '';
             let campaignScheduleContext = 'campaign';
+            let campaignReplySearchTerm = '';
+            const campaignReplyDefaultPlaceholder = campaignReplyInput ? String(campaignReplyInput.getAttribute('placeholder') || '').trim() : 'Type a direct Twilio response...';
 
             function setCampaignReplyAddress(value) {
                 const propertyAddress = String(value || '').trim();
@@ -2221,6 +2388,50 @@
                         ...conversation,
                         contactName: normalizedContactName
                     };
+                });
+            }
+
+            function setActiveTwilioConversationBlocked(blocked) {
+                if (!activeTwilioConversationKey) {
+                    return;
+                }
+
+                twilioInboxConversations = twilioInboxConversations.map((conversation) => {
+                    if (!conversation || conversation.conversationKey !== activeTwilioConversationKey) {
+                        return conversation;
+                    }
+
+                    return {
+                        ...conversation,
+                        isBlocked: Boolean(blocked)
+                    };
+                });
+            }
+
+            function syncCampaignReplyBlockState(isBlocked) {
+                const blocked = Boolean(isBlocked);
+
+                if (campaignReplyBlockContactButton) {
+                    campaignReplyBlockContactButton.classList.toggle('is-blocked', blocked);
+                    campaignReplyBlockContactButton.setAttribute('aria-label', blocked ? 'Unblock contact' : 'Block outbound messages');
+                    campaignReplyBlockContactButton.title = blocked ? 'Unblock contact' : 'Block outbound messages';
+                }
+
+                if (campaignReplyInput) {
+                    campaignReplyInput.disabled = blocked || !activeTwilioConversationKey;
+                    campaignReplyInput.placeholder = blocked
+                        ? 'Outbound messages are blocked for this contact. Incoming texts still appear here.'
+                        : campaignReplyDefaultPlaceholder;
+                    if (blocked) {
+                        campaignReplyInput.value = '';
+                    }
+                    syncCampaignReplyInputHeight();
+                }
+
+                [campaignReplyAttachButton, campaignReplyNewlineButton, campaignReplyScheduleButton, campaignReplySendButton].forEach((element) => {
+                    if (element) {
+                        element.disabled = blocked || !activeTwilioConversationKey;
+                    }
                 });
             }
 
@@ -2738,6 +2949,28 @@
                 campaignRepliesStatus.classList.add(mode === 'ready' ? 'ready' : 'offline');
             }
 
+            function getFilteredTwilioInboxConversations() {
+                const searchTerm = String(campaignReplySearchTerm || '').trim().toLowerCase();
+                if (!searchTerm) {
+                    return twilioInboxConversations;
+                }
+
+                return twilioInboxConversations.filter((conversation) => {
+                    const haystack = [
+                        conversation?.contactName,
+                        conversation?.contactPhone,
+                        conversation?.propertyAddress,
+                        conversation?.campaignName,
+                        conversation?.lastMessagePreview,
+                        conversation?.lastMessageBody
+                    ]
+                        .map((value) => String(value || '').toLowerCase())
+                        .join(' ');
+
+                    return haystack.includes(searchTerm);
+                });
+            }
+
             function setCampaignReplyComposerEnabled(enabled) {
                 if (campaignReplyInput) {
                     campaignReplyInput.disabled = !enabled;
@@ -2756,6 +2989,17 @@
                 }
                 if (campaignReplyEditNameButton) {
                     campaignReplyEditNameButton.disabled = !enabled;
+                }
+                if (campaignReplyBlockContactButton) {
+                    campaignReplyBlockContactButton.disabled = !enabled;
+                    if (!enabled) {
+                        campaignReplyBlockContactButton.classList.remove('is-blocked');
+                        campaignReplyBlockContactButton.setAttribute('aria-label', 'Block outbound messages');
+                        campaignReplyBlockContactButton.title = 'Block outbound messages';
+                    }
+                }
+                if (campaignReplyDeleteThreadButton) {
+                    campaignReplyDeleteThreadButton.disabled = !enabled;
                 }
                 if (campaignReplyAttachButton) {
                     campaignReplyAttachButton.disabled = !enabled;
@@ -2928,13 +3172,6 @@
                 }
             }
 
-            async function submitCampaignSend(options = {}) {
-                if (campaignRecipientsInput) {
-                    campaignRecipientsInput.value = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
-                }
-
-                const recipients = parseCampaignRecipients(campaignRecipientsInput ? campaignRecipientsInput.value : '');
-
             async function submitCampaignReply(options = {}) {
                 const body = campaignReplyInput ? campaignReplyInput.value.trim() : '';
                 const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
@@ -3009,6 +3246,13 @@
                     campaignReplyStatus.textContent = error.message || `Unable to ${scheduleAt ? 'schedule' : 'send'} Twilio reply.`;
                 }
             }
+
+            async function submitCampaignSend(options = {}) {
+                if (campaignRecipientsInput) {
+                    campaignRecipientsInput.value = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
+                }
+
+                const recipients = parseCampaignRecipients(campaignRecipientsInput ? campaignRecipientsInput.value : '');
                 const body = campaignBodyInput ? campaignBodyInput.value.trim() : '';
                 const campaignName = campaignNameInput ? campaignNameInput.value.trim() : 'Agent SMS Campaign';
                 const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
@@ -3093,12 +3337,56 @@
                 }));
             }
 
+            async function deleteTwilioConversationByKey(conversationKey, contactLabel, options = {}) {
+                const normalizedConversationKey = String(conversationKey || '').trim();
+                const normalizedContactLabel = String(contactLabel || 'this contact').trim() || 'this contact';
+                const statusMessage = String(options.statusMessage || 'Deleting Twilio conversation...').trim() || 'Deleting Twilio conversation...';
+
+                if (!normalizedConversationKey) {
+                    campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
+                    return false;
+                }
+
+                if (!window.confirm(`Delete the Twilio conversation with ${normalizedContactLabel}? This clears the thread from the inbox.`)) {
+                    return false;
+                }
+
+                campaignReplyStatus.textContent = statusMessage;
+
+                try {
+                    const response = await fetch('/api/twilio/inbox/conversation', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({ conversationKey: normalizedConversationKey })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Unable to delete the Twilio conversation.');
+                    }
+
+                    if (activeTwilioConversationKey === normalizedConversationKey) {
+                        activeTwilioConversationKey = '';
+                    }
+                    await loadTwilioInboxConversations({ markRead: false });
+                    campaignReplyStatus.textContent = 'Twilio conversation deleted.';
+                    return true;
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || 'Unable to delete the Twilio conversation.';
+                    return false;
+                }
+            }
+
             function renderTwilioReplyConversations() {
                 if (!campaignReplyConversations) {
                     return;
                 }
 
                 campaignReplyConversations.replaceChildren();
+
+                const visibleConversations = getFilteredTwilioInboxConversations();
 
                 if (!twilioInboxConversations.length) {
                     const empty = document.createElement('p');
@@ -3108,13 +3396,24 @@
                     return;
                 }
 
-                twilioInboxConversations.forEach((conversation) => {
+                if (!visibleConversations.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'campaign-reply-empty';
+                    empty.textContent = 'No Twilio threads match that search.';
+                    campaignReplyConversations.appendChild(empty);
+                    return;
+                }
+
+                visibleConversations.forEach((conversation) => {
+                    const item = document.createElement('div');
+                    item.className = 'campaign-reply-conversation';
+                    if (conversation.conversationKey === activeTwilioConversationKey) {
+                        item.classList.add('is-active');
+                    }
+
                     const button = document.createElement('button');
                     button.type = 'button';
-                    button.className = 'campaign-reply-conversation';
-                    if (conversation.conversationKey === activeTwilioConversationKey) {
-                        button.classList.add('is-active');
-                    }
+                    button.className = 'campaign-reply-conversation-main';
 
                     const top = document.createElement('div');
                     top.className = 'campaign-reply-conversation-top';
@@ -3158,7 +3457,24 @@
                         loadTwilioInboxMessages(conversation.conversationKey, { markRead: true });
                     });
 
-                    campaignReplyConversations.appendChild(button);
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'campaign-reply-conversation-delete';
+                    deleteButton.setAttribute('aria-label', `Delete ${conversation.contactName || conversation.contactPhone || 'conversation'}`);
+                    deleteButton.title = 'Delete conversation';
+                    deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                    deleteButton.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        await deleteTwilioConversationByKey(
+                            conversation.conversationKey,
+                            conversation.contactName || conversation.contactPhone || 'this contact',
+                            { statusMessage: 'Deleting Twilio conversation from Active Threads...' }
+                        );
+                    });
+
+                    item.append(button, deleteButton);
+                    campaignReplyConversations.appendChild(item);
                 });
             }
 
@@ -3219,34 +3535,44 @@
                         return;
                     }
 
-                    if (kind === 'image') {
+                    if (kind === 'image' || kind === 'video') {
                         const row = document.createElement('div');
                         row.className = 'campaign-reply-attachment-image-row';
 
-                        const link = document.createElement('a');
-                        link.className = 'campaign-reply-attachment-link';
-                        link.href = url;
-                        link.target = '_blank';
-                        link.rel = 'noopener noreferrer';
-                        link.setAttribute('aria-label', `Open photo ${index + 1}`);
+                        const mediaNode = kind === 'image'
+                            ? document.createElement('img')
+                            : document.createElement('video');
 
-                        const image = document.createElement('img');
-                        image.className = 'campaign-reply-attachment-image';
-                        image.src = url;
-                        image.alt = message.direction === 'outgoing' ? 'Sent photo attachment' : 'Received photo attachment';
-                        image.loading = 'lazy';
+                        if (mediaNode instanceof HTMLImageElement) {
+                            mediaNode.className = 'campaign-reply-attachment-image';
+                            mediaNode.src = url;
+                            mediaNode.alt = message.direction === 'outgoing' ? 'Sent photo attachment' : 'Received photo attachment';
+                            mediaNode.loading = 'lazy';
+                        } else {
+                            mediaNode.className = 'campaign-reply-attachment-video';
+                            mediaNode.controls = true;
+                            mediaNode.preload = 'metadata';
+                            mediaNode.playsInline = true;
+                            mediaNode.setAttribute('controlsList', 'nodownload');
+                            mediaNode.setAttribute('aria-label', message.direction === 'outgoing' ? 'Sent video attachment' : 'Received video attachment');
 
-                        link.appendChild(image);
+                            const source = document.createElement('source');
+                            source.src = url;
+                            if (contentType) {
+                                source.type = contentType;
+                            }
+                            mediaNode.appendChild(source);
+                        }
 
                         const download = document.createElement('a');
                         download.className = 'campaign-reply-attachment-download';
                         download.href = url;
                         download.download = buildAttachmentDownloadName(attachment, index);
-                        download.setAttribute('aria-label', `Download photo ${index + 1}`);
-                        download.title = 'Download image';
+                        download.setAttribute('aria-label', `Download ${kind} ${index + 1}`);
+                        download.title = kind === 'video' ? 'Download video' : 'Download image';
                         download.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.41L11 12.59V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"></path></svg>';
 
-                        row.append(link, download);
+                        row.append(mediaNode, download);
                         wrap.appendChild(row);
                         return;
                     }
@@ -3289,15 +3615,17 @@
                     empty.textContent = 'Replies will appear here once a contact answers a Twilio campaign.';
                     campaignReplyThread.appendChild(empty);
                     setCampaignReplyComposerEnabled(false);
+                    syncCampaignReplyBlockState(false);
                     return;
                 }
 
                 campaignReplyTitle.textContent = conversation.contactName || conversation.contactPhone || 'Twilio contact';
                 setCampaignReplyAddress(conversation.propertyAddress || '');
                 campaignReplySubtitle.textContent = conversation.campaignName
-                    ? `${conversation.contactPhone} • ${conversation.campaignName}`
-                    : `${conversation.contactPhone} • Direct Twilio thread`;
+                    ? `${conversation.contactPhone} • ${conversation.campaignName}${conversation.isBlocked ? ' • Outbound blocked, inbound allowed' : ''}`
+                    : `${conversation.contactPhone} • Direct Twilio thread${conversation.isBlocked ? ' • Outbound blocked, inbound allowed' : ''}`;
                 setCampaignReplyComposerEnabled(true);
+                syncCampaignReplyBlockState(Boolean(conversation.isBlocked));
 
                 if (!Array.isArray(messages) || !messages.length) {
                     const empty = document.createElement('p');
@@ -3391,6 +3719,13 @@
                     renderTwilioReplyConversations();
                     renderTwilioReplyThread([], null);
                 }
+            }
+
+            if (campaignReplySearchInput) {
+                campaignReplySearchInput.addEventListener('input', () => {
+                    campaignReplySearchTerm = String(campaignReplySearchInput.value || '').trim();
+                    renderTwilioReplyConversations();
+                });
             }
 
             async function loadTwilioInboxMessages(conversationKey, options = {}) {
@@ -3736,11 +4071,72 @@
                 });
             }
 
+            if (campaignReplyBlockContactButton) {
+                campaignReplyBlockContactButton.addEventListener('click', async () => {
+                    const activeConversation = twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
+                    if (!activeConversation || !activeTwilioConversationKey) {
+                        campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
+                        return;
+                    }
+
+                    const nextBlockedState = !Boolean(activeConversation.isBlocked);
+                    const contactLabel = String(activeConversation.contactName || activeConversation.contactPhone || 'this contact').trim();
+                    const confirmationMessage = nextBlockedState
+                        ? `Block outbound Twilio messaging to ${contactLabel}? They can still text you, and incoming messages will still appear here. This also stops MLS quick send.`
+                        : `Unblock ${contactLabel} so outbound Twilio messaging can resume?`;
+
+                    if (!window.confirm(confirmationMessage)) {
+                        return;
+                    }
+
+                    campaignReplyStatus.textContent = nextBlockedState
+                        ? 'Blocking contact from outbound messaging...'
+                        : 'Removing outbound message block...';
+
+                    try {
+                        const response = await fetch('/api/twilio/inbox/contact-block', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { Authorization: `Bearer ${token}` } : {})
+                            },
+                            body: JSON.stringify({
+                                conversationKey: activeTwilioConversationKey,
+                                blocked: nextBlockedState
+                            })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'Unable to update the contact block state.');
+                        }
+
+                        setActiveTwilioConversationBlocked(nextBlockedState);
+                        await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
+                        await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
+                        campaignReplyStatus.textContent = nextBlockedState
+                            ? 'Outbound Twilio messaging blocked. Incoming texts will still appear here.'
+                            : 'Outbound Twilio messaging restored for this contact.';
+                    } catch (error) {
+                        campaignReplyStatus.textContent = error.message || 'Unable to update the contact block state.';
+                    }
+                });
+            }
+
             if (campaignReplyTitle) {
                 campaignReplyTitle.addEventListener('click', async () => {
                     if (campaignReplyTitle.classList.contains('is-editable')) {
                         await promptTwilioContactNameEdit();
                     }
+                });
+            }
+
+            if (campaignReplyDeleteThreadButton) {
+                campaignReplyDeleteThreadButton.addEventListener('click', async () => {
+                    const activeConversation = twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
+                    await deleteTwilioConversationByKey(
+                        activeTwilioConversationKey,
+                        activeConversation?.contactName || activeConversation?.contactPhone || 'this contact'
+                    );
                 });
             }
 

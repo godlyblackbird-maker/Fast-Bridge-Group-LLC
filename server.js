@@ -3241,6 +3241,60 @@ async function findTwilioConversationByPhone(phone) {
   );
 }
 
+async function isTwilioContactBlockedByPhone(phone) {
+  const normalizedPhone = normalizeSmsPhone(phone);
+  if (!normalizedPhone) {
+    return false;
+  }
+
+  const row = await dbGet('SELECT 1 FROM twilio_blocked_contacts WHERE contact_phone = ? LIMIT 1', [normalizedPhone]);
+  return Boolean(row);
+}
+
+async function blockTwilioContact(record) {
+  const normalizedPhone = normalizeSmsPhone(record?.contactPhone);
+  if (!normalizedPhone) {
+    return null;
+  }
+
+  await dbRun(
+    `INSERT INTO twilio_blocked_contacts (
+       contact_phone,
+       contact_name,
+       blocked_by_user_id,
+       blocked_by_name,
+       blocked_by_email,
+       created_at,
+       updated_at
+     ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     ON CONFLICT(contact_phone) DO UPDATE SET
+       contact_name = excluded.contact_name,
+       blocked_by_user_id = excluded.blocked_by_user_id,
+       blocked_by_name = excluded.blocked_by_name,
+       blocked_by_email = excluded.blocked_by_email,
+       updated_at = CURRENT_TIMESTAMP`,
+    [
+      normalizedPhone,
+      String(record?.contactName || '').trim(),
+      Number(record?.blockedByUserId) || null,
+      String(record?.blockedByName || '').trim(),
+      String(record?.blockedByEmail || '').trim().toLowerCase()
+    ]
+  );
+
+  return dbGet('SELECT * FROM twilio_blocked_contacts WHERE contact_phone = ?', [normalizedPhone]);
+}
+
+async function unblockTwilioContact(phone) {
+  const normalizedPhone = normalizeSmsPhone(phone);
+  if (!normalizedPhone) {
+    return 0;
+  }
+
+  const result = await dbRun('DELETE FROM twilio_blocked_contacts WHERE contact_phone = ?', [normalizedPhone]);
+  return Math.max(Number(result?.changes) || 0, 0);
+}
+
 function isTwilioOptOutMessageBody(body) {
   const normalizedBody = String(body || '').trim().toLowerCase();
   if (!normalizedBody) {
@@ -3454,6 +3508,15 @@ async function sendTwilioCampaignMessages({ body, campaignName, recipients, medi
       continue;
     }
 
+    if (await isTwilioContactBlockedByPhone(normalizedPhone)) {
+      failed.push({
+        name: recipient.name || '',
+        phone: normalizedPhone,
+        error: 'Recipient is blocked from outbound messaging. Incoming messages are still allowed.'
+      });
+      continue;
+    }
+
     const personalizedBody = normalizedBody ? personalizeSmsBody(normalizedBody, recipient, normalizedSenderName).slice(0, 1600) : '';
 
     try {
@@ -3646,6 +3709,16 @@ async function updateTwilioConversationContactName(conversationKey, contactName)
   );
 
   return getLatestTwilioConversationRow(normalizedConversationKey);
+}
+
+async function deleteTwilioConversation(conversationKey) {
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  if (!normalizedConversationKey) {
+    return 0;
+  }
+
+  const result = await dbRun('DELETE FROM twilio_inbox_messages WHERE conversation_key = ?', [normalizedConversationKey]);
+  return Math.max(Number(result?.changes) || 0, 0);
 }
 
 async function queryOpenAiAssistant(question) {
@@ -4679,6 +4752,26 @@ function initializeDatabase() {
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_conversation_created ON twilio_inbox_messages(conversation_key, created_at, id)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_unread ON twilio_inbox_messages(direction, read_at, created_at)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_contact_phone ON twilio_inbox_messages(contact_phone, created_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS twilio_blocked_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_phone TEXT NOT NULL UNIQUE,
+      contact_name TEXT,
+      blocked_by_user_id INTEGER,
+      blocked_by_name TEXT,
+      blocked_by_email TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating twilio_blocked_contacts table:', err);
+    } else {
+      console.log('Twilio blocked contacts table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_twilio_blocked_contact_phone ON twilio_blocked_contacts(contact_phone)', () => {});
     }
   });
 
@@ -16417,19 +16510,21 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
     const conversations = await Promise.all(rows.map(async (row) => {
       const latestRow = await getLatestTwilioConversationRow(row.conversation_key);
       const serializedLatestMessage = serializeTwilioInboxMessage(latestRow);
+      const normalizedContactPhone = String(row.contact_phone || '').trim();
       return {
         conversationKey: String(row.conversation_key || '').trim(),
         campaignName: String(row.campaign_name || '').trim(),
         propertyAddress: String(serializedLatestMessage?.propertyAddress || '').trim(),
         contactName: String(row.contact_name || '').trim() || String(row.contact_phone || '').trim(),
-        contactPhone: String(row.contact_phone || '').trim(),
+        contactPhone: normalizedContactPhone,
         platformIdentity: String(row.platform_identity || '').trim(),
         lastMessageBody: String(row.last_message_body || '').trim(),
         lastMessagePreview: String(serializedLatestMessage?.preview || row.last_message_body || '').trim(),
         lastMessageAt: normalizeApiTimestamp(row.last_message_at) || null,
         lastDirection: String(row.last_direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
         lastStatus: String(row.last_status || '').trim(),
-        unreadCount: Math.max(0, Number(row.unread_count) || 0)
+        unreadCount: Math.max(0, Number(row.unread_count) || 0),
+        isBlocked: await isTwilioContactBlockedByPhone(normalizedContactPhone)
       };
     }));
 
@@ -16526,9 +16621,11 @@ app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
 
   try {
     const authHeader = `Basic ${Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')}`;
+    const forwardedRangeHeader = String(req.headers.range || '').trim();
     const response = await fetch(attachment.sourceUrl, {
       headers: {
-        Authorization: authHeader
+        Authorization: authHeader,
+        ...(forwardedRangeHeader ? { Range: forwardedRangeHeader } : {})
       }
     });
 
@@ -16538,9 +16635,42 @@ app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
     }
 
     const contentType = String(response.headers.get('content-type') || attachment.contentType || 'application/octet-stream').trim();
+    const contentLength = String(response.headers.get('content-length') || '').trim();
+    const contentRange = String(response.headers.get('content-range') || '').trim();
+    const acceptRanges = String(response.headers.get('accept-ranges') || '').trim();
+    const contentDisposition = String(response.headers.get('content-disposition') || '').trim();
+    const etag = String(response.headers.get('etag') || '').trim();
+    const lastModified = String(response.headers.get('last-modified') || '').trim();
     const arrayBuffer = await response.arrayBuffer();
+    const shouldRenderInline = attachment.kind === 'image'
+      || attachment.kind === 'video'
+      || attachment.kind === 'audio'
+      || contentType === 'application/pdf';
+    res.status(response.status);
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'private, max-age=300');
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+    if (contentRange) {
+      res.setHeader('Content-Range', contentRange);
+    }
+    if (acceptRanges) {
+      res.setHeader('Accept-Ranges', acceptRanges);
+    } else if (forwardedRangeHeader) {
+      res.setHeader('Accept-Ranges', 'bytes');
+    }
+    if (shouldRenderInline) {
+      res.setHeader('Content-Disposition', 'inline');
+    } else if (contentDisposition) {
+      res.setHeader('Content-Disposition', contentDisposition);
+    }
+    if (etag) {
+      res.setHeader('ETag', etag);
+    }
+    if (lastModified) {
+      res.setHeader('Last-Modified', lastModified);
+    }
     return res.send(Buffer.from(arrayBuffer));
   } catch (error) {
     console.error('Failed to proxy Twilio media:', error);
@@ -16603,6 +16733,78 @@ app.patch('/api/twilio/inbox/contact-name', async (req, res) => {
   }
 });
 
+app.delete('/api/twilio/inbox/conversation', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const conversationKey = String(req.body?.conversationKey || '').trim();
+  if (!conversationKey) {
+    return res.status(400).json({ error: 'conversationKey is required.' });
+  }
+
+  try {
+    const existingRow = await getLatestTwilioConversationRow(conversationKey);
+    if (!existingRow) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    const deletedCount = await deleteTwilioConversation(conversationKey);
+    return res.json({ success: true, conversationKey, deletedCount });
+  } catch (error) {
+    console.error('Failed to delete Twilio conversation:', error);
+    return res.status(500).json({ error: 'Unable to delete the Twilio conversation.' });
+  }
+});
+
+app.put('/api/twilio/inbox/contact-block', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const conversationKey = String(req.body?.conversationKey || '').trim();
+  const blocked = Boolean(req.body?.blocked);
+  if (!conversationKey) {
+    return res.status(400).json({ error: 'conversationKey is required.' });
+  }
+
+  try {
+    const existingRow = await getLatestTwilioConversationRow(conversationKey);
+    if (!existingRow) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    const contactPhone = String(existingRow.contact_phone || '').trim();
+    if (!contactPhone) {
+      return res.status(400).json({ error: 'Conversation does not have a valid phone number.' });
+    }
+
+    if (blocked) {
+      await blockTwilioContact({
+        contactPhone,
+        contactName: String(existingRow.contact_name || '').trim(),
+        blockedByUserId: Number(decoded.id) || null,
+        blockedByName: String(decoded.name || '').trim(),
+        blockedByEmail: String(decoded.email || '').trim().toLowerCase()
+      });
+    } else {
+      await unblockTwilioContact(contactPhone);
+    }
+
+    return res.json({
+      success: true,
+      conversationKey,
+      contactPhone,
+      blocked
+    });
+  } catch (error) {
+    console.error('Failed to update Twilio contact block state:', error);
+    return res.status(500).json({ error: 'Unable to update the Twilio contact block state.' });
+  }
+});
+
 app.post('/api/twilio/inbox/reply', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
@@ -16626,6 +16828,10 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
   const latestRow = await getLatestTwilioConversationRow(conversationKey);
   if (!latestRow) {
     return res.status(404).json({ error: 'Conversation not found.' });
+  }
+
+  if (await isTwilioContactBlockedByPhone(String(latestRow.contact_phone || '').trim())) {
+    return res.status(403).json({ error: 'This contact is blocked from outbound messaging. Incoming messages are still allowed.' });
   }
 
   const client = getTwilioClient();
@@ -16733,6 +16939,19 @@ app.post('/api/twilio/send-sms', async (req, res) => {
 
     if ((scheduledTime - Date.now()) < TWILIO_SCHEDULE_MIN_LEAD_MS) {
       return res.status(400).json({ error: `Scheduled sends must be at least ${Math.round(TWILIO_SCHEDULE_MIN_LEAD_MS / 60000)} minute(s) in the future.` });
+    }
+
+    for (const entry of providedRecipients) {
+      const candidatePhone = normalizeSmsPhone(typeof entry === 'string' ? entry : entry?.phone);
+      if (!candidatePhone) {
+        continue;
+      }
+      if (await hasTwilioInboundOptOutByPhone(candidatePhone)) {
+        return res.status(400).json({ error: 'One or more recipients have already opted out with STOP.' });
+      }
+      if (await isTwilioContactBlockedByPhone(candidatePhone)) {
+        return res.status(400).json({ error: 'One or more recipients are blocked from outbound messaging. Incoming messages are still allowed.' });
+      }
     }
 
     try {
