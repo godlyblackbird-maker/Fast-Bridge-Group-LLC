@@ -3629,6 +3629,25 @@ async function markTwilioConversationRead(conversationKey) {
   );
 }
 
+async function updateTwilioConversationContactName(conversationKey, contactName) {
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  const normalizedContactName = String(contactName || '').trim();
+
+  if (!normalizedConversationKey || !normalizedContactName) {
+    return null;
+  }
+
+  await dbRun(
+    `UPDATE twilio_inbox_messages
+        SET contact_name = ?,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE conversation_key = ?`,
+    [normalizedContactName, normalizedConversationKey]
+  );
+
+  return getLatestTwilioConversationRow(normalizedConversationKey);
+}
+
 async function queryOpenAiAssistant(question) {
   const apiKeys = getOpenAiApiKeyCandidates();
   if (apiKeys.length === 0) {
@@ -7341,7 +7360,7 @@ function serializeTwilioMediaUpload(row) {
 
   return {
     id: String(row.id || '').trim(),
-    fileName: String(row.original_file_name || '').trim() || 'Image',
+    fileName: String(row.original_file_name || '').trim() || 'File',
     fileSize: Math.max(Number(row.file_size) || 0, 0),
     fileType: String(row.file_type || '').trim() || getContentTypeForFileName(row.original_file_name),
     contentPath: buildTwilioMediaUploadContentPath(row.id),
@@ -7353,8 +7372,24 @@ function serializeTwilioMediaUpload(row) {
 function isAllowedTwilioMediaUpload(extension, mimeType = '') {
   const normalizedExtension = String(extension || '').trim().toLowerCase();
   const normalizedMimeType = String(mimeType || '').trim().toLowerCase();
-  return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.avif', '.heic', '.heif', '.jfif'].includes(normalizedExtension)
-    || normalizedMimeType.startsWith('image/');
+  return [
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.avif', '.heic', '.heif', '.jfif',
+    '.pdf', '.txt', '.csv', '.rtf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.xml', '.json'
+  ].includes(normalizedExtension)
+    || normalizedMimeType.startsWith('image/')
+    || normalizedMimeType.startsWith('text/')
+    || [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/rtf',
+      'application/xml',
+      'application/json'
+    ].includes(normalizedMimeType);
 }
 
 function buildTwilioOutgoingMediaPayload(uploadRecords, requestOriginOrReq) {
@@ -15825,8 +15860,8 @@ app.post('/api/twilio/media-uploads', (req, res) => {
   userUploadMemory.single('file')(req, res, async (uploadError) => {
     if (uploadError) {
       const uploadMessage = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
-        ? 'Images must be 15 MB or smaller.'
-        : (uploadError && uploadError.message ? uploadError.message : 'Failed to upload the image.');
+        ? 'Attachments must be 15 MB or smaller.'
+        : (uploadError && uploadError.message ? uploadError.message : 'Failed to upload the file.');
       return res.status(400).json({ error: uploadMessage });
     }
 
@@ -15837,15 +15872,15 @@ app.post('/api/twilio/media-uploads', (req, res) => {
       const contextKey = sanitizeUserUploadContextKey(req.body?.contextKey || 'draft', 'draft');
 
       if (!uploadedFile || !fileName) {
-        return res.status(400).json({ error: 'An image file is required.' });
+        return res.status(400).json({ error: 'A file is required.' });
       }
 
       if (!isAllowedTwilioMediaUpload(extension, uploadedFile.mimetype || '')) {
-        return res.status(400).json({ error: 'Only image uploads are allowed for Twilio media.' });
+        return res.status(400).json({ error: 'Only supported documents and media files are allowed for Twilio attachments.' });
       }
 
       if (!uploadedFile.buffer || !uploadedFile.buffer.length) {
-        return res.status(400).json({ error: 'The uploaded image was empty.' });
+        return res.status(400).json({ error: 'The uploaded file was empty.' });
       }
 
       const createdRecord = await createUserUploadRecord({
@@ -15861,7 +15896,7 @@ app.post('/api/twilio/media-uploads', (req, res) => {
       return res.status(201).json({ document: serializeTwilioMediaUpload(createdRecord) });
     } catch (error) {
       console.error('Failed to save Twilio media upload:', error);
-      return res.status(500).json({ error: 'Failed to save the uploaded image.' });
+      return res.status(500).json({ error: 'Failed to save the uploaded file.' });
     }
   });
 });
@@ -16530,6 +16565,41 @@ app.post('/api/twilio/inbox/messages/read', async (req, res) => {
   } catch (error) {
     console.error('Failed to mark Twilio conversation read:', error);
     return res.status(500).json({ error: 'Unable to mark Twilio conversation as read.' });
+  }
+});
+
+app.patch('/api/twilio/inbox/contact-name', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const conversationKey = String(req.body?.conversationKey || '').trim();
+  const contactName = String(req.body?.contactName || '').trim();
+
+  if (!conversationKey || !contactName) {
+    return res.status(400).json({ error: 'conversationKey and contactName are required.' });
+  }
+
+  if (contactName.length > 120) {
+    return res.status(400).json({ error: 'Keep the contact name under 120 characters.' });
+  }
+
+  try {
+    const existingRow = await getLatestTwilioConversationRow(conversationKey);
+    if (!existingRow) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    const updatedRow = await updateTwilioConversationContactName(conversationKey, contactName);
+    return res.json({
+      success: true,
+      conversationKey,
+      contactName: String(updatedRow?.contact_name || contactName).trim()
+    });
+  } catch (error) {
+    console.error('Failed to update Twilio contact name:', error);
+    return res.status(500).json({ error: 'Unable to update the Twilio contact name.' });
   }
 });
 

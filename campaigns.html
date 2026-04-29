@@ -513,12 +513,32 @@
         }
 
         .campaign-schedule-btn {
-            padding-inline: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding-inline: 14px;
+            border-color: rgba(96, 165, 250, 0.34);
+            background: rgba(59, 130, 246, 0.16);
+            color: #dbeafe;
         }
 
         .campaign-schedule-btn svg {
             width: 18px;
             height: 18px;
+            fill: currentColor;
+            flex: 0 0 auto;
+        }
+
+        .campaign-schedule-btn-label {
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .campaign-schedule-btn:hover,
+        .campaign-schedule-btn:focus-visible {
+            border-color: rgba(147, 197, 253, 0.5);
+            background: rgba(59, 130, 246, 0.24);
         }
 
         .campaign-media-toolbar {
@@ -561,14 +581,31 @@
             color: #111827;
         }
 
-        .campaign-media-thumb {
+        .campaign-media-thumb,
+        .campaign-media-file-badge {
             width: 44px;
             height: 44px;
             border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .campaign-media-thumb {
             object-fit: cover;
             border: 1px solid rgba(148, 163, 184, 0.2);
             background: rgba(241, 245, 249, 0.92);
-            flex-shrink: 0;
+        }
+
+        .campaign-media-file-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: linear-gradient(135deg, rgba(226, 232, 240, 0.92), rgba(191, 219, 254, 0.95));
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
         }
 
         .campaign-media-copy {
@@ -736,9 +773,40 @@
 
         .campaign-reply-title-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
             flex-wrap: wrap;
+        }
+
+        .campaign-reply-name-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .campaign-reply-name-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .campaign-reply-name-group h4 {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .campaign-reply-name-group h4.is-editable {
+            cursor: pointer;
+        }
+
+        .campaign-reply-name-group h4.is-editable:hover,
+        .campaign-reply-name-group h4.is-editable:focus-visible {
+            color: var(--accent);
         }
 
         .campaign-reply-address-group {
@@ -746,6 +814,25 @@
             align-items: center;
             gap: 8px;
             flex-wrap: wrap;
+        }
+
+        .campaign-reply-edit-name,
+        .campaign-reply-copy-address {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(255, 255, 255, 0.94);
+            color: #475569;
+        }
+
+        .campaign-reply-edit-name:disabled {
+            opacity: 0.58;
+            cursor: not-allowed;
         }
 
         .campaign-reply-address-chip {
@@ -765,19 +852,8 @@
             white-space: nowrap;
         }
 
-        .campaign-reply-copy-address {
-            width: 34px;
-            height: 34px;
-            min-width: 34px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            background: rgba(255, 255, 255, 0.94);
-            color: #475569;
-        }
-
+        .campaign-reply-edit-name:hover,
+        .campaign-reply-edit-name:focus-visible,
         .campaign-reply-copy-address:hover,
         .campaign-reply-copy-address:focus-visible {
             border-color: rgba(var(--accent-rgb), 0.28);
@@ -785,6 +861,7 @@
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
         }
 
+        .campaign-reply-edit-name svg,
         .campaign-reply-copy-address svg {
             width: 16px;
             height: 16px;
@@ -1058,8 +1135,19 @@
             gap: 10px;
         }
 
+        .campaign-reply-send-stack {
+            position: relative;
+            display: inline-flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
         .campaign-reply-form .outreach-textarea {
-            min-height: 110px;
+            min-height: 48px;
+            max-height: 220px;
+            overflow-y: hidden;
+            resize: none;
+            line-height: 1.55;
             background: rgba(255, 255, 255, 0.94);
             color: #0f172a;
             border-color: rgba(148, 163, 184, 0.22);
@@ -1067,6 +1155,7 @@
 
         #campaign-reply-attach,
         #campaign-reply-newline,
+        #campaign-reply-schedule,
         #campaign-reply-send {
             width: 48px;
             height: 48px;
@@ -1084,7 +1173,8 @@
         }
 
         #campaign-reply-attach,
-        #campaign-reply-newline {
+        #campaign-reply-newline,
+        #campaign-reply-schedule {
             border: 1px solid rgba(148, 163, 184, 0.24);
             background: rgba(255, 255, 255, 0.96);
             color: #0f172a;
@@ -1093,6 +1183,7 @@
 
         #campaign-reply-attach svg,
         #campaign-reply-newline svg,
+        #campaign-reply-schedule svg,
         #campaign-reply-send svg {
             width: 20px;
             height: 20px;
@@ -1101,11 +1192,30 @@
             fill: none;
         }
 
+        #campaign-reply-attach img,
         #campaign-reply-newline img {
             width: 20px;
             height: 20px;
             display: block;
             object-fit: contain;
+        }
+
+        #campaign-reply-schedule {
+            position: absolute;
+            right: 0;
+            bottom: calc(100% + 10px);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(8px) scale(0.92);
+            transition: opacity 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+            z-index: 2;
+        }
+
+        .campaign-reply-send-stack:hover #campaign-reply-schedule:not(:disabled),
+        .campaign-reply-send-stack:focus-within #campaign-reply-schedule:not(:disabled) {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
         }
 
         #campaign-reply-send svg {
@@ -1122,10 +1232,18 @@
             transform: translateY(-1px);
         }
 
+        #campaign-reply-schedule:hover:not(:disabled),
+        #campaign-reply-schedule:focus-visible:not(:disabled) {
+            filter: brightness(1.04);
+            transform: translateY(0) scale(1);
+        }
+
         #campaign-reply-attach:hover:not(:disabled),
         #campaign-reply-attach:focus-visible:not(:disabled),
         #campaign-reply-newline:hover:not(:disabled),
-        #campaign-reply-newline:focus-visible:not(:disabled) {
+        #campaign-reply-newline:focus-visible:not(:disabled),
+        #campaign-reply-schedule:hover:not(:disabled),
+        #campaign-reply-schedule:focus-visible:not(:disabled) {
             box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14), 0 14px 28px rgba(15, 23, 42, 0.18);
         }
 
@@ -1136,6 +1254,7 @@
 
         #campaign-reply-attach:disabled,
         #campaign-reply-newline:disabled,
+        #campaign-reply-schedule:disabled,
         #campaign-reply-send:disabled {
             border-color: transparent;
             background: #cbd5e1;
@@ -1684,15 +1803,25 @@
                                 <section class="campaign-replies-thread-shell">
                                     <div class="campaign-replies-thread-head">
                                         <div class="campaign-reply-title-row">
-                                            <h4 id="campaign-reply-title">Choose a Twilio thread</h4>
-                                            <div id="campaign-reply-address-group" class="campaign-reply-address-group" hidden>
-                                                <span id="campaign-reply-address" class="campaign-reply-address-chip"></span>
-                                                <button id="campaign-reply-copy-address" type="button" class="campaign-reply-copy-address" aria-label="Copy property address" title="Copy property address">
-                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                        <rect x="9" y="9" width="11" height="11" rx="2"></rect>
-                                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                                    </svg>
-                                                </button>
+                                            <div class="campaign-reply-name-group">
+                                                <div class="campaign-reply-name-row">
+                                                    <h4 id="campaign-reply-title">Choose a Twilio thread</h4>
+                                                    <button id="campaign-reply-edit-name" type="button" class="campaign-reply-edit-name" aria-label="Edit contact name" title="Edit contact name" disabled>
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path d="M12 20h9"></path>
+                                                            <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <div id="campaign-reply-address-group" class="campaign-reply-address-group" hidden>
+                                                    <span id="campaign-reply-address" class="campaign-reply-address-chip"></span>
+                                                    <button id="campaign-reply-copy-address" type="button" class="campaign-reply-copy-address" aria-label="Copy property address" title="Copy property address">
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <p id="campaign-reply-subtitle">Open a contact on the left to review replies and send a direct response.</p>
@@ -1702,24 +1831,34 @@
                                     </div>
                                     <form id="campaign-reply-form" class="campaign-reply-form">
                                         <div id="campaign-reply-status" class="campaign-reply-status"></div>
-                                        <input id="campaign-reply-media-input" class="campaign-media-input" type="file" accept="image/*" multiple>
+                                        <input id="campaign-reply-media-input" class="campaign-media-input" type="file" multiple>
                                         <div id="campaign-reply-media-pending" class="campaign-media-pending" hidden></div>
                                         <div class="campaign-reply-form-row">
                                             <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
                                             <div class="campaign-reply-action-group">
-                                                <button id="campaign-reply-attach" type="button" class="card-btn" aria-label="Attach image" title="Attach image" disabled>
-                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path d="M9 7.5V6a3 3 0 1 1 6 0v8a5 5 0 1 1-10 0V7a1 1 0 0 1 2 0v7a3 3 0 1 0 6 0V6a1 1 0 1 0-2 0v8.5a1.5 1.5 0 0 1-3 0V8.5"></path>
-                                                    </svg>
+                                                <button id="campaign-reply-attach" type="button" class="card-btn" aria-label="Attach file" title="Attach file" disabled>
+                                                    <img src="Symbols/paper-clip-svgrepo-com.svg" alt="" aria-hidden="true">
                                                 </button>
                                                 <button id="campaign-reply-newline" type="button" class="card-btn" aria-label="Insert line break" title="Insert line break" disabled>
                                                     <img src="Symbols/insert down space.svg" alt="" aria-hidden="true">
                                                 </button>
-                                                <button id="campaign-reply-send" type="submit" class="card-btn active" aria-label="Send reply" title="Send reply" disabled>
-                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
-                                                    </svg>
-                                                </button>
+                                                <div class="campaign-reply-send-stack">
+                                                    <button id="campaign-reply-schedule" type="button" class="card-btn" aria-label="Schedule reply" title="Schedule reply" disabled>
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path d="M7 3v3"></path>
+                                                            <path d="M17 3v3"></path>
+                                                            <rect x="3" y="5" width="18" height="16" rx="3"></rect>
+                                                            <path d="M3 10h18"></path>
+                                                            <path d="M12 13v4"></path>
+                                                            <path d="M10 15h4"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button id="campaign-reply-send" type="submit" class="card-btn active" aria-label="Send reply" title="Send reply" disabled>
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </form>
@@ -1772,9 +1911,9 @@
                                     </div>
                                     <div class="form-group outreach-full-width">
                                         <div class="campaign-media-toolbar">
-                                            <input id="campaign-media-input" class="campaign-media-input" type="file" accept="image/*" multiple>
-                                            <button id="campaign-media-attach" type="button" class="card-btn">Add Images</button>
-                                            <span class="campaign-media-note">Upload photos to send alongside your Twilio message.</span>
+                                            <input id="campaign-media-input" class="campaign-media-input" type="file" multiple>
+                                            <button id="campaign-media-attach" type="button" class="card-btn">Attach Files</button>
+                                            <span class="campaign-media-note">Upload photos or documents to send alongside your Twilio message.</span>
                                         </div>
                                         <div id="campaign-media-pending" class="campaign-media-pending" hidden></div>
                                     </div>
@@ -1788,6 +1927,7 @@
                                         <svg viewBox="0 0 24 24" aria-hidden="true">
                                             <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v3H2V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm15 9v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8h20Zm-10 3a1 1 0 0 0-1 1v2.38l-1.45 1.45a1 1 0 1 0 1.41 1.41l1.74-1.74A1 1 0 0 0 13 18v-3a1 1 0 0 0-1-1Z"></path>
                                         </svg>
+                                        <span class="campaign-schedule-btn-label">Schedule Send</span>
                                     </button>
                                     <button id="campaign-send-sms-btn" type="button" class="card-btn active">Send Twilio Campaign</button>
                                 </div>
@@ -1945,6 +2085,7 @@
                 </div>
                 <button type="button" class="campaign-template-close" data-campaign-schedule-close="true" aria-label="Close Twilio schedule dialog">×</button>
             </div>
+            <p id="campaign-schedule-subtitle" class="campaign-template-subtitle">Choose the exact date and time to queue this campaign automatically.</p>
             <p class="campaign-schedule-help">The send stays on the server, so it will still run if this page is closed. Scheduled Twilio sends must be at least 1 minute in the future.</p>
             <label class="campaign-template-field">
                 <span class="campaign-template-field-label">Send Date And Time</span>
@@ -1993,6 +2134,8 @@
             const campaignScheduleButton = document.getElementById('campaign-schedule-send-btn');
             const campaignScheduleSummary = document.getElementById('campaign-schedule-summary');
             const campaignScheduleModal = document.getElementById('campaign-schedule-modal');
+            const campaignScheduleTitle = document.getElementById('campaign-schedule-title');
+            const campaignScheduleSubtitle = document.getElementById('campaign-schedule-subtitle');
             const campaignScheduleInput = document.getElementById('campaign-schedule-datetime');
             const campaignSchedulePreview = document.getElementById('campaign-schedule-preview');
             const campaignScheduleConfirmButton = document.getElementById('campaign-schedule-confirm');
@@ -2009,6 +2152,7 @@
             const campaignRepliesStatus = document.getElementById('campaign-replies-status');
             const campaignReplyConversations = document.getElementById('campaign-reply-conversations');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
+            const campaignReplyEditNameButton = document.getElementById('campaign-reply-edit-name');
             const campaignReplyAddressGroup = document.getElementById('campaign-reply-address-group');
             const campaignReplyAddress = document.getElementById('campaign-reply-address');
             const campaignReplyCopyAddressButton = document.getElementById('campaign-reply-copy-address');
@@ -2020,6 +2164,7 @@
             const campaignReplyMediaPending = document.getElementById('campaign-reply-media-pending');
             const campaignReplyAttachButton = document.getElementById('campaign-reply-attach');
             const campaignReplyNewlineButton = document.getElementById('campaign-reply-newline');
+            const campaignReplyScheduleButton = document.getElementById('campaign-reply-schedule');
             const campaignReplySendButton = document.getElementById('campaign-reply-send');
             const campaignReplyStatus = document.getElementById('campaign-reply-status');
             const campaignTemplateBlocks = {
@@ -2041,6 +2186,7 @@
             let pendingCampaignMediaItems = [];
             let pendingReplyMediaItems = [];
             let pendingCampaignScheduleAt = '';
+            let campaignScheduleContext = 'campaign';
 
             function setCampaignReplyAddress(value) {
                 const propertyAddress = String(value || '').trim();
@@ -2050,12 +2196,113 @@
 
                 if (!propertyAddress) {
                     campaignReplyAddress.textContent = '';
+                    campaignReplyAddress.dataset.copyValue = '';
                     campaignReplyAddressGroup.setAttribute('hidden', 'hidden');
                     return;
                 }
 
                 campaignReplyAddress.textContent = propertyAddress;
+                campaignReplyAddress.dataset.copyValue = propertyAddress;
                 campaignReplyAddressGroup.removeAttribute('hidden');
+            }
+
+            function setActiveTwilioConversationContactName(contactName) {
+                const normalizedContactName = String(contactName || '').trim();
+                if (!normalizedContactName || !activeTwilioConversationKey) {
+                    return;
+                }
+
+                twilioInboxConversations = twilioInboxConversations.map((conversation) => {
+                    if (!conversation || conversation.conversationKey !== activeTwilioConversationKey) {
+                        return conversation;
+                    }
+
+                    return {
+                        ...conversation,
+                        contactName: normalizedContactName
+                    };
+                });
+            }
+
+            async function promptTwilioContactNameEdit() {
+                const activeConversation = twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
+                if (!activeConversation || !activeTwilioConversationKey) {
+                    campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
+                    return;
+                }
+
+                const currentName = String(activeConversation.contactName || activeConversation.contactPhone || '').trim();
+                const nextName = window.prompt('Edit contact name', currentName);
+                if (nextName === null) {
+                    return;
+                }
+
+                const normalizedName = String(nextName || '').trim();
+                if (!normalizedName) {
+                    campaignReplyStatus.textContent = 'Contact name cannot be empty.';
+                    return;
+                }
+
+                if (normalizedName === currentName) {
+                    return;
+                }
+
+                campaignReplyStatus.textContent = 'Updating contact name...';
+
+                try {
+                    const response = await fetch('/api/twilio/inbox/contact-name', {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({
+                            conversationKey: activeTwilioConversationKey,
+                            contactName: normalizedName
+                        })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Unable to update the contact name.');
+                    }
+
+                    setActiveTwilioConversationContactName(data.contactName || normalizedName);
+                    campaignReplyTitle.textContent = data.contactName || normalizedName;
+                    renderTwilioReplyConversations();
+                    campaignReplyStatus.textContent = 'Contact name updated.';
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || 'Unable to update the contact name.';
+                }
+            }
+
+            async function copyTextToClipboard(value) {
+                const normalizedValue = String(value || '').trim();
+                if (!normalizedValue) {
+                    return false;
+                }
+
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function' && window.isSecureContext) {
+                    await navigator.clipboard.writeText(normalizedValue);
+                    return true;
+                }
+
+                const helper = document.createElement('textarea');
+                helper.value = normalizedValue;
+                helper.setAttribute('readonly', 'readonly');
+                helper.style.position = 'fixed';
+                helper.style.top = '0';
+                helper.style.left = '-9999px';
+                helper.style.opacity = '0';
+                document.body.appendChild(helper);
+                helper.focus();
+                helper.select();
+                helper.setSelectionRange(0, helper.value.length);
+
+                try {
+                    return document.execCommand('copy');
+                } finally {
+                    helper.remove();
+                }
             }
 
             function setTwilioWebhookUiState(data = {}) {
@@ -2249,6 +2496,33 @@
                 return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
             }
 
+            function isImageFileType(value) {
+                return String(value || '').trim().toLowerCase().startsWith('image/');
+            }
+
+            function getAttachmentBadgeLabel(fileName, fileType) {
+                const trimmedName = String(fileName || '').trim();
+                const dotIndex = trimmedName.lastIndexOf('.');
+                if (dotIndex > -1 && dotIndex < trimmedName.length - 1) {
+                    return trimmedName.slice(dotIndex + 1).toUpperCase().slice(0, 4);
+                }
+
+                const normalizedType = String(fileType || '').trim().toLowerCase();
+                if (normalizedType === 'application/pdf') {
+                    return 'PDF';
+                }
+                if (normalizedType.startsWith('text/')) {
+                    return 'TXT';
+                }
+                if (normalizedType.startsWith('audio/')) {
+                    return 'AUD';
+                }
+                if (normalizedType.startsWith('video/')) {
+                    return 'VID';
+                }
+                return 'FILE';
+            }
+
             function normalizeCampaignPhoneValue(value) {
                 const raw = String(value || '').trim();
                 if (!raw) {
@@ -2354,6 +2628,28 @@
                 campaignSchedulePreview.textContent = value ? formatCampaignScheduledAt(value) : 'No date selected yet.';
             }
 
+            function setCampaignScheduleContext(context) {
+                campaignScheduleContext = context === 'reply' ? 'reply' : 'campaign';
+
+                if (campaignScheduleTitle) {
+                    campaignScheduleTitle.textContent = campaignScheduleContext === 'reply'
+                        ? 'Schedule Twilio Reply'
+                        : 'Schedule Twilio Campaign';
+                }
+
+                if (campaignScheduleSubtitle) {
+                    campaignScheduleSubtitle.textContent = campaignScheduleContext === 'reply'
+                        ? 'Choose the exact date and time to send this reply to the active Twilio thread.'
+                        : 'Choose the exact date and time to queue this campaign automatically.';
+                }
+
+                if (campaignScheduleConfirmButton) {
+                    campaignScheduleConfirmButton.textContent = campaignScheduleContext === 'reply'
+                        ? 'Schedule Twilio Reply'
+                        : 'Schedule Twilio Campaign';
+                }
+            }
+
             function setPendingCampaignScheduleAt(value) {
                 const normalized = value ? new Date(value) : null;
                 pendingCampaignScheduleAt = normalized instanceof Date && !Number.isNaN(normalized.getTime())
@@ -2378,21 +2674,25 @@
                 }
             }
 
-            function openCampaignScheduleModal() {
+            function openCampaignScheduleModal(context = 'campaign') {
                 if (!campaignScheduleModal) {
                     return;
                 }
 
-                if (campaignScheduleInput && !campaignScheduleInput.value) {
-                    campaignScheduleInput.value = pendingCampaignScheduleAt
-                        ? toCampaignDateTimeLocalValue(pendingCampaignScheduleAt)
+                setCampaignScheduleContext(context);
+
+                if (campaignScheduleInput) {
+                    campaignScheduleInput.value = campaignScheduleContext === 'campaign'
+                        ? (pendingCampaignScheduleAt
+                            ? toCampaignDateTimeLocalValue(pendingCampaignScheduleAt)
+                            : getDefaultCampaignScheduleLocalValue())
                         : getDefaultCampaignScheduleLocalValue();
                 }
 
                 updateCampaignSchedulePreview(
                     campaignScheduleInput && campaignScheduleInput.value
                         ? new Date(campaignScheduleInput.value).toISOString()
-                        : pendingCampaignScheduleAt
+                        : (campaignScheduleContext === 'campaign' ? pendingCampaignScheduleAt : '')
                 );
                 campaignScheduleModal.hidden = false;
                 campaignScheduleModal.setAttribute('aria-hidden', 'false');
@@ -2417,6 +2717,17 @@
                 campaignScheduleModal.setAttribute('aria-hidden', 'true');
             }
 
+            function syncCampaignReplyInputHeight() {
+                if (!campaignReplyInput) {
+                    return;
+                }
+
+                campaignReplyInput.style.height = '48px';
+                const nextHeight = Math.min(Math.max(campaignReplyInput.scrollHeight, 48), 220);
+                campaignReplyInput.style.height = `${nextHeight}px`;
+                campaignReplyInput.style.overflowY = campaignReplyInput.scrollHeight > 220 ? 'auto' : 'hidden';
+            }
+
             function setCampaignRepliesStatus(message, mode) {
                 if (!campaignRepliesStatus) {
                     return;
@@ -2430,12 +2741,30 @@
             function setCampaignReplyComposerEnabled(enabled) {
                 if (campaignReplyInput) {
                     campaignReplyInput.disabled = !enabled;
+                    if (!enabled) {
+                        campaignReplyInput.value = '';
+                    }
+                    syncCampaignReplyInputHeight();
+                }
+                if (campaignReplyTitle) {
+                    campaignReplyTitle.classList.toggle('is-editable', enabled);
+                    if (enabled) {
+                        campaignReplyTitle.setAttribute('title', 'Click to edit contact name');
+                    } else {
+                        campaignReplyTitle.removeAttribute('title');
+                    }
+                }
+                if (campaignReplyEditNameButton) {
+                    campaignReplyEditNameButton.disabled = !enabled;
                 }
                 if (campaignReplyAttachButton) {
                     campaignReplyAttachButton.disabled = !enabled;
                 }
                 if (campaignReplyNewlineButton) {
                     campaignReplyNewlineButton.disabled = !enabled;
+                }
+                if (campaignReplyScheduleButton) {
+                    campaignReplyScheduleButton.disabled = !enabled;
                 }
                 if (campaignReplySendButton) {
                     campaignReplySendButton.disabled = !enabled;
@@ -2461,22 +2790,33 @@
                     const chip = document.createElement('div');
                     chip.className = 'campaign-media-chip';
 
-                    const thumb = document.createElement('img');
-                    thumb.className = 'campaign-media-thumb';
-                    thumb.src = String(item?.contentPath || '').trim();
-                    thumb.alt = String(item?.fileName || 'Image').trim() || 'Image';
-                    thumb.loading = 'lazy';
+                    const fileName = String(item?.fileName || 'File').trim() || 'File';
+                    const fileType = String(item?.fileType || '').trim();
+                    const previewNode = isImageFileType(fileType)
+                        ? document.createElement('img')
+                        : document.createElement('div');
+
+                    if (previewNode instanceof HTMLImageElement) {
+                        previewNode.className = 'campaign-media-thumb';
+                        previewNode.src = String(item?.contentPath || '').trim();
+                        previewNode.alt = fileName;
+                        previewNode.loading = 'lazy';
+                    } else {
+                        previewNode.className = 'campaign-media-file-badge';
+                        previewNode.textContent = getAttachmentBadgeLabel(fileName, fileType);
+                        previewNode.setAttribute('aria-hidden', 'true');
+                    }
 
                     const copy = document.createElement('div');
                     copy.className = 'campaign-media-copy';
 
                     const name = document.createElement('p');
                     name.className = 'campaign-media-name';
-                    name.textContent = String(item?.fileName || 'Image').trim() || 'Image';
+                    name.textContent = fileName;
 
                     const meta = document.createElement('p');
                     meta.className = 'campaign-media-meta';
-                    meta.textContent = [formatFileSize(item?.fileSize), String(item?.fileType || '').trim()].filter(Boolean).join(' • ');
+                    meta.textContent = [formatFileSize(item?.fileSize), fileType].filter(Boolean).join(' • ');
 
                     const removeButton = document.createElement('button');
                     removeButton.type = 'button';
@@ -2488,7 +2828,7 @@
                     });
 
                     copy.append(name, meta);
-                    chip.append(thumb, copy, removeButton);
+                    chip.append(previewNode, copy, removeButton);
                     container.appendChild(chip);
                 });
             }
@@ -2523,7 +2863,7 @@
 
             async function uploadTwilioMediaFile(file, contextKey) {
                 if (!token) {
-                    throw new Error('Sign in again before uploading Twilio images.');
+                    throw new Error('Sign in again before uploading Twilio attachments.');
                 }
 
                 const formData = new FormData();
@@ -2540,7 +2880,7 @@
 
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error(payload.error || 'Unable to upload the selected image.');
+                    throw new Error(payload.error || 'Unable to upload the selected file.');
                 }
 
                 return payload && payload.document ? payload.document : null;
@@ -2594,6 +2934,81 @@
                 }
 
                 const recipients = parseCampaignRecipients(campaignRecipientsInput ? campaignRecipientsInput.value : '');
+
+            async function submitCampaignReply(options = {}) {
+                const body = campaignReplyInput ? campaignReplyInput.value.trim() : '';
+                const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
+
+                if (!activeTwilioConversationKey) {
+                    campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
+                    return;
+                }
+
+                if (!body && !pendingReplyMediaItems.length) {
+                    campaignReplyStatus.textContent = 'Type a reply or attach at least one file before sending.';
+                    return;
+                }
+
+                const conversation = twilioInboxConversations.find((item) => item.conversationKey === activeTwilioConversationKey) || null;
+                if (!conversation || !String(conversation.contactPhone || '').trim()) {
+                    campaignReplyStatus.textContent = 'The active Twilio conversation is missing a phone number.';
+                    return;
+                }
+
+                campaignReplyStatus.textContent = scheduleAt ? 'Scheduling Twilio reply...' : 'Sending Twilio reply...';
+
+                try {
+                    const response = await fetch(scheduleAt ? '/api/twilio/send-sms' : '/api/twilio/inbox/reply', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify(scheduleAt
+                            ? {
+                                campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply',
+                                body,
+                                senderName: getCurrentSenderName(),
+                                recipients: [{
+                                    name: conversation.contactName || conversation.contactPhone || '',
+                                    phone: conversation.contactPhone || '',
+                                    area: conversation.propertyAddress || ''
+                                }],
+                                mediaUploadIds: pendingReplyMediaItems.map((item) => item.id).filter(Boolean),
+                                scheduleAt
+                            }
+                            : {
+                                conversationKey: activeTwilioConversationKey,
+                                body,
+                                campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply',
+                                mediaUploadIds: pendingReplyMediaItems.map((item) => item.id).filter(Boolean)
+                            })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || `Unable to ${scheduleAt ? 'schedule' : 'send'} Twilio reply.`);
+                    }
+
+                    if (campaignReplyInput) {
+                        campaignReplyInput.value = '';
+                        syncCampaignReplyInputHeight();
+                    }
+                    pendingReplyMediaItems = [];
+                    renderPendingReplyMedia();
+
+                    if (scheduleAt && data.scheduled && data.scheduledMessage) {
+                        campaignReplyStatus.textContent = `Reply scheduled for ${formatCampaignScheduledAt(data.scheduledMessage.scheduledFor || scheduleAt)}.`;
+                        closeCampaignScheduleModal();
+                        return;
+                    }
+
+                    campaignReplyStatus.textContent = 'Twilio reply sent.';
+                    await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
+                    await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || `Unable to ${scheduleAt ? 'schedule' : 'send'} Twilio reply.`;
+                }
+            }
                 const body = campaignBodyInput ? campaignBodyInput.value.trim() : '';
                 const campaignName = campaignNameInput ? campaignNameInput.value.trim() : 'Agent SMS Campaign';
                 const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
@@ -3182,7 +3597,7 @@
 
             if (campaignScheduleButton) {
                 campaignScheduleButton.addEventListener('click', () => {
-                    openCampaignScheduleModal();
+                    openCampaignScheduleModal('campaign');
                 });
             }
 
@@ -3199,7 +3614,14 @@
 
             if (campaignScheduleClearButton) {
                 campaignScheduleClearButton.addEventListener('click', () => {
-                    setPendingCampaignScheduleAt('');
+                    if (campaignScheduleContext === 'campaign') {
+                        setPendingCampaignScheduleAt('');
+                    } else {
+                        if (campaignScheduleInput) {
+                            campaignScheduleInput.value = '';
+                        }
+                        updateCampaignSchedulePreview('');
+                    }
                     closeCampaignScheduleModal();
                 });
             }
@@ -3211,11 +3633,19 @@
                         : '';
 
                     if (!scheduleAt) {
-                        campaignSendStatus.textContent = 'Choose a date and time before scheduling this Twilio campaign.';
+                        if (campaignScheduleContext === 'reply') {
+                            campaignReplyStatus.textContent = 'Choose a date and time before scheduling this Twilio reply.';
+                        } else {
+                            campaignSendStatus.textContent = 'Choose a date and time before scheduling this Twilio campaign.';
+                        }
                         return;
                     }
 
-                    await submitCampaignSend({ scheduleAt });
+                    if (campaignScheduleContext === 'reply') {
+                        await submitCampaignReply({ scheduleAt });
+                    } else {
+                        await submitCampaignSend({ scheduleAt });
+                    }
                 });
             }
 
@@ -3276,28 +3706,40 @@
 
             if (campaignReplyCopyAddressButton) {
                 campaignReplyCopyAddressButton.addEventListener('click', async () => {
-                    const value = String(campaignReplyAddress ? campaignReplyAddress.textContent : '').trim();
+                    const activeConversation = twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
+                    const value = String(
+                        activeConversation?.propertyAddress
+                        || campaignReplyAddress?.dataset.copyValue
+                        || campaignReplyAddress?.textContent
+                        || ''
+                    ).trim();
                     if (!value) {
+                        campaignReplyStatus.textContent = 'No property address is available for this chat.';
                         return;
                     }
 
                     try {
-                        if (navigator.clipboard && navigator.clipboard.writeText) {
-                            await navigator.clipboard.writeText(value);
-                        } else {
-                            const helper = document.createElement('textarea');
-                            helper.value = value;
-                            helper.setAttribute('readonly', 'readonly');
-                            helper.style.position = 'absolute';
-                            helper.style.left = '-9999px';
-                            document.body.appendChild(helper);
-                            helper.select();
-                            document.execCommand('copy');
-                            helper.remove();
+                        const copied = await copyTextToClipboard(value);
+                        if (!copied) {
+                            throw new Error('Copy command was rejected.');
                         }
                         campaignReplyStatus.textContent = 'Property address copied.';
                     } catch (error) {
                         campaignReplyStatus.textContent = 'Could not copy the property address.';
+                    }
+                });
+            }
+
+            if (campaignReplyEditNameButton) {
+                campaignReplyEditNameButton.addEventListener('click', async () => {
+                    await promptTwilioContactNameEdit();
+                });
+            }
+
+            if (campaignReplyTitle) {
+                campaignReplyTitle.addEventListener('click', async () => {
+                    if (campaignReplyTitle.classList.contains('is-editable')) {
+                        await promptTwilioContactNameEdit();
                     }
                 });
             }
@@ -3325,6 +3767,10 @@
                 }
 
                 if (campaignReplyInput) {
+                    campaignReplyInput.addEventListener('input', () => {
+                        syncCampaignReplyInputHeight();
+                    });
+
                     campaignReplyInput.addEventListener('keydown', (event) => {
                         if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) {
                             return;
@@ -3343,55 +3789,21 @@
                     });
                 }
 
+                if (campaignReplyScheduleButton) {
+                    campaignReplyScheduleButton.addEventListener('click', () => {
+                        if (!campaignReplyScheduleButton.disabled) {
+                            openCampaignScheduleModal('reply');
+                        }
+                    });
+                }
+
                 campaignReplyForm.addEventListener('submit', async (event) => {
                     event.preventDefault();
-
-                    const body = campaignReplyInput ? campaignReplyInput.value.trim() : '';
-                    if (!activeTwilioConversationKey) {
-                        campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
-                        return;
-                    }
-
-                    if (!body && !pendingReplyMediaItems.length) {
-                        campaignReplyStatus.textContent = 'Type a reply or attach at least one image before sending.';
-                        return;
-                    }
-
-                    campaignReplyStatus.textContent = 'Sending Twilio reply...';
-
-                    try {
-                        const conversation = twilioInboxConversations.find((item) => item.conversationKey === activeTwilioConversationKey) || null;
-                        const response = await fetch('/api/twilio/inbox/reply', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { Authorization: `Bearer ${token}` } : {})
-                            },
-                            body: JSON.stringify({
-                                conversationKey: activeTwilioConversationKey,
-                                body,
-                                campaignName: conversation?.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply',
-                                mediaUploadIds: pendingReplyMediaItems.map((item) => item.id).filter(Boolean)
-                            })
-                        });
-                        const data = await response.json().catch(() => ({}));
-                        if (!response.ok || !data.success) {
-                            throw new Error(data.error || 'Unable to send Twilio reply.');
-                        }
-
-                        if (campaignReplyInput) {
-                            campaignReplyInput.value = '';
-                        }
-                        pendingReplyMediaItems = [];
-                        renderPendingReplyMedia();
-                        campaignReplyStatus.textContent = 'Twilio reply sent.';
-                        await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
-                        await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
-                    } catch (error) {
-                        campaignReplyStatus.textContent = error.message || 'Unable to send Twilio reply.';
-                    }
+                    await submitCampaignReply();
                 });
             }
+
+            syncCampaignReplyInputHeight();
 
             loadTwilioStatus();
             loadTwilioInboxConversations({ markRead: true });
