@@ -3143,6 +3143,7 @@ async function listTwilioInboxConversations() {
         base.conversation_key,
         base.contact_phone,
         base.platform_identity,
+        TRIM(COALESCE(GROUP_CONCAT(NULLIF(TRIM(COALESCE(base.body, '')), ''), ' '), '')) AS conversation_body_text,
         COALESCE(
           NULLIF((
             SELECT contact_name
@@ -16518,6 +16519,7 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
         contactName: String(row.contact_name || '').trim() || String(row.contact_phone || '').trim(),
         contactPhone: normalizedContactPhone,
         platformIdentity: String(row.platform_identity || '').trim(),
+        searchText: String(row.conversation_body_text || '').trim(),
         lastMessageBody: String(row.last_message_body || '').trim(),
         lastMessagePreview: String(serializedLatestMessage?.preview || row.last_message_body || '').trim(),
         lastMessageAt: normalizeApiTimestamp(row.last_message_at) || null,
