@@ -2404,6 +2404,7 @@
 
             const sentRowRecords = loadSentRowRecords();
             const smsPhonePreferences = loadSmsPhonePreferences();
+            const twilioPhoneHistoryCache = Object.create(null);
 
             function createPhoneCopiedSignature(row, key) {
                 const source = row && typeof row === 'object' ? row : {};
@@ -2649,7 +2650,10 @@
                     throw new Error('Add the agent cell, direct, or office phone number before sending a Twilio message.');
                 }
 
-                const messageBody = buildStatusTemplate(rowData);
+                const hasPriorTwilioHistory = await hasTwilioHistoryForPhone(recipientPhone, authToken);
+                const messageBody = hasPriorTwilioHistory
+                    ? buildRepeatTwilioFollowUpMessage(rowData)
+                    : buildStatusTemplate(rowData);
                 if (!messageBody) {
                     throw new Error('The outreach template for this row is empty.');
                 }
@@ -2729,6 +2733,40 @@
 
             function getTimeGreetingSentence() {
                 return `Hope you're having a good ${getTimeOfDayGreeting()}!`;
+            }
+
+            function buildRepeatTwilioFollowUpMessage(rowData) {
+                const agentName = normalizeCellValue(rowData && rowData.laName) || 'there';
+                const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
+                const timeGreeting = getTimeGreetingSentence();
+                return `Hey ${agentName} ${timeGreeting} just checking in on ${propertyAddress} how's that going?`
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            async function hasTwilioHistoryForPhone(phone, authToken) {
+                const normalizedPhone = normalizePhoneMatchValue(phone);
+                if (!normalizedPhone) {
+                    return false;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(twilioPhoneHistoryCache, normalizedPhone)) {
+                    return Boolean(twilioPhoneHistoryCache[normalizedPhone]);
+                }
+
+                const response = await fetch(`/api/twilio/inbox/contact-history?phone=${encodeURIComponent(normalizedPhone)}`, {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`
+                    }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Unable to check prior Twilio history for this contact.');
+                }
+
+                const hasHistory = Boolean(payload && payload.hasHistory);
+                twilioPhoneHistoryCache[normalizedPhone] = hasHistory;
+                return hasHistory;
             }
 
             function getDayGreetingSentence() {

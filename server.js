@@ -2613,6 +2613,50 @@ function buildTwilioWebhookUrl(req, pathName) {
   }
 }
 
+
+  function normalizeTwilioDeliveryStatus(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function getTwilioDeliveryStatusRank(value) {
+    const normalizedStatus = normalizeTwilioDeliveryStatus(value);
+    switch (normalizedStatus) {
+      case 'read':
+        return 7;
+      case 'delivered':
+        return 6;
+      case 'failed':
+      case 'undelivered':
+      case 'canceled':
+        return 5;
+      case 'sent':
+        return 4;
+      case 'sending':
+        return 3;
+      case 'accepted':
+      case 'scheduled':
+      case 'queued':
+        return 2;
+      case 'received':
+        return 1;
+      default:
+        return 0;
+    }
+  }
+
+  function shouldPersistTwilioDeliveryStatus(currentStatus, incomingStatus) {
+    const normalizedIncomingStatus = normalizeTwilioDeliveryStatus(incomingStatus);
+    if (!normalizedIncomingStatus) {
+      return false;
+    }
+
+    const normalizedCurrentStatus = normalizeTwilioDeliveryStatus(currentStatus);
+    if (!normalizedCurrentStatus) {
+      return true;
+    }
+
+    return getTwilioDeliveryStatusRank(normalizedIncomingStatus) >= getTwilioDeliveryStatusRank(normalizedCurrentStatus);
+  }
 function listTwilioWebhookValidationUrls(req) {
   const originalUrl = String(req.originalUrl || req.url || '').trim();
   if (!originalUrl) {
@@ -3053,6 +3097,28 @@ async function getLatestTwilioConversationRow(conversationKey) {
       ORDER BY datetime(created_at) DESC, id DESC
       LIMIT 1`,
     [String(conversationKey || '').trim()]
+  );
+}
+
+async function findTwilioConversationByPhone(phone) {
+  const normalizedPhone = normalizeSmsPhone(phone);
+  if (!normalizedPhone) {
+    return null;
+  }
+
+  return dbGet(
+    `SELECT conversation_key,
+            contact_name,
+            contact_phone,
+            platform_identity,
+            campaign_name,
+            created_at,
+            updated_at
+       FROM twilio_inbox_messages
+      WHERE contact_phone = ?
+      ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC, id DESC
+      LIMIT 1`,
+    [normalizedPhone]
   );
 }
 
@@ -15731,9 +15797,23 @@ app.post('/api/twilio/webhook/status', async (req, res) => {
 
   try {
     const messageSid = String(req.body?.MessageSid || req.body?.SmsSid || '').trim();
+    const incomingStatus = normalizeTwilioDeliveryStatus(req.body?.MessageStatus || req.body?.SmsStatus || '');
+    const incomingErrorCode = String(req.body?.ErrorCode || '').trim();
+    const incomingErrorMessage = String(req.body?.ErrorMessage || '').trim();
     if (!messageSid) {
       return res.status(204).end();
     }
+
+    const currentRow = await dbGet('SELECT status, error_code, error_message FROM twilio_inbox_messages WHERE message_sid = ?', [messageSid]);
+    if (!currentRow) {
+      return res.status(204).end();
+    }
+
+    const nextStatus = shouldPersistTwilioDeliveryStatus(currentRow.status, incomingStatus)
+      ? incomingStatus
+      : normalizeTwilioDeliveryStatus(currentRow.status || '') || 'queued';
+    const nextErrorCode = incomingErrorCode || String(currentRow.error_code || '').trim();
+    const nextErrorMessage = incomingErrorMessage || String(currentRow.error_message || '').trim();
 
     await dbRun(
       `UPDATE twilio_inbox_messages
@@ -15743,9 +15823,9 @@ app.post('/api/twilio/webhook/status', async (req, res) => {
               updated_at = CURRENT_TIMESTAMP
         WHERE message_sid = ?`,
       [
-        String(req.body?.MessageStatus || req.body?.SmsStatus || '').trim(),
-        String(req.body?.ErrorCode || '').trim(),
-        String(req.body?.ErrorMessage || '').trim(),
+        nextStatus,
+        nextErrorCode,
+        nextErrorMessage,
         messageSid
       ]
     );
@@ -15810,6 +15890,39 @@ app.get('/api/twilio/inbox/messages', async (req, res) => {
   } catch (error) {
     console.error('Failed to load Twilio inbox messages:', error);
     return res.status(500).json({ error: 'Unable to load Twilio inbox messages.' });
+  }
+});
+
+app.get('/api/twilio/inbox/contact-history', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const phone = String(req.query?.phone || '').trim();
+  const normalizedPhone = normalizeSmsPhone(phone);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'A valid phone number is required.' });
+  }
+
+  try {
+    const conversation = await findTwilioConversationByPhone(normalizedPhone);
+    return res.json({
+      phone: normalizedPhone,
+      hasHistory: Boolean(conversation),
+      conversation: conversation ? {
+        conversationKey: String(conversation.conversation_key || '').trim(),
+        contactName: String(conversation.contact_name || '').trim() || String(conversation.contact_phone || '').trim(),
+        contactPhone: String(conversation.contact_phone || '').trim(),
+        platformIdentity: String(conversation.platform_identity || '').trim(),
+        campaignName: String(conversation.campaign_name || '').trim(),
+        createdAt: normalizeApiTimestamp(conversation.created_at) || null,
+        updatedAt: normalizeApiTimestamp(conversation.updated_at) || normalizeApiTimestamp(conversation.created_at) || null
+      } : null
+    });
+  } catch (error) {
+    console.error('Failed to check Twilio contact history:', error);
+    return res.status(500).json({ error: 'Unable to check Twilio contact history.' });
   }
 });
 
