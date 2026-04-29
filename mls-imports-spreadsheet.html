@@ -2511,7 +2511,6 @@
                 const source = rowData && typeof rowData === 'object' ? rowData : {};
                 const candidates = [
                     { key: 'laCell', label: 'LA Cell', value: source.laCell },
-                    { key: 'laDirect', label: 'LA Direct', value: source.laDirect },
                     { key: 'loPhone', label: 'LO Phone', value: source.loPhone }
                 ];
                 const seen = new Set();
@@ -2542,45 +2541,7 @@
                     return null;
                 }
 
-                const rowSignature = createCopiedRowSignature(rowData);
-                const preferredPhone = rowSignature ? String(smsPhonePreferences[rowSignature] || '').trim() : '';
-                const preferredOption = preferredPhone
-                    ? options.find((option) => option.normalizedPhone === preferredPhone) || null
-                    : null;
-
-                if (options.length === 1) {
-                    if (rowSignature) {
-                        smsPhonePreferences[rowSignature] = options[0].normalizedPhone;
-                        persistSmsPhonePreferences(smsPhonePreferences);
-                    }
-                    return options[0];
-                }
-
-                const defaultOption = preferredOption || options[0];
-                const selection = window.prompt(
-                    `Choose which number to text for ${getSmsRecipientName(rowData)}:\n\n${options.map((option, index) => `${index + 1}. ${option.label}: ${option.phone}`).join('\n')}\n\nEnter 1-${options.length}.`,
-                    String(Math.max(1, options.indexOf(defaultOption) + 1))
-                );
-
-                if (selection === null) {
-                    return null;
-                }
-
-                const selectedIndex = Number.parseInt(String(selection).trim(), 10);
-                const selectedOption = Number.isInteger(selectedIndex) && selectedIndex >= 1 && selectedIndex <= options.length
-                    ? options[selectedIndex - 1]
-                    : null;
-
-                if (!selectedOption) {
-                    throw new Error(`Choose a valid phone option between 1 and ${options.length}.`);
-                }
-
-                if (rowSignature) {
-                    smsPhonePreferences[rowSignature] = selectedOption.normalizedPhone;
-                    persistSmsPhonePreferences(smsPhonePreferences);
-                }
-
-                return selectedOption;
+                return options[0];
             }
 
             function syncSendButtonState(rowElement) {
@@ -2598,11 +2559,7 @@
                 const rowSignature = createCopiedRowSignature(rowData);
                 const sentRecord = rowSignature ? sentRowRecords[rowSignature] : null;
                 const phoneOptions = getSmsPhoneOptions(rowData);
-                const hasMultiplePhones = phoneOptions.length > 1;
-                const preferredPhone = rowSignature ? String(smsPhonePreferences[rowSignature] || '').trim() : '';
-                const preferredOption = preferredPhone
-                    ? phoneOptions.find((option) => option.normalizedPhone === preferredPhone) || null
-                    : null;
+                const selectedOption = phoneOptions[0] || null;
 
                 button.classList.toggle('is-sent', Boolean(sentRecord));
                 if (sentRecord) {
@@ -2612,23 +2569,18 @@
                     return;
                 }
 
-                button.title = hasMultiplePhones
-                    ? `Send through Twilio${preferredOption ? ` to ${preferredOption.label}: ${preferredOption.phone}` : ' and choose a phone number'}`
-                    : phoneOptions[0]
-                        ? `Send through Twilio to ${phoneOptions[0].phone}`
-                        : 'Send through Twilio';
-                meta.textContent = hasMultiplePhones
-                    ? (preferredOption ? `Using ${preferredOption.label}` : 'Choose number')
-                    : phoneOptions[0]
-                        ? `Using ${phoneOptions[0].label}`
-                        : 'No phone ready';
+                button.title = selectedOption
+                    ? `Send through Twilio to ${selectedOption.label}: ${selectedOption.phone}`
+                    : 'Send through Twilio';
+                meta.textContent = selectedOption
+                    ? `Using ${selectedOption.label}`
+                    : 'No phone ready';
                 meta.classList.remove('is-sent');
             }
 
             function getPreferredSmsPhone(rowData) {
                 const source = rowData && typeof rowData === 'object' ? rowData : {};
                 return normalizeCellValue(source.laCell)
-                    || normalizeCellValue(source.laDirect)
                     || normalizeCellValue(source.loPhone)
                     || '';
             }
@@ -2647,7 +2599,7 @@
                 const phoneOption = chooseSmsPhoneOption(rowData);
                 const recipientPhone = normalizeCellValue(phoneOption && phoneOption.phone);
                 if (!recipientPhone) {
-                    throw new Error('Add the agent cell, direct, or office phone number before sending a Twilio message.');
+                    throw new Error('Add the LA Cell or LO Phone before sending a Twilio message.');
                 }
 
                 const hasPriorTwilioHistory = await hasTwilioHistoryForPhone(recipientPhone, authToken);
