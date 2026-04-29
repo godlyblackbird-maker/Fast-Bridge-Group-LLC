@@ -493,6 +493,34 @@
             font-size: 13px;
         }
 
+        .campaign-schedule-summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            max-width: 100%;
+            padding: 8px 12px;
+            border-radius: 16px;
+            border: 1px solid rgba(96, 165, 250, 0.26);
+            background: rgba(59, 130, 246, 0.12);
+            color: #dbeafe;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .campaign-schedule-summary[hidden] {
+            display: none;
+        }
+
+        .campaign-schedule-btn {
+            padding-inline: 12px;
+        }
+
+        .campaign-schedule-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
         .campaign-media-toolbar {
             display: flex;
             align-items: center;
@@ -1299,6 +1327,37 @@
             margin-top: 18px;
         }
 
+        .campaign-schedule-help {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .campaign-schedule-preview {
+            display: grid;
+            gap: 8px;
+            margin-top: 18px;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.46);
+        }
+
+        .campaign-schedule-preview-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .campaign-schedule-preview-value {
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
         .campaign-note {
             margin-top: 14px;
             font-size: 12px;
@@ -1720,10 +1779,16 @@
                                         <div id="campaign-media-pending" class="campaign-media-pending" hidden></div>
                                     </div>
                                 </div>
+                                <div id="campaign-schedule-summary" class="campaign-schedule-summary" hidden></div>
                                 <div class="outreach-actions">
                                     <button id="campaign-load-template-1" type="button" class="card-btn">Load First Touch</button>
                                     <button id="campaign-load-template-2" type="button" class="card-btn">Load Follow-Up</button>
                                     <button id="campaign-load-template-3" type="button" class="card-btn">Load Breakup</button>
+                                    <button id="campaign-schedule-send-btn" type="button" class="card-btn campaign-schedule-btn" aria-label="Schedule Twilio campaign" title="Schedule Twilio campaign">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v3H2V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm15 9v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8h20Zm-10 3a1 1 0 0 0-1 1v2.38l-1.45 1.45a1 1 0 1 0 1.41 1.41l1.74-1.74A1 1 0 0 0 13 18v-3a1 1 0 0 0-1-1Z"></path>
+                                        </svg>
+                                    </button>
                                     <button id="campaign-send-sms-btn" type="button" class="card-btn active">Send Twilio Campaign</button>
                                 </div>
                                 <div id="campaign-send-status" class="campaign-send-status"></div>
@@ -1870,6 +1935,32 @@
         </div>
     </div>
 
+    <div id="campaign-schedule-modal" class="campaign-template-modal" hidden aria-hidden="true">
+        <div class="campaign-template-backdrop" data-campaign-schedule-close="true"></div>
+        <div class="campaign-template-card" role="dialog" aria-modal="true" aria-labelledby="campaign-schedule-title">
+            <div class="campaign-template-header">
+                <div>
+                    <h3 id="campaign-schedule-title" class="campaign-template-title">Schedule Twilio Campaign</h3>
+                    <p class="campaign-template-subtitle">Choose the exact date and time to queue this campaign automatically.</p>
+                </div>
+                <button type="button" class="campaign-template-close" data-campaign-schedule-close="true" aria-label="Close Twilio schedule dialog">×</button>
+            </div>
+            <p class="campaign-schedule-help">The send stays on the server, so it will still run if this page is closed. Scheduled Twilio sends must be at least 1 minute in the future.</p>
+            <label class="campaign-template-field">
+                <span class="campaign-template-field-label">Send Date And Time</span>
+                <input id="campaign-schedule-datetime" class="campaign-template-select" type="datetime-local">
+            </label>
+            <div class="campaign-schedule-preview">
+                <span class="campaign-schedule-preview-label">Scheduled For</span>
+                <div id="campaign-schedule-preview" class="campaign-schedule-preview-value">No date selected yet.</div>
+            </div>
+            <div class="campaign-template-actions">
+                <button id="campaign-schedule-clear" type="button" class="card-btn">Clear Schedule</button>
+                <button id="campaign-schedule-confirm" type="button" class="card-btn active">Schedule Twilio Campaign</button>
+            </div>
+        </div>
+    </div>
+
     <button class="mobile-menu-toggle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -1899,6 +1990,14 @@
             const campaignMediaAttachButton = document.getElementById('campaign-media-attach');
             const campaignMediaPending = document.getElementById('campaign-media-pending');
             const campaignSendButton = document.getElementById('campaign-send-sms-btn');
+            const campaignScheduleButton = document.getElementById('campaign-schedule-send-btn');
+            const campaignScheduleSummary = document.getElementById('campaign-schedule-summary');
+            const campaignScheduleModal = document.getElementById('campaign-schedule-modal');
+            const campaignScheduleInput = document.getElementById('campaign-schedule-datetime');
+            const campaignSchedulePreview = document.getElementById('campaign-schedule-preview');
+            const campaignScheduleConfirmButton = document.getElementById('campaign-schedule-confirm');
+            const campaignScheduleClearButton = document.getElementById('campaign-schedule-clear');
+            const campaignScheduleCloseButtons = document.querySelectorAll('[data-campaign-schedule-close]');
             const campaignManageTemplatesButton = document.getElementById('campaign-manage-templates');
             const campaignTemplateModal = document.getElementById('campaign-template-modal');
             const campaignTemplateSelect = document.getElementById('campaign-template-select');
@@ -1941,6 +2040,7 @@
             let twilioInboxRefreshHandle = null;
             let pendingCampaignMediaItems = [];
             let pendingReplyMediaItems = [];
+            let pendingCampaignScheduleAt = '';
 
             function setCampaignReplyAddress(value) {
                 const propertyAddress = String(value || '').trim();
@@ -2212,6 +2312,111 @@
                 }).format(date);
             }
 
+            function formatCampaignScheduledAt(value) {
+                const date = value ? new Date(value) : null;
+                if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                    return 'No date selected yet.';
+                }
+
+                return new Intl.DateTimeFormat('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                }).format(date);
+            }
+
+            function toCampaignDateTimeLocalValue(value) {
+                const date = value ? new Date(value) : null;
+                if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                    return '';
+                }
+
+                const offsetDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+                return offsetDate.toISOString().slice(0, 16);
+            }
+
+            function getDefaultCampaignScheduleLocalValue() {
+                const date = new Date(Date.now() + (60 * 60 * 1000));
+                date.setSeconds(0, 0);
+                const minutes = date.getMinutes();
+                const roundedMinutes = Math.ceil(minutes / 5) * 5;
+                date.setMinutes(roundedMinutes, 0, 0);
+                return toCampaignDateTimeLocalValue(date.toISOString());
+            }
+
+            function updateCampaignSchedulePreview(value) {
+                if (!campaignSchedulePreview) {
+                    return;
+                }
+
+                campaignSchedulePreview.textContent = value ? formatCampaignScheduledAt(value) : 'No date selected yet.';
+            }
+
+            function setPendingCampaignScheduleAt(value) {
+                const normalized = value ? new Date(value) : null;
+                pendingCampaignScheduleAt = normalized instanceof Date && !Number.isNaN(normalized.getTime())
+                    ? normalized.toISOString()
+                    : '';
+
+                if (campaignScheduleSummary) {
+                    if (!pendingCampaignScheduleAt) {
+                        campaignScheduleSummary.textContent = '';
+                        campaignScheduleSummary.setAttribute('hidden', 'hidden');
+                    } else {
+                        campaignScheduleSummary.textContent = `Scheduled for ${formatCampaignScheduledAt(pendingCampaignScheduleAt)}`;
+                        campaignScheduleSummary.removeAttribute('hidden');
+                    }
+                }
+
+                updateCampaignSchedulePreview(pendingCampaignScheduleAt);
+                if (campaignScheduleInput) {
+                    campaignScheduleInput.value = pendingCampaignScheduleAt
+                        ? toCampaignDateTimeLocalValue(pendingCampaignScheduleAt)
+                        : '';
+                }
+            }
+
+            function openCampaignScheduleModal() {
+                if (!campaignScheduleModal) {
+                    return;
+                }
+
+                if (campaignScheduleInput && !campaignScheduleInput.value) {
+                    campaignScheduleInput.value = pendingCampaignScheduleAt
+                        ? toCampaignDateTimeLocalValue(pendingCampaignScheduleAt)
+                        : getDefaultCampaignScheduleLocalValue();
+                }
+
+                updateCampaignSchedulePreview(
+                    campaignScheduleInput && campaignScheduleInput.value
+                        ? new Date(campaignScheduleInput.value).toISOString()
+                        : pendingCampaignScheduleAt
+                );
+                campaignScheduleModal.hidden = false;
+                campaignScheduleModal.setAttribute('aria-hidden', 'false');
+                window.requestAnimationFrame(() => {
+                    if (campaignScheduleInput) {
+                        campaignScheduleInput.focus();
+                        if (typeof campaignScheduleInput.showPicker === 'function') {
+                            try {
+                                campaignScheduleInput.showPicker();
+                            } catch (_error) {}
+                        }
+                    }
+                });
+            }
+
+            function closeCampaignScheduleModal() {
+                if (!campaignScheduleModal) {
+                    return;
+                }
+
+                campaignScheduleModal.hidden = true;
+                campaignScheduleModal.setAttribute('aria-hidden', 'true');
+            }
+
             function setCampaignRepliesStatus(message, mode) {
                 if (!campaignRepliesStatus) {
                     return;
@@ -2380,6 +2585,70 @@
                     if (input) {
                         input.value = '';
                     }
+                }
+            }
+
+            async function submitCampaignSend(options = {}) {
+                if (campaignRecipientsInput) {
+                    campaignRecipientsInput.value = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
+                }
+
+                const recipients = parseCampaignRecipients(campaignRecipientsInput ? campaignRecipientsInput.value : '');
+                const body = campaignBodyInput ? campaignBodyInput.value.trim() : '';
+                const campaignName = campaignNameInput ? campaignNameInput.value.trim() : 'Agent SMS Campaign';
+                const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
+
+                if (!recipients.length) {
+                    campaignSendStatus.textContent = 'Add at least one phone number before sending.';
+                    return;
+                }
+
+                if (!body && !pendingCampaignMediaItems.length) {
+                    campaignSendStatus.textContent = 'Enter an SMS body or add at least one image before sending.';
+                    return;
+                }
+
+                campaignSendStatus.textContent = scheduleAt ? 'Scheduling Twilio campaign...' : 'Queueing Twilio campaign...';
+
+                try {
+                    const response = await fetch('/api/twilio/send-sms', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({
+                            campaignName,
+                            body,
+                            senderName: getCurrentSenderName(),
+                            recipients,
+                            mediaUploadIds: pendingCampaignMediaItems.map((item) => item.id).filter(Boolean),
+                            ...(scheduleAt ? { scheduleAt } : {})
+                        })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (response.ok && data.success) {
+                        pendingCampaignMediaItems = [];
+                        renderPendingCampaignMedia();
+
+                        if (data.scheduled && data.scheduledMessage) {
+                            setPendingCampaignScheduleAt(data.scheduledMessage.scheduledFor || scheduleAt);
+                            campaignSendStatus.textContent = `Scheduled ${recipients.length} SMS for ${formatCampaignScheduledAt(data.scheduledMessage.scheduledFor || scheduleAt)}.`;
+                            closeCampaignScheduleModal();
+                            return;
+                        }
+
+                        const failedCount = Array.isArray(data.failed) ? data.failed.length : 0;
+                        setPendingCampaignScheduleAt('');
+                        campaignSendStatus.textContent = failedCount > 0
+                            ? `Queued ${data.sent.length} SMS. ${failedCount} failed.`
+                            : `Queued ${data.sent.length} SMS successfully.`;
+                        loadTwilioInboxConversations({ preferredConversationKey: data.sent[0]?.conversationKey || activeTwilioConversationKey, markRead: false });
+                    } else {
+                        campaignSendStatus.textContent = data.error || 'Failed to queue campaign.';
+                    }
+                } catch (error) {
+                    campaignSendStatus.textContent = error.message || 'Failed to queue campaign.';
                 }
             }
 
@@ -2859,6 +3128,11 @@
             document.addEventListener('keydown', (event) => {
                 if (event.key === 'Escape' && campaignTemplateModal && !campaignTemplateModal.hidden) {
                     closeCampaignTemplateModal();
+                    return;
+                }
+
+                if (event.key === 'Escape' && campaignScheduleModal && !campaignScheduleModal.hidden) {
+                    closeCampaignScheduleModal();
                 }
             });
 
@@ -2902,55 +3176,46 @@
 
             if (campaignSendButton) {
                 campaignSendButton.addEventListener('click', async () => {
-                    if (campaignRecipientsInput) {
-                        campaignRecipientsInput.value = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
-                    }
-                    const recipients = parseCampaignRecipients(campaignRecipientsInput ? campaignRecipientsInput.value : '');
-                    const body = campaignBodyInput ? campaignBodyInput.value.trim() : '';
-                    const campaignName = campaignNameInput ? campaignNameInput.value.trim() : 'Agent SMS Campaign';
+                    await submitCampaignSend();
+                });
+            }
 
-                    if (!recipients.length) {
-                        campaignSendStatus.textContent = 'Add at least one phone number before sending.';
+            if (campaignScheduleButton) {
+                campaignScheduleButton.addEventListener('click', () => {
+                    openCampaignScheduleModal();
+                });
+            }
+
+            campaignScheduleCloseButtons.forEach((button) => {
+                button.addEventListener('click', closeCampaignScheduleModal);
+            });
+
+            if (campaignScheduleInput) {
+                campaignScheduleInput.addEventListener('input', () => {
+                    const isoValue = campaignScheduleInput.value ? new Date(campaignScheduleInput.value).toISOString() : '';
+                    updateCampaignSchedulePreview(isoValue);
+                });
+            }
+
+            if (campaignScheduleClearButton) {
+                campaignScheduleClearButton.addEventListener('click', () => {
+                    setPendingCampaignScheduleAt('');
+                    closeCampaignScheduleModal();
+                });
+            }
+
+            if (campaignScheduleConfirmButton) {
+                campaignScheduleConfirmButton.addEventListener('click', async () => {
+                    const scheduleAt = campaignScheduleInput && campaignScheduleInput.value
+                        ? new Date(campaignScheduleInput.value).toISOString()
+                        : '';
+
+                    if (!scheduleAt) {
+                        campaignSendStatus.textContent = 'Choose a date and time before scheduling this Twilio campaign.';
                         return;
                     }
 
-                    if (!body && !pendingCampaignMediaItems.length) {
-                        campaignSendStatus.textContent = 'Enter an SMS body or add at least one image before sending.';
-                        return;
-                    }
-
-                    campaignSendStatus.textContent = 'Queueing Twilio campaign...';
-
-                    try {
-                        const response = await fetch('/api/twilio/send-sms', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { Authorization: `Bearer ${token}` } : {})
-                            },
-                            body: JSON.stringify({
-                                campaignName,
-                                body,
-                                senderName: getCurrentSenderName(),
-                                recipients,
-                                mediaUploadIds: pendingCampaignMediaItems.map((item) => item.id).filter(Boolean)
-                            })
-                        });
-                        const data = await response.json();
-                        if (response.ok && data.success) {
-                            const failedCount = Array.isArray(data.failed) ? data.failed.length : 0;
-                            pendingCampaignMediaItems = [];
-                            renderPendingCampaignMedia();
-                            campaignSendStatus.textContent = failedCount > 0
-                                ? `Queued ${data.sent.length} SMS. ${failedCount} failed.`
-                                : `Queued ${data.sent.length} SMS successfully.`;
-                            loadTwilioInboxConversations({ preferredConversationKey: data.sent[0]?.conversationKey || activeTwilioConversationKey, markRead: false });
-                        } else {
-                            campaignSendStatus.textContent = data.error || 'Failed to queue campaign.';
-                        }
-                    } catch (error) {
-                        campaignSendStatus.textContent = error.message || 'Failed to queue campaign.';
-                    }
+                    await submitCampaignSend({ scheduleAt });
                 });
             }
 

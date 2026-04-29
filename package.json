@@ -1,6 +1,6 @@
 {
   "name": "fast-investments-dashboard",
-  "version": "1.4.5",
+  "version": "1.4.7",
   "description": "Secure Investment Dashboard",
   "main": "electron/main.cjs",
   "scripts": {

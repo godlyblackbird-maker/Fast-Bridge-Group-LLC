@@ -169,6 +169,9 @@ const SQLITE_BACKUP_INTERVAL_HOURS = Math.max(1, Number.parseInt(String(process.
 const SQLITE_BACKUP_INTERVAL_MS = SQLITE_BACKUP_INTERVAL_HOURS * 60 * 60 * 1000;
 const SQLITE_BACKUP_STARTUP_DELAY_MS = Math.max(15 * 1000, Number.parseInt(String(process.env.SQLITE_BACKUP_STARTUP_DELAY_MS || 2 * 60 * 1000), 10) || (2 * 60 * 1000));
 const SQLITE_BACKUP_S3_PREFIX = String(process.env.SQLITE_BACKUP_S3_PREFIX || 'database-backups/sqlite').trim().replace(/\/+$/g, '');
+const TWILIO_SCHEDULE_POLL_MS = Math.max(15 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_POLL_MS || 30 * 1000), 10) || (30 * 1000));
+const TWILIO_SCHEDULE_MIN_LEAD_MS = Math.max(60 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MIN_LEAD_MS || 60 * 1000), 10) || (60 * 1000));
+const TWILIO_SCHEDULE_MAX_BATCH = Math.max(1, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MAX_BATCH || 20), 10) || 20);
 const ACTIVE_BUYERS_SHEET_ROW_ID = 1;
 const MLS_IMPORT_PDF_BODY_LIMIT = '260mb';
 const MLS_IMPORT_PDF_MAX_BYTES = 180 * 1024 * 1024;
@@ -196,6 +199,8 @@ let latestS3ArchiveHealth = null;
 let latestSqliteBackupHealth = null;
 let sqliteBackupTimer = null;
 let sqliteBackupInFlight = null;
+let twilioScheduledMessageTimer = null;
+let twilioScheduledMessageRunPromise = null;
 const USER_MESSAGE_EDIT_WINDOW_MS = 60 * 1000;
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
@@ -2600,17 +2605,21 @@ function getTwilioWebhookRequestUrl(req) {
   return `${origin}${originalUrl}`;
 }
 
-function buildTwilioWebhookUrl(req, pathName) {
-  const origin = getTwilioRequestOrigin(req);
-  if (!origin) {
+function buildTwilioUrlFromOrigin(origin, pathName) {
+  const normalizedOrigin = String(origin || '').trim();
+  if (!normalizedOrigin) {
     return '';
   }
 
   try {
-    return new URL(String(pathName || '').trim() || '/', origin).toString();
+    return new URL(String(pathName || '').trim() || '/', normalizedOrigin).toString();
   } catch (error) {
     return '';
   }
+}
+
+function buildTwilioWebhookUrl(req, pathName) {
+  return buildTwilioUrlFromOrigin(getTwilioRequestOrigin(req), pathName);
 }
 
 
@@ -2910,6 +2919,74 @@ function serializeTwilioInboxMessage(row) {
   };
 }
 
+function parseTwilioScheduledRecipients(value) {
+  try {
+    const parsed = JSON.parse(String(value || '[]'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function parseTwilioScheduledMediaUploadIds(value) {
+  try {
+    const parsed = JSON.parse(String(value || '[]'));
+    return Array.isArray(parsed)
+      ? parsed.map((entry) => String(entry || '').trim()).filter(Boolean)
+      : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function normalizeTwilioScheduledFor(value) {
+  const normalized = normalizeApiTimestamp(value);
+  if (!normalized) {
+    return '';
+  }
+
+  const scheduledTime = Date.parse(normalized);
+  if (Number.isNaN(scheduledTime)) {
+    return '';
+  }
+
+  return new Date(scheduledTime).toISOString();
+}
+
+function serializeTwilioScheduledMessage(row) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  return {
+    id: Number(row.id) || 0,
+    campaignName: String(row.campaign_name || '').trim(),
+    senderName: String(row.sender_name || '').trim(),
+    ownerUserId: Number(row.owner_user_id) || 0,
+    ownerName: String(row.owner_name || '').trim(),
+    ownerEmail: String(row.owner_email || '').trim().toLowerCase(),
+    body: String(row.body || '').trim(),
+    recipients: parseTwilioScheduledRecipients(row.recipients_json),
+    mediaUploadIds: parseTwilioScheduledMediaUploadIds(row.media_upload_ids_json),
+    requestOrigin: String(row.request_origin || '').trim(),
+    scheduledFor: normalizeTwilioScheduledFor(row.scheduled_for) || '',
+    status: String(row.status || '').trim().toLowerCase() || 'queued',
+    sentCount: Math.max(0, Number(row.sent_count) || 0),
+    failedCount: Math.max(0, Number(row.failed_count) || 0),
+    errorMessage: String(row.error_message || '').trim(),
+    result: (() => {
+      try {
+        return JSON.parse(String(row.result_json || '{}'));
+      } catch (error) {
+        return {};
+      }
+    })(),
+    createdAt: normalizeApiTimestamp(row.created_at) || new Date().toISOString(),
+    updatedAt: normalizeApiTimestamp(row.updated_at) || normalizeApiTimestamp(row.created_at) || new Date().toISOString(),
+    sentAt: normalizeApiTimestamp(row.sent_at)
+  };
+}
+
 async function getAuthenticatedUserFromBearerHeader(authHeader) {
   const token = String(authHeader || '').replace(/^Bearer\s+/i, '').trim();
   if (!token) {
@@ -3190,6 +3267,354 @@ async function hasTwilioInboundOptOutByPhone(phone) {
   );
 
   return rows.some((row) => isTwilioOptOutMessageBody(row?.body));
+}
+
+async function createTwilioScheduledMessage(record) {
+  const result = await dbRun(
+    `INSERT INTO twilio_scheduled_messages (
+       campaign_name,
+       sender_name,
+       owner_user_id,
+       owner_name,
+       owner_email,
+       body,
+       recipients_json,
+       media_upload_ids_json,
+       request_origin,
+       scheduled_for,
+       status,
+       result_json,
+       created_at,
+       updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [
+      String(record?.campaignName || '').trim(),
+      String(record?.senderName || '').trim(),
+      Number(record?.ownerUserId) || null,
+      String(record?.ownerName || '').trim(),
+      String(record?.ownerEmail || '').trim().toLowerCase(),
+      String(record?.body || '').trim(),
+      safeJsonStringify(Array.isArray(record?.recipients) ? record.recipients : []),
+      safeJsonStringify(Array.isArray(record?.mediaUploadIds) ? record.mediaUploadIds : []),
+      String(record?.requestOrigin || '').trim(),
+      normalizeTwilioScheduledFor(record?.scheduledFor)
+    ]
+  );
+
+  return dbGet('SELECT * FROM twilio_scheduled_messages WHERE id = ?', [result.lastID]);
+}
+
+async function getQueuedTwilioScheduledMessages(nowIso, limit = TWILIO_SCHEDULE_MAX_BATCH) {
+  return dbAll(
+    `SELECT *
+       FROM twilio_scheduled_messages
+      WHERE status = 'queued'
+        AND datetime(scheduled_for) <= datetime(?)
+      ORDER BY datetime(scheduled_for) ASC, id ASC
+      LIMIT ?`,
+    [nowIso, Math.max(1, Number(limit) || TWILIO_SCHEDULE_MAX_BATCH)]
+  );
+}
+
+async function markTwilioScheduledMessageProcessing(scheduleId) {
+  const result = await dbRun(
+    `UPDATE twilio_scheduled_messages
+        SET status = 'processing',
+            updated_at = CURRENT_TIMESTAMP,
+            error_message = NULL
+      WHERE id = ?
+        AND status = 'queued'`,
+    [Number(scheduleId) || 0]
+  );
+
+  return Number(result?.changes) > 0;
+}
+
+async function markTwilioScheduledMessageSent(scheduleId, sendResult) {
+  const sent = Array.isArray(sendResult?.sent) ? sendResult.sent : [];
+  const failed = Array.isArray(sendResult?.failed) ? sendResult.failed : [];
+  await dbRun(
+    `UPDATE twilio_scheduled_messages
+        SET status = 'sent',
+            sent_count = ?,
+            failed_count = ?,
+            result_json = ?,
+            error_message = NULL,
+            sent_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+    [
+      sent.length,
+      failed.length,
+      safeJsonStringify({
+        message: String(sendResult?.message || '').trim(),
+        sent,
+        failed
+      }),
+      Number(scheduleId) || 0
+    ]
+  );
+}
+
+async function markTwilioScheduledMessageFailed(scheduleId, error, sendResult = null) {
+  const sent = Array.isArray(sendResult?.sent) ? sendResult.sent : [];
+  const failed = Array.isArray(sendResult?.failed) ? sendResult.failed : [];
+  await dbRun(
+    `UPDATE twilio_scheduled_messages
+        SET status = 'failed',
+            sent_count = ?,
+            failed_count = ?,
+            result_json = ?,
+            error_message = ?,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+    [
+      sent.length,
+      failed.length,
+      safeJsonStringify({ sent, failed }),
+      String(error && error.message ? error.message : error || 'Scheduled Twilio send failed.').trim(),
+      Number(scheduleId) || 0
+    ]
+  );
+}
+
+async function sendTwilioCampaignMessages({ body, campaignName, recipients, mediaUploadIds, authenticatedUser, senderName, requestOrigin }) {
+  const config = getTwilioMessagingConfig();
+  if (!isTwilioConfigured(config)) {
+    const error = new Error('Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const providedRecipients = Array.isArray(recipients) ? recipients : [];
+  const normalizedBody = String(body || '').trim();
+  const normalizedCampaignName = String(campaignName || 'Untitled SMS Campaign').trim() || 'Untitled SMS Campaign';
+  const normalizedSenderName = String(senderName || authenticatedUser?.name || '').trim();
+  const normalizedRequestOrigin = String(requestOrigin || '').trim();
+  const normalizedMediaUploadIds = Array.from(new Set((Array.isArray(mediaUploadIds) ? mediaUploadIds : [])
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)));
+
+  if (providedRecipients.length === 0) {
+    const error = new Error('At least one recipient is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (normalizedMediaUploadIds.length > 0 && !authenticatedUser) {
+    const error = new Error('Sign in again before sending uploaded Twilio images.');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const twilioMediaUploads = await listTwilioMediaUploadsForOwner(Number(authenticatedUser?.id) || 0, normalizedMediaUploadIds);
+  if (!normalizedBody && twilioMediaUploads.length === 0) {
+    const error = new Error('Either an SMS body or at least one image is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = getTwilioClient();
+  if (!client) {
+    const error = new Error('Twilio client could not be initialized.');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const sent = [];
+  const failed = [];
+  const statusCallbackUrl = buildTwilioUrlFromOrigin(normalizedRequestOrigin, '/api/twilio/webhook/status');
+  const mediaPayload = buildTwilioOutgoingMediaPayload(twilioMediaUploads, normalizedRequestOrigin);
+
+  for (const entry of providedRecipients) {
+    const recipient = typeof entry === 'string'
+      ? { phone: entry }
+      : {
+          name: String(entry?.name || '').trim(),
+          phone: String(entry?.phone || '').trim(),
+          area: String(entry?.area || entry?.market || '').trim()
+        };
+
+    const normalizedPhone = normalizeSmsPhone(recipient.phone);
+    if (!normalizedPhone) {
+      failed.push({
+        name: recipient.name || '',
+        phone: recipient.phone || '',
+        error: 'Invalid phone number'
+      });
+      continue;
+    }
+
+    if (await hasTwilioInboundOptOutByPhone(normalizedPhone)) {
+      failed.push({
+        name: recipient.name || '',
+        phone: normalizedPhone,
+        error: 'Recipient has already opted out with STOP.'
+      });
+      continue;
+    }
+
+    const personalizedBody = normalizedBody ? personalizeSmsBody(normalizedBody, recipient, normalizedSenderName).slice(0, 1600) : '';
+
+    try {
+      const payload = {
+        to: normalizedPhone
+      };
+
+      if (personalizedBody) {
+        payload.body = personalizedBody;
+      }
+
+      if (mediaPayload.mediaUrls.length > 0) {
+        payload.mediaUrl = mediaPayload.mediaUrls;
+      }
+
+      if (config.messagingServiceSid) {
+        payload.messagingServiceSid = config.messagingServiceSid;
+      } else {
+        payload.from = config.fromNumber;
+      }
+
+      if (statusCallbackUrl) {
+        payload.statusCallback = statusCallbackUrl;
+      }
+
+      const message = await client.messages.create(payload);
+      const details = getTwilioConversationDetails({
+        contactPhone: normalizedPhone,
+        platformIdentity: payload.messagingServiceSid || payload.from || config.messagingServiceSid || config.fromNumber
+      });
+      const storedRow = await upsertTwilioInboxMessage({
+        messageSid: String(message.sid || '').trim(),
+        accountSid: String(message.accountSid || config.accountSid || '').trim(),
+        conversationKey: details.conversationKey,
+        campaignName: normalizedCampaignName,
+        contactName: String(recipient.name || '').trim(),
+        contactPhone: details.contactPhone,
+        platformIdentity: details.platformIdentity,
+        ownerUserId: Number(authenticatedUser?.id) || null,
+        ownerName: String(authenticatedUser?.name || normalizedSenderName || '').trim(),
+        ownerEmail: String(authenticatedUser?.email || '').trim().toLowerCase(),
+        direction: 'outgoing',
+        body: personalizedBody,
+        status: String(message.status || 'queued').trim(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        readAt: new Date().toISOString(),
+        rawPayload: {
+          sid: message.sid,
+          status: message.status,
+          to: payload.to,
+          from: payload.from || '',
+          messagingServiceSid: payload.messagingServiceSid || '',
+          propertyAddress: String(recipient.area || '').trim(),
+          area: String(recipient.area || '').trim(),
+          ...mediaPayload.rawPayload
+        }
+      });
+      sent.push({
+        name: recipient.name || '',
+        phone: normalizedPhone,
+        sid: message.sid,
+        status: message.status || 'queued',
+        conversationKey: String(storedRow?.conversation_key || details.conversationKey || '').trim()
+      });
+    } catch (error) {
+      failed.push({
+        name: recipient.name || '',
+        phone: normalizedPhone,
+        error: error.message || 'Twilio send failed'
+      });
+    }
+  }
+
+  if (sent.length === 0) {
+    const result = {
+      success: false,
+      campaignName: normalizedCampaignName,
+      message: 'No messages were sent.',
+      sent,
+      failed
+    };
+    const error = new Error(result.message);
+    error.statusCode = 500;
+    error.sendResult = result;
+    throw error;
+  }
+
+  return {
+    success: true,
+    campaignName: normalizedCampaignName,
+    message: `Queued ${sent.length} message(s).`,
+    sent,
+    failed
+  };
+}
+
+async function processDueTwilioScheduledMessages() {
+  if (twilioScheduledMessageRunPromise) {
+    return twilioScheduledMessageRunPromise;
+  }
+
+  twilioScheduledMessageRunPromise = (async () => {
+    const queuedRows = await getQueuedTwilioScheduledMessages(new Date().toISOString(), TWILIO_SCHEDULE_MAX_BATCH);
+    for (const row of queuedRows) {
+      const claimed = await markTwilioScheduledMessageProcessing(row.id);
+      if (!claimed) {
+        continue;
+      }
+
+      const scheduledMessage = serializeTwilioScheduledMessage(row);
+      const ownerUserId = Number(row.owner_user_id) || 0;
+
+      try {
+        const authenticatedUser = ownerUserId > 0
+          ? await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [ownerUserId])
+          : null;
+        const sendResult = await sendTwilioCampaignMessages({
+          body: scheduledMessage.body,
+          campaignName: scheduledMessage.campaignName,
+          recipients: scheduledMessage.recipients,
+          mediaUploadIds: scheduledMessage.mediaUploadIds,
+          authenticatedUser,
+          senderName: scheduledMessage.senderName,
+          requestOrigin: scheduledMessage.requestOrigin
+        });
+        await markTwilioScheduledMessageSent(row.id, sendResult);
+      } catch (error) {
+        await markTwilioScheduledMessageFailed(row.id, error, error && error.sendResult ? error.sendResult : null);
+        console.error('Failed to process scheduled Twilio campaign:', row && row.id, error);
+      }
+    }
+  })()
+    .catch((error) => {
+      console.error('Scheduled Twilio processing crashed:', error);
+    })
+    .finally(() => {
+      twilioScheduledMessageRunPromise = null;
+    });
+
+  return twilioScheduledMessageRunPromise;
+}
+
+function initializeTwilioScheduledMessageWorker() {
+  if (twilioScheduledMessageTimer) {
+    return;
+  }
+
+  processDueTwilioScheduledMessages().catch((error) => {
+    console.error('Scheduled Twilio startup scan crashed:', error);
+  });
+
+  twilioScheduledMessageTimer = setInterval(() => {
+    processDueTwilioScheduledMessages().catch((error) => {
+      console.error('Scheduled Twilio interval scan crashed:', error);
+    });
+  }, TWILIO_SCHEDULE_POLL_MS);
+
+  if (twilioScheduledMessageTimer && typeof twilioScheduledMessageTimer.unref === 'function') {
+    twilioScheduledMessageTimer.unref();
+  }
 }
 
 async function markTwilioConversationRead(conversationKey) {
@@ -4235,6 +4660,38 @@ function initializeDatabase() {
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_conversation_created ON twilio_inbox_messages(conversation_key, created_at, id)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_unread ON twilio_inbox_messages(direction, read_at, created_at)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_contact_phone ON twilio_inbox_messages(contact_phone, created_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS twilio_scheduled_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_name TEXT NOT NULL,
+      sender_name TEXT,
+      owner_user_id INTEGER,
+      owner_name TEXT,
+      owner_email TEXT,
+      body TEXT NOT NULL DEFAULT '',
+      recipients_json TEXT NOT NULL DEFAULT '[]',
+      media_upload_ids_json TEXT NOT NULL DEFAULT '[]',
+      request_origin TEXT,
+      scheduled_for DATETIME NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      result_json TEXT NOT NULL DEFAULT '{}',
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      sent_at DATETIME
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating twilio_scheduled_messages table:', err);
+    } else {
+      console.log('Twilio scheduled messages table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_twilio_scheduled_status_time ON twilio_scheduled_messages(status, scheduled_for)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_twilio_scheduled_owner_time ON twilio_scheduled_messages(owner_user_id, scheduled_for DESC)', () => {});
     }
   });
 
@@ -6900,16 +7357,20 @@ function isAllowedTwilioMediaUpload(extension, mimeType = '') {
     || normalizedMimeType.startsWith('image/');
 }
 
-function buildTwilioOutgoingMediaPayload(uploadRecords, req) {
+function buildTwilioOutgoingMediaPayload(uploadRecords, requestOriginOrReq) {
   const uploads = Array.isArray(uploadRecords) ? uploadRecords : [];
   const mediaUrls = [];
   const rawPayload = {
     NumMedia: '0'
   };
 
+  const requestOrigin = typeof requestOriginOrReq === 'string'
+    ? String(requestOriginOrReq || '').trim()
+    : getTwilioRequestOrigin(requestOriginOrReq);
+
   uploads.forEach((uploadRecord, index) => {
     const contentPath = buildTwilioMediaUploadContentPath(uploadRecord?.id);
-    const absoluteUrl = buildTwilioWebhookUrl(req, contentPath);
+    const absoluteUrl = buildTwilioUrlFromOrigin(requestOrigin, contentPath);
     if (!absoluteUrl) {
       return;
     }
@@ -16170,15 +16631,11 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
 });
 
 app.post('/api/twilio/send-sms', async (req, res) => {
-  const config = getTwilioMessagingConfig();
-  if (!isTwilioConfigured(config)) {
-    return res.status(400).json({ error: 'Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.' });
-  }
-
   const body = String(req.body?.body || '').trim();
   const campaignName = String(req.body?.campaignName || 'Untitled SMS Campaign').trim();
   const providedRecipients = Array.isArray(req.body?.recipients) ? req.body.recipients : [];
   const mediaUploadIds = Array.isArray(req.body?.mediaUploadIds) ? req.body.mediaUploadIds : [];
+  const scheduledFor = normalizeTwilioScheduledFor(req.body?.scheduleAt);
 
   if (providedRecipients.length === 0) {
     return res.status(400).json({ error: 'At least one recipient is required.' });
@@ -16190,138 +16647,68 @@ app.post('/api/twilio/send-sms', async (req, res) => {
     senderName = String(authenticatedUser.name || '').trim();
   }
 
-  if (mediaUploadIds.length > 0 && !authenticatedUser) {
-    return res.status(401).json({ error: 'Sign in again before sending uploaded Twilio images.' });
-  }
-
-  const twilioMediaUploads = await listTwilioMediaUploadsForOwner(Number(authenticatedUser?.id) || 0, mediaUploadIds);
-  if (!body && twilioMediaUploads.length === 0) {
+  if (!body && mediaUploadIds.length === 0) {
     return res.status(400).json({ error: 'Either an SMS body or at least one image is required.' });
   }
 
-  const client = getTwilioClient();
-  if (!client) {
-    return res.status(500).json({ error: 'Twilio client could not be initialized.' });
-  }
-
-  const sent = [];
-  const failed = [];
-  const statusCallbackUrl = buildTwilioWebhookUrl(req, '/api/twilio/webhook/status');
-  const mediaPayload = buildTwilioOutgoingMediaPayload(twilioMediaUploads, req);
-
-  for (const entry of providedRecipients) {
-    const recipient = typeof entry === 'string'
-      ? { phone: entry }
-      : {
-          name: String(entry?.name || '').trim(),
-          phone: String(entry?.phone || '').trim(),
-          area: String(entry?.area || entry?.market || '').trim()
-        };
-
-    const normalizedPhone = normalizeSmsPhone(recipient.phone);
-    if (!normalizedPhone) {
-      failed.push({
-        name: recipient.name || '',
-        phone: recipient.phone || '',
-        error: 'Invalid phone number'
-      });
-      continue;
+  if (scheduledFor) {
+    if (!authenticatedUser) {
+      return res.status(401).json({ error: 'Sign in again before scheduling Twilio messages.' });
     }
 
-    if (await hasTwilioInboundOptOutByPhone(normalizedPhone)) {
-      failed.push({
-        name: recipient.name || '',
-        phone: normalizedPhone,
-        error: 'Recipient has already opted out with STOP.'
-      });
-      continue;
+    const scheduledTime = Date.parse(scheduledFor);
+    if (Number.isNaN(scheduledTime)) {
+      return res.status(400).json({ error: 'Choose a valid date and time for the scheduled send.' });
     }
 
-    const personalizedBody = body ? personalizeSmsBody(body, recipient, senderName).slice(0, 1600) : '';
+    if ((scheduledTime - Date.now()) < TWILIO_SCHEDULE_MIN_LEAD_MS) {
+      return res.status(400).json({ error: `Scheduled sends must be at least ${Math.round(TWILIO_SCHEDULE_MIN_LEAD_MS / 60000)} minute(s) in the future.` });
+    }
 
     try {
-      const payload = {
-        to: normalizedPhone
-      };
-
-      if (personalizedBody) {
-        payload.body = personalizedBody;
-      }
-
-      if (mediaPayload.mediaUrls.length > 0) {
-        payload.mediaUrl = mediaPayload.mediaUrls;
-      }
-
-      if (config.messagingServiceSid) {
-        payload.messagingServiceSid = config.messagingServiceSid;
-      } else {
-        payload.from = config.fromNumber;
-      }
-
-      if (statusCallbackUrl) {
-        payload.statusCallback = statusCallbackUrl;
-      }
-
-      const message = await client.messages.create(payload);
-      const details = getTwilioConversationDetails({
-        contactPhone: normalizedPhone,
-        platformIdentity: payload.messagingServiceSid || payload.from || config.messagingServiceSid || config.fromNumber
-      });
-      const storedRow = await upsertTwilioInboxMessage({
-        messageSid: String(message.sid || '').trim(),
-        accountSid: String(message.accountSid || config.accountSid || '').trim(),
-        conversationKey: details.conversationKey,
+      const scheduledRow = await createTwilioScheduledMessage({
         campaignName,
-        contactName: String(recipient.name || '').trim(),
-        contactPhone: details.contactPhone,
-        platformIdentity: details.platformIdentity,
-        ownerUserId: Number(authenticatedUser?.id) || null,
-        ownerName: String(authenticatedUser?.name || senderName || '').trim(),
-        ownerEmail: String(authenticatedUser?.email || '').trim().toLowerCase(),
-        direction: 'outgoing',
-        body: personalizedBody,
-        status: String(message.status || 'queued').trim(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        readAt: new Date().toISOString(),
-        rawPayload: {
-          sid: message.sid,
-          status: message.status,
-          to: payload.to,
-          from: payload.from || '',
-          messagingServiceSid: payload.messagingServiceSid || '',
-          propertyAddress: String(recipient.area || '').trim(),
-          area: String(recipient.area || '').trim(),
-          ...mediaPayload.rawPayload
-        }
+        senderName,
+        ownerUserId: Number(authenticatedUser.id) || null,
+        ownerName: String(authenticatedUser.name || senderName || '').trim(),
+        ownerEmail: String(authenticatedUser.email || '').trim().toLowerCase(),
+        body,
+        recipients: providedRecipients,
+        mediaUploadIds,
+        requestOrigin: getTwilioRequestOrigin(req),
+        scheduledFor
       });
-      sent.push({
-        name: recipient.name || '',
-        phone: normalizedPhone,
-        sid: message.sid,
-        status: message.status || 'queued',
-        conversationKey: String(storedRow?.conversation_key || details.conversationKey || '').trim()
+
+      return res.json({
+        success: true,
+        scheduled: true,
+        message: `Scheduled ${providedRecipients.length} message(s).`,
+        scheduledMessage: serializeTwilioScheduledMessage(scheduledRow)
       });
     } catch (error) {
-      failed.push({
-        name: recipient.name || '',
-        phone: normalizedPhone,
-        error: error.message || 'Twilio send failed'
-      });
+      console.error('Failed to schedule Twilio campaign:', error);
+      return res.status(500).json({ error: error.message || 'Unable to schedule Twilio campaign.' });
     }
   }
 
-  if (sent.length === 0) {
-    return res.status(500).json({ error: 'No messages were sent.', failed, campaignName });
+  try {
+    const result = await sendTwilioCampaignMessages({
+      body,
+      campaignName,
+      recipients: providedRecipients,
+      mediaUploadIds,
+      authenticatedUser,
+      senderName,
+      requestOrigin: getTwilioRequestOrigin(req)
+    });
+    return res.json(result);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 500).json({
+      error: error.message || 'No messages were sent.',
+      failed: Array.isArray(error?.sendResult?.failed) ? error.sendResult.failed : [],
+      campaignName
+    });
   }
-
-  return res.json({
-    success: true,
-    campaignName,
-    message: `Queued ${sent.length} message(s).`,
-    sent,
-    failed
-  });
 });
 
 app.post('/api/send-agent-email', async (req, res) => {
@@ -17154,7 +17541,7 @@ app.get('/download/windows', (req, res) => {
     pkgVersion = '';
   }
 
-  const resolvedVersion = pkgVersion || '1.4.5';
+  const resolvedVersion = pkgVersion || '1.4.7';
   const installerFileNames = [
     `FAST.BRIDGE.GROUP.Setup.${resolvedVersion}.exe`,
     `FAST BRIDGE GROUP Setup ${resolvedVersion}.exe`
@@ -17169,7 +17556,7 @@ app.get('/download/windows', (req, res) => {
 
   const installerCandidates = [
     pkgVersion ? path.join(__dirname, 'dist', 'electron', `FAST BRIDGE GROUP Setup ${pkgVersion}.exe`) : '',
-    path.join(__dirname, 'dist', 'electron', 'FAST BRIDGE GROUP Setup 1.4.5.exe'),
+    path.join(__dirname, 'dist', 'electron', 'FAST BRIDGE GROUP Setup 1.4.7.exe'),
     path.join(__dirname, 'dist', 'electron-packager', 'FAST BRIDGE GROUP-win32-x64', 'FAST BRIDGE GROUP.exe')
   ].filter(Boolean);
 
@@ -17252,6 +17639,7 @@ async function startServer() {
   `);
 
     initializeS3BackupsAndHealthChecks();
+    initializeTwilioScheduledMessageWorker();
   });
 }
 
