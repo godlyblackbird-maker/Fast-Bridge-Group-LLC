@@ -2822,6 +2822,47 @@ function summarizeTwilioMessageContent(body, attachments) {
   return mediaItems.length === 1 ? 'Attachment' : `${mediaItems.length} attachments`;
 }
 
+function extractPropertyAddressFromTwilioBody(body) {
+  const normalizedBody = String(body || '').replace(/\s+/g, ' ').trim();
+  if (!normalizedBody) {
+    return '';
+  }
+
+  const patterns = [
+    /(?:listing at|checking in on|congrats on closing|reaching out on|saw)\s+(.+?)(?:\.|,\s+if\b|\s+is\s+marked\b|\s+is\s+active\b|\s+is\s+pending\b|\s+how's that going\?|$)/i,
+    /on\s+(.+?)(?:\.|,\s+if\b|\s+how's that going\?|$)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalizedBody.match(pattern);
+    if (match && match[1]) {
+      return String(match[1]).trim().replace(/[.,!?]+$/, '');
+    }
+  }
+
+  return '';
+}
+
+function getTwilioMessagePropertyAddress(rowOrPayload) {
+  const payload = rowOrPayload && typeof rowOrPayload === 'object' && typeof rowOrPayload.raw_payload_json === 'string'
+    ? safeJsonParse(rowOrPayload.raw_payload_json, {})
+    : rowOrPayload;
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const directValue = String(
+    source.propertyAddress
+      || source.property_address
+      || source.area
+      || source.market
+      || ''
+  ).trim();
+
+  if (directValue) {
+    return directValue;
+  }
+
+  return extractPropertyAddressFromTwilioBody(rowOrPayload?.body || source.Body || source.body || '');
+}
+
 function getTwilioConversationDetails({ contactPhone, platformIdentity }) {
   const normalizedContactPhone = normalizeSmsPhone(contactPhone);
   const normalizedPlatformIdentity = normalizeTwilioPlatformIdentity(platformIdentity);
@@ -2852,6 +2893,7 @@ function serializeTwilioInboxMessage(row) {
     messageSid: String(row.message_sid || '').trim(),
     conversationKey: String(row.conversation_key || '').trim(),
     campaignName: String(row.campaign_name || '').trim(),
+    propertyAddress: getTwilioMessagePropertyAddress(row),
     contactName: String(row.contact_name || '').trim(),
     contactPhone: String(row.contact_phone || '').trim(),
     platformIdentity: String(row.platform_identity || '').trim(),
@@ -3120,6 +3162,34 @@ async function findTwilioConversationByPhone(phone) {
       LIMIT 1`,
     [normalizedPhone]
   );
+}
+
+function isTwilioOptOutMessageBody(body) {
+  const normalizedBody = String(body || '').trim().toLowerCase();
+  if (!normalizedBody) {
+    return false;
+  }
+
+  return /^(stop|stopall|unsubscribe|cancel|end|quit)\b/.test(normalizedBody);
+}
+
+async function hasTwilioInboundOptOutByPhone(phone) {
+  const normalizedPhone = normalizeSmsPhone(phone);
+  if (!normalizedPhone) {
+    return false;
+  }
+
+  const rows = await dbAll(
+    `SELECT body
+       FROM twilio_inbox_messages
+      WHERE contact_phone = ?
+        AND direction = 'inbound'
+        AND TRIM(COALESCE(body, '')) <> ''
+      ORDER BY datetime(created_at) DESC, id DESC`,
+    [normalizedPhone]
+  );
+
+  return rows.some((row) => isTwilioOptOutMessageBody(row?.body));
 }
 
 async function markTwilioConversationRead(conversationKey) {
@@ -15775,7 +15845,10 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       readAt: null,
-      rawPayload: payload
+      rawPayload: {
+        ...payload,
+        propertyAddress: getTwilioMessagePropertyAddress(latestRow || payload)
+      }
     });
 
     return res.type('text/xml').send('<Response></Response>');
@@ -15851,6 +15924,7 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
       return {
         conversationKey: String(row.conversation_key || '').trim(),
         campaignName: String(row.campaign_name || '').trim(),
+        propertyAddress: String(serializedLatestMessage?.propertyAddress || '').trim(),
         contactName: String(row.contact_name || '').trim() || String(row.contact_phone || '').trim(),
         contactPhone: String(row.contact_phone || '').trim(),
         platformIdentity: String(row.platform_identity || '').trim(),
@@ -16077,6 +16151,7 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
         to: payload.to,
         from: payload.from || '',
         messagingServiceSid: payload.messagingServiceSid || '',
+        propertyAddress: getTwilioMessagePropertyAddress(latestRow),
         ...mediaPayload.rawPayload
       }
     });
@@ -16153,6 +16228,15 @@ app.post('/api/twilio/send-sms', async (req, res) => {
       continue;
     }
 
+    if (await hasTwilioInboundOptOutByPhone(normalizedPhone)) {
+      failed.push({
+        name: recipient.name || '',
+        phone: normalizedPhone,
+        error: 'Recipient has already opted out with STOP.'
+      });
+      continue;
+    }
+
     const personalizedBody = body ? personalizeSmsBody(body, recipient, senderName).slice(0, 1600) : '';
 
     try {
@@ -16206,6 +16290,8 @@ app.post('/api/twilio/send-sms', async (req, res) => {
           to: payload.to,
           from: payload.from || '',
           messagingServiceSid: payload.messagingServiceSid || '',
+          propertyAddress: String(recipient.area || '').trim(),
+          area: String(recipient.area || '').trim(),
           ...mediaPayload.rawPayload
         }
       });

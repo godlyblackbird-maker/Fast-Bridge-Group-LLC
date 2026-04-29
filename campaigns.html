@@ -174,6 +174,16 @@
             overflow: visible;
         }
 
+        .campaign-brand-strip.is-bottom {
+            margin-top: 8px;
+            padding: 8px 24px 18px;
+            justify-items: center;
+        }
+
+        .campaign-brand-strip.is-bottom::before {
+            inset: 8px 22% 0;
+        }
+
         .campaign-brand-strip::before {
             content: '';
             position: absolute;
@@ -656,7 +666,7 @@
         .campaign-replies-shell {
             display: grid;
             grid-template-columns: 320px minmax(0, 1fr);
-            height: clamp(560px, 72vh, 760px);
+            height: clamp(680px, 80vh, 920px);
             margin-top: 18px;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
             background: linear-gradient(180deg, rgba(245, 247, 250, 0.98) 0%, rgba(232, 236, 242, 0.98) 100%);
@@ -694,6 +704,65 @@
             margin: 0;
             color: #111827;
             font-size: 18px;
+        }
+
+        .campaign-reply-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .campaign-reply-address-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .campaign-reply-address-chip {
+            display: inline-flex;
+            align-items: center;
+            max-width: min(100%, 420px);
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.06);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            color: #334155;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .campaign-reply-copy-address {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(255, 255, 255, 0.94);
+            color: #475569;
+        }
+
+        .campaign-reply-copy-address:hover,
+        .campaign-reply-copy-address:focus-visible {
+            border-color: rgba(var(--accent-rgb), 0.28);
+            color: #0f172a;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+        }
+
+        .campaign-reply-copy-address svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
 
         .campaign-replies-list-head p,
@@ -1526,10 +1595,6 @@
             </nav>
 
             <div class="campaigns-wrap">
-                <section class="campaign-brand-strip" aria-label="Twilio brand highlight">
-                    <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-brand-logo">
-                </section>
-
                 <section class="glass-card campaign-tools-section">
                     <div class="campaign-tools-head">
                         <div>
@@ -1559,7 +1624,18 @@
                                 </aside>
                                 <section class="campaign-replies-thread-shell">
                                     <div class="campaign-replies-thread-head">
-                                        <h4 id="campaign-reply-title">Choose a Twilio thread</h4>
+                                        <div class="campaign-reply-title-row">
+                                            <h4 id="campaign-reply-title">Choose a Twilio thread</h4>
+                                            <div id="campaign-reply-address-group" class="campaign-reply-address-group" hidden>
+                                                <span id="campaign-reply-address" class="campaign-reply-address-chip"></span>
+                                                <button id="campaign-reply-copy-address" type="button" class="campaign-reply-copy-address" aria-label="Copy property address" title="Copy property address">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
                                         <p id="campaign-reply-subtitle">Open a contact on the left to review replies and send a direct response.</p>
                                     </div>
                                     <div id="campaign-reply-thread" class="campaign-reply-thread">
@@ -1750,6 +1826,10 @@
                         </article>
                     </aside>
                 </section>
+
+                <section class="campaign-brand-strip is-bottom" aria-label="Twilio brand highlight">
+                    <img src="png photos/Twilio_logo.png" alt="Twilio logo" class="campaign-brand-logo">
+                </section>
             </div>
         </main>
     </div>
@@ -1830,6 +1910,9 @@
             const campaignRepliesStatus = document.getElementById('campaign-replies-status');
             const campaignReplyConversations = document.getElementById('campaign-reply-conversations');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
+            const campaignReplyAddressGroup = document.getElementById('campaign-reply-address-group');
+            const campaignReplyAddress = document.getElementById('campaign-reply-address');
+            const campaignReplyCopyAddressButton = document.getElementById('campaign-reply-copy-address');
             const campaignReplySubtitle = document.getElementById('campaign-reply-subtitle');
             const campaignReplyThread = document.getElementById('campaign-reply-thread');
             const campaignReplyForm = document.getElementById('campaign-reply-form');
@@ -1858,6 +1941,22 @@
             let twilioInboxRefreshHandle = null;
             let pendingCampaignMediaItems = [];
             let pendingReplyMediaItems = [];
+
+            function setCampaignReplyAddress(value) {
+                const propertyAddress = String(value || '').trim();
+                if (!campaignReplyAddressGroup || !campaignReplyAddress) {
+                    return;
+                }
+
+                if (!propertyAddress) {
+                    campaignReplyAddress.textContent = '';
+                    campaignReplyAddressGroup.setAttribute('hidden', 'hidden');
+                    return;
+                }
+
+                campaignReplyAddress.textContent = propertyAddress;
+                campaignReplyAddressGroup.removeAttribute('hidden');
+            }
 
             function setTwilioWebhookUiState(data = {}) {
                 const configured = Boolean(data.configured);
@@ -2499,6 +2598,7 @@
 
                 if (!conversation) {
                     campaignReplyTitle.textContent = 'Choose a Twilio thread';
+                    setCampaignReplyAddress('');
                     campaignReplySubtitle.textContent = 'Open a contact on the left to review replies and send a direct response.';
                     const empty = document.createElement('p');
                     empty.className = 'campaign-reply-thread-empty';
@@ -2509,6 +2609,7 @@
                 }
 
                 campaignReplyTitle.textContent = conversation.contactName || conversation.contactPhone || 'Twilio contact';
+                setCampaignReplyAddress(conversation.propertyAddress || '');
                 campaignReplySubtitle.textContent = conversation.campaignName
                     ? `${conversation.contactPhone} • ${conversation.campaignName}`
                     : `${conversation.contactPhone} • Direct Twilio thread`;
@@ -2904,6 +3005,34 @@
                         campaignSendStatus.textContent = 'Status webhook URL copied.';
                     } catch (error) {
                         campaignSendStatus.textContent = 'Could not copy the status webhook URL.';
+                    }
+                });
+            }
+
+            if (campaignReplyCopyAddressButton) {
+                campaignReplyCopyAddressButton.addEventListener('click', async () => {
+                    const value = String(campaignReplyAddress ? campaignReplyAddress.textContent : '').trim();
+                    if (!value) {
+                        return;
+                    }
+
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(value);
+                        } else {
+                            const helper = document.createElement('textarea');
+                            helper.value = value;
+                            helper.setAttribute('readonly', 'readonly');
+                            helper.style.position = 'absolute';
+                            helper.style.left = '-9999px';
+                            document.body.appendChild(helper);
+                            helper.select();
+                            document.execCommand('copy');
+                            helper.remove();
+                        }
+                        campaignReplyStatus.textContent = 'Property address copied.';
+                    } catch (error) {
+                        campaignReplyStatus.textContent = 'Could not copy the property address.';
                     }
                 });
             }
