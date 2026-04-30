@@ -180,7 +180,7 @@ const MLS_IMPORT_PDF_JOB_TTL_MS = 2 * 60 * 60 * 1000;
 const MLS_IMPORT_PDF_WORKER_TIMEOUT_MS = 90 * 60 * 1000;
 const MLS_IMPORT_TEMP_DIR = path.join(__dirname, 'temp', 'mls-imports');
 const USER_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
-const USER_UPLOADS_LOCAL_ROOT = path.join(__dirname, 'USER_UPLOADS');
+const USER_UPLOADS_LOCAL_ROOT = resolveUserUploadsLocalRoot();
 
 let cachedOpenAiApiKey = null;
 let cachedTwilioClient = null;
@@ -216,6 +216,7 @@ const COMMUNITY_TEXT_MESSAGE_MAX_LENGTH = 2000;
 
 fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
 fs.mkdirSync(SQLITE_BACKUP_TEMP_DIR, { recursive: true });
+fs.mkdirSync(USER_UPLOADS_LOCAL_ROOT, { recursive: true });
 
 const mlsImportPdfUpload = multer({
   storage: multer.diskStorage({
@@ -1157,12 +1158,35 @@ function resolveDatabaseFilePath() {
     return path.resolve(explicitPath);
   }
 
-  const persistentRoot = getFirstConfiguredEnvValue('RENDER_DISK_MOUNT_PATH', 'PERSISTENT_STORAGE_PATH', 'DATA_DIR');
+  const persistentRoot = resolvePersistentStorageRoot();
   if (persistentRoot) {
-    return path.join(path.resolve(persistentRoot), DATABASE_FILENAME);
+    return path.join(persistentRoot, DATABASE_FILENAME);
   }
 
   return path.join(__dirname, DATABASE_FILENAME);
+}
+
+function resolvePersistentStorageRoot() {
+  const persistentRoot = getFirstConfiguredEnvValue('RENDER_DISK_MOUNT_PATH', 'PERSISTENT_STORAGE_PATH', 'DATA_DIR');
+  if (!persistentRoot) {
+    return '';
+  }
+
+  return path.resolve(persistentRoot);
+}
+
+function resolveUserUploadsLocalRoot() {
+  const explicitRoot = getFirstConfiguredEnvValue('USER_UPLOADS_PATH', 'USER_UPLOADS_LOCAL_ROOT');
+  if (explicitRoot) {
+    return path.resolve(explicitRoot);
+  }
+
+  const persistentRoot = resolvePersistentStorageRoot();
+  if (persistentRoot) {
+    return path.join(persistentRoot, 'USER_UPLOADS');
+  }
+
+  return path.join(__dirname, 'USER_UPLOADS');
 }
 
 function ensureDatabaseStorageReady(databaseFilePath) {
@@ -1185,7 +1209,7 @@ function isUsingFallbackDatabasePath(databaseFilePath) {
     return false;
   }
 
-  const persistentRoot = getFirstConfiguredEnvValue('RENDER_DISK_MOUNT_PATH', 'PERSISTENT_STORAGE_PATH', 'DATA_DIR');
+  const persistentRoot = resolvePersistentStorageRoot();
   if (persistentRoot) {
     return false;
   }
@@ -2567,6 +2591,13 @@ function personalizeSmsBody(body, recipient = {}, senderName = '') {
     .trim();
 }
 
+function buildRepeatTwilioFollowUpBody(recipient = {}) {
+  const name = String(recipient.name || '').trim();
+  const firstName = name ? name.split(/\s+/)[0] : 'there';
+  const propertyAddress = String(recipient.area || recipient.market || '').trim() || 'the property';
+  return `Hey ${firstName} just checking in on ${propertyAddress}, how's that going?`;
+}
+
 function normalizeTwilioPlatformIdentity(value) {
   const raw = String(value || '').trim();
   if (!raw) {
@@ -3433,7 +3464,7 @@ async function markTwilioScheduledMessageFailed(scheduleId, error, sendResult = 
   );
 }
 
-async function sendTwilioCampaignMessages({ body, campaignName, recipients, mediaUploadIds, authenticatedUser, senderName, requestOrigin }) {
+async function sendTwilioCampaignMessages({ body, campaignName, recipients, mediaUploadIds, authenticatedUser, senderName, requestOrigin, useRepeatHistoryFollowUp = false }) {
   const config = getTwilioMessagingConfig();
   if (!isTwilioConfigured(config)) {
     const error = new Error('Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.');
@@ -3518,7 +3549,12 @@ async function sendTwilioCampaignMessages({ body, campaignName, recipients, medi
       continue;
     }
 
-    const personalizedBody = normalizedBody ? personalizeSmsBody(normalizedBody, recipient, normalizedSenderName).slice(0, 1600) : '';
+    const hasPriorTwilioHistory = useRepeatHistoryFollowUp && normalizedBody
+      ? Boolean(await findTwilioConversationByPhone(normalizedPhone))
+      : false;
+    const personalizedBody = hasPriorTwilioHistory
+      ? buildRepeatTwilioFollowUpBody(recipient).slice(0, 1600)
+      : (normalizedBody ? personalizeSmsBody(normalizedBody, recipient, normalizedSenderName).slice(0, 1600) : '');
 
     try {
       const payload = {
@@ -16931,6 +16967,7 @@ app.post('/api/twilio/send-sms', async (req, res) => {
   const providedRecipients = Array.isArray(req.body?.recipients) ? req.body.recipients : [];
   const mediaUploadIds = Array.isArray(req.body?.mediaUploadIds) ? req.body.mediaUploadIds : [];
   const scheduledFor = normalizeTwilioScheduledFor(req.body?.scheduleAt);
+  const useRepeatHistoryFollowUp = Boolean(req.body?.useRepeatHistoryFollowUp);
 
   if (providedRecipients.length === 0) {
     return res.status(400).json({ error: 'At least one recipient is required.' });
@@ -17007,7 +17044,8 @@ app.post('/api/twilio/send-sms', async (req, res) => {
       mediaUploadIds,
       authenticatedUser,
       senderName,
-      requestOrigin: getTwilioRequestOrigin(req)
+      requestOrigin: getTwilioRequestOrigin(req),
+      useRepeatHistoryFollowUp: useRepeatHistoryFollowUp && !scheduledFor
     });
     return res.json(result);
   } catch (error) {

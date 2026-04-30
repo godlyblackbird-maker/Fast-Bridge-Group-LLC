@@ -3472,6 +3472,7 @@
                 campaignSendStatus.textContent = scheduleAt ? 'Scheduling Twilio campaign...' : 'Queueing Twilio campaign...';
 
                 try {
+                    const useRepeatHistoryFollowUp = !scheduleAt;
                     const response = await fetch('/api/twilio/send-sms', {
                         method: 'POST',
                         headers: {
@@ -3484,6 +3485,7 @@
                             senderName: getCurrentSenderName(),
                             recipients,
                             mediaUploadIds: pendingCampaignMediaItems.map((item) => item.id).filter(Boolean),
+                            ...(useRepeatHistoryFollowUp ? { useRepeatHistoryFollowUp: true } : {}),
                             ...(scheduleAt ? { scheduleAt } : {})
                         })
                     });

@@ -2688,10 +2688,9 @@
             }
 
             function buildRepeatTwilioFollowUpMessage(rowData) {
-                const agentName = normalizeCellValue(rowData && rowData.laName) || 'there';
+                const agentFirstName = getAgentFirstName(rowData && rowData.laName) || 'there';
                 const propertyAddress = normalizeCellValue(rowData && rowData.propertyAddress) || 'the property';
-                const timeGreeting = getTimeGreetingSentence();
-                return `Hey ${agentName} ${timeGreeting} just checking in on ${propertyAddress} how's that going?`
+                return `Hey ${agentFirstName} just checking in on ${propertyAddress}, how's that going?`
                     .replace(/\s+/g, ' ')
                     .trim();
             }

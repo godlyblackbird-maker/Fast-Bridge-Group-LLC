@@ -7,6 +7,7 @@ const path = require('path');
 const appRoot = path.resolve(__dirname, '..');
 const iconPath = path.join(appRoot, 'build', 'app-icon.ico');
 const serverEntry = path.join(appRoot, 'server.js');
+const desktopDataDir = app.getPath('userData');
 const desktopPort = Number.parseInt(String(process.env.ELECTRON_APP_PORT || process.env.PORT || '3000'), 10) || 3000;
 const desktopUrl = `http://127.0.0.1:${desktopPort}`;
 const APP_USER_MODEL_ID = 'com.fastbridgegroup.desktop';
@@ -97,6 +98,7 @@ const startLocalServer = async () => {
     env: {
       ...process.env,
       PORT: String(desktopPort),
+      DATA_DIR: desktopDataDir,
       ELECTRON_DESKTOP: '1'
     },
     stdio: 'inherit'

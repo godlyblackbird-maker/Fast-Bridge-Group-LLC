@@ -228,7 +228,7 @@
 
         .buyers-sheet-table {
             width: max-content;
-            min-width: 1460px;
+            min-width: 1620px;
             max-width: none;
             border-collapse: collapse;
         }
@@ -265,6 +265,23 @@
             white-space: nowrap;
         }
 
+        .buyers-sheet-table thead th.is-wide-column,
+        .buyers-sheet-table tbody td.is-wide-column {
+            min-width: 220px;
+        }
+
+        .buyers-sheet-table thead th.is-extra-wide-column,
+        .buyers-sheet-table tbody td.is-extra-wide-column {
+            min-width: 320px;
+        }
+
+        .buyers-sheet-table tbody td.is-multiline-cell {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.45;
+        }
+
         .buyers-sheet-table tbody tr:nth-child(even) td {
             background: var(--buyers-row-bg-alt);
         }
@@ -273,6 +290,10 @@
             outline: none;
             min-width: 140px;
             cursor: text;
+        }
+
+        .buyers-sheet-table td[contenteditable="true"].is-multiline-cell {
+            min-width: 220px;
         }
 
         .buyers-sheet-table td[contenteditable="true"]:focus {
@@ -665,13 +686,13 @@
 
         @media (max-width: 900px) {
             .buyers-sheet-table {
-                min-width: 1320px;
+                min-width: 1460px;
             }
         }
 
         @media (max-width: 700px) {
             .buyers-sheet-table {
-                min-width: 1240px;
+                min-width: 1320px;
                 font-size: 13px;
             }
 
@@ -878,13 +899,13 @@
                             <thead>
                                 <tr>
                                     <th>Import Date</th>
-                                    <th>Property Address</th>
+                                    <th class="is-wide-column">Property Address</th>
                                     <th>LA Name</th>
                                     <th>LO Phone</th>
-                                    <th>Offers Email</th>
+                                    <th class="is-wide-column">Offers Email</th>
                                     <th>LA Cell</th>
                                     <th>Status</th>
-                                    <th>PDF File</th>
+                                    <th class="is-extra-wide-column">PDF File</th>
                                     <th>Copy</th>
                                 </tr>
                             </thead>
@@ -1505,6 +1526,20 @@
                 td.contentEditable = 'true';
                 td.spellcheck = false;
                 td.textContent = normalizeCellValue(value);
+                td.dataset.columnKey = key;
+
+                if (key === 'propertyAddress' || key === 'offersEmail') {
+                    td.classList.add('is-wide-column');
+                }
+
+                if (key === 'pdfFile') {
+                    td.classList.add('is-extra-wide-column');
+                }
+
+                if (key === 'propertyAddress' || key === 'offersEmail' || key === 'pdfFile') {
+                    td.classList.add('is-multiline-cell');
+                }
+
                 td.addEventListener('input', () => {
                     saveRows();
                     syncPhoneCopyButtonState(td, td.dataset.phoneFieldKey || '');
