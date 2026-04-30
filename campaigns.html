@@ -776,6 +776,43 @@
             position: relative;
         }
 
+        .campaign-reply-filters {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .campaign-reply-filter-button {
+            min-height: 32px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.82);
+            color: #475569;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, background 0.18s ease;
+        }
+
+        .campaign-reply-filter-button:hover,
+        .campaign-reply-filter-button:focus-visible {
+            outline: none;
+            border-color: rgba(var(--accent-rgb), 0.28);
+            color: #0f172a;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
+        }
+
+        .campaign-reply-filter-button.is-active {
+            border-color: rgba(var(--accent-rgb), 0.34);
+            background: rgba(var(--accent-rgb), 0.12);
+            color: #0f172a;
+            box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.16);
+        }
+
         .campaign-reply-search input {
             width: 100%;
             min-height: 42px;
@@ -1935,6 +1972,10 @@
                                     <div class="campaign-replies-list-head">
                                         <h4>Active Threads</h4>
                                         <p>Twilio responses grouped by contact number.</p>
+                                        <div class="campaign-reply-filters" role="group" aria-label="Filter active threads">
+                                            <button id="campaign-reply-filter-all" type="button" class="campaign-reply-filter-button is-active">All</button>
+                                            <button id="campaign-reply-filter-unread" type="button" class="campaign-reply-filter-button">Unread</button>
+                                        </div>
                                         <label class="campaign-reply-search" for="campaign-reply-search-input">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                 <circle cx="11" cy="11" r="7"></circle>
@@ -2313,6 +2354,8 @@
             const campaignTemplateCloseButtons = document.querySelectorAll('[data-campaign-template-close]');
             const campaignRepliesStatus = document.getElementById('campaign-replies-status');
             const campaignReplyConversations = document.getElementById('campaign-reply-conversations');
+            const campaignReplyFilterAllButton = document.getElementById('campaign-reply-filter-all');
+            const campaignReplyFilterUnreadButton = document.getElementById('campaign-reply-filter-unread');
             const campaignReplySearchInput = document.getElementById('campaign-reply-search-input');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
             const campaignReplyEditNameButton = document.getElementById('campaign-reply-edit-name');
@@ -2353,6 +2396,7 @@
             let pendingCampaignScheduleAt = '';
             let campaignScheduleContext = 'campaign';
             let campaignReplySearchTerm = '';
+            let campaignReplyFilterMode = 'all';
             const campaignReplyDefaultPlaceholder = campaignReplyInput ? String(campaignReplyInput.getAttribute('placeholder') || '').trim() : 'Type a direct Twilio response...';
 
             function setCampaignReplyAddress(value) {
@@ -2951,11 +2995,18 @@
 
             function getFilteredTwilioInboxConversations() {
                 const searchTerm = String(campaignReplySearchTerm || '').trim().toLowerCase();
-                if (!searchTerm) {
-                    return twilioInboxConversations;
-                }
-
                 return twilioInboxConversations.filter((conversation) => {
+                    const matchesUnreadFilter = campaignReplyFilterMode !== 'unread'
+                        || Number(conversation?.unreadCount) > 0
+                        || String(conversation?.lastDirection || '').trim().toLowerCase() === 'inbound';
+                    if (!matchesUnreadFilter) {
+                        return false;
+                    }
+
+                    if (!searchTerm) {
+                        return true;
+                    }
+
                     const haystack = [
                         conversation?.contactName,
                         conversation?.contactPhone,
@@ -2970,6 +3021,15 @@
 
                     return haystack.includes(searchTerm);
                 });
+            }
+
+            function syncCampaignReplyFilterButtons() {
+                if (campaignReplyFilterAllButton) {
+                    campaignReplyFilterAllButton.classList.toggle('is-active', campaignReplyFilterMode === 'all');
+                }
+                if (campaignReplyFilterUnreadButton) {
+                    campaignReplyFilterUnreadButton.classList.toggle('is-active', campaignReplyFilterMode === 'unread');
+                }
             }
 
             function setCampaignReplyComposerEnabled(enabled) {
@@ -3400,7 +3460,9 @@
                 if (!visibleConversations.length) {
                     const empty = document.createElement('p');
                     empty.className = 'campaign-reply-empty';
-                    empty.textContent = 'No Twilio threads match that search.';
+                    empty.textContent = campaignReplyFilterMode === 'unread'
+                        ? 'No unread or pending-reply Twilio threads match the current search.'
+                        : 'No Twilio threads match that search.';
                     campaignReplyConversations.appendChild(empty);
                     return;
                 }
@@ -3725,6 +3787,22 @@
             if (campaignReplySearchInput) {
                 campaignReplySearchInput.addEventListener('input', () => {
                     campaignReplySearchTerm = String(campaignReplySearchInput.value || '').trim();
+                    renderTwilioReplyConversations();
+                });
+            }
+
+            if (campaignReplyFilterAllButton) {
+                campaignReplyFilterAllButton.addEventListener('click', () => {
+                    campaignReplyFilterMode = 'all';
+                    syncCampaignReplyFilterButtons();
+                    renderTwilioReplyConversations();
+                });
+            }
+
+            if (campaignReplyFilterUnreadButton) {
+                campaignReplyFilterUnreadButton.addEventListener('click', () => {
+                    campaignReplyFilterMode = 'unread';
+                    syncCampaignReplyFilterButtons();
                     renderTwilioReplyConversations();
                 });
             }
