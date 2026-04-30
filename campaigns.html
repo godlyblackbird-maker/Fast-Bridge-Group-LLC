@@ -731,7 +731,7 @@
         .campaign-replies-shell {
             display: grid;
             grid-template-columns: 320px minmax(0, 1fr);
-            height: clamp(680px, 80vh, 920px);
+            height: clamp(760px, 84vh, 1040px);
             margin-top: 18px;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
             background: linear-gradient(180deg, rgba(245, 247, 250, 0.98) 0%, rgba(232, 236, 242, 0.98) 100%);
@@ -772,48 +772,61 @@
         }
 
         .campaign-reply-search {
+            display: block;
+            width: 100%;
             margin-top: 12px;
             position: relative;
         }
 
         .campaign-reply-filters {
-            display: inline-flex;
+            display: inline-grid;
+            grid-auto-flow: column;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             margin-top: 12px;
-            flex-wrap: wrap;
+            padding: 4px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.94) 100%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 24px rgba(15, 23, 42, 0.06);
+            width: fit-content;
+            max-width: 100%;
         }
 
         .campaign-reply-filter-button {
-            min-height: 32px;
-            padding: 6px 12px;
+            min-height: 34px;
+            padding: 7px 14px;
             border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            background: rgba(255, 255, 255, 0.82);
-            color: #475569;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #64748b;
             font-size: 12px;
             font-weight: 800;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, background 0.18s ease;
+            line-height: 1;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, background 0.18s ease, transform 0.18s ease;
         }
 
         .campaign-reply-filter-button:hover,
         .campaign-reply-filter-button:focus-visible {
             outline: none;
-            border-color: rgba(var(--accent-rgb), 0.28);
+            background: rgba(255, 255, 255, 0.72);
             color: #0f172a;
-            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+            transform: translateY(-1px);
         }
 
         .campaign-reply-filter-button.is-active {
             border-color: rgba(var(--accent-rgb), 0.34);
-            background: rgba(var(--accent-rgb), 0.12);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(var(--accent-rgb), 0.16) 100%);
             color: #0f172a;
-            box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.16);
+            box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transform: none;
         }
 
         .campaign-reply-search input {
+            display: block;
             width: 100%;
             min-height: 42px;
             padding: 10px 14px 10px 40px;
@@ -847,6 +860,7 @@
             color: #64748b;
             transform: translateY(-50%);
             pointer-events: none;
+            z-index: 1;
         }
 
         .campaign-reply-title-row {
@@ -1048,6 +1062,35 @@
             cursor: pointer;
         }
 
+        .campaign-reply-conversation-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .campaign-reply-conversation-dismiss {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(59, 130, 246, 0.24);
+            background: rgba(255, 255, 255, 0.96);
+            color: #2563eb;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .campaign-reply-conversation-dismiss:hover,
+        .campaign-reply-conversation-dismiss:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(37, 99, 235, 0.34);
+            color: #1d4ed8;
+            box-shadow: 0 14px 24px rgba(30, 64, 175, 0.14);
+        }
+
         .campaign-reply-conversation-delete {
             width: 34px;
             height: 34px;
@@ -1071,6 +1114,7 @@
             box-shadow: 0 14px 24px rgba(127, 29, 29, 0.14);
         }
 
+        .campaign-reply-conversation-dismiss svg,
         .campaign-reply-conversation-delete svg {
             width: 16px;
             height: 16px;
@@ -2034,7 +2078,7 @@
                                     </div>
                                     <form id="campaign-reply-form" class="campaign-reply-form">
                                         <div id="campaign-reply-status" class="campaign-reply-status"></div>
-                                        <input id="campaign-reply-media-input" class="campaign-media-input" type="file" multiple>
+                                        <input id="campaign-reply-media-input" class="campaign-media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.xml,.json" multiple>
                                         <div id="campaign-reply-media-pending" class="campaign-media-pending" hidden></div>
                                         <div class="campaign-reply-form-row">
                                             <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
@@ -2114,7 +2158,7 @@
                                     </div>
                                     <div class="form-group outreach-full-width">
                                         <div class="campaign-media-toolbar">
-                                            <input id="campaign-media-input" class="campaign-media-input" type="file" multiple>
+                                            <input id="campaign-media-input" class="campaign-media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.xml,.json" multiple>
                                             <button id="campaign-media-attach" type="button" class="card-btn">Attach Files</button>
                                             <span class="campaign-media-note">Upload photos or documents to send alongside your Twilio message.</span>
                                         </div>
@@ -2397,7 +2441,102 @@
             let campaignScheduleContext = 'campaign';
             let campaignReplySearchTerm = '';
             let campaignReplyFilterMode = 'all';
+            const CAMPAIGN_REPLY_DISMISSED_UNREAD_KEY = 'campaignReplyDismissedUnreadByConversation';
             const campaignReplyDefaultPlaceholder = campaignReplyInput ? String(campaignReplyInput.getAttribute('placeholder') || '').trim() : 'Type a direct Twilio response...';
+            let dismissedUnreadConversationMap = (() => {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(CAMPAIGN_REPLY_DISMISSED_UNREAD_KEY) || '{}');
+                    return parsed && typeof parsed === 'object' ? parsed : {};
+                } catch (_error) {
+                    return {};
+                }
+            })();
+
+            function persistDismissedUnreadConversationMap() {
+                try {
+                    localStorage.setItem(CAMPAIGN_REPLY_DISMISSED_UNREAD_KEY, JSON.stringify(dismissedUnreadConversationMap));
+                } catch (_error) {}
+            }
+
+            function getConversationUnreadSignature(conversation) {
+                return String(conversation?.lastMessageAt || '').trim();
+            }
+
+            function isConversationDismissedFromUnread(conversation) {
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                const signature = getConversationUnreadSignature(conversation);
+                if (!conversationKey || !signature) {
+                    return false;
+                }
+
+                return String(dismissedUnreadConversationMap[conversationKey] || '').trim() === signature;
+            }
+
+            function dismissConversationFromUnread(conversation) {
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                const signature = getConversationUnreadSignature(conversation);
+                if (!conversationKey || !signature) {
+                    return;
+                }
+
+                dismissedUnreadConversationMap[conversationKey] = signature;
+                persistDismissedUnreadConversationMap();
+            }
+
+            function pruneDismissedUnreadConversations() {
+                const activeConversationKeys = new Set();
+                twilioInboxConversations.forEach((conversation) => {
+                    const conversationKey = String(conversation?.conversationKey || '').trim();
+                    const signature = getConversationUnreadSignature(conversation);
+                    if (!conversationKey) {
+                        return;
+                    }
+
+                    activeConversationKeys.add(conversationKey);
+                    if (!signature || String(dismissedUnreadConversationMap[conversationKey] || '').trim() !== signature) {
+                        delete dismissedUnreadConversationMap[conversationKey];
+                    }
+                });
+
+                Object.keys(dismissedUnreadConversationMap).forEach((conversationKey) => {
+                    if (!activeConversationKeys.has(conversationKey)) {
+                        delete dismissedUnreadConversationMap[conversationKey];
+                    }
+                });
+
+                persistDismissedUnreadConversationMap();
+            }
+
+            async function dismissTwilioUnreadConversation(conversation) {
+                const normalizedConversationKey = String(conversation?.conversationKey || '').trim();
+                if (!normalizedConversationKey) {
+                    campaignReplyStatus.textContent = 'Unable to dismiss that unread thread.';
+                    return;
+                }
+
+                campaignReplyStatus.textContent = 'Dismissing unread thread...';
+
+                try {
+                    const response = await fetch('/api/twilio/inbox/messages/read', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({ conversationKey: normalizedConversationKey })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Unable to dismiss that unread thread.');
+                    }
+
+                    dismissConversationFromUnread(conversation);
+                    await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
+                    campaignReplyStatus.textContent = 'Unread thread dismissed from the unread view.';
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || 'Unable to dismiss that unread thread.';
+                }
+            }
 
             function setCampaignReplyAddress(value) {
                 const propertyAddress = String(value || '').trim();
@@ -2997,8 +3136,9 @@
                 const searchTerm = String(campaignReplySearchTerm || '').trim().toLowerCase();
                 return twilioInboxConversations.filter((conversation) => {
                     const matchesUnreadFilter = campaignReplyFilterMode !== 'unread'
-                        || Number(conversation?.unreadCount) > 0
-                        || String(conversation?.lastDirection || '').trim().toLowerCase() === 'inbound';
+                        || ((Number(conversation?.unreadCount) > 0
+                            || String(conversation?.lastDirection || '').trim().toLowerCase() === 'inbound')
+                            && !isConversationDismissedFromUnread(conversation));
                     if (!matchesUnreadFilter) {
                         return false;
                     }
@@ -3167,7 +3307,8 @@
             }
 
             async function uploadTwilioMediaFile(file, contextKey) {
-                if (!token) {
+                const activeToken = String((typeof window.getAuthToken === 'function' ? window.getAuthToken() : '') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                if (!activeToken) {
                     throw new Error('Sign in again before uploading Twilio attachments.');
                 }
 
@@ -3178,7 +3319,7 @@
                 const response = await fetch('/api/twilio/media-uploads', {
                     method: 'POST',
                     headers: {
-                        Authorization: `Bearer ${token}`
+                        Authorization: `Bearer ${activeToken}`
                     },
                     body: formData
                 });
@@ -3206,7 +3347,7 @@
                 const contextKey = String(config.contextKey || 'draft').trim() || 'draft';
 
                 if (statusElement) {
-                    statusElement.textContent = files.length === 1 ? 'Uploading image...' : `Uploading ${files.length} images...`;
+                    statusElement.textContent = files.length === 1 ? 'Uploading attachment...' : `Uploading ${files.length} attachments...`;
                 }
 
                 try {
@@ -3220,11 +3361,11 @@
                     setItems([...(getItems() || []), ...uploaded]);
                     render();
                     if (statusElement) {
-                        statusElement.textContent = uploaded.length === 1 ? 'Image ready to send.' : `${uploaded.length} images ready to send.`;
+                        statusElement.textContent = uploaded.length === 1 ? 'Attachment ready to send.' : `${uploaded.length} attachments ready to send.`;
                     }
                 } catch (error) {
                     if (statusElement) {
-                        statusElement.textContent = error.message || 'Unable to upload the selected image.';
+                        statusElement.textContent = error.message || 'Unable to upload the selected attachment.';
                     }
                 } finally {
                     if (input) {
@@ -3520,6 +3661,24 @@
                         loadTwilioInboxMessages(conversation.conversationKey, { markRead: true });
                     });
 
+                    const actions = document.createElement('div');
+                    actions.className = 'campaign-reply-conversation-actions';
+
+                    if (campaignReplyFilterMode === 'unread' && (Number(conversation.unreadCount) > 0 || String(conversation.lastDirection || '').trim().toLowerCase() === 'inbound')) {
+                        const dismissButton = document.createElement('button');
+                        dismissButton.type = 'button';
+                        dismissButton.className = 'campaign-reply-conversation-dismiss';
+                        dismissButton.setAttribute('aria-label', `Dismiss ${conversation.contactName || conversation.contactPhone || 'thread'} from unread`);
+                        dismissButton.title = 'Dismiss from unread';
+                        dismissButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"></path></svg>';
+                        dismissButton.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            await dismissTwilioUnreadConversation(conversation);
+                        });
+                        actions.appendChild(dismissButton);
+                    }
+
                     const deleteButton = document.createElement('button');
                     deleteButton.type = 'button';
                     deleteButton.className = 'campaign-reply-conversation-delete';
@@ -3535,8 +3694,9 @@
                             { statusMessage: 'Deleting Twilio conversation from Active Threads...' }
                         );
                     });
+                    actions.appendChild(deleteButton);
 
-                    item.append(button, deleteButton);
+                    item.append(button, actions);
                     campaignReplyConversations.appendChild(item);
                 });
             }
@@ -3758,6 +3918,7 @@
                     }
 
                     twilioInboxConversations = Array.isArray(data.conversations) ? data.conversations : [];
+                    pruneDismissedUnreadConversations();
                     publishTwilioUnreadState(twilioInboxConversations);
                     if (!activeTwilioConversationKey || !twilioInboxConversations.some((item) => item.conversationKey === activeTwilioConversationKey)) {
                         activeTwilioConversationKey = options.preferredConversationKey || (twilioInboxConversations[0]?.conversationKey || '');

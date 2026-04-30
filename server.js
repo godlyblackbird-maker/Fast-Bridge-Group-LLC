@@ -7468,9 +7468,12 @@ function isAllowedTwilioMediaUpload(extension, mimeType = '') {
   const normalizedMimeType = String(mimeType || '').trim().toLowerCase();
   return [
     '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.avif', '.heic', '.heif', '.jfif',
-    '.pdf', '.txt', '.csv', '.rtf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.xml', '.json'
+    '.pdf', '.txt', '.csv', '.rtf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.xml', '.json',
+    '.mp4', '.mov', '.avi', '.webm', '.m4v', '.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'
   ].includes(normalizedExtension)
     || normalizedMimeType.startsWith('image/')
+    || normalizedMimeType.startsWith('video/')
+    || normalizedMimeType.startsWith('audio/')
     || normalizedMimeType.startsWith('text/')
     || [
       'application/pdf',
@@ -7482,7 +7485,21 @@ function isAllowedTwilioMediaUpload(extension, mimeType = '') {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'application/rtf',
       'application/xml',
-      'application/json'
+      'application/json',
+      'video/mp4',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/webm',
+      'audio/mpeg',
+      'audio/mp3',
+      'audio/wav',
+      'audio/wave',
+      'audio/x-wav',
+      'audio/ogg',
+      'audio/mp4',
+      'audio/x-m4a',
+      'audio/aac',
+      'audio/flac'
     ].includes(normalizedMimeType);
 }
 
