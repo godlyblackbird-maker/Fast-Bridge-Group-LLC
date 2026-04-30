@@ -1228,6 +1228,10 @@
                             <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
                             <button id="mls-imports-add-pdf" class="card-btn" type="button">Add PDF</button>
                             <button id="mls-imports-export-csv" class="card-btn" type="button">Save CSV</button>
+                            <button id="mls-imports-send-all-twilio" class="card-btn" type="button" title="Send each visible MLS row through Twilio one by one">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg>
+                                <span>Send All Twilio</span>
+                            </button>
                             <button id="mls-imports-send-email-btn" class="card-btn" type="button">Mass Email Agents</button>
                             <button id="mls-imports-copy-templates" class="card-btn" type="button">Copy Templates</button>
                             <button id="mls-imports-add-to-my-agents" class="card-btn" type="button">Add To My Agents</button>
@@ -1485,6 +1489,7 @@
             const addPdfButton = document.getElementById('mls-imports-add-pdf');
             const pdfInput = document.getElementById('mls-imports-pdf-input');
             const exportCsvButton = document.getElementById('mls-imports-export-csv');
+            const sendAllTwilioButton = document.getElementById('mls-imports-send-all-twilio');
             const sendEmailButton = document.getElementById('mls-imports-send-email-btn');
             const copyTemplatesButton = document.getElementById('mls-imports-copy-templates');
             const addToMyAgentsButton = document.getElementById('mls-imports-add-to-my-agents');
@@ -1519,7 +1524,7 @@
             const templateResetButton = document.getElementById('mls-imports-template-reset');
             const templateCloseButtons = templateModal ? Array.from(templateModal.querySelectorAll('[data-template-close="true"]')) : [];
 
-            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton || !prevPageButton || !nextPageButton || !pageIndicator || !pageMeta) {
+            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendAllTwilioButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton || !prevPageButton || !nextPageButton || !pageIndicator || !pageMeta) {
                 return;
             }
 
@@ -1532,6 +1537,13 @@
             let activePdfUploadRequest = null;
             let activePdfJobId = '';
             let activePdfImportCancelled = false;
+            let isSendingAllTwilioRows = false;
+
+            function wait(ms) {
+                return new Promise((resolve) => {
+                    window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+                });
+            }
 
             function createMlsPdfImportCancelledError() {
                 const error = new Error('The MLS PDF import was cancelled.');
@@ -3111,6 +3123,62 @@
                 });
             }
 
+            async function sendAllVisibleRowsThroughTwilio() {
+                if (isSendingAllTwilioRows) {
+                    return;
+                }
+
+                const allRows = (await fetchAllSpreadsheetRows()).filter(isMeaningfulRow);
+
+                if (!allRows.length) {
+                    showToast('error', 'No Rows To Send', 'Add or load at least one MLS row before sending Twilio messages.');
+                    return;
+                }
+
+                isSendingAllTwilioRows = true;
+                sendAllTwilioButton.disabled = true;
+                const originalLabel = sendAllTwilioButton.innerHTML;
+                sendAllTwilioButton.innerHTML = '<span>Sending...</span>';
+
+                let sentCount = 0;
+                let failedCount = 0;
+
+                try {
+                    for (const rowData of allRows) {
+                        const rowElement = Array.from(tableBody.querySelectorAll('tr')).find((candidate) => {
+                            const sameId = rowData.id && candidate.dataset.rowId && Number(candidate.dataset.rowId) === Number(rowData.id);
+                            const sameMatchKey = rowData.matchKey && normalizeCellValue(candidate.dataset.matchKey) === normalizeCellValue(rowData.matchKey);
+                            return Boolean(sameId || sameMatchKey);
+                        });
+                        const sendButton = rowElement ? rowElement.querySelector('.buyers-sheet-send-btn') : null;
+
+                        try {
+                            await sendMlsTemplateToAgent(rowData, sendButton);
+                            if (rowElement) {
+                                syncSendButtonState(rowElement);
+                            }
+                            sentCount += 1;
+                        } catch (error) {
+                            failedCount += 1;
+                        }
+
+                        await wait(500);
+                    }
+
+                    if (sentCount > 0 && failedCount === 0) {
+                        showToast('success', 'Twilio Batch Sent', `Sent ${sentCount} MLS Twilio message${sentCount === 1 ? '' : 's'} one by one for the full spreadsheet.`);
+                    } else if (sentCount > 0) {
+                        showToast('success', 'Twilio Batch Finished', `Sent ${sentCount} MLS Twilio message${sentCount === 1 ? '' : 's'}. ${failedCount} row${failedCount === 1 ? '' : 's'} failed.`);
+                    } else {
+                        showToast('error', 'Twilio Batch Failed', 'None of the current MLS rows could be sent through Twilio.');
+                    }
+                } finally {
+                    isSendingAllTwilioRows = false;
+                    sendAllTwilioButton.disabled = false;
+                    sendAllTwilioButton.innerHTML = originalLabel;
+                }
+            }
+
             function normalizeImportMatchValue(value) {
                 return String(value || '').trim().toLowerCase();
             }
@@ -3674,6 +3742,10 @@
                 void exportRowsToCsv().catch((error) => {
                     showToast('error', 'CSV Export Failed', error && error.message ? error.message : 'The CSV could not be created.');
                 });
+            });
+
+            sendAllTwilioButton.addEventListener('click', () => {
+                void sendAllVisibleRowsThroughTwilio();
             });
 
             addToMyAgentsButton.addEventListener('click', async () => {
