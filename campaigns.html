@@ -1204,6 +1204,7 @@
             border: 1px solid rgba(148, 163, 184, 0.18);
             color: #111827;
             box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+            position: relative;
         }
 
         .campaign-reply-message.is-outgoing {
@@ -1324,6 +1325,113 @@
             justify-content: space-between;
             gap: 12px;
             flex-wrap: wrap;
+        }
+
+        .campaign-reply-reactions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .campaign-reply-reaction-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 30px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-reaction-chip {
+            background: rgba(248, 250, 252, 0.18);
+            border-color: rgba(248, 250, 252, 0.22);
+        }
+
+        .campaign-reply-reaction-launcher {
+            position: absolute;
+            top: 10px;
+            right: -18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.26);
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+            color: #0f172a;
+            opacity: 0;
+            transform: translateY(4px) scale(0.96);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+            z-index: 2;
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-reaction-launcher {
+            left: -18px;
+            right: auto;
+        }
+
+        .campaign-reply-message:hover .campaign-reply-reaction-launcher,
+        .campaign-reply-message:focus-within .campaign-reply-reaction-launcher,
+        .campaign-reply-reaction-launcher.is-open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .campaign-reply-reaction-launcher:hover,
+        .campaign-reply-reaction-launcher:focus-visible {
+            border-color: rgba(var(--accent-rgb), 0.32);
+            outline: none;
+        }
+
+        .campaign-reply-reaction-picker {
+            position: absolute;
+            top: -54px;
+            right: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+            z-index: 3;
+        }
+
+        .campaign-reply-message.is-outgoing .campaign-reply-reaction-picker {
+            left: 8px;
+            right: auto;
+        }
+
+        .campaign-reply-reaction-option {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .campaign-reply-reaction-option:hover,
+        .campaign-reply-reaction-option:focus-visible {
+            background: rgba(15, 23, 42, 0.06);
+            outline: none;
         }
 
         .campaign-reply-message.is-outgoing .campaign-reply-thread-meta,
@@ -2434,6 +2542,7 @@
             let campaignTemplateDraft = cloneCampaignTemplateSettings(campaignTemplateSettings);
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
+            let activeTwilioReactionPickerMessageId = 0;
             let twilioInboxRefreshHandle = null;
             let pendingCampaignMediaItems = [];
             let pendingReplyMediaItems = [];
@@ -2451,6 +2560,133 @@
                     return {};
                 }
             })();
+            const CAMPAIGN_REPLY_REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👀', '✅'];
+
+            function normalizeCampaignReplyReactions(value) {
+                const source = Array.isArray(value) ? value : [];
+                const seen = new Set();
+                return source
+                    .map((entry) => String(entry || '').trim())
+                    .filter((entry) => entry && entry.length <= 16)
+                    .filter((entry) => {
+                        if (seen.has(entry)) {
+                            return false;
+                        }
+                        seen.add(entry);
+                        return true;
+                    })
+                    .slice(0, 8);
+            }
+
+            async function saveTwilioMessageReactions(messageId, reactions) {
+                if (!token) {
+                    throw new Error('Sign in again before reacting to Twilio messages.');
+                }
+
+                const response = await fetch('/api/twilio/inbox/message-reactions', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({
+                        messageId,
+                        reactions: normalizeCampaignReplyReactions(reactions)
+                    })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to update the message reaction.');
+                }
+                return data.message || null;
+            }
+
+            function closeCampaignReplyReactionPicker() {
+                activeTwilioReactionPickerMessageId = 0;
+            }
+
+            async function toggleTwilioMessageReaction(message, emoji) {
+                const currentReactions = normalizeCampaignReplyReactions(message && message.reactions);
+                const nextReactions = currentReactions.includes(emoji)
+                    ? currentReactions.filter((entry) => entry !== emoji)
+                    : [...currentReactions, emoji];
+
+                await saveTwilioMessageReactions(message.id, nextReactions);
+                closeCampaignReplyReactionPicker();
+                await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
+            }
+
+            function renderTwilioMessageReactions(message, bubble) {
+                if (!bubble || !message || !message.id) {
+                    return;
+                }
+
+                const launcher = document.createElement('button');
+                launcher.type = 'button';
+                launcher.className = 'campaign-reply-reaction-launcher';
+                launcher.setAttribute('aria-label', 'React to this message');
+                launcher.title = 'React to this message';
+                launcher.textContent = '😊';
+                if (activeTwilioReactionPickerMessageId === Number(message.id)) {
+                    launcher.classList.add('is-open');
+                }
+                launcher.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    activeTwilioReactionPickerMessageId = activeTwilioReactionPickerMessageId === Number(message.id) ? 0 : Number(message.id);
+                    void loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
+                });
+                bubble.appendChild(launcher);
+
+                const reactions = normalizeCampaignReplyReactions(message.reactions);
+                if (reactions.length) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'campaign-reply-reactions';
+                    reactions.forEach((emoji) => {
+                        const chip = document.createElement('button');
+                        chip.type = 'button';
+                        chip.className = 'campaign-reply-reaction-chip';
+                        chip.textContent = emoji;
+                        chip.setAttribute('aria-label', `Remove ${emoji} reaction`);
+                        chip.title = `Remove ${emoji} reaction`;
+                        chip.addEventListener('click', async (event) => {
+                            event.stopPropagation();
+                            try {
+                                await toggleTwilioMessageReaction(message, emoji);
+                            } catch (error) {
+                                campaignReplyStatus.textContent = error.message || 'Unable to update the message reaction.';
+                            }
+                        });
+                        wrap.appendChild(chip);
+                    });
+                    bubble.appendChild(wrap);
+                }
+
+                if (activeTwilioReactionPickerMessageId === Number(message.id)) {
+                    const picker = document.createElement('div');
+                    picker.className = 'campaign-reply-reaction-picker';
+                    picker.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                    });
+                    CAMPAIGN_REPLY_REACTION_OPTIONS.forEach((emoji) => {
+                        const option = document.createElement('button');
+                        option.type = 'button';
+                        option.className = 'campaign-reply-reaction-option';
+                        option.textContent = emoji;
+                        option.setAttribute('aria-label', `React with ${emoji}`);
+                        option.title = `React with ${emoji}`;
+                        option.addEventListener('click', async (event) => {
+                            event.stopPropagation();
+                            try {
+                                await toggleTwilioMessageReaction(message, emoji);
+                            } catch (error) {
+                                campaignReplyStatus.textContent = error.message || 'Unable to update the message reaction.';
+                            }
+                        });
+                        picker.appendChild(option);
+                    });
+                    bubble.appendChild(picker);
+                }
+            }
 
             function persistDismissedUnreadConversationMap() {
                 try {
@@ -3872,6 +4108,7 @@
                     }
 
                     renderTwilioMessageAttachments(message, bubble);
+                    renderTwilioMessageReactions(message, bubble);
 
                     const foot = document.createElement('div');
                     foot.className = 'campaign-reply-message-foot';
@@ -4007,6 +4244,14 @@
                 }
             }
 
+            document.addEventListener('click', () => {
+                if (!activeTwilioReactionPickerMessageId || !activeTwilioConversationKey) {
+                    return;
+                }
+                closeCampaignReplyReactionPicker();
+                void loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
+            });
+
             function parseCampaignRecipients(text) {
                 return normalizeCampaignRecipientsInputValue(text)
                     .split(/\r?\n/)
@@ -4118,6 +4363,12 @@
             }
 
             document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && activeTwilioReactionPickerMessageId && activeTwilioConversationKey) {
+                    closeCampaignReplyReactionPicker();
+                    void loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
+                    return;
+                }
+
                 if (event.key === 'Escape' && campaignTemplateModal && !campaignTemplateModal.hidden) {
                     closeCampaignTemplateModal();
                     return;

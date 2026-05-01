@@ -8,6 +8,7 @@ const multer = require('multer');
 const twilio = require('twilio');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
 const { Worker } = require('worker_threads');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
@@ -1175,18 +1176,44 @@ function resolvePersistentStorageRoot() {
   return path.resolve(persistentRoot);
 }
 
+function resolveWritableDirectory(...candidateRoots) {
+  for (const candidateRoot of candidateRoots) {
+    const normalizedRoot = String(candidateRoot || '').trim();
+    if (!normalizedRoot) {
+      continue;
+    }
+
+    const resolvedRoot = path.resolve(normalizedRoot);
+    try {
+      fs.mkdirSync(resolvedRoot, { recursive: true });
+      fs.accessSync(resolvedRoot, fs.constants.W_OK);
+      return resolvedRoot;
+    } catch (_error) {
+      // Try the next candidate.
+    }
+  }
+
+  const tempFallbackRoot = path.join(os.tmpdir(), 'fast-bridge-group-data');
+  fs.mkdirSync(tempFallbackRoot, { recursive: true });
+  return tempFallbackRoot;
+}
+
 function resolveUserUploadsLocalRoot() {
   const explicitRoot = getFirstConfiguredEnvValue('USER_UPLOADS_PATH', 'USER_UPLOADS_LOCAL_ROOT');
   if (explicitRoot) {
-    return path.resolve(explicitRoot);
+    return resolveWritableDirectory(explicitRoot);
   }
 
   const persistentRoot = resolvePersistentStorageRoot();
   if (persistentRoot) {
-    return path.join(persistentRoot, 'USER_UPLOADS');
+    return resolveWritableDirectory(path.join(persistentRoot, 'USER_UPLOADS'));
   }
 
-  return path.join(__dirname, 'USER_UPLOADS');
+  return resolveWritableDirectory(
+    path.join(path.dirname(resolveDatabaseFilePath()), 'USER_UPLOADS'),
+    path.join(__dirname, 'USER_UPLOADS'),
+    path.join(os.tmpdir(), 'fast-bridge-group-data', 'USER_UPLOADS')
+  );
 }
 
 function ensureDatabaseStorageReady(databaseFilePath) {
@@ -2862,6 +2889,79 @@ function summarizeTwilioMessageContent(body, attachments) {
   return mediaItems.length === 1 ? 'Attachment' : `${mediaItems.length} attachments`;
 }
 
+function normalizeTwilioMessageReactions(value) {
+  const parsed = Array.isArray(value) ? value : safeJsonParse(value, []);
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  const seen = new Set();
+  return parsed
+    .map((entry) => String(entry || '').trim())
+    .filter((entry) => entry && entry.length <= 16)
+    .filter((entry) => {
+      if (seen.has(entry)) {
+        return false;
+      }
+      seen.add(entry);
+      return true;
+    })
+    .slice(0, 8);
+}
+
+function normalizeInboundTwilioReaction(payload) {
+  const rawBody = String(payload?.Body || '').trim();
+  const rawButtonText = String(payload?.ButtonText || '').trim();
+  const rawReactionType = String(payload?.ReactionType || payload?.Reaction || '').trim();
+  const candidates = [rawBody, rawButtonText, rawReactionType].filter(Boolean);
+
+  const aliasMap = new Map([
+    ['+1', '👍'],
+    ['thumbs up', '👍'],
+    ['thumbsup', '👍'],
+    ['like', '👍'],
+    ['liked', '👍'],
+    ['love', '❤️'],
+    ['loved', '❤️'],
+    ['heart', '❤️'],
+    ['laugh', '😂'],
+    ['laughed', '😂'],
+    ['haha', '😂'],
+    ['wow', '😮'],
+    ['surprised', '😮'],
+    ['sad', '😢'],
+    ['cry', '😢'],
+    ['fire', '🔥'],
+    ['eyes', '👀'],
+    ['check', '✅'],
+    ['checked', '✅']
+  ]);
+
+  for (const candidate of candidates) {
+    const normalizedCandidate = String(candidate || '').trim();
+    if (!normalizedCandidate) {
+      continue;
+    }
+
+    const mappedAlias = aliasMap.get(normalizedCandidate.toLowerCase());
+    if (mappedAlias) {
+      return mappedAlias;
+    }
+
+    const emojiOnly = normalizedCandidate
+      .replace(/[\uFE0E\uFE0F]/g, '')
+      .replace(/[\u200D]/g, '')
+      .replace(/[\u{1F3FB}-\u{1F3FF}]/gu, '')
+      .trim();
+
+    if (emojiOnly && emojiOnly.length <= 8 && /\p{Extended_Pictographic}/u.test(emojiOnly)) {
+      return normalizedCandidate;
+    }
+  }
+
+  return '';
+}
+
 function extractPropertyAddressFromTwilioBody(body) {
   const normalizedBody = String(body || '').replace(/\s+/g, ' ').trim();
   if (!normalizedBody) {
@@ -2941,6 +3041,7 @@ function serializeTwilioInboxMessage(row) {
     body,
     preview: summarizeTwilioMessageContent(body, attachments),
     attachments,
+    reactions: normalizeTwilioMessageReactions(row.reactions_json),
     status: String(row.status || '').trim(),
     errorCode: String(row.error_code || '').trim(),
     errorMessage: String(row.error_message || '').trim(),
@@ -3050,6 +3151,7 @@ async function upsertTwilioInboxMessage(record) {
   const updatedAt = normalizeApiTimestamp(record.updatedAt) || createdAt;
   const readAt = normalizeApiTimestamp(record.readAt);
   const payloadJson = safeJsonStringify(record.rawPayload || {});
+  const reactionsJson = safeJsonStringify(normalizeTwilioMessageReactions(record.reactions));
 
   if (!conversationKey || !contactPhone || !platformIdentity) {
     return null;
@@ -3073,11 +3175,12 @@ async function upsertTwilioInboxMessage(record) {
          status,
          error_code,
          error_message,
+         reactions_json,
          raw_payload_json,
          created_at,
          updated_at,
          read_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(message_sid) DO UPDATE SET
          account_sid = excluded.account_sid,
          conversation_key = excluded.conversation_key,
@@ -3093,6 +3196,7 @@ async function upsertTwilioInboxMessage(record) {
          status = excluded.status,
          error_code = excluded.error_code,
          error_message = excluded.error_message,
+         reactions_json = COALESCE(NULLIF(excluded.reactions_json, ''), twilio_inbox_messages.reactions_json),
          raw_payload_json = excluded.raw_payload_json,
          updated_at = excluded.updated_at,
          read_at = COALESCE(excluded.read_at, twilio_inbox_messages.read_at)`,
@@ -3112,6 +3216,7 @@ async function upsertTwilioInboxMessage(record) {
         String(record.status || '').trim(),
         String(record.errorCode || '').trim(),
         String(record.errorMessage || '').trim(),
+        reactionsJson,
         payloadJson,
         createdAt,
         updatedAt,
@@ -3138,11 +3243,12 @@ async function upsertTwilioInboxMessage(record) {
        status,
        error_code,
        error_message,
+       reactions_json,
        raw_payload_json,
        created_at,
        updated_at,
        read_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
     [
       String(record.accountSid || '').trim(),
       conversationKey,
@@ -3158,6 +3264,7 @@ async function upsertTwilioInboxMessage(record) {
       String(record.status || '').trim(),
       String(record.errorCode || '').trim(),
       String(record.errorMessage || '').trim(),
+      reactionsJson,
       payloadJson,
       createdAt,
       updatedAt,
@@ -3166,6 +3273,23 @@ async function upsertTwilioInboxMessage(record) {
   );
 
   return dbGet('SELECT * FROM twilio_inbox_messages WHERE id = ?', [result.lastID]);
+}
+
+async function updateTwilioMessageReactions(messageId, reactions) {
+  const normalizedMessageId = Number(messageId) || 0;
+  if (!normalizedMessageId) {
+    return null;
+  }
+
+  await dbRun(
+    `UPDATE twilio_inbox_messages
+        SET reactions_json = ?,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+    [safeJsonStringify(normalizeTwilioMessageReactions(reactions)), normalizedMessageId]
+  );
+
+  return dbGet('SELECT * FROM twilio_inbox_messages WHERE id = ?', [normalizedMessageId]);
 }
 
 async function listTwilioInboxConversations() {
@@ -4776,6 +4900,7 @@ function initializeDatabase() {
       status TEXT,
       error_code TEXT,
       error_message TEXT,
+      reactions_json TEXT NOT NULL DEFAULT '[]',
       raw_payload_json TEXT NOT NULL DEFAULT '{}',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -4786,6 +4911,11 @@ function initializeDatabase() {
       console.error('Error creating twilio_inbox_messages table:', err);
     } else {
       console.log('Twilio inbox messages table ready');
+      db.run("ALTER TABLE twilio_inbox_messages ADD COLUMN reactions_json TEXT NOT NULL DEFAULT '[]'", (alterError) => {
+        if (alterError && !/duplicate column name/i.test(String(alterError.message || ''))) {
+          console.error('Error adding reactions_json to twilio_inbox_messages:', alterError);
+        }
+      });
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_conversation_created ON twilio_inbox_messages(conversation_key, created_at, id)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_unread ON twilio_inbox_messages(direction, read_at, created_at)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_twilio_inbox_contact_phone ON twilio_inbox_messages(contact_phone, created_at DESC)', () => {});
@@ -16466,9 +16596,20 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
     const body = String(payload.Body || '').trim();
     const attachments = getTwilioMessageMediaAttachments(payload);
     const details = getTwilioConversationDetailsFromPayload(payload, 'inbound');
+    const originalRepliedMessageSid = String(payload.OriginalRepliedMessageSid || '').trim();
+    const inboundReaction = normalizeInboundTwilioReaction(payload);
 
     if (!messageSid || !details.conversationKey || (!body && attachments.length === 0)) {
       return res.type('text/xml').send('<Response></Response>');
+    }
+
+    if (originalRepliedMessageSid && inboundReaction) {
+      const originalMessage = await dbGet('SELECT * FROM twilio_inbox_messages WHERE message_sid = ?', [originalRepliedMessageSid]);
+      if (originalMessage) {
+        const nextReactions = normalizeTwilioMessageReactions([...(originalMessage.reactions_json ? safeJsonParse(originalMessage.reactions_json, []) : []), inboundReaction]);
+        await updateTwilioMessageReactions(Number(originalMessage.id) || 0, nextReactions);
+        return res.type('text/xml').send('<Response></Response>');
+      }
     }
 
     const latestRow = await getLatestTwilioConversationRow(details.conversationKey);
@@ -16643,6 +16784,33 @@ app.get('/api/twilio/inbox/contact-history', async (req, res) => {
   } catch (error) {
     console.error('Failed to check Twilio contact history:', error);
     return res.status(500).json({ error: 'Unable to check Twilio contact history.' });
+  }
+});
+
+app.put('/api/twilio/inbox/message-reactions', express.json({ limit: '50kb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const messageId = Number(req.body?.messageId) || 0;
+  if (!messageId) {
+    return res.status(400).json({ error: 'A valid Twilio message id is required.' });
+  }
+
+  try {
+    const updatedMessage = await updateTwilioMessageReactions(messageId, req.body?.reactions);
+    if (!updatedMessage) {
+      return res.status(404).json({ error: 'Twilio message not found.' });
+    }
+
+    return res.json({
+      success: true,
+      message: serializeTwilioInboxMessage(updatedMessage)
+    });
+  } catch (error) {
+    console.error('Failed to update Twilio message reactions:', error);
+    return res.status(500).json({ error: 'Unable to update Twilio message reactions.' });
   }
 });
 
