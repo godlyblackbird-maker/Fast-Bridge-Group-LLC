@@ -19833,7 +19833,7 @@ function initNavbarDateTime() {
         const isImportedPropertyDetail = propertyDetailOrigin === 'deals';
         const propertyPageTitleText = isImportedPropertyDetail
             ? 'Property Details (IMPORT)'
-            : 'Property Details | Rigby & Associates';
+            : 'Property Details | FAST BRIDGE GROUP LLC';
 
         if (propertyPageTitleEl) {
             propertyPageTitleEl.textContent = propertyPageTitleText;
@@ -19848,8 +19848,8 @@ function initNavbarDateTime() {
         }
 
         document.title = isImportedPropertyDetail
-            ? 'Property Details (IMPORT) - FAST BRIDGE GROUP'
-            : 'Property Details | Rigby & Associates - FAST BRIDGE GROUP';
+            ? 'Property Details (IMPORT) - FAST BRIDGE GROUP LLC'
+            : 'Property Details | FAST BRIDGE GROUP LLC';
 
         [mlsNavLink, dealsNavLink].forEach((link) => {
             if (link) {

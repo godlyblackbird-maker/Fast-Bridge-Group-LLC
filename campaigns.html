@@ -1616,6 +1616,17 @@
             text-align: center;
         }
 
+        .campaign-reply-thread-empty {
+            display: grid;
+            place-items: center;
+            min-height: 220px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.56);
+            border: 1px dashed rgba(148, 163, 184, 0.28);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
         .campaign-copy-block {
             padding: 16px;
             border-radius: 16px;
@@ -1926,8 +1937,165 @@
                 align-items: stretch;
             }
 
+            .campaign-replies-card {
+                overflow: visible;
+            }
+
+            .campaign-replies-head {
+                padding: 18px 18px 0;
+                gap: 12px;
+            }
+
+            .campaign-replies-shell {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+                height: auto;
+                margin-top: 14px;
+            }
+
+            .campaign-replies-list {
+                grid-template-rows: auto minmax(220px, auto);
+                border-right: 0;
+                border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            }
+
+            .campaign-replies-thread-shell {
+                grid-template-rows: auto minmax(260px, auto) auto;
+            }
+
+            .campaign-replies-list-head,
+            .campaign-replies-thread-head,
+            .campaign-reply-thread,
+            .campaign-reply-form {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .campaign-replies-list-head,
+            .campaign-replies-thread-head {
+                padding-top: 14px;
+                padding-bottom: 14px;
+            }
+
+            .campaign-replies-list-head h4,
+            .campaign-replies-thread-head h4 {
+                font-size: 16px;
+            }
+
+            .campaign-replies-list-body {
+                min-height: 220px;
+                padding-top: 16px;
+                padding-bottom: 18px;
+            }
+
+            .campaign-reply-filters {
+                width: 100%;
+            }
+
+            .campaign-reply-filter-button {
+                min-width: 0;
+                width: 100%;
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .campaign-reply-title-row {
+                gap: 12px;
+            }
+
+            .campaign-reply-name-row {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .campaign-reply-name-group,
+            .campaign-reply-address-group {
+                width: 100%;
+            }
+
+            .campaign-reply-address-chip {
+                max-width: 100%;
+            }
+
+            .campaign-reply-delete-thread {
+                margin-left: 0;
+                align-self: flex-start;
+            }
+
+            .campaign-reply-thread {
+                gap: 12px;
+                padding-top: 16px;
+                padding-bottom: 16px;
+                min-height: 260px;
+            }
+
+            .campaign-reply-empty {
+                display: grid;
+                place-items: center;
+                min-height: 160px;
+                padding: 26px 18px;
+                border-radius: 18px;
+                background: rgba(255, 255, 255, 0.52);
+                border: 1px dashed rgba(148, 163, 184, 0.24);
+                font-size: 15px;
+                line-height: 1.7;
+            }
+
+            .campaign-reply-thread-empty {
+                min-height: clamp(240px, 32dvh, 340px);
+                padding: 28px 18px;
+                font-size: 15px;
+                line-height: 1.75;
+            }
+
             .campaign-reply-message {
                 max-width: 100%;
+                padding: 12px 14px;
+                border-radius: 18px;
+            }
+
+            .campaign-reply-message-body {
+                font-size: 13px;
+                line-height: 1.6;
+            }
+
+            .campaign-reply-attachment-image-row {
+                flex-wrap: wrap;
+            }
+
+            .campaign-reply-attachment-image,
+            .campaign-reply-attachment-video {
+                max-width: 100%;
+            }
+
+            .campaign-reply-form {
+                gap: 10px;
+                padding-top: 14px;
+                padding-bottom: 16px;
+            }
+
+            .campaign-reply-form .outreach-textarea {
+                min-height: 112px;
+            }
+
+            .campaign-reply-action-group {
+                width: 100%;
+                justify-content: space-between;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            #campaign-reply-attach,
+            #campaign-reply-newline,
+            #campaign-reply-schedule,
+            #campaign-reply-send {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+            }
+
+            .campaign-reply-send-stack {
+                margin-left: auto;
             }
 
         }
@@ -2564,6 +2732,52 @@
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
             let activeTwilioReactionPickerMessageId = 0;
+
+            function escapeCampaignReplyCopyHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function handleCampaignReplyThreadCopy(event) {
+                if (!campaignReplyThread || !event || !event.clipboardData) {
+                    return;
+                }
+
+                const selection = window.getSelection ? window.getSelection() : null;
+                if (!selection || selection.isCollapsed || !selection.rangeCount) {
+                    return;
+                }
+
+                const anchorNode = selection.anchorNode;
+                const focusNode = selection.focusNode;
+                const isInsideThread = [anchorNode, focusNode].some((node) => {
+                    if (!node) {
+                        return false;
+                    }
+                    const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+                    return element instanceof Element && campaignReplyThread.contains(element);
+                });
+
+                if (!isInsideThread) {
+                    return;
+                }
+
+                const text = selection.toString();
+                if (!String(text || '').trim()) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.clipboardData.setData('text/plain', text);
+                event.clipboardData.setData(
+                    'text/html',
+                    `<div style="color:#111827;white-space:pre-wrap;">${escapeCampaignReplyCopyHtml(text)}</div>`
+                );
+            }
             let twilioInboxRefreshHandle = null;
             let pendingCampaignMediaItems = [];
             let pendingReplyMediaItems = [];
@@ -4213,6 +4427,10 @@
                     campaignReplySearchTerm = String(campaignReplySearchInput.value || '').trim();
                     renderTwilioReplyConversations();
                 });
+            }
+
+            if (campaignReplyThread) {
+                campaignReplyThread.addEventListener('copy', handleCampaignReplyThreadCopy);
             }
 
             if (campaignReplyFilterAllButton) {
