@@ -272,6 +272,9 @@ const LORIA_BROKER_LICENSE_NUMBER = String(process.env.LORIA_BROKER_LICENSE_NUMB
 const LORIA_BROKER_PHONE = String(process.env.LORIA_BROKER_PHONE || '').trim();
 const LORIA_BROKER_WEBSITE = String(process.env.LORIA_BROKER_WEBSITE || '').trim();
 const LORIA_VOW_OPERATOR_LABEL = String(process.env.LORIA_VOW_OPERATOR_LABEL || 'Broker-Operated VOW').trim() || 'Broker-Operated VOW';
+const CANONICAL_ELSA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('ELSA_TUCKER_EMAIL') || 'elsa.tucker@fastbridgegroupllc.com');
+const CANONICAL_ELSA_PASSWORD = String(process.env.ELSA_TUCKER_PASSWORD || 'Password123').trim() || 'Password123';
+const CANONICAL_ELSA_NAME = String(process.env.ELSA_TUCKER_NAME || 'ELSA TUCKER').trim() || 'ELSA TUCKER';
 const CANONICAL_STEVEN_CASTILLO_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('STEVEN_CASTILLO_EMAIL') || 'steve.castillo@fastbridgegroupllc.com');
 const CANONICAL_STEVEN_CASTILLO_PASSWORD = String(process.env.STEVEN_CASTILLO_PASSWORD || 'Password123').trim() || 'Password123';
 const CANONICAL_STEVEN_CASTILLO_NAME = String(process.env.STEVEN_CASTILLO_NAME || 'Steven Castillo').trim() || 'Steven Castillo';
@@ -4932,6 +4935,7 @@ function initializeDatabase() {
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
       syncLoriaBrokerAccount();
+      syncElsaUserAccount();
       syncPublicTestAccount();
       purgeSuppressedAccounts().catch((error) => {
         console.error('Failed to purge suppressed accounts during startup:', error);
@@ -9849,6 +9853,64 @@ async function syncLoriaBrokerAccount() {
   }
 }
 
+async function syncElsaUserAccount() {
+  const canonicalEmail = CANONICAL_ELSA_EMAIL;
+  const canonicalName = CANONICAL_ELSA_NAME;
+  const canonicalPassword = CANONICAL_ELSA_PASSWORD;
+  const legacyEmails = [];
+  const canonicalRole = 'user';
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) = ?
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
+      [canonicalEmail, canonicalName, canonicalEmail]
+    );
+
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+
+    if (!account) {
+      await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
+      );
+      console.log('Elsa user account created/synced');
+      return;
+    }
+
+    const currentSmtpPass = String(account.smtp_pass || '').trim();
+    const currentSmtpSignature = String(account.smtp_signature || '').trim();
+
+    await dbRun(
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      [
+        canonicalName,
+        canonicalEmail,
+        hash,
+        canonicalRole,
+        account.smtp_user || '',
+        currentSmtpPass,
+        currentSmtpSignature,
+        account.id
+      ]
+    );
+
+    await mergeLegacyConversationUsersIntoCanonicalAccount({
+      canonicalUserId: account.id,
+      canonicalEmail,
+      canonicalName,
+      legacyEmails,
+      logLabel: 'Elsa user account'
+    });
+
+    console.log('Elsa user account synced');
+  } catch (error) {
+    console.error('Failed to sync Elsa user account:', error);
+  }
+}
+
 async function syncStevenCastilloUserAccount() {
   const canonicalEmail = CANONICAL_STEVEN_CASTILLO_EMAIL;
   const canonicalName = CANONICAL_STEVEN_CASTILLO_NAME;
@@ -10941,6 +11003,10 @@ app.post('/api/login', async (req, res) => {
 
   if (normalizedEmail === CANONICAL_LORIA_EMAIL) {
     await syncLoriaBrokerAccount();
+  }
+
+  if (normalizedEmail === CANONICAL_ELSA_EMAIL) {
+    await syncElsaUserAccount();
   }
 
   db.get('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail], async (err, user) => {
