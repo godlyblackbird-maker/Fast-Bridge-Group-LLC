@@ -1954,13 +1954,17 @@
             }
 
             .campaign-replies-list {
-                grid-template-rows: auto minmax(220px, auto);
+                grid-template-rows: auto minmax(0, 1fr);
+                max-height: min(34dvh, 320px);
+                min-height: 0;
                 border-right: 0;
                 border-bottom: 1px solid rgba(15, 23, 42, 0.08);
             }
 
             .campaign-replies-thread-shell {
-                grid-template-rows: auto minmax(260px, auto) auto;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                max-height: min(68dvh, 560px);
+                min-height: 0;
             }
 
             .campaign-replies-list-head,
@@ -1983,9 +1987,14 @@
             }
 
             .campaign-replies-list-body {
-                min-height: 220px;
+                min-height: 0;
                 padding-top: 16px;
                 padding-bottom: 18px;
+                overflow-y: auto;
+                overflow-x: hidden;
+                overscroll-behavior-y: contain;
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-y;
             }
 
             .campaign-reply-filters {
@@ -2026,7 +2035,14 @@
                 gap: 12px;
                 padding-top: 16px;
                 padding-bottom: 16px;
-                min-height: 260px;
+                min-height: 0;
+                height: 100%;
+                max-height: none;
+                overflow-y: auto;
+                overflow-x: hidden;
+                overscroll-behavior-y: contain;
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-y;
             }
 
             .campaign-reply-empty {
@@ -2842,9 +2858,12 @@
 
             async function toggleTwilioMessageReaction(message, emoji) {
                 const currentReactions = normalizeCampaignReplyReactions(message && message.reactions);
-                const nextReactions = currentReactions.includes(emoji)
-                    ? currentReactions.filter((entry) => entry !== emoji)
-                    : [...currentReactions, emoji];
+                if (currentReactions.includes(emoji)) {
+                    closeCampaignReplyReactionPicker();
+                    return;
+                }
+
+                const nextReactions = [...currentReactions, emoji];
 
                 await saveTwilioMessageReactions(message.id, nextReactions);
                 closeCampaignReplyReactionPicker();
@@ -2877,20 +2896,11 @@
                     const wrap = document.createElement('div');
                     wrap.className = 'campaign-reply-reactions';
                     reactions.forEach((emoji) => {
-                        const chip = document.createElement('button');
-                        chip.type = 'button';
+                        const chip = document.createElement('span');
                         chip.className = 'campaign-reply-reaction-chip';
                         chip.textContent = emoji;
-                        chip.setAttribute('aria-label', `Remove ${emoji} reaction`);
-                        chip.title = `Remove ${emoji} reaction`;
-                        chip.addEventListener('click', async (event) => {
-                            event.stopPropagation();
-                            try {
-                                await toggleTwilioMessageReaction(message, emoji);
-                            } catch (error) {
-                                campaignReplyStatus.textContent = error.message || 'Unable to update the message reaction.';
-                            }
-                        });
+                        chip.setAttribute('aria-label', `Sent ${emoji} reaction`);
+                        chip.title = `Sent ${emoji} reaction`;
                         wrap.appendChild(chip);
                     });
                     bubble.appendChild(wrap);
@@ -2913,8 +2923,9 @@
                             event.stopPropagation();
                             try {
                                 await toggleTwilioMessageReaction(message, emoji);
+                                campaignReplyStatus.textContent = 'Emoji reaction sent.';
                             } catch (error) {
-                                campaignReplyStatus.textContent = error.message || 'Unable to update the message reaction.';
+                                campaignReplyStatus.textContent = error.message || 'Unable to send the emoji reaction.';
                             }
                         });
                         picker.appendChild(option);

@@ -3853,6 +3853,87 @@ async function markTwilioConversationRead(conversationKey) {
   );
 }
 
+async function sendTwilioInboxOutboundMessage({ req, conversationKey, latestRow, campaignName, body, mediaUploads, ownerUser }) {
+  const config = getTwilioMessagingConfig();
+  if (!isTwilioConfigured(config)) {
+    throw Object.assign(new Error('Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.'), { statusCode: 400 });
+  }
+
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  const messageBody = String(body || '').trim();
+  const uploads = Array.isArray(mediaUploads) ? mediaUploads : [];
+  const conversationRow = latestRow && typeof latestRow === 'object' ? latestRow : null;
+
+  if (!normalizedConversationKey || !conversationRow || (!messageBody && uploads.length === 0)) {
+    throw Object.assign(new Error('conversationKey and either a body or image upload are required.'), { statusCode: 400 });
+  }
+
+  if (await isTwilioContactBlockedByPhone(String(conversationRow.contact_phone || '').trim())) {
+    throw Object.assign(new Error('This contact is blocked from outbound messaging. Incoming messages are still allowed.'), { statusCode: 403 });
+  }
+
+  const client = getTwilioClient();
+  if (!client) {
+    throw new Error('Twilio client could not be initialized.');
+  }
+
+  const mediaPayload = buildTwilioOutgoingMediaPayload(uploads, req);
+  const payload = {
+    to: String(conversationRow.contact_phone || '').trim()
+  };
+
+  if (messageBody) {
+    payload.body = messageBody.slice(0, 1600);
+  }
+
+  if (mediaPayload.mediaUrls.length > 0) {
+    payload.mediaUrl = mediaPayload.mediaUrls;
+  }
+
+  if (config.messagingServiceSid) {
+    payload.messagingServiceSid = config.messagingServiceSid;
+  } else {
+    payload.from = config.fromNumber;
+  }
+
+  const statusCallbackUrl = buildTwilioWebhookUrl(req, '/api/twilio/webhook/status');
+  if (statusCallbackUrl) {
+    payload.statusCallback = statusCallbackUrl;
+  }
+
+  const message = await client.messages.create(payload);
+  const storedRow = await upsertTwilioInboxMessage({
+    messageSid: String(message.sid || '').trim(),
+    accountSid: String(message.accountSid || config.accountSid || '').trim(),
+    conversationKey: normalizedConversationKey,
+    campaignName: String(campaignName || conversationRow.campaign_name || '').trim(),
+    contactName: String(conversationRow.contact_name || '').trim(),
+    contactPhone: String(conversationRow.contact_phone || '').trim(),
+    platformIdentity: String(conversationRow.platform_identity || '').trim(),
+    ownerUserId: Number(ownerUser?.id) || null,
+    ownerName: String(ownerUser?.name || '').trim(),
+    ownerEmail: String(ownerUser?.email || '').trim().toLowerCase(),
+    direction: 'outgoing',
+    body: String(payload.body || '').trim(),
+    status: String(message.status || 'queued').trim(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    readAt: new Date().toISOString(),
+    rawPayload: {
+      sid: message.sid,
+      status: message.status,
+      to: payload.to,
+      from: payload.from || '',
+      messagingServiceSid: payload.messagingServiceSid || '',
+      propertyAddress: getTwilioMessagePropertyAddress(conversationRow),
+      ...mediaPayload.rawPayload
+    }
+  });
+
+  await markTwilioConversationRead(normalizedConversationKey);
+  return storedRow;
+}
+
 async function updateTwilioConversationContactName(conversationKey, contactName) {
   const normalizedConversationKey = String(conversationKey || '').trim();
   const normalizedContactName = String(contactName || '').trim();
@@ -16799,10 +16880,32 @@ app.put('/api/twilio/inbox/message-reactions', express.json({ limit: '50kb' }), 
   }
 
   try {
-    const updatedMessage = await updateTwilioMessageReactions(messageId, req.body?.reactions);
-    if (!updatedMessage) {
+    const existingMessage = await dbGet('SELECT * FROM twilio_inbox_messages WHERE id = ?', [messageId]);
+    if (!existingMessage) {
       return res.status(404).json({ error: 'Twilio message not found.' });
     }
+
+    const nextReactions = normalizeTwilioMessageReactions(req.body?.reactions);
+    const currentReactions = normalizeTwilioMessageReactions(existingMessage.reactions_json);
+    const addedReactions = nextReactions.filter((entry) => !currentReactions.includes(entry));
+    const latestRow = await getLatestTwilioConversationRow(String(existingMessage.conversation_key || '').trim());
+    if (!latestRow) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    if (addedReactions.length) {
+      await sendTwilioInboxOutboundMessage({
+        req,
+        conversationKey: String(existingMessage.conversation_key || '').trim(),
+        latestRow,
+        campaignName: String(existingMessage.campaign_name || latestRow.campaign_name || '').trim(),
+        body: addedReactions.join(' '),
+        mediaUploads: [],
+        ownerUser: decoded
+      });
+    }
+
+    const updatedMessage = await updateTwilioMessageReactions(messageId, nextReactions);
 
     return res.json({
       success: true,
@@ -16810,7 +16913,7 @@ app.put('/api/twilio/inbox/message-reactions', express.json({ limit: '50kb' }), 
     });
   } catch (error) {
     console.error('Failed to update Twilio message reactions:', error);
-    return res.status(500).json({ error: 'Unable to update Twilio message reactions.' });
+    return res.status(Number(error?.statusCode) || 500).json({ error: error.message || 'Unable to update Twilio message reactions.' });
   }
 });
 
@@ -17034,11 +17137,6 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
     return;
   }
 
-  const config = getTwilioMessagingConfig();
-  if (!isTwilioConfigured(config)) {
-    return res.status(400).json({ error: 'Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER or TWILIO_MESSAGING_SERVICE_SID.' });
-  }
-
   const conversationKey = String(req.body?.conversationKey || '').trim();
   const body = String(req.body?.body || '').trim();
   const campaignName = String(req.body?.campaignName || '').trim();
@@ -17053,70 +17151,16 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
     return res.status(404).json({ error: 'Conversation not found.' });
   }
 
-  if (await isTwilioContactBlockedByPhone(String(latestRow.contact_phone || '').trim())) {
-    return res.status(403).json({ error: 'This contact is blocked from outbound messaging. Incoming messages are still allowed.' });
-  }
-
-  const client = getTwilioClient();
-  if (!client) {
-    return res.status(500).json({ error: 'Twilio client could not be initialized.' });
-  }
-
   try {
-    const mediaPayload = buildTwilioOutgoingMediaPayload(twilioMediaUploads, req);
-    const payload = {
-      to: String(latestRow.contact_phone || '').trim()
-    };
-
-    if (body) {
-      payload.body = body.slice(0, 1600);
-    }
-
-    if (mediaPayload.mediaUrls.length > 0) {
-      payload.mediaUrl = mediaPayload.mediaUrls;
-    }
-
-    if (config.messagingServiceSid) {
-      payload.messagingServiceSid = config.messagingServiceSid;
-    } else {
-      payload.from = config.fromNumber;
-    }
-
-    const statusCallbackUrl = buildTwilioWebhookUrl(req, '/api/twilio/webhook/status');
-    if (statusCallbackUrl) {
-      payload.statusCallback = statusCallbackUrl;
-    }
-
-    const message = await client.messages.create(payload);
-    const storedRow = await upsertTwilioInboxMessage({
-      messageSid: String(message.sid || '').trim(),
-      accountSid: String(message.accountSid || config.accountSid || '').trim(),
+    const storedRow = await sendTwilioInboxOutboundMessage({
+      req,
       conversationKey,
-      campaignName: campaignName || String(latestRow.campaign_name || '').trim(),
-      contactName: String(latestRow.contact_name || '').trim(),
-      contactPhone: String(latestRow.contact_phone || '').trim(),
-      platformIdentity: String(latestRow.platform_identity || '').trim(),
-      ownerUserId: Number(decoded.id) || null,
-      ownerName: String(decoded.name || '').trim(),
-      ownerEmail: String(decoded.email || '').trim().toLowerCase(),
-      direction: 'outgoing',
-      body: String(payload.body || '').trim(),
-      status: String(message.status || 'queued').trim(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      readAt: new Date().toISOString(),
-      rawPayload: {
-        sid: message.sid,
-        status: message.status,
-        to: payload.to,
-        from: payload.from || '',
-        messagingServiceSid: payload.messagingServiceSid || '',
-        propertyAddress: getTwilioMessagePropertyAddress(latestRow),
-        ...mediaPayload.rawPayload
-      }
+      latestRow,
+      campaignName,
+      body,
+      mediaUploads: twilioMediaUploads,
+      ownerUser: decoded
     });
-
-    await markTwilioConversationRead(conversationKey);
 
     return res.json({
       success: true,
@@ -17125,7 +17169,7 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to send Twilio reply:', error);
-    return res.status(500).json({ error: error.message || 'Unable to send Twilio reply.' });
+    return res.status(Number(error?.statusCode) || 500).json({ error: error.message || 'Unable to send Twilio reply.' });
   }
 });
 
