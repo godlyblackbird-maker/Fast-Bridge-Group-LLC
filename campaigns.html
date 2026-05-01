@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twilio Messaging - FAST BRIDGE GROUP Dashboard</title>
+    <title>Twilio Messaging - FAST BRIDGE GROUP LLC Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -779,12 +779,15 @@
         }
 
         .campaign-reply-filters {
-            display: inline-grid;
-            grid-auto-flow: column;
+                display: inline-grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             align-items: center;
             gap: 4px;
             margin-top: 12px;
             padding: 4px;
+                position: relative;
+                isolation: isolate;
+                overflow: hidden;
             border-radius: 999px;
             border: 1px solid rgba(148, 163, 184, 0.18);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.94) 100%);
@@ -793,7 +796,29 @@
             max-width: 100%;
         }
 
+            .campaign-reply-filters::before {
+                content: '';
+                position: absolute;
+                top: 4px;
+                left: 4px;
+                width: calc(50% - 4px);
+                height: calc(100% - 8px);
+                border-radius: 999px;
+                border: 1px solid rgba(var(--accent-rgb), 0.26);
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(var(--accent-rgb), 0.22) 100%);
+                box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+                transform: translateX(0);
+                transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background 0.24s ease;
+                z-index: 0;
+            }
+
+            .campaign-reply-filters[data-mode="unread"]::before {
+                transform: translateX(calc(100% + 4px));
+            }
+
         .campaign-reply-filter-button {
+                position: relative;
+                z-index: 1;
             min-height: 34px;
             padding: 7px 14px;
             border-radius: 999px;
@@ -805,24 +830,23 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             line-height: 1;
-            transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+                transition: color 0.22s ease, opacity 0.22s ease;
         }
 
         .campaign-reply-filter-button:hover,
         .campaign-reply-filter-button:focus-visible {
             outline: none;
-            background: rgba(255, 255, 255, 0.72);
             color: #0f172a;
-            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
-            transform: translateY(-1px);
         }
 
         .campaign-reply-filter-button.is-active {
-            border-color: rgba(var(--accent-rgb), 0.34);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(var(--accent-rgb), 0.16) 100%);
             color: #0f172a;
-            box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            transform: none;
+                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.48);
+            }
+
+            .campaign-reply-filters[data-mode="all"] #campaign-reply-filter-unread,
+            .campaign-reply-filters[data-mode="unread"] #campaign-reply-filter-all {
+                opacity: 0.82;
         }
 
         .campaign-reply-search input {
@@ -1462,6 +1486,11 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
+            --campaign-reply-action-button-bg: linear-gradient(180deg, rgba(var(--accent-light-rgb), 0.98) 0%, rgba(var(--accent-rgb), 0.96) 100%);
+            --campaign-reply-action-button-color: #ffffff;
+            --campaign-reply-action-button-border: rgba(var(--accent-rgb), 0.22);
+            --campaign-reply-action-button-shadow: 0 10px 20px rgba(var(--accent-rgb), 0.24);
+            --campaign-reply-action-button-ring: rgba(var(--accent-rgb), 0.16);
         }
 
         .campaign-reply-send-stack {
@@ -1494,20 +1523,11 @@
             justify-content: center;
             padding: 0;
             border-radius: 999px;
-            border: 0;
-            background: linear-gradient(180deg, #2f95ff 0%, #007aff 100%);
-            color: #ffffff;
-            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.24);
+            border: 1px solid var(--campaign-reply-action-button-border);
+            background: var(--campaign-reply-action-button-bg);
+            color: var(--campaign-reply-action-button-color);
+            box-shadow: var(--campaign-reply-action-button-shadow);
             transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-        }
-
-        #campaign-reply-attach,
-        #campaign-reply-newline,
-        #campaign-reply-schedule {
-            border: 1px solid rgba(148, 163, 184, 0.24);
-            background: rgba(255, 255, 255, 0.96);
-            color: #0f172a;
-            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
         }
 
         #campaign-reply-attach svg,
@@ -1519,14 +1539,6 @@
             stroke: currentColor;
             stroke-width: 2.25;
             fill: none;
-        }
-
-        #campaign-reply-attach img,
-        #campaign-reply-newline img {
-            width: 20px;
-            height: 20px;
-            display: block;
-            object-fit: contain;
         }
 
         #campaign-reply-schedule {
@@ -1573,12 +1585,12 @@
         #campaign-reply-newline:focus-visible:not(:disabled),
         #campaign-reply-schedule:hover:not(:disabled),
         #campaign-reply-schedule:focus-visible:not(:disabled) {
-            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.14), 0 14px 28px rgba(15, 23, 42, 0.18);
+            box-shadow: 0 0 0 4px var(--campaign-reply-action-button-ring), 0 14px 28px rgba(var(--accent-rgb), 0.32);
         }
 
         #campaign-reply-send:hover:not(:disabled),
         #campaign-reply-send:focus-visible:not(:disabled) {
-            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.16), 0 14px 28px rgba(0, 122, 255, 0.32);
+            box-shadow: 0 0 0 4px var(--campaign-reply-action-button-ring), 0 14px 28px rgba(var(--accent-rgb), 0.32);
         }
 
         #campaign-reply-attach:disabled,
@@ -1931,7 +1943,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
-                <span class="logo-text">FAST BRIDGE GROUP</span>
+                <span class="logo-text">FAST BRIDGE GROUP LLC</span>
             </div>
 
             <ul class="nav-menu">
@@ -2124,7 +2136,7 @@
                                     <div class="campaign-replies-list-head">
                                         <h4>Active Threads</h4>
                                         <p>Twilio responses grouped by contact number.</p>
-                                        <div class="campaign-reply-filters" role="group" aria-label="Filter active threads">
+                                        <div id="campaign-reply-filters" class="campaign-reply-filters" role="group" aria-label="Filter active threads">
                                             <button id="campaign-reply-filter-all" type="button" class="campaign-reply-filter-button is-active">All</button>
                                             <button id="campaign-reply-filter-unread" type="button" class="campaign-reply-filter-button">Unread</button>
                                         </div>
@@ -2192,10 +2204,18 @@
                                             <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
                                             <div class="campaign-reply-action-group">
                                                 <button id="campaign-reply-attach" type="button" class="card-btn" aria-label="Attach file" title="Attach file" disabled>
-                                                    <img src="Symbols/paper-clip-svgrepo-com.svg" alt="" aria-hidden="true">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M21 11.5L12.2 20.3a5 5 0 0 1-7.07-7.07l9.2-9.2a3.5 3.5 0 1 1 4.95 4.95l-9.19 9.19a2 2 0 0 1-2.83-2.83l8.14-8.13"></path>
+                                                    </svg>
                                                 </button>
                                                 <button id="campaign-reply-newline" type="button" class="card-btn" aria-label="Insert line break" title="Insert line break" disabled>
-                                                    <img src="Symbols/insert down space.svg" alt="" aria-hidden="true">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M4 6h9"></path>
+                                                        <path d="M4 10h9"></path>
+                                                        <path d="M4 14h7"></path>
+                                                        <path d="M14 14h5v4"></path>
+                                                        <path d="M19 18l-4-4"></path>
+                                                    </svg>
                                                 </button>
                                                 <div class="campaign-reply-send-stack">
                                                     <button id="campaign-reply-schedule" type="button" class="card-btn" aria-label="Schedule reply" title="Schedule reply" disabled>
@@ -2506,6 +2526,7 @@
             const campaignTemplateCloseButtons = document.querySelectorAll('[data-campaign-template-close]');
             const campaignRepliesStatus = document.getElementById('campaign-replies-status');
             const campaignReplyConversations = document.getElementById('campaign-reply-conversations');
+            const campaignReplyFilters = document.getElementById('campaign-reply-filters');
             const campaignReplyFilterAllButton = document.getElementById('campaign-reply-filter-all');
             const campaignReplyFilterUnreadButton = document.getElementById('campaign-reply-filter-unread');
             const campaignReplySearchInput = document.getElementById('campaign-reply-search-input');
@@ -3400,6 +3421,9 @@
             }
 
             function syncCampaignReplyFilterButtons() {
+                if (campaignReplyFilters) {
+                    campaignReplyFilters.dataset.mode = campaignReplyFilterMode === 'unread' ? 'unread' : 'all';
+                }
                 if (campaignReplyFilterAllButton) {
                     campaignReplyFilterAllButton.classList.toggle('is-active', campaignReplyFilterMode === 'all');
                 }
