@@ -9858,7 +9858,7 @@ async function syncElsaUserAccount() {
   const canonicalName = CANONICAL_ELSA_NAME;
   const canonicalPassword = CANONICAL_ELSA_PASSWORD;
   const legacyEmails = [];
-  const canonicalRole = 'user';
+  const canonicalRole = PREMIUM_USER_ROLE;
 
   try {
     const account = await dbGet(
@@ -9876,6 +9876,32 @@ async function syncElsaUserAccount() {
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
       );
+      const createdAccount = await dbGet('SELECT id FROM users WHERE LOWER(email) = ?', [canonicalEmail]);
+      if (createdAccount) {
+        await dbRun(
+          `INSERT INTO subscription_profiles (
+              user_id, plan_key, billing_name, billing_email, subscription_status, amount_cents,
+              currency, activated_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+              plan_key = excluded.plan_key,
+              billing_name = COALESCE(NULLIF(subscription_profiles.billing_name, ''), excluded.billing_name),
+              billing_email = COALESCE(NULLIF(subscription_profiles.billing_email, ''), excluded.billing_email),
+              subscription_status = 'active',
+              amount_cents = excluded.amount_cents,
+              currency = excluded.currency,
+              activated_at = COALESCE(subscription_profiles.activated_at, CURRENT_TIMESTAMP),
+              updated_at = CURRENT_TIMESTAMP`,
+          [
+            createdAccount.id,
+            PREMIUM_PLAN_KEY,
+            canonicalName,
+            canonicalEmail,
+            PREMIUM_PRICE_CENTS,
+            PREMIUM_CURRENCY
+          ]
+        );
+      }
       console.log('Elsa user account created/synced');
       return;
     }
@@ -9898,6 +9924,30 @@ async function syncElsaUserAccount() {
         currentSmtpPass,
         currentSmtpSignature,
         account.id
+      ]
+    );
+
+    await dbRun(
+      `INSERT INTO subscription_profiles (
+          user_id, plan_key, billing_name, billing_email, subscription_status, amount_cents,
+          currency, activated_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+          plan_key = excluded.plan_key,
+          billing_name = COALESCE(NULLIF(subscription_profiles.billing_name, ''), excluded.billing_name),
+          billing_email = COALESCE(NULLIF(subscription_profiles.billing_email, ''), excluded.billing_email),
+          subscription_status = 'active',
+          amount_cents = excluded.amount_cents,
+          currency = excluded.currency,
+          activated_at = COALESCE(subscription_profiles.activated_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP`,
+      [
+        account.id,
+        PREMIUM_PLAN_KEY,
+        canonicalName,
+        canonicalEmail,
+        PREMIUM_PRICE_CENTS,
+        PREMIUM_CURRENCY
       ]
     );
 
