@@ -2716,13 +2716,27 @@ function sanitizeTwilioVoiceRoomName(value) {
   return normalized.slice(0, 64) || 'community-voice-lounge';
 }
 
+function getTwilioVoiceTargetPresenceForIncomingCall(req) {
+  const config = getTwilioVoiceConfig();
+  const calledNumber = normalizeSmsPhone(req?.body?.To || config.fromNumber || '');
+  const ownerEmail = getAssignedTwilioOwnerEmailForNumber(calledNumber)
+    || getConfiguredTwilioSenderOwnerEmail(config)
+    || CANONICAL_ISAAC_EMAIL;
+  const normalizedOwnerEmail = normalizeKnownEmail(ownerEmail);
+
+  return listActiveTwilioVoicePresence().filter((entry) => {
+    const presenceEmail = normalizeKnownEmail(entry?.email || '');
+    return Boolean(presenceEmail) && presenceEmail === normalizedOwnerEmail;
+  });
+}
+
 function buildTwilioIncomingVoiceResponse(req) {
   const config = getTwilioVoiceConfig();
   const response = new twilio.twiml.VoiceResponse();
-  const activePresence = listActiveTwilioVoicePresence();
+  const activePresence = getTwilioVoiceTargetPresenceForIncomingCall(req);
 
   if (activePresence.length === 0) {
-    response.say({ voice: 'Polly.Joanna' }, 'FAST is unavailable right now. Please try again shortly.');
+    response.say({ voice: 'Polly.Joanna' }, 'Isaac is unavailable right now. Please try again shortly.');
     response.hangup();
     return response.toString();
   }

@@ -268,6 +268,231 @@
             align-items: start;
         }
 
+        .discord-meetings-widget {
+            position: relative;
+            overflow: hidden;
+            gap: 16px;
+            border: 1px solid rgba(147, 197, 253, 0.34);
+            background:
+                radial-gradient(circle at top right, rgba(191, 219, 254, 0.28), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(96, 165, 250, 0.26), transparent 36%),
+                linear-gradient(155deg, rgba(59, 130, 246, 0.92), rgba(37, 99, 235, 0.88) 54%, rgba(30, 64, 175, 0.94));
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.26),
+                0 24px 50px rgba(30, 64, 175, 0.3);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .discord-meetings-widget:hover,
+        .discord-meetings-widget:focus-within {
+            background:
+                radial-gradient(circle at top right, rgba(219, 234, 254, 0.34), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(125, 211, 252, 0.28), transparent 36%),
+                linear-gradient(155deg, rgba(96, 165, 250, 0.96), rgba(37, 99, 235, 0.92) 54%, rgba(29, 78, 216, 0.96)) !important;
+            border-color: rgba(191, 219, 254, 0.42) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                0 28px 56px rgba(30, 64, 175, 0.34),
+                0 0 34px rgba(96, 165, 250, 0.28) !important;
+        }
+
+        .discord-meetings-widget::before,
+        .discord-meetings-widget::after {
+            content: '';
+            position: absolute;
+            border-radius: 999px;
+            pointer-events: none;
+        }
+
+        .discord-meetings-widget::before {
+            top: -52px;
+            right: -42px;
+            width: 190px;
+            height: 190px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.26), transparent 68%);
+        }
+
+        .discord-meetings-widget::after {
+            left: -72px;
+            bottom: -84px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.22), transparent 70%);
+        }
+
+        .discord-meetings-top {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 72px minmax(0, 1fr);
+            gap: 16px;
+            align-items: center;
+        }
+
+        .discord-meetings-art {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            display: block;
+            filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 14px rgba(191, 219, 254, 0.24)) drop-shadow(0 0 24px rgba(96, 165, 250, 0.14));
+            transform-origin: center;
+            transform-style: preserve-3d;
+            animation: discord-logo-turn 5.2s linear infinite;
+            transition: filter 0.2s ease;
+        }
+
+        .discord-meetings-widget:hover .discord-meetings-art,
+        .discord-meetings-widget:focus-within .discord-meetings-art {
+            filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 20px rgba(var(--accent-light-rgb), 0.34)) drop-shadow(0 0 30px rgba(var(--accent-light-rgb), 0.2));
+        }
+
+        @keyframes discord-logo-turn {
+            0% {
+                transform: perspective(900px) rotateX(5deg) rotateY(0deg);
+            }
+
+            100% {
+                transform: perspective(900px) rotateX(5deg) rotateY(360deg);
+            }
+        }
+
+        .discord-meetings-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            margin-bottom: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: rgba(239, 246, 255, 0.98);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            backdrop-filter: blur(12px);
+        }
+
+        .discord-meetings-widget .card-header,
+        .discord-meetings-copy,
+        .discord-meetings-link-note,
+        .discord-meetings-link,
+        .discord-meetings-invite-box {
+            position: relative;
+            z-index: 1;
+        }
+
+        .discord-meetings-widget .card-header {
+            margin-bottom: 0;
+        }
+
+        .discord-meetings-widget .card-title {
+            color: #ffffff;
+            font-size: 22px;
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+        }
+
+        .discord-meetings-widget .card-subtitle {
+            color: rgba(224, 231, 255, 0.78);
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .discord-meetings-copy {
+            margin: 0;
+            color: rgba(238, 242, 255, 0.94);
+            font-size: 14px;
+            line-height: 1.65;
+            max-width: 48ch;
+        }
+
+        .discord-meetings-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            min-height: 52px;
+            border-radius: 16px;
+            text-decoration: none;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            background: linear-gradient(145deg, #ffffff, #bfdbfe) !important;
+            color: #0f3d91 !important;
+            box-shadow: 0 16px 28px rgba(15, 23, 42, 0.26);
+        }
+
+        .discord-meetings-link:hover,
+        .discord-meetings-link:focus-visible {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 34px rgba(15, 23, 42, 0.34);
+        }
+
+        .discord-meetings-invite-box {
+            display: grid;
+            gap: 6px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.28);
+            border: 1px solid rgba(191, 219, 254, 0.14);
+            backdrop-filter: blur(14px);
+        }
+
+        .discord-meetings-invite-label {
+            color: rgba(224, 231, 255, 0.7);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .discord-meetings-link-note {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.96);
+            font-size: 13px;
+            font-weight: 700;
+            word-break: break-all;
+        }
+
+        [data-theme="light"] .discord-meetings-widget {
+            border-color: rgba(79, 70, 229, 0.18);
+            background:
+                radial-gradient(circle at top right, rgba(96, 165, 250, 0.18), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(56, 189, 248, 0.14), transparent 32%),
+                linear-gradient(155deg, rgba(255, 255, 255, 0.34), rgba(219, 234, 254, 0.26) 58%, rgba(191, 219, 254, 0.22));
+        }
+
+        [data-theme="light"] .discord-meetings-widget:hover,
+        [data-theme="light"] .discord-meetings-widget:focus-within {
+            background:
+                radial-gradient(circle at top right, rgba(147, 197, 253, 0.28), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(125, 211, 252, 0.2), transparent 32%),
+                linear-gradient(155deg, rgba(255, 255, 255, 0.42), rgba(219, 234, 254, 0.3) 58%, rgba(191, 219, 254, 0.26)) !important;
+            border-color: rgba(59, 130, 246, 0.26) !important;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.28),
+                0 28px 56px rgba(30, 41, 59, 0.24),
+                0 0 30px rgba(59, 130, 246, 0.18) !important;
+        }
+
+        @media (max-width: 640px) {
+            .discord-meetings-top {
+                grid-template-columns: 1fr;
+            }
+
+            .discord-meetings-art {
+                width: 74px;
+                height: 74px;
+            }
+
+            .discord-meetings-art img {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
         .admin-control-panel {
             position: relative;
             overflow: hidden;
@@ -839,6 +1064,28 @@
                             <button id="admin-announcement-clear-btn" type="button" class="card-btn">Clear Form</button>
                             <button id="admin-announcement-save-btn" type="button" class="card-btn active">Publish Announcement</button>
                         </div>
+                    </div>
+                </div>
+
+                <div id="admin-discord-meetings-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel discord-meetings-widget" data-span="6" data-widget-id="admin-discord-meetings" data-widget-title="Discord Meetings" style="--panel-index:0;">
+                    <div class="discord-meetings-top">
+                        <img class="discord-meetings-art" src="Symbols/discord-icon-svgrepo-com.svg" alt="" aria-hidden="true">
+                        <div>
+                            <span class="discord-meetings-kicker">Meetings Hub</span>
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Join The Meeting</h2>
+                                    <p class="card-subtitle">This is the live Discord meeting button for team calls, handoffs, and quick updates.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="discord-meetings-copy">Click the button below to join the active Discord meeting room. Keep this card available in Admin Controls so anyone can jump into the call fast.</p>
+                    <a class="card-btn active discord-meetings-link" href="https://discord.gg/Ef4b8anp" target="_blank" rel="noopener noreferrer" aria-label="Open Discord server">Open Server</a>
+                    <a class="card-btn active discord-meetings-link" href="https://discord.gg/Ef4b8anp" target="_blank" rel="noopener noreferrer" aria-label="Join Discord meeting now">Join Meeting Now</a>
+                    <div class="discord-meetings-invite-box">
+                        <span class="discord-meetings-invite-label">Meeting join link</span>
+                        <p class="discord-meetings-link-note">https://discord.gg/Ef4b8anp</p>
                     </div>
                 </div>
 
