@@ -9880,15 +9880,19 @@ async function syncElsaUserAccount() {
       return;
     }
 
+    const currentEmail = normalizeKnownEmail(account.email || '');
     const currentSmtpPass = String(account.smtp_pass || '').trim();
     const currentSmtpSignature = String(account.smtp_signature || '').trim();
+    const shouldResetPassword = !String(account.password_hash || '').trim()
+      || Number(account.access_granted) !== 1
+      || currentEmail !== canonicalEmail;
 
     await dbRun(
       'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
-        hash,
+        shouldResetPassword ? hash : account.password_hash,
         canonicalRole,
         account.smtp_user || '',
         currentSmtpPass,
