@@ -2875,22 +2875,6 @@
                     return;
                 }
 
-                const launcher = document.createElement('button');
-                launcher.type = 'button';
-                launcher.className = 'campaign-reply-reaction-launcher';
-                launcher.setAttribute('aria-label', 'React to this message');
-                launcher.title = 'React to this message';
-                launcher.textContent = '😊';
-                if (activeTwilioReactionPickerMessageId === Number(message.id)) {
-                    launcher.classList.add('is-open');
-                }
-                launcher.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    activeTwilioReactionPickerMessageId = activeTwilioReactionPickerMessageId === Number(message.id) ? 0 : Number(message.id);
-                    void loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
-                });
-                bubble.appendChild(launcher);
-
                 const reactions = normalizeCampaignReplyReactions(message.reactions);
                 if (reactions.length) {
                     const wrap = document.createElement('div');
@@ -2899,38 +2883,11 @@
                         const chip = document.createElement('span');
                         chip.className = 'campaign-reply-reaction-chip';
                         chip.textContent = emoji;
-                        chip.setAttribute('aria-label', `Sent ${emoji} reaction`);
-                        chip.title = `Sent ${emoji} reaction`;
+                        chip.setAttribute('aria-label', `${emoji} reaction`);
+                        chip.title = `${emoji} reaction`;
                         wrap.appendChild(chip);
                     });
                     bubble.appendChild(wrap);
-                }
-
-                if (activeTwilioReactionPickerMessageId === Number(message.id)) {
-                    const picker = document.createElement('div');
-                    picker.className = 'campaign-reply-reaction-picker';
-                    picker.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                    });
-                    CAMPAIGN_REPLY_REACTION_OPTIONS.forEach((emoji) => {
-                        const option = document.createElement('button');
-                        option.type = 'button';
-                        option.className = 'campaign-reply-reaction-option';
-                        option.textContent = emoji;
-                        option.setAttribute('aria-label', `React with ${emoji}`);
-                        option.title = `React with ${emoji}`;
-                        option.addEventListener('click', async (event) => {
-                            event.stopPropagation();
-                            try {
-                                await toggleTwilioMessageReaction(message, emoji);
-                                campaignReplyStatus.textContent = 'Emoji reaction sent.';
-                            } catch (error) {
-                                campaignReplyStatus.textContent = error.message || 'Unable to send the emoji reaction.';
-                            }
-                        });
-                        picker.appendChild(option);
-                    });
-                    bubble.appendChild(picker);
                 }
             }
 
@@ -4197,20 +4154,24 @@
                 const wrap = document.createElement('div');
                 wrap.className = 'campaign-reply-attachments';
 
-                const buildAuthenticatedAttachmentUrl = (rawUrl) => {
+                const buildAuthenticatedAttachmentUrl = (rawUrl, options = {}) => {
                     const baseUrl = String(rawUrl || '').trim();
                     if (!baseUrl) {
                         return '';
                     }
 
+                    const shouldDownload = Boolean(options && options.download);
+
                     const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-                    if (!authToken) {
-                        return baseUrl;
-                    }
 
                     try {
                         const url = new URL(baseUrl, window.location.origin);
-                        url.searchParams.set('token', authToken);
+                        if (authToken) {
+                            url.searchParams.set('token', authToken);
+                        }
+                        if (shouldDownload) {
+                            url.searchParams.set('download', '1');
+                        }
                         return url.toString();
                     } catch (error) {
                         return baseUrl;
@@ -4241,6 +4202,7 @@
                     const kind = String(attachment?.kind || '').trim().toLowerCase();
                     const contentType = String(attachment?.contentType || '').trim();
                     const url = buildAuthenticatedAttachmentUrl(attachment?.url || '');
+                    const downloadUrl = buildAuthenticatedAttachmentUrl(attachment?.url || '', { download: true });
                     if (!url) {
                         return;
                     }
@@ -4276,7 +4238,7 @@
 
                         const download = document.createElement('a');
                         download.className = 'campaign-reply-attachment-download';
-                        download.href = url;
+                        download.href = downloadUrl || url;
                         download.download = buildAttachmentDownloadName(attachment, index);
                         download.setAttribute('aria-label', `Download ${kind} ${index + 1}`);
                         download.title = kind === 'video' ? 'Download video' : 'Download image';

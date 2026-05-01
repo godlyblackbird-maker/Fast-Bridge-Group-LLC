@@ -252,6 +252,12 @@ const userUploadMemory = multer({
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
+const DEFAULT_TWILIO_NUMBER_ASSIGNMENTS = Object.freeze([
+  Object.freeze({
+    phoneNumber: '+18448755968',
+    email: CANONICAL_ISAAC_EMAIL
+  })
+]);
 const LEGACY_EMAIL_ALIASES = new Map([
   ['isaacs.hesed@gmail.com', CANONICAL_ISAAC_EMAIL],
   ['isaacs.hesed@fastbridgegroup.com', CANONICAL_ISAAC_EMAIL],
@@ -1362,6 +1368,153 @@ function isFastBridgeWorkspaceEmail(email) {
 
 function userHasWebsiteAccess(userLike) {
   return Number(userLike && userLike.access_granted) === 1;
+}
+
+function parseTwilioNumberAssignmentsConfig(rawValue) {
+  const source = String(rawValue || '').trim();
+  if (!source) {
+    return [];
+  }
+
+  return source
+    .split(/[\r\n,;]+/)
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [phonePart, emailPart] = entry.split('=').map((part) => String(part || '').trim());
+      const phoneNumber = normalizeSmsPhone(phonePart);
+      const email = normalizeKnownEmail(emailPart);
+      if (!phoneNumber || !email) {
+        return null;
+      }
+      return { phoneNumber, email };
+    })
+    .filter(Boolean);
+}
+
+function getConfiguredTwilioNumberAssignments() {
+  const configuredAssignments = parseTwilioNumberAssignmentsConfig(process.env.TWILIO_NUMBER_ASSIGNMENTS || '');
+  const combinedAssignments = [...DEFAULT_TWILIO_NUMBER_ASSIGNMENTS, ...configuredAssignments];
+  const dedupedAssignments = new Map();
+
+  combinedAssignments.forEach((entry) => {
+    const phoneNumber = normalizeSmsPhone(entry?.phoneNumber);
+    const email = normalizeKnownEmail(entry?.email);
+    if (!phoneNumber || !email) {
+      return;
+    }
+    dedupedAssignments.set(phoneNumber, email);
+  });
+
+  return dedupedAssignments;
+}
+
+function getAssignedTwilioOwnerEmailForNumber(phoneNumber) {
+  const normalizedPhoneNumber = normalizeSmsPhone(phoneNumber);
+  if (!normalizedPhoneNumber) {
+    return '';
+  }
+  return getConfiguredTwilioNumberAssignments().get(normalizedPhoneNumber) || '';
+}
+
+function getConfiguredTwilioSenderOwnerEmail(config = getTwilioMessagingConfig()) {
+  return getAssignedTwilioOwnerEmailForNumber(config?.fromNumber || '');
+}
+
+function ensureTwilioSenderAccess(userLike, config = getTwilioMessagingConfig()) {
+  const ownerEmail = getConfiguredTwilioSenderOwnerEmail(config);
+  if (!ownerEmail) {
+    return { allowed: true, statusCode: 200, error: '', ownerEmail: '' };
+  }
+
+  const authenticatedEmail = normalizeKnownEmail(userLike?.email || '');
+  if (authenticatedEmail !== ownerEmail) {
+    return { allowed: false, statusCode: 403, error: 'Configure a number via twilio, contact admin', ownerEmail };
+  }
+
+  return { allowed: true, statusCode: 200, error: '', ownerEmail };
+}
+
+function extractTwilioInboxNumber(rowOrPayload) {
+  const payload = rowOrPayload && typeof rowOrPayload === 'object' && typeof rowOrPayload.raw_payload_json === 'string'
+    ? safeJsonParse(rowOrPayload.raw_payload_json, {})
+    : rowOrPayload;
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const direction = String(rowOrPayload?.direction || source.direction || '').trim().toLowerCase();
+  const candidates = direction === 'inbound'
+    ? [source.To, source.to, source.twilioNumber, rowOrPayload?.platform_identity]
+    : [source.from, source.From, source.twilioNumber, rowOrPayload?.platform_identity];
+
+  for (const candidate of candidates) {
+    const normalizedCandidate = normalizeSmsPhone(candidate);
+    if (normalizedCandidate) {
+      return normalizedCandidate;
+    }
+  }
+
+  return '';
+}
+
+async function resolveTwilioConversationOwnerEmail(conversationKey) {
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  if (!normalizedConversationKey) {
+    return '';
+  }
+
+  const rows = await listTwilioInboxMessages(normalizedConversationKey);
+  if (!Array.isArray(rows) || !rows.length) {
+    return '';
+  }
+
+  for (const row of rows) {
+    const assignedEmail = getAssignedTwilioOwnerEmailForNumber(extractTwilioInboxNumber(row));
+    if (assignedEmail) {
+      return assignedEmail;
+    }
+  }
+
+  const ownerEmail = rows
+    .map((row) => normalizeKnownEmail(row?.owner_email || ''))
+    .find(Boolean);
+
+  return ownerEmail || '';
+}
+
+async function ensureTwilioConversationAccess(decoded, conversationKey) {
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  if (!normalizedConversationKey) {
+    return { allowed: false, statusCode: 400, error: 'conversationKey is required.', ownerEmail: '', conversationKey: '' };
+  }
+
+  const ownerEmail = await resolveTwilioConversationOwnerEmail(normalizedConversationKey);
+  if (!ownerEmail) {
+    return { allowed: false, statusCode: 404, error: 'Conversation not found.', ownerEmail: '', conversationKey: normalizedConversationKey };
+  }
+
+  const authenticatedEmail = normalizeKnownEmail(decoded?.email || '');
+  if (authenticatedEmail !== ownerEmail) {
+    return { allowed: false, statusCode: 403, error: 'This Twilio conversation is assigned to another user.', ownerEmail, conversationKey: normalizedConversationKey };
+  }
+
+  return { allowed: true, statusCode: 200, error: '', ownerEmail, conversationKey: normalizedConversationKey };
+}
+
+async function ensureTwilioMessageAccess(decoded, messageSid) {
+  const normalizedMessageSid = String(messageSid || '').trim();
+  if (!normalizedMessageSid) {
+    return { allowed: false, statusCode: 400, error: 'messageSid is required.', row: null };
+  }
+
+  const row = await dbGet('SELECT * FROM twilio_inbox_messages WHERE message_sid = ?', [normalizedMessageSid]);
+  if (!row) {
+    return { allowed: false, statusCode: 404, error: 'Twilio media was not found.', row: null };
+  }
+
+  const access = await ensureTwilioConversationAccess(decoded, String(row.conversation_key || '').trim());
+  return {
+    ...access,
+    row: access.allowed ? row : null
+  };
 }
 
 function isKnownAdminEmail(email) {
@@ -2960,6 +3113,149 @@ function normalizeInboundTwilioReaction(payload) {
   }
 
   return '';
+}
+
+function normalizeTwilioReactionTargetText(value) {
+  return String(value || '')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseInboundSmsTapback(body) {
+  const normalizedBody = normalizeTwilioReactionTargetText(body);
+  if (!normalizedBody) {
+    return null;
+  }
+
+  const reactionMap = new Map([
+    ['liked', '👍'],
+    ['loved', '❤️'],
+    ['disliked', '👎'],
+    ['laughed at', '😂'],
+    ['emphasized', '‼️'],
+    ['questioned', '❓']
+  ]);
+
+  const removalMap = new Map([
+    ['like', '👍'],
+    ['heart', '❤️'],
+    ['dislike', '👎'],
+    ['laugh', '😂'],
+    ['exclamation mark', '‼️'],
+    ['question mark', '❓']
+  ]);
+
+  const quotedMatch = normalizedBody.match(/^(Liked|Loved|Disliked|Laughed at|Emphasized|Questioned)\s+["“](.+)["”]$/i);
+  if (quotedMatch) {
+    const emoji = reactionMap.get(String(quotedMatch[1] || '').trim().toLowerCase());
+    const quotedText = normalizeTwilioReactionTargetText(quotedMatch[2]);
+    if (emoji && quotedText) {
+      return {
+        emoji,
+        remove: false,
+        quotedText,
+        mediaHint: ''
+      };
+    }
+  }
+
+  const removalQuotedMatch = normalizedBody.match(/^Removed\s+(?:an?|the)\s+(heart|like|dislike|laugh|exclamation mark|question mark)\s+from\s+["“](.+)["”]$/i);
+  if (removalQuotedMatch) {
+    const emoji = removalMap.get(String(removalQuotedMatch[1] || '').trim().toLowerCase());
+    const quotedText = normalizeTwilioReactionTargetText(removalQuotedMatch[2]);
+    if (emoji && quotedText) {
+      return {
+        emoji,
+        remove: true,
+        quotedText,
+        mediaHint: ''
+      };
+    }
+  }
+
+  const mediaMatch = normalizedBody.match(/^(Liked|Loved|Disliked|Laughed at|Emphasized|Questioned)\s+(an image|a photo|a picture|a video|a movie|an attachment)$/i);
+  if (mediaMatch) {
+    const emoji = reactionMap.get(String(mediaMatch[1] || '').trim().toLowerCase());
+    const mediaLabel = String(mediaMatch[2] || '').trim().toLowerCase();
+    const mediaHint = mediaLabel.includes('video') || mediaLabel.includes('movie')
+      ? 'video'
+      : mediaLabel.includes('attachment')
+        ? 'attachment'
+        : 'image';
+    if (emoji) {
+      return {
+        emoji,
+        remove: false,
+        quotedText: '',
+        mediaHint
+      };
+    }
+  }
+
+  const mediaRemovalMatch = normalizedBody.match(/^Removed\s+(?:an?|the)\s+(heart|like|dislike|laugh|exclamation mark|question mark)\s+from\s+(an image|a photo|a picture|a video|a movie|an attachment)$/i);
+  if (mediaRemovalMatch) {
+    const emoji = removalMap.get(String(mediaRemovalMatch[1] || '').trim().toLowerCase());
+    const mediaLabel = String(mediaRemovalMatch[2] || '').trim().toLowerCase();
+    const mediaHint = mediaLabel.includes('video') || mediaLabel.includes('movie')
+      ? 'video'
+      : mediaLabel.includes('attachment')
+        ? 'attachment'
+        : 'image';
+    if (emoji) {
+      return {
+        emoji,
+        remove: true,
+        quotedText: '',
+        mediaHint
+      };
+    }
+  }
+
+  return null;
+}
+
+async function findTwilioReactionTargetMessage(conversationKey, reactionTarget) {
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  if (!normalizedConversationKey || !reactionTarget || typeof reactionTarget !== 'object') {
+    return null;
+  }
+
+  const outgoingRows = await dbAll(
+    `SELECT *
+       FROM twilio_inbox_messages
+      WHERE conversation_key = ?
+        AND direction = 'outgoing'
+      ORDER BY datetime(created_at) DESC, id DESC
+      LIMIT 40`,
+    [normalizedConversationKey]
+  );
+
+  if (!Array.isArray(outgoingRows) || !outgoingRows.length) {
+    return null;
+  }
+
+  const quotedText = normalizeTwilioReactionTargetText(reactionTarget.quotedText || '');
+  if (quotedText) {
+    return outgoingRows.find((row) => normalizeTwilioReactionTargetText(row.body || '') === quotedText) || null;
+  }
+
+  const mediaHint = String(reactionTarget.mediaHint || '').trim().toLowerCase();
+  if (!mediaHint) {
+    return null;
+  }
+
+  return outgoingRows.find((row) => {
+    const attachments = getTwilioMessageMediaAttachments(row);
+    if (!attachments.length) {
+      return false;
+    }
+    if (mediaHint === 'attachment') {
+      return true;
+    }
+    return attachments.some((attachment) => String(attachment?.kind || '').trim().toLowerCase() === mediaHint);
+  }) || null;
 }
 
 function extractPropertyAddressFromTwilioBody(body) {
@@ -16679,6 +16975,7 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
     const details = getTwilioConversationDetailsFromPayload(payload, 'inbound');
     const originalRepliedMessageSid = String(payload.OriginalRepliedMessageSid || '').trim();
     const inboundReaction = normalizeInboundTwilioReaction(payload);
+    const smsTapbackReaction = !originalRepliedMessageSid ? parseInboundSmsTapback(body) : null;
 
     if (!messageSid || !details.conversationKey || (!body && attachments.length === 0)) {
       return res.type('text/xml').send('<Response></Response>');
@@ -16688,6 +16985,18 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
       const originalMessage = await dbGet('SELECT * FROM twilio_inbox_messages WHERE message_sid = ?', [originalRepliedMessageSid]);
       if (originalMessage) {
         const nextReactions = normalizeTwilioMessageReactions([...(originalMessage.reactions_json ? safeJsonParse(originalMessage.reactions_json, []) : []), inboundReaction]);
+        await updateTwilioMessageReactions(Number(originalMessage.id) || 0, nextReactions);
+        return res.type('text/xml').send('<Response></Response>');
+      }
+    }
+
+    if (smsTapbackReaction && details.conversationKey) {
+      const originalMessage = await findTwilioReactionTargetMessage(details.conversationKey, smsTapbackReaction);
+      if (originalMessage) {
+        const currentReactions = normalizeTwilioMessageReactions(originalMessage.reactions_json ? safeJsonParse(originalMessage.reactions_json, []) : []);
+        const nextReactions = smsTapbackReaction.remove
+          ? currentReactions.filter((entry) => entry !== smsTapbackReaction.emoji)
+          : normalizeTwilioMessageReactions([...currentReactions, smsTapbackReaction.emoji]);
         await updateTwilioMessageReactions(Number(originalMessage.id) || 0, nextReactions);
         return res.type('text/xml').send('<Response></Response>');
       }
@@ -16783,7 +17092,11 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
 
   try {
     const rows = await listTwilioInboxConversations();
-    const conversations = await Promise.all(rows.map(async (row) => {
+    const conversations = (await Promise.all(rows.map(async (row) => {
+      const access = await ensureTwilioConversationAccess(decoded, String(row.conversation_key || '').trim());
+      if (!access.allowed) {
+        return null;
+      }
       const latestRow = await getLatestTwilioConversationRow(row.conversation_key);
       const serializedLatestMessage = serializeTwilioInboxMessage(latestRow);
       const normalizedContactPhone = String(row.contact_phone || '').trim();
@@ -16803,7 +17116,7 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
         unreadCount: Math.max(0, Number(row.unread_count) || 0),
         isBlocked: await isTwilioContactBlockedByPhone(normalizedContactPhone)
       };
-    }));
+    }))).filter(Boolean);
 
     return res.json({ conversations });
   } catch (error) {
@@ -16824,6 +17137,10 @@ app.get('/api/twilio/inbox/messages', async (req, res) => {
   }
 
   try {
+    const access = await ensureTwilioConversationAccess(decoded, conversationKey);
+    if (!access.allowed) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
     const rows = await listTwilioInboxMessages(conversationKey);
     return res.json({
       conversationKey,
@@ -16849,6 +17166,12 @@ app.get('/api/twilio/inbox/contact-history', async (req, res) => {
 
   try {
     const conversation = await findTwilioConversationByPhone(normalizedPhone);
+    if (conversation) {
+      const access = await ensureTwilioConversationAccess(decoded, String(conversation.conversation_key || '').trim());
+      if (!access.allowed) {
+        return res.json({ phone: normalizedPhone, hasHistory: false, conversation: null });
+      }
+    }
     return res.json({
       phone: normalizedPhone,
       hasHistory: Boolean(conversation),
@@ -16879,42 +17202,7 @@ app.put('/api/twilio/inbox/message-reactions', express.json({ limit: '50kb' }), 
     return res.status(400).json({ error: 'A valid Twilio message id is required.' });
   }
 
-  try {
-    const existingMessage = await dbGet('SELECT * FROM twilio_inbox_messages WHERE id = ?', [messageId]);
-    if (!existingMessage) {
-      return res.status(404).json({ error: 'Twilio message not found.' });
-    }
-
-    const nextReactions = normalizeTwilioMessageReactions(req.body?.reactions);
-    const currentReactions = normalizeTwilioMessageReactions(existingMessage.reactions_json);
-    const addedReactions = nextReactions.filter((entry) => !currentReactions.includes(entry));
-    const latestRow = await getLatestTwilioConversationRow(String(existingMessage.conversation_key || '').trim());
-    if (!latestRow) {
-      return res.status(404).json({ error: 'Conversation not found.' });
-    }
-
-    if (addedReactions.length) {
-      await sendTwilioInboxOutboundMessage({
-        req,
-        conversationKey: String(existingMessage.conversation_key || '').trim(),
-        latestRow,
-        campaignName: String(existingMessage.campaign_name || latestRow.campaign_name || '').trim(),
-        body: addedReactions.join(' '),
-        mediaUploads: [],
-        ownerUser: decoded
-      });
-    }
-
-    const updatedMessage = await updateTwilioMessageReactions(messageId, nextReactions);
-
-    return res.json({
-      success: true,
-      message: serializeTwilioInboxMessage(updatedMessage)
-    });
-  } catch (error) {
-    console.error('Failed to update Twilio message reactions:', error);
-    return res.status(Number(error?.statusCode) || 500).json({ error: error.message || 'Unable to update Twilio message reactions.' });
-  }
+  return res.status(400).json({ error: 'Native outbound message reactions are not supported for this Twilio inbox.' });
 });
 
 app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
@@ -16929,10 +17217,12 @@ app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
     return res.status(400).json({ error: 'messageSid is required.' });
   }
 
-  const row = await dbGet('SELECT * FROM twilio_inbox_messages WHERE message_sid = ?', [messageSid]);
-  if (!row) {
-    return res.status(404).json({ error: 'Twilio media was not found.' });
+  const access = await ensureTwilioMessageAccess(decoded, messageSid);
+  if (!access.allowed) {
+    return res.status(access.statusCode).json({ error: access.error });
   }
+
+  const row = access.row;
 
   const attachments = getTwilioMessageMediaAttachments(row);
   const attachment = attachments.find((item) => item.index === mediaIndex);
@@ -16948,6 +17238,7 @@ app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
   try {
     const authHeader = `Basic ${Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')}`;
     const forwardedRangeHeader = String(req.headers.range || '').trim();
+    const forceDownload = String(req.query?.download || '').trim() === '1';
     const response = await fetch(attachment.sourceUrl, {
       headers: {
         Authorization: authHeader,
@@ -16986,7 +17277,11 @@ app.get('/api/twilio/inbox/media/:messageSid/:mediaIndex', async (req, res) => {
     } else if (forwardedRangeHeader) {
       res.setHeader('Accept-Ranges', 'bytes');
     }
-    if (shouldRenderInline) {
+    if (forceDownload) {
+      res.setHeader('Content-Disposition', contentDisposition && /attachment/i.test(contentDisposition)
+        ? contentDisposition
+        : `attachment; filename="twilio-media-${messageSid}-${mediaIndex}"`);
+    } else if (shouldRenderInline) {
       res.setHeader('Content-Disposition', 'inline');
     } else if (contentDisposition) {
       res.setHeader('Content-Disposition', contentDisposition);
@@ -17016,6 +17311,10 @@ app.post('/api/twilio/inbox/messages/read', async (req, res) => {
   }
 
   try {
+    const access = await ensureTwilioConversationAccess(decoded, conversationKey);
+    if (!access.allowed) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
     await markTwilioConversationRead(conversationKey);
     return res.json({ success: true, conversationKey });
   } catch (error) {
@@ -17042,6 +17341,10 @@ app.patch('/api/twilio/inbox/contact-name', async (req, res) => {
   }
 
   try {
+    const access = await ensureTwilioConversationAccess(decoded, conversationKey);
+    if (!access.allowed) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
     const existingRow = await getLatestTwilioConversationRow(conversationKey);
     if (!existingRow) {
       return res.status(404).json({ error: 'Conversation not found.' });
@@ -17071,6 +17374,10 @@ app.delete('/api/twilio/inbox/conversation', async (req, res) => {
   }
 
   try {
+    const access = await ensureTwilioConversationAccess(decoded, conversationKey);
+    if (!access.allowed) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
     const existingRow = await getLatestTwilioConversationRow(conversationKey);
     if (!existingRow) {
       return res.status(404).json({ error: 'Conversation not found.' });
@@ -17097,6 +17404,10 @@ app.put('/api/twilio/inbox/contact-block', async (req, res) => {
   }
 
   try {
+    const access = await ensureTwilioConversationAccess(decoded, conversationKey);
+    if (!access.allowed) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
     const existingRow = await getLatestTwilioConversationRow(conversationKey);
     if (!existingRow) {
       return res.status(404).json({ error: 'Conversation not found.' });
@@ -17146,6 +17457,11 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
     return res.status(400).json({ error: 'conversationKey and either a body or image upload are required.' });
   }
 
+  const access = await ensureTwilioConversationAccess(decoded, conversationKey);
+  if (!access.allowed) {
+    return res.status(access.statusCode).json({ error: access.error });
+  }
+
   const latestRow = await getLatestTwilioConversationRow(conversationKey);
   if (!latestRow) {
     return res.status(404).json({ error: 'Conversation not found.' });
@@ -17189,6 +17505,11 @@ app.post('/api/twilio/send-sms', async (req, res) => {
   const authenticatedUser = await getAuthenticatedUserFromBearerHeader(req.headers.authorization || '');
   if (!senderName && authenticatedUser) {
     senderName = String(authenticatedUser.name || '').trim();
+  }
+
+  const senderAccess = ensureTwilioSenderAccess(authenticatedUser);
+  if (!senderAccess.allowed) {
+    return res.status(senderAccess.statusCode).json({ error: senderAccess.error });
   }
 
   if (!body && mediaUploadIds.length === 0) {
