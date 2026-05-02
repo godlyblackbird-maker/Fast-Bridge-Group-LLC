@@ -91,6 +91,7 @@ const GOOGLE_MAPS_API_KEY = getFirstConfiguredEnvValue('GOOGLE_MAPS_API_KEY', 'G
 const GOOGLE_MAPS_MAP_ID = getFirstConfiguredEnvValue('GOOGLE_MAPS_MAP_ID', 'GOOGLE_MAP_ID');
 const GOOGLE_EARTH_FALLBACK_MAP_ID = 'DEMO_MAP_ID';
 const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 const GMAIL_APP_PATH = '/gmail.html';
 const PREMIUM_USER_ROLE = 'premium user';
 const TEST_USER_ROLE = 'test user';
@@ -10980,6 +10981,10 @@ function formatGmailOAuthError(error) {
     return 'Google blocked Gmail access for this app. Check the OAuth consent screen publishing status and allowed test users in Google Cloud.';
   }
 
+  if (normalized.includes('insufficient authentication scopes') || normalized.includes('insufficientpermissions')) {
+    return 'Reconnect Gmail and approve compose permissions before sending mail from FAST.';
+  }
+
   if (normalized.includes('not fully configured')) {
     return 'Google Gmail access is not fully configured on the server. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to the environment.';
   }
@@ -11034,6 +11039,15 @@ function normalizeGmailOAuthConnection(row) {
     createdAt: source.created_at ? new Date(source.created_at).toISOString() : null,
     updatedAt: source.updated_at ? new Date(source.updated_at).toISOString() : null
   };
+}
+
+function splitOAuthScopes(scope) {
+  return String(scope || '').trim().split(/\s+/).filter(Boolean);
+}
+
+function gmailConnectionHasScopes(connection, requiredScopes = []) {
+  const grantedScopes = new Set(splitOAuthScopes(connection && connection.scope));
+  return requiredScopes.every((scope) => grantedScopes.has(String(scope || '').trim()));
 }
 
 async function getGmailOAuthConnectionForUser(userId) {
@@ -11159,6 +11173,24 @@ async function fetchGmailApiJson(endpoint, accessToken, params = {}) {
   return response.json();
 }
 
+async function postGmailApiJson(endpoint, accessToken, body = {}) {
+  const response = await fetch(`https://gmail.googleapis.com${endpoint}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body || {})
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Gmail API request failed: ${detail.slice(0, 200)}`);
+  }
+
+  return response.json();
+}
+
 function getGmailMessageHeader(message, headerName) {
   const normalizedHeaderName = String(headerName || '').trim().toLowerCase();
   const headers = Array.isArray(message && message.payload && message.payload.headers) ? message.payload.headers : [];
@@ -11273,6 +11305,81 @@ function mapGmailMessageDetail(message) {
   };
 }
 
+function sortGmailThreadMessages(messages) {
+  return (Array.isArray(messages) ? messages.slice() : []).sort((left, right) => {
+    const leftDate = Number(left && left.internalDate) || 0;
+    const rightDate = Number(right && right.internalDate) || 0;
+    return leftDate - rightDate;
+  });
+}
+
+function normalizeEmailListInput(value) {
+  const parts = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[\n,;]+/);
+
+  return parts
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+function escapeMimeHeader(value) {
+  return String(value || '').replace(/[\r\n]+/g, ' ').trim();
+}
+
+function buildGmailRawMessage({ from, to, cc, bcc, subject, bodyText, bodyHtml }) {
+  const normalizedFrom = escapeMimeHeader(from);
+  const normalizedTo = normalizeEmailListInput(to);
+  const normalizedCc = normalizeEmailListInput(cc);
+  const normalizedBcc = normalizeEmailListInput(bcc);
+  const normalizedSubject = escapeMimeHeader(subject) || '(no subject)';
+  const plainText = String(bodyText || '').replace(/\r\n?/g, '\n');
+  const htmlText = String(bodyHtml || '').trim();
+  const headers = [
+    `From: ${normalizedFrom}`,
+    `To: ${normalizedTo}`,
+    'MIME-Version: 1.0',
+    `Subject: ${normalizedSubject}`
+  ];
+
+  if (normalizedCc) {
+    headers.push(`Cc: ${normalizedCc}`);
+  }
+
+  if (normalizedBcc) {
+    headers.push(`Bcc: ${normalizedBcc}`);
+  }
+
+  let body = '';
+  if (htmlText) {
+    const boundary = `fastbridge-compose-${Date.now().toString(36)}`;
+    headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
+    body = [
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      'Content-Transfer-Encoding: 7bit',
+      '',
+      plainText || stripHtmlToPlainText(htmlText),
+      '',
+      `--${boundary}`,
+      'Content-Type: text/html; charset="UTF-8"',
+      'Content-Transfer-Encoding: 7bit',
+      '',
+      htmlText,
+      '',
+      `--${boundary}--`,
+      ''
+    ].join('\r\n');
+  } else {
+    headers.push('Content-Type: text/plain; charset="UTF-8"');
+    headers.push('Content-Transfer-Encoding: 7bit');
+    body = `${plainText}\r\n`;
+  }
+
+  return Buffer.from(`${headers.join('\r\n')}\r\n\r\n${body}`, 'utf8').toString('base64url');
+}
+
 async function withGmailAccessTokenForUser(userId, handler) {
   const connection = await getGmailOAuthConnectionForUser(userId);
   if (!connection || !connection.refreshToken) {
@@ -11335,7 +11442,7 @@ app.get('/api/gmail/connect-url', (req, res) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: `openid email profile ${GMAIL_READONLY_SCOPE}`,
+    scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${GMAIL_SEND_SCOPE}`,
     access_type: 'offline',
     include_granted_scopes: 'true',
     prompt: 'consent select_account',
@@ -16274,15 +16381,86 @@ app.get('/api/gmail/messages/:messageId', async (req, res) => {
         { format: 'full' }
       );
 
+      const threadId = String(message && message.threadId || '').trim();
+      const thread = threadId
+        ? await fetchGmailApiJson(
+            `/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}`,
+            accessToken,
+            { format: 'full' }
+          )
+        : null;
+      const threadMessages = sortGmailThreadMessages(thread && thread.messages).map(mapGmailMessageDetail);
+
       return {
         gmailEmail: connection.gmailEmail,
-        message: mapGmailMessageDetail(message)
+        message: mapGmailMessageDetail(message),
+        threadMessages
       };
     });
 
     return res.json(payload);
   } catch (error) {
     console.error('Failed to load Gmail inbox message:', error);
+    return res.status(500).json({ error: formatGmailOAuthError(error) });
+  }
+});
+
+// POST /api/gmail/messages/send — sends a Gmail message for the authenticated user
+app.post('/api/gmail/messages/send', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const to = normalizeEmailListInput(req.body?.to);
+  const cc = normalizeEmailListInput(req.body?.cc);
+  const bcc = normalizeEmailListInput(req.body?.bcc);
+  const subject = String(req.body?.subject || '').trim();
+  const bodyText = String(req.body?.bodyText || '').trim();
+  const bodyHtml = String(req.body?.bodyHtml || '').trim();
+
+  if (!to) {
+    return res.status(400).json({ error: 'At least one recipient is required.' });
+  }
+
+  if (!bodyText && !bodyHtml) {
+    return res.status(400).json({ error: 'Message body is required.' });
+  }
+
+  try {
+    const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
+      if (!gmailConnectionHasScopes(connection, [GMAIL_SEND_SCOPE])) {
+        throw new Error('Reconnect Gmail and approve compose permissions before sending mail from FAST.');
+      }
+
+      const response = await postGmailApiJson('/gmail/v1/users/me/messages/send', accessToken, {
+        raw: buildGmailRawMessage({
+          from: connection.gmailEmail || decoded.email,
+          to,
+          cc,
+          bcc,
+          subject,
+          bodyText,
+          bodyHtml
+        })
+      });
+
+      return {
+        gmailEmail: connection.gmailEmail,
+        messageId: String(response && response.id || '').trim(),
+        threadId: String(response && response.threadId || '').trim()
+      };
+    });
+
+    return res.json({
+      success: true,
+      gmailEmail: payload.gmailEmail,
+      messageId: payload.messageId,
+      threadId: payload.threadId,
+      message: 'Gmail message sent successfully.'
+    });
+  } catch (error) {
+    console.error('Failed to send Gmail message:', error);
     return res.status(500).json({ error: formatGmailOAuthError(error) });
   }
 });
