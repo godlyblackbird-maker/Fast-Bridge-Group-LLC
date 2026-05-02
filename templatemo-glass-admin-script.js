@@ -22901,6 +22901,60 @@ function initNavbarDateTime() {
                 return getRenderedSubjectLocation() || getSubjectLocation();
             }
 
+            function getCurrentMapCenterLocation() {
+                if (!mapInstance || typeof mapInstance.getCenter !== 'function') {
+                    return null;
+                }
+
+                const center = mapInstance.getCenter();
+                if (!center) {
+                    return null;
+                }
+
+                if (typeof center.toJSON === 'function') {
+                    const centerJson = center.toJSON();
+                    if (Number.isFinite(Number(centerJson && centerJson.lat)) && Number.isFinite(Number(centerJson && centerJson.lng))) {
+                        return {
+                            lat: Number(centerJson.lat),
+                            lng: Number(centerJson.lng)
+                        };
+                    }
+                }
+
+                if (typeof center.lat === 'function' && typeof center.lng === 'function') {
+                    const lat = Number(center.lat());
+                    const lng = Number(center.lng());
+                    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                        return { lat, lng };
+                    }
+                }
+
+                return null;
+            }
+
+            function resolveEarthSubjectLocation(subjectLocation = null) {
+                const renderedLocation = getRenderedSubjectLocation();
+                if (renderedLocation) {
+                    return renderedLocation;
+                }
+
+                const mapCenterLocation = getCurrentMapCenterLocation();
+                if (mapCenterLocation && (!subjectLocation || isSameMapLocation(mapCenterLocation, subjectLocation))) {
+                    return mapCenterLocation;
+                }
+
+                const explicitSubjectLocation = subjectLocation
+                    && Number.isFinite(Number(subjectLocation.lat))
+                    && Number.isFinite(Number(subjectLocation.lng))
+                    ? {
+                        lat: Number(subjectLocation.lat),
+                        lng: Number(subjectLocation.lng)
+                    }
+                    : null;
+
+                return explicitSubjectLocation || getSubjectLocation();
+            }
+
             function getEarthFocusMarkerMeta() {
                 return getSubjectMarkerMeta(getEarthFocusLocation());
             }
@@ -23266,25 +23320,29 @@ function initNavbarDateTime() {
             }
 
             async function ensureEarthReady(focusLocation = null) {
+                const resolvedRequestedFocus = resolveEarthSubjectLocation(focusLocation);
                 if (!compsMapEarthCanvas) {
                     return null;
                 }
                 if (earthMapElement) {
+                    if (resolvedRequestedFocus) {
+                        updateEarthCamera(resolvedRequestedFocus);
+                        syncEarthSubjectMarker(resolvedRequestedFocus);
+                    }
                     return earthMapElement;
                 }
                 if (earthReadyPromise) {
-                    return earthReadyPromise;
+                    return earthReadyPromise.then((earthMap) => {
+                        if (earthMap && resolvedRequestedFocus) {
+                            updateEarthCamera(resolvedRequestedFocus);
+                            syncEarthSubjectMarker(resolvedRequestedFocus);
+                        }
+                        return earthMap;
+                    });
                 }
 
                 earthReadyPromise = (async () => {
-                    const resolvedFocusLocation = focusLocation
-                        && Number.isFinite(Number(focusLocation.lat))
-                        && Number.isFinite(Number(focusLocation.lng))
-                        ? {
-                            lat: Number(focusLocation.lat),
-                            lng: Number(focusLocation.lng)
-                        }
-                        : getEarthFocusLocation();
+                    const resolvedFocusLocation = resolvedRequestedFocus || getEarthFocusLocation();
 
                     const config = await resolveGoogleMapsBrowserConfig();
                     syncEarthLayerAvailability(config);
@@ -24984,7 +25042,7 @@ function initNavbarDateTime() {
                 }
                 setMapLayerMode(currentMapLayer);
                 renderMapMarkers(filtered);
-                const earthSubjectLocation = getRenderedSubjectLocation() || subjectLocation || getSubjectLocation();
+                const earthSubjectLocation = resolveEarthSubjectLocation(subjectLocation);
                 if (earthSubjectLocation) {
                     storeSubjectLocation(earthSubjectLocation);
                     persistCurrentPropertyDetail();
@@ -25267,7 +25325,7 @@ function initNavbarDateTime() {
 
                         const subjectLocation = await ensureSubjectCoordinates().catch(() => getSubjectLocation());
                         await ensureMapReady().catch(() => null);
-                        const earthSubjectLocation = getRenderedSubjectLocation() || subjectLocation || getSubjectLocation();
+                        const earthSubjectLocation = resolveEarthSubjectLocation(subjectLocation);
                         if (earthSubjectLocation) {
                             storeSubjectLocation(earthSubjectLocation);
                             persistCurrentPropertyDetail();
