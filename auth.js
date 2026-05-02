@@ -1068,6 +1068,23 @@
     return normalizedPath === '/mls-imports-spreadsheet.html' || normalizedPath.endsWith('/mls-imports-spreadsheet.html');
   }
 
+  function isGmailPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/gmail.html' || normalizedPath.endsWith('/gmail.html');
+  }
+
+  function createGmailNavItem(isActive) {
+    const listItem = document.createElement('li');
+    listItem.className = 'nav-item';
+
+    const link = document.createElement('a');
+    link.href = 'gmail.html';
+    link.className = isActive ? 'nav-link active' : 'nav-link';
+    link.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path><path d="m22 8-10 7L2 8"></path></svg>Gmail';
+    listItem.appendChild(link);
+    return listItem;
+  }
+
   function createMlsSpreadsheetNavItem(isActive) {
     const listItem = document.createElement('li');
     listItem.className = 'nav-item';
@@ -1144,6 +1161,57 @@
       backLink.href = 'dashboard.html';
       backLink.textContent = 'Back To Dashboard';
     }
+
+    return true;
+  }
+
+  function applyGmailInboxAccess() {
+    const isGmailPage = isGmailPath(window.location.pathname);
+    const existingLinks = document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]');
+
+    existingLinks.forEach((link) => {
+      link.classList.toggle('active', isGmailPage);
+    });
+
+    const navMenus = document.querySelectorAll('.nav-section > ul');
+    navMenus.forEach((menu) => {
+      if (!menu) {
+        return;
+      }
+
+      const navSection = menu.closest('.nav-section');
+      const sectionTitle = navSection ? String(navSection.querySelector('.nav-section-title')?.textContent || '').trim().toLowerCase() : '';
+      if (sectionTitle !== 'main menu') {
+        return;
+      }
+
+      const settingsItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="settings.html"], .nav-link[href="/settings.html"]');
+        return Boolean(link);
+      });
+
+      let gmailItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]');
+        return Boolean(link);
+      });
+
+      if (!gmailItem) {
+        gmailItem = createGmailNavItem(isGmailPage);
+      }
+
+      if (settingsItem && gmailItem !== settingsItem) {
+        menu.insertBefore(gmailItem, settingsItem);
+        return;
+      }
+
+      if (!menu.contains(gmailItem)) {
+        menu.appendChild(gmailItem);
+      }
+    });
+
+    document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]').forEach((link) => {
+      link.classList.toggle('active', isGmailPage);
+    });
 
     return true;
   }
@@ -2006,6 +2074,9 @@
         return;
       }
       if (applyMlsSpreadsheetAccess(activeUser) === false) {
+        return;
+      }
+      if (applyGmailInboxAccess(activeUser) === false) {
         return;
       }
 
