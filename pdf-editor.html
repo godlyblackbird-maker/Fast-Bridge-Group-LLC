@@ -619,9 +619,9 @@
             top: 28px;
             left: 28px;
             min-width: 180px;
-            max-width: min(360px, calc(100% - 32px));
+            max-width: min(720px, calc(100% - 32px));
             display: grid;
-            grid-template-columns: auto auto auto 1fr auto;
+            grid-template-columns: auto auto auto 1fr auto auto;
             align-items: start;
             gap: 8px;
             padding: 10px 12px;
@@ -672,8 +672,14 @@
             box-shadow: none;
         }
 
+        .pdf-editor-text-item.is-editing {
+            outline: 2px dashed rgba(var(--accent-rgb), 0.9);
+            outline-offset: 4px;
+        }
+
         .pdf-editor-text-item .pdf-editor-overlay-handle,
         .pdf-editor-text-item .pdf-editor-overlay-size,
+        .pdf-editor-text-item .pdf-editor-text-resize,
         .pdf-editor-signature-item .pdf-editor-overlay-handle,
         .pdf-editor-signature-item .pdf-editor-overlay-size,
         .pdf-editor-initials-item .pdf-editor-overlay-handle,
@@ -761,6 +767,7 @@
 
         .pdf-editor-overlay-handle,
         .pdf-editor-overlay-size,
+        .pdf-editor-text-resize,
         .pdf-editor-overlay-remove,
         .pdf-editor-image-rotate,
         .pdf-editor-image-resize {
@@ -786,6 +793,7 @@
 
         .pdf-editor-text-item.is-active .pdf-editor-overlay-handle,
         .pdf-editor-text-item.is-active .pdf-editor-overlay-size,
+        .pdf-editor-text-item.is-active .pdf-editor-text-resize,
         .pdf-editor-text-item.is-active .pdf-editor-overlay-remove,
         .pdf-editor-signature-item.is-active .pdf-editor-overlay-handle,
         .pdf-editor-signature-item.is-active .pdf-editor-overlay-size,
@@ -821,6 +829,12 @@
             line-height: 1;
         }
 
+        .pdf-editor-text-resize {
+            cursor: ew-resize;
+            font-size: 14px;
+            line-height: 1;
+        }
+
         .pdf-editor-text-item.is-dragging .pdf-editor-overlay-handle,
         .pdf-editor-signature-item.is-dragging .pdf-editor-overlay-handle,
         .pdf-editor-initials-item.is-dragging .pdf-editor-overlay-handle,
@@ -833,6 +847,8 @@
         .pdf-editor-overlay-handle:focus-visible,
         .pdf-editor-overlay-size:hover,
         .pdf-editor-overlay-size:focus-visible,
+        .pdf-editor-text-resize:hover,
+        .pdf-editor-text-resize:focus-visible,
         .pdf-editor-overlay-remove:hover,
         .pdf-editor-overlay-remove:focus-visible,
         .pdf-editor-image-rotate:hover,
@@ -1084,9 +1100,6 @@
                     <div>
                         <h2 class="pdf-editor-title">PDF Editor</h2>
                         <p class="pdf-editor-copy">Upload a PDF, preview it in place, and layer text, signatures, and images directly on top of the page.</p>
-                    </div>
-                    <div class="pdf-editor-actions">
-                        <a class="pdf-editor-link is-secondary" href="admin-controls.html">Go back to admin page</a>
                     </div>
                 </section>
 
@@ -2061,6 +2074,55 @@
                 return { dragHandle, decreaseButton, increaseButton, removeButton };
             }
 
+            function createTextResizeControl(label) {
+                const resizeButton = document.createElement('button');
+                resizeButton.type = 'button';
+                resizeButton.className = 'pdf-editor-text-resize';
+                resizeButton.setAttribute('aria-label', label);
+                resizeButton.textContent = '<>';
+                return resizeButton;
+            }
+
+            function startTextWidthResize(item, event) {
+                if (!(item instanceof HTMLElement) || !event) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                setActiveOverlayItem(item);
+                item.classList.add('is-transforming');
+                setActivePage(Number(item.dataset.pageIndex || '0'));
+
+                const overlayLayer = getOverlayLayerForItem(item);
+                if (!overlayLayer) {
+                    item.classList.remove('is-transforming');
+                    return;
+                }
+
+                const computedStyle = window.getComputedStyle(item);
+                const minWidth = Math.max(Number.parseFloat(computedStyle.minWidth) || 180, 120);
+                const startWidth = item.offsetWidth;
+                const startLeft = Number.parseFloat(item.style.left) || item.offsetLeft || 0;
+                const startX = event.clientX;
+
+                const handleMove = (moveEvent) => {
+                    const deltaX = moveEvent.clientX - startX;
+                    const maxWidth = Math.max(minWidth, overlayLayer.clientWidth - startLeft - 8);
+                    const nextWidth = clampValue(startWidth + deltaX, minWidth, maxWidth);
+                    item.style.width = `${nextWidth}px`;
+                };
+
+                const stop = () => {
+                    item.classList.remove('is-transforming');
+                    window.removeEventListener('pointermove', handleMove);
+                    window.removeEventListener('pointerup', stop);
+                };
+
+                window.addEventListener('pointermove', handleMove);
+                window.addEventListener('pointerup', stop);
+            }
+
             function appendItemToActivePage(item) {
                 const pageRecord = getActivePageRecord();
                 if (!pageRecord) {
@@ -2096,6 +2158,7 @@
                     increaseLabel: 'Increase text size',
                     removeLabel: 'Remove text box'
                 });
+                const resizeButton = createTextResizeControl('Resize text box width');
 
                 const content = document.createElement('div');
                 content.className = 'pdf-editor-text-content';
@@ -2111,6 +2174,7 @@
                 applyContentStroke(content, textStrokeColorInput.value || '#000000', textStrokeWidthInput.value || '0');
 
                 item.appendChild(content);
+                item.appendChild(resizeButton);
                 item.appendChild(controls.removeButton);
                 if (!appendItemToActivePage(item)) {
                     return;
@@ -2125,7 +2189,7 @@
                         if (!target) {
                             return false;
                         }
-                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size')) {
+                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size, .pdf-editor-text-resize')) {
                             return false;
                         }
                         if (target.closest('.pdf-editor-text-content')) {
@@ -2142,13 +2206,21 @@
                 });
 
                 item.addEventListener('pointerdown', () => setActiveOverlayItem(item));
-                content.addEventListener('focus', () => setActiveOverlayItem(item));
+                content.addEventListener('focus', () => {
+                    item.classList.add('is-editing');
+                    setActiveOverlayItem(item);
+                });
+                content.addEventListener('blur', () => {
+                    item.classList.remove('is-editing');
+                });
                 controls.removeButton.addEventListener('click', () => {
                     if (activeOverlayItem === item) {
                         setActiveOverlayItem(null);
                     }
+                    item.classList.remove('is-editing');
                     item.remove();
                 });
+                resizeButton.addEventListener('pointerdown', (event) => startTextWidthResize(item, event));
                 content.addEventListener('keydown', (event) => {
                     if (event.key !== 'Enter' || event.shiftKey) {
                         return;
@@ -2156,7 +2228,7 @@
                     event.preventDefault();
                     content.blur();
                     setActiveOverlayItem(null);
-                    status.textContent = 'Text added. Click it again if you want to move or edit it.';
+                    status.textContent = 'Text added. Click it again if you want to move, resize, or edit it.';
                 });
 
                 window.requestAnimationFrame(() => {
@@ -2195,6 +2267,7 @@
                     increaseLabel: 'Increase date size',
                     removeLabel: 'Remove date box'
                 });
+                const resizeButton = createTextResizeControl('Resize date box width');
 
                 const content = document.createElement('div');
                 content.className = 'pdf-editor-text-content';
@@ -2210,6 +2283,7 @@
                 applyContentStroke(content, textStrokeColorInput.value || '#000000', textStrokeWidthInput.value || '0');
 
                 item.appendChild(content);
+                item.appendChild(resizeButton);
                 item.appendChild(controls.removeButton);
                 if (!appendItemToActivePage(item)) {
                     return;
@@ -2224,7 +2298,7 @@
                         if (!target) {
                             return false;
                         }
-                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size')) {
+                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size, .pdf-editor-text-resize')) {
                             return false;
                         }
                         if (target.closest('.pdf-editor-text-content')) {
@@ -2241,13 +2315,21 @@
                 });
 
                 item.addEventListener('pointerdown', () => setActiveOverlayItem(item));
-                content.addEventListener('focus', () => setActiveOverlayItem(item));
+                content.addEventListener('focus', () => {
+                    item.classList.add('is-editing');
+                    setActiveOverlayItem(item);
+                });
+                content.addEventListener('blur', () => {
+                    item.classList.remove('is-editing');
+                });
                 controls.removeButton.addEventListener('click', () => {
                     if (activeOverlayItem === item) {
                         setActiveOverlayItem(null);
                     }
+                    item.classList.remove('is-editing');
                     item.remove();
                 });
+                resizeButton.addEventListener('pointerdown', (event) => startTextWidthResize(item, event));
                 content.addEventListener('keydown', (event) => {
                     if (event.key !== 'Enter' || event.shiftKey) {
                         return;
@@ -2255,7 +2337,7 @@
                     event.preventDefault();
                     content.blur();
                     setActiveOverlayItem(null);
-                    status.textContent = 'Date added. Click it again if you want to move or edit it.';
+                    status.textContent = 'Date added. Click it again if you want to move, resize, or edit it.';
                 });
 
                 window.requestAnimationFrame(() => {

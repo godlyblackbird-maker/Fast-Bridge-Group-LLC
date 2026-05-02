@@ -1060,27 +1060,6 @@
   }
 
   function applyAdminControlsAccess(userLike) {
-    const hasKnownRole = !!String(userLike && userLike.role || '').trim();
-    const isAdmin = isAdminUser(userLike);
-    const adminLinks = document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]');
-
-    if (hasKnownRole && !isAdmin) {
-      adminLinks.forEach((link) => {
-        const listItem = link.closest('.nav-item');
-        if (listItem) {
-          listItem.remove();
-        } else {
-          link.remove();
-        }
-      });
-    }
-
-    const normalizedPath = String(window.location.pathname || '').trim().toLowerCase();
-    if (hasKnownRole && !isAdmin && (normalizedPath.endsWith('/admin-controls.html') || normalizedPath === '/admin-controls.html')) {
-      window.location.href = '/dashboard.html';
-      return false;
-    }
-
     return true;
   }
 
@@ -1528,11 +1507,6 @@
       }
     }
 
-    if (normalizedPath.endsWith('/admin-controls.html') || normalizedPath === '/admin-controls.html') {
-      if (!isAdminUser(activeUser)) {
-        window.location.href = '/dashboard.html';
-      }
-    }
   }
 
   function loadTwilioVoiceSdk() {
