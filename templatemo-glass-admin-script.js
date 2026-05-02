@@ -22600,6 +22600,8 @@ function initNavbarDateTime() {
             const compsMapStatusBadge = document.getElementById('comps-map-status-badge');
             const compsMapStatusBadgeTitle = document.getElementById('comps-map-status-badge-title');
             const compsMapStatusBadgeText = document.getElementById('comps-map-status-badge-text');
+            const compsMapDiagnosticsToggle = document.getElementById('comps-map-diagnostics-toggle');
+            const compsMapDiagnosticsBar = document.getElementById('comps-map-diagnostics-bar');
             const compsMapDiagnosticsSummary = document.getElementById('comps-map-diagnostics-summary');
             const compsMapDiagnosticsSummaryTitle = document.getElementById('comps-map-diagnostics-summary-title');
             const compsMapDiagnosticsSummaryText = document.getElementById('comps-map-diagnostics-summary-text');
@@ -22723,6 +22725,19 @@ function initNavbarDateTime() {
             let measurementPolygon = null;
             let measurementPathListeners = [];
             let earthPanelVisible = false;
+            let diagnosticsExpanded = false;
+
+            function setDiagnosticsExpanded(isExpanded) {
+                diagnosticsExpanded = Boolean(isExpanded);
+                if (compsMapDiagnosticsBar) {
+                    compsMapDiagnosticsBar.hidden = !diagnosticsExpanded;
+                }
+                if (compsMapDiagnosticsToggle) {
+                    compsMapDiagnosticsToggle.textContent = diagnosticsExpanded ? '-' : '+';
+                    compsMapDiagnosticsToggle.setAttribute('aria-expanded', diagnosticsExpanded ? 'true' : 'false');
+                    compsMapDiagnosticsToggle.setAttribute('aria-label', diagnosticsExpanded ? 'Collapse diagnostics' : 'Expand diagnostics');
+                }
+            }
 
             function syncLayerButtonState() {
                 layerButtons.forEach((button) => {
@@ -22823,6 +22838,13 @@ function initNavbarDateTime() {
                     return 'Latest Search + View result used the OpenStreetMap fallback because Google did not return a match.';
                 }
                 return '';
+            }
+
+            if (compsMapDiagnosticsToggle) {
+                setDiagnosticsExpanded(false);
+                compsMapDiagnosticsToggle.addEventListener('click', () => {
+                    setDiagnosticsExpanded(!diagnosticsExpanded);
+                });
             }
 
             function syncEarthLayerAvailability(config) {
@@ -23210,7 +23232,7 @@ function initNavbarDateTime() {
                 });
             }
 
-            async function ensureEarthReady() {
+            async function ensureEarthReady(focusLocation = null) {
                 if (!compsMapEarthCanvas) {
                     return null;
                 }
@@ -23222,6 +23244,15 @@ function initNavbarDateTime() {
                 }
 
                 earthReadyPromise = (async () => {
+                    const resolvedFocusLocation = focusLocation
+                        && Number.isFinite(Number(focusLocation.lat))
+                        && Number.isFinite(Number(focusLocation.lng))
+                        ? {
+                            lat: Number(focusLocation.lat),
+                            lng: Number(focusLocation.lng)
+                        }
+                        : getEarthFocusLocation();
+
                     const config = await resolveGoogleMapsBrowserConfig();
                     syncEarthLayerAvailability(config);
                     const configuredEarthMapId = String(config && (config.earthMapId || config.mapId) || '').trim();
@@ -23264,7 +23295,7 @@ function initNavbarDateTime() {
                         tilt: 58,
                         heading: 0,
                         center: {
-                            ...getEarthFocusLocation(),
+                            ...resolvedFocusLocation,
                             altitude: 70
                         }
                     });
@@ -23287,8 +23318,8 @@ function initNavbarDateTime() {
 
                     compsMapEarthCanvas.innerHTML = '';
                     compsMapEarthCanvas.appendChild(earthMapElement);
-                    updateEarthCamera(getEarthFocusLocation());
-                    syncEarthSubjectMarker(getEarthFocusLocation());
+                    updateEarthCamera(resolvedFocusLocation);
+                    syncEarthSubjectMarker(resolvedFocusLocation);
                     syncEarthCompMarkers(lastTopResults);
 
                     if (earthMapBuildError) {
@@ -24795,18 +24826,6 @@ function initNavbarDateTime() {
                 }
                 bounds.extend(subjectLocation);
 
-                const radiusMiles = inputNumber('comps-radius') || defaults.radius;
-                radiusCircle = new window.google.maps.Circle({
-                    strokeColor: '#3b82f6',
-                    strokeOpacity: 0.7,
-                    strokeWeight: 2,
-                    fillColor: '#3b82f6',
-                    fillOpacity: 0.08,
-                    map: mapInstance,
-                    center: subjectLocation,
-                    radius: radiusMiles * 1609.34
-                });
-
                 filtered.forEach((comp, index) => {
                     const compKey = getCompKey(comp);
                     const marker = createMapMarker({
@@ -24925,7 +24944,7 @@ function initNavbarDateTime() {
             async function refreshMap(filtered) {
                 updateCompsMapOpenLink();
 
-                await ensureSubjectCoordinates();
+                const subjectLocation = await ensureSubjectCoordinates();
                 const map = await ensureMapReady();
                 if (!map) {
                     return;
@@ -24933,8 +24952,8 @@ function initNavbarDateTime() {
                 setMapLayerMode(currentMapLayer);
                 renderMapMarkers(filtered);
                 if (earthMapElement) {
-                    updateEarthCamera(getEarthFocusLocation());
-                    syncEarthSubjectMarker(getEarthFocusLocation());
+                    updateEarthCamera(subjectLocation || getEarthFocusLocation());
+                    syncEarthSubjectMarker(subjectLocation || getEarthFocusLocation());
                     syncEarthCompMarkers(filtered);
                 }
                 if (streetViewEnabled) {
@@ -25208,17 +25227,17 @@ function initNavbarDateTime() {
                             return;
                         }
 
-                        await ensureSubjectCoordinates().catch(() => getSubjectLocation());
+                        const subjectLocation = await ensureSubjectCoordinates().catch(() => getSubjectLocation());
                         await ensureMapReady().catch(() => null);
 
-                        await ensureEarthReady()
+                        await ensureEarthReady(subjectLocation)
                             .then((earthMap) => {
                                 if (!earthMap) {
                                     return;
                                 }
                                 setEarthPanelState(true);
-                                updateEarthCamera(getEarthFocusLocation());
-                                syncEarthSubjectMarker(getEarthFocusLocation());
+                                updateEarthCamera(subjectLocation || getEarthFocusLocation());
+                                syncEarthSubjectMarker(subjectLocation || getEarthFocusLocation());
                             })
                             .catch((error) => {
                                 setEarthPanelState(false);

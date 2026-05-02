@@ -733,12 +733,14 @@
                                                 <input id="comps-map-address-search" class="comps-map-search-input" type="text" placeholder="Search address or pocket on map" aria-label="Search address or pocket on map">
                                                 <button id="comps-map-address-search-btn" class="card-btn active" type="button">Search</button>
                                             </div>
-                                            <button id="comps-map-street-view-btn" class="card-btn" type="button">Street View</button>
                                         </div>
                                     </div>
                                     <div class="comps-map-control-cluster comps-map-control-cluster-search comps-map-control-cluster-diagnostics">
-                                        <span class="comps-map-control-label">Diagnostics</span>
-                                        <div class="comps-map-diagnostics-bar">
+                                        <div class="comps-map-control-cluster-head">
+                                            <span class="comps-map-control-label">Diagnostics</span>
+                                            <button id="comps-map-diagnostics-toggle" class="comps-map-diagnostics-toggle" type="button" aria-expanded="false" aria-controls="comps-map-diagnostics-bar">+</button>
+                                        </div>
+                                        <div id="comps-map-diagnostics-bar" class="comps-map-diagnostics-bar" hidden>
                                             <div class="comps-map-toolbar">
                                                 <span id="comps-map-style-source" class="comps-map-style-source" title="Map styling source">JSON Style</span>
                                             </div>
@@ -796,6 +798,7 @@
                                                 <button type="button" class="card-btn active" data-comps-view="split">Split</button>
                                                 <button type="button" class="card-btn" data-comps-view="map">Map</button>
                                                 <button type="button" class="card-btn" data-comps-view="matrix">Matrix</button>
+                                                <button id="comps-map-street-view-btn" type="button" class="card-btn">Street View</button>
                                             </div>
                                         </div>
                                         <div class="comps-map-control-cluster">
@@ -841,19 +844,6 @@
                                         </div>
                                     </div>
                                     <div id="comps-map-earth-shell" class="comps-map-earth-shell" hidden>
-                                        <div class="comps-map-earth-indicator" id="comps-map-earth-indicator">
-                                            <span class="comps-map-earth-indicator-label">Earth Property</span>
-                                            <strong id="comps-map-earth-indicator-address">Property Address</strong>
-                                        </div>
-                                        <div class="comps-map-earth-target" aria-hidden="true">
-                                            <div class="comps-map-earth-target-label">
-                                                <span class="comps-map-earth-target-kicker">Subject Property</span>
-                                                <strong id="comps-map-earth-target-address">Property Address</strong>
-                                            </div>
-                                            <div class="comps-map-earth-target-pin">
-                                                <span class="comps-map-earth-target-dot"></span>
-                                            </div>
-                                        </div>
                                         <div id="comps-map-earth-canvas" class="comps-map-earth-canvas" aria-label="Google Earth 3D map"></div>
                                     </div>
                                 </section>

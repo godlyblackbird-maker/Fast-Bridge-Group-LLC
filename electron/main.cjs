@@ -33,16 +33,11 @@ ipcMain.handle('fast-desktop:save-file', async (_event, options = {}) => {
     return { canceled: true };
   }
 
-  const bytes = options && options.bytes;
-  if (!bytes) {
+  const base64 = options && options.base64;
+  if (!base64 || typeof base64 !== 'string') {
     throw new Error('No file data was provided to save.');
   }
-
-  const buffer = Buffer.isBuffer(bytes)
-    ? bytes
-    : ArrayBuffer.isView(bytes)
-      ? Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-      : Buffer.from(bytes);
+  const buffer = Buffer.from(base64, 'base64');
   await fs.writeFile(saveResult.filePath, buffer);
   return { canceled: false, filePath: saveResult.filePath };
 });
