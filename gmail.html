@@ -327,6 +327,14 @@
             display: none;
         }
 
+        .gmail-shell.is-thread-open {
+            grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
+        }
+
+        .gmail-shell.is-thread-open .gmail-list-panel {
+            display: none;
+        }
+
         .gmail-panel {
             min-width: 0;
             background: var(--gmail-card);
@@ -656,6 +664,34 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
+        }
+
+        .gmail-reader-toolbar-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .gmail-back-btn {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--gmail-border);
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--glass-bg) 80%, rgba(255, 255, 255, 0.18) 20%);
+            color: var(--gmail-text);
+            cursor: pointer;
+            transition: background-color 0.16s ease, transform 0.16s ease;
+        }
+
+        .gmail-back-btn:hover,
+        .gmail-back-btn:focus-visible {
+            background: var(--gmail-hover);
+            transform: translateX(-1px);
+            outline: none;
         }
 
         .gmail-reader-chip {
@@ -1314,7 +1350,12 @@
 
                 <section class="gmail-panel gmail-reader-panel is-idle">
                     <div class="gmail-reader-toolbar">
-                        <div class="gmail-reader-chip" id="gmail-reader-chip">Message preview</div>
+                        <div class="gmail-reader-toolbar-main">
+                            <button class="gmail-back-btn" id="gmail-reader-back" type="button" aria-label="Back to inbox">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                            </button>
+                            <div class="gmail-reader-chip" id="gmail-reader-chip">Message preview</div>
+                        </div>
                         <div class="gmail-loader" id="gmail-reader-loader" hidden>Loading message</div>
                     </div>
                     <div class="gmail-reader-header">
@@ -1405,6 +1446,7 @@
             const categoriesMenu = document.getElementById('gmail-categories-menu');
             const gmailShell = document.querySelector('.gmail-shell');
             const readerPanel = document.querySelector('.gmail-reader-panel');
+            const readerBackButton = document.getElementById('gmail-reader-back');
             const readerChip = document.getElementById('gmail-reader-chip');
             const readerSubject = document.getElementById('gmail-reader-subject');
             const readerFrom = document.getElementById('gmail-reader-from');
@@ -1609,13 +1651,22 @@
             function setReaderIdleState(isIdle) {
                 if (gmailShell) {
                     gmailShell.classList.toggle('is-reader-hidden', Boolean(isIdle));
+                    gmailShell.classList.toggle('is-thread-open', !isIdle);
                 }
                 readerPanel.classList.toggle('is-idle', Boolean(isIdle));
                 readerPanel.hidden = Boolean(isIdle);
                 readerPanel.setAttribute('aria-hidden', String(Boolean(isIdle)));
+                readerBackButton.hidden = Boolean(isIdle);
                 if (isIdle) {
                     readerBody.innerHTML = '';
                 }
+            }
+
+            function returnToInboxList() {
+                state.selectedMessageId = '';
+                renderMessageList();
+                setReaderIdleState(true);
+                selectionLabel.textContent = 'None';
             }
 
             function updateConnectionUi() {
@@ -2028,6 +2079,7 @@
             disconnectButton.addEventListener('click', disconnectGmail);
             refreshButton.addEventListener('click', () => loadMessages({ reset: true }));
             bannerDismiss.addEventListener('click', () => setBanner(''));
+            readerBackButton.addEventListener('click', returnToInboxList);
 
             searchForm.addEventListener('submit', (event) => {
                 event.preventDefault();
