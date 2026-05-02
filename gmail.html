@@ -43,8 +43,6 @@
         }
 
         .gmail-page {
-            display: grid;
-            grid-template-columns: 280px minmax(0, 1fr);
             min-height: 100vh;
             position: relative;
             z-index: 1;
@@ -62,6 +60,7 @@
             grid-template-rows: auto auto 1fr;
             gap: 18px;
             min-width: 0;
+            width: auto;
         }
 
         .gmail-topbar {
@@ -171,9 +170,10 @@
 
         .gmail-shell {
             display: grid;
-            grid-template-columns: 240px minmax(320px, 460px) minmax(0, 1fr);
+            grid-template-columns: minmax(220px, 240px) minmax(320px, 1.05fr) minmax(0, 1.35fr);
             gap: 18px;
             min-height: 0;
+            align-items: stretch;
         }
 
         .gmail-panel {
@@ -521,17 +521,18 @@
             }
         }
 
-        @media (max-width: 1320px) {
+        @media (max-width: 1480px) {
             .gmail-shell {
-                grid-template-columns: 220px minmax(300px, 420px) minmax(0, 1fr);
+                grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
+            }
+
+            .gmail-reader-panel {
+                grid-column: 1 / -1;
+                min-height: 520px;
             }
         }
 
         @media (max-width: 1100px) {
-            .gmail-page {
-                grid-template-columns: 1fr;
-            }
-
             .gmail-sidebar {
                 display: none;
             }
@@ -630,7 +631,7 @@
             </div>
         </aside>
 
-        <main class="gmail-main">
+        <main class="main-content gmail-main">
             <section class="gmail-topbar">
                 <div class="gmail-title-group">
                     <h1>Gmail Inbox</h1>
