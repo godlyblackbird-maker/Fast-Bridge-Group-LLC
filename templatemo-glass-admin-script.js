@@ -22864,8 +22864,41 @@ function initNavbarDateTime() {
                     : getEarthUnavailableMessage(lastGoogleMapsConfig);
             }
 
+            function getRenderedSubjectLocation() {
+                const markerPosition = getMarkerPosition(subjectMarker);
+                const lat = Number(markerPosition && markerPosition.lat);
+                const lng = Number(markerPosition && markerPosition.lng);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    return { lat, lng };
+                }
+
+                if (subjectMarkerHalo && typeof subjectMarkerHalo.getCenter === 'function') {
+                    const haloCenter = subjectMarkerHalo.getCenter();
+                    if (haloCenter) {
+                        if (typeof haloCenter.toJSON === 'function') {
+                            const haloJson = haloCenter.toJSON();
+                            if (Number.isFinite(Number(haloJson && haloJson.lat)) && Number.isFinite(Number(haloJson && haloJson.lng))) {
+                                return {
+                                    lat: Number(haloJson.lat),
+                                    lng: Number(haloJson.lng)
+                                };
+                            }
+                        }
+                        if (typeof haloCenter.lat === 'function' && typeof haloCenter.lng === 'function') {
+                            const haloLat = Number(haloCenter.lat());
+                            const haloLng = Number(haloCenter.lng());
+                            if (Number.isFinite(haloLat) && Number.isFinite(haloLng)) {
+                                return { lat: haloLat, lng: haloLng };
+                            }
+                        }
+                    }
+                }
+
+                return null;
+            }
+
             function getEarthFocusLocation() {
-                return getSubjectLocation();
+                return getRenderedSubjectLocation() || getSubjectLocation();
             }
 
             function getEarthFocusMarkerMeta() {
@@ -24951,13 +24984,18 @@ function initNavbarDateTime() {
                 }
                 setMapLayerMode(currentMapLayer);
                 renderMapMarkers(filtered);
+                const earthSubjectLocation = getRenderedSubjectLocation() || subjectLocation || getSubjectLocation();
+                if (earthSubjectLocation) {
+                    storeSubjectLocation(earthSubjectLocation);
+                    persistCurrentPropertyDetail();
+                }
                 if (earthMapElement) {
-                    updateEarthCamera(subjectLocation || getEarthFocusLocation());
-                    syncEarthSubjectMarker(subjectLocation || getEarthFocusLocation());
+                    updateEarthCamera(earthSubjectLocation || getEarthFocusLocation());
+                    syncEarthSubjectMarker(earthSubjectLocation || getEarthFocusLocation());
                     syncEarthCompMarkers(filtered);
                 }
                 if (streetViewEnabled) {
-                    panoramaInstance && panoramaInstance.setPosition(getSubjectLocation());
+                    panoramaInstance && panoramaInstance.setPosition(earthSubjectLocation || getSubjectLocation());
                     setStreetViewMode(true);
                 }
             }
@@ -25229,15 +25267,20 @@ function initNavbarDateTime() {
 
                         const subjectLocation = await ensureSubjectCoordinates().catch(() => getSubjectLocation());
                         await ensureMapReady().catch(() => null);
+                        const earthSubjectLocation = getRenderedSubjectLocation() || subjectLocation || getSubjectLocation();
+                        if (earthSubjectLocation) {
+                            storeSubjectLocation(earthSubjectLocation);
+                            persistCurrentPropertyDetail();
+                        }
 
-                        await ensureEarthReady(subjectLocation)
+                        await ensureEarthReady(earthSubjectLocation)
                             .then((earthMap) => {
                                 if (!earthMap) {
                                     return;
                                 }
                                 setEarthPanelState(true);
-                                updateEarthCamera(subjectLocation || getEarthFocusLocation());
-                                syncEarthSubjectMarker(subjectLocation || getEarthFocusLocation());
+                                updateEarthCamera(earthSubjectLocation || getEarthFocusLocation());
+                                syncEarthSubjectMarker(earthSubjectLocation || getEarthFocusLocation());
                             })
                             .catch((error) => {
                                 setEarthPanelState(false);
