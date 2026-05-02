@@ -21849,10 +21849,20 @@ function initNavbarDateTime() {
                 requestCandidates.push(`${locationOrigin}${requestUrl}`);
             }
 
+            const locationHost = String(window.location && window.location.hostname || '').trim().toLowerCase();
+            const locationPort = String(window.location && window.location.port || '').trim();
+            const isLocalPreviewHost = locationHost === '127.0.0.1' || locationHost === 'localhost';
+            if (isLocalPreviewHost && locationPort && locationPort !== '3000') {
+                requestCandidates.push(`http://localhost:3000${requestUrl}`);
+                requestCandidates.push(`http://127.0.0.1:3000${requestUrl}`);
+            }
+
+            const uniqueRequestCandidates = requestCandidates.filter((candidateUrl, index, list) => list.indexOf(candidateUrl) === index);
+
             googleMapsBrowserConfigPromise = (async () => {
                 let lastError = null;
 
-                for (const candidateUrl of requestCandidates) {
+                for (const candidateUrl of uniqueRequestCandidates) {
                     try {
                         const response = await fetch(candidateUrl, {
                             cache: 'no-store',
