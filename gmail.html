@@ -319,6 +319,14 @@
             align-items: stretch;
         }
 
+        .gmail-shell.is-reader-hidden {
+            grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
+        }
+
+        .gmail-shell.is-reader-hidden .gmail-reader-panel {
+            display: none;
+        }
+
         .gmail-panel {
             min-width: 0;
             background: var(--gmail-card);
@@ -486,7 +494,6 @@
 
         .gmail-panel-toolbar {
             padding: 16px 18px;
-            border-bottom: 1px solid var(--gmail-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -1176,21 +1183,21 @@
                     </div>
 
                     <div class="gmail-nav-group">
-                        <button class="gmail-nav-button is-toggle is-expanded" type="button" id="gmail-categories-toggle" aria-expanded="true">
+                        <button class="gmail-nav-button is-toggle" type="button" id="gmail-categories-toggle" aria-expanded="false">
                             <span class="gmail-nav-main">
                                 <svg class="gmail-nav-chevron" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
                                 <span class="gmail-nav-label">Categories</span>
                             </span>
                         </button>
-                        <button class="gmail-nav-button is-toggle is-expanded" type="button" id="gmail-more-toggle" aria-expanded="true">
+                        <button class="gmail-nav-button is-toggle" type="button" id="gmail-more-toggle" aria-expanded="false">
                             <span class="gmail-nav-main">
                                 <svg class="gmail-nav-chevron" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
-                                <span class="gmail-nav-label" id="gmail-more-toggle-label">Less</span>
+                                <span class="gmail-nav-label" id="gmail-more-toggle-label">More</span>
                             </span>
                         </button>
                     </div>
 
-                    <div class="gmail-nav-group gmail-nav-children" id="gmail-more-menu">
+                    <div class="gmail-nav-group gmail-nav-children" id="gmail-more-menu" hidden>
                         <button class="gmail-nav-button" type="button" data-gmail-view="important" data-gmail-label="Important" data-gmail-query="is:important">
                             <span class="gmail-nav-main">
                                 <svg class="gmail-nav-icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
@@ -1221,7 +1228,7 @@
                         </button>
                     </div>
 
-                    <div class="gmail-nav-group gmail-nav-children" id="gmail-categories-menu">
+                    <div class="gmail-nav-group gmail-nav-children" id="gmail-categories-menu" hidden>
                         <button class="gmail-nav-button" type="button" data-gmail-view="social" data-gmail-label="Social" data-gmail-query="category:social">
                             <span class="gmail-nav-main">
                                 <svg class="gmail-nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
@@ -1253,12 +1260,6 @@
                     </div>
 
                     <div class="gmail-nav-group">
-                        <button class="gmail-nav-button is-action" type="button" data-gmail-action="subscriptions">
-                            <span class="gmail-nav-main">
-                                <svg class="gmail-nav-icon" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h11"/><path d="M4 17h8"/><path d="M18 14v6"/><path d="M15 17h6"/></svg>
-                                <span class="gmail-nav-label">Manage subscriptions</span>
-                            </span>
-                        </button>
                         <button class="gmail-nav-button is-action" type="button" data-gmail-action="labels">
                             <span class="gmail-nav-main">
                                 <svg class="gmail-nav-icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -1402,6 +1403,7 @@
             const moreMenu = document.getElementById('gmail-more-menu');
             const categoriesToggle = document.getElementById('gmail-categories-toggle');
             const categoriesMenu = document.getElementById('gmail-categories-menu');
+            const gmailShell = document.querySelector('.gmail-shell');
             const readerPanel = document.querySelector('.gmail-reader-panel');
             const readerChip = document.getElementById('gmail-reader-chip');
             const readerSubject = document.getElementById('gmail-reader-subject');
@@ -1439,8 +1441,8 @@
                 activeViewKey: 'inbox',
                 activeViewLabel: 'Inbox',
                 activeViewQuery: 'in:inbox',
-                showMoreMenu: true,
-                showCategoriesMenu: true,
+                showMoreMenu: false,
+                showCategoriesMenu: false,
                 composeOpen: false,
                 composeMinimized: false
             };
@@ -1605,7 +1607,12 @@
             }
 
             function setReaderIdleState(isIdle) {
+                if (gmailShell) {
+                    gmailShell.classList.toggle('is-reader-hidden', Boolean(isIdle));
+                }
                 readerPanel.classList.toggle('is-idle', Boolean(isIdle));
+                readerPanel.hidden = Boolean(isIdle);
+                readerPanel.setAttribute('aria-hidden', String(Boolean(isIdle)));
                 if (isIdle) {
                     readerBody.innerHTML = '';
                 }
@@ -1806,10 +1813,15 @@
                     renderMessageList();
 
                     if (state.messages.length) {
-                        const preferredId = state.messages.some((message) => message.id === state.selectedMessageId)
-                            ? state.selectedMessageId
-                            : state.messages[0].id;
-                        await loadMessage(preferredId, { silentListRefresh: true });
+                            state.selectedMessageId = '';
+                            setReaderIdleState(true);
+                            readerChip.textContent = 'Message preview';
+                            selectionLabel.textContent = 'None';
+                            readerSubject.textContent = 'Select a message';
+                            readerFrom.textContent = 'No sender yet';
+                            readerTo.textContent = 'No recipient yet';
+                            readerDate.textContent = 'No date yet';
+                            readerFooter.textContent = 'Your selected email will render here with the sender, subject, and message body.';
                     } else {
                         state.selectedMessageId = '';
                         setReaderIdleState(true);
@@ -1997,10 +2009,6 @@
             actionButtons.forEach((button) => {
                 button.addEventListener('click', () => {
                     const action = String(button.dataset.gmailAction || '').trim();
-                    if (action === 'subscriptions') {
-                        setBanner('Manage subscriptions is not wired yet in this first Gmail release.', 'success');
-                        return;
-                    }
                     if (action === 'labels') {
                         setBanner('Manage labels is not wired yet in this first Gmail release.', 'success');
                         return;
