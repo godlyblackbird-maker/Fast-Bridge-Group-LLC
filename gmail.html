@@ -161,6 +161,8 @@
             --gmail-shell: color-mix(in srgb, var(--bg-gradient-3) 76%, rgba(255, 255, 255, 0.2) 24%);
             --gmail-card: color-mix(in srgb, var(--glass-bg) 82%, rgba(255, 255, 255, 0.16) 18%);
             --gmail-card-strong: color-mix(in srgb, var(--glass-bg) 68%, rgba(255, 255, 255, 0.3) 32%);
+            --gmail-compose-card: color-mix(in srgb, var(--glass-bg) 88%, #ffffff 12%);
+            --gmail-compose-card-strong: color-mix(in srgb, var(--glass-bg) 74%, #ffffff 26%);
             --gmail-border: color-mix(in srgb, var(--glass-border) 78%, rgba(15, 23, 42, 0.08) 22%);
             --gmail-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
             --gmail-accent: var(--emerald);
@@ -1086,7 +1088,7 @@
             height: min(640px, calc(100dvh - 48px));
             display: grid;
             grid-template-rows: auto 1fr;
-            background: var(--gmail-card);
+            background: var(--gmail-compose-card);
             border-radius: 18px 18px 0 0;
             box-shadow: 0 24px 80px rgba(60, 64, 67, 0.3), 0 8px 24px rgba(60, 64, 67, 0.2);
             overflow: hidden;
@@ -1108,7 +1110,7 @@
         .gmail-compose-header {
             min-height: 48px;
             padding: 0 8px 0 16px;
-            background: var(--gmail-card-strong);
+            background: var(--gmail-compose-card-strong);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -1147,7 +1149,7 @@
             min-height: 0;
             display: grid;
             grid-template-rows: auto auto auto auto minmax(180px, 1fr) auto;
-            background: var(--gmail-card);
+            background: var(--gmail-compose-card);
         }
 
         .gmail-compose-row {
@@ -1157,7 +1159,7 @@
             align-items: center;
             gap: 12px;
             padding: 0 16px;
-            background: var(--gmail-card);
+            background: var(--gmail-compose-card);
         }
 
         .gmail-compose-row label {
@@ -1171,7 +1173,7 @@
             width: 100%;
             border: none;
             outline: none;
-            background: var(--gmail-card);
+            background: var(--gmail-compose-card);
             color: var(--gmail-text);
             font: inherit;
         }
@@ -1182,7 +1184,7 @@
             padding: 16px;
             border: none;
             outline: none;
-            background: var(--gmail-card);
+            background: var(--gmail-compose-card);
             color: var(--gmail-text);
             font: 0.96rem/1.55 'Outfit', sans-serif;
             overflow: auto;
@@ -1224,7 +1226,7 @@
             display: grid;
             gap: 12px;
             border-top: 1px solid rgba(60, 64, 67, 0.12);
-            background: var(--gmail-card);
+            background: var(--gmail-compose-card);
             position: relative;
         }
 
@@ -1251,7 +1253,7 @@
             padding: 10px 12px;
             border-radius: 18px;
             border: 1px solid rgba(60, 64, 67, 0.12);
-            background: var(--gmail-card-strong);
+            background: var(--gmail-compose-card-strong);
         }
 
         .gmail-compose-formatbar[hidden] {
@@ -1273,7 +1275,7 @@
         .gmail-compose-select {
             padding: 0 10px;
             border: 1px solid rgba(60, 64, 67, 0.12);
-            background: var(--gmail-card-strong);
+            background: var(--gmail-compose-card-strong);
             cursor: pointer;
         }
 
@@ -1321,7 +1323,7 @@
             gap: 8px;
             padding: 8px 12px;
             border-radius: 999px;
-            background: var(--gmail-card-strong);
+            background: var(--gmail-compose-card-strong);
             border: 1px solid rgba(60, 64, 67, 0.12);
             color: var(--gmail-text);
             font-size: 0.88rem;
@@ -1347,7 +1349,7 @@
             padding: 10px;
             border-radius: 16px;
             border: 1px solid rgba(60, 64, 67, 0.12);
-            background: var(--gmail-card-strong);
+            background: var(--gmail-compose-card-strong);
             box-shadow: 0 16px 38px rgba(15, 23, 42, 0.14);
             z-index: 2;
         }
@@ -2623,7 +2625,6 @@
                             state.messages = state.messages.filter((entry) => String(entry && entry.id || '').trim() !== messageId);
                             publishGmailUnreadState(state.messages);
                             renderMessageList();
-                            setBanner('Gmail message archived.', 'success');
                         } catch (error) {
                             setBanner(error.message || 'Unable to archive the Gmail message.', 'error');
                             button.disabled = false;
@@ -2652,7 +2653,6 @@
                             state.messages = state.messages.filter((entry) => String(entry && entry.id || '').trim() !== messageId);
                             publishGmailUnreadState(state.messages);
                             renderMessageList();
-                            setBanner('Gmail message moved to trash.', 'success');
                         } catch (error) {
                             setBanner(error.message || 'Unable to move the Gmail message to trash.', 'error');
                             button.disabled = false;
