@@ -33,6 +33,7 @@
   const TEST_USER_ROLE = 'test user';
   const TWILIO_VOICE_SDK_URL = 'https://sdk.twilio.com/js/voice/releases/2.12.3/twilio.min.js';
   const TWILIO_VOICE_HEARTBEAT_MS = 30 * 1000;
+  const GMAIL_NAV_UNREAD_POLL_MS = 15 * 1000;
   const TWILIO_VOICE_SIGNAL_STORAGE_KEY = 'fastTwilioVoiceSignal';
   const TWILIO_VOICE_BROADCAST_CHANNEL_NAME = 'fastTwilioVoiceChannel';
   const TWILIO_VOICE_TAB_ID = `twilio-voice-${Math.random().toString(36).slice(2, 10)}`;
@@ -1216,6 +1217,123 @@
     return true;
   }
 
+  function initGmailNavUnreadIndicator() {
+    let pollTimer = 0;
+    let isPolling = false;
+
+    function getLinks() {
+      return Array.from(document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]'));
+    }
+
+    function ensureDot(link) {
+      if (!(link instanceof HTMLElement)) {
+        return null;
+      }
+
+      let dot = link.querySelector('[data-gmail-unread-dot="true"]');
+      if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'nav-unread-dot';
+        dot.dataset.gmailUnreadDot = 'true';
+        dot.setAttribute('aria-hidden', 'true');
+        link.appendChild(dot);
+      }
+
+      return dot;
+    }
+
+    function applyUnreadState(hasUnread) {
+      getLinks().forEach((link) => {
+        ensureDot(link);
+        link.dataset.hasUnreadMessages = hasUnread ? 'true' : 'false';
+      });
+    }
+
+    async function refreshUnreadState() {
+      if (isPolling) {
+        return;
+      }
+
+      const links = getLinks();
+      if (!links.length) {
+        return;
+      }
+
+      links.forEach(ensureDot);
+
+      const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+      if (!token) {
+        applyUnreadState(false);
+        return;
+      }
+
+      isPolling = true;
+      try {
+        const statusResponse = await fetch('/api/gmail/status', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json'
+          }
+        });
+        if (!statusResponse.ok) {
+          return;
+        }
+
+        const statusPayload = await statusResponse.json().catch(() => ({}));
+        if (!statusPayload || statusPayload.connected !== true) {
+          applyUnreadState(false);
+          return;
+        }
+
+        const unreadResponse = await fetch('/api/gmail/messages?maxResults=10&q=in:inbox%20is:unread', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json'
+          }
+        });
+        if (!unreadResponse.ok) {
+          return;
+        }
+
+        const unreadPayload = await unreadResponse.json().catch(() => ({}));
+        const messages = Array.isArray(unreadPayload && unreadPayload.messages) ? unreadPayload.messages : [];
+        const hasUnread = messages.some((message) => Boolean(message && message.isUnread));
+        applyUnreadState(hasUnread);
+      } catch (error) {
+        // Ignore temporary Gmail polling failures and keep the last known indicator state.
+      } finally {
+        isPolling = false;
+      }
+    }
+
+    if (!getLinks().length) {
+      return;
+    }
+
+    applyUnreadState(false);
+
+    window.addEventListener('gmail:unreadchange', (event) => {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+      applyUnreadState(Boolean(detail.hasUnread));
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        refreshUnreadState();
+      }
+    });
+    window.addEventListener('focus', refreshUnreadState);
+
+    refreshUnreadState();
+    pollTimer = window.setInterval(refreshUnreadState, GMAIL_NAV_UNREAD_POLL_MS);
+
+    window.addEventListener('beforeunload', () => {
+      if (pollTimer) {
+        window.clearInterval(pollTimer);
+      }
+    }, { once: true });
+  }
+
   function isActiveBuyersPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/active-buyers.html' || normalizedPath.endsWith('/active-buyers.html');
@@ -2079,6 +2197,7 @@
       if (applyGmailInboxAccess(activeUser) === false) {
         return;
       }
+      initGmailNavUnreadIndicator();
 
       applyTestUserBrowseOnlyMode(activeUser);
 

@@ -91,6 +91,7 @@ const GOOGLE_MAPS_API_KEY = getFirstConfiguredEnvValue('GOOGLE_MAPS_API_KEY', 'G
 const GOOGLE_MAPS_MAP_ID = getFirstConfiguredEnvValue('GOOGLE_MAPS_MAP_ID', 'GOOGLE_MAP_ID');
 const GOOGLE_EARTH_FALLBACK_MAP_ID = 'DEMO_MAP_ID';
 const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+const GMAIL_MODIFY_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
 const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 const GMAIL_APP_PATH = '/gmail.html';
 const PREMIUM_USER_ROLE = 'premium user';
@@ -11191,11 +11192,61 @@ async function postGmailApiJson(endpoint, accessToken, body = {}) {
   return response.json();
 }
 
+async function postGmailApiOptionalJson(endpoint, accessToken, body = {}) {
+  const response = await fetch(`https://gmail.googleapis.com${endpoint}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body || {})
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Gmail API request failed: ${detail.slice(0, 200)}`);
+  }
+
+  const responseText = await response.text();
+  if (!responseText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch (_error) {
+    return {};
+  }
+}
+
 function getGmailMessageHeader(message, headerName) {
   const normalizedHeaderName = String(headerName || '').trim().toLowerCase();
   const headers = Array.isArray(message && message.payload && message.payload.headers) ? message.payload.headers : [];
   const header = headers.find((entry) => String(entry && entry.name || '').trim().toLowerCase() === normalizedHeaderName);
   return String(header && header.value || '').trim();
+}
+
+function getGmailMailboxDisplayName(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) {
+    return '';
+  }
+
+  const withoutAngleAddress = rawValue.replace(/<[^>]*>/g, ' ').trim();
+  const withoutQuotes = withoutAngleAddress.replace(/^"|"$/g, '').trim();
+  if (withoutQuotes) {
+    return withoutQuotes;
+  }
+
+  const emailMatch = rawValue.match(/([A-Z0-9._%+-]+)@([A-Z0-9.-]+\.[A-Z]{2,})/i);
+  if (!emailMatch) {
+    return rawValue;
+  }
+
+  return String(emailMatch[1] || '')
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function decodeGmailBodyData(data) {
@@ -11279,11 +11330,13 @@ function extractGmailPayloadBodies(payload) {
 }
 
 function mapGmailMessageSummary(message) {
+  const fromHeader = getGmailMessageHeader(message, 'From');
   const labels = Array.isArray(message && message.labelIds) ? message.labelIds : [];
   return {
     id: String(message && message.id || '').trim(),
     threadId: String(message && message.threadId || '').trim(),
-    from: getGmailMessageHeader(message, 'From'),
+    from: fromHeader,
+    fromName: getGmailMailboxDisplayName(fromHeader),
     to: getGmailMessageHeader(message, 'To'),
     subject: getGmailMessageHeader(message, 'Subject') || '(no subject)',
     date: getGmailMessageHeader(message, 'Date'),
@@ -11328,7 +11381,49 @@ function escapeMimeHeader(value) {
   return String(value || '').replace(/[\r\n]+/g, ' ').trim();
 }
 
-function buildGmailRawMessage({ from, to, cc, bcc, subject, bodyText, bodyHtml }) {
+function escapeMimeFilename(value) {
+  return String(value || '').replace(/["\\\r\n]+/g, ' ').trim() || 'attachment';
+}
+
+function wrapBase64Mime(value) {
+  return String(value || '').replace(/\s+/g, '').match(/.{1,76}/g)?.join('\r\n') || '';
+}
+
+function normalizeGmailComposeAttachments(attachments) {
+  const items = Array.isArray(attachments) ? attachments : [];
+  const normalizedItems = [];
+
+  for (const item of items) {
+    if (!item || typeof item !== 'object') {
+      continue;
+    }
+
+    const filename = escapeMimeFilename(item.filename || item.name || 'attachment');
+    const mimeType = String(item.mimeType || item.type || 'application/octet-stream').trim() || 'application/octet-stream';
+    const base64 = String(item.base64 || item.contentBase64 || '').replace(/^data:[^,]+,/i, '').replace(/\s+/g, '');
+    if (!filename || !base64) {
+      continue;
+    }
+
+    let bytes = 0;
+    try {
+      bytes = Buffer.from(base64, 'base64').length;
+    } catch (_error) {
+      continue;
+    }
+
+    normalizedItems.push({
+      filename,
+      mimeType,
+      base64,
+      bytes
+    });
+  }
+
+  return normalizedItems;
+}
+
+function buildGmailRawMessage({ from, to, cc, bcc, subject, bodyText, bodyHtml, attachments }) {
   const normalizedFrom = escapeMimeHeader(from);
   const normalizedTo = normalizeEmailListInput(to);
   const normalizedCc = normalizeEmailListInput(cc);
@@ -11336,6 +11431,7 @@ function buildGmailRawMessage({ from, to, cc, bcc, subject, bodyText, bodyHtml }
   const normalizedSubject = escapeMimeHeader(subject) || '(no subject)';
   const plainText = String(bodyText || '').replace(/\r\n?/g, '\n');
   const htmlText = String(bodyHtml || '').trim();
+  const normalizedAttachments = normalizeGmailComposeAttachments(attachments);
   const headers = [
     `From: ${normalizedFrom}`,
     `To: ${normalizedTo}`,
@@ -11352,7 +11448,57 @@ function buildGmailRawMessage({ from, to, cc, bcc, subject, bodyText, bodyHtml }
   }
 
   let body = '';
-  if (htmlText) {
+  if (normalizedAttachments.length) {
+    const mixedBoundary = `fastbridge-mixed-${Date.now().toString(36)}`;
+    headers.push(`Content-Type: multipart/mixed; boundary="${mixedBoundary}"`);
+
+    const alternativeBoundary = `fastbridge-compose-${Date.now().toString(36)}`;
+    const messagePart = htmlText
+      ? [
+          `--${mixedBoundary}`,
+          `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`,
+          '',
+          `--${alternativeBoundary}`,
+          'Content-Type: text/plain; charset="UTF-8"',
+          'Content-Transfer-Encoding: 7bit',
+          '',
+          plainText || stripHtmlToPlainText(htmlText),
+          '',
+          `--${alternativeBoundary}`,
+          'Content-Type: text/html; charset="UTF-8"',
+          'Content-Transfer-Encoding: 7bit',
+          '',
+          htmlText,
+          '',
+          `--${alternativeBoundary}--`,
+          ''
+        ]
+      : [
+          `--${mixedBoundary}`,
+          'Content-Type: text/plain; charset="UTF-8"',
+          'Content-Transfer-Encoding: 7bit',
+          '',
+          plainText,
+          ''
+        ];
+
+    const attachmentParts = normalizedAttachments.flatMap((attachment) => [
+      `--${mixedBoundary}`,
+      `Content-Type: ${attachment.mimeType}; name="${attachment.filename}"`,
+      `Content-Disposition: attachment; filename="${attachment.filename}"`,
+      'Content-Transfer-Encoding: base64',
+      '',
+      wrapBase64Mime(attachment.base64),
+      ''
+    ]);
+
+    body = [
+      ...messagePart,
+      ...attachmentParts,
+      `--${mixedBoundary}--`,
+      ''
+    ].join('\r\n');
+  } else if (htmlText) {
     const boundary = `fastbridge-compose-${Date.now().toString(36)}`;
     headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
     body = [
@@ -11442,7 +11588,7 @@ app.get('/api/gmail/connect-url', (req, res) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${GMAIL_SEND_SCOPE}`,
+    scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${GMAIL_MODIFY_SCOPE} ${GMAIL_SEND_SCOPE}`,
     access_type: 'offline',
     include_granted_scopes: 'true',
     prompt: 'consent select_account',
@@ -16405,6 +16551,175 @@ app.get('/api/gmail/messages/:messageId', async (req, res) => {
   }
 });
 
+// GET /api/gmail/signatures — lists Gmail send-as signatures for the authenticated user
+app.get('/api/gmail/signatures', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
+      const response = await fetchGmailApiJson('/gmail/v1/users/me/settings/sendAs', accessToken);
+      const sendAs = Array.isArray(response && response.sendAs) ? response.sendAs : [];
+      const signatures = sendAs.map((entry) => ({
+        sendAsEmail: String(entry && entry.sendAsEmail || '').trim(),
+        displayName: String(entry && entry.displayName || '').trim(),
+        signature: String(entry && entry.signature || '').trim(),
+        isPrimary: Boolean(entry && entry.isPrimary),
+        isDefault: Boolean(entry && entry.isDefault)
+      })).filter((entry) => entry.sendAsEmail);
+
+      return {
+        gmailEmail: connection.gmailEmail,
+        signatures,
+        defaultSendAsEmail: String((signatures.find((entry) => entry.isDefault) || signatures.find((entry) => entry.isPrimary) || signatures[0] || {}).sendAsEmail || '').trim()
+      };
+    });
+
+    return res.json(payload);
+  } catch (error) {
+    console.error('Failed to load Gmail signatures:', error);
+    return res.status(500).json({ error: formatGmailOAuthError(error) });
+  }
+});
+
+// POST /api/gmail/messages/:messageId/star — toggles the starred state for one Gmail message
+app.post('/api/gmail/messages/:messageId/star', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const messageId = String(req.params?.messageId || '').trim();
+  const starred = Boolean(req.body?.starred);
+  if (!messageId) {
+    return res.status(400).json({ error: 'Message id is required.' });
+  }
+
+  try {
+    const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
+      if (!gmailConnectionHasScopes(connection, [GMAIL_MODIFY_SCOPE])) {
+        throw new Error('Reconnect Gmail and approve inbox management permissions before starring or deleting mail from FAST.');
+      }
+
+      const response = await postGmailApiJson(
+        `/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}/modify`,
+        accessToken,
+        {
+          addLabelIds: starred ? ['STARRED'] : [],
+          removeLabelIds: starred ? [] : ['STARRED']
+        }
+      );
+
+      return {
+        gmailEmail: connection.gmailEmail,
+        message: mapGmailMessageSummary(response)
+      };
+    });
+
+    return res.json({
+      success: true,
+      gmailEmail: payload.gmailEmail,
+      message: payload.message
+    });
+  } catch (error) {
+    console.error('Failed to update Gmail star state:', error);
+    return res.status(500).json({ error: formatGmailOAuthError(error) });
+  }
+});
+
+// POST /api/gmail/messages/:messageId/archive — removes one Gmail message from inbox
+app.post('/api/gmail/messages/:messageId/archive', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const messageId = String(req.params?.messageId || '').trim();
+  if (!messageId) {
+    return res.status(400).json({ error: 'Message id is required.' });
+  }
+
+  try {
+    const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
+      if (!gmailConnectionHasScopes(connection, [GMAIL_MODIFY_SCOPE])) {
+        throw new Error('Reconnect Gmail and approve inbox management permissions before starring or deleting mail from FAST.');
+      }
+
+      const response = await postGmailApiJson(
+        `/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}/modify`,
+        accessToken,
+        {
+          removeLabelIds: ['INBOX']
+        }
+      );
+
+      return {
+        gmailEmail: connection.gmailEmail,
+        message: mapGmailMessageSummary(response)
+      };
+    });
+
+    return res.json({
+      success: true,
+      gmailEmail: payload.gmailEmail,
+      message: payload.message,
+      messageText: 'Gmail message archived.'
+    });
+  } catch (error) {
+    console.error('Failed to archive Gmail message:', error);
+    return res.status(500).json({ error: formatGmailOAuthError(error) });
+  }
+});
+
+// POST /api/gmail/messages/trash — moves multiple Gmail messages to trash
+app.post('/api/gmail/messages/trash', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const messageIds = Array.from(new Set(
+    (Array.isArray(req.body?.messageIds) ? req.body.messageIds : [])
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  ));
+
+  if (!messageIds.length) {
+    return res.status(400).json({ error: 'At least one message id is required.' });
+  }
+
+  try {
+    const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
+      if (!gmailConnectionHasScopes(connection, [GMAIL_MODIFY_SCOPE])) {
+        throw new Error('Reconnect Gmail and approve inbox management permissions before starring or deleting mail from FAST.');
+      }
+
+      await Promise.all(messageIds.map((messageId) => postGmailApiOptionalJson(
+        `/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}/trash`,
+        accessToken,
+        {}
+      )));
+
+      return {
+        gmailEmail: connection.gmailEmail,
+        deletedCount: messageIds.length
+      };
+    });
+
+    return res.json({
+      success: true,
+      gmailEmail: payload.gmailEmail,
+      deletedCount: payload.deletedCount,
+      message: payload.deletedCount === 1 ? 'Gmail message moved to trash.' : 'Selected Gmail messages moved to trash.'
+    });
+  } catch (error) {
+    console.error('Failed to trash Gmail messages:', error);
+    return res.status(500).json({ error: formatGmailOAuthError(error) });
+  }
+});
+
 // POST /api/gmail/messages/send — sends a Gmail message for the authenticated user
 app.post('/api/gmail/messages/send', async (req, res) => {
   const decoded = requireAuth(req, res);
@@ -16418,12 +16733,18 @@ app.post('/api/gmail/messages/send', async (req, res) => {
   const subject = String(req.body?.subject || '').trim();
   const bodyText = String(req.body?.bodyText || '').trim();
   const bodyHtml = String(req.body?.bodyHtml || '').trim();
+  const attachments = normalizeGmailComposeAttachments(req.body?.attachments);
+
+  const totalAttachmentBytes = attachments.reduce((total, attachment) => total + (Number(attachment?.bytes) || 0), 0);
+  if (totalAttachmentBytes > 15 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Attachments must stay under 15 MB total.' });
+  }
 
   if (!to) {
     return res.status(400).json({ error: 'At least one recipient is required.' });
   }
 
-  if (!bodyText && !bodyHtml) {
+  if (!bodyText && !bodyHtml && !attachments.length) {
     return res.status(400).json({ error: 'Message body is required.' });
   }
 
@@ -16441,7 +16762,8 @@ app.post('/api/gmail/messages/send', async (req, res) => {
           bcc,
           subject,
           bodyText,
-          bodyHtml
+          bodyHtml,
+          attachments
         })
       });
 
