@@ -445,6 +445,277 @@
             margin-top: 0;
         }
 
+        .twilio-quick-send-card {
+            grid-column: 1 / -1;
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+            border-color: rgba(244, 114, 182, 0.18);
+            background:
+                radial-gradient(circle at top right, rgba(244, 114, 182, 0.16), transparent 28%),
+                radial-gradient(circle at left center, rgba(56, 189, 248, 0.14), transparent 32%),
+                linear-gradient(160deg, rgba(15, 23, 42, 0.86), rgba(30, 41, 59, 0.78));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 28px 64px rgba(15, 23, 42, 0.22);
+        }
+
+        .twilio-quick-send-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 28%),
+                linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.18));
+        }
+
+        .twilio-quick-send-shell {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 22px;
+            padding: 26px;
+        }
+
+        .twilio-quick-send-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) auto;
+            gap: 18px;
+            align-items: end;
+            padding: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+                radial-gradient(circle at 12% 18%, rgba(244, 114, 182, 0.18), transparent 24%),
+                radial-gradient(circle at 88% 16%, rgba(56, 189, 248, 0.16), transparent 24%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+        }
+
+        .twilio-quick-send-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(244, 114, 182, 0.24);
+            background: rgba(244, 114, 182, 0.12);
+            color: #fbcfe8;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .twilio-quick-send-title {
+            font-size: clamp(30px, 4vw, 44px);
+            line-height: 1.02;
+            margin: 0;
+            letter-spacing: -0.04em;
+        }
+
+        .twilio-quick-send-lead {
+            margin: 10px 0 0;
+            max-width: 760px;
+            color: rgba(241, 245, 249, 0.82);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .twilio-quick-send-glow {
+            width: 180px;
+            height: 180px;
+            border-radius: 999px;
+            justify-self: end;
+            background:
+                radial-gradient(circle at center, rgba(244, 114, 182, 0.36), rgba(244, 114, 182, 0.08) 42%, transparent 70%),
+                radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.24), transparent 36%);
+            filter: blur(2px);
+            animation: twilioQuickSendPulse 6s ease-in-out infinite;
+        }
+
+        @keyframes twilioQuickSendPulse {
+            0%,
+            100% {
+                transform: scale(0.96) translateY(0);
+                opacity: 0.76;
+            }
+
+            50% {
+                transform: scale(1.04) translateY(-6px);
+                opacity: 1;
+            }
+        }
+
+        .twilio-quick-send-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .twilio-quick-send-main,
+        .twilio-quick-send-side {
+            display: grid;
+            gap: 18px;
+            min-width: 0;
+        }
+
+        .twilio-quick-send-main {
+            padding: 22px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.42), rgba(15, 23, 42, 0.24));
+        }
+
+        .twilio-quick-send-side {
+            align-content: start;
+        }
+
+        .twilio-quick-send-side-card {
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        .twilio-quick-send-side-card h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .twilio-quick-send-side-card p {
+            margin: 8px 0 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 13px;
+        }
+
+        .twilio-quick-send-template-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .twilio-quick-send-bottom-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .twilio-quick-send-primary-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .twilio-quick-send-card .campaign-provider-inline {
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .twilio-quick-send-card .campaign-provider-inline-copy p {
+            font-size: 14px;
+        }
+
+        .twilio-quick-send-card .campaign-send-panel {
+            gap: 16px;
+        }
+
+        .twilio-quick-send-card .campaign-status-pill {
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+        }
+
+        .twilio-quick-send-card .campaign-webhook-panel {
+            gap: 12px;
+            padding: 18px;
+            border-radius: 22px;
+            border-color: rgba(96, 165, 250, 0.16);
+            background:
+                radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 34%),
+                linear-gradient(180deg, rgba(15, 23, 42, 0.44), rgba(15, 23, 42, 0.24));
+        }
+
+        .twilio-quick-send-card .outreach-input-grid {
+            gap: 16px;
+        }
+
+        .twilio-quick-send-card .form-input {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .twilio-quick-send-card .form-input:focus {
+            box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.14);
+            border-color: rgba(244, 114, 182, 0.34);
+        }
+
+        .twilio-quick-send-card .outreach-textarea {
+            min-height: 150px;
+        }
+
+        .twilio-quick-send-card #campaign-sms-body {
+            min-height: 220px;
+        }
+
+        .twilio-quick-send-card .campaign-media-toolbar {
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px dashed rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .twilio-quick-send-card .outreach-actions {
+            gap: 12px;
+        }
+
+        @media (max-width: 1180px) {
+            .twilio-quick-send-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .twilio-quick-send-hero {
+                grid-template-columns: 1fr;
+            }
+
+            .twilio-quick-send-glow {
+                width: 140px;
+                height: 140px;
+                justify-self: start;
+            }
+        }
+
+        @media (max-width: 780px) {
+            .twilio-quick-send-shell {
+                padding: 18px;
+            }
+
+            .twilio-quick-send-hero,
+            .twilio-quick-send-main,
+            .twilio-quick-send-side-card {
+                padding: 18px;
+            }
+
+            .twilio-quick-send-template-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .twilio-quick-send-bottom-actions {
+                align-items: stretch;
+            }
+
+            .twilio-quick-send-primary-actions {
+                width: 100%;
+            }
+        }
+
         .campaign-provider-inline {
             display: flex;
             align-items: center;
@@ -2469,72 +2740,90 @@
                             </div>
                         </div>
 
-                        <div class="glass-card widget-card outreach-card" data-widget-id="twilio-quick-send" data-widget-title="Twilio Quick Send">
-                            <div class="card-header">
-                                <div>
-                                    <h2 class="card-title">Twilio Quick Send</h2>
-                                    <p class="card-subtitle">Launch a small SMS campaign without leaving Campaigns.</p>
+                        <div class="glass-card widget-card outreach-card twilio-quick-send-card" data-widget-id="twilio-quick-send" data-widget-title="Twilio Quick Send">
+                            <div class="twilio-quick-send-shell">
+                                <div class="twilio-quick-send-hero">
+                                    <div>
+                                        <span class="twilio-quick-send-kicker">SMS Launch Pad</span>
+                                        <h2 class="twilio-quick-send-title">Twilio Quick Send</h2>
+                                        <p class="twilio-quick-send-lead">Launch a small SMS campaign without leaving Campaigns. This workspace is now wider, cleaner, and built to keep your send flow, webhook setup, and live Twilio readiness in one high-signal view.</p>
+                                    </div>
+                                    <div class="twilio-quick-send-glow" aria-hidden="true"></div>
                                 </div>
-                            </div>
-                            <div class="campaign-send-panel">
-                                <div class="campaign-provider-inline">
-                                    <div class="campaign-provider-inline-copy">
-                                        <span class="campaign-provider-inline-label">Twilio Workspace</span>
-                                        <p>Use this panel to build and send Twilio outreach directly from Campaigns.</p>
-                                    </div>
-                                </div>
-                                <div id="campaign-twilio-status" class="campaign-status-pill offline">Checking Twilio config...</div>
-                                <div class="campaign-webhook-panel">
-                                    <p id="campaign-webhook-copy" class="campaign-webhook-copy">Replies only show up after Twilio posts inbound messages back to FAST.</p>
-                                    <div class="campaign-webhook-meta">
-                                        <span id="campaign-webhook-target" class="campaign-webhook-chip">Checking setup target...</span>
-                                        <span id="campaign-webhook-mode" class="campaign-webhook-chip">Checking mode...</span>
-                                    </div>
-                                    <div class="campaign-webhook-row">
-                                        <p id="campaign-inbox-webhook-url" class="campaign-webhook-url">Loading inbound webhook...</p>
-                                        <button id="campaign-copy-inbox-webhook" type="button" class="card-btn">Copy Inbound URL</button>
-                                    </div>
-                                    <div class="campaign-webhook-row">
-                                        <p id="campaign-status-webhook-url" class="campaign-webhook-url">Loading status webhook...</p>
-                                        <button id="campaign-copy-status-webhook" type="button" class="card-btn">Copy Status URL</button>
-                                    </div>
-                                </div>
-                                <div class="outreach-input-grid">
-                                    <div class="form-group">
-                                        <label for="campaign-sms-name">Campaign Name</label>
-                                        <input id="campaign-sms-name" class="form-input" type="text" placeholder="OC stale listing outreach">
-                                    </div>
-                                    <div class="form-group outreach-full-width">
-                                        <label for="campaign-sms-recipients">Recipients</label>
-                                        <textarea id="campaign-sms-recipients" class="form-input outreach-textarea" placeholder="One per line. Use Name | Phone | Area or just Phone."></textarea>
-                                    </div>
-                                    <div class="form-group outreach-full-width">
-                                        <label for="campaign-sms-body">Message</label>
-                                        <textarea id="campaign-sms-body" class="form-input outreach-textarea" placeholder="Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out."></textarea>
-                                    </div>
-                                    <div class="form-group outreach-full-width">
-                                        <div class="campaign-media-toolbar">
-                                            <input id="campaign-media-input" class="campaign-media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.xml,.json" multiple>
-                                            <button id="campaign-media-attach" type="button" class="card-btn">Attach Files</button>
-                                            <span class="campaign-media-note">Upload photos or documents to send alongside your Twilio message.</span>
+                                <div class="twilio-quick-send-grid">
+                                    <div class="twilio-quick-send-main">
+                                        <div class="campaign-send-panel">
+                                            <div class="campaign-provider-inline">
+                                                <div class="campaign-provider-inline-copy">
+                                                    <span class="campaign-provider-inline-label">Twilio Workspace</span>
+                                                    <p>Use this panel to build and send Twilio outreach directly from Campaigns.</p>
+                                                </div>
+                                                <div id="campaign-twilio-status" class="campaign-status-pill offline">Checking Twilio config...</div>
+                                            </div>
+                                            <div class="outreach-input-grid">
+                                                <div class="form-group">
+                                                    <label for="campaign-sms-name">Campaign Name</label>
+                                                    <input id="campaign-sms-name" class="form-input" type="text" placeholder="Agent SMS Campaign">
+                                                </div>
+                                                <div class="form-group outreach-full-width">
+                                                    <label for="campaign-sms-recipients">Recipients</label>
+                                                    <textarea id="campaign-sms-recipients" class="form-input outreach-textarea" placeholder="One per line. Use Name | Phone | Area or just Phone."></textarea>
+                                                </div>
+                                                <div class="form-group outreach-full-width">
+                                                    <label for="campaign-sms-body">Message</label>
+                                                    <textarea id="campaign-sms-body" class="form-input outreach-textarea" placeholder="Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out."></textarea>
+                                                </div>
+                                                <div class="form-group outreach-full-width">
+                                                    <div class="campaign-media-toolbar">
+                                                        <input id="campaign-media-input" class="campaign-media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.xml,.json" multiple>
+                                                        <button id="campaign-media-attach" type="button" class="card-btn">Attach Files</button>
+                                                        <span class="campaign-media-note">Upload photos or documents to send alongside your Twilio message.</span>
+                                                    </div>
+                                                    <div id="campaign-media-pending" class="campaign-media-pending" hidden></div>
+                                                </div>
+                                            </div>
+                                            <div id="campaign-schedule-summary" class="campaign-schedule-summary" hidden></div>
+                                            <div class="twilio-quick-send-bottom-actions">
+                                                <div class="twilio-quick-send-template-buttons">
+                                                    <button id="campaign-load-template-1" type="button" class="card-btn">Load First Touch</button>
+                                                    <button id="campaign-load-template-2" type="button" class="card-btn">Load Follow-Up</button>
+                                                    <button id="campaign-load-template-3" type="button" class="card-btn">Load Breakup</button>
+                                                </div>
+                                                <div class="twilio-quick-send-primary-actions">
+                                                    <button id="campaign-schedule-send-btn" type="button" class="card-btn campaign-schedule-btn" aria-label="Schedule Twilio campaign" title="Schedule Twilio campaign">
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v3H2V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm15 9v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8h20Zm-10 3a1 1 0 0 0-1 1v2.38l-1.45 1.45a1 1 0 1 0 1.41 1.41l1.74-1.74A1 1 0 0 0 13 18v-3a1 1 0 0 0-1-1Z"></path>
+                                                        </svg>
+                                                        <span class="campaign-schedule-btn-label">Schedule Send</span>
+                                                    </button>
+                                                    <button id="campaign-send-sms-btn" type="button" class="card-btn active">Send Twilio Campaign</button>
+                                                </div>
+                                            </div>
+                                            <div id="campaign-send-status" class="campaign-send-status"></div>
                                         </div>
-                                        <div id="campaign-media-pending" class="campaign-media-pending" hidden></div>
+                                    </div>
+                                    <div class="twilio-quick-send-side">
+                                        <div class="twilio-quick-send-side-card">
+                                            <h3>Twilio Readiness</h3>
+                                            <p>Keep inbound routing, number mode, and delivery status visible while you build the send. No more hunting around before launch.</p>
+                                        </div>
+                                        <div class="campaign-webhook-panel">
+                                            <p id="campaign-webhook-copy" class="campaign-webhook-copy">Replies only show up after Twilio posts inbound messages back to FAST.</p>
+                                            <div class="campaign-webhook-meta">
+                                                <span id="campaign-webhook-target" class="campaign-webhook-chip">Checking setup target...</span>
+                                                <span id="campaign-webhook-mode" class="campaign-webhook-chip">Checking mode...</span>
+                                            </div>
+                                            <div class="campaign-webhook-row">
+                                                <p id="campaign-inbox-webhook-url" class="campaign-webhook-url">Loading inbound webhook...</p>
+                                                <button id="campaign-copy-inbox-webhook" type="button" class="card-btn">Copy Inbound URL</button>
+                                            </div>
+                                            <div class="campaign-webhook-row">
+                                                <p id="campaign-status-webhook-url" class="campaign-webhook-url">Loading status webhook...</p>
+                                                <button id="campaign-copy-status-webhook" type="button" class="card-btn">Copy Status URL</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div id="campaign-schedule-summary" class="campaign-schedule-summary" hidden></div>
-                                <div class="outreach-actions">
-                                    <button id="campaign-load-template-1" type="button" class="card-btn">Load First Touch</button>
-                                    <button id="campaign-load-template-2" type="button" class="card-btn">Load Follow-Up</button>
-                                    <button id="campaign-load-template-3" type="button" class="card-btn">Load Breakup</button>
-                                    <button id="campaign-schedule-send-btn" type="button" class="card-btn campaign-schedule-btn" aria-label="Schedule Twilio campaign" title="Schedule Twilio campaign">
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v3H2V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm15 9v8a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-8h20Zm-10 3a1 1 0 0 0-1 1v2.38l-1.45 1.45a1 1 0 1 0 1.41 1.41l1.74-1.74A1 1 0 0 0 13 18v-3a1 1 0 0 0-1-1Z"></path>
-                                        </svg>
-                                        <span class="campaign-schedule-btn-label">Schedule Send</span>
-                                    </button>
-                                    <button id="campaign-send-sms-btn" type="button" class="card-btn active">Send Twilio Campaign</button>
-                                </div>
-                                <div id="campaign-send-status" class="campaign-send-status"></div>
                             </div>
                         </div>
 

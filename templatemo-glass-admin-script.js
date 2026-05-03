@@ -18,6 +18,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const NOTIFICATION_HISTORY_KEY = 'dashboardNotificationHistoryByUser';
     const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
     const MESSAGE_NOTIFICATION_STATE_KEY = 'dashboardMessageNotificationStateByUser';
+    const TWILIO_NOTIFICATION_STATE_KEY = 'dashboardTwilioNotificationStateByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
     const FAST_SHARED_PROPERTY_MESSAGE_MARKER = '[FAST_SHARED_PROPERTY_V1]';
     const FAST_MESSAGE_BUNDLE_MARKER = '[FAST_MESSAGE_BUNDLE_V1]';
@@ -25,6 +26,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const MESSAGE_NOTIFICATION_POLL_MS = 15000;
     const STRIKE_ZONE_CSV_PATH = 'Apprasial%20Rules/SoCal-Buy-_-strike-zone-2024-UPDATE.csv';
     const DASHBOARD_NOTIFICATION_SOUND_PATH = 'Sound FX/Notification sound effect.wav';
+    const TWILIO_NOTIFICATION_SOUND_PATH = 'Sound FX/milestone_ios_17.mp3';
     const THEME_BACKGROUND_VIDEO_PATHS = {
         cloud: 'Themes/animated cloud theme.mp4',
         space: 'Themes/animated space theme.mp4'
@@ -1353,6 +1355,121 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return !pathname.endsWith('/fbg-messages.html') && !pathname.endsWith('fbg-messages.html');
     }
 
+    function isTwilioMessagingPage() {
+        const pathname = String(window.location.pathname || '').trim().toLowerCase();
+        return pathname.endsWith('/campaigns.html') || pathname.endsWith('campaigns.html');
+    }
+
+    function getTwilioNotificationSettings() {
+        const shared = getMessageNotificationSettings();
+        return {
+            inApp: shared.inApp,
+            desktop: shared.desktop,
+            sound: shared.sound
+        };
+    }
+
+    function getTwilioNotificationState(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const stored = getUserScopedObject(TWILIO_NOTIFICATION_STATE_KEY, workspaceUser.key);
+        const conversationSignatures = stored && stored.conversationSignatures && typeof stored.conversationSignatures === 'object'
+            ? stored.conversationSignatures
+            : {};
+
+        return {
+            seeded: Boolean(stored.seeded),
+            conversationSignatures
+        };
+    }
+
+    function setTwilioNotificationState(nextState, workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+
+        setUserScopedObject(TWILIO_NOTIFICATION_STATE_KEY, workspaceUser.key, {
+            seeded: Boolean(nextState && nextState.seeded),
+            conversationSignatures: nextState && nextState.conversationSignatures && typeof nextState.conversationSignatures === 'object'
+                ? nextState.conversationSignatures
+                : {},
+            updatedAt: Date.now()
+        });
+    }
+
+    function buildTwilioConversationNotificationSignature(conversation) {
+        const conversationKey = String(conversation && conversation.conversationKey || '').trim();
+        const unreadCount = Math.max(0, Number(conversation && conversation.unreadCount) || 0);
+        const lastDirection = String(conversation && conversation.lastDirection || '').trim().toLowerCase();
+        const lastMessageAt = String(conversation && conversation.lastMessageAt || '').trim();
+        const lastMessagePreview = String(conversation && conversation.lastMessagePreview || '').trim();
+
+        return [conversationKey, unreadCount, lastDirection, lastMessageAt, lastMessagePreview].join('|');
+    }
+
+    function showIncomingTwilioNotifications(entries) {
+        if (!Array.isArray(entries) || !entries.length) {
+            return;
+        }
+
+        const settings = getTwilioNotificationSettings();
+        const shouldShowToast = settings.inApp && !isTwilioMessagingPage();
+
+        if (settings.sound && shouldShowToast) {
+            playTwilioNotificationSound();
+        }
+
+        entries.forEach((entry) => {
+            const contactName = String(entry && entry.contactName || entry && entry.contactPhone || '').trim() || 'Unknown contact';
+            const previewText = String(entry && entry.lastMessagePreview || entry && entry.lastMessageBody || '').trim() || 'You received a new Twilio reply.';
+            const preview = previewText.length > 140 ? `${previewText.slice(0, 137)}...` : previewText;
+            const propertyAddress = String(entry && entry.propertyAddress || '').trim();
+            const campaignName = String(entry && entry.campaignName || '').trim();
+            const meta = propertyAddress
+                ? `Property: ${propertyAddress}`
+                : (campaignName ? `Campaign: ${campaignName}` : 'Open Twilio Messaging to reply.');
+            const title = `New Twilio reply from ${contactName}`;
+
+            rememberDashboardNotification('info', title, preview || 'You received a new Twilio reply.', {
+                eyebrow: 'Twilio Messaging',
+                meta,
+                items: campaignName || propertyAddress
+                    ? [
+                        campaignName ? { label: 'Campaign', meta: campaignName } : null,
+                        propertyAddress ? { label: 'Property', meta: propertyAddress } : null
+                    ].filter(Boolean)
+                    : []
+            });
+
+            if (shouldShowToast) {
+                showDashboardToast('info', title, preview || 'You received a new Twilio reply.', {
+                    eyebrow: 'Twilio Messaging',
+                    meta,
+                    duration: 9000,
+                    playSound: false,
+                    persist: false,
+                    items: campaignName || propertyAddress
+                        ? [
+                            campaignName ? { label: 'Campaign', meta: campaignName } : null,
+                            propertyAddress ? { label: 'Property', meta: propertyAddress } : null
+                        ].filter(Boolean)
+                        : []
+                });
+            }
+
+            if (settings.desktop && !isTwilioMessagingPage() && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification(`FAST BRIDGE GROUP: ${contactName}`, {
+                    body: preview || 'Sent a new Twilio reply.'
+                });
+            }
+        });
+
+        if (settings.desktop && !isTwilioMessagingPage()) {
+            requestDesktopNotificationPermission();
+        }
+    }
+
     function requestDesktopNotificationPermission() {
         if (!('Notification' in window) || Notification.permission !== 'default') {
             return;
@@ -1477,6 +1594,29 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 audio = document.createElement('audio');
                 audio.id = 'planner-notification-sound';
                 audio.src = DASHBOARD_NOTIFICATION_SOUND_PATH;
+                audio.preload = 'auto';
+                audio.volume = 0.45;
+                document.body.appendChild(audio);
+            }
+            audio.currentTime = 0;
+            audio.play().catch(() => {
+                // Ignore autoplay restrictions.
+            });
+        } catch (error) {
+            // Ignore playback errors.
+        }
+    }
+
+    function playTwilioNotificationSound() {
+        if (!getPlannerNotificationSettings().sound) {
+            return;
+        }
+        try {
+            let audio = document.getElementById('twilio-notification-sound');
+            if (!audio) {
+                audio = document.createElement('audio');
+                audio.id = 'twilio-notification-sound';
+                audio.src = TWILIO_NOTIFICATION_SOUND_PATH;
                 audio.preload = 'auto';
                 audio.volume = 0.45;
                 document.body.appendChild(audio);
@@ -6190,7 +6330,7 @@ function initNavbarDateTime() {
             },
             {
                 href: 'mls-imports-spreadsheet.html',
-                markup: '<a href="mls-imports-spreadsheet.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 4v16"></path><path d="M16 10v10"></path></svg>MLS Spreadsheet</a>'
+                markup: '<a href="mls-imports-spreadsheet.html" class="nav-link"><span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>MLS Spreadsheet</a>'
             },
             {
                 href: 'pdf-editor.html',
@@ -6396,6 +6536,7 @@ function initNavbarDateTime() {
     }
 
     function initTwilioMessagingNavUnreadIndicator() {
+        const workspaceUser = getWorkspaceUserContext();
         const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
         let pollTimer = 0;
         let isPolling = false;
@@ -6459,6 +6600,47 @@ function initNavbarDateTime() {
 
                 const payload = await response.json().catch(() => ({}));
                 const conversations = Array.isArray(payload && payload.conversations) ? payload.conversations : [];
+                const state = workspaceUser && workspaceUser.key
+                    ? getTwilioNotificationState(workspaceUser)
+                    : { seeded: false, conversationSignatures: {} };
+                const nextConversationSignatures = {};
+
+                conversations.forEach((conversation) => {
+                    const conversationKey = String(conversation && conversation.conversationKey || '').trim();
+                    if (!conversationKey) {
+                        return;
+                    }
+                    nextConversationSignatures[conversationKey] = buildTwilioConversationNotificationSignature(conversation);
+                });
+
+                if (state.seeded) {
+                    const nextNotifications = conversations.filter((conversation) => {
+                        const conversationKey = String(conversation && conversation.conversationKey || '').trim();
+                        if (!conversationKey) {
+                            return false;
+                        }
+
+                        const unreadCount = Math.max(0, Number(conversation && conversation.unreadCount) || 0);
+                        const lastDirection = String(conversation && conversation.lastDirection || '').trim().toLowerCase();
+                        if (unreadCount <= 0 || lastDirection !== 'inbound') {
+                            return false;
+                        }
+
+                        return nextConversationSignatures[conversationKey] !== String(state.conversationSignatures && state.conversationSignatures[conversationKey] || '');
+                    });
+
+                    if (nextNotifications.length > 0) {
+                        showIncomingTwilioNotifications(nextNotifications);
+                    }
+                }
+
+                if (workspaceUser && workspaceUser.key) {
+                    setTwilioNotificationState({
+                        seeded: true,
+                        conversationSignatures: nextConversationSignatures
+                    }, workspaceUser);
+                }
+
                 const hasUnread = conversations.some((conversation) => (Number(conversation && conversation.unreadCount) || 0) > 0);
                 applyUnreadState(hasUnread);
             } catch (error) {

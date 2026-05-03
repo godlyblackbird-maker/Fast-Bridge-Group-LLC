@@ -373,30 +373,590 @@
             z-index: 1;
         }
 
-        .community-panel[data-community-panel="fbg-messaging"] {
+        .community-bottom-section {
+            width: 100%;
+            margin: 0;
+        }
+
+        .community-bottom-messages-card {
             padding: 24px;
         }
 
-        .community-messages-shell {
+        .community-bottom-messages-shell {
             display: grid;
             gap: 16px;
         }
 
-        .community-messages-embed-wrap {
-            min-height: 640px;
-            border-radius: 24px;
+        .community-bottom-messages-card .messages-chat-shell {
+            display: grid;
+            grid-template-columns: 340px minmax(0, 1fr);
+            gap: 0;
             overflow: hidden;
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            background: rgba(15, 23, 42, 0.12);
+            min-height: 760px;
+            padding: 0;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            background: linear-gradient(180deg, rgba(247, 247, 250, 0.98) 0%, rgba(236, 238, 243, 0.98) 100%);
+            box-shadow: 0 28px 90px rgba(7, 12, 24, 0.2);
         }
 
-        .community-messages-embed {
-            display: block;
+        .community-bottom-messages-card .messages-chat-users,
+        .community-bottom-messages-card .messages-chat-panel {
+            min-width: 0;
+        }
+
+        .community-bottom-messages-card .messages-chat-users {
+            border-right: 1px solid rgba(18, 28, 45, 0.08);
+            background: linear-gradient(180deg, #fcfcfd 0%, #f3f4f7 100%);
+        }
+
+        .community-bottom-messages-card .messages-chat-users-head,
+        .community-bottom-messages-card .messages-chat-panel-head {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(18, 28, 45, 0.08);
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(18px);
+        }
+
+        .community-bottom-messages-card .messages-chat-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .community-bottom-messages-card .messages-chat-panel-head-copy {
+            min-width: 0;
+        }
+
+        .community-bottom-messages-card .messages-chat-clear {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .community-bottom-messages-card .messages-chat-users-head .card-title,
+        .community-bottom-messages-card .messages-chat-panel-head .card-title {
+            color: #111827;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .community-bottom-messages-card .messages-chat-users-head p,
+        .community-bottom-messages-card .messages-chat-panel-head p {
+            margin: 4px 0 0;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .community-bottom-messages-card .messages-chat-users-list {
+            display: grid;
+            gap: 0;
+            padding: 8px 0;
+            max-height: 670px;
+            overflow-y: auto;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-btn {
             width: 100%;
-            min-height: 640px;
-            height: 640px;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: start;
+            gap: 12px;
+            text-align: left;
+            padding: 14px 18px;
+            border: 0;
+            border-bottom: 1px solid rgba(18, 28, 45, 0.06);
+            border-radius: 0;
+            background: transparent;
+            color: #111827;
+            transition: background 0.18s ease;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-btn:hover,
+        .community-bottom-messages-card .messages-chat-user-btn:focus-visible,
+        .community-bottom-messages-card .messages-chat-user-btn.active {
+            transform: none;
+            border-color: rgba(18, 28, 45, 0.06);
+            background: rgba(0, 122, 255, 0.08);
+            outline: none;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-avatar {
+            width: 46px;
+            height: 46px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        }
+
+        .community-bottom-messages-card .messages-chat-user-copy {
+            min-width: 0;
+            display: grid;
+            gap: 5px;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-top,
+        .community-bottom-messages-card .messages-chat-user-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-name {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-email,
+        .community-bottom-messages-card .messages-chat-user-preview,
+        .community-bottom-messages-card .messages-chat-time,
+        .community-bottom-messages-card .messages-chat-role,
+        .community-bottom-messages-card .messages-chat-empty,
+        .community-bottom-messages-card .messages-chat-placeholder {
+            color: #6b7280;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-email,
+        .community-bottom-messages-card .messages-chat-user-preview,
+        .community-bottom-messages-card .messages-chat-time,
+        .community-bottom-messages-card .messages-chat-role {
+            font-size: 13px;
+        }
+
+        .community-bottom-messages-card .messages-chat-user-preview {
+            line-clamp: 2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.45;
+        }
+
+        .community-bottom-messages-card .messages-chat-unread {
+            min-width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #007aff;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .community-bottom-messages-card .messages-chat-panel {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            min-height: 760px;
+            background: linear-gradient(180deg, #f5f5f7 0%, #ffffff 30%, #ffffff 100%);
+        }
+
+        .community-bottom-messages-card .messages-chat-thread {
+            display: grid;
+            gap: 12px;
+            align-content: start;
+            padding: 22px 20px;
+            overflow-y: auto;
+            min-height: 320px;
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 34%),
+                linear-gradient(180deg, #f4f5f7 0%, #ffffff 100%);
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble {
+            width: fit-content;
+            max-width: min(78%, 520px);
+            min-width: 0;
+            justify-self: start;
+            padding: 9px 14px 7px;
+            border-radius: 18px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 0;
+            background: #e9e9eb;
+            color: #111827;
+            box-shadow: 0 1px 1px rgba(17, 24, 39, 0.06);
+            position: relative;
+            margin-left: 12px;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.outgoing {
+            justify-self: end;
+            margin-left: 0;
+            margin-right: 12px;
+            background: #007aff;
+            color: #ffffff;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble::after {
+            content: '';
+            position: absolute;
+            left: -6px;
+            bottom: 1px;
+            width: 17px;
+            height: 17px;
+            background: #e9e9eb;
+            border-bottom-right-radius: 15px;
+            clip-path: path('M18 0C10 3 4 10 0 18C8 17 13 15 18 9V0Z');
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.outgoing::after {
+            left: auto;
+            right: -6px;
+            background: #007aff;
+            transform: scaleX(-1);
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble-meta {
+            margin-top: 4px;
+            font-size: 11px;
+            color: rgba(17, 24, 39, 0.56);
+            text-align: right;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-chat-bubble-meta {
+            color: rgba(255, 255, 255, 0.78);
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.can-edit .messages-chat-bubble-edit {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.can-edit:hover .messages-chat-bubble-edit,
+        .community-bottom-messages-card .messages-chat-bubble.can-edit:focus-within .messages-chat-bubble-edit {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble-edit {
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            padding: 2px 8px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.82);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble-text {
+            white-space: pre-wrap;
+        }
+
+        .community-bottom-messages-card .messages-chat-attachments,
+        .community-bottom-messages-card .messages-pending-attachments {
+            display: grid;
+            gap: 10px;
+        }
+
+        .community-bottom-messages-card .messages-chat-attachment {
+            display: grid;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+        }
+
+        .community-bottom-messages-card .messages-chat-attachment-preview {
+            display: block;
+            max-width: min(280px, 100%);
+            max-height: 220px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .community-bottom-messages-card .messages-chat-attachment-embed,
+        .community-bottom-messages-card .messages-chat-attachment-video,
+        .community-bottom-messages-card .messages-chat-attachment-audio {
+            display: block;
+            width: min(320px, 100%);
+            max-width: 100%;
+            border: 0;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .community-bottom-messages-card .messages-chat-attachment-embed,
+        .community-bottom-messages-card .messages-chat-attachment-video {
+            height: 220px;
+        }
+
+        .community-bottom-messages-card .messages-chat-attachment-link {
+            color: inherit;
+            text-decoration: none;
+            display: block;
+        }
+
+        .community-bottom-messages-card .messages-chat-attachment-copy,
+        .community-bottom-messages-card .messages-pending-attachment-copy {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .community-bottom-messages-card .messages-chat-attachment-head,
+        .community-bottom-messages-card .messages-pending-attachment-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .community-bottom-messages-card .messages-attachment-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.12);
+            color: #0f172a;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-attachment-badge,
+        .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-shared-property-label {
+            background: rgba(255, 255, 255, 0.18);
+            color: #ffffff;
+        }
+
+        .community-bottom-messages-card .messages-shared-property-card {
+            display: grid;
+            gap: 10px;
+        }
+
+        .community-bottom-messages-card .messages-shared-property-label {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.08);
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .community-bottom-messages-card .messages-shared-property-title,
+        .community-bottom-messages-card .messages-pending-share-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .community-bottom-messages-card .messages-shared-property-meta,
+        .community-bottom-messages-card .messages-shared-property-note,
+        .community-bottom-messages-card .messages-shared-property-details,
+        .community-bottom-messages-card .messages-pending-share-meta,
+        .community-bottom-messages-card .messages-chat-status,
+        .community-bottom-messages-card .messages-pending-attachment-meta {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.55;
+            color: #6b7280;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-shared-property-meta,
+        .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-shared-property-details,
+        .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-shared-property-note {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .community-bottom-messages-card .messages-shared-property-note {
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.06);
+        }
+
+        .community-bottom-messages-card .messages-shared-property-link {
+            display: grid;
+            gap: 10px;
+            padding: 0;
             border: 0;
             background: transparent;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .community-bottom-messages-card .messages-pending-share,
+        .community-bottom-messages-card .messages-editing-bar {
+            display: none;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: rgba(0, 122, 255, 0.06);
+            border: 1px solid rgba(0, 122, 255, 0.16);
+        }
+
+        .community-bottom-messages-card .messages-pending-share.active,
+        .community-bottom-messages-card .messages-editing-bar.active,
+        .community-bottom-messages-card .messages-pending-attachments.active {
+            display: grid;
+        }
+
+        .community-bottom-messages-card .messages-pending-share-label,
+        .community-bottom-messages-card .messages-editing-label {
+            color: #007aff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .community-bottom-messages-card .messages-editing-bar {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.22);
+        }
+
+        .community-bottom-messages-card .messages-editing-label {
+            color: #b45309;
+        }
+
+        .community-bottom-messages-card .messages-editing-meta {
+            margin-top: 4px;
+            color: #7c2d12;
+            font-size: 13px;
+        }
+
+        .community-bottom-messages-card .messages-chat-form {
+            display: grid;
+            gap: 10px;
+            padding: 14px 18px 18px;
+            border-top: 1px solid rgba(18, 28, 45, 0.08);
+            background: rgba(248, 250, 252, 0.94);
+            backdrop-filter: blur(18px);
+        }
+
+        .community-bottom-messages-card .messages-composer-row {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 10px;
+            align-items: end;
+        }
+
+        .community-bottom-messages-card .messages-chat-attach,
+        .community-bottom-messages-card #messages-chat-send {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+        }
+
+        .community-bottom-messages-card .messages-chat-attach {
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: #ffffff;
+            color: #334155;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+        }
+
+        .community-bottom-messages-card .messages-chat-attach svg,
+        .community-bottom-messages-card #messages-chat-send svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        .community-bottom-messages-card .messages-chat-form .outreach-textarea,
+        .community-bottom-messages-card #messages-chat-input {
+            min-height: 48px;
+            max-height: 120px;
+            padding: 12px 16px;
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            background: #ffffff;
+            color: #111827;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            resize: none;
+        }
+
+        .community-bottom-messages-card .messages-chat-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .community-bottom-messages-card #messages-chat-send {
+            width: 46px;
+            height: 46px;
+            padding: 0;
+            flex: 0 0 46px;
+            border: 0;
+            background: linear-gradient(180deg, #2f95ff 0%, #007aff 100%);
+            color: #ffffff;
+            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.24);
+        }
+
+        .community-bottom-messages-card #messages-chat-send:disabled,
+        .community-bottom-messages-card .messages-chat-attach:disabled {
+            opacity: 0.55;
+            box-shadow: none;
+        }
+
+        .community-bottom-messages-card .messages-pending-attachment-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 100%;
+            padding: 9px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(0, 122, 255, 0.16);
+            background: rgba(255, 255, 255, 0.96);
+            color: #111827;
+        }
+
+        .community-bottom-messages-card .messages-pending-attachment-name {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .community-bottom-messages-card .messages-pending-attachment-remove {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.08);
+            color: #475569;
         }
 
         .community-feed-item strong {
@@ -1974,9 +2534,33 @@
                 position: static;
             }
 
-            .community-messages-embed-wrap,
-            .community-messages-embed {
-                min-height: 720px;
+            .community-bottom-messages-card .messages-chat-shell {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
+            .community-bottom-messages-card .messages-chat-users {
+                border-right: 0;
+                border-bottom: 1px solid rgba(18, 28, 45, 0.08);
+            }
+        }
+
+        @media (max-width: 700px) {
+            .community-bottom-messages-card .messages-chat-panel-head,
+            .community-bottom-messages-card .messages-chat-users-head,
+            .community-bottom-messages-card .messages-chat-thread,
+            .community-bottom-messages-card .messages-chat-form {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
+            .community-bottom-messages-card .messages-chat-user-btn {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
+            .community-bottom-messages-card .messages-chat-bubble {
+                max-width: 100%;
             }
         }
 
@@ -2289,26 +2873,6 @@
                         </div>
                     </section>
 
-                    <section class="glass-card community-panel" data-community-panel="fbg-messaging" aria-labelledby="community-fbg-messaging-title">
-                        <div class="community-messages-shell">
-                            <div class="card-header">
-                                <div>
-                                    <h2 class="card-title" id="community-fbg-messaging-title">FBG Messaging</h2>
-                                    <p class="card-subtitle">Internal direct messages for FAST users now live inside the Community workspace.</p>
-                                </div>
-                            </div>
-                            <div class="community-messages-embed-wrap">
-                                <iframe
-                                    class="community-messages-embed"
-                                    src="fbg-messages.html?embedded=community"
-                                    title="FBG Messaging"
-                                    loading="lazy"
-                                    referrerpolicy="same-origin"
-                                ></iframe>
-                            </div>
-                        </div>
-                    </section>
-
                     <section class="glass-card community-panel" data-community-panel="deal-rooms" aria-labelledby="community-deal-rooms-title">
                         <div class="card-header">
                             <div>
@@ -2368,6 +2932,78 @@
                             </div>
                             <div class="community-voice-audio" id="community-voice-audio" aria-hidden="true"></div>
                         </div>
+                    </section>
+
+                    <section class="community-bottom-section" id="community-fbg-messaging-bottom" aria-labelledby="community-bottom-fbg-messaging-title">
+                        <section class="glass-card community-bottom-messages-card">
+                            <div class="community-bottom-messages-shell">
+                                <div class="card-header">
+                                    <div>
+                                        <h2 class="card-title" id="community-bottom-fbg-messaging-title">FBG Messaging</h2>
+                                        <p class="card-subtitle">Internal FAST messaging lives directly inside Community now, without loading the separate FBG page.</p>
+                                    </div>
+                                </div>
+                                <section class="messages-chat-shell" aria-label="FBG internal messaging">
+                                    <aside class="messages-chat-users">
+                                        <div class="messages-chat-users-head">
+                                            <h3 class="card-title">All Users</h3>
+                                            <p>Click any FAST user to open your internal conversation.</p>
+                                        </div>
+                                        <div id="messages-chat-users-list" class="messages-chat-users-list">
+                                            <p class="messages-chat-empty">Loading users...</p>
+                                        </div>
+                                    </aside>
+
+                                    <section class="messages-chat-panel">
+                                        <div class="messages-chat-panel-head">
+                                            <div class="messages-chat-panel-head-copy">
+                                                <h3 id="messages-chat-panel-title" class="card-title">Choose a user</h3>
+                                                <p id="messages-chat-panel-subtitle">Open a user from the left to see the conversation.</p>
+                                            </div>
+                                            <button id="messages-chat-clear" type="button" class="card-btn messages-chat-clear" disabled hidden aria-hidden="true">Clear conversation</button>
+                                        </div>
+                                        <div id="messages-chat-thread" class="messages-chat-thread">
+                                            <p class="messages-chat-placeholder">No conversation selected yet.</p>
+                                        </div>
+                                        <form id="messages-chat-form" class="messages-chat-form">
+                                            <div id="messages-pending-share" class="messages-pending-share" aria-live="polite">
+                                                <div class="messages-pending-share-copy">
+                                                    <span class="messages-pending-share-label">Property Link Ready</span>
+                                                    <p id="messages-pending-share-title" class="messages-pending-share-title">No property selected</p>
+                                                    <p id="messages-pending-share-meta" class="messages-pending-share-meta">Open a property and tap Share In FBG to attach it here.</p>
+                                                </div>
+                                                <button id="messages-pending-share-clear" type="button" class="card-btn messages-pending-share-clear">Clear</button>
+                                            </div>
+                                            <div id="messages-editing-bar" class="messages-editing-bar" aria-live="polite" hidden>
+                                                <div class="messages-editing-copy">
+                                                    <p class="messages-editing-label">Editing Message</p>
+                                                    <p id="messages-editing-meta" class="messages-editing-meta">You have 1 minute from send time to update a message.</p>
+                                                </div>
+                                                <button id="messages-editing-cancel" type="button" class="card-btn">Cancel</button>
+                                            </div>
+                                            <div id="messages-pending-attachments" class="messages-pending-attachments" aria-live="polite" hidden></div>
+                                            <div class="messages-composer-row">
+                                                <button id="messages-chat-attach" type="button" class="card-btn messages-chat-attach" aria-label="Attach files" title="Attach files" disabled>
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M21.44 11.05L12.25 20.24a6 6 0 0 1-8.49-8.49l9.9-9.9a4 4 0 1 1 5.66 5.66l-9.9 9.9a2 2 0 1 1-2.83-2.83l8.49-8.48"></path>
+                                                    </svg>
+                                                </button>
+                                                <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
+                                            </div>
+                                            <input id="messages-chat-attachment-input" type="file" hidden multiple accept="*/*">
+                                            <div class="messages-chat-actions">
+                                                <div id="messages-chat-status" class="messages-chat-status"></div>
+                                                <button id="messages-chat-send" type="submit" class="card-btn active" aria-label="Send message" title="Send message" disabled>
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </section>
+                                </section>
+                            </div>
+                        </section>
                     </section>
 
                     <section class="glass-card community-panel" data-community-panel="resource-drops" aria-labelledby="community-resource-drops-title">
@@ -2555,6 +3191,7 @@
                 </aside>
             </div>
         </main>
+
     </div>
 
     <div class="community-voice-screen-modal" id="community-voice-screen-modal" hidden>
@@ -2690,8 +3327,6 @@
         (function () {
             const buttons = Array.from(document.querySelectorAll('[data-community-target]'));
             const panels = Array.from(document.querySelectorAll('[data-community-panel]'));
-            const messagesEmbed = document.querySelector('.community-messages-embed');
-            const messagesEmbedWrap = document.querySelector('.community-messages-embed-wrap');
             const initialPanelSearchParams = new URLSearchParams(window.location.search);
             const collapseToggles = Array.from(document.querySelectorAll('[data-community-collapse-toggle]'));
             const voiceStatus = document.getElementById('community-voice-status');
@@ -2726,82 +3361,6 @@
             const voiceSettingsMicDeviceSelect = document.getElementById('community-voice-settings-mic-device');
             const voiceSettingsMicDeviceNote = document.getElementById('community-voice-settings-mic-device-note');
             const voiceSettingsGainState = document.getElementById('community-voice-settings-gain-state');
-            let cleanupMessagesEmbedAutoSize = null;
-
-            const syncMessagesEmbedHeight = () => {
-                if (!(messagesEmbed instanceof HTMLIFrameElement) || !messagesEmbedWrap) {
-                    return;
-                }
-
-                try {
-                    const doc = messagesEmbed.contentDocument;
-                    const root = doc && doc.documentElement;
-                    const body = doc && doc.body;
-                    const nextHeight = Math.max(
-                        root ? root.scrollHeight : 0,
-                        body ? body.scrollHeight : 0,
-                        640
-                    );
-
-                    messagesEmbed.style.height = `${nextHeight}px`;
-                    messagesEmbedWrap.style.minHeight = `${nextHeight}px`;
-                } catch (error) {
-                    // Ignore sizing failures and keep the fallback height.
-                }
-            };
-
-            const attachMessagesEmbedAutoSize = () => {
-                if (!(messagesEmbed instanceof HTMLIFrameElement)) {
-                    return;
-                }
-
-                if (typeof cleanupMessagesEmbedAutoSize === 'function') {
-                    cleanupMessagesEmbedAutoSize();
-                    cleanupMessagesEmbedAutoSize = null;
-                }
-
-                try {
-                    const frameWindow = messagesEmbed.contentWindow;
-                    const doc = messagesEmbed.contentDocument;
-                    const root = doc && doc.documentElement;
-
-                    if (!frameWindow || !doc || !root) {
-                        syncMessagesEmbedHeight();
-                        return;
-                    }
-
-                    const scheduleSync = () => {
-                        window.requestAnimationFrame(syncMessagesEmbedHeight);
-                    };
-
-                    const observer = new MutationObserver(scheduleSync);
-                    observer.observe(root, {
-                        childList: true,
-                        subtree: true,
-                        attributes: true,
-                        characterData: true
-                    });
-
-                    frameWindow.addEventListener('resize', scheduleSync);
-                    window.addEventListener('resize', scheduleSync);
-
-                    scheduleSync();
-                    window.setTimeout(scheduleSync, 120);
-                    window.setTimeout(scheduleSync, 360);
-
-                    cleanupMessagesEmbedAutoSize = () => {
-                        observer.disconnect();
-                        frameWindow.removeEventListener('resize', scheduleSync);
-                        window.removeEventListener('resize', scheduleSync);
-                    };
-                } catch (error) {
-                    syncMessagesEmbedHeight();
-                }
-            };
-
-            if (messagesEmbed instanceof HTMLIFrameElement) {
-                messagesEmbed.addEventListener('load', attachMessagesEmbedAutoSize);
-            }
             const voiceSettingsGainDownButton = document.getElementById('community-voice-settings-gain-down');
             const voiceSettingsGainValue = document.getElementById('community-voice-settings-gain-value');
             const voiceSettingsGainUpButton = document.getElementById('community-voice-settings-gain-up');
@@ -6379,5 +6938,6 @@
             renderVoiceToolbar();
         })();
     </script>
+    <script src="community-fbg-messaging.js"></script>
 </body>
 </html>
