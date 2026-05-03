@@ -1086,6 +1086,30 @@
     return listItem;
   }
 
+  function createCampaignsNavItem(isActive) {
+    const listItem = document.createElement('li');
+    listItem.className = 'nav-item';
+
+    const link = document.createElement('a');
+    link.href = 'campaigns.html';
+    link.className = isActive ? 'nav-link active' : 'nav-link';
+    link.innerHTML = '<span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging';
+    listItem.appendChild(link);
+    return listItem;
+  }
+
+  function createFbgMessagesNavItem(isActive) {
+    const listItem = document.createElement('li');
+    listItem.className = 'nav-item';
+
+    const link = document.createElement('a');
+    link.href = 'fbg-messages.html';
+    link.className = isActive ? 'nav-link active' : 'nav-link';
+    link.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg>FBG messaging';
+    listItem.appendChild(link);
+    return listItem;
+  }
+
   function createMlsSpreadsheetNavItem(isActive) {
     const listItem = document.createElement('li');
     listItem.className = 'nav-item';
@@ -1168,10 +1192,22 @@
 
   function applyGmailInboxAccess() {
     const isGmailPage = isGmailPath(window.location.pathname);
+    const isCampaignsPage = isCampaignsPath(window.location.pathname);
+    const isFbgMessagesPage = isFbgMessagesPath(window.location.pathname);
+    const campaignLinks = document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
     const existingLinks = document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]');
+    const fbgMessagingLinks = document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
+
+    campaignLinks.forEach((link) => {
+      link.classList.toggle('active', isCampaignsPage);
+    });
 
     existingLinks.forEach((link) => {
       link.classList.toggle('active', isGmailPage);
+    });
+
+    fbgMessagingLinks.forEach((link) => {
+      link.classList.toggle('active', isFbgMessagesPage);
     });
 
     const navMenus = document.querySelectorAll('.nav-section > ul');
@@ -1191,27 +1227,61 @@
         return Boolean(link);
       });
 
+      let campaignItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
+        return Boolean(link);
+      });
+
       let gmailItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
         const link = item.querySelector('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]');
         return Boolean(link);
       });
 
+      let fbgMessagesItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
+        return Boolean(link);
+      });
+
+      if (!campaignItem) {
+        campaignItem = createCampaignsNavItem(isCampaignsPage);
+      }
+
       if (!gmailItem) {
         gmailItem = createGmailNavItem(isGmailPage);
       }
 
-      if (settingsItem && gmailItem !== settingsItem) {
-        menu.insertBefore(gmailItem, settingsItem);
+      if (!fbgMessagesItem) {
+        fbgMessagesItem = createFbgMessagesNavItem(isFbgMessagesPage);
+      }
+
+      const orderedItems = [campaignItem, gmailItem, fbgMessagesItem].filter(Boolean);
+
+      if (settingsItem) {
+        orderedItems.forEach((item) => {
+          if (item !== settingsItem) {
+            menu.insertBefore(item, settingsItem);
+          }
+        });
         return;
       }
 
-      if (!menu.contains(gmailItem)) {
-        menu.appendChild(gmailItem);
-      }
+      orderedItems.forEach((item) => {
+        if (!menu.contains(item)) {
+          menu.appendChild(item);
+        }
+      });
+    });
+
+    document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]').forEach((link) => {
+      link.classList.toggle('active', isCampaignsPage);
     });
 
     document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]').forEach((link) => {
       link.classList.toggle('active', isGmailPage);
+    });
+
+    document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]').forEach((link) => {
+      link.classList.toggle('active', isFbgMessagesPage);
     });
 
     return true;
@@ -1347,6 +1417,11 @@
   function isCampaignsPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/campaigns.html' || normalizedPath.endsWith('/campaigns.html');
+  }
+
+  function isFbgMessagesPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/fbg-messages.html' || normalizedPath.endsWith('/fbg-messages.html');
   }
 
   function clearPremiumUpgradeTooltipHideTimer() {

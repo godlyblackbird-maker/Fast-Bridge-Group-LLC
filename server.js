@@ -16496,12 +16496,12 @@ app.get('/api/gmail/messages', async (req, res) => {
   const maxResults = Math.max(1, Math.min(Number(req.query?.maxResults) || 25, 50));
   const pageToken = String(req.query?.pageToken || '').trim();
   const queryText = String(req.query?.q || '').trim();
+  const includeSpamTrash = /\bin:(spam|trash|anywhere)\b/i.test(queryText);
 
   try {
     const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
       const list = await fetchGmailApiJson('/gmail/v1/users/me/messages', accessToken, {
-        labelIds: 'INBOX',
-        includeSpamTrash: false,
+        includeSpamTrash,
         maxResults,
         pageToken,
         q: queryText
