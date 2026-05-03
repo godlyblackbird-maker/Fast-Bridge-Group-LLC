@@ -560,7 +560,7 @@
             background: transparent;
             border-top: 1px solid rgba(15, 23, 42, 0.05);
             display: grid;
-            grid-template-columns: auto minmax(0, 1fr);
+            grid-template-columns: auto minmax(0, 1fr) auto;
             gap: 14px;
             align-items: center;
             color: var(--gmail-text);
@@ -617,7 +617,7 @@
         }
 
         .gmail-mail-star.is-starred {
-            color: #fbbc04;
+            color: var(--gmail-blue);
         }
 
         .gmail-mail-open {
@@ -628,7 +628,7 @@
             text-align: left;
             cursor: pointer;
             display: grid;
-            grid-template-columns: minmax(0, 148px) minmax(0, 1fr) auto auto;
+            grid-template-columns: minmax(0, 148px) minmax(0, 1fr) auto;
             gap: 14px;
             align-items: center;
             color: inherit;
@@ -676,6 +676,7 @@
             font-size: 0.86rem;
             color: var(--gmail-muted);
             justify-self: end;
+            transition: opacity 0.16s ease;
         }
 
         .gmail-mail-quick-actions {
@@ -684,6 +685,7 @@
             gap: 6px;
             opacity: 0;
             pointer-events: none;
+            justify-self: end;
             transition: opacity 0.16s ease;
         }
 
@@ -692,6 +694,16 @@
         .gmail-mail-row.is-selected .gmail-mail-quick-actions {
             opacity: 1;
             pointer-events: auto;
+        }
+
+        .gmail-mail-row:hover .gmail-mail-date,
+        .gmail-mail-row:hover .gmail-mail-unread,
+        .gmail-mail-row:focus-within .gmail-mail-date,
+        .gmail-mail-row:focus-within .gmail-mail-unread,
+        .gmail-mail-row.is-selected .gmail-mail-date,
+        .gmail-mail-row.is-selected .gmail-mail-unread {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .gmail-mail-quick-btn {
@@ -728,6 +740,7 @@
             font-size: 12px;
             font-weight: 700;
             justify-self: end;
+            transition: opacity 0.16s ease;
         }
 
         .gmail-empty {
@@ -1009,7 +1022,7 @@
             height: min(640px, calc(100dvh - 48px));
             display: grid;
             grid-template-rows: auto 1fr;
-            background: color-mix(in srgb, var(--glass-bg) 100%, #ffffff 0%);
+            background: var(--gmail-card);
             border-radius: 18px 18px 0 0;
             box-shadow: 0 24px 80px rgba(60, 64, 67, 0.3), 0 8px 24px rgba(60, 64, 67, 0.2);
             overflow: hidden;
@@ -1031,7 +1044,7 @@
         .gmail-compose-header {
             min-height: 48px;
             padding: 0 8px 0 16px;
-            background: color-mix(in srgb, var(--glass-bg) 96%, #ffffff 4%);
+            background: var(--gmail-card-strong);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -1070,7 +1083,7 @@
             min-height: 0;
             display: grid;
             grid-template-rows: auto auto auto auto minmax(180px, 1fr) auto;
-            background: color-mix(in srgb, var(--glass-bg) 66%, rgba(255, 255, 255, 0.34) 34%);
+            background: var(--gmail-card);
         }
 
         .gmail-compose-row {
@@ -1146,7 +1159,7 @@
             display: grid;
             gap: 12px;
             border-top: 1px solid rgba(60, 64, 67, 0.12);
-            background: color-mix(in srgb, var(--glass-bg) 66%, rgba(255, 255, 255, 0.34) 34%);
+            background: var(--gmail-card);
             position: relative;
         }
 
@@ -1173,7 +1186,7 @@
             padding: 10px 12px;
             border-radius: 18px;
             border: 1px solid rgba(60, 64, 67, 0.12);
-            background: color-mix(in srgb, var(--glass-bg) 92%, #ffffff 8%);
+            background: var(--gmail-card-strong);
         }
 
         .gmail-compose-formatbar[hidden] {
@@ -1195,7 +1208,7 @@
         .gmail-compose-select {
             padding: 0 10px;
             border: 1px solid rgba(60, 64, 67, 0.12);
-            background: color-mix(in srgb, var(--glass-bg) 96%, #ffffff 4%);
+            background: var(--gmail-card-strong);
             cursor: pointer;
         }
 
@@ -1243,7 +1256,7 @@
             gap: 8px;
             padding: 8px 12px;
             border-radius: 999px;
-            background: color-mix(in srgb, var(--glass-bg) 90%, #ffffff 10%);
+            background: var(--gmail-card-strong);
             border: 1px solid rgba(60, 64, 67, 0.12);
             color: var(--gmail-text);
             font-size: 0.88rem;
@@ -1269,7 +1282,7 @@
             padding: 10px;
             border-radius: 16px;
             border: 1px solid rgba(60, 64, 67, 0.12);
-            background: color-mix(in srgb, var(--glass-bg) 96%, #ffffff 4%);
+            background: var(--gmail-card-strong);
             box-shadow: 0 16px 38px rgba(15, 23, 42, 0.14);
             z-index: 2;
         }
@@ -1750,15 +1763,6 @@
                     <button class="gmail-compose-tool" id="gmail-compose-bold" type="button" aria-label="Bold"><strong>B</strong></button>
                     <button class="gmail-compose-tool" id="gmail-compose-italic" type="button" aria-label="Italic"><em>I</em></button>
                     <button class="gmail-compose-tool" id="gmail-compose-underline" type="button" aria-label="Underline"><u>U</u></button>
-                    <button class="gmail-compose-tool" id="gmail-compose-text-color-btn" type="button" aria-label="Text color">A</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-align-left" type="button" aria-label="Align left">L</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-align-center" type="button" aria-label="Align center">C</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-align-right" type="button" aria-label="Align right">R</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-align-justify" type="button" aria-label="Justify">J</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-bullets" type="button" aria-label="Bulleted list">•</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-numbers" type="button" aria-label="Numbered list">1.</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-outdent" type="button" aria-label="Outdent">&lt;</button>
-                    <button class="gmail-compose-tool" id="gmail-compose-indent" type="button" aria-label="Indent">&gt;</button>
                 </div>
                 <div class="gmail-compose-attachments" id="gmail-compose-attachments" hidden></div>
                 <div class="gmail-compose-toolbar-row">
@@ -2446,15 +2450,15 @@
                                 ${message.isUnread
                                     ? '<span class="gmail-mail-unread">New</span>'
                                     : `<div class="gmail-mail-date">${escapeHtml(formatDate(message.date))}</div>`}
-                                <div class="gmail-mail-quick-actions" aria-hidden="true">
-                                    <button class="gmail-mail-quick-btn" type="button" data-archive-message="${escapeHtml(message.id)}" aria-label="Archive message">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="5" rx="1"></rect><path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9Z"></path><path d="M10 13h4"></path></svg>
-                                    </button>
-                                    <button class="gmail-mail-quick-btn" type="button" data-trash-message="${escapeHtml(message.id)}" aria-label="Move message to trash">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M7 6l1 14h8l1-14"></path></svg>
-                                    </button>
-                                </div>
                             </button>
+                            <div class="gmail-mail-quick-actions" aria-hidden="true">
+                                <button class="gmail-mail-quick-btn" type="button" data-archive-message="${escapeHtml(message.id)}" aria-label="Archive message">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="5" rx="1"></rect><path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9Z"></path><path d="M10 13h4"></path></svg>
+                                </button>
+                                <button class="gmail-mail-quick-btn" type="button" data-trash-message="${escapeHtml(message.id)}" aria-label="Move message to trash">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M7 6l1 14h8l1-14"></path></svg>
+                                </button>
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -2904,16 +2908,6 @@
             document.getElementById('gmail-compose-bold').addEventListener('click', () => executeComposeCommand('bold'));
             document.getElementById('gmail-compose-italic').addEventListener('click', () => executeComposeCommand('italic'));
             document.getElementById('gmail-compose-underline').addEventListener('click', () => executeComposeCommand('underline'));
-            document.getElementById('gmail-compose-text-color-btn').addEventListener('click', () => composeTextColorInput.click());
-            document.getElementById('gmail-compose-align-left').addEventListener('click', () => executeComposeCommand('justifyLeft'));
-            document.getElementById('gmail-compose-align-center').addEventListener('click', () => executeComposeCommand('justifyCenter'));
-            document.getElementById('gmail-compose-align-right').addEventListener('click', () => executeComposeCommand('justifyRight'));
-            document.getElementById('gmail-compose-align-justify').addEventListener('click', () => executeComposeCommand('justifyFull'));
-            document.getElementById('gmail-compose-bullets').addEventListener('click', () => executeComposeCommand('insertUnorderedList'));
-            document.getElementById('gmail-compose-numbers').addEventListener('click', () => executeComposeCommand('insertOrderedList'));
-            document.getElementById('gmail-compose-outdent').addEventListener('click', () => executeComposeCommand('outdent'));
-            document.getElementById('gmail-compose-indent').addEventListener('click', () => executeComposeCommand('indent'));
-            composeTextColorInput.addEventListener('input', () => executeComposeCommand('foreColor', composeTextColorInput.value));
             composeAttachButton.addEventListener('click', () => composeAttachmentInput.click());
             composeImageButton.addEventListener('click', () => composeImageInput.click());
             composeAttachmentInput.addEventListener('change', async () => {
