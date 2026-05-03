@@ -93,6 +93,7 @@ const GOOGLE_EARTH_FALLBACK_MAP_ID = 'DEMO_MAP_ID';
 const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 const GMAIL_MODIFY_SCOPE = 'https://www.googleapis.com/auth/gmail.modify';
 const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
+const GMAIL_COMPOSE_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
 const GMAIL_APP_PATH = '/gmail.html';
 const PREMIUM_USER_ROLE = 'premium user';
 const TEST_USER_ROLE = 'test user';
@@ -11051,6 +11052,11 @@ function gmailConnectionHasScopes(connection, requiredScopes = []) {
   return requiredScopes.every((scope) => grantedScopes.has(String(scope || '').trim()));
 }
 
+function gmailConnectionHasAnyScope(connection, acceptedScopes = []) {
+  const grantedScopes = new Set(splitOAuthScopes(connection && connection.scope));
+  return acceptedScopes.some((scope) => grantedScopes.has(String(scope || '').trim()));
+}
+
 async function getGmailOAuthConnectionForUser(userId) {
   const normalizedUserId = Number(userId) || 0;
   if (!normalizedUserId) {
@@ -11217,6 +11223,24 @@ async function postGmailApiOptionalJson(endpoint, accessToken, body = {}) {
   } catch (_error) {
     return {};
   }
+}
+
+async function putGmailApiJson(endpoint, accessToken, body = {}) {
+  const response = await fetch(`https://gmail.googleapis.com${endpoint}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body || {})
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Gmail API request failed: ${detail.slice(0, 200)}`);
+  }
+
+  return response.json();
 }
 
 function getGmailMessageHeader(message, headerName) {
@@ -11588,7 +11612,7 @@ app.get('/api/gmail/connect-url', (req, res) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${GMAIL_MODIFY_SCOPE} ${GMAIL_SEND_SCOPE}`,
+    scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${GMAIL_MODIFY_SCOPE} ${GMAIL_SEND_SCOPE} ${GMAIL_COMPOSE_SCOPE}`,
     access_type: 'offline',
     include_granted_scopes: 'true',
     prompt: 'consent select_account',
@@ -16759,7 +16783,7 @@ app.post('/api/gmail/messages/send', async (req, res) => {
 
   try {
     const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
-      if (!gmailConnectionHasScopes(connection, [GMAIL_SEND_SCOPE])) {
+      if (!gmailConnectionHasAnyScope(connection, [GMAIL_SEND_SCOPE, GMAIL_COMPOSE_SCOPE])) {
         throw new Error('Reconnect Gmail and approve compose permissions before sending mail from FAST.');
       }
 
@@ -16792,6 +16816,76 @@ app.post('/api/gmail/messages/send', async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to send Gmail message:', error);
+    return res.status(500).json({ error: formatGmailOAuthError(error) });
+  }
+});
+
+// POST /api/gmail/drafts — creates or updates a Gmail draft for the authenticated user
+app.post('/api/gmail/drafts', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const draftId = String(req.body?.draftId || '').trim();
+  const to = normalizeEmailListInput(req.body?.to);
+  const cc = normalizeEmailListInput(req.body?.cc);
+  const bcc = normalizeEmailListInput(req.body?.bcc);
+  const subject = String(req.body?.subject || '').trim();
+  const bodyText = String(req.body?.bodyText || '').trim();
+  const bodyHtml = String(req.body?.bodyHtml || '').trim();
+  const attachments = normalizeGmailComposeAttachments(req.body?.attachments);
+
+  const totalAttachmentBytes = attachments.reduce((total, attachment) => total + (Number(attachment?.bytes) || 0), 0);
+  if (totalAttachmentBytes > 15 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Attachments must stay under 15 MB total.' });
+  }
+
+  if (!to && !cc && !bcc && !subject && !bodyText && !bodyHtml && !attachments.length) {
+    return res.status(400).json({ error: 'Add recipients, a subject, message content, or attachments before saving a Gmail draft.' });
+  }
+
+  try {
+    const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
+      if (!gmailConnectionHasScopes(connection, [GMAIL_COMPOSE_SCOPE])) {
+        throw new Error('Reconnect Gmail and approve Gmail draft permissions before saving drafts from FAST.');
+      }
+
+      const message = {
+        raw: buildGmailRawMessage({
+          from: connection.gmailEmail || decoded.email,
+          to,
+          cc,
+          bcc,
+          subject,
+          bodyText,
+          bodyHtml,
+          attachments
+        })
+      };
+
+      const response = draftId
+        ? await putGmailApiJson(`/gmail/v1/users/me/drafts/${encodeURIComponent(draftId)}`, accessToken, { message })
+        : await postGmailApiJson('/gmail/v1/users/me/drafts', accessToken, { message });
+
+      return {
+        gmailEmail: connection.gmailEmail,
+        draftId: String(response && response.id || draftId || '').trim(),
+        messageId: String(response && response.message && response.message.id || '').trim(),
+        threadId: String(response && response.message && response.message.threadId || '').trim()
+      };
+    });
+
+    return res.json({
+      success: true,
+      gmailEmail: payload.gmailEmail,
+      draftId: payload.draftId,
+      messageId: payload.messageId,
+      threadId: payload.threadId,
+      message: 'Gmail draft synced successfully.'
+    });
+  } catch (error) {
+    console.error('Failed to save Gmail draft:', error);
     return res.status(500).json({ error: formatGmailOAuthError(error) });
   }
 });

@@ -161,8 +161,11 @@
             --gmail-shell: color-mix(in srgb, var(--bg-gradient-3) 76%, rgba(255, 255, 255, 0.2) 24%);
             --gmail-card: color-mix(in srgb, var(--glass-bg) 82%, rgba(255, 255, 255, 0.16) 18%);
             --gmail-card-strong: color-mix(in srgb, var(--glass-bg) 68%, rgba(255, 255, 255, 0.3) 32%);
-            --gmail-compose-card: color-mix(in srgb, var(--bg-gradient-3) 82%, var(--bg-gradient-2) 18%);
-            --gmail-compose-card-strong: color-mix(in srgb, var(--bg-gradient-2) 78%, var(--bg-gradient-1) 22%);
+            --gmail-compose-card: color-mix(in srgb, var(--glass-bg) 54%, var(--bg-gradient-3) 46%);
+            --gmail-compose-card-strong: color-mix(in srgb, var(--glass-bg) 34%, var(--bg-gradient-2) 66%);
+            --gmail-compose-card-soft: color-mix(in srgb, var(--glass-bg) 46%, var(--bg-gradient-1) 54%);
+            --gmail-compose-edge: color-mix(in srgb, var(--glass-border) 72%, rgba(var(--accent-light-rgb), 0.28) 28%);
+            --gmail-compose-shadow: 0 20px 42px rgba(var(--accent-rgb), 0.14);
             --gmail-border: color-mix(in srgb, var(--glass-border) 78%, rgba(15, 23, 42, 0.08) 22%);
             --gmail-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
             --gmail-accent: var(--emerald);
@@ -522,11 +525,19 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            background: rgba(26, 115, 232, 0.08);
-            border: 1px solid rgba(26, 115, 232, 0.08);
-            border-radius: 18px;
-            padding: 0 14px;
+            background: color-mix(in srgb, var(--gmail-compose-card-soft) 44%, transparent 56%);
+            border: 1px solid color-mix(in srgb, var(--gmail-compose-edge) 56%, transparent 44%);
+            border-radius: 24px;
+            padding: 0 16px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
             min-height: 52px;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+        }
+
+        .gmail-search-form:focus-within {
+            background: color-mix(in srgb, var(--gmail-compose-card-soft) 62%, transparent 38%);
+            border-color: rgba(var(--accent-rgb), 0.28);
+            box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.18), 0 0 0 3px rgba(var(--accent-rgb), 0.08);
         }
 
         .gmail-search-form input {
@@ -536,6 +547,10 @@
             background: transparent;
             font: inherit;
             color: var(--gmail-text);
+        }
+
+        .gmail-search-form input::placeholder {
+            color: color-mix(in srgb, var(--gmail-muted) 78%, rgba(255, 255, 255, 0.22) 22%);
         }
 
         .gmail-search-submit {
@@ -1085,12 +1100,13 @@
             right: 34px;
             bottom: 0;
             width: min(560px, calc(100vw - 44px));
-            height: min(640px, calc(100dvh - 48px));
+            height: min(720px, calc(100dvh - 24px));
             display: grid;
             grid-template-rows: auto 1fr;
-            background: var(--gmail-compose-card);
+            background: linear-gradient(180deg, var(--gmail-compose-card-strong), var(--gmail-compose-card));
             border-radius: 18px 18px 0 0;
-            box-shadow: 0 24px 80px rgba(60, 64, 67, 0.3), 0 8px 24px rgba(60, 64, 67, 0.2);
+            border: 1px solid var(--gmail-compose-edge);
+            box-shadow: var(--gmail-compose-shadow), 0 28px 80px rgba(15, 23, 42, 0.22);
             overflow: hidden;
             z-index: 240;
         }
@@ -1110,12 +1126,12 @@
         .gmail-compose-header {
             min-height: 48px;
             padding: 0 8px 0 16px;
-            background: var(--gmail-compose-card-strong);
+            background: linear-gradient(180deg, color-mix(in srgb, var(--gmail-compose-card-soft) 88%, rgba(255, 255, 255, 0.12) 12%), var(--gmail-compose-card-strong));
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            border-bottom: 1px solid rgba(60, 64, 67, 0.14);
+            border-bottom: 1px solid var(--gmail-compose-edge);
             font-size: 0.92rem;
             font-weight: 600;
             color: var(--gmail-text);
@@ -1141,7 +1157,8 @@
 
         .gmail-compose-control:hover,
         .gmail-compose-control:focus-visible {
-            background: rgba(60, 64, 67, 0.12);
+            background: rgba(var(--accent-rgb), 0.14);
+            color: var(--gmail-text);
             outline: none;
         }
 
@@ -1149,42 +1166,77 @@
             min-height: 0;
             display: grid;
             grid-template-rows: auto auto auto auto minmax(180px, 1fr) auto;
+            gap: 10px;
+            padding: 14px 14px 0;
             background: var(--gmail-compose-card);
         }
 
         .gmail-compose-row {
-            min-height: 44px;
-            border-bottom: 1px solid rgba(60, 64, 67, 0.12);
-            display: flex;
+            min-height: 52px;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
             align-items: center;
             gap: 12px;
-            padding: 0 16px;
-            background: var(--gmail-compose-card);
+            padding: 0;
+            background: transparent;
+            border-bottom: 1px solid color-mix(in srgb, var(--gmail-compose-edge) 78%, transparent 22%);
         }
 
         .gmail-compose-row label {
-            width: 28px;
-            flex: 0 0 28px;
-            color: var(--gmail-muted);
-            font-size: 0.9rem;
+            width: auto;
+            min-width: 70px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px 0 0;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            color: color-mix(in srgb, var(--gmail-text) 84%, white 16%);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
 
         .gmail-compose-row input {
             width: 100%;
+            min-height: 42px;
+            padding: 0 14px;
             border: none;
+            border-radius: 14px;
             outline: none;
-            background: var(--gmail-compose-card);
+            background: color-mix(in srgb, var(--gmail-compose-card-soft) 42%, transparent 58%);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gmail-compose-edge) 52%, transparent 48%);
             color: var(--gmail-text);
             font: inherit;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+        }
+
+        .gmail-compose-row input::placeholder {
+            color: color-mix(in srgb, var(--gmail-muted) 78%, rgba(255, 255, 255, 0.26) 22%);
+        }
+
+        .gmail-compose-row:focus-within label {
+            color: var(--gmail-blue);
+        }
+
+        .gmail-compose-row input:focus-visible {
+            background: color-mix(in srgb, var(--gmail-compose-card-soft) 62%, transparent 38%);
+            box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.3), 0 0 0 3px rgba(var(--accent-rgb), 0.08);
         }
 
         .gmail-compose-editor {
             width: 100%;
             min-height: 0;
             padding: 16px;
-            border: none;
+            border: 1px solid var(--gmail-compose-edge);
+            border-radius: 18px;
             outline: none;
-            background: var(--gmail-compose-card);
+            background: color-mix(in srgb, var(--gmail-compose-card) 78%, rgba(255, 255, 255, 0.12) 22%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 34px rgba(var(--accent-rgb), 0.08);
             color: var(--gmail-text);
             font: 0.96rem/1.55 'Outfit', sans-serif;
             overflow: auto;
@@ -1206,9 +1258,19 @@
 
         .gmail-compose-editor blockquote {
             margin: 12px 0;
-            padding-left: 12px;
+            padding: 12px 14px;
             border-left: 3px solid rgba(var(--accent-rgb), 0.35);
+            border-radius: 0 14px 14px 0;
+            background: color-mix(in srgb, var(--gmail-compose-card-soft) 72%, rgba(255, 255, 255, 0.12) 28%);
             color: var(--gmail-muted);
+        }
+
+        .gmail-compose-editor blockquote strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--gmail-text);
+            font-size: 0.98rem;
+            font-weight: 700;
         }
 
         .gmail-compose-editor pre {
@@ -1225,7 +1287,7 @@
             padding: 12px 16px 16px;
             display: grid;
             gap: 12px;
-            border-top: 1px solid rgba(60, 64, 67, 0.12);
+            border-top: 1px solid var(--gmail-compose-edge);
             background: var(--gmail-compose-card);
             position: relative;
         }
@@ -1252,8 +1314,9 @@
         .gmail-compose-formatbar {
             padding: 10px 12px;
             border-radius: 18px;
-            border: 1px solid rgba(60, 64, 67, 0.12);
-            background: var(--gmail-compose-card-strong);
+            border: 1px solid var(--gmail-compose-edge);
+            background: color-mix(in srgb, var(--gmail-compose-card-soft) 74%, rgba(255, 255, 255, 0.08) 26%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
 
         .gmail-compose-formatbar[hidden] {
@@ -1274,8 +1337,8 @@
 
         .gmail-compose-select {
             padding: 0 10px;
-            border: 1px solid rgba(60, 64, 67, 0.12);
-            background: var(--gmail-compose-card-strong);
+            border: 1px solid var(--gmail-compose-edge);
+            background: color-mix(in srgb, var(--gmail-compose-card-strong) 82%, rgba(255, 255, 255, 0.1) 18%);
             cursor: pointer;
         }
 
@@ -1292,13 +1355,33 @@
         .gmail-compose-tool:focus-visible,
         .gmail-compose-send-toggle:hover,
         .gmail-compose-send-toggle:focus-visible {
-            background: rgba(60, 64, 67, 0.12);
+            background: rgba(var(--accent-rgb), 0.14);
             outline: none;
         }
 
         .gmail-compose-tool.is-active {
-            background: rgba(var(--accent-rgb), 0.14);
+            background: rgba(var(--accent-rgb), 0.18);
             color: var(--gmail-blue);
+        }
+
+        #gmail-compose-signature-btn,
+        #gmail-compose-calendar-btn {
+            background: rgba(var(--accent-rgb), 0.12);
+            color: var(--gmail-blue);
+            box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.18);
+        }
+
+        #gmail-compose-signature-btn:hover,
+        #gmail-compose-signature-btn:focus-visible,
+        #gmail-compose-calendar-btn:hover,
+        #gmail-compose-calendar-btn:focus-visible {
+            background: rgba(var(--accent-rgb), 0.2);
+            color: color-mix(in srgb, var(--gmail-blue) 78%, white 22%);
+        }
+
+        #gmail-compose-signature-btn svg,
+        #gmail-compose-calendar-btn svg {
+            stroke-width: 2.15;
         }
 
         .gmail-compose-tool-label {
@@ -1323,8 +1406,8 @@
             gap: 8px;
             padding: 8px 12px;
             border-radius: 999px;
-            background: var(--gmail-compose-card-strong);
-            border: 1px solid rgba(60, 64, 67, 0.12);
+            background: color-mix(in srgb, var(--gmail-compose-card-soft) 76%, rgba(255, 255, 255, 0.12) 24%);
+            border: 1px solid var(--gmail-compose-edge);
             color: var(--gmail-text);
             font-size: 0.88rem;
         }
@@ -1348,9 +1431,9 @@
             min-width: 180px;
             padding: 10px;
             border-radius: 16px;
-            border: 1px solid rgba(60, 64, 67, 0.12);
-            background: var(--gmail-compose-card-strong);
-            box-shadow: 0 16px 38px rgba(15, 23, 42, 0.14);
+            border: 1px solid var(--gmail-compose-edge);
+            background: color-mix(in srgb, var(--gmail-compose-card-strong) 82%, rgba(255, 255, 255, 0.08) 18%);
+            box-shadow: 0 16px 38px rgba(var(--accent-rgb), 0.12), 0 18px 40px rgba(15, 23, 42, 0.16);
             z-index: 2;
         }
 
@@ -1394,17 +1477,22 @@
         }
 
         .gmail-compose-send-group {
+            display: inline-flex;
+            align-items: stretch;
             gap: 0;
             border-radius: 999px;
             overflow: hidden;
-            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.1);
+            background: linear-gradient(135deg, var(--emerald), var(--gold));
+            box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.2), 0 12px 30px rgba(15, 23, 42, 0.12);
         }
 
         .gmail-compose-send-group .gmail-compose-send,
         .gmail-compose-send-group .gmail-compose-send-toggle {
             border-radius: 0;
-            background: linear-gradient(135deg, var(--emerald), var(--gold));
+            min-height: 40px;
+            background: transparent;
             color: #fff;
+            box-shadow: none;
         }
 
         .gmail-compose-send-group .gmail-compose-send {
@@ -1413,7 +1501,23 @@
         }
 
         .gmail-compose-send-group .gmail-compose-send-toggle {
-            width: 36px;
+            width: 42px;
+            border-left: 1px solid rgba(255, 255, 255, 0.24);
+        }
+
+        .gmail-compose-send-group .gmail-compose-send:hover,
+        .gmail-compose-send-group .gmail-compose-send:focus-visible,
+        .gmail-compose-send-group .gmail-compose-send-toggle:hover,
+        .gmail-compose-send-group .gmail-compose-send-toggle:focus-visible {
+            background: rgba(255, 255, 255, 0.12);
+            outline: none;
+        }
+
+        .gmail-compose-send-group .gmail-compose-send[disabled],
+        .gmail-compose-send-group .gmail-compose-send-toggle[disabled] {
+            background: transparent;
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .gmail-compose-send[disabled] {
@@ -1469,8 +1573,9 @@
             .gmail-compose-window {
                 right: 12px;
                 left: 12px;
+                bottom: 0;
                 width: auto;
-                height: min(78dvh, calc(100dvh - 24px));
+                height: min(84dvh, calc(100dvh - 12px));
             }
 
             .gmail-topbar {
@@ -1801,19 +1906,19 @@
         <form class="gmail-compose-form" id="gmail-compose-form">
             <div class="gmail-compose-row">
                 <label for="gmail-compose-to">To</label>
-                <input id="gmail-compose-to" type="text" autocomplete="off" placeholder="Recipients">
+                <input id="gmail-compose-to" type="text" autocomplete="off" placeholder="Add recipients">
             </div>
             <div class="gmail-compose-row">
                 <label for="gmail-compose-cc">Cc</label>
-                <input id="gmail-compose-cc" type="text" autocomplete="off" placeholder="Carbon copy recipients">
+                <input id="gmail-compose-cc" type="text" autocomplete="off" placeholder="Add carbon copy recipients">
             </div>
             <div class="gmail-compose-row">
                 <label for="gmail-compose-bcc">Bcc</label>
-                <input id="gmail-compose-bcc" type="text" autocomplete="off" placeholder="Blind carbon copy recipients">
+                <input id="gmail-compose-bcc" type="text" autocomplete="off" placeholder="Add blind carbon copy recipients">
             </div>
             <div class="gmail-compose-row">
-                <label for="gmail-compose-subject"> </label>
-                <input id="gmail-compose-subject" type="text" autocomplete="off" placeholder="Subject">
+                <label for="gmail-compose-subject">Subject</label>
+                <input id="gmail-compose-subject" type="text" autocomplete="off" placeholder="Add a subject line">
             </div>
             <div class="gmail-compose-editor" id="gmail-compose-body" contenteditable="true" data-placeholder="Compose email"></div>
             <div class="gmail-compose-footer">
@@ -1984,6 +2089,7 @@
             const composeMoreButton = document.getElementById('gmail-compose-more-btn');
             const composeTrashButton = document.getElementById('gmail-compose-trash-btn');
             const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
+            const GMAIL_COMPOSE_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
 
             const state = {
                 connected: false,
@@ -2007,6 +2113,7 @@
                 composeFormattingVisible: true,
                 composeAttachments: [],
                 composeConfidentialMode: false,
+                composeDraftId: '',
                 composeSignatures: [],
                 composeDefaultSignatureEmail: '',
                 composeSignatureLoaded: false,
@@ -2200,6 +2307,7 @@
                 composeBodyInput.innerHTML = '';
                 state.composeAttachments = [];
                 state.composeConfidentialMode = false;
+                state.composeDraftId = '';
                 state.composeFormattingVisible = true;
                 composeFormatBar.hidden = false;
                 composeLockButton.classList.remove('is-active');
@@ -2209,8 +2317,33 @@
                 refreshComposeStatus();
             }
 
+            function hasGmailScope(...requiredScopes) {
+                const grantedScopes = new Set(String(state.gmailScope || '').split(/\s+/).filter(Boolean));
+                return requiredScopes.some((scope) => grantedScopes.has(String(scope || '').trim()));
+            }
+
             function hasComposePermission() {
-                return String(state.gmailScope || '').split(/\s+/).includes(GMAIL_SEND_SCOPE);
+                return hasGmailScope(GMAIL_SEND_SCOPE, GMAIL_COMPOSE_SCOPE);
+            }
+
+            function hasDraftSyncPermission() {
+                return hasGmailScope(GMAIL_COMPOSE_SCOPE);
+            }
+
+            function updateComposeSendAvailability() {
+                const canSend = state.connected && hasComposePermission();
+                composeSendButton.disabled = !canSend;
+                composeSendToggle.disabled = !canSend;
+                composeSendButton.setAttribute('aria-disabled', String(!canSend));
+                composeSendToggle.setAttribute('aria-disabled', String(!canSend));
+                composeSendButton.title = canSend
+                    ? 'Send message'
+                    : (state.connected
+                        ? 'Reconnect Gmail and approve compose permissions before sending'
+                        : 'Connect Gmail before sending');
+                composeSendToggle.title = canSend
+                    ? 'More send options'
+                    : composeSendButton.title;
             }
 
             function syncCombinedQuery() {
@@ -2218,14 +2351,13 @@
             }
 
             function updateComposeAvailability() {
-                const available = state.connected && hasComposePermission();
-                composePill.classList.toggle('is-disabled', !available);
-                composePill.setAttribute('aria-disabled', String(!available));
-                composePill.title = available
+                const canSend = state.connected && hasComposePermission();
+                composePill.classList.remove('is-disabled');
+                composePill.setAttribute('aria-disabled', 'false');
+                composePill.title = canSend
                     ? 'Compose a new Gmail message'
-                    : (state.connected
-                        ? 'Reconnect Gmail to approve compose permissions'
-                        : 'Connect Gmail to enable compose');
+                    : 'Open compose draft';
+                updateComposeSendAvailability();
                 refreshComposeStatus();
             }
 
@@ -2318,27 +2450,25 @@
                 composeWindow.setAttribute('aria-hidden', String(!state.composeOpen));
                 composeWindow.classList.toggle('is-minimized', state.composeMinimized);
                 composeFormatBar.hidden = !state.composeFormattingVisible;
+                updateComposeSendAvailability();
                 if (!state.composeOpen || state.composeMinimized) {
                     closeComposeMenus();
                 }
             }
 
             async function openComposeWindow() {
-                if (!state.connected) {
-                    setBanner('Connect Gmail first, then open compose.', 'error');
-                    return;
-                }
-
-                if (!hasComposePermission()) {
-                    setBanner('Reconnect Gmail and approve compose permissions before sending mail from FAST.', 'error');
-                    return;
-                }
-
                 state.composeOpen = true;
                 state.composeMinimized = false;
                 syncComposeWindowUi();
-                await ensureComposeSignaturesLoaded();
-                applyDefaultComposeSignatureIfNeeded();
+                if (state.connected && hasComposePermission()) {
+                    await ensureComposeSignaturesLoaded();
+                    applyDefaultComposeSignatureIfNeeded();
+                    refreshComposeStatus();
+                } else {
+                    refreshComposeStatus(state.connected
+                        ? 'Draft is open. Reconnect Gmail and approve compose permissions before sending.'
+                        : 'Draft is open. Connect Gmail before sending.');
+                }
                 focusComposeEditor();
             }
 
@@ -3018,6 +3148,52 @@
                 }
             }
 
+            async function saveComposeDraftToGmail(options) {
+                const closeAfterSave = Boolean(options && options.closeAfterSave);
+
+                if (!state.connected) {
+                    throw new Error('Connect Gmail before saving drafts from FAST.');
+                }
+
+                if (!hasDraftSyncPermission()) {
+                    throw new Error('Reconnect Gmail and approve Gmail draft permissions before saving drafts from FAST.');
+                }
+
+                const bodyHtml = getComposeEditorHtml();
+                const bodyText = getComposeEditorText();
+                const payload = await apiFetch('/api/gmail/drafts', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        draftId: state.composeDraftId,
+                        to: String(composeToInput.value || '').trim(),
+                        cc: String(composeCcInput.value || '').trim(),
+                        bcc: String(composeBccInput.value || '').trim(),
+                        subject: String(composeSubjectInput.value || '').trim(),
+                        bodyText,
+                        bodyHtml,
+                        attachments: state.composeAttachments.map((attachment) => ({
+                            filename: attachment.filename,
+                            mimeType: attachment.mimeType,
+                            base64: attachment.base64
+                        }))
+                    })
+                });
+
+                state.composeDraftId = String(payload && payload.draftId || state.composeDraftId || '').trim();
+
+                if (closeAfterSave) {
+                    closeComposeWindow(true);
+                    if (state.activeViewKey === 'drafts') {
+                        await loadMessages({ reset: true });
+                    }
+                    setBanner(payload && payload.message ? payload.message : 'Gmail draft synced successfully.', 'success');
+                    return payload;
+                }
+
+                refreshComposeStatus(payload && payload.message ? payload.message : 'Gmail draft synced successfully.');
+                return payload;
+            }
+
             composePill.addEventListener('click', openComposeWindow);
             composeForm.addEventListener('submit', sendComposeMessage);
             composeCloseButton.addEventListener('click', () => closeComposeWindow(false));
@@ -3132,15 +3308,21 @@
                 composeMoreMenu.hidden = true;
             });
             Array.from(composeSendMenu.querySelectorAll('[data-compose-send-option]')).forEach((button) => {
-                button.addEventListener('click', () => {
+                button.addEventListener('click', async () => {
                     const action = String(button.getAttribute('data-compose-send-option') || '').trim();
                     if (action === 'send-now') {
                         composeForm.requestSubmit();
                     } else if (action === 'save-close') {
-                        state.composeOpen = false;
-                        state.composeMinimized = false;
-                        syncComposeWindowUi();
-                        refreshComposeStatus('Draft saved locally.');
+                        button.disabled = true;
+                        try {
+                            refreshComposeStatus('Syncing Gmail draft...');
+                            await saveComposeDraftToGmail({ closeAfterSave: true });
+                        } catch (error) {
+                            setBanner(error.message || 'Unable to sync the Gmail draft.', 'error');
+                            refreshComposeStatus(error.message || 'Unable to sync the Gmail draft.');
+                        } finally {
+                            button.disabled = false;
+                        }
                     }
                     closeComposeMenus();
                 });
