@@ -16612,9 +16612,18 @@ app.post('/api/gmail/messages/:messageId/star', async (req, res) => {
         }
       );
 
+      const refreshedMessage = await fetchGmailApiJson(
+        `/gmail/v1/users/me/messages/${encodeURIComponent(String(response && response.id || messageId).trim())}`,
+        accessToken,
+        {
+          format: 'metadata',
+          metadataHeaders: ['From', 'To', 'Subject', 'Date']
+        }
+      );
+
       return {
         gmailEmail: connection.gmailEmail,
-        message: mapGmailMessageSummary(response)
+        message: mapGmailMessageSummary(refreshedMessage)
       };
     });
 
