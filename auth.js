@@ -1098,18 +1098,6 @@
     return listItem;
   }
 
-  function createFbgMessagesNavItem(isActive) {
-    const listItem = document.createElement('li');
-    listItem.className = 'nav-item';
-
-    const link = document.createElement('a');
-    link.href = 'fbg-messages.html';
-    link.className = isActive ? 'nav-link active' : 'nav-link';
-    link.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg>FBG messaging';
-    listItem.appendChild(link);
-    return listItem;
-  }
-
   function createMlsSpreadsheetNavItem(isActive) {
     const listItem = document.createElement('li');
     listItem.className = 'nav-item';
@@ -1129,16 +1117,15 @@
     const existingLinks = document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
     const navMode = hasKnownRole ? getFeatureNavAccessMode('mlsSpreadsheet', userLike) : 'show';
 
-    existingLinks.forEach((link) => {
-      removeNavLink(link);
-    });
-
     if (hasKnownRole && navMode !== 'show' && isSpreadsheetPage) {
       window.location.href = '/dashboard.html';
       return false;
     }
 
     if (hasKnownRole && navMode === 'hidden') {
+      existingLinks.forEach((link) => {
+        removeNavLink(link);
+      });
       return true;
     }
 
@@ -1168,9 +1155,13 @@
         spreadsheetItem = createMlsSpreadsheetNavItem(isSpreadsheetPage);
       }
 
-      if (settingsItem && spreadsheetItem !== settingsItem) {
+      if (settingsItem && spreadsheetItem !== settingsItem && !menu.contains(spreadsheetItem)) {
         menu.insertBefore(spreadsheetItem, settingsItem);
         return;
+      }
+
+      if (!menu.contains(spreadsheetItem)) {
+        menu.appendChild(spreadsheetItem);
       }
     });
 
@@ -1193,10 +1184,8 @@
   function applyGmailInboxAccess() {
     const isGmailPage = isGmailPath(window.location.pathname);
     const isCampaignsPage = isCampaignsPath(window.location.pathname);
-    const isFbgMessagesPage = isFbgMessagesPath(window.location.pathname);
     const campaignLinks = document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
     const existingLinks = document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]');
-    const fbgMessagingLinks = document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
 
     campaignLinks.forEach((link) => {
       link.classList.toggle('active', isCampaignsPage);
@@ -1204,10 +1193,6 @@
 
     existingLinks.forEach((link) => {
       link.classList.toggle('active', isGmailPage);
-    });
-
-    fbgMessagingLinks.forEach((link) => {
-      link.classList.toggle('active', isFbgMessagesPage);
     });
 
     const navMenus = document.querySelectorAll('.nav-section > ul');
@@ -1237,11 +1222,6 @@
         return Boolean(link);
       });
 
-      let fbgMessagesItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
-        const link = item.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
-        return Boolean(link);
-      });
-
       if (!campaignItem) {
         campaignItem = createCampaignsNavItem(isCampaignsPage);
       }
@@ -1250,15 +1230,11 @@
         gmailItem = createGmailNavItem(isGmailPage);
       }
 
-      if (!fbgMessagesItem) {
-        fbgMessagesItem = createFbgMessagesNavItem(isFbgMessagesPage);
-      }
-
-      const orderedItems = [campaignItem, gmailItem, fbgMessagesItem].filter(Boolean);
+      const orderedItems = [campaignItem, gmailItem].filter(Boolean);
 
       if (settingsItem) {
         orderedItems.forEach((item) => {
-          if (item !== settingsItem) {
+          if (item !== settingsItem && !menu.contains(item)) {
             menu.insertBefore(item, settingsItem);
           }
         });
@@ -1278,10 +1254,6 @@
 
     document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]').forEach((link) => {
       link.classList.toggle('active', isGmailPage);
-    });
-
-    document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]').forEach((link) => {
-      link.classList.toggle('active', isFbgMessagesPage);
     });
 
     return true;

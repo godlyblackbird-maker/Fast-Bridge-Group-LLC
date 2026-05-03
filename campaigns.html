@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Twilio Messaging | FAST BRIDGE GROUP LLC</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
@@ -157,6 +156,26 @@
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
+        .campaign-page-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .campaign-page-title-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            object-fit: cover;
+            flex-shrink: 0;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+        }
+
+        .campaign-page-title-group .page-title {
+            margin: 0;
+        }
+
         .campaigns-wrap {
             margin-top: 24px;
             display: flex;
@@ -1893,6 +1912,15 @@
         }
 
         @media (max-width: 1180px) {
+            .campaign-page-title-group {
+                gap: 12px;
+            }
+
+            .campaign-page-title-logo {
+                width: 38px;
+                height: 38px;
+            }
+
             .campaign-hero,
             .campaign-grid,
             .vendor-grid,
@@ -2178,6 +2206,15 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="gmail.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                    <path d="M3 7l9 6 9-6"/>
+                                </svg>
+                                Gmail
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="campaigns.html" class="nav-link active">
                                 <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
                                 Twilio Messaging
@@ -2282,13 +2319,9 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <div class="page-header">
-                    <h1 class="page-title">Twilio Messaging</h1>
-                    <div class="page-breadcrumb">
-                        <a href="dashboard.html">Dashboard</a>
-                        <span>/</span>
-                        <span>Twilio Messaging</span>
-                    </div>
+                <div class="page-title-group campaign-page-title-group">
+                    <img class="campaign-page-title-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                    <h1 class="page-title">Twilio Messaging | FAST BRIDGE GROUP LLC</h1>
                 </div>
                 <div class="navbar-right">
                     <div class="search-box">
@@ -2678,7 +2711,7 @@
         </svg>
     </button>
 
-    <script src="templatemo-glass-admin-script.js"></script>
+    <script src="templatemo-glass-admin-script.js?v=20260503c"></script>
     <script src="auth.js"></script>
     <script src="profile.js"></script>
     <script>

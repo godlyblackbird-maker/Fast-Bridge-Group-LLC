@@ -6143,6 +6143,7 @@ function initNavbarDateTime() {
         }
 
         const currentPath = String(window.location.pathname || '').toLowerCase();
+        const currentPage = String(currentPath.split('/').pop() || '').toLowerCase();
         const mainMenuSections = Array.from(sidebar.querySelectorAll('.nav-section'));
         const mainMenuSection = mainMenuSections.find((section) => {
             const title = section.querySelector('.nav-section-title');
@@ -6154,77 +6155,141 @@ function initNavbarDateTime() {
             return;
         }
 
-        const existingCommunityLink = menuList.querySelector('.nav-link[href="community.html"], .nav-link[href="/community.html"]');
-        const communityMarkup = `
-            <a href="community.html" class="nav-link">
-                <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
-                Community
-            </a>
-        `;
+        const canonicalMenuItems = [
+            {
+                href: 'dashboard.html',
+                markup: '<a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>Dashboard</a>'
+            },
+            {
+                href: 'analytics.html',
+                markup: '<a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>Analytics<span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span></a>'
+            },
+            {
+                href: 'mls.html',
+                markup: '<a href="mls.html" class="nav-link"><span class="nav-icon nav-icon-fire" aria-hidden="true"></span>MLS Hot Deals</a>'
+            },
+            {
+                href: 'mls-search.html',
+                markup: '<a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>MLS Search</a>'
+            },
+            {
+                href: 'my-agents.html',
+                markup: '<a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>My Agents</a>'
+            },
+            {
+                href: 'deals.html',
+                markup: '<a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a>'
+            },
+            {
+                href: 'gmail.html',
+                markup: '<a href="gmail.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>Gmail</a>'
+            },
+            {
+                href: 'campaigns.html',
+                markup: '<a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a>'
+            },
+            {
+                href: 'mls-imports-spreadsheet.html',
+                markup: '<a href="mls-imports-spreadsheet.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 4v16"></path><path d="M16 10v10"></path></svg>MLS Spreadsheet</a>'
+            },
+            {
+                href: 'pdf-editor.html',
+                markup: '<a href="pdf-editor.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="14 3 14 9 20 9"></polyline><path d="M9 15h6"></path><path d="M9 11h3"></path></svg>PDF Editor</a>'
+            },
+            {
+                href: 'community.html',
+                markup: '<a href="community.html" class="nav-link"><span class="nav-icon nav-icon-community" aria-hidden="true"></span>Community</a>'
+            },
+            {
+                href: 'users.html',
+                markup: '<a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent Workspace</a>'
+            },
+            {
+                href: 'trainings.html',
+                markup: '<a href="trainings.html" class="nav-link"><span class="nav-icon nav-icon-training" aria-hidden="true"></span>Trainings</a>'
+            },
+            {
+                href: 'settings.html',
+                markup: '<a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Settings</a>'
+            }
+        ];
+        const activeHrefByPage = {
+            'gmail.html': 'gmail.html',
+            'mls-imports-spreadsheet.html': 'mls-imports-spreadsheet.html',
+            'my-agents.html': 'my-agents.html',
+            'property-details.html': 'mls.html',
+            'fbg-messages.html': 'community.html'
+        };
+        const directMenuItems = Array.from(menuList.children).filter((child) => child instanceof HTMLElement && child.matches('.nav-item'));
+        const existingItemsByHref = new Map();
+        const duplicateItems = [];
+        const canonicalHrefs = new Set(canonicalMenuItems.map((item) => item.href));
 
-        let communityLink = existingCommunityLink;
-        if (!communityLink) {
+        function normalizeHrefValue(value) {
+            return String(value || '').trim().replace(/^\.?\//, '').toLowerCase();
+        }
+
+        function createMenuItem(markup) {
             const listItem = document.createElement('li');
             listItem.className = 'nav-item';
-            listItem.innerHTML = communityMarkup;
+            listItem.innerHTML = markup;
+            return listItem;
+        }
 
-            const campaignsItem = Array.from(menuList.querySelectorAll('.nav-item')).find((item) => {
-                const itemLink = item.querySelector('.nav-link');
-                return itemLink && /campaigns\.html$/i.test(String(itemLink.getAttribute('href') || ''));
-            });
-
-            if (campaignsItem && campaignsItem.nextSibling) {
-                menuList.insertBefore(listItem, campaignsItem.nextSibling);
-            } else if (campaignsItem) {
-                menuList.appendChild(listItem);
-            } else {
-                menuList.appendChild(listItem);
+        directMenuItems.forEach((item) => {
+            const link = item.querySelector('.nav-link[href]');
+            const href = normalizeHrefValue(link && link.getAttribute('href'));
+            if (!href) {
+                duplicateItems.push(item);
+                return;
             }
 
-            communityLink = listItem.querySelector('.nav-link');
-        }
-
-        if (communityLink) {
-            const isCommunityActive = /\/community\.html$/.test(currentPath) || currentPath === 'community.html';
-            communityLink.classList.toggle('active', isCommunityActive);
-        }
-
-        const existingLink = menuList.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
-        const fbgMessagesMarkup = `
-            <a href="fbg-messages.html" class="nav-link">
-                <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
-                FBG Messages
-            </a>
-        `;
-
-        let link = existingLink;
-        if (!link) {
-            const listItem = document.createElement('li');
-            listItem.className = 'nav-item';
-            listItem.innerHTML = fbgMessagesMarkup;
-
-            const campaignsItem = Array.from(menuList.querySelectorAll('.nav-item')).find((item) => {
-                const itemLink = item.querySelector('.nav-link');
-                return itemLink && /campaigns\.html$/i.test(String(itemLink.getAttribute('href') || ''));
-            });
-
-            if (campaignsItem && campaignsItem.nextSibling) {
-                menuList.insertBefore(listItem, campaignsItem.nextSibling);
-            } else if (campaignsItem) {
-                menuList.appendChild(listItem);
-            } else {
-                menuList.appendChild(listItem);
+            if (href === 'fbg-messages.html') {
+                duplicateItems.push(item);
+                return;
             }
 
-            link = listItem.querySelector('.nav-link');
-        }
+            if (existingItemsByHref.has(href)) {
+                duplicateItems.push(item);
+                return;
+            }
 
-        if (!link) {
-            return;
-        }
+            existingItemsByHref.set(href, item);
+        });
 
-        const isActive = /\/fbg-messages\.html$/.test(currentPath) || currentPath === 'fbg-messages.html';
-        link.classList.toggle('active', isActive);
+        duplicateItems.forEach((item) => {
+            item.remove();
+        });
+
+        const activeHref = activeHrefByPage[currentPage] || currentPage;
+        const fragment = document.createDocumentFragment();
+
+        canonicalMenuItems.forEach((config) => {
+            const item = existingItemsByHref.get(config.href) || createMenuItem(config.markup);
+            const link = item.querySelector('.nav-link[href]');
+            const href = normalizeHrefValue(link && link.getAttribute('href'));
+            const isActive = href === activeHref;
+            if (link) {
+                link.classList.toggle('active', isActive);
+                if (isActive) {
+                    link.setAttribute('aria-current', 'page');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+            }
+            fragment.appendChild(item);
+        });
+
+        directMenuItems.forEach((item) => {
+            const link = item.querySelector('.nav-link[href]');
+            const href = normalizeHrefValue(link && link.getAttribute('href'));
+            if (!href || canonicalHrefs.has(href) || href === 'fbg-messages.html') {
+                return;
+            }
+            fragment.appendChild(item);
+        });
+
+        menuList.replaceChildren(fragment);
     }
 
     function initFbgMessagesNavUnreadIndicator() {
@@ -6233,7 +6298,9 @@ function initNavbarDateTime() {
         let isPolling = false;
 
         function getLinks() {
-            return Array.from(document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]'));
+            return Array.from(document.querySelectorAll(
+                '.nav-link[href="community.html?panel=fbg-messaging"], .nav-link[href="/community.html?panel=fbg-messaging"], .nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]'
+            ));
         }
 
         function ensureDot(link) {
