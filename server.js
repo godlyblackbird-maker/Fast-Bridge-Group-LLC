@@ -19699,7 +19699,7 @@ app.get('/download/windows', (req, res) => {
     pkgVersion = '';
   }
 
-  const resolvedVersion = pkgVersion || '1.4.7';
+  const resolvedVersion = pkgVersion || '1.4.8';
   const installerFileNames = [
     `FAST.BRIDGE.GROUP.Setup.${resolvedVersion}.exe`,
     `FAST BRIDGE GROUP Setup ${resolvedVersion}.exe`
@@ -19714,7 +19714,7 @@ app.get('/download/windows', (req, res) => {
 
   const installerCandidates = [
     pkgVersion ? path.join(__dirname, 'dist', 'electron', `FAST BRIDGE GROUP Setup ${pkgVersion}.exe`) : '',
-    path.join(__dirname, 'dist', 'electron', 'FAST BRIDGE GROUP Setup 1.4.7.exe'),
+    path.join(__dirname, 'dist', 'electron', 'FAST BRIDGE GROUP Setup 1.4.8.exe'),
     path.join(__dirname, 'dist', 'electron-packager', 'FAST BRIDGE GROUP-win32-x64', 'FAST BRIDGE GROUP.exe')
   ].filter(Boolean);
 
