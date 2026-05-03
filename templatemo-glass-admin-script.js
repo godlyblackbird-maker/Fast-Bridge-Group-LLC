@@ -22227,7 +22227,10 @@ function initNavbarDateTime() {
                 mapsScriptParams.set('key', apiKey);
                 mapsScriptParams.set('v', 'beta');
                 mapsScriptParams.set('loading', 'async');
-                mapsScriptParams.set('libraries', 'drawing,geometry,places');
+                mapsScriptParams.set('libraries', 'marker,drawing,geometry,places,maps3d');
+                if (mapId) {
+                    mapsScriptParams.set('map_ids', mapId);
+                }
                 mapsScriptParams.set('callback', GOOGLE_MAPS_CALLBACK_NAME);
                 script.src = `https://maps.googleapis.com/maps/api/js?${mapsScriptParams.toString()}`;
                 script.onload = () => {
@@ -22513,6 +22516,15 @@ function initNavbarDateTime() {
 
             const radiusSteps = [50, 120, 250, 500];
             const streetViewService = new window.google.maps.StreetViewService();
+            const okStatus = window.google.maps.StreetViewStatus && window.google.maps.StreetViewStatus.OK
+                ? window.google.maps.StreetViewStatus.OK
+                : 'OK';
+            const outdoorSource = window.google.maps.StreetViewSource && window.google.maps.StreetViewSource.OUTDOOR
+                ? window.google.maps.StreetViewSource.OUTDOOR
+                : null;
+            const nearestPreference = window.google.maps.StreetViewPreference && window.google.maps.StreetViewPreference.NEAREST
+                ? window.google.maps.StreetViewPreference.NEAREST
+                : null;
 
             return radiusSteps.reduce((promise, radius) => {
                 return promise.then((match) => {
@@ -22521,13 +22533,19 @@ function initNavbarDateTime() {
                     }
 
                     return new Promise((resolve) => {
-                        streetViewService.getPanorama({
+                        const request = {
                             location: { lat, lng },
-                            radius,
-                            source: window.google.maps.StreetViewSource.OUTDOOR,
-                            preference: window.google.maps.StreetViewPreference.NEAREST
-                        }, (data, status) => {
-                            if (status !== 'OK' || !data || !data.location || !data.location.latLng) {
+                            radius
+                        };
+                        if (outdoorSource) {
+                            request.source = outdoorSource;
+                        }
+                        if (nearestPreference) {
+                            request.preference = nearestPreference;
+                        }
+
+                        streetViewService.getPanorama(request, (data, status) => {
+                            if (status !== okStatus || !data || !data.location || !data.location.latLng) {
                                 resolve(null);
                                 return;
                             }
