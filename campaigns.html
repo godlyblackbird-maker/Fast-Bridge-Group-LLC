@@ -214,7 +214,7 @@
         }
 
         .campaign-brand-strip.is-bottom::before {
-            inset: 8px 22% 0;
+            display: none;
         }
 
         .campaign-brand-strip::before {
@@ -235,6 +235,11 @@
             transform-origin: center;
             will-change: transform, filter;
             filter: drop-shadow(0 10px 18px rgba(190, 24, 93, 0.12));
+        }
+
+        .campaign-brand-strip.is-bottom .campaign-brand-logo {
+            width: clamp(320px, 42vw, 520px);
+            filter: none;
         }
 
         @keyframes campaignTwilioBreathing {
@@ -2277,6 +2282,10 @@
                 width: clamp(156px, 52vw, 220px);
             }
 
+            .campaign-brand-strip.is-bottom .campaign-brand-logo {
+                width: clamp(240px, 76vw, 360px);
+            }
+
             .campaign-copy-top,
             .vendor-head,
             .campaign-tools-head {
@@ -2941,43 +2950,6 @@
                     <div class="campaign-main">
                     </div>
 
-                    <aside class="campaign-rail">
-                        <article class="glass-card campaign-copy-card">
-                            <div class="card-header campaign-copy-head">
-                                <div>
-                                    <h3 class="card-title">Copy-Ready SMS Blocks</h3>
-                                    <p class="card-subtitle">Use these as starting points for agent outreach.</p>
-                                </div>
-                                <button id="campaign-manage-templates" type="button" class="card-btn">Edit SMS Blocks</button>
-                            </div>
-                            <div class="campaign-copy-grid">
-                                <div class="campaign-copy-block">
-                                    <div class="campaign-copy-top">
-                                        <span class="campaign-copy-label">First Touch</span>
-                                        <button type="button" class="card-btn active" data-copy-target="sms-template-1">Copy</button>
-                                    </div>
-                                    <p class="campaign-copy-text" id="sms-template-1">Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.</p>
-                                </div>
-
-                                <div class="campaign-copy-block">
-                                    <div class="campaign-copy-top">
-                                        <span class="campaign-copy-label">Follow-Up</span>
-                                        <button type="button" class="card-btn active" data-copy-target="sms-template-2">Copy</button>
-                                    </div>
-                                    <p class="campaign-copy-text" id="sms-template-2">Checking back in, [Agent First Name]. We are still buying in [Area], especially probate, heavy fixer, and failed-escrow opportunities. If you want, I can text over our exact buy box and close timeline. Reply STOP to opt out.</p>
-                                </div>
-
-                                <div class="campaign-copy-block">
-                                    <div class="campaign-copy-top">
-                                        <span class="campaign-copy-label">Breakup / Keepalive</span>
-                                        <button type="button" class="card-btn active" data-copy-target="sms-template-3">Copy</button>
-                                    </div>
-                                    <p class="campaign-copy-text" id="sms-template-3">Last note from me for now, [Agent First Name]. If you ever have a seller who needs a quick as-is close in [Area], send it my way and I will respond fast. Happy to share proof of funds and our buy box when useful. Reply STOP to opt out.</p>
-                                </div>
-                            </div>
-                        </article>
-
-                    </aside>
                 </section>
 
                 <section class="campaign-brand-strip is-bottom" aria-label="Twilio brand highlight">
@@ -2985,42 +2957,6 @@
                 </section>
             </div>
         </main>
-    </div>
-
-    <div id="campaign-template-modal" class="campaign-template-modal" hidden aria-hidden="true">
-        <div class="campaign-template-backdrop" data-campaign-template-close="true"></div>
-        <div class="campaign-template-card" role="dialog" aria-modal="true" aria-labelledby="campaign-template-title">
-            <div class="campaign-template-header">
-                <div>
-                    <h3 id="campaign-template-title" class="campaign-template-title">SMS Block Templates</h3>
-                    <p class="campaign-template-subtitle">Edit the three Campaigns SMS blocks once and use them for quick copy/paste or direct Twilio loading.</p>
-                </div>
-                <button type="button" class="campaign-template-close" data-campaign-template-close="true" aria-label="Close SMS block manager">×</button>
-            </div>
-            <div class="campaign-template-controls">
-                <label class="campaign-template-field">
-                    <span class="campaign-template-field-label">SMS Block</span>
-                    <select id="campaign-template-select" class="campaign-template-select">
-                        <option value="first-touch">First Touch</option>
-                        <option value="follow-up">Follow-Up</option>
-                        <option value="breakup">Breakup / Keepalive</option>
-                    </select>
-                </label>
-            </div>
-            <p class="campaign-template-help">Placeholders you can keep in the copy: [Agent First Name], [Your Name], and [Area]. These saved templates stay tied to the signed-in workspace user on this browser.</p>
-            <label class="campaign-template-field">
-                <span class="campaign-template-field-label">Template Body</span>
-                <textarea id="campaign-template-body" class="campaign-template-textarea" spellcheck="true"></textarea>
-            </label>
-            <div class="campaign-template-preview-wrap">
-                <span class="campaign-template-preview-label">Preview</span>
-                <div id="campaign-template-preview" class="campaign-template-preview"></div>
-            </div>
-            <div class="campaign-template-actions">
-                <button id="campaign-template-reset" type="button" class="card-btn">Use Default For Block</button>
-                <button id="campaign-template-save" type="button" class="card-btn active">Save SMS Blocks</button>
-            </div>
-        </div>
     </div>
 
     <div id="campaign-schedule-modal" class="campaign-template-modal" hidden aria-hidden="true">
@@ -3046,6 +2982,33 @@
             <div class="campaign-template-actions">
                 <button id="campaign-schedule-clear" type="button" class="card-btn">Clear Schedule</button>
                 <button id="campaign-schedule-confirm" type="button" class="card-btn active">Schedule Twilio Campaign</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="campaign-no-replies-template-modal" class="campaign-template-modal" hidden aria-hidden="true">
+        <div class="campaign-template-backdrop" data-campaign-no-replies-template-close="true"></div>
+        <div class="campaign-template-card" role="dialog" aria-modal="true" aria-labelledby="campaign-no-replies-template-title">
+            <div class="campaign-template-header">
+                <div>
+                    <h3 id="campaign-no-replies-template-title" class="campaign-template-title">Copy Template</h3>
+                    <p class="campaign-template-subtitle">Edit the Twilio no-replies follow-up script and preview it with the active property before copying.</p>
+                </div>
+                <button type="button" class="campaign-template-close" data-campaign-no-replies-template-close="true" aria-label="Close no-replies template manager">×</button>
+            </div>
+            <p class="campaign-template-help">Available placeholders: {firstName}, {fullName}, {propertyAddress}, and {phoneNumber}. The preview uses the selected no-reply thread, or the first visible one if nothing is selected.</p>
+            <label class="campaign-template-field">
+                <span class="campaign-template-field-label">Template Body</span>
+                <textarea id="campaign-no-replies-template-body" class="campaign-template-textarea" spellcheck="true"></textarea>
+            </label>
+            <div class="campaign-template-preview-wrap">
+                <span class="campaign-template-preview-label">Preview</span>
+                <div id="campaign-no-replies-template-preview" class="campaign-template-preview"></div>
+            </div>
+            <div class="campaign-template-actions">
+                <button id="campaign-no-replies-template-reset" type="button" class="card-btn">Use Default</button>
+                <button id="campaign-no-replies-template-copy" type="button" class="card-btn">Copy</button>
+                <button id="campaign-no-replies-template-save" type="button" class="card-btn active">Save Template</button>
             </div>
         </div>
     </div>
@@ -3089,14 +3052,13 @@
             const campaignScheduleConfirmButton = document.getElementById('campaign-schedule-confirm');
             const campaignScheduleClearButton = document.getElementById('campaign-schedule-clear');
             const campaignScheduleCloseButtons = document.querySelectorAll('[data-campaign-schedule-close]');
-            const campaignManageTemplatesButton = document.getElementById('campaign-manage-templates');
-            const campaignTemplateModal = document.getElementById('campaign-template-modal');
-            const campaignTemplateSelect = document.getElementById('campaign-template-select');
-            const campaignTemplateBody = document.getElementById('campaign-template-body');
-            const campaignTemplatePreview = document.getElementById('campaign-template-preview');
-            const campaignTemplateSaveButton = document.getElementById('campaign-template-save');
-            const campaignTemplateResetButton = document.getElementById('campaign-template-reset');
-            const campaignTemplateCloseButtons = document.querySelectorAll('[data-campaign-template-close]');
+            const campaignNoRepliesTemplateModal = document.getElementById('campaign-no-replies-template-modal');
+            const campaignNoRepliesTemplateBody = document.getElementById('campaign-no-replies-template-body');
+            const campaignNoRepliesTemplatePreview = document.getElementById('campaign-no-replies-template-preview');
+            const campaignNoRepliesTemplateSaveButton = document.getElementById('campaign-no-replies-template-save');
+            const campaignNoRepliesTemplateResetButton = document.getElementById('campaign-no-replies-template-reset');
+            const campaignNoRepliesTemplateCopyButton = document.getElementById('campaign-no-replies-template-copy');
+            const campaignNoRepliesTemplateCloseButtons = document.querySelectorAll('[data-campaign-no-replies-template-close]');
             const campaignRepliesStatus = document.getElementById('campaign-replies-status');
             const campaignReplyConversations = document.getElementById('campaign-reply-conversations');
             const campaignReplyFilters = document.getElementById('campaign-reply-filters');
@@ -3124,19 +3086,17 @@
             const campaignReplyScheduleButton = document.getElementById('campaign-reply-schedule');
             const campaignReplySendButton = document.getElementById('campaign-reply-send');
             const campaignReplyStatus = document.getElementById('campaign-reply-status');
-            const campaignTemplateBlocks = {
-                'first-touch': document.getElementById('sms-template-1'),
-                'follow-up': document.getElementById('sms-template-2'),
-                breakup: document.getElementById('sms-template-3')
-            };
             const CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE = 'campaignSmsTemplateSettings';
+            const CAMPAIGN_NO_REPLIES_TEMPLATE_STORAGE_KEY_BASE = 'campaignNoRepliesTemplateBody';
             const CAMPAIGN_TEMPLATE_DEFAULTS = {
                 'first-touch': 'Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.',
                 'follow-up': 'Checking back in, [Agent First Name]. We are still buying in [Area], especially probate, heavy fixer, and failed-escrow opportunities. If you want, I can text over our exact buy box and close timeline. Reply STOP to opt out.',
                 breakup: 'Last note from me for now, [Agent First Name]. If you ever have a seller who needs a quick as-is close in [Area], send it my way and I will respond fast. Happy to share proof of funds and our buy box when useful. Reply STOP to opt out.'
             };
+            const CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT = 'Hey {firstName}, just wanted to follow back up on {propertyAddress} and see if you are still open to talking through it.';
             let campaignTemplateSettings = loadCampaignTemplateSettings();
-            let campaignTemplateDraft = cloneCampaignTemplateSettings(campaignTemplateSettings);
+            let campaignNoRepliesTemplateValue = loadCampaignNoRepliesTemplateBody();
+            let campaignNoRepliesTemplateDraft = campaignNoRepliesTemplateValue;
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
             let activeTwilioReactionPickerMessageId = 0;
@@ -3700,16 +3660,42 @@
                 };
             }
 
-            function cloneCampaignTemplateSettings(value) {
-                const normalized = normalizeCampaignTemplateSettings(value);
-                return {
-                    selectedTemplate: normalized.selectedTemplate,
-                    templates: { ...normalized.templates }
-                };
-            }
-
             function getCampaignTemplateStorageKey() {
                 return `${CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
+            }
+
+            function normalizeCampaignNoRepliesTemplateBody(value) {
+                const normalized = String(value || '').replace(/\r/g, '').trim();
+                return normalized || CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT;
+            }
+
+            function getCampaignNoRepliesTemplateStorageKey() {
+                return `${CAMPAIGN_NO_REPLIES_TEMPLATE_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
+            }
+
+            function loadCampaignNoRepliesTemplateBody() {
+                try {
+                    return normalizeCampaignNoRepliesTemplateBody(localStorage.getItem(getCampaignNoRepliesTemplateStorageKey()) || CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT);
+                } catch (error) {
+                    return CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT;
+                }
+            }
+
+            function persistCampaignNoRepliesTemplateBody(value) {
+                localStorage.setItem(getCampaignNoRepliesTemplateStorageKey(), normalizeCampaignNoRepliesTemplateBody(value));
+            }
+
+            function fillNoRepliesTemplate(template, conversation) {
+                const source = conversation || getPrimaryNoRepliesConversation() || null;
+                const firstName = getConversationFirstName(source);
+                const fullName = String(source?.contactName || '').trim() || firstName;
+                const propertyAddress = String(source?.propertyAddress || '').trim() || 'your property';
+                const phoneNumber = String(source?.contactPhone || '').trim() || 'this number';
+                return normalizeCampaignNoRepliesTemplateBody(template)
+                    .replace(/\{firstName\}/gi, firstName)
+                    .replace(/\{fullName\}/gi, fullName)
+                    .replace(/\{propertyAddress\}/gi, propertyAddress)
+                    .replace(/\{phoneNumber\}/gi, phoneNumber);
             }
 
             function loadCampaignTemplateSettings() {
@@ -3724,49 +3710,40 @@
                 localStorage.setItem(getCampaignTemplateStorageKey(), JSON.stringify(normalizeCampaignTemplateSettings(value)));
             }
 
-            function renderCampaignTemplateBlocks() {
-                Object.entries(campaignTemplateBlocks).forEach(([templateKey, element]) => {
-                    if (!element) {
-                        return;
-                    }
-                    element.textContent = campaignTemplateSettings.templates[templateKey] || CAMPAIGN_TEMPLATE_DEFAULTS[templateKey];
-                });
-            }
-
-            function syncCampaignTemplateEditor() {
-                if (!campaignTemplateSelect || !campaignTemplateBody || !campaignTemplatePreview) {
+            function syncCampaignNoRepliesTemplateEditor() {
+                if (!campaignNoRepliesTemplateBody || !campaignNoRepliesTemplatePreview) {
                     return;
                 }
 
-                const selectedTemplate = normalizeCampaignTemplateKey(campaignTemplateSelect.value || campaignTemplateDraft.selectedTemplate);
-                campaignTemplateDraft.selectedTemplate = selectedTemplate;
-                campaignTemplateSelect.value = selectedTemplate;
-                campaignTemplateBody.value = campaignTemplateDraft.templates[selectedTemplate] || CAMPAIGN_TEMPLATE_DEFAULTS[selectedTemplate];
-                campaignTemplatePreview.textContent = campaignTemplateBody.value.trim() || CAMPAIGN_TEMPLATE_DEFAULTS[selectedTemplate];
+                campaignNoRepliesTemplateDraft = normalizeCampaignNoRepliesTemplateBody(campaignNoRepliesTemplateDraft);
+                campaignNoRepliesTemplateBody.value = campaignNoRepliesTemplateDraft;
+                campaignNoRepliesTemplatePreview.textContent = fillNoRepliesTemplate(campaignNoRepliesTemplateDraft);
             }
 
-            function openCampaignTemplateModal() {
-                if (!campaignTemplateModal) {
+            function openCampaignNoRepliesTemplateModal() {
+                if (!campaignNoRepliesTemplateModal) {
                     return;
                 }
-                campaignTemplateDraft = cloneCampaignTemplateSettings(campaignTemplateSettings);
-                syncCampaignTemplateEditor();
-                campaignTemplateModal.hidden = false;
-                campaignTemplateModal.setAttribute('aria-hidden', 'false');
+
+                campaignNoRepliesTemplateDraft = campaignNoRepliesTemplateValue;
+                syncCampaignNoRepliesTemplateEditor();
+                campaignNoRepliesTemplateModal.hidden = false;
+                campaignNoRepliesTemplateModal.setAttribute('aria-hidden', 'false');
                 window.requestAnimationFrame(() => {
-                    if (campaignTemplateBody) {
-                        campaignTemplateBody.focus();
-                        campaignTemplateBody.setSelectionRange(campaignTemplateBody.value.length, campaignTemplateBody.value.length);
+                    if (campaignNoRepliesTemplateBody) {
+                        campaignNoRepliesTemplateBody.focus();
+                        campaignNoRepliesTemplateBody.setSelectionRange(campaignNoRepliesTemplateBody.value.length, campaignNoRepliesTemplateBody.value.length);
                     }
                 });
             }
 
-            function closeCampaignTemplateModal() {
-                if (!campaignTemplateModal) {
+            function closeCampaignNoRepliesTemplateModal() {
+                if (!campaignNoRepliesTemplateModal) {
                     return;
                 }
-                campaignTemplateModal.hidden = true;
-                campaignTemplateModal.setAttribute('aria-hidden', 'true');
+
+                campaignNoRepliesTemplateModal.hidden = true;
+                campaignNoRepliesTemplateModal.setAttribute('aria-hidden', 'true');
             }
 
             function getCurrentSenderName() {
@@ -4089,9 +4066,7 @@
             }
 
             function buildNoRepliesCopyTemplateMessage(conversation) {
-                const firstName = getConversationFirstName(conversation);
-                const propertyAddress = String(conversation?.propertyAddress || '').trim() || 'your property';
-                return `Hey ${firstName}, just wanted to follow back up on ${propertyAddress} and see if you are still open to talking through it.`;
+                return fillNoRepliesTemplate(campaignNoRepliesTemplateValue, conversation);
             }
 
             function getPrimaryNoRepliesConversation() {
@@ -4230,17 +4205,7 @@
                     return;
                 }
 
-                const defaultMessage = buildNoRepliesCopyTemplateMessage(conversation);
-                const nextMessage = window.prompt('Edit the quick follow-up template before copying it.', defaultMessage);
-                if (nextMessage === null) {
-                    campaignReplyStatus.textContent = 'Copy template cancelled.';
-                    return;
-                }
-
-                const copied = await copyTextToClipboard(nextMessage);
-                campaignReplyStatus.textContent = copied
-                    ? 'No-reply follow-up template copied.'
-                    : 'Could not copy the follow-up template.';
+                openCampaignNoRepliesTemplateModal();
             }
 
             function setCampaignReplyComposerEnabled(enabled) {
@@ -5193,27 +5158,6 @@
                 }
             }
 
-            renderCampaignTemplateBlocks();
-
-            if (campaignManageTemplatesButton) {
-                campaignManageTemplatesButton.addEventListener('click', openCampaignTemplateModal);
-            }
-
-            campaignTemplateCloseButtons.forEach((button) => {
-                button.addEventListener('click', closeCampaignTemplateModal);
-            });
-
-            if (campaignTemplateSelect) {
-                campaignTemplateSelect.addEventListener('change', () => {
-                    if (campaignTemplateBody) {
-                        const currentKey = normalizeCampaignTemplateKey(campaignTemplateDraft.selectedTemplate);
-                        campaignTemplateDraft.templates[currentKey] = normalizeCampaignTemplateBody(campaignTemplateBody.value, currentKey);
-                    }
-                    campaignTemplateDraft.selectedTemplate = normalizeCampaignTemplateKey(campaignTemplateSelect.value);
-                    syncCampaignTemplateEditor();
-                });
-            }
-
             if (campaignRecipientsInput) {
                 const syncCampaignRecipientsField = () => {
                     const normalizedValue = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
@@ -5228,32 +5172,48 @@
                 });
             }
 
-            if (campaignTemplateBody) {
-                campaignTemplateBody.addEventListener('input', () => {
-                    const currentKey = normalizeCampaignTemplateKey(campaignTemplateSelect ? campaignTemplateSelect.value : campaignTemplateDraft.selectedTemplate);
-                    campaignTemplateDraft.templates[currentKey] = normalizeCampaignTemplateBody(campaignTemplateBody.value, currentKey);
-                    campaignTemplatePreview.textContent = campaignTemplateBody.value.trim() || CAMPAIGN_TEMPLATE_DEFAULTS[currentKey];
-                });
-            }
 
-            if (campaignTemplateResetButton) {
-                campaignTemplateResetButton.addEventListener('click', () => {
-                    const currentKey = normalizeCampaignTemplateKey(campaignTemplateSelect ? campaignTemplateSelect.value : campaignTemplateDraft.selectedTemplate);
-                    campaignTemplateDraft.templates[currentKey] = CAMPAIGN_TEMPLATE_DEFAULTS[currentKey];
-                    syncCampaignTemplateEditor();
-                });
-            }
+            campaignNoRepliesTemplateCloseButtons.forEach((button) => {
+                button.addEventListener('click', closeCampaignNoRepliesTemplateModal);
+            });
 
-            if (campaignTemplateSaveButton) {
-                campaignTemplateSaveButton.addEventListener('click', () => {
-                    if (campaignTemplateBody) {
-                        const currentKey = normalizeCampaignTemplateKey(campaignTemplateSelect ? campaignTemplateSelect.value : campaignTemplateDraft.selectedTemplate);
-                        campaignTemplateDraft.templates[currentKey] = normalizeCampaignTemplateBody(campaignTemplateBody.value, currentKey);
+            if (campaignNoRepliesTemplateBody) {
+                campaignNoRepliesTemplateBody.addEventListener('input', () => {
+                    campaignNoRepliesTemplateDraft = normalizeCampaignNoRepliesTemplateBody(campaignNoRepliesTemplateBody.value);
+                    if (campaignNoRepliesTemplatePreview) {
+                        campaignNoRepliesTemplatePreview.textContent = fillNoRepliesTemplate(campaignNoRepliesTemplateDraft);
                     }
-                    campaignTemplateSettings = cloneCampaignTemplateSettings(campaignTemplateDraft);
-                    persistCampaignTemplateSettings(campaignTemplateSettings);
-                    renderCampaignTemplateBlocks();
-                    closeCampaignTemplateModal();
+                });
+            }
+
+            if (campaignNoRepliesTemplateResetButton) {
+                campaignNoRepliesTemplateResetButton.addEventListener('click', () => {
+                    campaignNoRepliesTemplateDraft = CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT;
+                    syncCampaignNoRepliesTemplateEditor();
+                });
+            }
+
+            if (campaignNoRepliesTemplateSaveButton) {
+                campaignNoRepliesTemplateSaveButton.addEventListener('click', () => {
+                    campaignNoRepliesTemplateValue = normalizeCampaignNoRepliesTemplateBody(campaignNoRepliesTemplateDraft);
+                    persistCampaignNoRepliesTemplateBody(campaignNoRepliesTemplateValue);
+                    closeCampaignNoRepliesTemplateModal();
+                    campaignReplyStatus.textContent = 'No-replies copy template saved.';
+                });
+            }
+
+            if (campaignNoRepliesTemplateCopyButton) {
+                campaignNoRepliesTemplateCopyButton.addEventListener('click', async () => {
+                    const conversation = getPrimaryNoRepliesConversation();
+                    if (!conversation) {
+                        campaignReplyStatus.textContent = 'Choose a no-reply Twilio thread first.';
+                        return;
+                    }
+
+                    const copied = await copyTextToClipboard(fillNoRepliesTemplate(campaignNoRepliesTemplateDraft, conversation));
+                    campaignReplyStatus.textContent = copied
+                        ? 'No-reply follow-up template copied.'
+                        : 'Could not copy the follow-up template.';
                 });
             }
 
@@ -5264,8 +5224,8 @@
                     return;
                 }
 
-                if (event.key === 'Escape' && campaignTemplateModal && !campaignTemplateModal.hidden) {
-                    closeCampaignTemplateModal();
+                if (event.key === 'Escape' && campaignNoRepliesTemplateModal && !campaignNoRepliesTemplateModal.hidden) {
+                    closeCampaignNoRepliesTemplateModal();
                     return;
                 }
 
