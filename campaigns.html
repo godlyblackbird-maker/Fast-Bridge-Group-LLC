@@ -2692,7 +2692,7 @@
                             <div class="campaign-replies-shell">
                                 <aside class="campaign-replies-list">
                                     <div class="campaign-replies-list-head">
-                                        <h4>Active Threads</h4>
+                                        <h4>Active Threads <span id="campaign-reply-thread-count">(0)</span></h4>
                                         <p>Twilio responses grouped by contact number.</p>
                                         <div id="campaign-reply-filters" class="campaign-reply-filters" role="group" aria-label="Filter active threads">
                                             <button id="campaign-reply-filter-all" type="button" class="campaign-reply-filter-button is-active">All</button>
@@ -2996,7 +2996,7 @@
                 </div>
                 <button type="button" class="campaign-template-close" data-campaign-no-replies-template-close="true" aria-label="Close no-replies template manager">×</button>
             </div>
-            <p class="campaign-template-help">Available placeholders: {firstName}, {fullName}, {propertyAddress}, and {phoneNumber}. The preview uses the selected no-reply thread, or the first visible one if nothing is selected.</p>
+            <p class="campaign-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}, {dayGreeting}. Aliases also supported here: {firstName}, {fullName}, and {phoneNumber}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. Add {dayGreeting} anywhere to place Happy Monday!/Tuesday/etc. based on the current day. If you leave {timeGreeting} out, the generator adds it at the end.</p>
             <label class="campaign-template-field">
                 <span class="campaign-template-field-label">Template Body</span>
                 <textarea id="campaign-no-replies-template-body" class="campaign-template-textarea" spellcheck="true"></textarea>
@@ -3068,6 +3068,7 @@
             const campaignReplyNoRepliesFollowUpButton = document.getElementById('campaign-reply-no-replies-follow-up');
             const campaignReplyNoRepliesCopyTemplateButton = document.getElementById('campaign-reply-no-replies-copy-template');
             const campaignReplySearchInput = document.getElementById('campaign-reply-search-input');
+            const campaignReplyThreadCount = document.getElementById('campaign-reply-thread-count');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
             const campaignReplyEditNameButton = document.getElementById('campaign-reply-edit-name');
             const campaignReplyBlockContactButton = document.getElementById('campaign-reply-block-contact');
@@ -3093,7 +3094,7 @@
                 'follow-up': 'Checking back in, [Agent First Name]. We are still buying in [Area], especially probate, heavy fixer, and failed-escrow opportunities. If you want, I can text over our exact buy box and close timeline. Reply STOP to opt out.',
                 breakup: 'Last note from me for now, [Agent First Name]. If you ever have a seller who needs a quick as-is close in [Area], send it my way and I will respond fast. Happy to share proof of funds and our buy box when useful. Reply STOP to opt out.'
             };
-            const CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT = 'Hey {firstName}, just wanted to follow back up on {propertyAddress} and see if you are still open to talking through it.';
+            const CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT = 'Hi {agentFirstName}, this is {senderName}. Just wanted to follow back up on {propertyAddress} and see if you are still open to talking through it. {timeGreeting}';
             let campaignTemplateSettings = loadCampaignTemplateSettings();
             let campaignNoRepliesTemplateValue = loadCampaignNoRepliesTemplateBody();
             let campaignNoRepliesTemplateDraft = campaignNoRepliesTemplateValue;
@@ -3685,17 +3686,65 @@
                 localStorage.setItem(getCampaignNoRepliesTemplateStorageKey(), normalizeCampaignNoRepliesTemplateBody(value));
             }
 
+            function getCampaignTimeOfDayGreeting() {
+                const hour = new Date().getHours();
+                if (hour < 5) {
+                    return 'night';
+                }
+                if (hour < 12) {
+                    return 'morning';
+                }
+                if (hour < 17) {
+                    return 'afternoon';
+                }
+                if (hour < 21) {
+                    return 'evening';
+                }
+                return 'night';
+            }
+
+            function getCampaignTimeGreetingSentence() {
+                return `Hope you're having a good ${getCampaignTimeOfDayGreeting()}!`;
+            }
+
+            function getCampaignDayGreetingSentence() {
+                const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const dayName = dayNames[new Date().getDay()] || 'Day';
+                return `Happy ${dayName}!`;
+            }
+
             function fillNoRepliesTemplate(template, conversation) {
                 const source = conversation || getPrimaryNoRepliesConversation() || null;
                 const firstName = getConversationFirstName(source);
                 const fullName = String(source?.contactName || '').trim() || firstName;
                 const propertyAddress = String(source?.propertyAddress || '').trim() || 'your property';
                 const phoneNumber = String(source?.contactPhone || '').trim() || 'this number';
-                return normalizeCampaignNoRepliesTemplateBody(template)
-                    .replace(/\{firstName\}/gi, firstName)
-                    .replace(/\{fullName\}/gi, fullName)
-                    .replace(/\{propertyAddress\}/gi, propertyAddress)
-                    .replace(/\{phoneNumber\}/gi, phoneNumber);
+                const bodyTemplate = normalizeCampaignNoRepliesTemplateBody(template);
+                const includesTimeGreetingToken = /\{timeGreeting\}/.test(bodyTemplate);
+                const replacements = {
+                    propertyAddress,
+                    status: 'No Reply',
+                    agentFirstName: firstName,
+                    agentName: fullName,
+                    senderName: getCurrentSenderName() || 'FAST BRIDGE GROUP',
+                    timeGreeting: getCampaignTimeGreetingSentence(),
+                    dayGreeting: getCampaignDayGreetingSentence(),
+                    firstName,
+                    fullName,
+                    phoneNumber
+                };
+                const body = bodyTemplate
+                    .replace(/\{(propertyAddress|status|agentFirstName|agentName|senderName|timeGreeting|dayGreeting|firstName|fullName|phoneNumber)\}/gi, (match, key) => {
+                        return Object.prototype.hasOwnProperty.call(replacements, key) ? replacements[key] : match;
+                    })
+                    .replace(/\s+([,!.?])/g, '$1')
+                    .trim();
+
+                if (!includesTimeGreetingToken && replacements.timeGreeting) {
+                    return `${body} ${replacements.timeGreeting}`.replace(/\s+([,!.?])/g, '$1').trim();
+                }
+
+                return body;
             }
 
             function loadCampaignTemplateSettings() {
@@ -4010,6 +4059,15 @@
                 campaignRepliesStatus.textContent = message;
                 campaignRepliesStatus.classList.remove('ready', 'offline');
                 campaignRepliesStatus.classList.add(mode === 'ready' ? 'ready' : 'offline');
+            }
+
+            function syncCampaignReplyThreadCount(count) {
+                if (!campaignReplyThreadCount) {
+                    return;
+                }
+
+                const safeCount = Math.max(0, Number(count) || 0);
+                campaignReplyThreadCount.textContent = `(${safeCount})`;
             }
 
             function getFilteredTwilioInboxConversations() {
@@ -4627,6 +4685,7 @@
                 campaignReplyConversations.replaceChildren();
 
                 const visibleConversations = getFilteredTwilioInboxConversations();
+                syncCampaignReplyThreadCount(visibleConversations.length);
 
                 if (!twilioInboxConversations.length) {
                     const empty = document.createElement('p');
