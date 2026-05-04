@@ -155,6 +155,21 @@
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
+        .my-agents-page-title-group {
+            min-width: 0;
+            flex-wrap: nowrap;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        .my-agents-page-title-logo {
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
         .buyers-sheet-wrap {
             margin-top: 24px;
             --buyers-border: rgba(var(--accent-light-rgb), 0.22);
@@ -607,6 +622,17 @@
             background: rgba(255, 255, 255, 0.06);
             color: #f8fafc;
             line-height: 1.7;
+
+        @media (max-width: 720px) {
+            .my-agents-page-title-group {
+                flex-wrap: wrap;
+                align-items: flex-start;
+            }
+
+            .my-agents-page-title-logo {
+                width: 60px;
+            }
+        }
             white-space: pre-wrap;
         }
 
@@ -875,7 +901,10 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <h1 class="page-title">My Agents</h1>
+                <div class="page-title-group my-agents-page-title-group">
+                    <img class="my-agents-page-title-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                    <h1 class="page-title">My Agents | FAST BRIDGE GROUP LLC</h1>
+                </div>
                 <div class="navbar-right">
                     <div class="search-box">
                         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

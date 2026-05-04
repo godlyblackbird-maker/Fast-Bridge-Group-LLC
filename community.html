@@ -179,6 +179,32 @@
             gap: 18px;
         }
 
+        .community-page-title-group {
+            min-width: 0;
+            flex-wrap: nowrap;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        .community-page-title-logo {
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
+        @media (max-width: 720px) {
+            .community-page-title-group {
+                flex-wrap: wrap;
+                align-items: flex-start;
+            }
+
+            .community-page-title-logo {
+                width: 60px;
+            }
+        }
+
         .community-hero {
             position: relative;
             overflow: hidden;
@@ -2750,7 +2776,10 @@
         <main class="main-content">
             <nav class="navbar">
                 <div class="page-header">
-                    <h1 class="page-title">Community</h1>
+                    <div class="page-title-group community-page-title-group">
+                        <img class="community-page-title-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                        <h1 class="page-title">Community | FAST BRIDGE GROUP LLC</h1>
+                    </div>
                     <div class="page-breadcrumb">
                         <a href="dashboard.html">Dashboard</a>
                         <span>/</span>

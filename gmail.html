@@ -220,15 +220,16 @@
             align-items: center;
             gap: 14px;
             min-width: 0;
+            flex-wrap: nowrap;
+            max-width: 100%;
         }
 
         .gmail-title-logo {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            object-fit: cover;
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            object-fit: contain;
             flex-shrink: 0;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
         }
 
         .gmail-title-group h1 {
@@ -1646,6 +1647,15 @@
                 align-items: stretch;
             }
 
+            .gmail-title-group {
+                flex-wrap: wrap;
+                align-items: flex-start;
+            }
+
+            .gmail-title-logo {
+                width: 60px;
+            }
+
             .gmail-actions {
                 justify-content: flex-start;
             }
@@ -2490,6 +2500,31 @@
                 }
             }
 
+            function syncMessageUnreadState(messageId, unread, updatedMessage) {
+                const normalizedMessageId = String(messageId || '').trim();
+                if (!normalizedMessageId) {
+                    return;
+                }
+
+                state.messages = state.messages.map((entry) => String(entry && entry.id || '').trim() === normalizedMessageId
+                    ? { ...entry, ...(updatedMessage || {}), isUnread: Boolean(unread) }
+                    : entry);
+
+                if (state.selectedMessageDetail && String(state.selectedMessageDetail.id || '').trim() === normalizedMessageId) {
+                    state.selectedMessageDetail = {
+                        ...state.selectedMessageDetail,
+                        ...(updatedMessage || {}),
+                        isUnread: Boolean(unread)
+                    };
+                }
+
+                state.selectedThreadMessages = state.selectedThreadMessages.map((entry) => String(entry && entry.id || '').trim() === normalizedMessageId
+                    ? { ...entry, ...(updatedMessage || {}), isUnread: Boolean(unread) }
+                    : entry);
+
+                publishGmailUnreadState(state.messages);
+            }
+
             async function toggleMessageStar(messageId, starred) {
                 const normalizedMessageId = String(messageId || '').trim();
                 if (!normalizedMessageId) {
@@ -3217,6 +3252,20 @@
                         ? `${threadMessages.length} messages in this thread.`
                         : (message.snippet || 'No preview text available.');
                     renderThreadMessages(threadMessages.length ? threadMessages : [message], message.id);
+
+                    if (message.isUnread) {
+                        try {
+                            const readPayload = await apiFetch(`/api/gmail/messages/${encodeURIComponent(normalizedMessageId)}/read`, {
+                                method: 'POST'
+                            });
+                            const updatedMessage = readPayload && readPayload.message ? readPayload.message : null;
+                            syncMessageUnreadState(normalizedMessageId, false, updatedMessage);
+                            readerChip.textContent = 'Inbox message';
+                            renderMessageList();
+                        } catch (readError) {
+                            console.warn('Unable to mark Gmail message as read after opening it:', readError);
+                        }
+                    }
                 } catch (error) {
                     state.selectedMessageId = '';
                     state.selectedMessageDetail = null;

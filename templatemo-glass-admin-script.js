@@ -1915,6 +1915,18 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return normalizedLinks;
     }
 
+    function getValidPropertyCoordinate(latLike, lngLike) {
+        const lat = Number(latLike);
+        const lng = Number(lngLike);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return null;
+        }
+        if (Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) {
+            return null;
+        }
+        return { lat, lng };
+    }
+
     function createShareablePropertyDetailSnapshot(detailLike) {
         const detail = detailLike && typeof detailLike === 'object' && !Array.isArray(detailLike)
             ? detailLike
@@ -1922,11 +1934,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const agentRecord = detail.agentRecord && typeof detail.agentRecord === 'object' && !Array.isArray(detail.agentRecord)
             ? detail.agentRecord
             : {};
+        const snapshotSubjectLocation = getValidPropertyCoordinate(detail.subjectLat, detail.subjectLng);
 
         const snapshot = {
             address: sanitizeSharedPropertyText(detail.address || detail.propertyAddress, 180),
-            subjectLat: Number.isFinite(Number(detail.subjectLat)) ? Number(detail.subjectLat) : '',
-            subjectLng: Number.isFinite(Number(detail.subjectLng)) ? Number(detail.subjectLng) : '',
+            subjectLat: snapshotSubjectLocation ? snapshotSubjectLocation.lat : '',
+            subjectLng: snapshotSubjectLocation ? snapshotSubjectLocation.lng : '',
             subjectCoordinateAddress: sanitizeSharedPropertyText(detail.subjectCoordinateAddress, 180),
             propertyImages: sanitizeSharedPropertyImages(detail.propertyImages),
             propertyDetails: sanitizeSharedPropertyText(detail.propertyDetails, 320),
@@ -2268,6 +2281,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             delete nextDetail.propertyAssignment;
         }
         persistSelectedPropertyDetail(nextDetail);
+    }
+
+    function normalizePropertyDetailDisplayText(value) {
+        return String(value || '')
+            .replace(/ft-�/gi, 'sqft')
+            .replace(/�/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
     }
 
     function syncPropertyDetailIntoLocalDealCache(propertyKeys, detailLike, workspaceUserLike) {
@@ -4142,6 +4163,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 candidates.push(persistedDetail);
             }
         }
+    function normalizePropertyDetailDisplayText(value) {
+        return String(value || '')
+            .replace(/ft-�/gi, 'sqft')
+            .replace(/�/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
 
         return candidates.find((candidate) => candidate && typeof candidate === 'object') || null;
     }
@@ -20034,7 +20062,9 @@ function initNavbarDateTime() {
 
             if (nextTabId === 'comps') {
                 window.setTimeout(() => {
-                    void maybeAutoSearchSubjectOnCompsOpen();
+                    if (typeof window.__fastMaybeAutoSearchSubjectOnCompsOpen === 'function') {
+                        void window.__fastMaybeAutoSearchSubjectOnCompsOpen();
+                    }
                 }, 40);
             }
         }
@@ -20256,6 +20286,33 @@ function initNavbarDateTime() {
 
         function normalizeCoordinateCacheAddress(value) {
             return String(value || '').trim().toLowerCase();
+        }
+
+        function normalizeAddressMatchValue(value) {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, ' ')
+                .replace(/\b(usa|united states|street|st|road|rd|avenue|ave|boulevard|blvd|drive|dr|lane|ln|court|ct|circle|cir|place|pl|way|freeway|fwy|highway|hwy)\b/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function isSubjectAddressMatch(labelLike) {
+            const subjectAddress = normalizeAddressMatchValue(
+                detailData.address
+                || detailData.propertyAddress
+                || propertyAddress
+                || ''
+            );
+            const candidateAddress = normalizeAddressMatchValue(labelLike);
+            if (!subjectAddress || !candidateAddress) {
+                return false;
+            }
+
+            return subjectAddress === candidateAddress
+                || candidateAddress.includes(subjectAddress)
+                || subjectAddress.includes(candidateAddress);
         }
 
         function resetPropertyLocationCaches() {
@@ -20649,9 +20706,33 @@ function initNavbarDateTime() {
             sourceLinkEl.removeAttribute('aria-disabled');
         }
 
+        function normalizePropertyMarketStatus(valueLike = '') {
+            const normalizedValue = String(valueLike || '').trim().toLowerCase();
+            if (!normalizedValue) {
+                return '';
+            }
+            if (normalizedValue.includes('off market') || normalizedValue.includes('off-market')) {
+                return 'off-market';
+            }
+            if (normalizedValue.includes('on hold') || normalizedValue.includes('on-hold')) {
+                return 'on-hold';
+            }
+            if (normalizedValue.includes('pending')) {
+                return 'pending';
+            }
+            if (normalizedValue.includes('closed')) {
+                return 'closed';
+            }
+            if (normalizedValue.includes('active')) {
+                return 'active';
+            }
+            return '';
+        }
+
         function renderPropertyDetailSnapshot() {
             const compactPropertyDetails = String(detailData.propertyDetails || '').replace(/\s*\/\s*/g, '\n');
             const currentStatusLabel = formatAgentStatusLabel(detailData.piqAgentStatus || 'none');
+            const marketStatus = normalizePropertyMarketStatus(detailData.statusLabel || detailData.marketInfo);
             const idMap = {
                 'property-address-title': detailData.address,
                 'property-details-line': detailData.propertyDetails,
@@ -20712,6 +20793,20 @@ function initNavbarDateTime() {
                 const element = document.getElementById(id);
                 if (element) {
                     element.textContent = idMap[id];
+                }
+            });
+
+            ['property-market-info', 'comps-summary-market-info'].forEach((id) => {
+                const element = document.getElementById(id);
+                if (!element) {
+                    return;
+                }
+
+                element.classList.add('market-status-line');
+                if (marketStatus) {
+                    element.dataset.marketStatus = marketStatus;
+                } else {
+                    delete element.dataset.marketStatus;
                 }
             });
 
@@ -23275,7 +23370,7 @@ function initNavbarDateTime() {
             }
 
             function getEarthFocusLocation() {
-                return getRenderedSubjectLocation() || getSubjectLocation();
+                 return getStoredSubjectLocation() || getRenderedSubjectLocation() || getSubjectLocation();
             }
 
             function getCurrentMapCenterLocation() {
@@ -23309,7 +23404,45 @@ function initNavbarDateTime() {
                 return null;
             }
 
+            function getStreetViewTargetLocation() {
+                if (lastSearchResult && Number.isFinite(Number(lastSearchResult.lat)) && Number.isFinite(Number(lastSearchResult.lng))) {
+                    return {
+                        lat: Number(lastSearchResult.lat),
+                        lng: Number(lastSearchResult.lng)
+                    };
+                }
+
+                return getSubjectLocation();
+            }
+
+            function getStreetViewTargetLabel() {
+                const searchLabel = String(lastSearchResult && lastSearchResult.label || '').trim();
+                if (searchLabel) {
+                    return searchLabel;
+                }
+
+                return String(getCurrentCompsSubjectAddress() || detailData.address || 'Subject property').trim() || 'Subject property';
+            }
+
             function resolveEarthSubjectLocation(subjectLocation = null) {
+                const explicitSubjectLocation = subjectLocation
+                    && Number.isFinite(Number(subjectLocation.lat))
+                    && Number.isFinite(Number(subjectLocation.lng))
+                    ? {
+                        lat: Number(subjectLocation.lat),
+                        lng: Number(subjectLocation.lng)
+                    }
+                    : null;
+
+                if (explicitSubjectLocation) {
+                    return explicitSubjectLocation;
+                }
+
+                const storedSubjectLocation = getStoredSubjectLocation();
+                if (storedSubjectLocation) {
+                    return storedSubjectLocation;
+                }
+
                 const renderedLocation = getRenderedSubjectLocation();
                 if (renderedLocation) {
                     return renderedLocation;
@@ -23319,15 +23452,6 @@ function initNavbarDateTime() {
                 if (mapCenterLocation && (!subjectLocation || isSameMapLocation(mapCenterLocation, subjectLocation))) {
                     return mapCenterLocation;
                 }
-
-                const explicitSubjectLocation = subjectLocation
-                    && Number.isFinite(Number(subjectLocation.lat))
-                    && Number.isFinite(Number(subjectLocation.lng))
-                    ? {
-                        lat: Number(subjectLocation.lat),
-                        lng: Number(subjectLocation.lng)
-                    }
-                    : null;
 
                 return explicitSubjectLocation || getSubjectLocation();
             }
@@ -23606,9 +23730,6 @@ function initNavbarDateTime() {
                 if ('extruded' in earthSubjectMarker) {
                     earthSubjectMarker.extruded = true;
                 }
-                if ('drawsOccludedSegments' in earthSubjectMarker) {
-                    earthSubjectMarker.drawsOccludedSegments = true;
-                }
             }
 
             function syncEarthSubjectMarker(locationLike) {
@@ -23634,8 +23755,8 @@ function initNavbarDateTime() {
                         position: markerPosition,
                         altitudeMode: 'CLAMP_TO_GROUND',
                         extruded: true,
-                        drawsOccludedSegments: true,
-                        title: markerMeta.title || markerMeta.label
+                        title: markerMeta.title || markerMeta.label,
+                        label: markerMeta.label || 'SUBJECT'
                     });
 
                     syncEarthMarkerPresentation(markerMeta);
@@ -23678,7 +23799,6 @@ function initNavbarDateTime() {
                         },
                         altitudeMode: 'CLAMP_TO_GROUND',
                         extruded: false,
-                        drawsOccludedSegments: true,
                         title: String(comp.address || 'Comparable property').trim() || 'Comparable property'
                     });
 
@@ -23747,7 +23867,8 @@ function initNavbarDateTime() {
                         earthMarkerLibraryPromise = null;
                         earthMarkerLibrary = null;
                     }
-                    earthMarkerCtor = (window.google.maps.marker && (window.google.maps.marker.Marker3DElement || window.google.maps.marker.Marker3DInteractiveElement))
+                    earthMarkerCtor = (earthLibrary && (earthLibrary.Marker3DElement || earthLibrary.Marker3DInteractiveElement || earthLibrary.MarkerElement || earthLibrary.MarkerInteractiveElement))
+                        || (window.google.maps.maps3d && (window.google.maps.maps3d.Marker3DElement || window.google.maps.maps3d.Marker3DInteractiveElement || window.google.maps.maps3d.MarkerElement || window.google.maps.maps3d.MarkerInteractiveElement))
                         || (earthMarkerLibrary && (earthMarkerLibrary.Marker3DElement || earthMarkerLibrary.Marker3DInteractiveElement))
                         || null;
                     const MapMode = earthLibrary && earthLibrary.MapMode;
@@ -23809,12 +23930,45 @@ function initNavbarDateTime() {
 
             function buildFallbackMarkerIcon(label, variant, isActive) {
                 const safeLabel = String(label || '').trim() || 'COMP';
-                const theme = variant === 'subject'
+                const isSubjectVariant = variant === 'subject';
+                const subjectStatus = normalizePropertyMarketStatus(detailData.statusLabel || detailData.marketInfo);
+                const subjectTheme = subjectStatus === 'active'
                     ? {
-                        fill: '#111827',
-                        stroke: '#fef3c7',
-                        text: '#fef3c7'
+                        fill: '#16a34a',
+                        stroke: '#dcfce7',
+                        text: '#f0fdf4'
                     }
+                    : subjectStatus === 'pending'
+                        ? {
+                            fill: '#facc15',
+                            stroke: '#fef9c3',
+                            text: '#1f2937'
+                        }
+                        : subjectStatus === 'on-hold'
+                            ? {
+                                fill: '#6b7280',
+                                stroke: '#e5e7eb',
+                                text: '#f9fafb'
+                            }
+                            : subjectStatus === 'closed'
+                                ? {
+                                    fill: '#dc2626',
+                                    stroke: '#fecaca',
+                                    text: '#fef2f2'
+                                }
+                                : subjectStatus === 'off-market'
+                                    ? {
+                                        fill: '#9333ea',
+                                        stroke: '#e9d5ff',
+                                        text: '#faf5ff'
+                                    }
+                                    : {
+                                        fill: '#111827',
+                                        stroke: '#fef3c7',
+                                        text: '#fef3c7'
+                                    };
+                const theme = variant === 'subject'
+                    ? subjectTheme
                     : variant === 'search'
                         ? {
                             fill: '#2563eb',
@@ -23826,16 +23980,18 @@ function initNavbarDateTime() {
                         stroke: isActive ? '#f8fafc' : 'rgba(8,15,28,0.78)',
                         text: variant === 'orange' ? '#111827' : '#ffffff'
                     };
-                const width = Math.max(78, Math.min(152, 26 + safeLabel.length * (variant === 'subject' ? 8.5 : 7.2)));
-                const height = variant === 'subject' ? 44 : 36;
+                const width = isSubjectVariant
+                    ? 44
+                    : Math.max(78, Math.min(152, 26 + safeLabel.length * 7.2));
+                const height = isSubjectVariant ? 44 : 36;
                 const radius = Math.round(height / 2);
-                const outerStroke = isActive ? '#f59e0b' : 'transparent';
+                const outerStroke = isActive ? '#ffffff' : 'transparent';
                 const outerStrokeWidth = isActive ? 4 : 0;
                 const svg = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
                         <rect x="${outerStrokeWidth / 2}" y="${outerStrokeWidth / 2}" width="${width - outerStrokeWidth}" height="${height - outerStrokeWidth}" rx="${radius}" fill="${theme.fill}" stroke="${outerStroke}" stroke-width="${outerStrokeWidth}" />
                         <rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="${radius - 1}" fill="none" stroke="${theme.stroke}" stroke-width="2" />
-                        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-size="${variant === 'subject' ? 13 : 11}" font-weight="700" fill="${theme.text}">${escapeHtml(safeLabel)}</text>
+                        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-size="${isSubjectVariant ? 11 : 11}" font-weight="700" fill="${theme.text}">${escapeHtml(safeLabel)}</text>
                     </svg>
                 `.trim();
 
@@ -23900,18 +24056,6 @@ function initNavbarDateTime() {
 
                 clearSearchedLocationArtifacts();
 
-                searchedMarkerHalo = new window.google.maps.Circle({
-                    strokeColor: '#93c5fd',
-                    strokeOpacity: 0.95,
-                    strokeWeight: 2,
-                    fillColor: '#2563eb',
-                    fillOpacity: 0.14,
-                    map: mapInstance,
-                    center: position,
-                    radius: 26,
-                    zIndex: 310
-                });
-
                 searchedMarker = markerCtor
                     ? createMapMarker({
                         map: mapInstance,
@@ -23962,6 +24106,17 @@ function initNavbarDateTime() {
                 return formatCurrency(safeValue);
             }
 
+            function formatSubjectMarkerLabel(value) {
+                const safeValue = Number(value) || 0;
+                if (Math.abs(safeValue) >= 1000000) {
+                    return `${(safeValue / 1000000).toFixed(safeValue >= 10000000 ? 0 : 1).replace(/\.0$/, '')}M`;
+                }
+                if (Math.abs(safeValue) >= 1000) {
+                    return `${(safeValue / 1000).toFixed(safeValue >= 100000 ? 0 : 0)}k`;
+                }
+                return `${Math.round(safeValue)}`;
+            }
+
             function getCompKey(comp) {
                 return String(comp && comp.address || '').trim().toLowerCase();
             }
@@ -23991,12 +24146,22 @@ function initNavbarDateTime() {
             }
 
             function getSubjectMarkerMeta(subjectLocation = getSubjectLocation()) {
+                const subjectPrice = parseCurrencyAmount(detailData.listPrice);
                 return {
-                    label: 'SUBJECT',
+                    label: subjectPrice > 0 ? formatSubjectMarkerLabel(subjectPrice) : 'SUBJ',
                     variant: 'subject',
                     title: detailData.address || 'Subject property',
                     propertyType: detailData.propertyDetails || 'Subject Property'
                 };
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
             }
 
             function setMapEmptyState(isVisible, message) {
@@ -24211,8 +24376,17 @@ function initNavbarDateTime() {
                 }
 
                 const markerOptions = options && typeof options === 'object' ? options : {};
-                if (markerCtor) {
-                    return new markerCtor({
+                const activeMapId = String(
+                    (typeof mapInstance.get === 'function' && mapInstance.get('mapId'))
+                    || ''
+                ).trim();
+                const canUseAdvancedMarkers = Boolean(activeMapId);
+                const advancedMarkerCtor = markerCtor
+                    || (window.google.maps.marker && window.google.maps.marker.AdvancedMarkerElement)
+                    || null;
+                if (advancedMarkerCtor && canUseAdvancedMarkers) {
+                    markerCtor = advancedMarkerCtor;
+                    return new advancedMarkerCtor({
                         map: markerOptions.map,
                         position: markerOptions.position,
                         content: markerOptions.content,
@@ -24556,29 +24730,39 @@ function initNavbarDateTime() {
 
             async function ensureSubjectCoordinates() {
                 const currentAddressKey = normalizeCoordinateCacheAddress(getCurrentCompsSubjectAddress());
-                const subjectLat = Number(detailData.subjectLat);
-                const subjectLng = Number(detailData.subjectLng);
+                const storedSubjectLocation = getValidPropertyCoordinate(detailData.subjectLat, detailData.subjectLng);
                 const subjectAddressKey = normalizeCoordinateCacheAddress(detailData.subjectCoordinateAddress);
                 const storedLocation = currentAddressKey
                     && subjectAddressKey === currentAddressKey
-                    && Number.isFinite(subjectLat)
-                    && Number.isFinite(subjectLng)
-                    ? { lat: subjectLat, lng: subjectLng }
+                    && storedSubjectLocation
+                    ? storedSubjectLocation
                     : null;
-                if (storedLocation) {
-                    return storedLocation;
-                }
 
                 const address = getCurrentCompsSubjectAddress() || getStreetViewAddressQuery();
                 if (address) {
                     try {
                         if (window.google && window.google.maps) {
+                            const placesMatch = await geocodeAddressWithGooglePlaces(address).catch(() => null);
+                            if (placesMatch && Number.isFinite(placesMatch.lat) && Number.isFinite(placesMatch.lng)) {
+                                storeSubjectLocation(placesMatch, placesMatch.formattedAddress || address);
+                                persistCurrentPropertyDetail();
+                                return { lat: placesMatch.lat, lng: placesMatch.lng };
+                            }
+
+                            if (storedLocation) {
+                                return storedLocation;
+                            }
+
                             const googleMatch = await geocodeAddressWithGoogle(address).catch(() => null);
                             if (googleMatch && Number.isFinite(googleMatch.lat) && Number.isFinite(googleMatch.lng)) {
                                 storeSubjectLocation(googleMatch, googleMatch.formattedAddress || address);
                                 persistCurrentPropertyDetail();
                                 return { lat: googleMatch.lat, lng: googleMatch.lng };
                             }
+                        }
+
+                        if (storedLocation) {
+                            return storedLocation;
                         }
 
                         const nominatimMatch = await geocodeAddressWithNominatim(address).catch(() => null);
@@ -24609,41 +24793,47 @@ function initNavbarDateTime() {
                     throw new Error(getGoogleMapsBrokenStateMessage());
                 }
 
-                const subjectLocation = getSubjectLocation();
-                panoramaInstance.setPosition(subjectLocation);
+                const streetViewTarget = getStreetViewTargetLocation();
+                const streetViewTargetLabel = getStreetViewTargetLabel();
+                panoramaInstance.setPosition(streetViewTarget);
                 panoramaInstance.setPov({
                     heading: 34,
                     pitch: 8
                 });
                 panoramaInstance.setVisible(true);
-                map.panTo(subjectLocation);
+                if (lastSearchResult) {
+                    renderSearchedLocationMarker(streetViewTarget, streetViewTargetLabel);
+                }
+                map.panTo(streetViewTarget);
                 setStreetViewMode(true);
 
-                const panoMatch = await findStreetViewPanorama(subjectLocation).catch(() => null);
-                if (!panoMatch) {
-                    return;
-                }
+                void (async () => {
+                    const panoMatch = await findStreetViewPanorama(streetViewTarget).catch(() => null);
+                    if (!panoMatch || !streetViewEnabled || !panoramaInstance) {
+                        return;
+                    }
 
-                try {
-                    detailData.streetViewPanoLat = panoMatch.lat;
-                    detailData.streetViewPanoLng = panoMatch.lng;
-                    persistCurrentPropertyDetail();
+                    try {
+                        detailData.streetViewPanoLat = panoMatch.lat;
+                        detailData.streetViewPanoLng = panoMatch.lng;
+                        persistCurrentPropertyDetail();
 
-                    const heading = window.google.maps.geometry && typeof window.google.maps.geometry.spherical?.computeHeading === 'function'
-                        ? window.google.maps.geometry.spherical.computeHeading(
-                            new window.google.maps.LatLng(panoMatch.lat, panoMatch.lng),
-                            new window.google.maps.LatLng(subjectLocation.lat, subjectLocation.lng)
-                        )
-                        : 34;
+                        const heading = window.google.maps.geometry && typeof window.google.maps.geometry.spherical?.computeHeading === 'function'
+                            ? window.google.maps.geometry.spherical.computeHeading(
+                                new window.google.maps.LatLng(panoMatch.lat, panoMatch.lng),
+                                new window.google.maps.LatLng(streetViewTarget.lat, streetViewTarget.lng)
+                            )
+                            : 34;
 
-                    panoramaInstance.setPosition({ lat: panoMatch.lat, lng: panoMatch.lng });
-                    panoramaInstance.setPov({
-                        heading: Number.isFinite(heading) ? heading : 34,
-                        pitch: 8
-                    });
-                } catch (error) {
-                    // Keep the visible subject panorama open even if refinement or cache persistence fails.
-                }
+                        panoramaInstance.setPosition({ lat: panoMatch.lat, lng: panoMatch.lng });
+                        panoramaInstance.setPov({
+                            heading: Number.isFinite(heading) ? heading : 34,
+                            pitch: 8
+                        });
+                    } catch (error) {
+                        // Keep the visible subject panorama open even if refinement or cache persistence fails.
+                    }
+                })();
             }
 
             async function ensureMapReady() {
@@ -24670,7 +24860,10 @@ function initNavbarDateTime() {
 
                     if (window.google && window.google.maps && window.google.maps.importLibrary) {
                         await window.google.maps.importLibrary('maps');
-                        markerCtor = null;
+                        const markerLibrary = await window.google.maps.importLibrary('marker').catch(() => null);
+                        markerCtor = (markerLibrary && markerLibrary.AdvancedMarkerElement)
+                            || (window.google.maps.marker && window.google.maps.marker.AdvancedMarkerElement)
+                            || null;
                     }
 
                     const styles = await loadGoogleMapsStyles(config.stylePath);
@@ -24695,6 +24888,11 @@ function initNavbarDateTime() {
 
                     mapInstance = new window.google.maps.Map(compsMapCanvas, mapOptions);
                     startGoogleMapsIntegrityMonitor();
+                    window.setTimeout(() => {
+                        if (detectBrokenGoogleMapsState()) {
+                            handleBrokenGoogleMapsState();
+                        }
+                    }, 250);
                     applyCurrentMapStyles();
                     panoramaInstance = new window.google.maps.StreetViewPanorama(compsMapPano, {
                         position: subjectLocation,
@@ -25012,6 +25210,36 @@ function initNavbarDateTime() {
 
                 const position = { lat, lng };
                 const resolvedLabel = String(labelText || 'Search result').trim() || 'Search result';
+                const shouldCalibrateSubject = isSubjectAddressMatch(resolvedLabel);
+
+                if (shouldCalibrateSubject) {
+                    lastSearchResult = null;
+                    clearSearchedLocationArtifacts();
+                    if (storeSubjectLocation(position, resolvedLabel)) {
+                        persistCurrentPropertyDetail();
+                    }
+
+                    if (mapInstance && window.google && window.google.maps) {
+                        renderMapMarkers(lastTopResults);
+                        mapInstance.panTo(position);
+                        if ((Number(mapInstance.getZoom()) || 0) < 17) {
+                            mapInstance.setZoom(17);
+                        }
+                    }
+
+                    if (earthMapElement) {
+                        updateEarthCamera(position);
+                        syncEarthSubjectMarker(position);
+                    }
+
+                    if (streetViewEnabled && panoramaInstance) {
+                        panoramaInstance.setPosition(position);
+                    }
+
+                    updateCompsMapOpenLink(resolvedLabel);
+                    return;
+                }
+
                 lastSearchResult = {
                     lat,
                     lng,
@@ -25138,33 +25366,30 @@ function initNavbarDateTime() {
 
             function getStoredSubjectLocation() {
                 const currentAddressKey = normalizeCoordinateCacheAddress(getCurrentCompsSubjectAddress());
-                const subjectLat = Number(detailData.subjectLat);
-                const subjectLng = Number(detailData.subjectLng);
+                const storedSubjectLocation = getValidPropertyCoordinate(detailData.subjectLat, detailData.subjectLng);
                 const subjectAddressKey = normalizeCoordinateCacheAddress(detailData.subjectCoordinateAddress);
-                if (currentAddressKey && subjectAddressKey === currentAddressKey && Number.isFinite(subjectLat) && Number.isFinite(subjectLng)) {
-                    return { lat: subjectLat, lng: subjectLng };
+                if (currentAddressKey && subjectAddressKey === currentAddressKey && storedSubjectLocation) {
+                    return storedSubjectLocation;
                 }
 
-                const streetViewLat = Number(detailData.streetViewLat);
-                const streetViewLng = Number(detailData.streetViewLng);
+                const streetViewLocation = getValidPropertyCoordinate(detailData.streetViewLat, detailData.streetViewLng);
                 const streetViewAddressKey = normalizeCoordinateCacheAddress(detailData.streetViewAddress);
-                if (currentAddressKey && streetViewAddressKey === currentAddressKey && Number.isFinite(streetViewLat) && Number.isFinite(streetViewLng)) {
-                    return { lat: streetViewLat, lng: streetViewLng };
+                if (currentAddressKey && streetViewAddressKey === currentAddressKey && streetViewLocation) {
+                    return streetViewLocation;
                 }
 
                 return null;
             }
 
             function storeSubjectLocation(locationLike, addressLike = '') {
-                const lat = Number(locationLike && locationLike.lat);
-                const lng = Number(locationLike && locationLike.lng);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                const resolvedLocation = getValidPropertyCoordinate(locationLike && locationLike.lat, locationLike && locationLike.lng);
+                if (!resolvedLocation) {
                     return false;
                 }
 
                 const resolvedAddress = String(addressLike || getCurrentCompsSubjectAddress()).trim();
-                detailData.subjectLat = lat;
-                detailData.subjectLng = lng;
+                detailData.subjectLat = resolvedLocation.lat;
+                detailData.subjectLng = resolvedLocation.lng;
                 detailData.subjectCoordinateAddress = resolvedAddress;
                 return true;
             }
@@ -25187,6 +25412,8 @@ function initNavbarDateTime() {
                 lastAutoSearchPropertyAddress = normalizedPropertyAddress;
                 updateCompsMapOpenLink(propertyAddress);
             }
+
+            window.__fastMaybeAutoSearchSubjectOnCompsOpen = maybeAutoSearchSubjectOnCompsOpen;
 
             async function initCompsAddressAutocomplete() {
                 if (!compsMapSearchInput) {
@@ -25250,29 +25477,20 @@ function initNavbarDateTime() {
                 });
             }
 
-            function renderMapMarkers(filtered) {
+            function renderMapMarkers(filtered, subjectLocationLike = getSubjectLocation()) {
                 if (!mapInstance || !window.google || !window.google.maps) {
                     return;
                 }
 
                 clearMapArtifacts();
                 setMapEmptyState(false);
-                const subjectLocation = getSubjectLocation();
+                const subjectLocation = getValidPropertyCoordinate(
+                    subjectLocationLike && subjectLocationLike.lat,
+                    subjectLocationLike && subjectLocationLike.lng
+                ) || getSubjectLocation();
                 const subjectMarkerMeta = getSubjectMarkerMeta(subjectLocation);
                 const activeKey = activeCompKey;
                 const bounds = new window.google.maps.LatLngBounds();
-
-                subjectMarkerHalo = new window.google.maps.Circle({
-                    strokeColor: '#f59e0b',
-                    strokeOpacity: 0.85,
-                    strokeWeight: 2,
-                    fillColor: '#f59e0b',
-                    fillOpacity: 0.12,
-                    map: mapInstance,
-                    center: subjectLocation,
-                    radius: 34,
-                    zIndex: 290
-                });
 
                 subjectMarker = createMapMarker({
                     map: mapInstance,
@@ -25412,13 +25630,18 @@ function initNavbarDateTime() {
             async function refreshMap(filtered) {
                 updateCompsMapOpenLink();
 
-                const subjectLocation = await ensureSubjectCoordinates();
                 const map = await ensureMapReady();
                 if (!map) {
                     return;
                 }
-                setMapLayerMode(currentMapLayer);
-                renderMapMarkers(filtered);
+                const subjectLocation = await ensureSubjectCoordinates();
+                if (earthPanelVisible) {
+                    syncCurrentMapPresentation();
+                    syncLayerButtonState();
+                } else {
+                    setMapLayerMode(currentMapLayer);
+                }
+                renderMapMarkers(filtered, subjectLocation);
                 const earthSubjectLocation = resolveEarthSubjectLocation(subjectLocation);
                 if (earthSubjectLocation) {
                     storeSubjectLocation(earthSubjectLocation);

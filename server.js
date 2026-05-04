@@ -16718,6 +16718,59 @@ app.post('/api/gmail/messages/:messageId/archive', async (req, res) => {
   }
 });
 
+// POST /api/gmail/messages/:messageId/read — removes the unread label from one Gmail message
+app.post('/api/gmail/messages/:messageId/read', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const messageId = String(req.params?.messageId || '').trim();
+  if (!messageId) {
+    return res.status(400).json({ error: 'Message id is required.' });
+  }
+
+  try {
+    const payload = await withGmailAccessTokenForUser(decoded.id, async (accessToken, connection) => {
+      if (!gmailConnectionHasScopes(connection, [GMAIL_MODIFY_SCOPE])) {
+        throw new Error('Reconnect Gmail and approve inbox management permissions before updating read state from FAST.');
+      }
+
+      const response = await postGmailApiJson(
+        `/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}/modify`,
+        accessToken,
+        {
+          removeLabelIds: ['UNREAD']
+        }
+      );
+
+      const refreshedMessage = await fetchGmailApiJson(
+        `/gmail/v1/users/me/messages/${encodeURIComponent(String(response && response.id || messageId).trim())}`,
+        accessToken,
+        {
+          format: 'metadata',
+          metadataHeaders: ['From', 'To', 'Subject', 'Date']
+        }
+      );
+
+      return {
+        gmailEmail: connection.gmailEmail,
+        message: mapGmailMessageSummary(refreshedMessage)
+      };
+    });
+
+    return res.json({
+      success: true,
+      gmailEmail: payload.gmailEmail,
+      message: payload.message,
+      messageText: 'Gmail message marked as read.'
+    });
+  } catch (error) {
+    console.error('Failed to mark Gmail message as read:', error);
+    return res.status(500).json({ error: formatGmailOAuthError(error) });
+  }
+});
+
 // POST /api/gmail/messages/trash — moves multiple Gmail messages to trash
 app.post('/api/gmail/messages/trash', async (req, res) => {
   const decoded = requireAuth(req, res);

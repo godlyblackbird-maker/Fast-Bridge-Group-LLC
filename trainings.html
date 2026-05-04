@@ -68,6 +68,21 @@
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
+        .training-page-title-group {
+            min-width: 0;
+            flex-wrap: nowrap;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        .training-page-title-logo {
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
         .training-library-grid {
             display: grid;
             gap: 18px;
@@ -197,6 +212,17 @@
             .training-library-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 align-items: start;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .training-page-title-group {
+                flex-wrap: wrap;
+                align-items: flex-start;
+            }
+
+            .training-page-title-logo {
+                width: 60px;
             }
         }
     </style>
@@ -372,7 +398,10 @@
         <main class="main-content">
             <nav class="navbar">
                 <div class="page-header">
-                    <h1 class="page-title">Trainings</h1>
+                    <div class="page-title-group training-page-title-group">
+                        <img class="training-page-title-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                        <h1 class="page-title">Trainings | FAST BRIDGE GROUP LLC</h1>
+                    </div>
                     <div class="page-breadcrumb">
                         <a href="dashboard.html">Dashboard</a>
                         <span>/</span>
