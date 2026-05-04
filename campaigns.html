@@ -1431,6 +1431,33 @@
             transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
         }
 
+        .campaign-reply-conversation-follow-up {
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(245, 158, 11, 0.28);
+            background: rgba(255, 255, 255, 0.96);
+            color: #b45309;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+        }
+
+        .campaign-reply-conversation-follow-up:hover,
+        .campaign-reply-conversation-follow-up:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(217, 119, 6, 0.36);
+            color: #92400e;
+            box-shadow: 0 14px 24px rgba(120, 53, 15, 0.14);
+        }
+
         .campaign-reply-conversation-dismiss:hover,
         .campaign-reply-conversation-dismiss:focus-visible {
             transform: translateY(-1px);
@@ -4063,30 +4090,8 @@
                 let failedCount = 0;
 
                 for (const conversation of conversations) {
-                    const conversationKey = String(conversation?.conversationKey || '').trim();
-                    const contactPhone = String(conversation?.contactPhone || '').trim();
-                    if (!conversationKey || !contactPhone) {
-                        failedCount += 1;
-                        continue;
-                    }
-
                     try {
-                        const response = await fetch('/api/twilio/inbox/reply', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { Authorization: `Bearer ${token}` } : {})
-                            },
-                            body: JSON.stringify({
-                                conversationKey,
-                                body: buildNoRepliesFollowUpMessage(conversation),
-                                campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply'
-                            })
-                        });
-                        const data = await response.json().catch(() => ({}));
-                        if (!response.ok || !data.success) {
-                            throw new Error(data.error || 'Unable to send quick follow up.');
-                        }
+                        await sendNoRepliesFollowUpMessage(conversation);
                         sentCount += 1;
                     } catch (_error) {
                         failedCount += 1;
@@ -4105,6 +4110,46 @@
                 syncCampaignReplyFilterButtons();
             }
 
+            async function sendNoRepliesFollowUpMessage(conversation) {
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                const contactPhone = String(conversation?.contactPhone || '').trim();
+                if (!conversationKey || !contactPhone) {
+                    throw new Error('The no-reply Twilio thread is missing a phone number.');
+                }
+
+                const response = await fetch('/api/twilio/inbox/reply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({
+                        conversationKey,
+                        body: buildNoRepliesFollowUpMessage(conversation),
+                        campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply'
+                    })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Unable to send quick follow up.');
+                }
+
+                return data;
+            }
+
+            async function sendSingleNoRepliesFollowUpMessage(conversation) {
+                const contactLabel = conversation?.contactName || conversation?.contactPhone || 'this contact';
+                campaignReplyStatus.textContent = `Sending quick follow-up to ${contactLabel}...`;
+
+                try {
+                    await sendNoRepliesFollowUpMessage(conversation);
+                    await loadTwilioInboxConversations();
+                    campaignReplyStatus.textContent = `Quick follow-up sent to ${contactLabel}.`;
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || 'Unable to send the quick follow-up message.';
+                }
+            }
+
             async function copyNoRepliesFollowUpTemplate() {
                 const conversation = getPrimaryNoRepliesConversation();
                 if (!conversation) {
@@ -4112,7 +4157,14 @@
                     return;
                 }
 
-                const copied = await copyTextToClipboard(buildNoRepliesCopyTemplateMessage(conversation));
+                const defaultMessage = buildNoRepliesCopyTemplateMessage(conversation);
+                const nextMessage = window.prompt('Edit the quick follow-up template before copying it.', defaultMessage);
+                if (nextMessage === null) {
+                    campaignReplyStatus.textContent = 'Copy template cancelled.';
+                    return;
+                }
+
+                const copied = await copyTextToClipboard(nextMessage);
                 campaignReplyStatus.textContent = copied
                     ? 'No-reply follow-up template copied.'
                     : 'Could not copy the follow-up template.';
@@ -4627,6 +4679,21 @@
                             await dismissTwilioUnreadConversation(conversation);
                         });
                         actions.appendChild(dismissButton);
+                    }
+
+                    if (campaignReplyFilterMode === 'no-replies' && !conversation?.hasInboundReplies) {
+                        const followUpButton = document.createElement('button');
+                        followUpButton.type = 'button';
+                        followUpButton.className = 'campaign-reply-conversation-follow-up';
+                        followUpButton.setAttribute('aria-label', `Send quick follow up to ${conversation.contactName || conversation.contactPhone || 'thread'}`);
+                        followUpButton.title = 'Send quick follow up';
+                        followUpButton.textContent = 'FU';
+                        followUpButton.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            await sendSingleNoRepliesFollowUpMessage(conversation);
+                        });
+                        actions.appendChild(followUpButton);
                     }
 
                     const deleteButton = document.createElement('button');
