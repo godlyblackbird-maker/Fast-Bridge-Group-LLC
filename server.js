@@ -11417,6 +11417,10 @@ function wrapBase64Mime(value) {
   return String(value || '').replace(/\s+/g, '').match(/.{1,76}/g)?.join('\r\n') || '';
 }
 
+function encodeMimeBodyUtf8Base64(value) {
+  return wrapBase64Mime(Buffer.from(String(value || ''), 'utf8').toString('base64'));
+}
+
 function normalizeGmailComposeAttachments(attachments) {
   const items = Array.isArray(attachments) ? attachments : [];
   const normalizedItems = [];
@@ -11459,6 +11463,9 @@ function buildGmailRawMessage({ from, to, cc, bcc, subject, inReplyTo, reference
   const normalizedSubject = escapeMimeHeader(subject) || '(no subject)';
   const plainText = String(bodyText || '').replace(/\r\n?/g, '\n');
   const htmlText = String(bodyHtml || '').trim();
+  const normalizedPlainText = plainText || stripHtmlToPlainText(htmlText);
+  const encodedPlainText = encodeMimeBodyUtf8Base64(normalizedPlainText);
+  const encodedHtmlText = encodeMimeBodyUtf8Base64(htmlText);
   const normalizedAttachments = normalizeGmailComposeAttachments(attachments);
   const headers = [
     `From: ${normalizedFrom}`,
@@ -11496,15 +11503,15 @@ function buildGmailRawMessage({ from, to, cc, bcc, subject, inReplyTo, reference
           '',
           `--${alternativeBoundary}`,
           'Content-Type: text/plain; charset="UTF-8"',
-          'Content-Transfer-Encoding: 7bit',
+          'Content-Transfer-Encoding: base64',
           '',
-          plainText || stripHtmlToPlainText(htmlText),
+          encodedPlainText,
           '',
           `--${alternativeBoundary}`,
           'Content-Type: text/html; charset="UTF-8"',
-          'Content-Transfer-Encoding: 7bit',
+          'Content-Transfer-Encoding: base64',
           '',
-          htmlText,
+          encodedHtmlText,
           '',
           `--${alternativeBoundary}--`,
           ''
@@ -11512,9 +11519,9 @@ function buildGmailRawMessage({ from, to, cc, bcc, subject, inReplyTo, reference
       : [
           `--${mixedBoundary}`,
           'Content-Type: text/plain; charset="UTF-8"',
-          'Content-Transfer-Encoding: 7bit',
+          'Content-Transfer-Encoding: base64',
           '',
-          plainText,
+          encodedPlainText,
           ''
         ];
 
@@ -11540,23 +11547,23 @@ function buildGmailRawMessage({ from, to, cc, bcc, subject, inReplyTo, reference
     body = [
       `--${boundary}`,
       'Content-Type: text/plain; charset="UTF-8"',
-      'Content-Transfer-Encoding: 7bit',
+      'Content-Transfer-Encoding: base64',
       '',
-      plainText || stripHtmlToPlainText(htmlText),
+      encodedPlainText,
       '',
       `--${boundary}`,
       'Content-Type: text/html; charset="UTF-8"',
-      'Content-Transfer-Encoding: 7bit',
+      'Content-Transfer-Encoding: base64',
       '',
-      htmlText,
+      encodedHtmlText,
       '',
       `--${boundary}--`,
       ''
     ].join('\r\n');
   } else {
     headers.push('Content-Type: text/plain; charset="UTF-8"');
-    headers.push('Content-Transfer-Encoding: 7bit');
-    body = `${plainText}\r\n`;
+    headers.push('Content-Transfer-Encoding: base64');
+    body = `${encodedPlainText}\r\n`;
   }
 
   return Buffer.from(`${headers.join('\r\n')}\r\n\r\n${body}`, 'utf8').toString('base64url');

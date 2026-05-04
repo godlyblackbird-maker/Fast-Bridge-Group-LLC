@@ -22268,8 +22268,22 @@ function initNavbarDateTime() {
             return `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
         }
 
-        function buildGoogleStreetViewUrl(lat, lng) {
-            return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${encodeURIComponent(`${lat},${lng}`)}`;
+        function buildGoogleStreetViewUrl(lat, lng, options = {}) {
+            const settings = options && typeof options === 'object' ? options : {};
+            const params = new URLSearchParams({
+                api: '1',
+                map_action: 'pano',
+                viewpoint: `${lat},${lng}`
+            });
+            const heading = Number(settings.heading);
+            const pitch = Number(settings.pitch);
+            if (Number.isFinite(heading)) {
+                params.set('heading', String(heading));
+            }
+            if (Number.isFinite(pitch)) {
+                params.set('pitch', String(pitch));
+            }
+            return `https://www.google.com/maps/@?${params.toString()}`;
         }
 
         function getStreetViewAddressQuery(fallbackAddress = '') {
@@ -23006,6 +23020,61 @@ function initNavbarDateTime() {
             }, Promise.resolve(null));
         }
 
+        function getStreetViewHeading(fromLocation, targetLocation, fallbackHeading = 34) {
+            const fromLat = Number(fromLocation && fromLocation.lat);
+            const fromLng = Number(fromLocation && fromLocation.lng);
+            const targetLat = Number(targetLocation && targetLocation.lat);
+            const targetLng = Number(targetLocation && targetLocation.lng);
+            if (
+                !Number.isFinite(fromLat)
+                || !Number.isFinite(fromLng)
+                || !Number.isFinite(targetLat)
+                || !Number.isFinite(targetLng)
+            ) {
+                return fallbackHeading;
+            }
+
+            if (window.google && window.google.maps && window.google.maps.geometry && typeof window.google.maps.geometry.spherical?.computeHeading === 'function') {
+                const heading = window.google.maps.geometry.spherical.computeHeading(
+                    new window.google.maps.LatLng(fromLat, fromLng),
+                    new window.google.maps.LatLng(targetLat, targetLng)
+                );
+                if (Number.isFinite(heading)) {
+                    return heading;
+                }
+            }
+
+            return fallbackHeading;
+        }
+
+        async function resolveStreetViewDisplayTarget(locationLike) {
+            const targetLat = Number(locationLike && locationLike.lat);
+            const targetLng = Number(locationLike && locationLike.lng);
+            if (!Number.isFinite(targetLat) || !Number.isFinite(targetLng)) {
+                return null;
+            }
+
+            const targetLocation = {
+                lat: targetLat,
+                lng: targetLng
+            };
+            const panoMatch = await findStreetViewPanorama(targetLocation).catch(() => null);
+            const panoLocation = panoMatch && Number.isFinite(Number(panoMatch.lat)) && Number.isFinite(Number(panoMatch.lng))
+                ? {
+                    lat: Number(panoMatch.lat),
+                    lng: Number(panoMatch.lng)
+                }
+                : targetLocation;
+
+            return {
+                targetLocation,
+                panoLocation,
+                panoMatch,
+                heading: getStreetViewHeading(panoLocation, targetLocation),
+                pitch: 8
+            };
+        }
+
         async function resolveStreetViewUrlForAddress(address) {
             const trimmedAddress = String(address || '').trim();
             if (!trimmedAddress) {
@@ -23014,9 +23083,17 @@ function initNavbarDateTime() {
 
             const cachedLat = Number(detailData.streetViewLat);
             const cachedLng = Number(detailData.streetViewLng);
+            const cachedPanoLat = Number(detailData.streetViewPanoLat);
+            const cachedPanoLng = Number(detailData.streetViewPanoLng);
             const cachedAddress = String(detailData.streetViewAddress || '').trim().toLowerCase();
             if (Number.isFinite(cachedLat) && Number.isFinite(cachedLng) && cachedAddress === trimmedAddress.toLowerCase()) {
-                return buildGoogleStreetViewUrl(cachedLat, cachedLng);
+                const panoLocation = Number.isFinite(cachedPanoLat) && Number.isFinite(cachedPanoLng)
+                    ? { lat: cachedPanoLat, lng: cachedPanoLng }
+                    : { lat: cachedLat, lng: cachedLng };
+                return buildGoogleStreetViewUrl(panoLocation.lat, panoLocation.lng, {
+                    heading: getStreetViewHeading(panoLocation, { lat: cachedLat, lng: cachedLng }),
+                    pitch: 8
+                });
             }
 
             if (window.google && window.google.maps) {
@@ -23025,8 +23102,23 @@ function initNavbarDateTime() {
                     detailData.streetViewLat = googleMatch.lat;
                     detailData.streetViewLng = googleMatch.lng;
                     detailData.streetViewAddress = googleMatch.formattedAddress || trimmedAddress;
+                    const googleStreetViewTarget = await resolveStreetViewDisplayTarget(googleMatch).catch(() => null);
+                    if (googleStreetViewTarget && googleStreetViewTarget.panoMatch) {
+                        detailData.streetViewPanoLat = googleStreetViewTarget.panoLocation.lat;
+                        detailData.streetViewPanoLng = googleStreetViewTarget.panoLocation.lng;
+                    } else {
+                        detailData.streetViewPanoLat = '';
+                        detailData.streetViewPanoLng = '';
+                    }
                     persistCurrentPropertyDetail();
-                    return buildGoogleStreetViewUrl(googleMatch.lat, googleMatch.lng);
+                    return buildGoogleStreetViewUrl(
+                        googleStreetViewTarget ? googleStreetViewTarget.panoLocation.lat : googleMatch.lat,
+                        googleStreetViewTarget ? googleStreetViewTarget.panoLocation.lng : googleMatch.lng,
+                        {
+                            heading: googleStreetViewTarget ? googleStreetViewTarget.heading : 34,
+                            pitch: 8
+                        }
+                    );
                 }
             }
 
@@ -23051,8 +23143,23 @@ function initNavbarDateTime() {
             detailData.streetViewLat = lat;
             detailData.streetViewLng = lng;
             detailData.streetViewAddress = trimmedAddress;
+            const fallbackStreetViewTarget = await resolveStreetViewDisplayTarget({ lat, lng }).catch(() => null);
+            if (fallbackStreetViewTarget && fallbackStreetViewTarget.panoMatch) {
+                detailData.streetViewPanoLat = fallbackStreetViewTarget.panoLocation.lat;
+                detailData.streetViewPanoLng = fallbackStreetViewTarget.panoLocation.lng;
+            } else {
+                detailData.streetViewPanoLat = '';
+                detailData.streetViewPanoLng = '';
+            }
             persistCurrentPropertyDetail();
-            return buildGoogleStreetViewUrl(lat, lng);
+            return buildGoogleStreetViewUrl(
+                fallbackStreetViewTarget ? fallbackStreetViewTarget.panoLocation.lat : lat,
+                fallbackStreetViewTarget ? fallbackStreetViewTarget.panoLocation.lng : lng,
+                {
+                    heading: fallbackStreetViewTarget ? fallbackStreetViewTarget.heading : 34,
+                    pitch: 8
+                }
+            );
         }
 
         function initCompsExplorer() {
@@ -24795,10 +24902,13 @@ function initNavbarDateTime() {
 
                 const streetViewTarget = getStreetViewTargetLocation();
                 const streetViewTargetLabel = getStreetViewTargetLabel();
-                panoramaInstance.setPosition(streetViewTarget);
+                const streetViewDisplay = await resolveStreetViewDisplayTarget(streetViewTarget);
+                const panoLocation = streetViewDisplay ? streetViewDisplay.panoLocation : streetViewTarget;
+                const heading = streetViewDisplay ? streetViewDisplay.heading : 34;
+                panoramaInstance.setPosition(panoLocation);
                 panoramaInstance.setPov({
-                    heading: 34,
-                    pitch: 8
+                    heading,
+                    pitch: streetViewDisplay ? streetViewDisplay.pitch : 8
                 });
                 panoramaInstance.setVisible(true);
                 if (lastSearchResult) {
@@ -24807,33 +24917,18 @@ function initNavbarDateTime() {
                 map.panTo(streetViewTarget);
                 setStreetViewMode(true);
 
-                void (async () => {
-                    const panoMatch = await findStreetViewPanorama(streetViewTarget).catch(() => null);
-                    if (!panoMatch || !streetViewEnabled || !panoramaInstance) {
-                        return;
+                try {
+                    if (streetViewDisplay && streetViewDisplay.panoMatch) {
+                        detailData.streetViewPanoLat = streetViewDisplay.panoLocation.lat;
+                        detailData.streetViewPanoLng = streetViewDisplay.panoLocation.lng;
+                    } else {
+                        detailData.streetViewPanoLat = '';
+                        detailData.streetViewPanoLng = '';
                     }
-
-                    try {
-                        detailData.streetViewPanoLat = panoMatch.lat;
-                        detailData.streetViewPanoLng = panoMatch.lng;
-                        persistCurrentPropertyDetail();
-
-                        const heading = window.google.maps.geometry && typeof window.google.maps.geometry.spherical?.computeHeading === 'function'
-                            ? window.google.maps.geometry.spherical.computeHeading(
-                                new window.google.maps.LatLng(panoMatch.lat, panoMatch.lng),
-                                new window.google.maps.LatLng(streetViewTarget.lat, streetViewTarget.lng)
-                            )
-                            : 34;
-
-                        panoramaInstance.setPosition({ lat: panoMatch.lat, lng: panoMatch.lng });
-                        panoramaInstance.setPov({
-                            heading: Number.isFinite(heading) ? heading : 34,
-                            pitch: 8
-                        });
-                    } catch (error) {
-                        // Keep the visible subject panorama open even if refinement or cache persistence fails.
-                    }
-                })();
+                    persistCurrentPropertyDetail();
+                } catch (error) {
+                    // Keep the visible subject panorama open even if cache persistence fails.
+                }
             }
 
             async function ensureMapReady() {
@@ -25233,7 +25328,7 @@ function initNavbarDateTime() {
                     }
 
                     if (streetViewEnabled && panoramaInstance) {
-                        panoramaInstance.setPosition(position);
+                        void showStreetViewForSubject().catch(() => null);
                     }
 
                     updateCompsMapOpenLink(resolvedLabel);
@@ -25265,6 +25360,10 @@ function initNavbarDateTime() {
                     }
                 }
                 updateCompsMapOpenLink(resolvedLabel);
+
+                if (streetViewEnabled && panoramaInstance) {
+                    void showStreetViewForSubject().catch(() => null);
+                }
             }
 
             function clearAutocompletePlaceSelection() {
