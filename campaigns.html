@@ -3194,10 +3194,19 @@
             let campaignReplySearchTerm = '';
             let campaignReplyFilterMode = 'all';
             const CAMPAIGN_REPLY_DISMISSED_UNREAD_KEY = 'campaignReplyDismissedUnreadByConversation';
+            const CAMPAIGN_REPLY_DISMISSED_NO_REPLIES_KEY = 'campaignReplyDismissedNoRepliesByConversation';
             const campaignReplyDefaultPlaceholder = campaignReplyInput ? String(campaignReplyInput.getAttribute('placeholder') || '').trim() : 'Type a direct Twilio response...';
             let dismissedUnreadConversationMap = (() => {
                 try {
                     const parsed = JSON.parse(localStorage.getItem(CAMPAIGN_REPLY_DISMISSED_UNREAD_KEY) || '{}');
+                    return parsed && typeof parsed === 'object' ? parsed : {};
+                } catch (_error) {
+                    return {};
+                }
+            })();
+            let dismissedNoRepliesConversationMap = (() => {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(CAMPAIGN_REPLY_DISMISSED_NO_REPLIES_KEY) || '{}');
                     return parsed && typeof parsed === 'object' ? parsed : {};
                 } catch (_error) {
                     return {};
@@ -3289,6 +3298,12 @@
                 } catch (_error) {}
             }
 
+            function persistDismissedNoRepliesConversationMap() {
+                try {
+                    localStorage.setItem(CAMPAIGN_REPLY_DISMISSED_NO_REPLIES_KEY, JSON.stringify(dismissedNoRepliesConversationMap));
+                } catch (_error) {}
+            }
+
             function getConversationUnreadSignature(conversation) {
                 return String(conversation?.lastMessageAt || '').trim();
             }
@@ -3314,6 +3329,27 @@
                 persistDismissedUnreadConversationMap();
             }
 
+            function isConversationDismissedFromNoReplies(conversation) {
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                const signature = getConversationUnreadSignature(conversation);
+                if (!conversationKey || !signature) {
+                    return false;
+                }
+
+                return String(dismissedNoRepliesConversationMap[conversationKey] || '').trim() === signature;
+            }
+
+            function dismissConversationFromNoReplies(conversation) {
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                const signature = getConversationUnreadSignature(conversation);
+                if (!conversationKey || !signature) {
+                    return;
+                }
+
+                dismissedNoRepliesConversationMap[conversationKey] = signature;
+                persistDismissedNoRepliesConversationMap();
+            }
+
             function pruneDismissedUnreadConversations() {
                 const activeConversationKeys = new Set();
                 twilioInboxConversations.forEach((conversation) => {
@@ -3336,6 +3372,30 @@
                 });
 
                 persistDismissedUnreadConversationMap();
+            }
+
+            function pruneDismissedNoRepliesConversations() {
+                const activeConversationKeys = new Set();
+                twilioInboxConversations.forEach((conversation) => {
+                    const conversationKey = String(conversation?.conversationKey || '').trim();
+                    const signature = getConversationUnreadSignature(conversation);
+                    if (!conversationKey) {
+                        return;
+                    }
+
+                    activeConversationKeys.add(conversationKey);
+                    if (conversation?.hasInboundReplies || !signature || String(dismissedNoRepliesConversationMap[conversationKey] || '').trim() !== signature) {
+                        delete dismissedNoRepliesConversationMap[conversationKey];
+                    }
+                });
+
+                Object.keys(dismissedNoRepliesConversationMap).forEach((conversationKey) => {
+                    if (!activeConversationKeys.has(conversationKey)) {
+                        delete dismissedNoRepliesConversationMap[conversationKey];
+                    }
+                });
+
+                persistDismissedNoRepliesConversationMap();
             }
 
             async function dismissTwilioUnreadConversation(conversation) {
@@ -3367,6 +3427,18 @@
                 } catch (error) {
                     campaignReplyStatus.textContent = error.message || 'Unable to dismiss that unread thread.';
                 }
+            }
+
+            async function dismissTwilioNoRepliesConversation(conversation) {
+                const normalizedConversationKey = String(conversation?.conversationKey || '').trim();
+                if (!normalizedConversationKey) {
+                    campaignReplyStatus.textContent = 'Unable to ignore that no-reply property.';
+                    return;
+                }
+
+                dismissConversationFromNoReplies(conversation);
+                renderTwilioReplyConversations();
+                campaignReplyStatus.textContent = 'No-reply property dismissed from this view.';
             }
 
             function setCampaignReplyAddress(value) {
@@ -3975,7 +4047,8 @@
                     }
 
                     const matchesNoRepliesFilter = campaignReplyFilterMode !== 'no-replies'
-                        || !Boolean(conversation?.hasInboundReplies);
+                        || (!Boolean(conversation?.hasInboundReplies)
+                            && !isConversationDismissedFromNoReplies(conversation));
                     if (!matchesNoRepliesFilter) {
                         return false;
                     }
@@ -4682,6 +4755,19 @@
                     }
 
                     if (campaignReplyFilterMode === 'no-replies' && !conversation?.hasInboundReplies) {
+                        const dismissNoRepliesButton = document.createElement('button');
+                        dismissNoRepliesButton.type = 'button';
+                        dismissNoRepliesButton.className = 'campaign-reply-conversation-dismiss';
+                        dismissNoRepliesButton.setAttribute('aria-label', `Dismiss ${conversation.contactName || conversation.contactPhone || 'property'} from no replies`);
+                        dismissNoRepliesButton.title = 'Dismiss from no replies';
+                        dismissNoRepliesButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"></path></svg>';
+                        dismissNoRepliesButton.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            await dismissTwilioNoRepliesConversation(conversation);
+                        });
+                        actions.appendChild(dismissNoRepliesButton);
+
                         const followUpButton = document.createElement('button');
                         followUpButton.type = 'button';
                         followUpButton.className = 'campaign-reply-conversation-follow-up';
@@ -4942,6 +5028,7 @@
 
                     twilioInboxConversations = Array.isArray(data.conversations) ? data.conversations : [];
                     pruneDismissedUnreadConversations();
+                    pruneDismissedNoRepliesConversations();
                     publishTwilioUnreadState(twilioInboxConversations);
                     if (!activeTwilioConversationKey || !twilioInboxConversations.some((item) => item.conversationKey === activeTwilioConversationKey)) {
                         activeTwilioConversationKey = options.preferredConversationKey || (twilioInboxConversations[0]?.conversationKey || '');
