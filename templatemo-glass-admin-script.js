@@ -6282,6 +6282,8 @@ function initNavbarDateTime() {
             return;
         }
 
+        const WORKSPACE_GROUP_COLLAPSED_KEY = 'mainMenuWorkspaceGroupCollapsed';
+
         const currentPath = String(window.location.pathname || '').toLowerCase();
         const currentPage = String(currentPath.split('/').pop() || '').toLowerCase();
         const mainMenuSections = Array.from(sidebar.querySelectorAll('.nav-section'));
@@ -6322,7 +6324,7 @@ function initNavbarDateTime() {
             },
             {
                 href: 'gmail.html',
-                markup: '<a href="gmail.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>Gmail</a>'
+                markup: '<a href="gmail.html" class="nav-link"><span class="nav-icon nav-icon-gmail" aria-hidden="true"></span>Gmail</a>'
             },
             {
                 href: 'campaigns.html',
@@ -6360,6 +6362,18 @@ function initNavbarDateTime() {
             'property-details.html': 'mls.html',
             'fbg-messages.html': 'community.html'
         };
+        const workspaceGroupHrefs = [
+            'my-agents.html',
+            'deals.html',
+            'gmail.html',
+            'campaigns.html',
+            'mls-imports-spreadsheet.html',
+            'pdf-editor.html',
+            'community.html',
+            'users.html',
+            'trainings.html'
+        ];
+        const workspaceGroupHrefSet = new Set(workspaceGroupHrefs);
         const directMenuItems = Array.from(menuList.children).filter((child) => child instanceof HTMLElement && child.matches('.nav-item'));
         const existingItemsByHref = new Map();
         const duplicateItems = [];
@@ -6374,6 +6388,86 @@ function initNavbarDateTime() {
             listItem.className = 'nav-item';
             listItem.innerHTML = markup;
             return listItem;
+        }
+
+        function readWorkspaceGroupCollapsed() {
+            try {
+                return localStorage.getItem(WORKSPACE_GROUP_COLLAPSED_KEY) === 'true';
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function writeWorkspaceGroupCollapsed(collapsed) {
+            try {
+                localStorage.setItem(WORKSPACE_GROUP_COLLAPSED_KEY, collapsed ? 'true' : 'false');
+            } catch (error) {
+                // Ignore storage failures.
+            }
+        }
+
+        function createWorkspaceGroup(items, hasActiveItem) {
+            if (!Array.isArray(items) || !items.length) {
+                return null;
+            }
+
+            const groupItem = document.createElement('li');
+            groupItem.className = 'nav-item nav-group';
+
+            const toggleButton = document.createElement('button');
+            toggleButton.type = 'button';
+            toggleButton.className = 'nav-group-toggle';
+            toggleButton.innerHTML = `
+                <span class="nav-group-toggle-line" aria-hidden="true"></span>
+                <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+                <span class="nav-group-toggle-line" aria-hidden="true"></span>
+            `;
+
+            const list = document.createElement('ul');
+            list.className = 'nav-group-list';
+            items.forEach((item) => {
+                list.appendChild(item);
+            });
+
+            const setCollapsedState = (collapsed, options = {}) => {
+                const shouldCollapse = Boolean(collapsed);
+                groupItem.dataset.collapsed = shouldCollapse ? 'true' : 'false';
+                list.hidden = shouldCollapse;
+                toggleButton.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
+                toggleButton.setAttribute('aria-label', shouldCollapse ? 'Expand workspace tabs' : 'Collapse workspace tabs');
+                if (!options.skipPersist) {
+                    writeWorkspaceGroupCollapsed(shouldCollapse);
+                }
+            };
+
+            toggleButton.addEventListener('click', () => {
+                setCollapsedState(groupItem.dataset.collapsed !== 'true');
+            });
+
+            groupItem.appendChild(toggleButton);
+            groupItem.appendChild(list);
+            setCollapsedState(readWorkspaceGroupCollapsed() && !hasActiveItem, { skipPersist: true });
+            return groupItem;
+        }
+
+        function buildCanonicalItem(config, activeHref) {
+            const item = existingItemsByHref.get(config.href) || createMenuItem(config.markup);
+            const link = item.querySelector('.nav-link[href]');
+            const href = normalizeHrefValue(link && link.getAttribute('href'));
+            const isActive = href === activeHref;
+            if (link) {
+                link.classList.toggle('active', isActive);
+                if (isActive) {
+                    link.setAttribute('aria-current', 'page');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+            }
+            return item;
         }
 
         directMenuItems.forEach((item) => {
@@ -6403,21 +6497,27 @@ function initNavbarDateTime() {
 
         const activeHref = activeHrefByPage[currentPage] || currentPage;
         const fragment = document.createDocumentFragment();
+        let workspaceGroupInserted = false;
 
         canonicalMenuItems.forEach((config) => {
-            const item = existingItemsByHref.get(config.href) || createMenuItem(config.markup);
-            const link = item.querySelector('.nav-link[href]');
-            const href = normalizeHrefValue(link && link.getAttribute('href'));
-            const isActive = href === activeHref;
-            if (link) {
-                link.classList.toggle('active', isActive);
-                if (isActive) {
-                    link.setAttribute('aria-current', 'page');
-                } else {
-                    link.removeAttribute('aria-current');
+            if (config.href === workspaceGroupHrefs[0] && !workspaceGroupInserted) {
+                const groupedItems = workspaceGroupHrefs
+                    .map((href) => canonicalMenuItems.find((item) => item.href === href))
+                    .filter(Boolean)
+                    .map((itemConfig) => buildCanonicalItem(itemConfig, activeHref));
+                const workspaceGroup = createWorkspaceGroup(groupedItems, workspaceGroupHrefSet.has(activeHref));
+                if (workspaceGroup) {
+                    fragment.appendChild(workspaceGroup);
                 }
+                workspaceGroupInserted = true;
+                return;
             }
-            fragment.appendChild(item);
+
+            if (workspaceGroupHrefSet.has(config.href)) {
+                return;
+            }
+
+            fragment.appendChild(buildCanonicalItem(config, activeHref));
         });
 
         directMenuItems.forEach((item) => {

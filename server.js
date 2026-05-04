@@ -11377,6 +11377,10 @@ function mapGmailMessageDetail(message) {
   const body = extractGmailPayloadBodies(message && message.payload);
   return {
     ...summary,
+    replyTo: getGmailMessageHeader(message, 'Reply-To'),
+    inReplyTo: getGmailMessageHeader(message, 'In-Reply-To'),
+    references: getGmailMessageHeader(message, 'References'),
+    messageHeaderId: getGmailMessageHeader(message, 'Message-ID'),
     bodyText: body.plainText,
     bodyHtml: body.htmlText
   };
@@ -11447,7 +11451,7 @@ function normalizeGmailComposeAttachments(attachments) {
   return normalizedItems;
 }
 
-function buildGmailRawMessage({ from, to, cc, bcc, subject, bodyText, bodyHtml, attachments }) {
+function buildGmailRawMessage({ from, to, cc, bcc, subject, inReplyTo, references, bodyText, bodyHtml, attachments }) {
   const normalizedFrom = escapeMimeHeader(from);
   const normalizedTo = normalizeEmailListInput(to);
   const normalizedCc = normalizeEmailListInput(cc);
@@ -11469,6 +11473,14 @@ function buildGmailRawMessage({ from, to, cc, bcc, subject, bodyText, bodyHtml, 
 
   if (normalizedBcc) {
     headers.push(`Bcc: ${normalizedBcc}`);
+  }
+
+  if (String(inReplyTo || '').trim()) {
+    headers.push(`In-Reply-To: ${escapeMimeHeader(inReplyTo)}`);
+  }
+
+  if (String(references || '').trim()) {
+    headers.push(`References: ${escapeMimeHeader(references)}`);
   }
 
   let body = '';
@@ -16764,6 +16776,9 @@ app.post('/api/gmail/messages/send', async (req, res) => {
   const cc = normalizeEmailListInput(req.body?.cc);
   const bcc = normalizeEmailListInput(req.body?.bcc);
   const subject = String(req.body?.subject || '').trim();
+  const threadId = String(req.body?.threadId || '').trim();
+  const inReplyTo = String(req.body?.inReplyTo || '').trim();
+  const references = String(req.body?.references || '').trim();
   const bodyText = String(req.body?.bodyText || '').trim();
   const bodyHtml = String(req.body?.bodyHtml || '').trim();
   const attachments = normalizeGmailComposeAttachments(req.body?.attachments);
@@ -16794,10 +16809,13 @@ app.post('/api/gmail/messages/send', async (req, res) => {
           cc,
           bcc,
           subject,
+          inReplyTo,
+          references,
           bodyText,
           bodyHtml,
           attachments
-        })
+        }),
+        ...(threadId ? { threadId } : {})
       });
 
       return {
@@ -16832,6 +16850,9 @@ app.post('/api/gmail/drafts', async (req, res) => {
   const cc = normalizeEmailListInput(req.body?.cc);
   const bcc = normalizeEmailListInput(req.body?.bcc);
   const subject = String(req.body?.subject || '').trim();
+  const threadId = String(req.body?.threadId || '').trim();
+  const inReplyTo = String(req.body?.inReplyTo || '').trim();
+  const references = String(req.body?.references || '').trim();
   const bodyText = String(req.body?.bodyText || '').trim();
   const bodyHtml = String(req.body?.bodyHtml || '').trim();
   const attachments = normalizeGmailComposeAttachments(req.body?.attachments);
@@ -16858,10 +16879,13 @@ app.post('/api/gmail/drafts', async (req, res) => {
           cc,
           bcc,
           subject,
+          inReplyTo,
+          references,
           bodyText,
           bodyHtml,
           attachments
-        })
+        }),
+        ...(threadId ? { threadId } : {})
       };
 
       const response = draftId

@@ -3984,6 +3984,65 @@ a {
     list-style: none;
 }
 
+.nav-group {
+    margin-top: 8px;
+    padding-top: 4px;
+}
+
+.nav-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 4px 2px 10px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.nav-group-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-group-toggle-icon svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.18s ease;
+}
+
+.nav-group-toggle-line {
+    height: 1px;
+    flex: 1 1 auto;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), var(--glass-border), rgba(255, 255, 255, 0.06));
+}
+
+.nav-group-toggle:hover,
+.nav-group-toggle:focus-visible {
+    color: var(--text-primary);
+    outline: none;
+}
+
+.nav-group-toggle:hover .nav-group-toggle-icon,
+.nav-group-toggle:focus-visible .nav-group-toggle-icon {
+    color: var(--text-primary);
+}
+
+.nav-group[data-collapsed="true"] .nav-group-toggle-icon svg {
+    transform: rotate(-90deg);
+}
+
+.nav-group-list {
+    margin: 8px 0 0;
+    padding: 0;
+}
+
+.nav-group-list[hidden] {
+    display: none;
+}
+
 .nav-link {
     display: flex;
     align-items: center;
@@ -4034,6 +4093,18 @@ a {
     background-color: currentColor;
     -webkit-mask-image: url("Symbols/FIRE%20SYMBOL.svg");
     mask-image: url("Symbols/FIRE%20SYMBOL.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.nav-icon-gmail {
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/gmail%20icon.svg");
+    mask-image: url("Symbols/gmail%20icon.svg");
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -4375,6 +4446,22 @@ a {
         font-size: 0;
     }
 
+    html[data-sidebar-collapsed="on"] .nav-group-toggle {
+        justify-content: center;
+        gap: 0;
+        padding: 6px 0 10px;
+    }
+
+    html[data-sidebar-collapsed="on"] .nav-group-toggle-line {
+        display: none;
+    }
+
+    html[data-sidebar-collapsed="on"] .nav-group-list,
+    html[data-sidebar-collapsed="on"] .nav-group-list[hidden] {
+        display: block !important;
+        margin-top: 4px;
+    }
+
     html[data-sidebar-collapsed="on"] .nav-icon {
         width: 22px;
         height: 22px;
@@ -4436,6 +4523,22 @@ body.sidebar-collapsed .nav-link {
     gap: 0;
     padding: 14px 12px;
     font-size: 0;
+}
+
+body.sidebar-collapsed .nav-group-toggle {
+    justify-content: center;
+    gap: 0;
+    padding: 6px 0 10px;
+}
+
+body.sidebar-collapsed .nav-group-toggle-line {
+    display: none;
+}
+
+body.sidebar-collapsed .nav-group-list,
+body.sidebar-collapsed .nav-group-list[hidden] {
+    display: block !important;
+    margin-top: 4px;
 }
 
 body.sidebar-collapsed .nav-icon {

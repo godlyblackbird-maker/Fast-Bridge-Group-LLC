@@ -851,6 +851,32 @@
             gap: 10px;
         }
 
+        .gmail-reader-reply-btn {
+            min-height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 14px;
+            border: 1px solid var(--gmail-border);
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--glass-bg) 80%, rgba(255, 255, 255, 0.18) 20%);
+            color: var(--gmail-text);
+            cursor: pointer;
+            transition: background-color 0.16s ease, transform 0.16s ease;
+        }
+
+        .gmail-reader-reply-btn:hover,
+        .gmail-reader-reply-btn:focus-visible {
+            background: var(--gmail-hover);
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        .gmail-reader-reply-btn[hidden] {
+            display: none;
+        }
+
         .gmail-reader-collapse-btn {
             width: 34px;
             height: 34px;
@@ -993,7 +1019,7 @@
             color: var(--gmail-blue);
         }
 
-        .gmail-thread-message.is-outbound .gmail-thread-message-body pre {
+        .gmail-thread-message.is-outbound .gmail-thread-message-body {
             color: color-mix(in srgb, var(--gmail-text) 92%, var(--gmail-blue) 8%);
         }
 
@@ -1032,6 +1058,7 @@
 
         .gmail-thread-message-body {
             padding-top: 2px;
+            overflow: hidden;
         }
 
         .gmail-thread-message-body pre {
@@ -1040,6 +1067,21 @@
             word-break: break-word;
             font: 0.97rem/1.7 'Outfit', sans-serif;
             color: var(--gmail-text);
+        }
+
+        .gmail-thread-message-body img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 14px;
+        }
+
+        .gmail-thread-message-body table {
+            max-width: 100%;
+        }
+
+        .gmail-thread-message-body a {
+            color: var(--gmail-blue);
+            word-break: break-word;
         }
 
         .gmail-reader-footer {
@@ -1895,6 +1937,10 @@
                             <div class="gmail-reader-chip" id="gmail-reader-chip">Message preview</div>
                         </div>
                         <div class="gmail-reader-toolbar-actions">
+                            <button class="gmail-reader-reply-btn" id="gmail-reader-reply" type="button" aria-label="Reply to this thread" hidden>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
+                                <span>Reply</span>
+                            </button>
                             <button class="gmail-reader-collapse-btn" id="gmail-reader-collapse" type="button" aria-label="Collapse message details" title="Collapse message details">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
                             </button>
@@ -1924,7 +1970,7 @@
 
     <section class="gmail-compose-window" id="gmail-compose-window" hidden aria-hidden="true">
         <div class="gmail-compose-header">
-            <span>New Message</span>
+            <span id="gmail-compose-title">New Message</span>
             <div class="gmail-compose-controls">
                 <button class="gmail-compose-control" id="gmail-compose-minimize" type="button" aria-label="Minimize compose window">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -2086,6 +2132,8 @@
             const readerMailbox = document.getElementById('gmail-reader-mailbox');
             const composePill = document.getElementById('gmail-compose-pill');
             const composeWindow = document.getElementById('gmail-compose-window');
+            const readerReplyButton = document.getElementById('gmail-reader-reply');
+            const composeTitle = document.getElementById('gmail-compose-title');
             const composeForm = document.getElementById('gmail-compose-form');
             const composeMinimizeButton = document.getElementById('gmail-compose-minimize');
             const composeCloseButton = document.getElementById('gmail-compose-close');
@@ -2145,10 +2193,13 @@
                 composeAttachments: [],
                 composeConfidentialMode: false,
                 composeDraftId: '',
+                composeReplyContext: null,
                 composeSignatures: [],
                 composeDefaultSignatureEmail: '',
                 composeSignatureLoaded: false,
-                readerHeaderCollapsed: false
+                readerHeaderCollapsed: false,
+                selectedMessageDetail: null,
+                selectedThreadMessages: []
             };
 
             function getComposeDefaultStatus() {
@@ -2175,6 +2226,12 @@
 
                 const base = getComposeDefaultStatus();
                 composeStatus.textContent = suffixes.length ? `${base} ${suffixes.join(' • ')}` : base;
+            }
+
+            function syncComposeHeaderUi() {
+                if (composeTitle) {
+                    composeTitle.textContent = state.composeReplyContext ? 'Reply' : 'New Message';
+                }
             }
 
             function closeComposeMenus() {
@@ -2339,12 +2396,14 @@
                 state.composeAttachments = [];
                 state.composeConfidentialMode = false;
                 state.composeDraftId = '';
+                state.composeReplyContext = null;
                 state.composeFormattingVisible = true;
                 composeFormatBar.hidden = false;
                 composeLockButton.classList.remove('is-active');
                 renderComposeAttachments();
                 renderComposeSignatureMenu();
                 closeComposeMenus();
+                syncComposeHeaderUi();
                 refreshComposeStatus();
             }
 
@@ -2450,6 +2509,9 @@
                 readerStarButton.hidden = !hasSelection;
                 readerStarButton.classList.toggle('is-starred', Boolean(starred));
                 readerStarButton.setAttribute('aria-label', starred ? 'Remove star' : 'Add star');
+                if (readerReplyButton) {
+                    readerReplyButton.hidden = !hasSelection;
+                }
             }
 
             function syncReaderHeaderUi() {
@@ -2490,6 +2552,7 @@
             async function openComposeWindow() {
                 state.composeOpen = true;
                 state.composeMinimized = false;
+                syncComposeHeaderUi();
                 syncComposeWindowUi();
                 if (state.connected && hasComposePermission()) {
                     await ensureComposeSignaturesLoaded();
@@ -2510,6 +2573,54 @@
                 if (resetForm) {
                     resetComposeDraft();
                 }
+            }
+
+            function normalizeReplySubject(subject) {
+                const rawSubject = String(subject || '').trim() || '(no subject)';
+                return /^re\s*:/i.test(rawSubject) ? rawSubject : `Re: ${rawSubject}`;
+            }
+
+            function getReplyRecipient(message) {
+                if (!message || typeof message !== 'object') {
+                    return '';
+                }
+
+                if (isOwnThreadMessage(message)) {
+                    return String(message.to || '').trim();
+                }
+
+                return String(message.replyTo || message.from || '').trim();
+            }
+
+            function buildReplyQuoteHtml(message) {
+                const messageBody = String(message && (message.bodyText || message.snippet) || '').trim();
+                const replyBody = messageBody || 'No readable message body was returned for this email.';
+                const author = String(message && (message.from || 'Unknown sender') || 'Unknown sender').trim();
+                const dateLabel = formatDate(message && message.date);
+                const quotedBody = escapeHtml(replyBody).replace(/\n/g, '<br>');
+                return `<br><br><blockquote><strong>On ${escapeHtml(dateLabel)}, ${escapeHtml(author)} wrote:</strong><br>${quotedBody}</blockquote>`;
+            }
+
+            async function replyToSelectedThread() {
+                const message = state.selectedMessageDetail;
+                if (!message) {
+                    return;
+                }
+
+                resetComposeDraft();
+                state.composeReplyContext = {
+                    threadId: String(message.threadId || '').trim(),
+                    inReplyTo: String(message.messageHeaderId || message.inReplyTo || '').trim(),
+                    references: String(message.references || message.messageHeaderId || '').trim(),
+                    messageId: String(message.id || '').trim()
+                };
+                composeToInput.value = getReplyRecipient(message);
+                composeSubjectInput.value = normalizeReplySubject(message.subject);
+
+                await openComposeWindow();
+                composeBodyInput.innerHTML = `${composeBodyInput.innerHTML}${buildReplyQuoteHtml(message)}`;
+                refreshComposeStatus();
+                focusComposeEditor();
             }
 
             function toggleComposeMinimized() {
@@ -2595,6 +2706,64 @@
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;');
+            }
+
+            function sanitizeEmailHtml(html) {
+                const rawHtml = String(html || '').trim();
+                if (!rawHtml) {
+                    return '';
+                }
+
+                const template = document.createElement('template');
+                template.innerHTML = rawHtml;
+
+                Array.from(template.content.querySelectorAll('script, style, iframe, object, embed, form, input, button, textarea, select, link, meta, base')).forEach((node) => {
+                    node.remove();
+                });
+
+                Array.from(template.content.querySelectorAll('*')).forEach((element) => {
+                    Array.from(element.attributes).forEach((attribute) => {
+                        const name = String(attribute.name || '').trim().toLowerCase();
+                        const value = String(attribute.value || '').trim();
+                        const normalizedValue = value.toLowerCase();
+
+                        if (name.startsWith('on')) {
+                            element.removeAttribute(attribute.name);
+                            return;
+                        }
+
+                        if ((name === 'href' || name === 'src') && normalizedValue.startsWith('javascript:')) {
+                            element.removeAttribute(attribute.name);
+                            return;
+                        }
+
+                        if (name === 'srcset') {
+                            element.removeAttribute(attribute.name);
+                            return;
+                        }
+
+                        if (name === 'target' && element.tagName.toLowerCase() === 'a') {
+                            element.setAttribute('rel', 'noopener noreferrer');
+                        }
+                    });
+
+                    if (element.tagName.toLowerCase() === 'a' && !element.getAttribute('target')) {
+                        element.setAttribute('target', '_blank');
+                        element.setAttribute('rel', 'noopener noreferrer');
+                    }
+                });
+
+                return template.innerHTML;
+            }
+
+            function renderThreadMessageBody(message) {
+                const htmlBody = sanitizeEmailHtml(message && message.bodyHtml);
+                if (htmlBody) {
+                    return htmlBody;
+                }
+
+                const bodyText = String(message && (message.bodyText || message.snippet) || '').trim() || 'No readable message body was returned for this email.';
+                return `<pre>${escapeHtml(bodyText)}</pre>`;
             }
 
             function formatDate(value) {
@@ -2880,7 +3049,6 @@
                         ${messages.map((message) => {
                             const isSelected = String(message && message.id || '').trim() === String(selectedMessageId || '').trim();
                             const isOutbound = isOwnThreadMessage(message);
-                            const bodyText = String(message && (message.bodyText || message.snippet) || '').trim() || 'No readable message body was returned for this email.';
                             return `
                                 <article class="gmail-thread-message ${isSelected ? 'is-selected' : ''} ${isOutbound ? 'is-outbound' : ''}">
                                     <div class="gmail-thread-message-header">
@@ -2894,7 +3062,7 @@
                                         </div>
                                     </div>
                                     <div class="gmail-thread-message-body">
-                                        <pre>${escapeHtml(bodyText)}</pre>
+                                        ${renderThreadMessageBody(message)}
                                     </div>
                                 </article>
                             `;
@@ -2980,6 +3148,9 @@
 
                     if (state.messages.length) {
                             state.selectedMessageId = '';
+                            state.selectedMessageDetail = null;
+                            state.selectedThreadMessages = [];
+                            updateReaderStarButton(false);
                             setReaderIdleState(true);
                             readerChip.textContent = 'Message preview';
                             selectionLabel.textContent = 'None';
@@ -2990,6 +3161,9 @@
                             readerFooter.textContent = 'Your selected email will render here with the sender, subject, and message body.';
                     } else {
                         state.selectedMessageId = '';
+                        state.selectedMessageDetail = null;
+                        state.selectedThreadMessages = [];
+                        updateReaderStarButton(false);
                         setReaderIdleState(true);
                     }
                     updateConnectionUi();
@@ -3028,6 +3202,8 @@
                     }
 
                     state.selectedMessageId = message.id;
+                    state.selectedMessageDetail = message;
+                    state.selectedThreadMessages = threadMessages.length ? threadMessages : [message];
                     renderMessageList();
                     readerSubject.textContent = message.subject || '(no subject)';
                     readerFrom.textContent = message.from || 'Unknown sender';
@@ -3041,6 +3217,9 @@
                         : (message.snippet || 'No preview text available.');
                     renderThreadMessages(threadMessages.length ? threadMessages : [message], message.id);
                 } catch (error) {
+                    state.selectedMessageId = '';
+                    state.selectedMessageDetail = null;
+                    state.selectedThreadMessages = [];
                     setBanner(error.message || 'Unable to load the selected Gmail message.', 'error');
                     renderReaderPlaceholder('Unable to load message', error.message || 'The selected message could not be opened.');
                 } finally {
@@ -3078,6 +3257,8 @@
                     state.composeSignatureLoaded = false;
                     state.messages = [];
                     state.selectedMessageId = '';
+                    state.selectedMessageDetail = null;
+                    state.selectedThreadMessages = [];
                     state.selectedMessageIds = [];
                     state.pageToken = '';
                     state.pageHistory = [];
@@ -3149,6 +3330,9 @@
                             cc: String(composeCcInput.value || '').trim(),
                             bcc: String(composeBccInput.value || '').trim(),
                             subject: String(composeSubjectInput.value || '').trim(),
+                            threadId: state.composeReplyContext && state.composeReplyContext.threadId || '',
+                            inReplyTo: state.composeReplyContext && state.composeReplyContext.inReplyTo || '',
+                            references: state.composeReplyContext && state.composeReplyContext.references || '',
                             bodyText,
                             bodyHtml,
                             attachments: state.composeAttachments.map((attachment) => ({
@@ -3200,6 +3384,9 @@
                         cc: String(composeCcInput.value || '').trim(),
                         bcc: String(composeBccInput.value || '').trim(),
                         subject: String(composeSubjectInput.value || '').trim(),
+                        threadId: state.composeReplyContext && state.composeReplyContext.threadId || '',
+                        inReplyTo: state.composeReplyContext && state.composeReplyContext.inReplyTo || '',
+                        references: state.composeReplyContext && state.composeReplyContext.references || '',
                         bodyText,
                         bodyHtml,
                         attachments: state.composeAttachments.map((attachment) => ({
@@ -3394,6 +3581,11 @@
             refreshButton.addEventListener('click', () => loadMessages({ reset: true }));
             bannerDismiss.addEventListener('click', () => setBanner(''));
             readerBackButton.addEventListener('click', returnToInboxList);
+            readerReplyButton.addEventListener('click', () => {
+                replyToSelectedThread().catch((error) => {
+                    setBanner(error.message || 'Unable to open a reply for this Gmail thread.', 'error');
+                });
+            });
             readerCollapseButton.addEventListener('click', () => {
                 state.readerHeaderCollapsed = !state.readerHeaderCollapsed;
                 syncReaderHeaderUi();
