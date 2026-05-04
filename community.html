@@ -2005,49 +2005,6 @@
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
 
-        .community-voice-presence-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .community-voice-presence-room {
-            display: grid;
-            gap: 2px;
-            min-width: 0;
-        }
-
-        .community-voice-presence-room-title {
-            color: var(--text-primary);
-            font-size: 14px;
-            font-weight: 800;
-            line-height: 1.2;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .community-voice-presence-kicker {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--community-menu-label-color);
-        }
-
-        .community-voice-presence-kicker::before {
-            content: '';
-            width: 9px;
-            height: 9px;
-            border-radius: 999px;
-            background: #22c55e;
-            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.16);
-        }
-
         .community-voice-invite-btn {
             width: 100%;
             justify-content: flex-start;
@@ -3052,6 +3009,9 @@
                                             <path d="M23 1 1 23"/>
                                         </svg>
                                     </button>
+                                    <div class="community-voice-presence-card">
+                                        <div class="community-voice-member-list" id="community-voice-member-list"></div>
+                                    </div>
                                     <div class="community-voice-toolbox" id="community-voice-toolbox" hidden>
                                         <div class="community-voice-toolbox-head">
                                             <span class="community-voice-toolbox-title">Voice Tools</span>
@@ -3106,15 +3066,6 @@
                                                 </svg>
                                             </button>
                                         </div>
-                                    </div>
-                                    <div class="community-voice-presence-card">
-                                        <div class="community-voice-presence-head">
-                                            <div class="community-voice-presence-room">
-                                                <strong class="community-voice-presence-room-title" id="community-voice-presence-room-title">Meeting Room 1</strong>
-                                                <span class="community-voice-presence-kicker">Voice Presence</span>
-                                            </div>
-                                        </div>
-                                        <div class="community-voice-member-list" id="community-voice-member-list"></div>
                                     </div>
                                 </div>
                             </div>
@@ -3334,7 +3285,6 @@
             const voiceMuteButton = document.getElementById('community-voice-tool-mute');
             const voiceDeafenButton = document.getElementById('community-voice-tool-deafen');
             const voiceSettingsButton = document.getElementById('community-voice-tool-settings');
-            const voicePresenceRoomTitle = document.getElementById('community-voice-presence-room-title');
             const heroJoinButton = document.getElementById('community-hero-join-voice');
             const voiceRoomBadge = document.getElementById('community-voice-room-badge');
             const voiceRoomTitle = document.getElementById('community-voice-room-title');
@@ -5960,10 +5910,6 @@
                 if (heroJoinButton) {
                     heroJoinButton.textContent = `Join ${room.label}`;
                 }
-                if (voicePresenceRoomTitle) {
-                    voicePresenceRoomTitle.textContent = voiceJoined ? activeRoom.label : room.label;
-                }
-
                 renderVoiceScreenStage();
             };
 

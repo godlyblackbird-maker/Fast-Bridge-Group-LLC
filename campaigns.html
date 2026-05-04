@@ -1084,7 +1084,7 @@
 
         .campaign-reply-filters {
                 display: inline-grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             align-items: center;
             gap: 4px;
             margin-top: 12px;
@@ -1105,7 +1105,7 @@
                 position: absolute;
                 top: 4px;
                 left: 4px;
-                width: calc(50% - 4px);
+                width: calc((100% - 8px) / 3);
                 height: calc(100% - 8px);
                 border-radius: 999px;
                 border: 1px solid rgba(var(--accent-rgb), 0.26);
@@ -1119,6 +1119,22 @@
             .campaign-reply-filters[data-mode="unread"]::before {
                 transform: translateX(calc(100% + 4px));
             }
+
+            .campaign-reply-filters[data-mode="no-replies"]::before {
+                transform: translateX(calc(200% + 8px));
+            }
+
+        .campaign-reply-follow-up-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .campaign-reply-follow-up-button[hidden] {
+            display: none;
+        }
 
         .campaign-reply-filter-button {
                 position: relative;
@@ -1149,7 +1165,11 @@
             }
 
             .campaign-reply-filters[data-mode="all"] #campaign-reply-filter-unread,
-            .campaign-reply-filters[data-mode="unread"] #campaign-reply-filter-all {
+            .campaign-reply-filters[data-mode="all"] #campaign-reply-filter-no-replies,
+            .campaign-reply-filters[data-mode="unread"] #campaign-reply-filter-all,
+            .campaign-reply-filters[data-mode="unread"] #campaign-reply-filter-no-replies,
+            .campaign-reply-filters[data-mode="no-replies"] #campaign-reply-filter-all,
+            .campaign-reply-filters[data-mode="no-replies"] #campaign-reply-filter-unread {
                 opacity: 0.82;
         }
 
@@ -2641,6 +2661,11 @@
                                         <div id="campaign-reply-filters" class="campaign-reply-filters" role="group" aria-label="Filter active threads">
                                             <button id="campaign-reply-filter-all" type="button" class="campaign-reply-filter-button is-active">All</button>
                                             <button id="campaign-reply-filter-unread" type="button" class="campaign-reply-filter-button">Unread</button>
+                                            <button id="campaign-reply-filter-no-replies" type="button" class="campaign-reply-filter-button">No Replies</button>
+                                        </div>
+                                        <div class="campaign-reply-follow-up-row">
+                                            <button id="campaign-reply-no-replies-follow-up" type="button" class="card-btn campaign-reply-follow-up-button" hidden>Quick Follow Up</button>
+                                            <button id="campaign-reply-no-replies-copy-template" type="button" class="card-btn campaign-reply-follow-up-button" hidden>Copy Template</button>
                                         </div>
                                         <label class="campaign-reply-search" for="campaign-reply-search-input">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -3050,6 +3075,9 @@
             const campaignReplyFilters = document.getElementById('campaign-reply-filters');
             const campaignReplyFilterAllButton = document.getElementById('campaign-reply-filter-all');
             const campaignReplyFilterUnreadButton = document.getElementById('campaign-reply-filter-unread');
+            const campaignReplyFilterNoRepliesButton = document.getElementById('campaign-reply-filter-no-replies');
+            const campaignReplyNoRepliesFollowUpButton = document.getElementById('campaign-reply-no-replies-follow-up');
+            const campaignReplyNoRepliesCopyTemplateButton = document.getElementById('campaign-reply-no-replies-copy-template');
             const campaignReplySearchInput = document.getElementById('campaign-reply-search-input');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
             const campaignReplyEditNameButton = document.getElementById('campaign-reply-edit-name');
@@ -3919,6 +3947,12 @@
                         return false;
                     }
 
+                    const matchesNoRepliesFilter = campaignReplyFilterMode !== 'no-replies'
+                        || !Boolean(conversation?.hasInboundReplies);
+                    if (!matchesNoRepliesFilter) {
+                        return false;
+                    }
+
                     if (!searchTerm) {
                         return true;
                     }
@@ -3939,9 +3973,44 @@
                 });
             }
 
+            function getConversationFirstName(conversation) {
+                const rawName = String(conversation?.contactName || '').trim();
+                if (!rawName || rawName === String(conversation?.contactPhone || '').trim()) {
+                    return 'there';
+                }
+
+                return rawName.split(/\s+/)[0] || 'there';
+            }
+
+            function buildNoRepliesFollowUpMessage(conversation) {
+                const firstName = getConversationFirstName(conversation);
+                const propertyAddress = String(conversation?.propertyAddress || '').trim() || 'your property';
+                return `Hey ${firstName} just following up on ${propertyAddress}?`;
+            }
+
+            function buildNoRepliesCopyTemplateMessage(conversation) {
+                const firstName = getConversationFirstName(conversation);
+                const propertyAddress = String(conversation?.propertyAddress || '').trim() || 'your property';
+                return `Hey ${firstName}, just wanted to follow back up on ${propertyAddress} and see if you are still open to talking through it.`;
+            }
+
+            function getPrimaryNoRepliesConversation() {
+                const noReplyConversations = getFilteredTwilioInboxConversations().filter((conversation) => !conversation?.hasInboundReplies);
+                if (!noReplyConversations.length) {
+                    return null;
+                }
+
+                const activeConversation = noReplyConversations.find((conversation) => conversation.conversationKey === activeTwilioConversationKey);
+                return activeConversation || noReplyConversations[0] || null;
+            }
+
             function syncCampaignReplyFilterButtons() {
                 if (campaignReplyFilters) {
-                    campaignReplyFilters.dataset.mode = campaignReplyFilterMode === 'unread' ? 'unread' : 'all';
+                    campaignReplyFilters.dataset.mode = campaignReplyFilterMode === 'unread'
+                        ? 'unread'
+                        : campaignReplyFilterMode === 'no-replies'
+                            ? 'no-replies'
+                            : 'all';
                 }
                 if (campaignReplyFilterAllButton) {
                     campaignReplyFilterAllButton.classList.toggle('is-active', campaignReplyFilterMode === 'all');
@@ -3949,6 +4018,104 @@
                 if (campaignReplyFilterUnreadButton) {
                     campaignReplyFilterUnreadButton.classList.toggle('is-active', campaignReplyFilterMode === 'unread');
                 }
+                if (campaignReplyFilterNoRepliesButton) {
+                    campaignReplyFilterNoRepliesButton.classList.toggle('is-active', campaignReplyFilterMode === 'no-replies');
+                }
+
+                if (campaignReplyNoRepliesFollowUpButton) {
+                    const noReplyConversations = campaignReplyFilterMode === 'no-replies'
+                        ? getFilteredTwilioInboxConversations().filter((conversation) => !conversation?.hasInboundReplies)
+                        : [];
+                    campaignReplyNoRepliesFollowUpButton.hidden = campaignReplyFilterMode !== 'no-replies';
+                    campaignReplyNoRepliesFollowUpButton.disabled = noReplyConversations.length === 0;
+                    campaignReplyNoRepliesFollowUpButton.textContent = noReplyConversations.length > 0
+                        ? `Quick Follow Up (${noReplyConversations.length})`
+                        : 'Quick Follow Up';
+                }
+
+                if (campaignReplyNoRepliesCopyTemplateButton) {
+                    const primaryNoReplyConversation = campaignReplyFilterMode === 'no-replies'
+                        ? getPrimaryNoRepliesConversation()
+                        : null;
+                    campaignReplyNoRepliesCopyTemplateButton.hidden = campaignReplyFilterMode !== 'no-replies';
+                    campaignReplyNoRepliesCopyTemplateButton.disabled = !primaryNoReplyConversation;
+                }
+            }
+
+            async function sendNoRepliesFollowUpMessages() {
+                const conversations = getFilteredTwilioInboxConversations().filter((conversation) => !conversation?.hasInboundReplies);
+                if (!conversations.length) {
+                    campaignReplyStatus.textContent = 'No no-reply Twilio threads are available for follow up.';
+                    return;
+                }
+
+                const confirmation = window.confirm(`Send a quick follow-up to ${conversations.length} no-reply Twilio thread${conversations.length === 1 ? '' : 's'}?`);
+                if (!confirmation) {
+                    return;
+                }
+
+                if (campaignReplyNoRepliesFollowUpButton) {
+                    campaignReplyNoRepliesFollowUpButton.disabled = true;
+                }
+                campaignReplyStatus.textContent = `Sending ${conversations.length} quick follow-up${conversations.length === 1 ? '' : 's'}...`;
+
+                let sentCount = 0;
+                let failedCount = 0;
+
+                for (const conversation of conversations) {
+                    const conversationKey = String(conversation?.conversationKey || '').trim();
+                    const contactPhone = String(conversation?.contactPhone || '').trim();
+                    if (!conversationKey || !contactPhone) {
+                        failedCount += 1;
+                        continue;
+                    }
+
+                    try {
+                        const response = await fetch('/api/twilio/inbox/reply', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { Authorization: `Bearer ${token}` } : {})
+                            },
+                            body: JSON.stringify({
+                                conversationKey,
+                                body: buildNoRepliesFollowUpMessage(conversation),
+                                campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply'
+                            })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'Unable to send quick follow up.');
+                        }
+                        sentCount += 1;
+                    } catch (_error) {
+                        failedCount += 1;
+                    }
+                }
+
+                await loadTwilioInboxConversations();
+                if (sentCount > 0 && failedCount === 0) {
+                    campaignReplyStatus.textContent = `Quick follow-up sent to ${sentCount} thread${sentCount === 1 ? '' : 's'}.`;
+                } else if (sentCount > 0) {
+                    campaignReplyStatus.textContent = `Quick follow-up sent to ${sentCount} thread${sentCount === 1 ? '' : 's'}, ${failedCount} failed.`;
+                } else {
+                    campaignReplyStatus.textContent = 'Unable to send the quick follow-up messages.';
+                }
+
+                syncCampaignReplyFilterButtons();
+            }
+
+            async function copyNoRepliesFollowUpTemplate() {
+                const conversation = getPrimaryNoRepliesConversation();
+                if (!conversation) {
+                    campaignReplyStatus.textContent = 'Choose a no-reply Twilio thread first.';
+                    return;
+                }
+
+                const copied = await copyTextToClipboard(buildNoRepliesCopyTemplateMessage(conversation));
+                campaignReplyStatus.textContent = copied
+                    ? 'No-reply follow-up template copied.'
+                    : 'Could not copy the follow-up template.';
             }
 
             function setCampaignReplyComposerEnabled(enabled) {
@@ -4384,6 +4551,8 @@
                     empty.className = 'campaign-reply-empty';
                     empty.textContent = campaignReplyFilterMode === 'unread'
                         ? 'No unread or pending-reply Twilio threads match the current search.'
+                        : campaignReplyFilterMode === 'no-replies'
+                            ? 'No Twilio threads without a reply match the current search.'
                         : 'No Twilio threads match that search.';
                     campaignReplyConversations.appendChild(empty);
                     return;
@@ -4756,6 +4925,26 @@
                     campaignReplyFilterMode = 'unread';
                     syncCampaignReplyFilterButtons();
                     renderTwilioReplyConversations();
+                });
+            }
+
+            if (campaignReplyFilterNoRepliesButton) {
+                campaignReplyFilterNoRepliesButton.addEventListener('click', () => {
+                    campaignReplyFilterMode = 'no-replies';
+                    syncCampaignReplyFilterButtons();
+                    renderTwilioReplyConversations();
+                });
+            }
+
+            if (campaignReplyNoRepliesFollowUpButton) {
+                campaignReplyNoRepliesFollowUpButton.addEventListener('click', () => {
+                    sendNoRepliesFollowUpMessages();
+                });
+            }
+
+            if (campaignReplyNoRepliesCopyTemplateButton) {
+                campaignReplyNoRepliesCopyTemplateButton.addEventListener('click', () => {
+                    copyNoRepliesFollowUpTemplate();
                 });
             }
 

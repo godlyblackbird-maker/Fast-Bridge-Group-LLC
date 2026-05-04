@@ -3677,7 +3677,8 @@ async function listTwilioInboxConversations() {
            ORDER BY datetime(latest_status.created_at) DESC, latest_status.id DESC
            LIMIT 1
         ) AS last_status,
-        SUM(CASE WHEN base.direction = 'inbound' AND base.read_at IS NULL THEN 1 ELSE 0 END) AS unread_count
+        SUM(CASE WHEN base.direction = 'inbound' AND base.read_at IS NULL THEN 1 ELSE 0 END) AS unread_count,
+        SUM(CASE WHEN base.direction = 'inbound' THEN 1 ELSE 0 END) AS inbound_count
        FROM twilio_inbox_messages base
       GROUP BY base.conversation_key, base.contact_phone, base.platform_identity
       ORDER BY datetime(last_message_at) DESC, LOWER(contact_name) ASC`,
@@ -18477,6 +18478,7 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
         lastDirection: String(row.last_direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing',
         lastStatus: String(row.last_status || '').trim(),
         unreadCount: Math.max(0, Number(row.unread_count) || 0),
+        hasInboundReplies: Math.max(0, Number(row.inbound_count) || 0) > 0,
         isBlocked: await isTwilioContactBlockedByPhone(normalizedContactPhone)
       };
     }))).filter(Boolean);
