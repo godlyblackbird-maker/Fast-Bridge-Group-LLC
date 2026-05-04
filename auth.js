@@ -1060,6 +1060,63 @@
     bindTestUserBrowseOnlyGuard();
   }
 
+  function applyLockedTestUserWorkspaceLink(link) {
+    if (!link || link.dataset.lockedTestUserWorkspace === 'true') {
+      return;
+    }
+
+    link.dataset.lockedTestUserWorkspace = 'true';
+    link.dataset.testUserLocked = 'true';
+    link.classList.remove('active');
+    link.classList.add('test-user-locked-control');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', 'TEST USER accounts cannot open this workspace.');
+
+    if (link.classList.contains('nav-link')) {
+      link.classList.add('nav-link-locked');
+
+      if (!link.querySelector('.nav-lock-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'nav-lock-badge';
+        badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
+        link.appendChild(badge);
+      }
+    }
+
+    link.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
+  function isPdfEditorPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/pdf-editor.html' || normalizedPath.endsWith('/pdf-editor.html');
+  }
+
+  function isRestrictedTestUserWorkspacePath(pathname) {
+    return isGmailPath(pathname) || isPdfEditorPath(pathname) || isFbgMessagesPath(pathname);
+  }
+
+  function applyTestUserRestrictedWorkspaceAccess(userLike) {
+    if (!isTestUser(userLike)) {
+      return true;
+    }
+
+    document.querySelectorAll(
+      'a[href="gmail.html"], a[href="/gmail.html"], a[href="pdf-editor.html"], a[href="/pdf-editor.html"], a[href="fbg-messages.html"], a[href="/fbg-messages.html"]'
+    ).forEach((link) => {
+      applyLockedTestUserWorkspaceLink(link);
+    });
+
+    if (isRestrictedTestUserWorkspacePath(window.location.pathname)) {
+      window.location.href = '/dashboard.html';
+      return false;
+    }
+
+    return true;
+  }
+
   function applyAdminControlsAccess(userLike) {
     return true;
   }
@@ -1184,11 +1241,17 @@
   function applyGmailInboxAccess() {
     const isGmailPage = isGmailPath(window.location.pathname);
     const isCampaignsPage = isCampaignsPath(window.location.pathname);
+    const isFbgMessagesPage = isFbgMessagesPath(window.location.pathname);
     const campaignLinks = document.querySelectorAll('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
+    const fbgMessagesLinks = document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
     const existingLinks = document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]');
 
     campaignLinks.forEach((link) => {
       link.classList.toggle('active', isCampaignsPage);
+    });
+
+    fbgMessagesLinks.forEach((link) => {
+      link.classList.toggle('active', isFbgMessagesPage);
     });
 
     existingLinks.forEach((link) => {
@@ -1212,8 +1275,18 @@
         return Boolean(link);
       });
 
+      const communityItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="community.html"], .nav-link[href="/community.html"]');
+        return Boolean(link);
+      });
+
       let campaignItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
         const link = item.querySelector('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
+        return Boolean(link);
+      });
+
+      let fbgMessagesItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
+        const link = item.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
         return Boolean(link);
       });
 
@@ -1226,8 +1299,20 @@
         campaignItem = createCampaignsNavItem(isCampaignsPage);
       }
 
+      if (!fbgMessagesItem) {
+        fbgMessagesItem = createFbgMessagesNavItem(isFbgMessagesPage);
+      }
+
       if (!gmailItem) {
         gmailItem = createGmailNavItem(isGmailPage);
+      }
+
+      if (communityItem && fbgMessagesItem && !menu.contains(fbgMessagesItem)) {
+        if (communityItem.nextSibling) {
+          menu.insertBefore(fbgMessagesItem, communityItem.nextSibling);
+        } else {
+          menu.appendChild(fbgMessagesItem);
+        }
       }
 
       const orderedItems = [campaignItem, gmailItem].filter(Boolean);
@@ -1252,6 +1337,10 @@
       link.classList.toggle('active', isCampaignsPage);
     });
 
+    document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]').forEach((link) => {
+      link.classList.toggle('active', isFbgMessagesPage);
+    });
+
     document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]').forEach((link) => {
       link.classList.toggle('active', isGmailPage);
     });
@@ -1262,6 +1351,21 @@
   function initGmailNavUnreadIndicator() {
     let pollTimer = 0;
     let isPolling = false;
+
+    function isMessageNewToday(message) {
+      if (!message || !message.isUnread) {
+        return false;
+      }
+
+      const parsedDate = new Date(String(message.date || '').trim());
+      if (Number.isNaN(parsedDate.getTime())) {
+        return false;
+      }
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      return parsedDate.getTime() >= startOfToday.getTime();
+    }
 
     function getLinks() {
       return Array.from(document.querySelectorAll('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]'));
@@ -1339,7 +1443,7 @@
 
         const unreadPayload = await unreadResponse.json().catch(() => ({}));
         const messages = Array.isArray(unreadPayload && unreadPayload.messages) ? unreadPayload.messages : [];
-        const hasUnread = messages.some((message) => Boolean(message && message.isUnread));
+        const hasUnread = messages.some((message) => isMessageNewToday(message));
         applyUnreadState(hasUnread);
       } catch (error) {
         // Ignore temporary Gmail polling failures and keep the last known indicator state.
@@ -1355,6 +1459,107 @@
     applyUnreadState(false);
 
     window.addEventListener('gmail:unreadchange', (event) => {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+      applyUnreadState(Boolean(detail.hasUnread));
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        refreshUnreadState();
+      }
+    });
+    window.addEventListener('focus', refreshUnreadState);
+
+    refreshUnreadState();
+    pollTimer = window.setInterval(refreshUnreadState, GMAIL_NAV_UNREAD_POLL_MS);
+
+    window.addEventListener('beforeunload', () => {
+      if (pollTimer) {
+        window.clearInterval(pollTimer);
+      }
+    }, { once: true });
+  }
+
+  function initFbgMessagesNavUnreadIndicator() {
+    let pollTimer = 0;
+    let isPolling = false;
+
+    function getLinks() {
+      return Array.from(document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]'));
+    }
+
+    function ensureDot(link) {
+      if (!(link instanceof HTMLElement)) {
+        return null;
+      }
+
+      let dot = link.querySelector('[data-fbgmessages-unread-dot="true"]');
+      if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'nav-unread-dot';
+        dot.dataset.fbgmessagesUnreadDot = 'true';
+        dot.setAttribute('aria-hidden', 'true');
+        link.appendChild(dot);
+      }
+
+      return dot;
+    }
+
+    function applyUnreadState(hasUnread) {
+      getLinks().forEach((link) => {
+        ensureDot(link);
+        link.dataset.hasUnreadMessages = hasUnread ? 'true' : 'false';
+      });
+    }
+
+    async function refreshUnreadState() {
+      if (isPolling) {
+        return;
+      }
+
+      const links = getLinks();
+      if (!links.length) {
+        return;
+      }
+
+      links.forEach(ensureDot);
+
+      const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+      if (!token) {
+        applyUnreadState(false);
+        return;
+      }
+
+      isPolling = true;
+      try {
+        const response = await fetch('/api/messages/users', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json'
+          }
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json().catch(() => ({}));
+        const users = Array.isArray(payload && payload.users) ? payload.users : [];
+        const hasUnread = users.some((user) => Math.max(0, Number(user && user.unreadCount) || 0) > 0);
+        applyUnreadState(hasUnread);
+      } catch (error) {
+        // Ignore temporary FBG messaging polling failures and keep the last known indicator state.
+      } finally {
+        isPolling = false;
+      }
+    }
+
+    if (!getLinks().length) {
+      return;
+    }
+
+    applyUnreadState(false);
+
+    window.addEventListener('fbgmessages:unreadchange', (event) => {
       const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
       applyUnreadState(Boolean(detail.hasUnread));
     });
@@ -1394,6 +1599,18 @@
   function isFbgMessagesPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/fbg-messages.html' || normalizedPath.endsWith('/fbg-messages.html');
+  }
+
+  function createFbgMessagesNavItem(isActive) {
+    const listItem = document.createElement('li');
+    listItem.className = 'nav-item';
+
+    const link = document.createElement('a');
+    link.href = 'fbg-messages.html';
+    link.className = isActive ? 'nav-link active' : 'nav-link';
+    link.innerHTML = '<span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>FBG Messaging';
+    listItem.appendChild(link);
+    return listItem;
   }
 
   function clearPremiumUpgradeTooltipHideTimer() {
@@ -2244,7 +2461,13 @@
       if (applyGmailInboxAccess(activeUser) === false) {
         return;
       }
-      initGmailNavUnreadIndicator();
+      if (applyTestUserRestrictedWorkspaceAccess(activeUser) === false) {
+        return;
+      }
+      if (!isTestUser(activeUser)) {
+        initGmailNavUnreadIndicator();
+        initFbgMessagesNavUnreadIndicator();
+      }
 
       applyTestUserBrowseOnlyMode(activeUser);
 

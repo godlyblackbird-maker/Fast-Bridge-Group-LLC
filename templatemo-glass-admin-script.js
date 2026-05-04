@@ -6371,6 +6371,10 @@ function initNavbarDateTime() {
                 markup: '<a href="community.html" class="nav-link"><span class="nav-icon nav-icon-community" aria-hidden="true"></span>Community</a>'
             },
             {
+                href: 'fbg-messages.html',
+                markup: '<a href="fbg-messages.html" class="nav-link"><span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>FBG Messaging</a>'
+            },
+            {
                 href: 'users.html',
                 markup: '<a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent Workspace</a>'
             },
@@ -6388,7 +6392,7 @@ function initNavbarDateTime() {
             'mls-imports-spreadsheet.html': 'mls-imports-spreadsheet.html',
             'my-agents.html': 'my-agents.html',
             'property-details.html': 'mls.html',
-            'fbg-messages.html': 'community.html'
+            'fbg-messages.html': 'fbg-messages.html'
         };
         const workspaceGroupHrefs = [
             'my-agents.html',
@@ -6398,6 +6402,7 @@ function initNavbarDateTime() {
             'mls-imports-spreadsheet.html',
             'pdf-editor.html',
             'community.html',
+            'fbg-messages.html',
             'users.html',
             'trainings.html'
         ];

@@ -2963,78 +2963,6 @@
                         </div>
                     </section>
 
-                    <section class="community-bottom-section" id="community-fbg-messaging-bottom" aria-labelledby="community-bottom-fbg-messaging-title">
-                        <section class="glass-card community-bottom-messages-card">
-                            <div class="community-bottom-messages-shell">
-                                <div class="card-header">
-                                    <div>
-                                        <h2 class="card-title" id="community-bottom-fbg-messaging-title">FBG Messaging</h2>
-                                        <p class="card-subtitle">Internal FAST messaging lives directly inside Community now, without loading the separate FBG page.</p>
-                                    </div>
-                                </div>
-                                <section class="messages-chat-shell" aria-label="FBG internal messaging">
-                                    <aside class="messages-chat-users">
-                                        <div class="messages-chat-users-head">
-                                            <h3 class="card-title">All Users</h3>
-                                            <p>Click any FAST user to open your internal conversation.</p>
-                                        </div>
-                                        <div id="messages-chat-users-list" class="messages-chat-users-list">
-                                            <p class="messages-chat-empty">Loading users...</p>
-                                        </div>
-                                    </aside>
-
-                                    <section class="messages-chat-panel">
-                                        <div class="messages-chat-panel-head">
-                                            <div class="messages-chat-panel-head-copy">
-                                                <h3 id="messages-chat-panel-title" class="card-title">Choose a user</h3>
-                                                <p id="messages-chat-panel-subtitle">Open a user from the left to see the conversation.</p>
-                                            </div>
-                                            <button id="messages-chat-clear" type="button" class="card-btn messages-chat-clear" disabled hidden aria-hidden="true">Clear conversation</button>
-                                        </div>
-                                        <div id="messages-chat-thread" class="messages-chat-thread">
-                                            <p class="messages-chat-placeholder">No conversation selected yet.</p>
-                                        </div>
-                                        <form id="messages-chat-form" class="messages-chat-form">
-                                            <div id="messages-pending-share" class="messages-pending-share" aria-live="polite">
-                                                <div class="messages-pending-share-copy">
-                                                    <span class="messages-pending-share-label">Property Link Ready</span>
-                                                    <p id="messages-pending-share-title" class="messages-pending-share-title">No property selected</p>
-                                                    <p id="messages-pending-share-meta" class="messages-pending-share-meta">Open a property and tap Share In FBG to attach it here.</p>
-                                                </div>
-                                                <button id="messages-pending-share-clear" type="button" class="card-btn messages-pending-share-clear">Clear</button>
-                                            </div>
-                                            <div id="messages-editing-bar" class="messages-editing-bar" aria-live="polite" hidden>
-                                                <div class="messages-editing-copy">
-                                                    <p class="messages-editing-label">Editing Message</p>
-                                                    <p id="messages-editing-meta" class="messages-editing-meta">You have 1 minute from send time to update a message.</p>
-                                                </div>
-                                                <button id="messages-editing-cancel" type="button" class="card-btn">Cancel</button>
-                                            </div>
-                                            <div id="messages-pending-attachments" class="messages-pending-attachments" aria-live="polite" hidden></div>
-                                            <div class="messages-composer-row">
-                                                <button id="messages-chat-attach" type="button" class="card-btn messages-chat-attach" aria-label="Attach files" title="Attach files" disabled>
-                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path d="M21.44 11.05L12.25 20.24a6 6 0 0 1-8.49-8.49l9.9-9.9a4 4 0 1 1 5.66 5.66l-9.9 9.9a2 2 0 1 1-2.83-2.83l8.49-8.48"></path>
-                                                    </svg>
-                                                </button>
-                                                <textarea id="messages-chat-input" class="form-input outreach-textarea" placeholder="Type a message to another FAST user..." disabled></textarea>
-                                            </div>
-                                            <input id="messages-chat-attachment-input" type="file" hidden multiple accept="*/*">
-                                            <div class="messages-chat-actions">
-                                                <div id="messages-chat-status" class="messages-chat-status"></div>
-                                                <button id="messages-chat-send" type="submit" class="card-btn active" aria-label="Send message" title="Send message" disabled>
-                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </section>
-                                </section>
-                            </div>
-                        </section>
-                    </section>
-
                     <section class="glass-card community-panel" data-community-panel="resource-drops" aria-labelledby="community-resource-drops-title">
                         <div class="card-header">
                             <div>
@@ -6967,6 +6895,5 @@
             renderVoiceToolbar();
         })();
     </script>
-    <script src="community-fbg-messaging.js"></script>
 </body>
 </html>

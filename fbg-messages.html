@@ -18,11 +18,9 @@
         (function () {
             const params = new URLSearchParams(window.location.search || '');
             const isEmbedded = params.get('embedded') === 'community';
-            if (!isEmbedded) {
-                window.location.replace('community.html?panel=fbg-messaging');
-                return;
+            if (isEmbedded) {
+                document.documentElement.setAttribute('data-messages-embedded', 'community');
             }
-            document.documentElement.setAttribute('data-messages-embedded', 'community');
         })();
     </script>
     <script id="theme-preload-script">

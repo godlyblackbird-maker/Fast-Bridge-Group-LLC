@@ -2924,6 +2924,7 @@
                                 </div>
                             </div>
                         </article>
+
                     </aside>
                 </section>
 
@@ -5039,7 +5040,10 @@
 
                     const originalLabel = button.textContent;
                     try {
-                        await navigator.clipboard.writeText(text);
+                        const copied = await copyTextToClipboard(text);
+                        if (!copied) {
+                            throw new Error('Copy command was rejected.');
+                        }
                         button.textContent = 'Copied';
                     } catch (error) {
                         button.textContent = 'Copy Failed';

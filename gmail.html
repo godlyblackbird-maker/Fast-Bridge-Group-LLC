@@ -3109,11 +3109,25 @@
 
             function publishGmailUnreadState(messages) {
                 const items = Array.isArray(messages) ? messages : [];
-                const hasUnread = items.some((message) => Boolean(message && message.isUnread));
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+                const isNewToday = (message) => {
+                    if (!message || !message.isUnread) {
+                        return false;
+                    }
+
+                    const parsedDate = new Date(String(message.date || '').trim());
+                    if (Number.isNaN(parsedDate.getTime())) {
+                        return false;
+                    }
+
+                    return parsedDate.getTime() >= startOfToday.getTime();
+                };
+                const hasUnread = items.some((message) => isNewToday(message));
                 window.dispatchEvent(new CustomEvent('gmail:unreadchange', {
                     detail: {
                         hasUnread,
-                        unreadTotal: items.reduce((total, message) => total + (message && message.isUnread ? 1 : 0), 0)
+                        unreadTotal: items.reduce((total, message) => total + (isNewToday(message) ? 1 : 0), 0)
                     }
                 }));
             }
