@@ -219,6 +219,13 @@ const COMMUNITY_VOICE_PARTICIPANT_TTL_MS = 70 * 1000;
 const COMMUNITY_VOICE_SIGNAL_TTL_MS = 2 * 60 * 1000;
 const COMMUNITY_TEXT_CHANNEL_DEFAULT = 'global-chat';
 const COMMUNITY_TEXT_MESSAGE_MAX_LENGTH = 2000;
+const ACTIVE_BUYER_MATCH_WEIGHTS = Object.freeze({
+  zip: 25,
+  price: 25,
+  assetClass: 20,
+  financingType: 15,
+  spread: 15
+});
 
 fs.mkdirSync(MLS_IMPORT_TEMP_DIR, { recursive: true });
 fs.mkdirSync(SQLITE_BACKUP_TEMP_DIR, { recursive: true });
@@ -5128,7 +5135,7 @@ function initializeDatabase() {
       seller_name TEXT NOT NULL,
       seller_email TEXT NOT NULL,
       seller_phone TEXT,
-        referred_by TEXT,
+      referred_by TEXT,
       sms_consent INTEGER DEFAULT 0,
       sms_consent_text TEXT,
       sms_consent_at DATETIME,
@@ -5137,10 +5144,12 @@ function initializeDatabase() {
       property_state TEXT,
       property_zip TEXT,
       property_type TEXT,
+      financing_type TEXT,
       bedrooms TEXT,
       bathrooms TEXT,
       square_feet TEXT,
       asking_price TEXT,
+      estimated_value TEXT,
       timeline TEXT,
       condition_issues TEXT,
       issue_notes TEXT,
@@ -5159,6 +5168,187 @@ function initializeDatabase() {
   db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent_text TEXT`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN sms_consent_at DATETIME`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN referred_by TEXT`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN financing_type TEXT`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN estimated_value TEXT`, () => {});
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS mls_saved_searches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_user_id INTEGER NOT NULL,
+      owner_email TEXT,
+      owner_name TEXT,
+      search_name TEXT NOT NULL,
+      filters_json TEXT NOT NULL DEFAULT '{}',
+      alert_enabled INTEGER NOT NULL DEFAULT 1,
+      last_snapshot_json TEXT NOT NULL DEFAULT '[]',
+      last_snapshot_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating mls_saved_searches table:', err);
+    } else {
+      console.log('MLS saved searches table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_mls_saved_searches_owner_updated ON mls_saved_searches(owner_user_id, updated_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS client_portals (
+      id TEXT PRIMARY KEY,
+      owner_user_id INTEGER NOT NULL,
+      portal_type TEXT NOT NULL,
+      source_kind TEXT,
+      source_ref TEXT,
+      title TEXT NOT NULL,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      company_name TEXT,
+      property_address TEXT,
+      status TEXT NOT NULL DEFAULT 'new',
+      summary TEXT,
+      notes TEXT,
+      deadline_at TEXT,
+      access_token TEXT NOT NULL UNIQUE,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating client_portals table:', err);
+    } else {
+      console.log('Client portals table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_client_portals_owner_updated ON client_portals(owner_user_id, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_client_portals_source ON client_portals(source_kind, source_ref)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_client_portals_access_token ON client_portals(access_token)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS client_portal_activity (
+      id TEXT PRIMARY KEY,
+      portal_id TEXT NOT NULL,
+      author_user_id INTEGER,
+      author_name TEXT,
+      author_email TEXT,
+      event_type TEXT NOT NULL,
+      visibility TEXT NOT NULL DEFAULT 'portal',
+      title TEXT,
+      body TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY(portal_id) REFERENCES client_portals(id),
+      FOREIGN KEY(author_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating client_portal_activity table:', err);
+    } else {
+      console.log('Client portal activity table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_client_portal_activity_portal_created ON client_portal_activity(portal_id, created_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_client_portal_activity_visibility ON client_portal_activity(portal_id, visibility, created_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS outreach_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_user_id INTEGER NOT NULL,
+      channel TEXT NOT NULL,
+      contact_key TEXT NOT NULL,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      conversation_key TEXT,
+      thread_id TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium',
+      response_tag TEXT NOT NULL DEFAULT 'new',
+      source_label TEXT,
+      last_contacted_at INTEGER NOT NULL DEFAULT 0,
+      last_response_at INTEGER NOT NULL DEFAULT 0,
+      next_follow_up_at INTEGER NOT NULL DEFAULT 0,
+      last_template_key TEXT,
+      last_template_name TEXT,
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      response_count INTEGER NOT NULL DEFAULT 0,
+      notes TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id),
+      UNIQUE(owner_user_id, channel, contact_key)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating outreach_contacts table:', err);
+    } else {
+      console.log('Outreach contacts table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_outreach_contacts_owner_updated ON outreach_contacts(owner_user_id, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_outreach_contacts_follow_up ON outreach_contacts(owner_user_id, next_follow_up_at ASC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS outreach_sequences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_user_id INTEGER NOT NULL,
+      channel TEXT NOT NULL,
+      name TEXT NOT NULL,
+      steps_json TEXT NOT NULL DEFAULT '[]',
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating outreach_sequences table:', err);
+    } else {
+      console.log('Outreach sequences table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_outreach_sequences_owner_channel ON outreach_sequences(owner_user_id, channel, updated_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS outreach_events (
+      id TEXT PRIMARY KEY,
+      owner_user_id INTEGER NOT NULL,
+      channel TEXT NOT NULL,
+      direction TEXT NOT NULL,
+      contact_key TEXT NOT NULL,
+      contact_name TEXT,
+      contact_email TEXT,
+      contact_phone TEXT,
+      conversation_key TEXT,
+      thread_id TEXT,
+      template_key TEXT,
+      template_name TEXT,
+      attributed_template_key TEXT,
+      attributed_template_name TEXT,
+      attributed_outbound_event_id TEXT,
+      subject TEXT,
+      body_preview TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium',
+      source_kind TEXT,
+      source_ref TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      happened_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating outreach_events table:', err);
+    } else {
+      console.log('Outreach events table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_outreach_events_owner_happened ON outreach_events(owner_user_id, happened_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_outreach_events_contact_direction ON outreach_events(owner_user_id, channel, contact_key, direction, happened_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_outreach_events_template ON outreach_events(owner_user_id, channel, template_key, happened_at DESC)', () => {});
+    }
+  });
 
   db.run(`
     CREATE TABLE IF NOT EXISTS smtp_requests (
@@ -5291,6 +5481,38 @@ function initializeDatabase() {
       console.error('Error creating property_assignments table:', err);
     } else {
       console.log('Property assignments table ready');
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS team_tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      priority TEXT NOT NULL DEFAULT 'p2',
+      status TEXT NOT NULL DEFAULT 'open',
+      due_at INTEGER NOT NULL DEFAULT 0,
+      assigned_to_user_id INTEGER NOT NULL,
+      assigned_to_key TEXT,
+      assigned_to_email TEXT,
+      assigned_to_name TEXT,
+      created_by_user_id INTEGER NOT NULL,
+      created_by_key TEXT,
+      created_by_email TEXT,
+      created_by_name TEXT,
+      completed_at INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(assigned_to_user_id) REFERENCES users(id),
+      FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating team_tasks table:', err);
+    } else {
+      console.log('Team tasks table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_team_tasks_assignee_status_due ON team_tasks(assigned_to_user_id, status, due_at ASC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_team_tasks_creator_updated ON team_tasks(created_by_user_id, updated_at DESC)', () => {});
     }
   });
 
@@ -5675,7 +5897,13 @@ function normalizeActiveBuyersSheetRow(row) {
     companyName: normalizeActiveBuyersSheetCell(source.companyName, 300),
     contact: normalizeActiveBuyersSheetCell(source.contact, 300),
     comments: normalizeActiveBuyersSheetCell(source.comments, 4000),
-    notes: normalizeActiveBuyersSheetCell(source.notes, 4000)
+    notes: normalizeActiveBuyersSheetCell(source.notes, 4000),
+    buyBoxZips: normalizeActiveBuyersSheetCell(source.buyBoxZips, 600),
+    minPrice: normalizeActiveBuyersSheetCell(source.minPrice, 80),
+    maxPrice: normalizeActiveBuyersSheetCell(source.maxPrice, 80),
+    assetClasses: normalizeActiveBuyersSheetCell(source.assetClasses, 300),
+    financingTypes: normalizeActiveBuyersSheetCell(source.financingTypes, 300),
+    targetSpreadPercent: normalizeActiveBuyersSheetCell(source.targetSpreadPercent, 80)
   };
 }
 
@@ -5782,6 +6010,450 @@ async function saveActiveBuyersSheet(rows, actor) {
   );
 
   return loadActiveBuyersSheet();
+}
+
+function parseCurrencyNumber(value) {
+  const normalized = String(value || '').replace(/[^\d.-]/g, '');
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeBuyerZip(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) {
+    return '';
+  }
+
+  return digits.slice(0, 5);
+}
+
+function parseBuyerZipCriteria(value) {
+  return Array.from(new Set(
+    String(value || '')
+      .split(/[\n,;|/]+/)
+      .map((entry) => normalizeBuyerZip(entry))
+      .filter((entry) => entry.length >= 3)
+  ));
+}
+
+function propertyZipMatchesBuyerCriteria(propertyZip, zipCriteria) {
+  if (!propertyZip || !Array.isArray(zipCriteria) || !zipCriteria.length) {
+    return false;
+  }
+
+  return zipCriteria.some((entry) => propertyZip.startsWith(entry));
+}
+
+function normalizeDelimitedTokens(value) {
+  return Array.from(new Set(
+    String(value || '')
+      .split(/[\n,;|/]+/)
+      .map((entry) => String(entry || '').trim().toLowerCase())
+      .filter(Boolean)
+  ));
+}
+
+function normalizeAssetClassToken(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.includes('single') || normalized === 'sfr' || normalized.includes('single family')) {
+    return 'single-family';
+  }
+  if (normalized.includes('condo')) {
+    return 'condo';
+  }
+  if (normalized.includes('town')) {
+    return 'townhome';
+  }
+  if (normalized.includes('multi')) {
+    return 'multi-family';
+  }
+  if (normalized.includes('mobile') || normalized.includes('manufactured')) {
+    return 'mobile-home';
+  }
+  if (normalized.includes('land') || normalized.includes('lot')) {
+    return 'land';
+  }
+  return normalized.replace(/\s+/g, '-');
+}
+
+function parseBuyerAssetClasses(value) {
+  return Array.from(new Set(
+    normalizeDelimitedTokens(value)
+      .map((entry) => normalizeAssetClassToken(entry))
+      .filter(Boolean)
+  ));
+}
+
+function normalizeFinancingTypeToken(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.includes('cash')) {
+    return 'cash';
+  }
+  if (normalized.includes('hard')) {
+    return 'hard-money';
+  }
+  if (normalized.includes('private')) {
+    return 'private-money';
+  }
+  if (normalized.includes('conventional') || normalized === 'conv') {
+    return 'conventional';
+  }
+  if (normalized.includes('seller')) {
+    return 'seller-finance';
+  }
+  if (normalized.includes('1031')) {
+    return '1031';
+  }
+  if (normalized.includes('fha')) {
+    return 'fha';
+  }
+  if (normalized.includes('va')) {
+    return 'va';
+  }
+  return normalized.replace(/\s+/g, '-');
+}
+
+function parseBuyerFinancingTypes(value) {
+  return Array.from(new Set(
+    normalizeDelimitedTokens(value)
+      .map((entry) => normalizeFinancingTypeToken(entry))
+      .filter(Boolean)
+  ));
+}
+
+function parsePercentNumber(value) {
+  const normalized = String(value || '').replace(/[^\d.-]/g, '');
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function calculateTargetSpreadPercent(askingPrice, estimatedValue) {
+  const asking = parseCurrencyNumber(askingPrice);
+  const estimate = parseCurrencyNumber(estimatedValue);
+  if (!Number.isFinite(asking) || !Number.isFinite(estimate) || estimate <= 0) {
+    return null;
+  }
+
+  return Number((((estimate - asking) / estimate) * 100).toFixed(1));
+}
+
+function formatBuyerMatchCurrency(value) {
+  if (!Number.isFinite(value)) {
+    return '';
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0
+  }).format(value);
+}
+
+function formatBuyerMatchPercent(value) {
+  if (!Number.isFinite(value)) {
+    return '';
+  }
+
+  return `${value}%`;
+}
+
+function normalizeMlsSavedSearchName(value) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
+function normalizeMlsSavedSearchFilters(filters) {
+  const source = filters && typeof filters === 'object' ? filters : {};
+  return {
+    location: String(source.location || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+    propertyType: String(source.propertyType || '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 80),
+    radius: String(source.radius || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+    minPrice: String(source.minPrice || '').replace(/[^\d]/g, '').slice(0, 12),
+    maxPrice: String(source.maxPrice || '').replace(/[^\d]/g, '').slice(0, 12),
+    beds: String(source.beds || '').replace(/[^\d.]/g, '').slice(0, 6),
+    baths: String(source.baths || '').replace(/[^\d.]/g, '').slice(0, 6),
+    keywords: String(source.keywords || '').replace(/\s+/g, ' ').trim().slice(0, 300)
+  };
+}
+
+function parseMlsSavedSearchSnapshot(snapshotJson) {
+  try {
+    const parsed = JSON.parse(String(snapshotJson || '[]'));
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((entry) => {
+        const source = entry && typeof entry === 'object' ? entry : {};
+        const matchKey = String(source.matchKey || '').trim();
+        return matchKey
+          ? {
+              matchKey,
+              address: String(source.address || '').trim(),
+              price: String(source.price || '').trim(),
+              city: String(source.city || '').trim(),
+              county: String(source.county || '').trim()
+            }
+          : null;
+      })
+      .filter(Boolean)
+      .slice(0, 500);
+  } catch (error) {
+    return [];
+  }
+}
+
+function normalizeMlsSavedSearchSnapshotEntries(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      const source = entry && typeof entry === 'object' ? entry : {};
+      const matchKey = String(source.matchKey || '').trim().slice(0, 240);
+      if (!matchKey) {
+        return null;
+      }
+
+      return {
+        matchKey,
+        address: String(source.address || '').trim().slice(0, 240),
+        price: String(source.price || '').trim().slice(0, 80),
+        city: String(source.city || '').trim().slice(0, 120),
+        county: String(source.county || '').trim().slice(0, 120)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 500);
+}
+
+function serializeMlsSavedSearchRow(row) {
+  const source = row && typeof row === 'object' ? row : {};
+  let filters = {};
+  try {
+    filters = normalizeMlsSavedSearchFilters(JSON.parse(String(source.filters_json || '{}')));
+  } catch (error) {
+    filters = normalizeMlsSavedSearchFilters({});
+  }
+
+  return {
+    id: Number(source.id) || null,
+    searchName: normalizeMlsSavedSearchName(source.search_name || ''),
+    filters,
+    alertEnabled: Number(source.alert_enabled || 0) === 1,
+    snapshotCount: parseMlsSavedSearchSnapshot(source.last_snapshot_json).length,
+    lastSnapshotAt: source.last_snapshot_at ? new Date(source.last_snapshot_at).toISOString() : null,
+    createdAt: source.created_at ? new Date(source.created_at).toISOString() : null,
+    updatedAt: source.updated_at ? new Date(source.updated_at).toISOString() : null
+  };
+}
+
+async function loadMlsSavedSearchesForUser(userId) {
+  const normalizedUserId = Number(userId) || 0;
+  if (!normalizedUserId) {
+    return [];
+  }
+
+  const rows = await dbAll(
+    `SELECT id, search_name, filters_json, alert_enabled, last_snapshot_json, last_snapshot_at, created_at, updated_at
+       FROM mls_saved_searches
+      WHERE owner_user_id = ?
+      ORDER BY datetime(updated_at) DESC, id DESC`,
+    [normalizedUserId]
+  );
+
+  return rows.map((row) => serializeMlsSavedSearchRow(row));
+}
+
+async function loadSingleMlsSavedSearchForUser(searchId, userId) {
+  const normalizedSearchId = Number(searchId) || 0;
+  const normalizedUserId = Number(userId) || 0;
+  if (!normalizedSearchId || !normalizedUserId) {
+    return null;
+  }
+
+  return dbGet(
+    `SELECT *
+       FROM mls_saved_searches
+      WHERE id = ? AND owner_user_id = ?
+      LIMIT 1`,
+    [normalizedSearchId, normalizedUserId]
+  );
+}
+
+function buildMlsSavedSearchDiff(previousSnapshot, currentSnapshot) {
+  const previousEntries = normalizeMlsSavedSearchSnapshotEntries(previousSnapshot);
+  const currentEntries = normalizeMlsSavedSearchSnapshotEntries(currentSnapshot);
+  const previousMap = new Map(previousEntries.map((entry) => [entry.matchKey, entry]));
+  const currentMap = new Map(currentEntries.map((entry) => [entry.matchKey, entry]));
+
+  const newMatches = currentEntries.filter((entry) => !previousMap.has(entry.matchKey));
+  const droppedMatches = previousEntries.filter((entry) => !currentMap.has(entry.matchKey));
+
+  return {
+    previousCount: previousEntries.length,
+    currentCount: currentEntries.length,
+    newMatches,
+    droppedMatches
+  };
+}
+
+function buildPropertySubmissionMatchInput(source) {
+  const propertyZip = normalizeBuyerZip(source && source.propertyZip);
+  const askingPriceNumber = parseCurrencyNumber(source && source.askingPrice);
+  const estimatedValueNumber = parseCurrencyNumber(source && source.estimatedValue);
+  const assetClass = normalizeAssetClassToken(source && source.propertyType);
+  const financingType = normalizeFinancingTypeToken(source && source.financingType);
+  const targetSpreadPercent = calculateTargetSpreadPercent(
+    source && source.askingPrice,
+    source && source.estimatedValue
+  );
+
+  return {
+    propertyZip,
+    askingPriceNumber,
+    estimatedValueNumber,
+    assetClass,
+    financingType,
+    targetSpreadPercent
+  };
+}
+
+function scoreBuyerMatch(buyerRow, propertyInput) {
+  const buyer = serializeActiveBuyersSheetRow(buyerRow);
+  if (!buyer.active) {
+    return null;
+  }
+
+  const reasons = [];
+  let score = 10;
+  let matchedCriteriaCount = 0;
+  let consideredCriteriaCount = 0;
+
+  const zipCriteria = parseBuyerZipCriteria(buyer.buyBoxZips);
+  if (zipCriteria.length) {
+    consideredCriteriaCount += 1;
+    if (propertyZipMatchesBuyerCriteria(propertyInput.propertyZip, zipCriteria)) {
+      score += ACTIVE_BUYER_MATCH_WEIGHTS.zip;
+      matchedCriteriaCount += 1;
+      reasons.push(`ZIP fit: ${propertyInput.propertyZip}`);
+    }
+  }
+
+  const minPrice = parseCurrencyNumber(buyer.minPrice);
+  const maxPrice = parseCurrencyNumber(buyer.maxPrice);
+  if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
+    consideredCriteriaCount += 1;
+    if (Number.isFinite(propertyInput.askingPriceNumber)) {
+      const meetsMin = !Number.isFinite(minPrice) || propertyInput.askingPriceNumber >= minPrice;
+      const meetsMax = !Number.isFinite(maxPrice) || propertyInput.askingPriceNumber <= maxPrice;
+      if (meetsMin && meetsMax) {
+        score += ACTIVE_BUYER_MATCH_WEIGHTS.price;
+        matchedCriteriaCount += 1;
+        reasons.push(`Price fit: ${formatBuyerMatchCurrency(propertyInput.askingPriceNumber)}`);
+      }
+    }
+  }
+
+  const assetClasses = parseBuyerAssetClasses(buyer.assetClasses);
+  if (assetClasses.length) {
+    consideredCriteriaCount += 1;
+    if (propertyInput.assetClass && assetClasses.includes(propertyInput.assetClass)) {
+      score += ACTIVE_BUYER_MATCH_WEIGHTS.assetClass;
+      matchedCriteriaCount += 1;
+      reasons.push(`Asset class fit: ${propertyInput.assetClass.replace(/-/g, ' ')}`);
+    }
+  }
+
+  const financingTypes = parseBuyerFinancingTypes(buyer.financingTypes);
+  if (financingTypes.length) {
+    consideredCriteriaCount += 1;
+    if (propertyInput.financingType && financingTypes.includes(propertyInput.financingType)) {
+      score += ACTIVE_BUYER_MATCH_WEIGHTS.financingType;
+      matchedCriteriaCount += 1;
+      reasons.push(`Financing fit: ${propertyInput.financingType.replace(/-/g, ' ')}`);
+    }
+  }
+
+  const targetSpreadPercent = parsePercentNumber(buyer.targetSpreadPercent);
+  if (Number.isFinite(targetSpreadPercent)) {
+    consideredCriteriaCount += 1;
+    if (Number.isFinite(propertyInput.targetSpreadPercent) && propertyInput.targetSpreadPercent >= targetSpreadPercent) {
+      score += ACTIVE_BUYER_MATCH_WEIGHTS.spread;
+      matchedCriteriaCount += 1;
+      reasons.push(`Spread fit: ${formatBuyerMatchPercent(propertyInput.targetSpreadPercent)}`);
+    }
+  }
+
+  if (!consideredCriteriaCount) {
+    score = 20;
+    reasons.push('No explicit buy box entered yet');
+  }
+
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
+  return {
+    buyer: {
+      name: buyer.name,
+      emailCategories: buyer.emailCategories,
+      cellPhone: buyer.cellPhone,
+      companyName: buyer.companyName,
+      contact: buyer.contact,
+      comments: buyer.comments,
+      notes: buyer.notes,
+      buyBoxZips: buyer.buyBoxZips,
+      minPrice: buyer.minPrice,
+      maxPrice: buyer.maxPrice,
+      assetClasses: buyer.assetClasses,
+      financingTypes: buyer.financingTypes,
+      targetSpreadPercent: buyer.targetSpreadPercent
+    },
+    score: normalizedScore,
+    matchedCriteriaCount,
+    consideredCriteriaCount,
+    reasons: reasons.slice(0, 3)
+  };
+}
+
+function buildBuyerMatchResults(activeBuyerRows, propertySource) {
+  const propertyInput = buildPropertySubmissionMatchInput(propertySource);
+  const matches = (Array.isArray(activeBuyerRows) ? activeBuyerRows : [])
+    .map((row) => scoreBuyerMatch(row, propertyInput))
+    .filter((entry) => entry && (entry.score >= 35 || entry.matchedCriteriaCount > 0))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      if (right.matchedCriteriaCount !== left.matchedCriteriaCount) {
+        return right.matchedCriteriaCount - left.matchedCriteriaCount;
+      }
+      return String(left.buyer && left.buyer.name || '').localeCompare(String(right.buyer && right.buyer.name || ''));
+    });
+
+  return {
+    summary: {
+      totalMatches: matches.length,
+      topScore: matches.length ? matches[0].score : 0,
+      targetSpreadPercent: propertyInput.targetSpreadPercent,
+      askingPrice: propertyInput.askingPriceNumber,
+      estimatedValue: propertyInput.estimatedValueNumber
+    },
+    matches: matches.slice(0, 8)
+  };
 }
 
 function normalizeMlsImportStatusLabel(value) {
@@ -7710,9 +8382,28 @@ function isInlineMessageAttachmentType(fileName, fileType = '') {
   ].includes(extension);
 }
 
+const CLIENT_PORTAL_TYPES = new Set(['seller', 'investor']);
+const CLIENT_PORTAL_STATUSES = new Set([
+  'new',
+  'reviewing',
+  'docs-requested',
+  'matching',
+  'offer-sent',
+  'under-contract',
+  'closed',
+  'on-hold'
+]);
+const CLIENT_PORTAL_ACTIVITY_TYPES = new Set(['status', 'note', 'deadline', 'message', 'call', 'email', 'sms', 'document']);
+const CLIENT_PORTAL_VISIBILITIES = new Set(['portal', 'internal']);
+const OUTREACH_PRIORITY_VALUES = new Set(['high', 'medium', 'low']);
+const OUTREACH_TAG_VALUES = new Set(['new', 'attempting-contact', 'engaged', 'responsive', 'warm', 'hot', 'cold', 'no-response', 'do-not-contact']);
+const OUTREACH_SEQUENCE_CHANNELS = new Set(['gmail', 'twilio']);
+const TEAM_TASK_PRIORITY_VALUES = new Set(['p1', 'p2', 'p3', 'p4']);
+const TEAM_TASK_STATUS_VALUES = new Set(['open', 'in-progress', 'done']);
+
 function sanitizeUserUploadScope(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar', 'fbg-message', 'property-detail', 'twilio-media'].includes(normalized)
+  return ['closed-deal', 'offer-package', 'agent-workspace', 'profile-avatar', 'fbg-message', 'property-detail', 'twilio-media', 'client-portal'].includes(normalized)
     ? normalized
     : '';
 }
@@ -8049,6 +8740,973 @@ function serializeUserUpload(row) {
     downloadPath: buildUserUploadContentPath(row.id, true),
     createdAt: Number(row.created_at) || Date.now(),
     updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+function normalizeClientPortalPlainText(value, maxLength = 4000) {
+  return String(value || '').replace(/\r\n/g, '\n').trim().slice(0, maxLength);
+}
+
+function normalizeClientPortalType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return CLIENT_PORTAL_TYPES.has(normalized) ? normalized : 'seller';
+}
+
+function normalizeClientPortalStatus(value, portalType = 'seller') {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (CLIENT_PORTAL_STATUSES.has(normalized)) {
+    return normalized;
+  }
+  return portalType === 'investor' ? 'matching' : 'new';
+}
+
+function normalizeClientPortalActivityType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return CLIENT_PORTAL_ACTIVITY_TYPES.has(normalized) ? normalized : 'note';
+}
+
+function normalizeClientPortalVisibility(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return CLIENT_PORTAL_VISIBILITIES.has(normalized) ? normalized : 'portal';
+}
+
+function normalizeClientPortalSourceValue(value, fallback = '') {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 200) || fallback;
+}
+
+function normalizeClientPortalDeadline(value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const parsed = Date.parse(normalized);
+  if (!Number.isNaN(parsed)) {
+    return new Date(parsed).toISOString();
+  }
+
+  return normalized.slice(0, 120);
+}
+
+function normalizeOutreachPriority(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return OUTREACH_PRIORITY_VALUES.has(normalized) ? normalized : 'medium';
+}
+
+function normalizeOutreachTag(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return OUTREACH_TAG_VALUES.has(normalized) ? normalized : 'new';
+}
+
+function normalizeOutreachChannel(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return OUTREACH_SEQUENCE_CHANNELS.has(normalized) ? normalized : 'twilio';
+}
+
+function buildOutreachContactKey({ channel, email, phone, conversationKey, threadId }) {
+  const normalizedChannel = normalizeOutreachChannel(channel);
+  const normalizedEmail = normalizeKnownEmail(email || '');
+  const normalizedPhone = normalizeSmsPhone(phone || '') || String(phone || '').trim();
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  const normalizedThreadId = String(threadId || '').trim();
+
+  if (normalizedChannel === 'gmail' && normalizedEmail) {
+    return `${normalizedChannel}:${normalizedEmail}`;
+  }
+
+  if (normalizedChannel === 'twilio' && normalizedPhone) {
+    return `${normalizedChannel}:${normalizedPhone}`;
+  }
+
+  return `${normalizedChannel}:${normalizedConversationKey || normalizedThreadId || normalizedEmail || normalizedPhone}`;
+}
+
+function normalizeOutreachSequenceSteps(value, channel = 'twilio') {
+  const source = Array.isArray(value) ? value : [];
+  const fallback = channel === 'gmail'
+    ? [
+        { dayOffset: 0, priority: 'high', templateKey: 'gmail-first-touch', label: 'First touch' },
+        { dayOffset: 3, priority: 'medium', templateKey: 'gmail-follow-up', label: 'Follow up' },
+        { dayOffset: 7, priority: 'low', templateKey: 'gmail-final', label: 'Final check-in' }
+      ]
+    : [
+        { dayOffset: 0, priority: 'high', templateKey: 'first-touch', label: 'First touch' },
+        { dayOffset: 2, priority: 'medium', templateKey: 'follow-up', label: 'Follow up' },
+        { dayOffset: 5, priority: 'low', templateKey: 'breakup', label: 'Breakup' }
+      ];
+
+  const normalized = source.map((step, index) => ({
+    dayOffset: Math.max(Number(step?.dayOffset) || 0, 0),
+    priority: normalizeOutreachPriority(step?.priority),
+    templateKey: normalizeClientPortalSourceValue(step?.templateKey || '', `step-${index + 1}`),
+    label: normalizeClientPortalPlainText(step?.label || '', 120) || `Step ${index + 1}`
+  })).filter((step) => step.templateKey);
+
+  return normalized.length ? normalized.slice(0, 8) : fallback;
+}
+
+function computeOutreachRiskLevel(row) {
+  const now = Date.now();
+  const nextFollowUpAt = Number(row?.next_follow_up_at || row?.nextFollowUpAt || 0) || 0;
+  const lastContactedAt = Number(row?.last_contacted_at || row?.lastContactedAt || 0) || 0;
+  const lastResponseAt = Number(row?.last_response_at || row?.lastResponseAt || 0) || 0;
+  const twoDaysMs = 2 * 86400000;
+  const threeDaysMs = 3 * 86400000;
+
+  if (nextFollowUpAt && nextFollowUpAt <= now) {
+    return 'high';
+  }
+
+  if (!lastResponseAt && lastContactedAt && (now - lastContactedAt) >= threeDaysMs) {
+    return 'high';
+  }
+
+  if (nextFollowUpAt && (nextFollowUpAt - now) <= twoDaysMs) {
+    return 'medium';
+  }
+
+  if (!lastResponseAt && lastContactedAt && (now - lastContactedAt) >= 86400000) {
+    return 'medium';
+  }
+
+  return 'low';
+}
+
+function serializeOutreachContact(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: Number(row.id) || 0,
+    channel: normalizeOutreachChannel(row.channel),
+    contactKey: String(row.contact_key || '').trim(),
+    contactName: normalizeClientPortalPlainText(row.contact_name || '', 160),
+    contactEmail: normalizeKnownEmail(row.contact_email || ''),
+    contactPhone: String(row.contact_phone || '').trim(),
+    conversationKey: String(row.conversation_key || '').trim(),
+    threadId: String(row.thread_id || '').trim(),
+    priority: normalizeOutreachPriority(row.priority),
+    responseTag: normalizeOutreachTag(row.response_tag),
+    sourceLabel: normalizeClientPortalSourceValue(row.source_label || ''),
+    lastContactedAt: Number(row.last_contacted_at) || 0,
+    lastResponseAt: Number(row.last_response_at) || 0,
+    nextFollowUpAt: Number(row.next_follow_up_at) || 0,
+    lastTemplateKey: normalizeClientPortalSourceValue(row.last_template_key || ''),
+    lastTemplateName: normalizeClientPortalPlainText(row.last_template_name || '', 160),
+    sentCount: Math.max(Number(row.sent_count) || 0, 0),
+    responseCount: Math.max(Number(row.response_count) || 0, 0),
+    notes: normalizeClientPortalPlainText(row.notes || '', 4000),
+    riskLevel: computeOutreachRiskLevel(row),
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+function serializeOutreachSequence(row) {
+  if (!row) {
+    return null;
+  }
+
+  let steps = [];
+  try {
+    steps = normalizeOutreachSequenceSteps(JSON.parse(String(row.steps_json || '[]')), row.channel);
+  } catch (error) {
+    steps = normalizeOutreachSequenceSteps([], row.channel);
+  }
+
+  return {
+    id: Number(row.id) || 0,
+    channel: normalizeOutreachChannel(row.channel),
+    name: normalizeClientPortalPlainText(row.name || '', 120),
+    isDefault: Number(row.is_default || 0) === 1,
+    steps,
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+function normalizeTeamTaskTitle(value) {
+  return normalizeClientPortalPlainText(value || '', 200);
+}
+
+function normalizeTeamTaskDescription(value) {
+  return normalizeClientPortalPlainText(value || '', 4000);
+}
+
+function normalizeTeamTaskPriority(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return TEAM_TASK_PRIORITY_VALUES.has(normalized) ? normalized : 'p2';
+}
+
+function normalizeTeamTaskStatus(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return TEAM_TASK_STATUS_VALUES.has(normalized) ? normalized : 'open';
+}
+
+function normalizeTeamTaskDueAt(value) {
+  const nextValue = Number(value) || Date.parse(String(value || '').trim());
+  return Number.isFinite(nextValue) && nextValue > 0 ? nextValue : 0;
+}
+
+function getTeamTaskPriorityRank(value) {
+  return { p1: 1, p2: 2, p3: 3, p4: 4 }[normalizeTeamTaskPriority(value)] || 5;
+}
+
+function serializeTeamTask(row) {
+  if (!row) {
+    return null;
+  }
+
+  const status = normalizeTeamTaskStatus(row.status);
+  const dueAt = Number(row.due_at) || 0;
+  const now = Date.now();
+
+  return {
+    id: String(row.id || '').trim(),
+    title: normalizeTeamTaskTitle(row.title || ''),
+    description: normalizeTeamTaskDescription(row.description || ''),
+    priority: normalizeTeamTaskPriority(row.priority),
+    status,
+    dueAt,
+    isOverdue: Boolean(dueAt && status !== 'done' && dueAt < now),
+    assignedTo: {
+      id: Number(row.assigned_to_user_id) || 0,
+      key: normalizeClientPortalSourceValue(row.assigned_to_key || ''),
+      name: normalizeClientPortalPlainText(row.assigned_to_name || '', 160),
+      email: normalizeKnownEmail(row.assigned_to_email || '')
+    },
+    createdBy: {
+      id: Number(row.created_by_user_id) || 0,
+      key: normalizeClientPortalSourceValue(row.created_by_key || ''),
+      name: normalizeClientPortalPlainText(row.created_by_name || '', 160),
+      email: normalizeKnownEmail(row.created_by_email || '')
+    },
+    completedAt: Number(row.completed_at) || 0,
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+async function getTeamTaskById(taskId) {
+  return dbGet('SELECT * FROM team_tasks WHERE id = ?', [String(taskId || '').trim()]);
+}
+
+function canViewTeamTask(taskRow, viewer) {
+  if (!taskRow || !viewer) {
+    return false;
+  }
+
+  if (isKnownAdminEmail(viewer.email || '')) {
+    return true;
+  }
+
+  const viewerId = Number(viewer.id) || 0;
+  return viewerId > 0 && (viewerId === Number(taskRow.assigned_to_user_id) || viewerId === Number(taskRow.created_by_user_id));
+}
+
+function canManageTeamTask(taskRow, viewer) {
+  if (!taskRow || !viewer) {
+    return false;
+  }
+
+  if (isKnownAdminEmail(viewer.email || '')) {
+    return true;
+  }
+
+  return Number(viewer.id) > 0 && (Number(viewer.id) === Number(taskRow.created_by_user_id) || Number(viewer.id) === Number(taskRow.assigned_to_user_id));
+}
+
+async function listVisibleTeamTasksForUser(viewer) {
+  const viewerId = Number(viewer?.id) || 0;
+  if (!viewerId) {
+    return [];
+  }
+
+  const rows = isKnownAdminEmail(viewer?.email || '')
+    ? await dbAll('SELECT * FROM team_tasks ORDER BY updated_at DESC, due_at ASC, id DESC')
+    : await dbAll(
+        `SELECT *
+           FROM team_tasks
+          WHERE assigned_to_user_id = ? OR created_by_user_id = ?
+          ORDER BY updated_at DESC, due_at ASC, id DESC`,
+        [viewerId, viewerId]
+      );
+
+  return rows.map((row) => serializeTeamTask(row)).filter(Boolean).sort((left, right) => {
+    if (left.status !== right.status) {
+      return left.status === 'done' ? 1 : -1;
+    }
+    if (left.isOverdue !== right.isOverdue) {
+      return left.isOverdue ? -1 : 1;
+    }
+    const priorityDiff = getTeamTaskPriorityRank(left.priority) - getTeamTaskPriorityRank(right.priority);
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+    const leftDue = left.dueAt || Number.MAX_SAFE_INTEGER;
+    const rightDue = right.dueAt || Number.MAX_SAFE_INTEGER;
+    if (leftDue !== rightDue) {
+      return leftDue - rightDue;
+    }
+    return (right.updatedAt || 0) - (left.updatedAt || 0);
+  });
+}
+
+async function buildTeamTaskScoreboard() {
+  const rows = await dbAll(
+    `SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.role,
+        COALESCE(SUM(CASE WHEN t.status != 'done' THEN 1 ELSE 0 END), 0) AS open_count,
+        COALESCE(SUM(CASE WHEN t.status = 'in-progress' THEN 1 ELSE 0 END), 0) AS in_progress_count,
+        COALESCE(SUM(CASE WHEN t.status != 'done' AND t.due_at > 0 AND t.due_at < ? THEN 1 ELSE 0 END), 0) AS overdue_count,
+        COALESCE(SUM(CASE WHEN t.status = 'done' AND t.completed_at >= ? THEN 1 ELSE 0 END), 0) AS completed_this_week,
+        COALESCE(COUNT(t.id), 0) AS total_count
+       FROM users u
+       LEFT JOIN team_tasks t ON t.assigned_to_user_id = u.id
+      GROUP BY u.id, u.name, u.email, u.role
+      ORDER BY overdue_count DESC, completed_this_week DESC, open_count DESC, LOWER(COALESCE(u.name, u.email, '')) ASC`,
+    [Date.now(), Date.now() - (7 * 86400000)]
+  );
+
+  return rows
+    .filter((row) => !isSuppressedAccountIdentity(row))
+    .map((row) => ({
+      user: serializeUser(row),
+      openCount: Math.max(Number(row.open_count) || 0, 0),
+      inProgressCount: Math.max(Number(row.in_progress_count) || 0, 0),
+      overdueCount: Math.max(Number(row.overdue_count) || 0, 0),
+      completedThisWeek: Math.max(Number(row.completed_this_week) || 0, 0),
+      totalCount: Math.max(Number(row.total_count) || 0, 0)
+    }));
+}
+
+async function ensureDefaultOutreachSequencesForUser(ownerUserId) {
+  const ownerId = Number(ownerUserId) || 0;
+  if (!ownerId) {
+    return;
+  }
+
+  const existing = await dbAll('SELECT id, channel FROM outreach_sequences WHERE owner_user_id = ?', [ownerId]);
+  const existingChannels = new Set((Array.isArray(existing) ? existing : []).map((row) => normalizeOutreachChannel(row.channel)));
+
+  const defaults = [
+    { channel: 'twilio', name: 'Standard SMS Follow Up', steps: normalizeOutreachSequenceSteps([], 'twilio') },
+    { channel: 'gmail', name: 'Standard Email Follow Up', steps: normalizeOutreachSequenceSteps([], 'gmail') }
+  ];
+
+  for (const entry of defaults) {
+    if (existingChannels.has(entry.channel)) {
+      continue;
+    }
+
+    await dbRun(
+      `INSERT INTO outreach_sequences (
+        owner_user_id, channel, name, steps_json, is_default, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, 1, ?, ?)`,
+      [ownerId, entry.channel, entry.name, JSON.stringify(entry.steps), Date.now(), Date.now()]
+    );
+  }
+}
+
+async function getOutreachContactById(ownerUserId, contactId) {
+  return dbGet('SELECT * FROM outreach_contacts WHERE owner_user_id = ? AND id = ?', [Number(ownerUserId) || 0, Number(contactId) || 0]);
+}
+
+async function getOutreachContactByKey(ownerUserId, channel, contactKey) {
+  return dbGet(
+    'SELECT * FROM outreach_contacts WHERE owner_user_id = ? AND channel = ? AND contact_key = ?',
+    [Number(ownerUserId) || 0, normalizeOutreachChannel(channel), String(contactKey || '').trim()]
+  );
+}
+
+async function listOutreachContactsForUser(ownerUserId, options = {}) {
+  const clauses = ['owner_user_id = ?'];
+  const params = [Number(ownerUserId) || 0];
+
+  if (options.channel) {
+    clauses.push('channel = ?');
+    params.push(normalizeOutreachChannel(options.channel));
+  }
+
+  const rows = await dbAll(
+    `SELECT *
+       FROM outreach_contacts
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY updated_at DESC, id DESC`,
+    params
+  );
+  return rows.map((row) => serializeOutreachContact(row)).filter(Boolean);
+}
+
+async function listOutreachSequencesForUser(ownerUserId, channel = '') {
+  const clauses = ['owner_user_id = ?'];
+  const params = [Number(ownerUserId) || 0];
+  if (channel) {
+    clauses.push('channel = ?');
+    params.push(normalizeOutreachChannel(channel));
+  }
+  const rows = await dbAll(
+    `SELECT *
+       FROM outreach_sequences
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY is_default DESC, updated_at DESC, id DESC`,
+    params
+  );
+  return rows.map((row) => serializeOutreachSequence(row)).filter(Boolean);
+}
+
+async function findLatestOutboundOutreachEvent(ownerUserId, channel, contactKey) {
+  return dbGet(
+    `SELECT *
+       FROM outreach_events
+      WHERE owner_user_id = ? AND channel = ? AND contact_key = ? AND direction = 'outbound'
+      ORDER BY happened_at DESC, created_at DESC
+      LIMIT 1`,
+    [Number(ownerUserId) || 0, normalizeOutreachChannel(channel), String(contactKey || '').trim()]
+  );
+}
+
+async function logOutreachEvent(entry) {
+  const ownerUserId = Number(entry?.ownerUserId) || 0;
+  const channel = normalizeOutreachChannel(entry?.channel);
+  const direction = String(entry?.direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outbound';
+  const contactKey = buildOutreachContactKey({
+    channel,
+    email: entry?.contactEmail,
+    phone: entry?.contactPhone,
+    conversationKey: entry?.conversationKey,
+    threadId: entry?.threadId
+  });
+
+  if (!ownerUserId || !contactKey) {
+    return null;
+  }
+
+  const eventId = crypto.randomUUID();
+  const happenedAt = Number(entry?.happenedAt) || Date.now();
+  const templateKey = normalizeClientPortalSourceValue(entry?.templateKey || '');
+  const templateName = normalizeClientPortalPlainText(entry?.templateName || '', 160);
+  const priority = normalizeOutreachPriority(entry?.priority);
+  let attributedTemplateKey = '';
+  let attributedTemplateName = '';
+  let attributedOutboundEventId = '';
+
+  if (direction === 'inbound') {
+    const attributedOutbound = await findLatestOutboundOutreachEvent(ownerUserId, channel, contactKey);
+    attributedTemplateKey = normalizeClientPortalSourceValue(attributedOutbound?.template_key || '');
+    attributedTemplateName = normalizeClientPortalPlainText(attributedOutbound?.template_name || '', 160);
+    attributedOutboundEventId = String(attributedOutbound?.id || '').trim();
+  }
+
+  await dbRun(
+    `INSERT INTO outreach_events (
+      id, owner_user_id, channel, direction, contact_key, contact_name, contact_email, contact_phone,
+      conversation_key, thread_id, template_key, template_name, attributed_template_key, attributed_template_name,
+      attributed_outbound_event_id, subject, body_preview, priority, source_kind, source_ref, metadata_json,
+      happened_at, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      eventId,
+      ownerUserId,
+      channel,
+      direction,
+      contactKey,
+      normalizeClientPortalPlainText(entry?.contactName || '', 160),
+      normalizeKnownEmail(entry?.contactEmail || ''),
+      normalizeSmsPhone(entry?.contactPhone || '') || String(entry?.contactPhone || '').trim(),
+      normalizeClientPortalSourceValue(entry?.conversationKey || ''),
+      normalizeClientPortalSourceValue(entry?.threadId || ''),
+      templateKey,
+      templateName,
+      attributedTemplateKey,
+      attributedTemplateName,
+      attributedOutboundEventId,
+      normalizeClientPortalPlainText(entry?.subject || '', 240),
+      normalizeClientPortalPlainText(entry?.bodyPreview || '', 500),
+      priority,
+      normalizeClientPortalSourceValue(entry?.sourceKind || ''),
+      normalizeClientPortalSourceValue(entry?.sourceRef || ''),
+      JSON.stringify(entry?.metadata && typeof entry.metadata === 'object' ? entry.metadata : {}),
+      happenedAt,
+      happenedAt
+    ]
+  );
+
+  const existingContact = await getOutreachContactByKey(ownerUserId, channel, contactKey);
+  const nextContactName = normalizeClientPortalPlainText(entry?.contactName || existingContact?.contact_name || '', 160);
+  const nextContactEmail = normalizeKnownEmail(entry?.contactEmail || existingContact?.contact_email || '');
+  const nextContactPhone = normalizeSmsPhone(entry?.contactPhone || '') || String(entry?.contactPhone || existingContact?.contact_phone || '').trim();
+  const nextConversationKey = normalizeClientPortalSourceValue(entry?.conversationKey || existingContact?.conversation_key || '');
+  const nextThreadId = normalizeClientPortalSourceValue(entry?.threadId || existingContact?.thread_id || '');
+  const nextSourceLabel = normalizeClientPortalSourceValue(entry?.sourceLabel || existingContact?.source_label || '');
+  const nextPriority = normalizeOutreachPriority(entry?.priority || existingContact?.priority || 'medium');
+  const nextTag = direction === 'inbound'
+    ? 'responsive'
+    : normalizeOutreachTag(entry?.responseTag || existingContact?.response_tag || 'new');
+  const nextLastContactedAt = direction === 'outbound' ? happenedAt : (Number(existingContact?.last_contacted_at) || 0);
+  const nextLastResponseAt = direction === 'inbound' ? happenedAt : (Number(existingContact?.last_response_at) || 0);
+  const nextNextFollowUpAt = direction === 'inbound'
+    ? 0
+    : (Number(entry?.nextFollowUpAt) || Number(existingContact?.next_follow_up_at) || 0);
+  const nextLastTemplateKey = direction === 'outbound' ? templateKey : normalizeClientPortalSourceValue(existingContact?.last_template_key || '');
+  const nextLastTemplateName = direction === 'outbound' ? templateName : normalizeClientPortalPlainText(existingContact?.last_template_name || '', 160);
+  const nextSentCount = Math.max(Number(existingContact?.sent_count) || 0, 0) + (direction === 'outbound' ? 1 : 0);
+  const nextResponseCount = Math.max(Number(existingContact?.response_count) || 0, 0) + (direction === 'inbound' ? 1 : 0);
+  const updatedAt = Date.now();
+
+  if (existingContact) {
+    await dbRun(
+      `UPDATE outreach_contacts
+          SET contact_name = ?,
+              contact_email = ?,
+              contact_phone = ?,
+              conversation_key = ?,
+              thread_id = ?,
+              priority = ?,
+              response_tag = ?,
+              source_label = ?,
+              last_contacted_at = ?,
+              last_response_at = ?,
+              next_follow_up_at = ?,
+              last_template_key = ?,
+              last_template_name = ?,
+              sent_count = ?,
+              response_count = ?,
+              updated_at = ?
+        WHERE id = ?`,
+      [
+        nextContactName,
+        nextContactEmail,
+        nextContactPhone,
+        nextConversationKey,
+        nextThreadId,
+        nextPriority,
+        nextTag,
+        nextSourceLabel,
+        nextLastContactedAt,
+        nextLastResponseAt,
+        nextNextFollowUpAt,
+        nextLastTemplateKey,
+        nextLastTemplateName,
+        nextSentCount,
+        nextResponseCount,
+        updatedAt,
+        Number(existingContact.id) || 0
+      ]
+    );
+  } else {
+    await dbRun(
+      `INSERT INTO outreach_contacts (
+        owner_user_id, channel, contact_key, contact_name, contact_email, contact_phone,
+        conversation_key, thread_id, priority, response_tag, source_label, last_contacted_at,
+        last_response_at, next_follow_up_at, last_template_key, last_template_name,
+        sent_count, response_count, notes, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)`,
+      [
+        ownerUserId,
+        channel,
+        contactKey,
+        nextContactName,
+        nextContactEmail,
+        nextContactPhone,
+        nextConversationKey,
+        nextThreadId,
+        nextPriority,
+        nextTag,
+        nextSourceLabel,
+        nextLastContactedAt,
+        nextLastResponseAt,
+        nextNextFollowUpAt,
+        nextLastTemplateKey,
+        nextLastTemplateName,
+        nextSentCount,
+        nextResponseCount,
+        updatedAt,
+        updatedAt
+      ]
+    );
+  }
+
+  return dbGet('SELECT * FROM outreach_events WHERE id = ?', [eventId]);
+}
+
+async function getOutreachTemplatePerformance(ownerUserId, channel = '') {
+  const clauses = ['owner_user_id = ?'];
+  const params = [Number(ownerUserId) || 0];
+  if (channel) {
+    clauses.push('channel = ?');
+    params.push(normalizeOutreachChannel(channel));
+  }
+
+  return dbAll(
+    `SELECT
+        channel,
+        COALESCE(NULLIF(template_key, ''), attributed_template_key) AS template_key,
+        COALESCE(NULLIF(template_name, ''), attributed_template_name) AS template_name,
+        SUM(CASE WHEN direction = 'outbound' THEN 1 ELSE 0 END) AS sent_count,
+        SUM(CASE WHEN direction = 'inbound' AND attributed_template_key != '' THEN 1 ELSE 0 END) AS reply_count,
+        MAX(happened_at) AS last_used_at
+       FROM outreach_events
+      WHERE ${clauses.join(' AND ')}
+      GROUP BY channel, COALESCE(NULLIF(template_key, ''), attributed_template_key), COALESCE(NULLIF(template_name, ''), attributed_template_name)
+      HAVING COALESCE(NULLIF(template_key, ''), attributed_template_key) != ''
+      ORDER BY sent_count DESC, last_used_at DESC`,
+    params
+  );
+}
+
+function buildClientPortalPublicUrl(req, accessToken) {
+  const token = String(accessToken || '').trim();
+  if (!token) {
+    return '';
+  }
+  return `${getRequestOrigin(req)}/portal.html?access=${encodeURIComponent(token)}`;
+}
+
+function buildClientPortalAdminUrl(req, portalId) {
+  const normalizedPortalId = String(portalId || '').trim();
+  if (!normalizedPortalId) {
+    return '';
+  }
+  return `${getRequestOrigin(req)}/portal.html?portal=${encodeURIComponent(normalizedPortalId)}`;
+}
+
+function buildClientPortalDocumentContentPath(portalId, documentId, options = {}) {
+  const normalizedPortalId = String(portalId || '').trim();
+  const normalizedDocumentId = String(documentId || '').trim();
+  const accessToken = String(options.accessToken || '').trim();
+  const download = options.download === true;
+
+  if (!normalizedDocumentId) {
+    return '';
+  }
+
+  if (accessToken) {
+    return `/api/client-portals/access/${encodeURIComponent(accessToken)}/documents/${encodeURIComponent(normalizedDocumentId)}/content?download=${download ? '1' : '0'}`;
+  }
+
+  if (!normalizedPortalId) {
+    return '';
+  }
+
+  return `/api/client-portals/${encodeURIComponent(normalizedPortalId)}/documents/${encodeURIComponent(normalizedDocumentId)}/content?download=${download ? '1' : '0'}`;
+}
+
+function serializeClientPortalDocument(row, options = {}) {
+  const base = serializeUserUpload(row);
+  if (!base) {
+    return null;
+  }
+
+  return {
+    ...base,
+    contentPath: buildClientPortalDocumentContentPath(options.portalId || row.context_key, row.id, { accessToken: options.accessToken, download: false }),
+    downloadPath: buildClientPortalDocumentContentPath(options.portalId || row.context_key, row.id, { accessToken: options.accessToken, download: true })
+  };
+}
+
+function serializeClientPortalActivity(row) {
+  if (!row) {
+    return null;
+  }
+
+  let metadata = {};
+  try {
+    metadata = JSON.parse(String(row.metadata_json || '{}')) || {};
+  } catch (error) {
+    metadata = {};
+  }
+
+  return {
+    id: String(row.id || '').trim(),
+    portalId: String(row.portal_id || '').trim(),
+    eventType: normalizeClientPortalActivityType(row.event_type),
+    visibility: normalizeClientPortalVisibility(row.visibility),
+    title: normalizeClientPortalPlainText(row.title || '', 200),
+    body: normalizeClientPortalPlainText(row.body || '', 6000),
+    authorName: normalizeClientPortalPlainText(row.author_name || '', 160),
+    authorEmail: normalizeClientPortalPlainText(row.author_email || '', 200).toLowerCase(),
+    metadata,
+    createdAt: Number(row.created_at) || Date.now()
+  };
+}
+
+function serializeClientPortalSmsRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: `twilio-${String(row.id || '').trim()}`,
+    source: 'sms',
+    direction: String(row.direction || '').trim().toLowerCase() || 'unknown',
+    body: normalizeClientPortalPlainText(row.body || '', 6000),
+    contactName: normalizeClientPortalPlainText(row.contact_name || '', 160),
+    status: normalizeClientPortalPlainText(row.status || '', 120),
+    createdAt: Number(Date.parse(String(row.created_at || ''))) || Date.now()
+  };
+}
+
+function serializeClientPortalRow(req, row, options = {}) {
+  if (!row) {
+    return null;
+  }
+
+  const includeAccessToken = options.includeAccessToken === true;
+  return {
+    id: String(row.id || '').trim(),
+    portalType: normalizeClientPortalType(row.portal_type),
+    sourceKind: normalizeClientPortalSourceValue(row.source_kind || ''),
+    sourceRef: normalizeClientPortalSourceValue(row.source_ref || ''),
+    title: normalizeClientPortalPlainText(row.title || '', 200),
+    contactName: normalizeClientPortalPlainText(row.contact_name || '', 160),
+    contactEmail: normalizeClientPortalPlainText(row.contact_email || '', 200).toLowerCase(),
+    contactPhone: normalizeClientPortalPlainText(row.contact_phone || '', 80),
+    companyName: normalizeClientPortalPlainText(row.company_name || '', 200),
+    propertyAddress: normalizeClientPortalPlainText(row.property_address || '', 240),
+    status: normalizeClientPortalStatus(row.status, row.portal_type),
+    summary: normalizeClientPortalPlainText(row.summary || '', 4000),
+    notes: normalizeClientPortalPlainText(row.notes || '', 8000),
+    deadlineAt: normalizeClientPortalDeadline(row.deadline_at || ''),
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now(),
+    publicUrl: buildClientPortalPublicUrl(req, row.access_token),
+    adminUrl: buildClientPortalAdminUrl(req, row.id),
+    accessToken: includeAccessToken ? String(row.access_token || '').trim() : undefined
+  };
+}
+
+async function getClientPortalById(portalId) {
+  return dbGet('SELECT * FROM client_portals WHERE id = ?', [String(portalId || '').trim()]);
+}
+
+async function getClientPortalByAccessToken(accessToken) {
+  return dbGet('SELECT * FROM client_portals WHERE access_token = ?', [String(accessToken || '').trim()]);
+}
+
+async function getClientPortalBySource(sourceKind, sourceRef) {
+  const normalizedSourceKind = normalizeClientPortalSourceValue(sourceKind);
+  const normalizedSourceRef = normalizeClientPortalSourceValue(sourceRef);
+  if (!normalizedSourceKind || !normalizedSourceRef) {
+    return null;
+  }
+
+  return dbGet(
+    `SELECT *
+       FROM client_portals
+      WHERE source_kind = ? AND source_ref = ?
+      ORDER BY updated_at DESC
+      LIMIT 1`,
+    [normalizedSourceKind, normalizedSourceRef]
+  );
+}
+
+async function listClientPortalDocuments(portalId) {
+  return dbAll(
+    `SELECT *
+       FROM user_uploads
+      WHERE scope = 'client-portal' AND context_key = ?
+      ORDER BY updated_at DESC, created_at DESC`,
+    [sanitizeUserUploadContextKey(portalId, 'default')]
+  );
+}
+
+async function getClientPortalDocument(portalId, documentId) {
+  return dbGet(
+    `SELECT *
+       FROM user_uploads
+      WHERE scope = 'client-portal' AND context_key = ? AND id = ?`,
+    [sanitizeUserUploadContextKey(portalId, 'default'), String(documentId || '').trim()]
+  );
+}
+
+async function listClientPortalActivity(portalId, options = {}) {
+  const includeInternal = options.includeInternal === true;
+  const whereClauses = ['portal_id = ?'];
+  const params = [String(portalId || '').trim()];
+
+  if (!includeInternal) {
+    whereClauses.push("visibility = 'portal'");
+  }
+
+  const rows = await dbAll(
+    `SELECT *
+       FROM client_portal_activity
+      WHERE ${whereClauses.join(' AND ')}
+      ORDER BY created_at DESC`,
+    params
+  );
+
+  return rows.map((row) => serializeClientPortalActivity(row)).filter(Boolean);
+}
+
+async function listClientPortalSmsHistory(portalRow) {
+  const contactPhone = normalizeSmsPhone(String(portalRow?.contact_phone || '').trim());
+  if (!contactPhone) {
+    return [];
+  }
+
+  const rows = await dbAll(
+    `SELECT id, direction, body, contact_name, status, created_at
+       FROM twilio_inbox_messages
+      WHERE contact_phone = ?
+      ORDER BY datetime(created_at) DESC, id DESC
+      LIMIT 50`,
+    [contactPhone]
+  );
+
+  return rows.map((row) => serializeClientPortalSmsRow(row)).filter(Boolean);
+}
+
+async function createClientPortalActivity({ portalId, eventType, visibility, title, body, authorUserId, authorName, authorEmail, metadata }) {
+  const normalizedPortalId = String(portalId || '').trim();
+  if (!normalizedPortalId) {
+    throw new Error('Portal id is required.');
+  }
+
+  const activityId = crypto.randomUUID();
+  const createdAt = Date.now();
+  await dbRun(
+    `INSERT INTO client_portal_activity (
+      id, portal_id, author_user_id, author_name, author_email,
+      event_type, visibility, title, body, metadata_json, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      activityId,
+      normalizedPortalId,
+      Number(authorUserId) || null,
+      normalizeClientPortalPlainText(authorName || '', 160),
+      normalizeClientPortalPlainText(authorEmail || '', 200).toLowerCase(),
+      normalizeClientPortalActivityType(eventType),
+      normalizeClientPortalVisibility(visibility),
+      normalizeClientPortalPlainText(title || '', 200),
+      normalizeClientPortalPlainText(body || '', 6000),
+      JSON.stringify(metadata && typeof metadata === 'object' ? metadata : {}),
+      createdAt
+    ]
+  );
+
+  return dbGet('SELECT * FROM client_portal_activity WHERE id = ?', [activityId]);
+}
+
+async function upsertClientPortal(req, ownerUser, payload) {
+  const portalType = normalizeClientPortalType(payload.portalType);
+  const sourceKind = normalizeClientPortalSourceValue(payload.sourceKind);
+  const sourceRef = normalizeClientPortalSourceValue(payload.sourceRef);
+  const title = normalizeClientPortalPlainText(payload.title || '', 200);
+  const contactName = normalizeClientPortalPlainText(payload.contactName || '', 160);
+  const contactEmail = normalizeClientPortalPlainText(payload.contactEmail || '', 200).toLowerCase();
+  const contactPhone = normalizeSmsPhone(payload.contactPhone || '') || normalizeClientPortalPlainText(payload.contactPhone || '', 80);
+  const companyName = normalizeClientPortalPlainText(payload.companyName || '', 200);
+  const propertyAddress = normalizeClientPortalPlainText(payload.propertyAddress || '', 240);
+  const summary = normalizeClientPortalPlainText(payload.summary || '', 4000);
+  const notes = normalizeClientPortalPlainText(payload.notes || '', 8000);
+  const deadlineAt = normalizeClientPortalDeadline(payload.deadlineAt || '');
+  const status = normalizeClientPortalStatus(payload.status, portalType);
+
+  if (!title && !contactName && !propertyAddress) {
+    throw new Error('Portal title, contact name, or property address is required.');
+  }
+
+  const existing = sourceKind && sourceRef ? await getClientPortalBySource(sourceKind, sourceRef) : null;
+  const now = Date.now();
+
+  if (existing) {
+    await dbRun(
+      `UPDATE client_portals
+          SET title = ?,
+              contact_name = ?,
+              contact_email = ?,
+              contact_phone = ?,
+              company_name = ?,
+              property_address = ?,
+              status = ?,
+              summary = ?,
+              notes = ?,
+              deadline_at = ?,
+              updated_at = ?
+        WHERE id = ?`,
+      [
+        title || String(existing.title || '').trim(),
+        contactName || String(existing.contact_name || '').trim(),
+        contactEmail || String(existing.contact_email || '').trim(),
+        contactPhone || String(existing.contact_phone || '').trim(),
+        companyName || String(existing.company_name || '').trim(),
+        propertyAddress || String(existing.property_address || '').trim(),
+        status || String(existing.status || '').trim(),
+        summary || String(existing.summary || '').trim(),
+        notes || String(existing.notes || '').trim(),
+        deadlineAt || String(existing.deadline_at || '').trim(),
+        now,
+        existing.id
+      ]
+    );
+
+    return getClientPortalById(existing.id);
+  }
+
+  const portalId = crypto.randomUUID();
+  const accessToken = crypto.randomBytes(18).toString('hex');
+  await dbRun(
+    `INSERT INTO client_portals (
+      id, owner_user_id, portal_type, source_kind, source_ref, title,
+      contact_name, contact_email, contact_phone, company_name, property_address,
+      status, summary, notes, deadline_at, access_token, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      portalId,
+      Number(ownerUser?.id) || 0,
+      portalType,
+      sourceKind,
+      sourceRef,
+      title || propertyAddress || contactName || (portalType === 'investor' ? 'Investor portal' : 'Seller portal'),
+      contactName,
+      contactEmail,
+      contactPhone,
+      companyName,
+      propertyAddress,
+      status,
+      summary,
+      notes,
+      deadlineAt,
+      accessToken,
+      now,
+      now
+    ]
+  );
+
+  const createdPortal = await getClientPortalById(portalId);
+  await createClientPortalActivity({
+    portalId,
+    eventType: 'status',
+    visibility: 'portal',
+    title: portalType === 'investor' ? 'Investor portal opened' : 'Seller portal opened',
+    body: summary || (portalType === 'investor'
+      ? 'Your buying profile and current deal flow are now live in this portal.'
+      : 'We received your property details and opened your private deal portal.'),
+    authorUserId: ownerUser?.id,
+    authorName: ownerUser?.name || 'FAST BRIDGE GROUP',
+    authorEmail: ownerUser?.email || ''
+  });
+  return createdPortal;
+}
+
+async function buildClientPortalPayload(req, portalRow, options = {}) {
+  const includeInternal = options.includeInternal === true;
+  const includeAccessToken = options.includeAccessToken === true;
+  const documents = await listClientPortalDocuments(portalRow.id);
+  const activity = await listClientPortalActivity(portalRow.id, { includeInternal });
+  const smsHistory = await listClientPortalSmsHistory(portalRow);
+
+  return {
+    ...serializeClientPortalRow(req, portalRow, { includeAccessToken }),
+    documents: documents.map((row) => serializeClientPortalDocument(row, { portalId: portalRow.id, accessToken: includeInternal ? '' : String(portalRow.access_token || '').trim() })).filter(Boolean),
+    activity,
+    smsHistory
   };
 }
 
@@ -16469,6 +18127,151 @@ app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: MLS_IMPORT_
   }
 });
 
+app.get('/api/outreach-intelligence/dashboard', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const channel = String(req.query?.channel || '').trim().toLowerCase();
+    await ensureDefaultOutreachSequencesForUser(decoded.id);
+    const contacts = await listOutreachContactsForUser(decoded.id, { channel });
+    const sequences = await listOutreachSequencesForUser(decoded.id, channel);
+    const templatePerformanceRows = await getOutreachTemplatePerformance(decoded.id, channel);
+
+    const prioritizedContacts = contacts
+      .sort((left, right) => {
+        const riskOrder = { high: 0, medium: 1, low: 2 };
+        const leftRisk = riskOrder[left.riskLevel] ?? 3;
+        const rightRisk = riskOrder[right.riskLevel] ?? 3;
+        if (leftRisk !== rightRisk) {
+          return leftRisk - rightRisk;
+        }
+        return (right.updatedAt || 0) - (left.updatedAt || 0);
+      });
+
+    return res.json({
+      success: true,
+      contacts: prioritizedContacts,
+      riskFlags: prioritizedContacts.filter((contact) => contact.riskLevel !== 'low').slice(0, 12),
+      sequences,
+      templatePerformance: templatePerformanceRows.map((row) => ({
+        channel: normalizeOutreachChannel(row.channel),
+        templateKey: normalizeClientPortalSourceValue(row.template_key || ''),
+        templateName: normalizeClientPortalPlainText(row.template_name || row.template_key || '', 160),
+        sentCount: Math.max(Number(row.sent_count) || 0, 0),
+        replyCount: Math.max(Number(row.reply_count) || 0, 0),
+        replyRate: Math.max(Number(row.sent_count) || 0, 0) > 0
+          ? Number((((Number(row.reply_count) || 0) / Math.max(Number(row.sent_count) || 1, 1)) * 100).toFixed(1))
+          : 0,
+        lastUsedAt: Number(row.last_used_at) || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Failed to load outreach dashboard:', error);
+    return res.status(500).json({ error: 'Unable to load outreach intelligence.' });
+  }
+});
+
+app.put('/api/outreach-intelligence/contacts/:contactId', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const contact = await getOutreachContactById(decoded.id, req.params?.contactId);
+    if (!contact) {
+      return res.status(404).json({ error: 'Outreach contact not found.' });
+    }
+
+    const contactName = normalizeClientPortalPlainText(req.body?.contactName || contact.contact_name || '', 160);
+    const responseTag = normalizeOutreachTag(req.body?.responseTag || contact.response_tag || 'new');
+    const priority = normalizeOutreachPriority(req.body?.priority || contact.priority || 'medium');
+    const notes = normalizeClientPortalPlainText(req.body?.notes || contact.notes || '', 4000);
+    const nextFollowUpAt = req.body && Object.prototype.hasOwnProperty.call(req.body, 'nextFollowUpAt')
+      ? Math.max(Number(req.body?.nextFollowUpAt) || 0, 0)
+      : (Number(contact.next_follow_up_at) || 0);
+
+    await dbRun(
+      `UPDATE outreach_contacts
+          SET contact_name = ?, response_tag = ?, priority = ?, notes = ?, next_follow_up_at = ?, updated_at = ?
+        WHERE id = ? AND owner_user_id = ?`,
+      [contactName, responseTag, priority, notes, nextFollowUpAt, Date.now(), Number(contact.id) || 0, Number(decoded.id) || 0]
+    );
+
+    const refreshed = await getOutreachContactById(decoded.id, contact.id);
+    return res.json({ success: true, contact: serializeOutreachContact(refreshed) });
+  } catch (error) {
+    console.error('Failed to update outreach contact:', error);
+    return res.status(500).json({ error: 'Unable to update the outreach contact.' });
+  }
+});
+
+app.post('/api/outreach-intelligence/contacts/:contactId/follow-up', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const contact = await getOutreachContactById(decoded.id, req.params?.contactId);
+    if (!contact) {
+      return res.status(404).json({ error: 'Outreach contact not found.' });
+    }
+
+    const nextFollowUpAt = Math.max(Number(req.body?.nextFollowUpAt) || 0, 0);
+    if (!nextFollowUpAt) {
+      return res.status(400).json({ error: 'A follow-up date is required.' });
+    }
+
+    const priority = normalizeOutreachPriority(req.body?.priority || contact.priority || 'medium');
+    const notes = normalizeClientPortalPlainText(req.body?.notes || contact.notes || '', 4000);
+
+    await dbRun(
+      `UPDATE outreach_contacts
+          SET next_follow_up_at = ?, priority = ?, notes = ?, updated_at = ?
+        WHERE id = ? AND owner_user_id = ?`,
+      [nextFollowUpAt, priority, notes, Date.now(), Number(contact.id) || 0, Number(decoded.id) || 0]
+    );
+
+    const refreshed = await getOutreachContactById(decoded.id, contact.id);
+    return res.json({ success: true, contact: serializeOutreachContact(refreshed) });
+  } catch (error) {
+    console.error('Failed to schedule outreach follow-up:', error);
+    return res.status(500).json({ error: 'Unable to schedule the outreach follow-up.' });
+  }
+});
+
+app.post('/api/outreach-intelligence/sequences', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const name = normalizeClientPortalPlainText(req.body?.name || '', 120);
+    const channel = normalizeOutreachChannel(req.body?.channel);
+    const steps = normalizeOutreachSequenceSteps(req.body?.steps, channel);
+    if (!name) {
+      return res.status(400).json({ error: 'Sequence name is required.' });
+    }
+
+    await dbRun(
+      `INSERT INTO outreach_sequences (owner_user_id, channel, name, steps_json, is_default, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 0, ?, ?)`,
+      [Number(decoded.id) || 0, channel, name, JSON.stringify(steps), Date.now(), Date.now()]
+    );
+
+    const sequences = await listOutreachSequencesForUser(decoded.id, channel);
+    return res.json({ success: true, sequences });
+  } catch (error) {
+    console.error('Failed to save outreach sequence:', error);
+    return res.status(500).json({ error: 'Unable to save the outreach sequence.' });
+  }
+});
+
 // GET /api/gmail/status — returns the authenticated user's connected Gmail inbox state
 app.get('/api/gmail/status', async (req, res) => {
   const decoded = requireAuth(req, res);
@@ -16843,6 +18646,12 @@ app.post('/api/gmail/messages/send', async (req, res) => {
   const bodyText = String(req.body?.bodyText || '').trim();
   const bodyHtml = String(req.body?.bodyHtml || '').trim();
   const attachments = normalizeGmailComposeAttachments(req.body?.attachments);
+  const outreachTemplateKey = normalizeClientPortalSourceValue(req.body?.templateKey || '');
+  const outreachTemplateName = normalizeClientPortalPlainText(req.body?.templateName || '', 160);
+  const outreachPriority = normalizeOutreachPriority(req.body?.priority || 'medium');
+  const outreachNextFollowUpAt = Math.max(Number(req.body?.nextFollowUpAt) || 0, 0);
+  const outreachSourceKind = normalizeClientPortalSourceValue(req.body?.sourceKind || 'gmail-compose');
+  const outreachSourceRef = normalizeClientPortalSourceValue(req.body?.sourceRef || '');
 
   const totalAttachmentBytes = attachments.reduce((total, attachment) => total + (Number(attachment?.bytes) || 0), 0);
   if (totalAttachmentBytes > 15 * 1024 * 1024) {
@@ -16882,9 +18691,35 @@ app.post('/api/gmail/messages/send', async (req, res) => {
       return {
         gmailEmail: connection.gmailEmail,
         messageId: String(response && response.id || '').trim(),
-        threadId: String(response && response.threadId || '').trim()
+        threadId: String(response && response.threadId || '').trim(),
+        connectionEmail: String(connection?.gmailEmail || decoded.email || '').trim().toLowerCase()
       };
     });
+
+    const recipients = to.split(',').map((value) => normalizeKnownEmail(value)).filter(Boolean);
+    await Promise.all(recipients.map((recipientEmail) => logOutreachEvent({
+      ownerUserId: decoded.id,
+      channel: 'gmail',
+      direction: 'outbound',
+      contactEmail: recipientEmail,
+      threadId: payload.threadId || threadId,
+      contactName: recipientEmail,
+      templateKey: outreachTemplateKey || (threadId ? 'gmail-reply' : 'gmail-compose'),
+      templateName: outreachTemplateName || (threadId ? 'Reply' : 'Manual Gmail Send'),
+      subject,
+      bodyPreview: bodyText || bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+      priority: outreachPriority,
+      nextFollowUpAt: outreachNextFollowUpAt,
+      sourceKind: outreachSourceKind,
+      sourceRef: outreachSourceRef || payload.messageId,
+      metadata: {
+        fromEmail: payload.connectionEmail,
+        cc,
+        bcc,
+        messageId: payload.messageId,
+        hasAttachments: attachments.length > 0
+      }
+    })));
 
     return res.json({
       success: true,
@@ -17288,7 +19123,7 @@ app.get('/api/access-requests', (req, res) => {
   );
 });
 
-app.post('/api/property-submissions', (req, res) => {
+app.post('/api/property-submissions', async (req, res) => {
   const sellerName = String(req.body?.sellerName || '').trim();
   const sellerEmail = String(req.body?.sellerEmail || '').trim().toLowerCase();
   const rawSellerPhone = String(req.body?.sellerPhone || '').trim();
@@ -17303,10 +19138,12 @@ app.post('/api/property-submissions', (req, res) => {
   const propertyState = String(req.body?.propertyState || '').trim();
   const propertyZip = String(req.body?.propertyZip || '').trim();
   const propertyType = String(req.body?.propertyType || '').trim();
+  const financingType = String(req.body?.financingType || '').trim();
   const bedrooms = String(req.body?.bedrooms || '').trim();
   const bathrooms = String(req.body?.bathrooms || '').trim();
   const squareFeet = String(req.body?.squareFeet || '').trim();
   const askingPrice = String(req.body?.askingPrice || '').trim();
+  const estimatedValue = String(req.body?.estimatedValue || '').trim();
   const timeline = String(req.body?.timeline || '').trim();
   const issueNotes = String(req.body?.issueNotes || '').trim();
   const rawIssues = Array.isArray(req.body?.conditionIssues) ? req.body.conditionIssues : [];
@@ -17331,8 +19168,9 @@ app.post('/api/property-submissions', (req, res) => {
     return res.status(400).json({ error: 'Explicit SMS consent is required for property inquiry messaging.' });
   }
 
-  db.run(
-    `INSERT INTO property_submissions (
+  try {
+    const insertResult = await dbRun(
+      `INSERT INTO property_submissions (
       seller_name,
       seller_email,
       seller_phone,
@@ -17345,15 +19183,17 @@ app.post('/api/property-submissions', (req, res) => {
       property_state,
       property_zip,
       property_type,
+      financing_type,
       bedrooms,
       bathrooms,
       square_feet,
       asking_price,
+      estimated_value,
       timeline,
       condition_issues,
       issue_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
-    [
+    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+      [
       sellerName,
       sellerEmail,
       sellerPhone,
@@ -17365,58 +19205,71 @@ app.post('/api/property-submissions', (req, res) => {
       propertyState,
       propertyZip,
       propertyType,
+      financingType,
       bedrooms,
       bathrooms,
       squareFeet,
       askingPrice,
+      estimatedValue,
       timeline,
       JSON.stringify(conditionIssues),
       issueNotes
-    ],
-    function onInsert(err) {
-      if (err) {
-        console.error('Failed to save property submission:', err);
-        return res.status(500).json({ error: 'Unable to save property submission.' });
-      }
+      ]
+    );
 
-      return res.json({
-        success: true,
-        message: 'Property submitted successfully.',
-        submission: {
-          id: this.lastID,
-          sellerName,
-          sellerEmail,
-          sellerPhone,
-          referredBy,
-          smsConsent,
-          smsConsentText,
-          propertyAddress,
-          propertyCity,
-          propertyState,
-          propertyZip,
-          propertyType,
-          bedrooms,
-          bathrooms,
-          squareFeet,
-          askingPrice,
-          timeline,
-          conditionIssues,
-          issueNotes,
-          status: 'new'
-        }
-      });
-    }
-  );
+    const activeBuyerSheet = await loadActiveBuyersSheet();
+    const buyerMatches = buildBuyerMatchResults(activeBuyerSheet.rows, {
+      propertyZip,
+      propertyType,
+      financingType,
+      askingPrice,
+      estimatedValue
+    });
+
+    return res.json({
+      success: true,
+      message: 'Property submitted successfully.',
+      submission: {
+        id: insertResult.lastID,
+        sellerName,
+        sellerEmail,
+        sellerPhone,
+        referredBy,
+        smsConsent,
+        smsConsentText,
+        propertyAddress,
+        propertyCity,
+        propertyState,
+        propertyZip,
+        propertyType,
+        financingType,
+        bedrooms,
+        bathrooms,
+        squareFeet,
+        askingPrice,
+        estimatedValue,
+        timeline,
+        conditionIssues,
+        issueNotes,
+        status: 'new'
+      },
+      buyerMatchSummary: buyerMatches.summary
+    });
+  } catch (err) {
+    console.error('Failed to save property submission:', err);
+    return res.status(500).json({ error: 'Unable to save property submission.' });
+  }
 });
 
-app.get('/api/property-submissions', (req, res) => {
+app.get('/api/property-submissions', async (req, res) => {
   const decoded = requireAdmin(req, res);
   if (!decoded) {
     return;
   }
 
-  db.all(
-    `SELECT
+  try {
+    const rows = await dbAll(
+      `SELECT
       id,
       seller_name,
       seller_email,
@@ -17430,63 +19283,607 @@ app.get('/api/property-submissions', (req, res) => {
       property_state,
       property_zip,
       property_type,
+      financing_type,
       bedrooms,
       bathrooms,
       square_feet,
       asking_price,
+      estimated_value,
       timeline,
       condition_issues,
       issue_notes,
       status,
       created_at
      FROM property_submissions
-     ORDER BY datetime(created_at) DESC, id DESC`,
-    (err, rows) => {
-      if (err) {
-        console.error('Failed to load property submissions:', err);
-        return res.status(500).json({ error: 'Unable to load property submissions.' });
+     ORDER BY datetime(created_at) DESC, id DESC`
+    );
+
+    const activeBuyerSheet = await loadActiveBuyersSheet();
+    const submissions = Array.isArray(rows)
+      ? rows.map((row) => {
+          let conditionIssues = [];
+          try {
+            const parsed = JSON.parse(String(row.condition_issues || '[]'));
+            conditionIssues = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+          } catch (error) {
+            conditionIssues = [];
+          }
+
+          const buyerMatches = buildBuyerMatchResults(activeBuyerSheet.rows, {
+            propertyZip: String(row.property_zip || ''),
+            propertyType: String(row.property_type || ''),
+            financingType: String(row.financing_type || ''),
+            askingPrice: String(row.asking_price || ''),
+            estimatedValue: String(row.estimated_value || '')
+          });
+
+          return {
+            id: row.id,
+            sellerName: String(row.seller_name || ''),
+            sellerEmail: String(row.seller_email || ''),
+            sellerPhone: String(row.seller_phone || ''),
+            referredBy: String(row.referred_by || ''),
+            smsConsent: Number(row.sms_consent || 0) === 1,
+            smsConsentText: String(row.sms_consent_text || ''),
+            smsConsentAt: row.sms_consent_at || null,
+            propertyAddress: String(row.property_address || ''),
+            propertyCity: String(row.property_city || ''),
+            propertyState: String(row.property_state || ''),
+            propertyZip: String(row.property_zip || ''),
+            propertyType: String(row.property_type || ''),
+            financingType: String(row.financing_type || ''),
+            bedrooms: String(row.bedrooms || ''),
+            bathrooms: String(row.bathrooms || ''),
+            squareFeet: String(row.square_feet || ''),
+            askingPrice: String(row.asking_price || ''),
+            estimatedValue: String(row.estimated_value || ''),
+            timeline: String(row.timeline || ''),
+            conditionIssues,
+            issueNotes: String(row.issue_notes || ''),
+            status: String(row.status || 'new'),
+            createdAt: row.created_at,
+            buyerMatchSummary: buyerMatches.summary,
+            buyerMatches: buyerMatches.matches
+          };
+        })
+      : [];
+
+    return res.json({ submissions });
+  } catch (err) {
+    console.error('Failed to load property submissions:', err);
+    return res.status(500).json({ error: 'Unable to load property submissions.' });
+  }
+});
+
+app.post('/api/client-portals', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const portal = await upsertClientPortal(req, decoded, {
+      portalType: req.body?.portalType,
+      sourceKind: req.body?.sourceKind,
+      sourceRef: req.body?.sourceRef,
+      title: req.body?.title,
+      contactName: req.body?.contactName,
+      contactEmail: req.body?.contactEmail,
+      contactPhone: req.body?.contactPhone,
+      companyName: req.body?.companyName,
+      propertyAddress: req.body?.propertyAddress,
+      status: req.body?.status,
+      summary: req.body?.summary,
+      notes: req.body?.notes,
+      deadlineAt: req.body?.deadlineAt
+    });
+
+    return res.status(201).json({
+      portal: await buildClientPortalPayload(req, portal, { includeInternal: true, includeAccessToken: true })
+    });
+  } catch (error) {
+    console.error('Failed to create client portal:', error);
+    return res.status(400).json({ error: error.message || 'Unable to create the client portal.' });
+  }
+});
+
+app.get('/api/client-portals/:portalId', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const portal = await getClientPortalById(req.params.portalId);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    return res.json({
+      portal: await buildClientPortalPayload(req, portal, { includeInternal: true, includeAccessToken: true })
+    });
+  } catch (error) {
+    console.error('Failed to load client portal:', error);
+    return res.status(500).json({ error: 'Unable to load the client portal.' });
+  }
+});
+
+app.put('/api/client-portals/:portalId', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const portal = await getClientPortalById(req.params.portalId);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    const portalType = normalizeClientPortalType(req.body?.portalType || portal.portal_type);
+    const title = normalizeClientPortalPlainText(req.body?.title || portal.title || '', 200);
+    const contactName = normalizeClientPortalPlainText(req.body?.contactName || portal.contact_name || '', 160);
+    const contactEmail = normalizeClientPortalPlainText(req.body?.contactEmail || portal.contact_email || '', 200).toLowerCase();
+    const rawPhone = String(req.body?.contactPhone || portal.contact_phone || '').trim();
+    const contactPhone = normalizeSmsPhone(rawPhone) || normalizeClientPortalPlainText(rawPhone, 80);
+    const companyName = normalizeClientPortalPlainText(req.body?.companyName || portal.company_name || '', 200);
+    const propertyAddress = normalizeClientPortalPlainText(req.body?.propertyAddress || portal.property_address || '', 240);
+    const status = normalizeClientPortalStatus(req.body?.status || portal.status, portalType);
+    const summary = normalizeClientPortalPlainText(req.body?.summary || '', 4000);
+    const notes = normalizeClientPortalPlainText(req.body?.notes || '', 8000);
+    const deadlineAt = normalizeClientPortalDeadline(req.body?.deadlineAt || '');
+    const updatedAt = Date.now();
+
+    await dbRun(
+      `UPDATE client_portals
+          SET portal_type = ?,
+              title = ?,
+              contact_name = ?,
+              contact_email = ?,
+              contact_phone = ?,
+              company_name = ?,
+              property_address = ?,
+              status = ?,
+              summary = ?,
+              notes = ?,
+              deadline_at = ?,
+              updated_at = ?
+        WHERE id = ?`,
+      [
+        portalType,
+        title,
+        contactName,
+        contactEmail,
+        contactPhone,
+        companyName,
+        propertyAddress,
+        status,
+        summary,
+        notes,
+        deadlineAt,
+        updatedAt,
+        portal.id
+      ]
+    );
+
+    if (req.body?.logUpdate !== false) {
+      await createClientPortalActivity({
+        portalId: portal.id,
+        eventType: 'status',
+        visibility: 'portal',
+        title: 'Portal updated',
+        body: `Status is now ${status.replace(/-/g, ' ')}.${summary ? ` ${summary}` : ''}`.trim(),
+        authorUserId: decoded.id,
+        authorName: decoded.name,
+        authorEmail: decoded.email,
+        metadata: { status, deadlineAt }
+      });
+    }
+
+    const refreshedPortal = await getClientPortalById(portal.id);
+    return res.json({
+      portal: await buildClientPortalPayload(req, refreshedPortal, { includeInternal: true, includeAccessToken: true })
+    });
+  } catch (error) {
+    console.error('Failed to update client portal:', error);
+    return res.status(500).json({ error: 'Unable to update the client portal.' });
+  }
+});
+
+app.post('/api/client-portals/:portalId/activity', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const portal = await getClientPortalById(req.params.portalId);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    const body = normalizeClientPortalPlainText(req.body?.body || '', 6000);
+    const title = normalizeClientPortalPlainText(req.body?.title || '', 200);
+    if (!body && !title) {
+      return res.status(400).json({ error: 'An activity note or title is required.' });
+    }
+
+    const activity = await createClientPortalActivity({
+      portalId: portal.id,
+      eventType: req.body?.eventType,
+      visibility: req.body?.visibility,
+      title,
+      body,
+      authorUserId: decoded.id,
+      authorName: decoded.name,
+      authorEmail: decoded.email,
+      metadata: req.body?.metadata
+    });
+
+    await dbRun('UPDATE client_portals SET updated_at = ? WHERE id = ?', [Date.now(), portal.id]);
+
+    return res.status(201).json({ activity: serializeClientPortalActivity(activity) });
+  } catch (error) {
+    console.error('Failed to add client portal activity:', error);
+    return res.status(500).json({ error: 'Unable to add the portal activity.' });
+  }
+});
+
+app.post('/api/client-portals/:portalId/documents', (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  userUploadMemory.single('file')(req, res, async (uploadError) => {
+    if (uploadError) {
+      const uploadMessage = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
+        ? 'Files must be 15 MB or smaller.'
+        : (uploadError && uploadError.message ? uploadError.message : 'Failed to upload the file.');
+      return res.status(400).json({ error: uploadMessage });
+    }
+
+    try {
+      const portal = await getClientPortalById(req.params.portalId);
+      if (!portal) {
+        return res.status(404).json({ error: 'Portal not found.' });
       }
 
-      const submissions = Array.isArray(rows)
-        ? rows.map((row) => {
-            let conditionIssues = [];
-            try {
-              const parsed = JSON.parse(String(row.condition_issues || '[]'));
-              conditionIssues = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-            } catch (error) {
-              conditionIssues = [];
-            }
+      const uploadedFile = req.file;
+      const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(uploadedFile?.originalname || '').trim()));
+      const extension = path.extname(fileName).toLowerCase();
 
-            return {
-              id: row.id,
-              sellerName: String(row.seller_name || ''),
-              sellerEmail: String(row.seller_email || ''),
-              sellerPhone: String(row.seller_phone || ''),
-              referredBy: String(row.referred_by || ''),
-              smsConsent: Number(row.sms_consent || 0) === 1,
-              smsConsentText: String(row.sms_consent_text || ''),
-              smsConsentAt: row.sms_consent_at || null,
-              propertyAddress: String(row.property_address || ''),
-              propertyCity: String(row.property_city || ''),
-              propertyState: String(row.property_state || ''),
-              propertyZip: String(row.property_zip || ''),
-              propertyType: String(row.property_type || ''),
-              bedrooms: String(row.bedrooms || ''),
-              bathrooms: String(row.bathrooms || ''),
-              squareFeet: String(row.square_feet || ''),
-              askingPrice: String(row.asking_price || ''),
-              timeline: String(row.timeline || ''),
-              conditionIssues,
-              issueNotes: String(row.issue_notes || ''),
-              status: String(row.status || 'new'),
-              createdAt: row.created_at
-            };
-          })
-        : [];
+      if (!uploadedFile || !fileName) {
+        return res.status(400).json({ error: 'A file is required.' });
+      }
 
-      return res.json({ submissions });
+      if (!isAllowedUserUploadForScope('client-portal', extension, uploadedFile.mimetype || '')) {
+        return res.status(400).json({ error: 'This file type is not allowed for portal uploads.' });
+      }
+
+      if (!uploadedFile.buffer || !uploadedFile.buffer.length) {
+        return res.status(400).json({ error: 'The uploaded file was empty.' });
+      }
+
+      const createdRecord = await createUserUploadRecord({
+        ownerUserId: Number(decoded.id) || 0,
+        scope: 'client-portal',
+        contextKey: portal.id,
+        fileName,
+        fileSize: uploadedFile.size,
+        fileType: getContentTypeForFileName(fileName, uploadedFile.mimetype),
+        buffer: uploadedFile.buffer
+      });
+
+      await createClientPortalActivity({
+        portalId: portal.id,
+        eventType: 'document',
+        visibility: 'portal',
+        title: 'Document uploaded',
+        body: `${fileName} is ready in the portal documents section.`,
+        authorUserId: decoded.id,
+        authorName: decoded.name,
+        authorEmail: decoded.email,
+        metadata: { documentId: createdRecord.id }
+      });
+      await dbRun('UPDATE client_portals SET updated_at = ? WHERE id = ?', [Date.now(), portal.id]);
+
+      return res.status(201).json({
+        document: serializeClientPortalDocument(createdRecord, { portalId: portal.id })
+      });
+    } catch (error) {
+      console.error('Failed to upload client portal document:', error);
+      return res.status(500).json({ error: 'Unable to upload the portal document.' });
     }
-  );
+  });
+});
+
+app.get('/api/client-portals/:portalId/documents/:documentId/content', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const portal = await getClientPortalById(req.params.portalId);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    const uploadRecord = await getClientPortalDocument(portal.id, req.params.documentId);
+    if (!uploadRecord) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    const download = String(req.query?.download || '').trim() === '1';
+    const fileName = String(uploadRecord.original_file_name || 'document').trim() || 'document';
+    res.setHeader('Content-Type', getContentTypeForFileName(fileName, uploadRecord.file_type));
+    res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="${fileName.replace(/"/g, '')}"`);
+    await streamStoredUserUploadToResponse(uploadRecord, res);
+    return;
+  } catch (error) {
+    console.error('Failed to stream client portal document:', error);
+    return res.status(500).json({ error: 'Unable to open the requested portal document.' });
+  }
+});
+
+app.delete('/api/client-portals/:portalId/documents/:documentId', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const portal = await getClientPortalById(req.params.portalId);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    const uploadRecord = await getClientPortalDocument(portal.id, req.params.documentId);
+    if (!uploadRecord) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    await deleteStoredUserUpload(uploadRecord);
+    await dbRun('DELETE FROM user_uploads WHERE id = ?', [String(uploadRecord.id || '').trim()]);
+    await dbRun('UPDATE client_portals SET updated_at = ? WHERE id = ?', [Date.now(), portal.id]);
+    return res.json({ success: true, documentId: String(uploadRecord.id || '').trim() });
+  } catch (error) {
+    console.error('Failed to delete client portal document:', error);
+    return res.status(500).json({ error: 'Unable to delete the portal document.' });
+  }
+});
+
+app.get('/api/client-portals/access/:accessToken', async (req, res) => {
+  try {
+    const portal = await getClientPortalByAccessToken(req.params.accessToken);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    return res.json({ portal: await buildClientPortalPayload(req, portal, { includeInternal: false, includeAccessToken: false }) });
+  } catch (error) {
+    console.error('Failed to load public client portal:', error);
+    return res.status(500).json({ error: 'Unable to load the portal right now.' });
+  }
+});
+
+app.post('/api/client-portals/access/:accessToken/messages', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const portal = await getClientPortalByAccessToken(req.params.accessToken);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    const body = normalizeClientPortalPlainText(req.body?.body || '', 6000);
+    const authorName = normalizeClientPortalPlainText(req.body?.authorName || portal.contact_name || 'Client', 160);
+    if (!body) {
+      return res.status(400).json({ error: 'A message is required.' });
+    }
+
+    const activity = await createClientPortalActivity({
+      portalId: portal.id,
+      eventType: 'message',
+      visibility: 'portal',
+      title: 'Client message',
+      body,
+      authorName,
+      authorEmail: portal.contact_email || '',
+      metadata: { source: 'portal' }
+    });
+    await dbRun('UPDATE client_portals SET updated_at = ? WHERE id = ?', [Date.now(), portal.id]);
+
+    return res.status(201).json({ activity: serializeClientPortalActivity(activity) });
+  } catch (error) {
+    console.error('Failed to save public client portal message:', error);
+    return res.status(500).json({ error: 'Unable to send the message right now.' });
+  }
+});
+
+app.get('/api/client-portals/access/:accessToken/documents/:documentId/content', async (req, res) => {
+  try {
+    const portal = await getClientPortalByAccessToken(req.params.accessToken);
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found.' });
+    }
+
+    const uploadRecord = await getClientPortalDocument(portal.id, req.params.documentId);
+    if (!uploadRecord) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    const download = String(req.query?.download || '').trim() === '1';
+    const fileName = String(uploadRecord.original_file_name || 'document').trim() || 'document';
+    res.setHeader('Content-Type', getContentTypeForFileName(fileName, uploadRecord.file_type));
+    res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="${fileName.replace(/"/g, '')}"`);
+    await streamStoredUserUploadToResponse(uploadRecord, res);
+    return;
+  } catch (error) {
+    console.error('Failed to stream public client portal document:', error);
+    return res.status(500).json({ error: 'Unable to open the requested document.' });
+  }
+});
+
+app.get('/api/mls-saved-searches', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const searches = await loadMlsSavedSearchesForUser(decoded.id);
+    return res.json({ searches });
+  } catch (error) {
+    console.error('Failed to load MLS saved searches:', error);
+    return res.status(500).json({ error: 'Unable to load MLS saved searches.' });
+  }
+});
+
+app.post('/api/mls-saved-searches', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const searchName = normalizeMlsSavedSearchName(req.body?.searchName || req.body?.name || '');
+  const filters = normalizeMlsSavedSearchFilters(req.body?.filters);
+  const alertEnabled = req.body?.alertEnabled !== false;
+
+  if (!searchName) {
+    return res.status(400).json({ error: 'Search name is required.' });
+  }
+
+  try {
+    const result = await dbRun(
+      `INSERT INTO mls_saved_searches (
+        owner_user_id,
+        owner_email,
+        owner_name,
+        search_name,
+        filters_json,
+        alert_enabled,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [decoded.id, normalizeKnownEmail(decoded.email || ''), String(decoded.name || '').trim(), searchName, JSON.stringify(filters), alertEnabled ? 1 : 0]
+    );
+    const row = await loadSingleMlsSavedSearchForUser(result.lastID, decoded.id);
+    return res.json({ success: true, search: serializeMlsSavedSearchRow(row) });
+  } catch (error) {
+    console.error('Failed to create MLS saved search:', error);
+    return res.status(500).json({ error: 'Unable to create MLS saved search.' });
+  }
+});
+
+app.put('/api/mls-saved-searches/:id', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const existing = await loadSingleMlsSavedSearchForUser(req.params?.id, decoded.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Saved search not found.' });
+  }
+
+  const searchName = normalizeMlsSavedSearchName(req.body?.searchName || existing.search_name || '');
+  const filters = normalizeMlsSavedSearchFilters(req.body?.filters || JSON.parse(String(existing.filters_json || '{}')));
+  const alertEnabled = typeof req.body?.alertEnabled === 'boolean'
+    ? req.body.alertEnabled
+    : Number(existing.alert_enabled || 0) === 1;
+
+  if (!searchName) {
+    return res.status(400).json({ error: 'Search name is required.' });
+  }
+
+  try {
+    await dbRun(
+      `UPDATE mls_saved_searches
+          SET search_name = ?,
+              filters_json = ?,
+              alert_enabled = ?,
+              updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND owner_user_id = ?`,
+      [searchName, JSON.stringify(filters), alertEnabled ? 1 : 0, Number(existing.id), decoded.id]
+    );
+    const row = await loadSingleMlsSavedSearchForUser(existing.id, decoded.id);
+    return res.json({ success: true, search: serializeMlsSavedSearchRow(row) });
+  } catch (error) {
+    console.error('Failed to update MLS saved search:', error);
+    return res.status(500).json({ error: 'Unable to update MLS saved search.' });
+  }
+});
+
+app.delete('/api/mls-saved-searches/:id', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    await dbRun('DELETE FROM mls_saved_searches WHERE id = ? AND owner_user_id = ?', [Number(req.params?.id) || 0, decoded.id]);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete MLS saved search:', error);
+    return res.status(500).json({ error: 'Unable to delete MLS saved search.' });
+  }
+});
+
+app.post('/api/mls-saved-searches/evaluate', express.json({ limit: '2mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const evaluations = Array.isArray(req.body?.evaluations) ? req.body.evaluations : [];
+  if (!evaluations.length) {
+    return res.status(400).json({ error: 'At least one saved search evaluation is required.' });
+  }
+
+  try {
+    const results = [];
+
+    for (const evaluation of evaluations.slice(0, 50)) {
+      const searchId = Number(evaluation?.id) || 0;
+      if (!searchId) {
+        continue;
+      }
+
+      const existing = await loadSingleMlsSavedSearchForUser(searchId, decoded.id);
+      if (!existing) {
+        continue;
+      }
+
+      const previousSnapshot = parseMlsSavedSearchSnapshot(existing.last_snapshot_json);
+      const currentSnapshot = normalizeMlsSavedSearchSnapshotEntries(evaluation?.currentMatches);
+      const diff = buildMlsSavedSearchDiff(previousSnapshot, currentSnapshot);
+
+      await dbRun(
+        `UPDATE mls_saved_searches
+            SET last_snapshot_json = ?,
+                last_snapshot_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND owner_user_id = ?`,
+        [JSON.stringify(currentSnapshot), searchId, decoded.id]
+      );
+
+      results.push({
+        searchId,
+        searchName: normalizeMlsSavedSearchName(existing.search_name || ''),
+        alertEnabled: Number(existing.alert_enabled || 0) === 1,
+        previousSnapshotAt: existing.last_snapshot_at ? new Date(existing.last_snapshot_at).toISOString() : null,
+        currentSnapshotAt: new Date().toISOString(),
+        previousCount: diff.previousCount,
+        currentCount: diff.currentCount,
+        newMatches: diff.newMatches.slice(0, 12),
+        droppedMatches: diff.droppedMatches.slice(0, 12)
+      });
+    }
+
+    return res.json({ results });
+  } catch (error) {
+    console.error('Failed to evaluate MLS saved searches:', error);
+    return res.status(500).json({ error: 'Unable to evaluate MLS saved searches.' });
+  }
 });
 
 app.get('/api/investor-attachments', (req, res) => {
@@ -17835,7 +20232,7 @@ app.post('/api/user-uploads', (req, res) => {
       const fileName = sanitizeAgentWorkspaceSegment(path.basename(String(uploadedFile?.originalname || '').trim()));
       const extension = path.extname(fileName).toLowerCase();
 
-      if (!scope || !['closed-deal', 'offer-package', 'fbg-message', 'property-detail'].includes(scope)) {
+      if (!scope || !['closed-deal', 'offer-package', 'fbg-message', 'property-detail', 'client-portal'].includes(scope)) {
         return res.status(400).json({ error: 'A valid upload scope is required.' });
       }
 
@@ -18222,6 +20619,188 @@ app.delete('/api/closed-deals/:dealId', async (req, res) => {
   }
 });
 
+app.get('/api/team-tasks/dashboard', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    await purgeSuppressedAccounts();
+    const tasks = await listVisibleTeamTasksForUser(decoded);
+    const scoreboard = await buildTeamTaskScoreboard();
+    const mine = tasks.filter((task) => Number(task.assignedTo?.id) === Number(decoded.id));
+    const overdueMine = mine.filter((task) => task.isOverdue && task.status !== 'done');
+    const dueSoonMine = mine.filter((task) => {
+      if (task.status === 'done' || !task.dueAt || task.isOverdue) {
+        return false;
+      }
+      return (task.dueAt - Date.now()) <= (2 * 86400000);
+    });
+
+    return res.json({
+      success: true,
+      tasks,
+      myTasks: mine,
+      alertSummary: {
+        overdueCount: overdueMine.length,
+        dueSoonCount: dueSoonMine.length,
+        openCount: mine.filter((task) => task.status !== 'done').length
+      },
+      scoreboard
+    });
+  } catch (error) {
+    console.error('Failed to load team tasks dashboard:', error);
+    return res.status(500).json({ error: 'Unable to load team tasks.' });
+  }
+});
+
+app.post('/api/team-tasks', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const title = normalizeTeamTaskTitle(req.body?.title || '');
+    const description = normalizeTeamTaskDescription(req.body?.description || '');
+    const priority = normalizeTeamTaskPriority(req.body?.priority || 'p2');
+    const dueAt = normalizeTeamTaskDueAt(req.body?.dueAt);
+    const assignedToUserId = Number(req.body?.assignedToUserId) || 0;
+
+    if (!title) {
+      return res.status(400).json({ error: 'Task title is required.' });
+    }
+
+    if (!assignedToUserId) {
+      return res.status(400).json({ error: 'Choose a team member to assign the task to.' });
+    }
+
+    const assignedUser = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [assignedToUserId]);
+    if (!assignedUser || isSuppressedAccountIdentity(assignedUser)) {
+      return res.status(404).json({ error: 'Assigned user was not found.' });
+    }
+
+    const taskId = crypto.randomUUID();
+    const now = Date.now();
+    await dbRun(
+      `INSERT INTO team_tasks (
+        id, title, description, priority, status, due_at,
+        assigned_to_user_id, assigned_to_key, assigned_to_email, assigned_to_name,
+        created_by_user_id, created_by_key, created_by_email, created_by_name,
+        completed_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [
+        taskId,
+        title,
+        description,
+        priority,
+        dueAt,
+        assignedToUserId,
+        normalizeClientPortalSourceValue(assignedUser.email || assignedUser.name || ''),
+        normalizeKnownEmail(assignedUser.email || ''),
+        normalizeClientPortalPlainText(assignedUser.name || '', 160),
+        Number(decoded.id) || 0,
+        normalizeClientPortalSourceValue(decoded.email || decoded.name || ''),
+        normalizeKnownEmail(decoded.email || ''),
+        normalizeClientPortalPlainText(decoded.name || '', 160),
+        now,
+        now
+      ]
+    );
+
+    const task = serializeTeamTask(await getTeamTaskById(taskId));
+    return res.status(201).json({ success: true, task });
+  } catch (error) {
+    console.error('Failed to create team task:', error);
+    return res.status(500).json({ error: 'Unable to create the task.' });
+  }
+});
+
+app.patch('/api/team-tasks/:taskId', express.json({ limit: '1mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const existingTask = await getTeamTaskById(req.params?.taskId);
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    if (!canManageTeamTask(existingTask, decoded)) {
+      return res.status(403).json({ error: 'You do not have access to update this task.' });
+    }
+
+    const nextTitle = Object.prototype.hasOwnProperty.call(req.body || {}, 'title')
+      ? normalizeTeamTaskTitle(req.body?.title || '')
+      : normalizeTeamTaskTitle(existingTask.title || '');
+    const nextDescription = Object.prototype.hasOwnProperty.call(req.body || {}, 'description')
+      ? normalizeTeamTaskDescription(req.body?.description || '')
+      : normalizeTeamTaskDescription(existingTask.description || '');
+    const nextPriority = Object.prototype.hasOwnProperty.call(req.body || {}, 'priority')
+      ? normalizeTeamTaskPriority(req.body?.priority)
+      : normalizeTeamTaskPriority(existingTask.priority);
+    const nextStatus = Object.prototype.hasOwnProperty.call(req.body || {}, 'status')
+      ? normalizeTeamTaskStatus(req.body?.status)
+      : normalizeTeamTaskStatus(existingTask.status);
+    const nextDueAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'dueAt')
+      ? normalizeTeamTaskDueAt(req.body?.dueAt)
+      : normalizeTeamTaskDueAt(existingTask.due_at);
+    const completedAt = nextStatus === 'done'
+      ? (Number(existingTask.completed_at) || Date.now())
+      : 0;
+
+    if (!nextTitle) {
+      return res.status(400).json({ error: 'Task title is required.' });
+    }
+
+    await dbRun(
+      `UPDATE team_tasks
+          SET title = ?,
+              description = ?,
+              priority = ?,
+              status = ?,
+              due_at = ?,
+              completed_at = ?,
+              updated_at = ?
+        WHERE id = ?`,
+      [nextTitle, nextDescription, nextPriority, nextStatus, nextDueAt, completedAt, Date.now(), String(existingTask.id || '').trim()]
+    );
+
+    const task = serializeTeamTask(await getTeamTaskById(existingTask.id));
+    return res.json({ success: true, task });
+  } catch (error) {
+    console.error('Failed to update team task:', error);
+    return res.status(500).json({ error: 'Unable to update the task.' });
+  }
+});
+
+app.delete('/api/team-tasks/:taskId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const existingTask = await getTeamTaskById(req.params?.taskId);
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    if (!canManageTeamTask(existingTask, decoded)) {
+      return res.status(403).json({ error: 'You do not have access to delete this task.' });
+    }
+
+    await dbRun('DELETE FROM team_tasks WHERE id = ?', [String(existingTask.id || '').trim()]);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete team task:', error);
+    return res.status(500).json({ error: 'Unable to delete the task.' });
+  }
+});
+
 app.get('/api/twilio/status', (req, res) => {
   const config = getTwilioMessagingConfig();
   const voiceConfig = getTwilioVoiceConfig();
@@ -18388,6 +20967,27 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
         propertyAddress: getTwilioMessagePropertyAddress(latestRow || payload)
       }
     });
+
+    if (latestRow && Number(latestRow.owner_user_id) > 0) {
+      await logOutreachEvent({
+        ownerUserId: Number(latestRow.owner_user_id) || 0,
+        channel: 'twilio',
+        direction: 'inbound',
+        contactName: String(payload.ProfileName || latestRow.contact_name || '').trim(),
+        contactPhone: details.contactPhone,
+        conversationKey: details.conversationKey,
+        templateName: '',
+        bodyPreview: body,
+        priority: 'medium',
+        sourceKind: 'twilio-webhook',
+        sourceRef: messageSid,
+        metadata: {
+          messageSid,
+          attachmentCount: attachments.length,
+          propertyAddress: getTwilioMessagePropertyAddress(latestRow || payload)
+        }
+      });
+    }
 
     return res.type('text/xml').send('<Response></Response>');
   } catch (error) {
@@ -18816,6 +21416,10 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
   const conversationKey = String(req.body?.conversationKey || '').trim();
   const body = String(req.body?.body || '').trim();
   const campaignName = String(req.body?.campaignName || '').trim();
+  const outreachTemplateKey = normalizeClientPortalSourceValue(req.body?.templateKey || 'twilio-reply');
+  const outreachTemplateName = normalizeClientPortalPlainText(req.body?.templateName || campaignName || 'Twilio Reply', 160);
+  const outreachPriority = normalizeOutreachPriority(req.body?.priority || 'medium');
+  const outreachNextFollowUpAt = Math.max(Number(req.body?.nextFollowUpAt) || 0, 0);
   const mediaUploadIds = Array.isArray(req.body?.mediaUploadIds) ? req.body.mediaUploadIds : [];
   const twilioMediaUploads = await listTwilioMediaUploadsForOwner(Number(decoded.id) || 0, mediaUploadIds);
   if (!conversationKey || (!body && twilioMediaUploads.length === 0)) {
@@ -18843,6 +21447,26 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
       ownerUser: decoded
     });
 
+    await logOutreachEvent({
+      ownerUserId: decoded.id,
+      channel: 'twilio',
+      direction: 'outbound',
+      contactName: String(latestRow.contact_name || '').trim(),
+      contactPhone: String(latestRow.contact_phone || '').trim(),
+      conversationKey,
+      templateKey: outreachTemplateKey,
+      templateName: outreachTemplateName,
+      bodyPreview: body,
+      priority: outreachPriority,
+      nextFollowUpAt: outreachNextFollowUpAt,
+      sourceKind: 'twilio-reply',
+      sourceRef: String(storedRow?.message_sid || '').trim(),
+      metadata: {
+        campaignName,
+        mediaCount: twilioMediaUploads.length
+      }
+    });
+
     return res.json({
       success: true,
       conversationKey,
@@ -18857,6 +21481,10 @@ app.post('/api/twilio/inbox/reply', async (req, res) => {
 app.post('/api/twilio/send-sms', async (req, res) => {
   const body = String(req.body?.body || '').trim();
   const campaignName = String(req.body?.campaignName || 'Untitled SMS Campaign').trim();
+  const outreachTemplateKey = normalizeClientPortalSourceValue(req.body?.templateKey || campaignName || 'twilio-campaign');
+  const outreachTemplateName = normalizeClientPortalPlainText(req.body?.templateName || campaignName || 'Twilio Campaign', 160);
+  const outreachPriority = normalizeOutreachPriority(req.body?.priority || 'medium');
+  const outreachNextFollowUpAt = Math.max(Number(req.body?.nextFollowUpAt) || 0, 0);
   const providedRecipients = Array.isArray(req.body?.recipients) ? req.body.recipients : [];
   const mediaUploadIds = Array.isArray(req.body?.mediaUploadIds) ? req.body.mediaUploadIds : [];
   const scheduledFor = normalizeTwilioScheduledFor(req.body?.scheduleAt);
@@ -18945,6 +21573,30 @@ app.post('/api/twilio/send-sms', async (req, res) => {
       requestOrigin: getTwilioRequestOrigin(req),
       useRepeatHistoryFollowUp: useRepeatHistoryFollowUp && !scheduledFor
     });
+
+    if (authenticatedUser && Array.isArray(result?.sent) && result.sent.length) {
+      await Promise.all(result.sent.map((item) => logOutreachEvent({
+        ownerUserId: authenticatedUser.id,
+        channel: 'twilio',
+        direction: 'outbound',
+        contactName: String(item?.contactName || item?.name || '').trim(),
+        contactPhone: String(item?.contactPhone || item?.phone || '').trim(),
+        conversationKey: String(item?.conversationKey || '').trim(),
+        templateKey: outreachTemplateKey,
+        templateName: outreachTemplateName,
+        bodyPreview: body,
+        priority: outreachPriority,
+        nextFollowUpAt: outreachNextFollowUpAt,
+        sourceKind: 'twilio-campaign',
+        sourceRef: String(item?.messageSid || item?.sid || item?.conversationKey || '').trim(),
+        metadata: {
+          campaignName,
+          scheduledFor: '',
+          mediaCount: mediaUploadIds.length
+        }
+      })));
+    }
+
     return res.json(result);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 500).json({

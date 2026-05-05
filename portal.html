@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deal Portal | FAST BRIDGE GROUP LLC</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+        }
+
+        .portal-shell {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 32px 18px 80px;
+        }
+
+        .portal-topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .portal-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .portal-brand img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .portal-eyebrow {
+            font-size: 12px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .portal-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .portal-title {
+            margin: 6px 0 10px;
+            font-size: clamp(2rem, 4vw, 3.25rem);
+        }
+
+        .portal-subtitle {
+            margin: 0;
+            color: var(--text-secondary);
+            max-width: 70ch;
+        }
+
+        .portal-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .portal-badge {
+            border: 1px solid rgba(var(--accent-light-rgb), 0.26);
+            background: rgba(var(--accent-rgb), 0.14);
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .portal-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.95fr);
+            gap: 18px;
+        }
+
+        .portal-column,
+        .portal-side {
+            display: grid;
+            gap: 18px;
+        }
+
+        .portal-card {
+            padding: 22px;
+        }
+
+        .portal-section-title {
+            margin: 0 0 10px;
+            font-size: 1.15rem;
+        }
+
+        .portal-meta-list,
+        .portal-document-list,
+        .portal-timeline,
+        .portal-sms-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .portal-meta-item,
+        .portal-document-item,
+        .portal-event,
+        .portal-sms-item {
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .portal-document-row,
+        .portal-event-head,
+        .portal-sms-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .portal-empty {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        .portal-status-banner {
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.42);
+            color: var(--text-primary);
+        }
+
+        .portal-status-banner.is-error {
+            border-color: rgba(248, 113, 113, 0.42);
+            color: #fecaca;
+        }
+
+        .portal-form {
+            display: grid;
+            gap: 12px;
+        }
+
+        .portal-form-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .portal-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .portal-inline-input,
+        .portal-textarea,
+        .portal-select {
+            width: 100%;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            padding: 12px 14px;
+            font: inherit;
+        }
+
+        .portal-textarea {
+            min-height: 118px;
+            resize: vertical;
+        }
+
+        .portal-label {
+            display: grid;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .portal-share-link {
+            word-break: break-all;
+            color: var(--gold-light);
+            font-size: 13px;
+        }
+
+        .portal-doc-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .portal-admin-only[hidden],
+        .portal-public-only[hidden] {
+            display: none !important;
+        }
+
+        @media (max-width: 980px) {
+            .portal-hero,
+            .portal-grid,
+            .portal-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <main class="portal-shell">
+        <div class="portal-topbar">
+            <a class="portal-brand" href="index.html">
+                <img src="png photos/FAST LOGO 777.png" alt="FAST logo">
+                <div>
+                    <div class="portal-eyebrow">Private Deal Portal</div>
+                    <strong>FAST BRIDGE GROUP LLC</strong>
+                </div>
+            </a>
+            <div class="portal-actions">
+                <a id="portal-dashboard-link" class="card-btn portal-admin-only" href="dashboard.html" hidden>Back to Dashboard</a>
+                <button id="portal-copy-link" class="card-btn portal-admin-only" type="button" hidden>Copy Share Link</button>
+            </div>
+        </div>
+
+        <div id="portal-status-banner" class="portal-status-banner">Loading portal...</div>
+
+        <section class="portal-hero">
+            <article class="glass-card portal-card">
+                <div class="portal-eyebrow" id="portal-type-label">Portal</div>
+                <h1 id="portal-title" class="portal-title">Loading...</h1>
+                <p id="portal-subtitle" class="portal-subtitle">We are preparing your status, documents, and communication history.</p>
+                <div class="portal-badges">
+                    <span class="portal-badge" id="portal-status-badge">Status</span>
+                    <span class="portal-badge" id="portal-deadline-badge">No deadline set</span>
+                    <span class="portal-badge" id="portal-updated-badge">Updated just now</span>
+                </div>
+            </article>
+
+            <article class="glass-card portal-card">
+                <h2 class="portal-section-title">Portal Snapshot</h2>
+                <div class="portal-meta-list" id="portal-snapshot-list"></div>
+            </article>
+        </section>
+
+        <section class="portal-grid">
+            <div class="portal-column">
+                <article class="glass-card portal-card">
+                    <h2 class="portal-section-title">Deal Notes</h2>
+                    <div class="portal-meta-list">
+                        <div class="portal-meta-item">
+                            <strong>Current Summary</strong>
+                            <p id="portal-summary" class="portal-empty"></p>
+                        </div>
+                        <div class="portal-meta-item">
+                            <strong>Internal Notes Shared To Portal</strong>
+                            <p id="portal-notes" class="portal-empty"></p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="glass-card portal-card">
+                    <h2 class="portal-section-title">Portal Timeline</h2>
+                    <div id="portal-timeline" class="portal-timeline"></div>
+                </article>
+
+                <article class="glass-card portal-card">
+                    <h2 class="portal-section-title">Communication History</h2>
+                    <div id="portal-sms-history" class="portal-sms-list"></div>
+                </article>
+            </div>
+
+            <aside class="portal-side">
+                <article class="glass-card portal-card">
+                    <h2 class="portal-section-title">Documents</h2>
+                    <div id="portal-documents" class="portal-document-list"></div>
+                </article>
+
+                <article class="glass-card portal-card">
+                    <h2 class="portal-section-title">Contact</h2>
+                    <div id="portal-contact" class="portal-meta-list"></div>
+                </article>
+
+                <article class="glass-card portal-card portal-admin-only" id="portal-admin-card" hidden>
+                    <h2 class="portal-section-title">Manage Portal</h2>
+                    <form id="portal-admin-form" class="portal-form">
+                        <div class="portal-form-grid">
+                            <label class="portal-label">Title
+                                <input id="portal-admin-title" class="portal-inline-input" type="text" maxlength="200">
+                            </label>
+                            <label class="portal-label">Status
+                                <select id="portal-admin-status" class="portal-select">
+                                    <option value="new">New</option>
+                                    <option value="reviewing">Reviewing</option>
+                                    <option value="docs-requested">Docs Requested</option>
+                                    <option value="matching">Matching</option>
+                                    <option value="offer-sent">Offer Sent</option>
+                                    <option value="under-contract">Under Contract</option>
+                                    <option value="closed">Closed</option>
+                                    <option value="on-hold">On Hold</option>
+                                </select>
+                            </label>
+                            <label class="portal-label">Deadline
+                                <input id="portal-admin-deadline" class="portal-inline-input" type="datetime-local">
+                            </label>
+                            <label class="portal-label">Property / Buy Box
+                                <input id="portal-admin-property" class="portal-inline-input" type="text" maxlength="240">
+                            </label>
+                        </div>
+                        <label class="portal-label">Summary
+                            <textarea id="portal-admin-summary" class="portal-textarea"></textarea>
+                        </label>
+                        <label class="portal-label">Portal Notes
+                            <textarea id="portal-admin-notes" class="portal-textarea"></textarea>
+                        </label>
+                        <div class="portal-actions">
+                            <button class="card-btn active" type="submit">Save Portal</button>
+                            <span id="portal-share-link" class="portal-share-link"></span>
+                        </div>
+                    </form>
+                </article>
+
+                <article class="glass-card portal-card portal-admin-only" id="portal-upload-card" hidden>
+                    <h2 class="portal-section-title">Upload Documents</h2>
+                    <form id="portal-upload-form" class="portal-form">
+                        <input id="portal-upload-input" class="portal-inline-input" type="file">
+                        <div class="portal-actions">
+                            <button class="card-btn" type="submit">Upload</button>
+                        </div>
+                    </form>
+                </article>
+
+                <article class="glass-card portal-card portal-admin-only" id="portal-activity-card" hidden>
+                    <h2 class="portal-section-title">Log Update</h2>
+                    <form id="portal-activity-form" class="portal-form">
+                        <div class="portal-form-grid">
+                            <label class="portal-label">Type
+                                <select id="portal-activity-type" class="portal-select">
+                                    <option value="note">Note</option>
+                                    <option value="deadline">Deadline</option>
+                                    <option value="message">Message</option>
+                                    <option value="call">Call</option>
+                                    <option value="email">Email</option>
+                                    <option value="sms">SMS</option>
+                                    <option value="status">Status</option>
+                                </select>
+                            </label>
+                            <label class="portal-label">Visibility
+                                <select id="portal-activity-visibility" class="portal-select">
+                                    <option value="portal">Visible in portal</option>
+                                    <option value="internal">Internal only</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label class="portal-label">Title
+                            <input id="portal-activity-title" class="portal-inline-input" type="text" maxlength="200">
+                        </label>
+                        <label class="portal-label">Body
+                            <textarea id="portal-activity-body" class="portal-textarea"></textarea>
+                        </label>
+                        <div class="portal-actions">
+                            <button class="card-btn" type="submit">Add Update</button>
+                        </div>
+                    </form>
+                </article>
+
+                <article class="glass-card portal-card portal-public-only" id="portal-message-card" hidden>
+                    <h2 class="portal-section-title">Send Update Request</h2>
+                    <form id="portal-message-form" class="portal-form">
+                        <label class="portal-label">Your name
+                            <input id="portal-message-author" class="portal-inline-input" type="text" maxlength="160">
+                        </label>
+                        <label class="portal-label">Message
+                            <textarea id="portal-message-body" class="portal-textarea" placeholder="Ask for a status update, document, or next step."></textarea>
+                        </label>
+                        <div class="portal-actions">
+                            <button class="card-btn active" type="submit">Send Message</button>
+                        </div>
+                    </form>
+                </article>
+            </aside>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const portalId = String(params.get('portal') || '').trim();
+            const accessToken = String(params.get('access') || '').trim();
+            const isAdminMode = Boolean(portalId);
+            const statusBanner = document.getElementById('portal-status-banner');
+            const dashboardLink = document.getElementById('portal-dashboard-link');
+            const copyLinkButton = document.getElementById('portal-copy-link');
+            const adminCards = Array.from(document.querySelectorAll('.portal-admin-only'));
+            const publicCards = Array.from(document.querySelectorAll('.portal-public-only'));
+            const snapshotList = document.getElementById('portal-snapshot-list');
+            const documentsList = document.getElementById('portal-documents');
+            const timelineList = document.getElementById('portal-timeline');
+            const smsList = document.getElementById('portal-sms-history');
+            const contactList = document.getElementById('portal-contact');
+            const adminForm = document.getElementById('portal-admin-form');
+            const uploadForm = document.getElementById('portal-upload-form');
+            const activityForm = document.getElementById('portal-activity-form');
+            const messageForm = document.getElementById('portal-message-form');
+            const shareLink = document.getElementById('portal-share-link');
+            const state = { portal: null };
+
+            function getAuthToken() {
+                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function formatDateTime(value) {
+                const parsed = typeof value === 'number' ? value : Date.parse(String(value || ''));
+                if (!Number.isFinite(parsed)) {
+                    return 'Not available';
+                }
+                return new Date(parsed).toLocaleString();
+            }
+
+            function humanizeStatus(value) {
+                return String(value || 'new').replace(/-/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
+            }
+
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function setBanner(message, tone) {
+                statusBanner.textContent = message;
+                statusBanner.classList.toggle('is-error', tone === 'error');
+            }
+
+            async function fetchPortal() {
+                if (isAdminMode) {
+                    const token = getAuthToken();
+                    if (!token) {
+                        throw new Error('Admin sign-in is required to manage this portal.');
+                    }
+                    const response = await fetch(`/api/client-portals/${encodeURIComponent(portalId)}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                        cache: 'no-store'
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload && payload.error ? payload.error : 'Unable to load the portal.');
+                    }
+                    return payload.portal;
+                }
+
+                if (!accessToken) {
+                    throw new Error('Portal link is missing an access token.');
+                }
+
+                const response = await fetch(`/api/client-portals/access/${encodeURIComponent(accessToken)}`, { cache: 'no-store' });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to load the portal.');
+                }
+                return payload.portal;
+            }
+
+            function renderMetaList(items, target) {
+                target.innerHTML = items.map((item) => `
+                    <div class="portal-meta-item">
+                        <strong>${escapeHtml(item.label)}</strong>
+                        <div>${escapeHtml(item.value || 'Not available')}</div>
+                    </div>
+                `).join('');
+            }
+
+            function renderDocuments(portal) {
+                const documents = Array.isArray(portal.documents) ? portal.documents : [];
+                if (!documents.length) {
+                    documentsList.innerHTML = '<p class="portal-empty">No documents uploaded yet.</p>';
+                    return;
+                }
+
+                documentsList.innerHTML = documents.map((documentItem) => `
+                    <div class="portal-document-item">
+                        <div class="portal-document-row">
+                            <div>
+                                <strong>${escapeHtml(documentItem.fileName)}</strong>
+                                <div>${escapeHtml(formatDateTime(documentItem.updatedAt))}</div>
+                            </div>
+                            <div class="portal-doc-actions">
+                                <a class="card-btn" href="${escapeHtml(documentItem.contentPath)}" target="_blank" rel="noopener">Open</a>
+                                <a class="card-btn" href="${escapeHtml(documentItem.downloadPath)}">Download</a>
+                                ${isAdminMode ? `<button class="card-btn portal-delete-doc-btn" type="button" data-document-id="${escapeHtml(documentItem.id)}">Delete</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                if (isAdminMode) {
+                    documentsList.querySelectorAll('.portal-delete-doc-btn').forEach((button) => {
+                        button.addEventListener('click', async () => {
+                            await deleteDocument(String(button.getAttribute('data-document-id') || ''));
+                        });
+                    });
+                }
+            }
+
+            function renderTimeline(portal) {
+                const activity = Array.isArray(portal.activity) ? portal.activity : [];
+                if (!activity.length) {
+                    timelineList.innerHTML = '<p class="portal-empty">No portal updates yet.</p>';
+                    return;
+                }
+
+                timelineList.innerHTML = activity.map((entry) => `
+                    <div class="portal-event">
+                        <div class="portal-event-head">
+                            <strong>${escapeHtml(entry.title || humanizeStatus(entry.eventType))}</strong>
+                            <span>${escapeHtml(formatDateTime(entry.createdAt))}</span>
+                        </div>
+                        <div>${escapeHtml(entry.body || 'No additional details.')}</div>
+                        <div class="portal-eyebrow">${escapeHtml(entry.authorName || 'FAST BRIDGE GROUP')} • ${escapeHtml(humanizeStatus(entry.eventType))}${entry.visibility === 'internal' ? ' • Internal' : ''}</div>
+                    </div>
+                `).join('');
+            }
+
+            function renderSmsHistory(portal) {
+                const items = Array.isArray(portal.smsHistory) ? portal.smsHistory : [];
+                if (!items.length) {
+                    smsList.innerHTML = '<p class="portal-empty">No SMS history connected to this portal yet.</p>';
+                    return;
+                }
+
+                smsList.innerHTML = items.map((entry) => `
+                    <div class="portal-sms-item">
+                        <div class="portal-sms-head">
+                            <strong>${escapeHtml(entry.direction === 'outbound' ? 'FAST BRIDGE GROUP' : (entry.contactName || 'Client'))}</strong>
+                            <span>${escapeHtml(formatDateTime(entry.createdAt))}</span>
+                        </div>
+                        <div>${escapeHtml(entry.body || '')}</div>
+                    </div>
+                `).join('');
+            }
+
+            function renderContact(portal) {
+                renderMetaList([
+                    { label: 'Contact name', value: portal.contactName || 'Not available' },
+                    { label: 'Email', value: portal.contactEmail || 'Not available' },
+                    { label: 'Phone', value: portal.contactPhone || 'Not available' },
+                    { label: 'Company', value: portal.companyName || 'Not available' },
+                    { label: 'Property / Focus', value: portal.propertyAddress || 'Not available' }
+                ], contactList);
+            }
+
+            function fillAdminForm(portal) {
+                document.getElementById('portal-admin-title').value = portal.title || '';
+                document.getElementById('portal-admin-status').value = portal.status || 'new';
+                document.getElementById('portal-admin-property').value = portal.propertyAddress || '';
+                document.getElementById('portal-admin-summary').value = portal.summary || '';
+                document.getElementById('portal-admin-notes').value = portal.notes || '';
+                document.getElementById('portal-admin-deadline').value = portal.deadlineAt && String(portal.deadlineAt).includes('T')
+                    ? String(portal.deadlineAt).slice(0, 16)
+                    : '';
+                shareLink.textContent = portal.publicUrl || '';
+            }
+
+            function renderPortal(portal) {
+                state.portal = portal;
+                document.getElementById('portal-type-label').textContent = portal.portalType === 'investor' ? 'Investor Portal' : 'Seller Portal';
+                document.getElementById('portal-title').textContent = portal.title || 'Deal portal';
+                document.getElementById('portal-subtitle').textContent = portal.summary || 'Status updates, files, and communications will show here.';
+                document.getElementById('portal-status-badge').textContent = humanizeStatus(portal.status);
+                document.getElementById('portal-deadline-badge').textContent = portal.deadlineAt ? `Deadline ${formatDateTime(portal.deadlineAt)}` : 'No deadline set';
+                document.getElementById('portal-updated-badge').textContent = `Updated ${formatDateTime(portal.updatedAt)}`;
+                document.getElementById('portal-summary').textContent = portal.summary || 'No summary has been shared yet.';
+                document.getElementById('portal-notes').textContent = portal.notes || 'No portal notes have been shared yet.';
+                renderMetaList([
+                    { label: 'Portal type', value: portal.portalType === 'investor' ? 'Investor' : 'Seller' },
+                    { label: 'Current status', value: humanizeStatus(portal.status) },
+                    { label: 'Deadline', value: portal.deadlineAt ? formatDateTime(portal.deadlineAt) : 'No deadline set' },
+                    { label: 'Last updated', value: formatDateTime(portal.updatedAt) }
+                ], snapshotList);
+                renderDocuments(portal);
+                renderTimeline(portal);
+                renderSmsHistory(portal);
+                renderContact(portal);
+
+                if (isAdminMode) {
+                    adminCards.forEach((element) => { element.hidden = false; });
+                    publicCards.forEach((element) => { element.hidden = true; });
+                    dashboardLink.hidden = false;
+                    copyLinkButton.hidden = false;
+                    fillAdminForm(portal);
+                } else {
+                    adminCards.forEach((element) => { element.hidden = true; });
+                    publicCards.forEach((element) => { element.hidden = false; });
+                    const authorInput = document.getElementById('portal-message-author');
+                    if (authorInput && !authorInput.value) {
+                        authorInput.value = portal.contactName || '';
+                    }
+                }
+            }
+
+            async function reloadPortal(successMessage) {
+                const portal = await fetchPortal();
+                renderPortal(portal);
+                setBanner(successMessage || 'Portal loaded.', 'info');
+            }
+
+            async function saveAdminPortal(event) {
+                event.preventDefault();
+                if (!state.portal) {
+                    return;
+                }
+
+                const token = getAuthToken();
+                const response = await fetch(`/api/client-portals/${encodeURIComponent(state.portal.id)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title: document.getElementById('portal-admin-title').value.trim(),
+                        status: document.getElementById('portal-admin-status').value,
+                        propertyAddress: document.getElementById('portal-admin-property').value.trim(),
+                        summary: document.getElementById('portal-admin-summary').value.trim(),
+                        notes: document.getElementById('portal-admin-notes').value.trim(),
+                        deadlineAt: document.getElementById('portal-admin-deadline').value.trim()
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to save the portal.');
+                }
+                renderPortal(payload.portal);
+                setBanner('Portal saved.', 'info');
+            }
+
+            async function uploadDocument(event) {
+                event.preventDefault();
+                const input = document.getElementById('portal-upload-input');
+                const file = input.files && input.files[0];
+                if (!file || !state.portal) {
+                    throw new Error('Choose a file first.');
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch(`/api/client-portals/${encodeURIComponent(state.portal.id)}/documents`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${getAuthToken()}`
+                    },
+                    body: formData
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to upload the document.');
+                }
+
+                input.value = '';
+                await reloadPortal('Document uploaded.');
+            }
+
+            async function deleteDocument(documentId) {
+                if (!state.portal || !documentId) {
+                    return;
+                }
+
+                const response = await fetch(`/api/client-portals/${encodeURIComponent(state.portal.id)}/documents/${encodeURIComponent(documentId)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${getAuthToken()}`
+                    }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to delete the document.');
+                }
+
+                await reloadPortal('Document removed.');
+            }
+
+            async function addActivity(event) {
+                event.preventDefault();
+                if (!state.portal) {
+                    return;
+                }
+
+                const response = await fetch(`/api/client-portals/${encodeURIComponent(state.portal.id)}/activity`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({
+                        eventType: document.getElementById('portal-activity-type').value,
+                        visibility: document.getElementById('portal-activity-visibility').value,
+                        title: document.getElementById('portal-activity-title').value.trim(),
+                        body: document.getElementById('portal-activity-body').value.trim()
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to add the update.');
+                }
+
+                activityForm.reset();
+                await reloadPortal('Portal update added.');
+            }
+
+            async function sendPortalMessage(event) {
+                event.preventDefault();
+                if (!accessToken) {
+                    return;
+                }
+
+                const response = await fetch(`/api/client-portals/access/${encodeURIComponent(accessToken)}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        authorName: document.getElementById('portal-message-author').value.trim(),
+                        body: document.getElementById('portal-message-body').value.trim()
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to send the message.');
+                }
+
+                messageForm.reset();
+                await reloadPortal('Message sent.');
+            }
+
+            async function copyShareLink() {
+                if (!state.portal || !state.portal.publicUrl) {
+                    return;
+                }
+
+                await navigator.clipboard.writeText(state.portal.publicUrl);
+                setBanner('Share link copied.', 'info');
+            }
+
+            if (adminForm) {
+                adminForm.addEventListener('submit', async (event) => {
+                    try {
+                        await saveAdminPortal(event);
+                    } catch (error) {
+                        setBanner(error.message || 'Unable to save the portal.', 'error');
+                    }
+                });
+            }
+
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', async (event) => {
+                    try {
+                        await uploadDocument(event);
+                    } catch (error) {
+                        setBanner(error.message || 'Unable to upload the document.', 'error');
+                    }
+                });
+            }
+
+            if (activityForm) {
+                activityForm.addEventListener('submit', async (event) => {
+                    try {
+                        await addActivity(event);
+                    } catch (error) {
+                        setBanner(error.message || 'Unable to add the portal update.', 'error');
+                    }
+                });
+            }
+
+            if (messageForm) {
+                messageForm.addEventListener('submit', async (event) => {
+                    try {
+                        await sendPortalMessage(event);
+                    } catch (error) {
+                        setBanner(error.message || 'Unable to send the message.', 'error');
+                    }
+                });
+            }
+
+            if (copyLinkButton) {
+                copyLinkButton.addEventListener('click', async () => {
+                    try {
+                        await copyShareLink();
+                    } catch (error) {
+                        setBanner(error.message || 'Unable to copy the share link.', 'error');
+                    }
+                });
+            }
+
+            reloadPortal().catch((error) => {
+                setBanner(error && error.message ? error.message : 'Unable to load the portal.', 'error');
+            });
+        })();
+    </script>
+</body>
+</html>

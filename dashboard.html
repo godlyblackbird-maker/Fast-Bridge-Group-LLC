@@ -1164,6 +1164,7 @@
             font-weight: 500;
         }
 
+
         .notes-folder-modal-input:focus {
             outline: none;
         }
@@ -1533,9 +1534,16 @@ https://templatemo.com/tm-607-glass-admin
                                             <option value="none">No reminder</option>
                                         </select>
                                     </div>
+                                    <div class="form-group planner-full-width">
+                                        <label for="planner-task-assignee">Assign To Teammate</label>
+                                        <select id="planner-task-assignee" class="form-input">
+                                            <option value="">Choose teammate...</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="calendar-inline-actions">
                                     <button id="planner-add-btn" type="button" class="card-btn active">Add To Planner</button>
+                                    <button id="planner-assign-btn" type="button" class="card-btn">Assign Team Task</button>
                                 </div>
                                 <div class="planner-filters" role="tablist" aria-label="Planner filters">
                                     <button type="button" class="planner-filter-btn active" data-filter="selected-date">Selected Date <span id="planner-count-today" class="planner-count">0</span></button>
@@ -1544,6 +1552,33 @@ https://templatemo.com/tm-607-glass-admin
                                 </div>
                                 <div id="planner-task-list" class="outreach-list planner-task-list">
                                     <p class="outreach-empty">No planner items yet.</p>
+                                </div>
+                                <div class="card-header" style="margin-top: 20px;">
+                                    <div>
+                                        <h3 class="card-title">Team Execution Alerts</h3>
+                                        <p class="card-subtitle">Open tasks assigned to you, overdue follow-through, and who is carrying the team this week.</p>
+                                    </div>
+                                </div>
+                                <div id="planner-team-alerts" class="outreach-list planner-task-list">
+                                    <p class="outreach-empty">No team task alerts yet.</p>
+                                </div>
+                                <div class="card-header" style="margin-top: 20px;">
+                                    <div>
+                                        <h3 class="card-title">Assigned Team Tasks</h3>
+                                        <p class="card-subtitle">Server-backed accountability tasks tied to teammates, due dates, and completion.</p>
+                                    </div>
+                                </div>
+                                <div id="planner-team-task-list" class="outreach-list planner-task-list">
+                                    <p class="outreach-empty">No assigned team tasks yet.</p>
+                                </div>
+                                <div class="card-header" style="margin-top: 20px;">
+                                    <div>
+                                        <h3 class="card-title">Team Scoreboard</h3>
+                                        <p class="card-subtitle">Weekly completions, open load, and overdue drag by teammate.</p>
+                                    </div>
+                                </div>
+                                <div id="planner-team-scoreboard" class="outreach-list planner-task-list">
+                                    <p class="outreach-empty">No scoreboard data yet.</p>
                                 </div>
                             </div>
                         </div>

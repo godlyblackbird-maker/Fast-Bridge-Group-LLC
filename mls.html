@@ -393,6 +393,19 @@
                     <p class="card-subtitle" id="mls-alert-status">Alerts arm after your current listings are seen once. New MLS cards added later will trigger top-right and desktop notifications while this feed is presented under Loria Rigby Brokerage.</p>
                 </div>
 
+                <div class="glass-card mls-board-intro">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Saved Search Snapshot Alerts</h2>
+                            <p class="card-subtitle" id="mls-saved-search-alert-summary">Load your saved searches from MLS Search to compare today’s opportunities against the prior snapshot.</p>
+                        </div>
+                        <a href="mls-search.html" class="card-btn">Manage Searches</a>
+                    </div>
+                    <div id="mls-saved-search-alert-feed" class="outreach-list">
+                        <p class="outreach-empty">Loading saved search alerts...</p>
+                    </div>
+                </div>
+
 
                 <div class="glass-card mls-controls-card">
                     <div class="mls-controls-grid">
@@ -834,6 +847,284 @@
                 .catch(() => {
                     lastUpdatedEl.textContent = 'Not available';
                 });
+        })();
+
+        (function () {
+            const alertSummaryEl = document.getElementById('mls-saved-search-alert-summary');
+            const alertFeedEl = document.getElementById('mls-saved-search-alert-feed');
+            const alertStatusEl = document.getElementById('mls-alert-status');
+
+            if (!alertSummaryEl || !alertFeedEl) {
+                return;
+            }
+
+            function getAuthToken() {
+                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function getAuthHeaders(extraHeaders) {
+                const token = getAuthToken();
+                return {
+                    ...(extraHeaders || {}),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                };
+            }
+
+            async function fetchJsonWithAuth(url, options) {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: getAuthHeaders(options && options.headers)
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Request failed.');
+                }
+                return payload;
+            }
+
+            function normalizeNumber(value) {
+                const parsed = Number.parseFloat(String(value || '').replace(/[^\d.]/g, ''));
+                return Number.isFinite(parsed) ? parsed : 0;
+            }
+
+            function inferListingType(searchText) {
+                const haystack = String(searchText || '').toLowerCase();
+                if (haystack.includes('duplex') || haystack.includes('triplex') || haystack.includes('multi')) {
+                    return 'multi family';
+                }
+                if (haystack.includes('townhome')) {
+                    return 'townhome';
+                }
+                if (haystack.includes('condo')) {
+                    return 'condo';
+                }
+                if (haystack.includes('fixer') || haystack.includes('value add')) {
+                    return 'fixer';
+                }
+                return 'single family residence';
+            }
+
+            function buildListingCards() {
+                return Array.from(document.querySelectorAll('.mls-property-card')).map((card) => {
+                    const titleEl = card.querySelector('h3');
+                    const locationEl = card.querySelector('.mls-location');
+                    const noteEl = card.querySelector('.mls-note');
+                    const metrics = Array.from(card.querySelectorAll('.mls-metrics span')).map((node) => String(node.textContent || '').trim());
+                    const address = String(titleEl && titleEl.textContent || '').trim();
+                    const locationText = String(locationEl && locationEl.textContent || '').trim();
+                    const noteText = String(noteEl && noteEl.textContent || '').trim();
+                    const searchText = String(card.dataset.search || '').trim().toLowerCase();
+                    const city = String(card.dataset.city || '').trim();
+                    const county = String(card.dataset.county || '').trim();
+                    const price = Number(card.dataset.price || 0) || 0;
+                    const beds = normalizeNumber(metrics.find((entry) => /bed/i.test(entry)) || '0');
+                    const baths = normalizeNumber(metrics.find((entry) => /bath/i.test(entry)) || '0');
+                    const propertyType = inferListingType(`${searchText} ${noteText}`);
+                    const matchKey = `${address.toLowerCase()}::${city.toLowerCase()}::${price}`;
+                    return {
+                        matchKey,
+                        address,
+                        city,
+                        county,
+                        price,
+                        beds,
+                        baths,
+                        propertyType,
+                        searchText: `${searchText} ${locationText.toLowerCase()} ${noteText.toLowerCase()}`.trim()
+                    };
+                });
+            }
+
+            function listingMatchesSavedSearch(listing, filters) {
+                const currentFilters = filters && typeof filters === 'object' ? filters : {};
+                const haystack = [listing.address, listing.city, listing.county, listing.searchText].join(' ').toLowerCase();
+                const location = String(currentFilters.location || '').trim().toLowerCase();
+                const propertyType = String(currentFilters.propertyType || '').trim().toLowerCase();
+                const minPrice = normalizeNumber(currentFilters.minPrice || 0);
+                const maxPrice = normalizeNumber(currentFilters.maxPrice || 0);
+                const beds = normalizeNumber(currentFilters.beds || 0);
+                const baths = normalizeNumber(currentFilters.baths || 0);
+                const keywords = String(currentFilters.keywords || '')
+                    .split(',')
+                    .map((entry) => entry.trim().toLowerCase())
+                    .filter(Boolean);
+
+                if (location && !haystack.includes(location)) {
+                    return false;
+                }
+                if (propertyType && listing.propertyType !== propertyType) {
+                    return false;
+                }
+                if (minPrice > 0 && listing.price < minPrice) {
+                    return false;
+                }
+                if (maxPrice > 0 && listing.price > maxPrice) {
+                    return false;
+                }
+                if (beds > 0 && listing.beds < beds) {
+                    return false;
+                }
+                if (baths > 0 && listing.baths < baths) {
+                    return false;
+                }
+                if (keywords.length && !keywords.some((keyword) => haystack.includes(keyword))) {
+                    return false;
+                }
+
+                return true;
+            }
+
+            function formatCurrency(value) {
+                const numeric = Number(value || 0);
+                if (!Number.isFinite(numeric) || numeric <= 0) {
+                    return 'Not priced';
+                }
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    maximumFractionDigits: 0
+                }).format(numeric);
+            }
+
+            function formatDateTime(value) {
+                if (!value) {
+                    return 'No prior snapshot';
+                }
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) {
+                    return 'No prior snapshot';
+                }
+                return date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            }
+
+            async function maybeNotifyForMatches(results) {
+                const alertable = (Array.isArray(results) ? results : []).filter((entry) => entry && entry.alertEnabled && Array.isArray(entry.newMatches) && entry.newMatches.length > 0);
+                if (!alertable.length) {
+                    return;
+                }
+
+                if (typeof window.showDashboardToast === 'function') {
+                    alertable.forEach((entry) => {
+                        window.showDashboardToast('success', 'MLS Search Alert', `${entry.searchName}: ${entry.newMatches.length} new match${entry.newMatches.length === 1 ? '' : 'es'} in today’s feed.`);
+                    });
+                }
+
+                if (!('Notification' in window)) {
+                    return;
+                }
+
+                if (Notification.permission === 'default') {
+                    try {
+                        await Notification.requestPermission();
+                    } catch (error) {
+                        return;
+                    }
+                }
+
+                if (Notification.permission !== 'granted') {
+                    return;
+                }
+
+                alertable.forEach((entry) => {
+                    const firstMatch = entry.newMatches[0] || {};
+                    const body = `${entry.newMatches.length} new saved-search match${entry.newMatches.length === 1 ? '' : 'es'}${firstMatch.address ? `, starting with ${firstMatch.address}` : ''}.`;
+                    try {
+                        new Notification(`FAST MLS Alert: ${entry.searchName}`, { body });
+                    } catch (error) {
+                        // Ignore notification failures.
+                    }
+                });
+            }
+
+            function renderAlertResults(results) {
+                const items = Array.isArray(results) ? results : [];
+                if (!items.length) {
+                    alertSummaryEl.textContent = 'No saved searches yet. Save filters in MLS Search, then this page will compare today’s cards against the prior snapshot.';
+                    alertFeedEl.innerHTML = '<p class="outreach-empty">No saved searches connected to this MLS workspace yet.</p>';
+                    return;
+                }
+
+                const totalNewMatches = items.reduce((sum, item) => sum + (Array.isArray(item.newMatches) ? item.newMatches.length : 0), 0);
+                const searchesWithChanges = items.filter((item) => Array.isArray(item.newMatches) && item.newMatches.length > 0).length;
+                alertSummaryEl.textContent = searchesWithChanges > 0
+                    ? `${searchesWithChanges} saved search${searchesWithChanges === 1 ? '' : 'es'} found ${totalNewMatches} new match${totalNewMatches === 1 ? '' : 'es'} compared with the prior snapshot.`
+                    : 'Saved searches are synced. No new matches were found compared with the prior snapshot.';
+                if (alertStatusEl) {
+                    alertStatusEl.textContent = searchesWithChanges > 0
+                        ? `Saved-search alerts are active. ${totalNewMatches} new match${totalNewMatches === 1 ? '' : 'es'} were detected in today’s MLS cards compared with the prior snapshot.`
+                        : 'Saved-search alerts are active. Today’s MLS cards match the prior snapshot with no new opportunities detected.';
+                }
+
+                alertFeedEl.innerHTML = items.map((item) => {
+                    const newMatches = Array.isArray(item.newMatches) ? item.newMatches : [];
+                    const matchMarkup = newMatches.length
+                        ? `<div style="display:grid;gap:8px;margin-top:10px;">${newMatches.slice(0, 4).map((match) => `<div style="padding:10px 12px;border:1px solid rgba(148,163,184,0.18);border-radius:12px;background:rgba(255,255,255,0.04);"><strong>${match.address || 'New listing'}</strong><div style="margin-top:4px;font-size:13px;opacity:0.82;">${[match.city, match.county, match.price].filter(Boolean).join(' • ')}</div></div>`).join('')}</div>`
+                        : '<p class="outreach-item-body">No new matches since the last snapshot.</p>';
+                    return `
+                        <article class="outreach-item">
+                            <div class="outreach-item-head">
+                                <span class="outreach-item-title">${item.searchName}</span>
+                                <span class="outreach-status ${newMatches.length ? 'sent' : 'draft'}">${newMatches.length ? `${newMatches.length} new` : 'no change'}</span>
+                            </div>
+                            <p class="outreach-owner">Previous snapshot: ${item.previousCount} matches on ${formatDateTime(item.previousSnapshotAt)}</p>
+                            <p class="outreach-owner">Current snapshot: ${item.currentCount} matches</p>
+                            <p class="outreach-owner">Dropped since last snapshot: ${Array.isArray(item.droppedMatches) ? item.droppedMatches.length : 0}</p>
+                            ${matchMarkup}
+                        </article>
+                    `;
+                }).join('');
+            }
+
+            async function syncSavedSearchAlerts() {
+                if (!getAuthToken()) {
+                    alertSummaryEl.textContent = 'Sign in to sync saved searches and market alerts.';
+                    alertFeedEl.innerHTML = '<p class="outreach-empty">Sign in to compare today’s listings against your saved search snapshots.</p>';
+                    return;
+                }
+
+                try {
+                    const searchPayload = await fetchJsonWithAuth('/api/mls-saved-searches');
+                    const searches = Array.isArray(searchPayload && searchPayload.searches) ? searchPayload.searches : [];
+                    if (!searches.length) {
+                        renderAlertResults([]);
+                        return;
+                    }
+
+                    const listings = buildListingCards();
+                    const evaluations = searches.map((search) => ({
+                        id: search.id,
+                        currentMatches: listings
+                            .filter((listing) => listingMatchesSavedSearch(listing, search.filters || {}))
+                            .map((listing) => ({
+                                matchKey: listing.matchKey,
+                                address: listing.address,
+                                price: formatCurrency(listing.price),
+                                city: listing.city,
+                                county: listing.county
+                            }))
+                    }));
+                    const evaluationPayload = await fetchJsonWithAuth('/api/mls-saved-searches/evaluate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ evaluations })
+                    });
+                    const results = Array.isArray(evaluationPayload && evaluationPayload.results) ? evaluationPayload.results : [];
+                    renderAlertResults(results);
+                    await maybeNotifyForMatches(results);
+                } catch (error) {
+                    alertSummaryEl.textContent = String(error.message || 'Unable to compare saved searches against the current MLS feed.');
+                    alertFeedEl.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load saved search alerts.')}</p>`;
+                }
+            }
+
+            void syncSavedSearchAlerts();
         })();
     </script>
 </body>

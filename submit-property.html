@@ -1043,6 +1043,18 @@
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
+                            <div class="submit-field">
+                                <label for="financing-type">Best Purchase Type</label>
+                                <select id="financing-type" name="financingType">
+                                    <option value="">Select one</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Hard Money">Hard Money</option>
+                                    <option value="Private Money">Private Money</option>
+                                    <option value="Conventional">Conventional</option>
+                                    <option value="Seller Finance">Seller Finance</option>
+                                    <option value="1031">1031 Exchange</option>
+                                </select>
+                            </div>
                             <div class="submit-field full-width">
                                 <label for="property-address">Property Address</label>
                                 <input id="property-address" name="propertyAddress" type="text" placeholder="123 Main St" required>
@@ -1062,6 +1074,10 @@
                             <div class="submit-field">
                                 <label for="asking-price">How Much Would You Hope To Get?</label>
                                 <input id="asking-price" name="askingPrice" type="text" inputmode="numeric" data-submit-auto-commas="true" placeholder="$450,000">
+                            </div>
+                            <div class="submit-field">
+                                <label for="estimated-value">Estimated Market Value / ARV</label>
+                                <input id="estimated-value" name="estimatedValue" type="text" inputmode="numeric" data-submit-auto-commas="true" placeholder="$540,000">
                             </div>
                             <div class="submit-field">
                                 <label for="bedrooms">Bedrooms</label>
@@ -1129,6 +1145,7 @@
                     <p>Your submission is now in the FAST review queue.</p>
                     <div class="submit-success-message">
                         <strong>Thank you, you will be getting a email within 1-3 business days with our offer!</strong>
+                        <p id="seller-property-routing-note" style="margin:12px 0 0;color:var(--submit-copy);">FAST has routed your submission into the internal review queue.</p>
                     </div>
                 </section>
             </div>
@@ -1168,6 +1185,7 @@
             const submitButton = document.getElementById('seller-property-submit-btn');
             const formPanel = document.getElementById('seller-property-form-panel');
             const successCard = document.getElementById('seller-property-success-card');
+            const routingNote = document.getElementById('seller-property-routing-note');
             const sellerPhoneInput = document.getElementById('seller-phone');
             const themeSwitchButton = document.getElementById('submit-theme-switch');
             const themeLabel = document.getElementById('submit-theme-label');
@@ -1340,10 +1358,12 @@
                     propertyState: String(formData.get('propertyState') || '').trim(),
                     propertyZip: String(formData.get('propertyZip') || '').trim(),
                     propertyType: String(formData.get('propertyType') || '').trim(),
+                    financingType: String(formData.get('financingType') || '').trim(),
                     bedrooms: String(formData.get('bedrooms') || '').trim(),
                     bathrooms: String(formData.get('bathrooms') || '').trim(),
                     squareFeet: String(formData.get('squareFeet') || '').trim(),
                     askingPrice: String(formData.get('askingPrice') || '').trim(),
+                    estimatedValue: String(formData.get('estimatedValue') || '').trim(),
                     timeline: String(formData.get('timeline') || '').trim(),
                     conditionIssues,
                     issueNotes: String(formData.get('issueNotes') || '').trim()
@@ -1378,6 +1398,15 @@
                     const data = await response.json();
                     if (!response.ok) {
                         throw new Error(data.error || 'Unable to submit property.');
+                    }
+
+                    if (routingNote) {
+                        const matchSummary = data && data.buyerMatchSummary ? data.buyerMatchSummary : null;
+                        if (matchSummary && Number(matchSummary.totalMatches) > 0) {
+                            routingNote.textContent = `FAST routed this submission to the internal review queue and found ${matchSummary.totalMatches} active buyer fit${Number(matchSummary.totalMatches) === 1 ? '' : 's'} for the team to review.`;
+                        } else {
+                            routingNote.textContent = 'FAST has routed your submission into the internal review queue.';
+                        }
                     }
 
                     form.reset();

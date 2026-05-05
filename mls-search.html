@@ -803,6 +803,96 @@
             margin-top: 14px;
         }
 
+        .mls-search-saved-panel {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mls-search-alert-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 46px;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .mls-search-alert-toggle input {
+            width: 16px;
+            height: 16px;
+            accent-color: rgba(var(--accent-rgb), 1);
+        }
+
+        .mls-search-saved-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .mls-search-saved-card {
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mls-search-saved-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .mls-search-saved-card h3 {
+            margin: 0;
+            font-size: 16px;
+            line-height: 1.3;
+        }
+
+        .mls-search-saved-card p {
+            margin: 8px 0 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .mls-search-saved-meta,
+        .mls-search-saved-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .mls-search-saved-meta span {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .mls-search-saved-empty {
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
         .mls-search-anchor {
             scroll-margin-top: 92px;
         }
@@ -1045,7 +1135,29 @@
                             <div class="mls-search-action-row">
                                 <button type="button" id="mls-search-generate" class="mls-search-action-btn is-primary">Refresh Search Brief</button>
                                 <button type="button" id="mls-search-copy" class="mls-search-action-btn">Copy Search Brief</button>
+                                <button type="button" id="mls-search-save-current" class="mls-search-action-btn">Save Current Search</button>
                                 <button type="button" id="mls-search-clear" class="mls-search-action-btn">Clear Filters</button>
+                            </div>
+
+                            <div class="mls-search-saved-panel">
+                                <div class="outreach-input-grid">
+                                    <div class="form-group outreach-full-width">
+                                        <label for="mls-search-save-name">Saved Search Name</label>
+                                        <input id="mls-search-save-name" class="form-input" type="text" placeholder="North OC fixers under 700k">
+                                    </div>
+                                    <div class="form-group outreach-full-width">
+                                        <label class="mls-search-alert-toggle" for="mls-search-alert-enabled">
+                                            <input id="mls-search-alert-enabled" type="checkbox" checked>
+                                            <span>Enable market alerts and snapshot comparisons for this saved search</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mls-search-action-row">
+                                    <button type="button" id="mls-search-reset-editor" class="mls-search-action-btn">Start New Saved Search</button>
+                                    <a href="mls.html" class="mls-search-action-btn">Open MLS Hot Deals</a>
+                                </div>
+                                <div class="mls-search-status" id="mls-search-save-status"><strong>Saved Searches:</strong> Save your filter sets here, then use MLS Hot Deals to get new-match alerts against the latest listing snapshot.</div>
+                                <div class="mls-search-saved-list" id="mls-search-saved-list"></div>
                             </div>
                         </div>
                     </div>
@@ -1164,6 +1276,16 @@
             const operatorBrokerageEl = document.getElementById('mls-operator-brokerage');
             const operatorNameEl = document.getElementById('mls-operator-name');
             const operatorLicenseEl = document.getElementById('mls-operator-license');
+            const saveCurrentBtn = document.getElementById('mls-search-save-current');
+            const resetEditorBtn = document.getElementById('mls-search-reset-editor');
+            const saveNameInput = document.getElementById('mls-search-save-name');
+            const alertEnabledInput = document.getElementById('mls-search-alert-enabled');
+            const saveStatusEl = document.getElementById('mls-search-save-status');
+            const savedListEl = document.getElementById('mls-search-saved-list');
+
+            const MLS_SEARCH_NAME_FALLBACK = 'MLS Search';
+            let selectedSavedSearchId = null;
+            let savedSearches = [];
 
             fetch('/api/vow/participant-broker')
                 .then((response) => response.json().catch(() => ({})).then((data) => ({ ok: response.ok, data })))
@@ -1266,6 +1388,38 @@
                 return String((fields[key] && fields[key].value) || '').trim();
             }
 
+            function getAuthToken() {
+                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function getAuthHeaders(extraHeaders) {
+                const token = getAuthToken();
+                return {
+                    ...(extraHeaders || {}),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                };
+            }
+
+            async function fetchJsonWithAuth(url, options) {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: getAuthHeaders(options && options.headers)
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Request failed.');
+                }
+                return payload;
+            }
+
+            function setSaveStatus(message, tone) {
+                if (!saveStatusEl) {
+                    return;
+                }
+                saveStatusEl.innerHTML = `<strong>${tone === 'error' ? 'Saved Searches:' : 'Saved Searches:'}</strong> ${String(message || '').trim()}`;
+                saveStatusEl.style.borderColor = tone === 'error' ? 'rgba(248, 113, 113, 0.32)' : '';
+            }
+
             function buildSearchState() {
                 return {
                     location: getFieldValue('location'),
@@ -1277,6 +1431,177 @@
                     baths: getFieldValue('baths'),
                     keywords: getFieldValue('keywords')
                 };
+            }
+
+            function applySearchState(state) {
+                const nextState = state && typeof state === 'object' ? state : {};
+                if (fields.location) fields.location.value = nextState.location || '';
+                if (fields.type) fields.type.value = nextState.propertyType || '';
+                if (fields.radius) fields.radius.value = nextState.radius || 'local pocket';
+                if (fields.minPrice) fields.minPrice.value = nextState.minPrice || '';
+                if (fields.maxPrice) fields.maxPrice.value = nextState.maxPrice || '';
+                if (fields.beds) fields.beds.value = nextState.beds || '';
+                if (fields.baths) fields.baths.value = nextState.baths || '';
+                if (fields.keywords) fields.keywords.value = nextState.keywords || '';
+                updateSearchView();
+            }
+
+            function buildSavedSearchName(state) {
+                const location = String(state.location || '').trim();
+                const propertyType = String(state.propertyType || '').trim();
+                if (location && propertyType) {
+                    return `${location} ${propertyType}`.slice(0, 120);
+                }
+                return location || propertyType || MLS_SEARCH_NAME_FALLBACK;
+            }
+
+            function formatDateTime(value) {
+                if (!value) {
+                    return 'Not snapshot yet';
+                }
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) {
+                    return 'Not snapshot yet';
+                }
+                return date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            }
+
+            function renderSavedSearches() {
+                if (!savedListEl) {
+                    return;
+                }
+
+                if (!savedSearches.length) {
+                    savedListEl.innerHTML = '<div class="mls-search-saved-empty">No saved searches yet. Save the current filters to create reusable alerts for MLS Hot Deals.</div>';
+                    return;
+                }
+
+                savedListEl.innerHTML = savedSearches.map((search) => {
+                    const filters = search && search.filters ? search.filters : {};
+                    const summary = buildSearchSummary({
+                        location: filters.location || '',
+                        propertyType: filters.propertyType || '',
+                        radius: filters.radius || '',
+                        minPrice: filters.minPrice || '',
+                        maxPrice: filters.maxPrice || '',
+                        beds: filters.beds || '',
+                        baths: filters.baths || '',
+                        keywords: filters.keywords || ''
+                    });
+                    const isSelected = Number(search.id) === Number(selectedSavedSearchId);
+                    return `
+                        <article class="mls-search-saved-card" data-saved-search-id="${search.id}">
+                            <div class="mls-search-saved-card-head">
+                                <div>
+                                    <h3>${search.searchName}</h3>
+                                    <p>${summary}</p>
+                                </div>
+                                <span class="mls-filter-chip">${search.alertEnabled ? 'Alerts On' : 'Alerts Off'}</span>
+                            </div>
+                            <div class="mls-search-saved-meta">
+                                <span>${search.snapshotCount || 0} tracked match${Number(search.snapshotCount || 0) === 1 ? '' : 'es'}</span>
+                                <span>Last snapshot ${formatDateTime(search.lastSnapshotAt)}</span>
+                                ${isSelected ? '<span>Editing now</span>' : ''}
+                            </div>
+                            <div class="mls-search-saved-actions">
+                                <button type="button" class="mls-search-action-btn" data-saved-search-action="load" data-saved-search-id="${search.id}">Load</button>
+                                <button type="button" class="mls-search-action-btn" data-saved-search-action="delete" data-saved-search-id="${search.id}">Delete</button>
+                                <button type="button" class="mls-search-action-btn" data-saved-search-action="toggle-alert" data-saved-search-id="${search.id}">${search.alertEnabled ? 'Disable Alerts' : 'Enable Alerts'}</button>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            }
+
+            function populateSavedSearchEditor(search) {
+                const current = search && typeof search === 'object' ? search : null;
+                selectedSavedSearchId = current ? current.id : null;
+                if (saveNameInput) {
+                    saveNameInput.value = current ? current.searchName || '' : buildSavedSearchName(buildSearchState());
+                }
+                if (alertEnabledInput) {
+                    alertEnabledInput.checked = current ? Boolean(current.alertEnabled) : true;
+                }
+                if (saveCurrentBtn) {
+                    saveCurrentBtn.textContent = current ? 'Update Saved Search' : 'Save Current Search';
+                }
+                renderSavedSearches();
+            }
+
+            function resetSavedSearchEditor() {
+                selectedSavedSearchId = null;
+                if (saveNameInput) {
+                    saveNameInput.value = buildSavedSearchName(buildSearchState());
+                }
+                if (alertEnabledInput) {
+                    alertEnabledInput.checked = true;
+                }
+                if (saveCurrentBtn) {
+                    saveCurrentBtn.textContent = 'Save Current Search';
+                }
+                renderSavedSearches();
+            }
+
+            async function loadSavedSearches() {
+                if (!getAuthToken()) {
+                    setSaveStatus('Sign in to store reusable searches and market alerts.', 'info');
+                    if (savedListEl) {
+                        savedListEl.innerHTML = '<div class="mls-search-saved-empty">Sign in to save searches for daily MLS alerting.</div>';
+                    }
+                    return;
+                }
+
+                try {
+                    const payload = await fetchJsonWithAuth('/api/mls-saved-searches');
+                    savedSearches = Array.isArray(payload && payload.searches) ? payload.searches : [];
+                    renderSavedSearches();
+                    setSaveStatus('Save your current filters here, then open MLS Hot Deals to compare the live feed against the last saved snapshot.', 'info');
+                } catch (error) {
+                    setSaveStatus(String(error.message || 'Unable to load saved searches.'), 'error');
+                }
+            }
+
+            async function saveCurrentSearch() {
+                if (!getAuthToken()) {
+                    setSaveStatus('Sign in before saving MLS searches.', 'error');
+                    return;
+                }
+
+                const filters = buildSearchState();
+                const searchName = String((saveNameInput && saveNameInput.value) || '').trim() || buildSavedSearchName(filters);
+                const alertEnabled = Boolean(alertEnabledInput && alertEnabledInput.checked);
+
+                try {
+                    const payload = await fetchJsonWithAuth(selectedSavedSearchId ? `/api/mls-saved-searches/${selectedSavedSearchId}` : '/api/mls-saved-searches', {
+                        method: selectedSavedSearchId ? 'PUT' : 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            searchName,
+                            filters,
+                            alertEnabled
+                        })
+                    });
+                    const savedSearch = payload && payload.search ? payload.search : null;
+                    if (savedSearch) {
+                        const existingIndex = savedSearches.findIndex((entry) => Number(entry.id) === Number(savedSearch.id));
+                        if (existingIndex >= 0) {
+                            savedSearches.splice(existingIndex, 1, savedSearch);
+                        } else {
+                            savedSearches.unshift(savedSearch);
+                        }
+                        populateSavedSearchEditor(savedSearch);
+                    }
+                    setSaveStatus(`Saved "${searchName}". Open MLS Hot Deals to track new matches against the latest snapshot.`, 'info');
+                } catch (error) {
+                    setSaveStatus(String(error.message || 'Unable to save the search.'), 'error');
+                }
             }
 
             function buildSearchSummary(state) {
@@ -1470,6 +1795,7 @@
                     }
                 });
                 updateSearchView();
+                resetSavedSearchEditor();
             }
 
             function applyPreset(key) {
@@ -1521,6 +1847,9 @@
 
                 buildSignalItems(state);
                 renderNearbyProperties(state);
+                if (saveNameInput && !selectedSavedSearchId && !String(saveNameInput.value || '').trim()) {
+                    saveNameInput.value = buildSavedSearchName(state);
+                }
             }
 
             Object.values(fields).forEach((field) => {
@@ -1537,12 +1866,84 @@
                 button.addEventListener('click', () => setResultsTab(button.getAttribute('data-mls-results-tab')));
             });
 
+            if (savedListEl) {
+                savedListEl.addEventListener('click', async (event) => {
+                    const trigger = event.target instanceof HTMLElement ? event.target.closest('[data-saved-search-action]') : null;
+                    if (!trigger) {
+                        return;
+                    }
+
+                    const action = trigger.getAttribute('data-saved-search-action');
+                    const searchId = Number(trigger.getAttribute('data-saved-search-id')) || 0;
+                    const selectedSearch = savedSearches.find((entry) => Number(entry.id) === searchId);
+                    if (!selectedSearch) {
+                        return;
+                    }
+
+                    if (action === 'load') {
+                        applySearchState(selectedSearch.filters || {});
+                        populateSavedSearchEditor(selectedSearch);
+                        setResultsTab('search');
+                        setSaveStatus(`Loaded "${selectedSearch.searchName}" into the search builder.`, 'info');
+                        return;
+                    }
+
+                    if (action === 'delete') {
+                        try {
+                            await fetchJsonWithAuth(`/api/mls-saved-searches/${searchId}`, { method: 'DELETE' });
+                            savedSearches = savedSearches.filter((entry) => Number(entry.id) !== searchId);
+                            if (Number(selectedSavedSearchId) === searchId) {
+                                resetSavedSearchEditor();
+                            } else {
+                                renderSavedSearches();
+                            }
+                            setSaveStatus(`Deleted "${selectedSearch.searchName}".`, 'info');
+                        } catch (error) {
+                            setSaveStatus(String(error.message || 'Unable to delete the saved search.'), 'error');
+                        }
+                        return;
+                    }
+
+                    if (action === 'toggle-alert') {
+                        try {
+                            const payload = await fetchJsonWithAuth(`/api/mls-saved-searches/${searchId}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    searchName: selectedSearch.searchName,
+                                    filters: selectedSearch.filters,
+                                    alertEnabled: !selectedSearch.alertEnabled
+                                })
+                            });
+                            const updatedSearch = payload && payload.search ? payload.search : null;
+                            if (updatedSearch) {
+                                savedSearches = savedSearches.map((entry) => Number(entry.id) === searchId ? updatedSearch : entry);
+                                if (Number(selectedSavedSearchId) === searchId) {
+                                    populateSavedSearchEditor(updatedSearch);
+                                } else {
+                                    renderSavedSearches();
+                                }
+                            }
+                            setSaveStatus(`Alerts ${updatedSearch && updatedSearch.alertEnabled ? 'enabled' : 'disabled'} for "${selectedSearch.searchName}".`, 'info');
+                        } catch (error) {
+                            setSaveStatus(String(error.message || 'Unable to update alert settings.'), 'error');
+                        }
+                    }
+                });
+            }
+
             if (copyBtn) copyBtn.addEventListener('click', copyBrief);
             if (clearBtn) clearBtn.addEventListener('click', clearFilters);
             if (generateBtn) generateBtn.addEventListener('click', updateSearchView);
+            if (saveCurrentBtn) saveCurrentBtn.addEventListener('click', saveCurrentSearch);
+            if (resetEditorBtn) resetEditorBtn.addEventListener('click', resetSavedSearchEditor);
 
             setResultsTab('search');
             updateSearchView();
+            resetSavedSearchEditor();
+            void loadSavedSearches();
         })();
     </script>
 </body>

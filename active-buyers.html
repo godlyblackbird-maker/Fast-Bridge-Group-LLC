@@ -200,7 +200,7 @@
 
         .buyers-sheet-table {
             width: max-content;
-            min-width: 1220px;
+            min-width: 1380px;
             max-width: none;
             border-collapse: collapse;
         }
@@ -248,6 +248,30 @@
         .buyers-sheet-actions {
             display: flex;
             gap: 8px;
+        }
+
+        .buyers-sheet-table td.buyers-portal-cell {
+            min-width: 172px;
+            white-space: normal;
+        }
+
+        .buyers-portal-cell-content {
+            display: grid;
+            gap: 8px;
+        }
+
+        .buyers-portal-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .buyers-portal-status {
+            font-size: 12px;
+            color: var(--buyers-note);
+        }
+
+        .buyers-portal-status.is-error {
+            color: #fca5a5;
         }
 
         .buyers-sheet-table-wrap {
@@ -698,13 +722,20 @@
                                     <th>Contact</th>
                                     <th>Comments</th>
                                     <th>NOTES</th>
+                                    <th>Buy Box ZIPs</th>
+                                    <th>Min Price</th>
+                                    <th>Max Price</th>
+                                    <th>Asset Classes</th>
+                                    <th>Financing Types</th>
+                                    <th>Target Spread %</th>
+                                    <th>Portal</th>
                                 </tr>
                             </thead>
                             <tbody id="buyers-sheet-body">
                             </tbody>
                         </table>
                     </div>
-                    <p class="buyers-sheet-note">Tip: Only admins can use this list. Changes save to one shared admin sheet and refresh across admin sessions automatically.</p>
+                    <p class="buyers-sheet-note">Tip: Only admins can use this list. Changes save to one shared admin sheet and refresh across admin sessions automatically. Use comma-separated ZIPs, asset classes, and financing types to power buyer-match automation.</p>
                 </div>
             </section>
         </main>
@@ -1056,7 +1087,13 @@
                 'Company Name',
                 'Contact',
                 'Comments',
-                'NOTES'
+                'NOTES',
+                'Buy Box ZIPs',
+                'Min Price',
+                'Max Price',
+                'Asset Classes',
+                'Financing Types',
+                'Target Spread %'
             ];
 
             function safeReadJson(key) {
@@ -1216,7 +1253,7 @@
                 });
                 tr.appendChild(activeCell);
 
-                ['name', 'emailCategories', 'cellPhone', 'companyName', 'contact', 'comments', 'notes'].forEach(key => {
+                ['name', 'emailCategories', 'cellPhone', 'companyName', 'contact', 'comments', 'notes', 'buyBoxZips', 'minPrice', 'maxPrice', 'assetClasses', 'financingTypes', 'targetSpreadPercent'].forEach(key => {
                     const td = document.createElement('td');
                     td.contentEditable = 'true';
                     td.spellcheck = false;
@@ -1225,7 +1262,47 @@
                     tr.appendChild(td);
                 });
 
+                const portalCell = document.createElement('td');
+                portalCell.className = 'buyers-portal-cell';
+                const portalWrap = document.createElement('div');
+                portalWrap.className = 'buyers-portal-cell-content';
+                const portalButton = document.createElement('button');
+                portalButton.type = 'button';
+                portalButton.className = 'card-btn buyers-portal-btn';
+                portalButton.textContent = 'Open Portal';
+                const portalStatus = document.createElement('span');
+                portalStatus.className = 'buyers-portal-status';
+                portalStatus.textContent = 'Creates a private investor page.';
+                portalButton.addEventListener('click', async () => {
+                    const rowData = readBuyerRow(tr);
+                    await openInvestorPortalForRow(rowData, portalButton, portalStatus);
+                });
+                portalWrap.appendChild(portalButton);
+                portalWrap.appendChild(portalStatus);
+                portalCell.appendChild(portalWrap);
+                tr.appendChild(portalCell);
+
                 return tr;
+            }
+
+            function readBuyerRow(tr) {
+                const cells = tr.querySelectorAll('td');
+                return {
+                    activeBuyer: cells[0] ? cells[0].textContent.trim() : 'BUYER',
+                    name: cells[1] ? cells[1].textContent.trim() : '',
+                    emailCategories: cells[2] ? cells[2].textContent.trim() : '',
+                    cellPhone: cells[3] ? cells[3].textContent.trim() : '',
+                    companyName: cells[4] ? cells[4].textContent.trim() : '',
+                    contact: cells[5] ? cells[5].textContent.trim() : '',
+                    comments: cells[6] ? cells[6].textContent.trim() : '',
+                    notes: cells[7] ? cells[7].textContent.trim() : '',
+                    buyBoxZips: cells[8] ? cells[8].textContent.trim() : '',
+                    minPrice: cells[9] ? cells[9].textContent.trim() : '',
+                    maxPrice: cells[10] ? cells[10].textContent.trim() : '',
+                    assetClasses: cells[11] ? cells[11].textContent.trim() : '',
+                    financingTypes: cells[12] ? cells[12].textContent.trim() : '',
+                    targetSpreadPercent: cells[13] ? cells[13].textContent.trim() : ''
+                };
             }
 
             function applyActiveBuyerCellStyle(cell) {
@@ -1241,19 +1318,60 @@
             }
 
             function getRowsFromDom() {
-                return Array.from(body.querySelectorAll('tr')).map(tr => {
-                    const cells = tr.querySelectorAll('td');
-                    return {
-                        activeBuyer: cells[0] ? cells[0].textContent.trim() : 'BUYER',
-                        name: cells[1] ? cells[1].textContent.trim() : '',
-                        emailCategories: cells[2] ? cells[2].textContent.trim() : '',
-                        cellPhone: cells[3] ? cells[3].textContent.trim() : '',
-                        companyName: cells[4] ? cells[4].textContent.trim() : '',
-                        contact: cells[5] ? cells[5].textContent.trim() : '',
-                        comments: cells[6] ? cells[6].textContent.trim() : '',
-                        notes: cells[7] ? cells[7].textContent.trim() : ''
-                    };
-                });
+                return Array.from(body.querySelectorAll('tr')).map((tr) => readBuyerRow(tr));
+            }
+
+            async function openInvestorPortalForRow(rowData, triggerButton, statusNode) {
+                const primaryEmail = String((rowData && rowData.emailCategories) || '').split('|')[0].trim();
+                const contactName = String((rowData && rowData.name) || '').trim();
+                const propertyFocus = [rowData.assetClasses, rowData.buyBoxZips].filter(Boolean).join(' | ');
+
+                if (!contactName && !primaryEmail) {
+                    statusNode.textContent = 'Add at least a buyer name or email first.';
+                    statusNode.classList.add('is-error');
+                    return;
+                }
+
+                triggerButton.disabled = true;
+                statusNode.textContent = 'Opening investor portal...';
+                statusNode.classList.remove('is-error');
+
+                try {
+                    const payload = await fetchJson('/api/client-portals', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            portalType: 'investor',
+                            sourceKind: 'active-buyer',
+                            sourceRef: `${contactName || 'buyer'}::${primaryEmail || rowData.cellPhone || rowData.companyName || 'no-contact'}`,
+                            title: contactName || rowData.companyName || 'Investor portal',
+                            contactName,
+                            contactEmail: primaryEmail,
+                            contactPhone: rowData.cellPhone,
+                            companyName: rowData.companyName,
+                            propertyAddress: propertyFocus,
+                            status: 'matching',
+                            summary: rowData.comments || 'Active buyer portal is live. New fits, docs, deadlines, and communication history will appear here.',
+                            notes: rowData.notes,
+                            deadlineAt: ''
+                        })
+                    });
+
+                    const portal = payload && payload.portal ? payload.portal : null;
+                    if (!portal || !portal.id) {
+                        throw new Error('Portal response was incomplete.');
+                    }
+
+                    statusNode.textContent = portal.publicUrl ? 'Portal ready. Share link is inside the portal.' : 'Portal ready.';
+                    window.open(portal.adminUrl || `/portal.html?portal=${encodeURIComponent(portal.id)}`, '_blank', 'noopener');
+                } catch (error) {
+                    statusNode.textContent = error && error.message ? error.message : 'Unable to open the investor portal.';
+                    statusNode.classList.add('is-error');
+                } finally {
+                    triggerButton.disabled = false;
+                }
             }
 
             function getRowSignature(rows) {
@@ -1286,7 +1404,13 @@
                         row.companyName,
                         row.contact,
                         row.comments,
-                        row.notes
+                        row.notes,
+                        row.buyBoxZips,
+                        row.minPrice,
+                        row.maxPrice,
+                        row.assetClasses,
+                        row.financingTypes,
+                        row.targetSpreadPercent
                     ].map(escapeCsvValue).join(','));
                 });
                 return lines.join('\r\n');
@@ -1347,7 +1471,13 @@
                         && !String(single.companyName || '').trim()
                         && !String(single.contact || '').trim()
                         && !String(single.comments || '').trim()
-                        && !String(single.notes || '').trim();
+                        && !String(single.notes || '').trim()
+                        && !String(single.buyBoxZips || '').trim()
+                        && !String(single.minPrice || '').trim()
+                        && !String(single.maxPrice || '').trim()
+                        && !String(single.assetClasses || '').trim()
+                        && !String(single.financingTypes || '').trim()
+                        && !String(single.targetSpreadPercent || '').trim();
 
                     if (isSingleEmpty) {
                         rows = SEEDED_ROWS;

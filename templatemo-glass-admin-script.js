@@ -19,6 +19,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const MLS_LISTING_NOTIFICATIONS_KEY = 'mlsListingNotificationsByUser';
     const MESSAGE_NOTIFICATION_STATE_KEY = 'dashboardMessageNotificationStateByUser';
     const TWILIO_NOTIFICATION_STATE_KEY = 'dashboardTwilioNotificationStateByUser';
+    const TEAM_TASK_NOTIFICATION_STATE_KEY = 'dashboardTeamTaskNotificationStateByUser';
     const PROPERTY_ASSIGNMENTS_KEY = 'propertyAssignments';
     const FAST_SHARED_PROPERTY_MESSAGE_MARKER = '[FAST_SHARED_PROPERTY_V1]';
     const FAST_MESSAGE_BUNDLE_MARKER = '[FAST_MESSAGE_BUNDLE_V1]';
@@ -225,151 +226,6 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     let themeLogoObserver = null;
     let themeBackgroundMediaInitialized = false;
 
-    function getDealsScopedStatus(propertyKey, workspaceUserLike) {
-        const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
-        if (!normalizedPropertyKey) {
-            return '';
-        }
-
-        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
-            ? workspaceUserLike
-            : getWorkspaceUserContext();
-        const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
-        const workspaceStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
-        if (Object.prototype.hasOwnProperty.call(workspaceStatuses, normalizedPropertyKey)) {
-            return normalizeAgentStatusValue(workspaceStatuses[normalizedPropertyKey] || '');
-        }
-
-        if (!usersMatch(activeSessionUser, workspaceUser)) {
-            const sessionStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, activeSessionUser.key);
-            if (Object.prototype.hasOwnProperty.call(sessionStatuses, normalizedPropertyKey)) {
-                return normalizeAgentStatusValue(sessionStatuses[normalizedPropertyKey] || '');
-            }
-        }
-
-        return '';
-    }
-
-    function buildAssignmentSummaryLabel(assignmentMeta, workspaceUserLike) {
-        const assignedTo = assignmentMeta && assignmentMeta.assignedTo && typeof assignmentMeta.assignedTo === 'object'
-            ? assignmentMeta.assignedTo
-            : null;
-        if (!assignedTo) {
-            return '';
-        }
-
-        const assignedTargetLabel = String(assignedTo.name || 'Unknown user').trim() || 'Unknown user';
-        const assignedAt = assignmentMeta.assignedAt ? new Date(assignmentMeta.assignedAt) : null;
-        const assignedAtLabel = assignedAt && !Number.isNaN(assignedAt.getTime())
-            ? assignedAt.toLocaleDateString()
-            : '';
-
-        if (assignedAtLabel) {
-            return `Assigned to ${assignedTargetLabel} on ${assignedAtLabel}`;
-        }
-
-        return `Assigned to ${assignedTargetLabel}`;
-    }
-
-    function buildDealStatusClassName(statusValue) {
-        const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
-        return normalizedStatus.replace(/\s+/g, '-').replace(/[^a-z-]/g, '') || 'none';
-    }
-
-    function isImportedPropertyItem(item) {
-        if (!item || typeof item !== 'object') {
-            return false;
-        }
-
-        const itemId = String(item.id || '').trim().toLowerCase();
-        if (itemId.startsWith('manual:')) {
-            return true;
-        }
-
-        const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
-            ? item.propertySnapshot
-            : null;
-        const mlsNumber = String(snapshot?.mlsNumber || '').trim().toUpperCase();
-        const idxValue = String(snapshot?.idx || '').trim().toLowerCase();
-        return mlsNumber === 'MANUAL' || idxValue === 'manual mls import';
-    }
-
-    function resolveDealWorkspaceState(item, workspaceUserLike) {
-        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
-            ? workspaceUserLike
-            : getWorkspaceUserContext();
-        const baseSnapshot = item && item.propertySnapshot && typeof item.propertySnapshot === 'object'
-            ? item.propertySnapshot
-            : {};
-        const normalizedPropertyKey = makePropertyStorageKey(
-            item?.propertyKey
-            || baseSnapshot.address
-            || item?.address
-            || item?.propertyAddress
-        );
-        const assignmentRecord = normalizedPropertyKey ? getPropertyAssignmentRecord(normalizedPropertyKey) : null;
-        const assignmentSnapshot = assignmentRecord && assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object'
-            ? assignmentRecord.propertySnapshot
-            : {};
-        const mergedSnapshot = {
-            ...baseSnapshot,
-            ...assignmentSnapshot
-        };
-        const assignmentMeta = assignmentRecord
-            ? buildPropertyAssignmentMeta(assignmentRecord)
-            : (mergedSnapshot.propertyAssignment && typeof mergedSnapshot.propertyAssignment === 'object'
-                ? buildPropertyAssignmentMeta(mergedSnapshot.propertyAssignment)
-                : null);
-        const propertyAddress = String(
-            mergedSnapshot.address
-            || mergedSnapshot.propertyAddress
-            || item?.address
-            || item?.propertyAddress
-            || normalizedPropertyKey
-            || 'Property'
-        ).trim() || 'Property';
-        const statusValue = normalizeAgentStatusValue(
-            getDealsScopedStatus(normalizedPropertyKey, workspaceUser)
-            || mergedSnapshot.piqAgentStatus
-            || item?.piqAgentStatus
-            || 'none'
-        );
-        const baseDetail = buildDashboardPropertyDetailFallback(propertyAddress, statusValue, mergedSnapshot);
-        const nextAgentRecord = {
-            ...(baseDetail.agentRecord && typeof baseDetail.agentRecord === 'object' ? baseDetail.agentRecord : {}),
-            ...(mergedSnapshot.agentRecord && typeof mergedSnapshot.agentRecord === 'object' ? mergedSnapshot.agentRecord : {}),
-            agentStatus: formatAgentStatusLabel(statusValue)
-        };
-        const detailPayload = {
-            ...baseDetail,
-            ...mergedSnapshot,
-            address: propertyAddress,
-            propertyAddress,
-            piqAgentStatus: statusValue,
-            agentRecord: nextAgentRecord
-        };
-
-        if (assignmentMeta) {
-            detailPayload.propertyAssignment = assignmentMeta;
-        } else {
-            delete detailPayload.propertyAssignment;
-        }
-
-        return {
-            propertyKey: normalizedPropertyKey,
-            propertyAddress,
-            statusValue,
-            statusLabel: formatAgentStatusLabel(statusValue),
-            statusClassName: buildDealStatusClassName(statusValue),
-            assignmentRecord,
-            assignmentMeta,
-            assignmentSummary: buildAssignmentSummaryLabel(assignmentMeta, workspaceUser),
-            snapshot: detailPayload,
-            imageUrl: String(detailPayload.propertyImages?.[0] || item?.imageUrl || '').trim(),
-            locationLabel: String(detailPayload.marketInfo || detailPayload.location || item?.location || '-').trim() || '-'
-        };
-    }
-
     function getSoundSettings() {
         const defaults = {
             menuHover: true,
@@ -512,7 +368,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         closeButton.type = 'button';
         closeButton.className = 'dashboard-toast-close';
         closeButton.setAttribute('aria-label', 'Dismiss notification');
-            closeButton.textContent = '×';
+        closeButton.textContent = '×';
         head.appendChild(closeButton);
         toast.appendChild(head);
 
@@ -1394,6 +1250,32 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             conversationSignatures: nextState && nextState.conversationSignatures && typeof nextState.conversationSignatures === 'object'
                 ? nextState.conversationSignatures
                 : {},
+            updatedAt: Date.now()
+        });
+    }
+
+    function getTeamTaskNotificationState(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const stored = getUserScopedObject(TEAM_TASK_NOTIFICATION_STATE_KEY, workspaceUser.key);
+
+        return {
+            seeded: Boolean(stored.seeded),
+            overdueSignature: String(stored.overdueSignature || '').trim(),
+            dueSoonSignature: String(stored.dueSoonSignature || '').trim()
+        };
+    }
+
+    function setTeamTaskNotificationState(nextState, workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+
+        setUserScopedObject(TEAM_TASK_NOTIFICATION_STATE_KEY, workspaceUser.key, {
+            seeded: Boolean(nextState && nextState.seeded),
+            overdueSignature: String(nextState && nextState.overdueSignature || '').trim(),
+            dueSoonSignature: String(nextState && nextState.dueSoonSignature || '').trim(),
             updatedAt: Date.now()
         });
     }
@@ -9687,7 +9569,7 @@ function initNavbarDateTime() {
                 response: fmt([
                     'Structuring a strong first offer comes down to three pillars: <strong>pricing discipline, term clarity, and proof of strength.</strong>',
                     [
-                        '<strong>Anchor on ARV minus repairs minus profit margin.</strong> Do not guess - pull closed comps within the last 120 days, same bed/bath, within half a mile. Your max allowable offer (MAO) = ARV × 0.70 - estimated repairs.',
+                        '<strong>Anchor on ARV minus repairs minus profit margin.</strong> Do not guess - pull closed comps within the last 120 days, same bed/bath, within half a mile. Your max allowable offer (MAO) = ARV x 0.70 - estimated repairs.',
                         '<strong>Set your escrow timeline to 21-30 days</strong> unless the seller signals a different preference. Shorter close is often valued as highly as price.',
                         '<strong>Lead with clean terms.</strong> A non-contingent or inspection-only offer (with a short window like 7-10 days) reads as more serious than a heavily contingent one.',
                         '<strong>Include proof of funds</strong> - a bank statement or LOC letter. Agents often show this to listing agents before price is even discussed.',
@@ -9796,7 +9678,7 @@ function initNavbarDateTime() {
                         '<strong>1. ARV (After-Repair Value):</strong> Pulled from closed comps, not Zestimates. This is your ceiling.',
                         '<strong>2. All-in Acquisition Cost:</strong> Purchase price + closing costs (2-3%) + financing fees.',
                         '<strong>3. Rehab Budget:</strong> Contractor scope, line-item. Add a 10-15% contingency for surprises.',
-                        '<strong>4. Holding Costs:</strong> Monthly financing cost × projected hold period + taxes + insurance + utilities.',
+                        '<strong>4. Holding Costs:</strong> Monthly financing cost x projected hold period + taxes + insurance + utilities.',
                         '<strong>5. Net Profit / Cash-on-Cash Return:</strong> For flips: Sale price - agent commission (5-6%) - all-in cost. For rentals: Annual net operating income / total cash invested.',
                     ],
                     'A healthy flip in most markets targets a minimum $40K-$50K net profit or 20% ROI, whichever is higher. Below that, you are one contractor delay or slow market away from breaking even. On rentals, 8-10% cash-on-cash return is considered solid. Under 6%, the risk-reward may not justify locking up capital.',
@@ -15064,6 +14946,65 @@ function initNavbarDateTime() {
                 .replace(/'/g, '&#39;');
         }
 
+        async function openSellerPortal(item, triggerButton) {
+            if (!token) {
+                throw new Error('Missing auth token. Please sign in again.');
+            }
+
+            if (triggerButton) {
+                triggerButton.disabled = true;
+                triggerButton.textContent = 'Opening...';
+            }
+
+            try {
+                const propertyLine = [item.propertyAddress, item.propertyCity, item.propertyState, item.propertyZip]
+                    .map((entry) => String(entry || '').trim())
+                    .filter(Boolean)
+                    .join(', ');
+                const response = await fetch('/api/client-portals', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        portalType: 'seller',
+                        sourceKind: 'property-submission',
+                        sourceRef: String(item.id || ''),
+                        title: propertyLine || item.sellerName || 'Seller portal',
+                        contactName: item.sellerName,
+                        contactEmail: item.sellerEmail,
+                        contactPhone: item.sellerPhone,
+                        companyName: '',
+                        propertyAddress: propertyLine,
+                        status: item.status || 'new',
+                        summary: item.issueNotes || 'Seller submission received. Status, next steps, documents, and communication history now live here.',
+                        notes: Array.isArray(item.conditionIssues) && item.conditionIssues.length
+                            ? `Condition issues: ${item.conditionIssues.join(', ')}`
+                            : '',
+                        deadlineAt: ''
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to open the seller portal.');
+                }
+
+                const portal = payload && payload.portal ? payload.portal : null;
+                if (!portal || !portal.id) {
+                    throw new Error('Portal response was incomplete.');
+                }
+
+                window.open(portal.adminUrl || `/portal.html?portal=${encodeURIComponent(portal.id)}`, '_blank', 'noopener');
+                return portal;
+            } finally {
+                if (triggerButton) {
+                    triggerButton.disabled = false;
+                    triggerButton.textContent = 'Seller Portal';
+                }
+            }
+        }
+
         function renderSubmissions(items) {
             submissionsList.innerHTML = '';
 
@@ -15091,6 +15032,24 @@ function initNavbarDateTime() {
                     ? item.conditionIssues.map((issue) => escapeSubmissionText(issue)).join(' • ')
                     : 'No condition issues selected';
                 const sellerPhone = formatPhoneDisplayValue(item.sellerPhone || '');
+                const buyerMatches = Array.isArray(item.buyerMatches) ? item.buyerMatches.slice(0, 3) : [];
+                const buyerMatchSummary = item && item.buyerMatchSummary && Number(item.buyerMatchSummary.totalMatches) > 0
+                    ? `<p class="outreach-owner">Buyer Match Routing: ${escapeSubmissionText(String(item.buyerMatchSummary.totalMatches))} fit${Number(item.buyerMatchSummary.totalMatches) === 1 ? '' : 's'} | Top score ${escapeSubmissionText(String(item.buyerMatchSummary.topScore || 0))}</p>`
+                    : '<p class="outreach-owner">Buyer Match Routing: No active buyer fits scored yet.</p>';
+                const buyerMatchDetails = buyerMatches.length
+                    ? `<div style="display:grid;gap:8px;margin-top:10px;">${buyerMatches.map((match) => {
+                        const reasons = Array.isArray(match.reasons) && match.reasons.length
+                            ? match.reasons.map((reason) => escapeSubmissionText(reason)).join(' • ')
+                            : 'No match reasons available';
+                        return `<div style="padding:10px 12px;border:1px solid rgba(148,163,184,0.18);border-radius:12px;background:rgba(255,255,255,0.04);">
+                            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                                <strong>${escapeSubmissionText(match && match.buyer && match.buyer.name || 'Unnamed buyer')}</strong>
+                                <span>${escapeSubmissionText(String(match && match.score || 0))}/100</span>
+                            </div>
+                            <div style="margin-top:4px;font-size:13px;opacity:0.82;">${reasons}</div>
+                        </div>`;
+                    }).join('')}</div>`
+                    : '';
 
                 row.innerHTML = `
                     <div class="outreach-item-head">
@@ -15101,13 +15060,30 @@ function initNavbarDateTime() {
                     <p class="outreach-owner">Email: ${escapeSubmissionText(item.sellerEmail || 'No email provided')}</p>
                     <p class="outreach-owner">Phone: ${escapeSubmissionText(sellerPhone || 'No phone submitted')}</p>
                     <p class="outreach-owner">Property Type: ${escapeSubmissionText(item.propertyType || 'Not provided')}</p>
+                    <p class="outreach-owner">Financing Type: ${escapeSubmissionText(item.financingType || 'Not provided')}</p>
                     <p class="outreach-owner">Beds / Baths / Sq Ft: ${escapeSubmissionText(item.bedrooms || '-') } / ${escapeSubmissionText(item.bathrooms || '-') } / ${escapeSubmissionText(item.squareFeet || '-')}</p>
                     <p class="outreach-owner">Target Price: ${escapeSubmissionText(item.askingPrice || 'Not provided')}</p>
+                    <p class="outreach-owner">Estimated Value / ARV: ${escapeSubmissionText(item.estimatedValue || 'Not provided')}</p>
                     <p class="outreach-owner">Timeline: ${escapeSubmissionText(item.timeline || 'Not provided')}</p>
                     <p class="outreach-owner">Submitted: ${escapeSubmissionText(createdAt)}</p>
+                    ${buyerMatchSummary}
                     <p class="outreach-item-body"><strong>Condition:</strong> ${issues}</p>
                     <p class="outreach-item-body">${escapeSubmissionText(item.issueNotes || 'No extra property notes submitted.')}</p>
+                    <div class="outreach-item-actions">
+                        <button type="button" class="card-btn admin-seller-portal-btn">Seller Portal</button>
+                    </div>
+                    ${buyerMatchDetails}
                 `;
+                const portalButton = row.querySelector('.admin-seller-portal-btn');
+                if (portalButton) {
+                    portalButton.addEventListener('click', async () => {
+                        try {
+                            await openSellerPortal(item, portalButton);
+                        } catch (error) {
+                            window.alert(String(error && error.message ? error.message : 'Unable to open the seller portal.'));
+                        }
+                    });
+                }
                 submissionsList.appendChild(row);
             });
         }
@@ -15303,7 +15279,12 @@ function initNavbarDateTime() {
         const prioritySelect = document.getElementById('planner-task-priority');
         const reminderSelect = document.getElementById('planner-task-reminder');
         const addButton = document.getElementById('planner-add-btn');
+        const assignButton = document.getElementById('planner-assign-btn');
+        const assigneeSelect = document.getElementById('planner-task-assignee');
         const list = document.getElementById('planner-task-list');
+        const teamAlerts = document.getElementById('planner-team-alerts');
+        const teamTaskList = document.getElementById('planner-team-task-list');
+        const teamScoreboard = document.getElementById('planner-team-scoreboard');
         const filterButtons = Array.from(document.querySelectorAll('.planner-filter-btn[data-filter]'));
         const countToday = document.getElementById('planner-count-today');
         const countUpcoming = document.getElementById('planner-count-upcoming');
@@ -15337,9 +15318,276 @@ function initNavbarDateTime() {
         }
 
         const workspaceUser = getWorkspaceUserContext();
+        let teamUsers = [];
+        let teamTaskDashboard = { tasks: [], myTasks: [], alertSummary: { overdueCount: 0, dueSoonCount: 0, openCount: 0 }, scoreboard: [] };
         const ownerLabel = document.getElementById('todo-goal-owner-label');
         if (ownerLabel) {
             ownerLabel.textContent = `Workspace owner: ${workspaceUser.name}`;
+        }
+
+        function getTeamTaskToken() {
+            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        }
+
+        async function loadTeamUsers() {
+            if (!assigneeSelect) {
+                return;
+            }
+
+            const token = getTeamTaskToken();
+            if (!token) {
+                assigneeSelect.innerHTML = '<option value="">Sign in to assign</option>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Unable to load teammates.');
+                }
+
+                teamUsers = Array.isArray(payload.users) ? payload.users.filter(Boolean) : [];
+                assigneeSelect.innerHTML = '<option value="">Choose teammate...</option>';
+                teamUsers.forEach((user) => {
+                    const option = document.createElement('option');
+                    option.value = String(user.id || '').trim();
+                    option.textContent = user.email
+                        ? `${String(user.name || user.email || 'User').trim()} (${String(user.email || '').trim()})`
+                        : String(user.name || 'User').trim();
+                    if (String(user.email || '').trim().toLowerCase() === String(workspaceUser.email || '').trim().toLowerCase()) {
+                        option.selected = true;
+                    }
+                    assigneeSelect.appendChild(option);
+                });
+            } catch (_error) {
+                assigneeSelect.innerHTML = '<option value="">Unable to load teammates</option>';
+            }
+        }
+
+        function formatTeamTaskDueDate(value) {
+            const date = Number(value) ? new Date(Number(value)) : null;
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                return 'No due date';
+            }
+            return date.toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function renderTeamTaskAlerts() {
+            if (!teamAlerts) {
+                return;
+            }
+
+            const summary = teamTaskDashboard && teamTaskDashboard.alertSummary ? teamTaskDashboard.alertSummary : {};
+            const myTasks = Array.isArray(teamTaskDashboard?.myTasks) ? teamTaskDashboard.myTasks : [];
+            teamAlerts.innerHTML = '';
+
+            if (!myTasks.length) {
+                teamAlerts.innerHTML = '<p class="outreach-empty">No team task alerts yet.</p>';
+                return;
+            }
+
+            const rows = [
+                { label: 'Overdue', value: Number(summary.overdueCount) || 0, meta: 'Needs same-day recovery' },
+                { label: 'Due Soon', value: Number(summary.dueSoonCount) || 0, meta: 'Due within 48 hours' },
+                { label: 'Open', value: Number(summary.openCount) || 0, meta: 'Assigned to you' }
+            ];
+
+            rows.forEach((row) => {
+                const item = document.createElement('div');
+                item.className = 'outreach-item';
+                item.innerHTML = `<div><strong>${row.label}</strong><div class="outreach-meta">${row.meta}</div></div><span class="outreach-meta">${row.value}</span>`;
+                teamAlerts.appendChild(item);
+            });
+        }
+
+        async function updateTeamTask(taskId, payload) {
+            const token = getTeamTaskToken();
+            if (!token) {
+                throw new Error('Sign in again before updating team tasks.');
+            }
+
+            const response = await fetch(`/api/team-tasks/${encodeURIComponent(String(taskId || '').trim())}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json'
+                },
+                body: JSON.stringify(payload || {})
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Unable to update the team task.');
+            }
+            return data.task || null;
+        }
+
+        async function deleteTeamTask(taskId) {
+            const token = getTeamTaskToken();
+            if (!token) {
+                throw new Error('Sign in again before deleting team tasks.');
+            }
+
+            const response = await fetch(`/api/team-tasks/${encodeURIComponent(String(taskId || '').trim())}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json'
+                }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Unable to delete the team task.');
+            }
+        }
+
+        function renderTeamTaskList() {
+            if (!teamTaskList) {
+                return;
+            }
+
+            const tasks = Array.isArray(teamTaskDashboard?.tasks) ? teamTaskDashboard.tasks.slice() : [];
+            teamTaskList.innerHTML = '';
+
+            if (!tasks.length) {
+                teamTaskList.innerHTML = '<p class="outreach-empty">No assigned team tasks yet.</p>';
+                return;
+            }
+
+            tasks.slice(0, 12).forEach((task) => {
+                const card = document.createElement('article');
+                card.className = 'planner-task-item';
+                if (task.status === 'done') {
+                    card.classList.add('is-complete');
+                }
+                if (task.isOverdue && task.status !== 'done') {
+                    card.classList.add('is-overdue');
+                }
+
+                const bubble = document.createElement('button');
+                bubble.type = 'button';
+                bubble.className = 'planner-check-bubble';
+                bubble.setAttribute('aria-label', task.status === 'done' ? 'Mark team task as open' : 'Mark team task as done');
+                bubble.innerHTML = '<span class="planner-check-dot"></span>';
+                bubble.addEventListener('click', async () => {
+                    try {
+                        await updateTeamTask(task.id, { status: task.status === 'done' ? 'open' : 'done' });
+                        await loadTeamTaskDashboard();
+                    } catch (error) {
+                        showDashboardToast('error', 'Task Update Failed', error.message || 'Unable to update the team task.');
+                    }
+                });
+
+                const content = document.createElement('div');
+                content.className = 'planner-task-content';
+
+                const head = document.createElement('div');
+                head.className = 'planner-task-head';
+
+                const title = document.createElement('p');
+                title.className = 'planner-task-title';
+                title.textContent = task.title;
+
+                const meta = document.createElement('div');
+                meta.className = 'planner-task-meta';
+                meta.innerHTML = `<span class="planner-priority planner-priority-${String(task.priority || 'p2')}"></span><span class="planner-task-time">${formatTeamTaskDueDate(task.dueAt)}</span>`;
+
+                const subtitle = document.createElement('p');
+                subtitle.className = 'outreach-meta';
+                subtitle.textContent = `${task.assignedTo?.name || task.assignedTo?.email || 'Unassigned'} • ${task.status === 'in-progress' ? 'In Progress' : task.status === 'done' ? 'Done' : 'Open'}${task.isOverdue && task.status !== 'done' ? ' • Overdue' : ''}`;
+
+                head.appendChild(title);
+                head.appendChild(meta);
+                content.appendChild(head);
+                content.appendChild(subtitle);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'planner-delete-btn';
+                deleteButton.textContent = '×';
+                deleteButton.setAttribute('aria-label', 'Delete team task');
+                deleteButton.addEventListener('click', async () => {
+                    try {
+                        await deleteTeamTask(task.id);
+                        await loadTeamTaskDashboard();
+                    } catch (error) {
+                        showDashboardToast('error', 'Task Delete Failed', error.message || 'Unable to delete the team task.');
+                    }
+                });
+
+                card.appendChild(bubble);
+                card.appendChild(content);
+                card.appendChild(deleteButton);
+                teamTaskList.appendChild(card);
+            });
+        }
+
+        function renderTeamScoreboard() {
+            if (!teamScoreboard) {
+                return;
+            }
+
+            const scoreboard = Array.isArray(teamTaskDashboard?.scoreboard) ? teamTaskDashboard.scoreboard : [];
+            teamScoreboard.innerHTML = '';
+
+            if (!scoreboard.length) {
+                teamScoreboard.innerHTML = '<p class="outreach-empty">No scoreboard data yet.</p>';
+                return;
+            }
+
+            scoreboard.slice(0, 8).forEach((entry) => {
+                const item = document.createElement('div');
+                item.className = 'outreach-item';
+                const name = String(entry?.user?.name || entry?.user?.email || 'User').trim();
+                item.innerHTML = `
+                    <div>
+                        <strong>${name}</strong>
+                        <div class="outreach-meta">Completed this week: ${Number(entry.completedThisWeek) || 0} • Open: ${Number(entry.openCount) || 0}</div>
+                    </div>
+                    <span class="outreach-meta">Overdue ${Number(entry.overdueCount) || 0}</span>
+                `;
+                teamScoreboard.appendChild(item);
+            });
+        }
+
+        async function loadTeamTaskDashboard() {
+            const token = getTeamTaskToken();
+            if (!token) {
+                teamTaskDashboard = { tasks: [], myTasks: [], alertSummary: { overdueCount: 0, dueSoonCount: 0, openCount: 0 }, scoreboard: [] };
+                renderTeamTaskAlerts();
+                renderTeamTaskList();
+                renderTeamScoreboard();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/team-tasks/dashboard', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Unable to load team tasks.');
+                }
+                teamTaskDashboard = payload || teamTaskDashboard;
+            } catch (_error) {
+                teamTaskDashboard = { tasks: [], myTasks: [], alertSummary: { overdueCount: 0, dueSoonCount: 0, openCount: 0 }, scoreboard: [] };
+            }
+
+            renderTeamTaskAlerts();
+            renderTeamTaskList();
+            renderTeamScoreboard();
         }
 
         function renderReminderNote() {
@@ -15647,7 +15895,72 @@ function initNavbarDateTime() {
             }
         }
 
+        async function assignTeamTask() {
+            const title = input.value.trim();
+            const dueDate = getPlannerDateKey(dateInput.value);
+            const priority = ['p1', 'p2', 'p3', 'p4'].includes(prioritySelect.value) ? prioritySelect.value : 'p2';
+            const assignedToUserId = Number(assigneeSelect && assigneeSelect.value) || 0;
+            const token = getTeamTaskToken();
+
+            if (!token) {
+                showDashboardToast('error', 'Sign In Required', 'Sign in again before assigning team tasks.');
+                return;
+            }
+
+            if (!title) {
+                showDashboardToast('error', 'Task Required', 'Add a task title first.');
+                return;
+            }
+
+            if (!assignedToUserId) {
+                showDashboardToast('error', 'Assignee Required', 'Choose a teammate before assigning this task.');
+                return;
+            }
+
+            assignButton.disabled = true;
+            try {
+                const response = await fetch('/api/team-tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description: '',
+                        priority,
+                        dueAt: dueDate ? `${dueDate}T17:00:00` : '',
+                        assignedToUserId
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || 'Unable to assign the team task.');
+                }
+
+                input.value = '';
+                if (plannerInCalendar) {
+                    dateInput.value = selectedCalendarDateKey;
+                } else {
+                    dateInput.value = '';
+                }
+                prioritySelect.value = 'p2';
+                reminderSelect.value = 'day-of';
+                clearDraft();
+                await loadTeamTaskDashboard();
+                showDashboardToast('success', 'Team Task Assigned', dueDate ? 'Task assigned with a due date for team execution.' : 'Task assigned to the selected teammate.');
+            } catch (error) {
+                showDashboardToast('error', 'Assign Failed', error.message || 'Unable to assign the team task.');
+            } finally {
+                assignButton.disabled = false;
+            }
+        }
+
         addButton.addEventListener('click', addItem);
+        if (assignButton) {
+            assignButton.addEventListener('click', assignTeamTask);
+        }
         input.addEventListener('input', saveDraft);
         dateInput.addEventListener('input', saveDraft);
         prioritySelect.addEventListener('change', saveDraft);
@@ -15686,6 +15999,8 @@ function initNavbarDateTime() {
             setSelectedCalendarDate(selectedCalendarDateKey);
         }
         renderItems();
+        loadTeamUsers().catch(() => {});
+        loadTeamTaskDashboard().catch(() => {});
     }
 
     function initPlannerNotifications() {
@@ -15874,6 +16189,96 @@ function initNavbarDateTime() {
         updateNotificationDots();
         checkPlannerReminders();
         window.setInterval(checkPlannerReminders, 60000);
+    }
+
+    function initTeamTaskNotifications() {
+        const workspaceUser = getWorkspaceUserContext();
+        const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        if (!token || !(workspaceUser && workspaceUser.key)) {
+            return;
+        }
+
+        let pollTimer = 0;
+        let isPolling = false;
+
+        function buildTaskSignature(tasks) {
+            return (Array.isArray(tasks) ? tasks : []).slice(0, 6).map((task) => {
+                return [task.id, task.title, task.dueAt, task.status].join('|');
+            }).join('||');
+        }
+
+        async function pollTeamTaskNotifications() {
+            if (isPolling) {
+                return;
+            }
+
+            isPolling = true;
+            try {
+                const response = await fetch('/api/team-tasks/dashboard', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json().catch(() => ({}));
+                const myTasks = Array.isArray(payload && payload.myTasks) ? payload.myTasks : [];
+                const overdueTasks = myTasks.filter((task) => task && task.isOverdue && task.status !== 'done');
+                const dueSoonTasks = myTasks.filter((task) => {
+                    const dueAt = Number(task && task.dueAt) || 0;
+                    return task && task.status !== 'done' && !task.isOverdue && dueAt > 0 && (dueAt - Date.now()) <= (2 * 86400000);
+                });
+                const state = getTeamTaskNotificationState(workspaceUser);
+                const overdueSignature = buildTaskSignature(overdueTasks);
+                const dueSoonSignature = buildTaskSignature(dueSoonTasks);
+                const settings = getPlannerNotificationSettings();
+
+                if (state.seeded && overdueTasks.length && overdueSignature !== state.overdueSignature) {
+                    if (settings.inApp) {
+                        showDashboardToast('error', overdueTasks.length === 1 ? 'Team task overdue' : 'Team tasks overdue', overdueTasks.length === 1 ? `"${overdueTasks[0].title}" is overdue.` : `${overdueTasks.length} assigned team tasks are overdue.`, {
+                            eyebrow: 'Execution layer',
+                            meta: 'Assigned work needs immediate follow-through.',
+                            items: overdueTasks.slice(0, 3).map((task) => ({ label: task.title, meta: formatPlannerDateLabel(getPlannerDateKey(task.dueAt)) }))
+                        });
+                    }
+                    if (settings.sound) {
+                        playPlannerNotificationSound();
+                    }
+                }
+
+                if (state.seeded && dueSoonTasks.length && dueSoonSignature !== state.dueSoonSignature) {
+                    if (settings.inApp) {
+                        showDashboardToast('reminder', dueSoonTasks.length === 1 ? 'Team task due soon' : 'Team tasks due soon', dueSoonTasks.length === 1 ? `"${dueSoonTasks[0].title}" is due soon.` : `${dueSoonTasks.length} assigned team tasks are due within 48 hours.`, {
+                            eyebrow: 'Execution layer',
+                            meta: 'Use the dashboard task board to tighten follow-through.',
+                            items: dueSoonTasks.slice(0, 3).map((task) => ({ label: task.title, meta: formatPlannerDateLabel(getPlannerDateKey(task.dueAt)) }))
+                        });
+                    }
+                }
+
+                setTeamTaskNotificationState({
+                    seeded: true,
+                    overdueSignature,
+                    dueSoonSignature
+                }, workspaceUser);
+            } catch (_error) {
+                // Ignore temporary polling failures.
+            } finally {
+                isPolling = false;
+            }
+        }
+
+        pollTeamTaskNotifications();
+        pollTimer = window.setInterval(pollTeamTaskNotifications, 60000);
+
+        window.addEventListener('beforeunload', () => {
+            if (pollTimer) {
+                window.clearInterval(pollTimer);
+            }
+        }, { once: true });
     }
 
     // ============================================
@@ -30461,6 +30866,7 @@ function initNavbarDateTime() {
             ['initDashboardAnnouncementsWidget', initDashboardAnnouncementsWidget],
             ['initTodoGoalsWidget', initTodoGoalsWidget],
             ['initPlannerNotifications', initPlannerNotifications],
+            ['initTeamTaskNotifications', initTeamTaskNotifications],
             ['initContractsWidget', initContractsWidget],
             ['initMlsDealsBoard', initMlsDealsBoard],
             ['initMlsSearchHub', initMlsSearchHub],

@@ -2891,6 +2891,68 @@
                             </div>
                         </div>
 
+                        <div class="glass-card widget-card outreach-card" data-widget-id="outreach-intelligence" data-widget-title="Outreach Intelligence">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Outreach Intelligence</h2>
+                                    <p class="card-subtitle">Apply reply tags, flag risky no-response threads, measure template performance, and send the next touch into the dashboard calendar.</p>
+                                </div>
+                            </div>
+                            <div id="campaign-outreach-summary" class="outreach-list">
+                                <p class="outreach-empty">Choose a Twilio thread to load follow-up risk and template reporting.</p>
+                            </div>
+                            <div class="outreach-input-grid">
+                                <div class="form-group">
+                                    <label for="campaign-outreach-sequence">Sequence</label>
+                                    <select id="campaign-outreach-sequence" class="form-input"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="campaign-outreach-tag">Response Tag</label>
+                                    <select id="campaign-outreach-tag" class="form-input">
+                                        <option value="new">New</option>
+                                        <option value="attempting-contact">Attempting Contact</option>
+                                        <option value="engaged">Engaged</option>
+                                        <option value="responsive">Responsive</option>
+                                        <option value="warm">Warm</option>
+                                        <option value="hot">Hot</option>
+                                        <option value="cold">Cold</option>
+                                        <option value="no-response">No Response</option>
+                                        <option value="do-not-contact">Do Not Contact</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="campaign-outreach-priority">Priority</label>
+                                    <select id="campaign-outreach-priority" class="form-input">
+                                        <option value="high">High</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="low">Low</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="campaign-outreach-follow-up">Next Follow Up</label>
+                                    <input id="campaign-outreach-follow-up" class="form-input" type="datetime-local">
+                                </div>
+                                <div class="form-group outreach-full-width">
+                                    <label for="campaign-outreach-notes">Notes</label>
+                                    <textarea id="campaign-outreach-notes" class="form-input outreach-textarea" placeholder="Track why this thread is hot, what to send next, or which offer terms to revisit."></textarea>
+                                </div>
+                            </div>
+                            <div class="outreach-actions">
+                                <button id="campaign-outreach-save" type="button" class="card-btn">Save Contact</button>
+                                <button id="campaign-outreach-calendar" type="button" class="card-btn active">Add To Calendar</button>
+                                <button id="campaign-outreach-refresh" type="button" class="card-btn">Refresh Intelligence</button>
+                            </div>
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Template Performance</h3>
+                                    <p class="card-subtitle">Reply lift across your Twilio templates based on attributed inbound replies.</p>
+                                </div>
+                            </div>
+                            <div id="campaign-template-performance" class="outreach-list">
+                                <p class="outreach-empty">Template performance will appear after the first tracked outreach sends.</p>
+                            </div>
+                        </div>
+
                         <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="Agent Templates">
                             <div class="card-header">
                                 <div>
@@ -3087,8 +3149,19 @@
             const campaignReplyScheduleButton = document.getElementById('campaign-reply-schedule');
             const campaignReplySendButton = document.getElementById('campaign-reply-send');
             const campaignReplyStatus = document.getElementById('campaign-reply-status');
+            const campaignOutreachSummary = document.getElementById('campaign-outreach-summary');
+            const campaignOutreachSequence = document.getElementById('campaign-outreach-sequence');
+            const campaignOutreachTag = document.getElementById('campaign-outreach-tag');
+            const campaignOutreachPriority = document.getElementById('campaign-outreach-priority');
+            const campaignOutreachFollowUp = document.getElementById('campaign-outreach-follow-up');
+            const campaignOutreachNotes = document.getElementById('campaign-outreach-notes');
+            const campaignOutreachSaveButton = document.getElementById('campaign-outreach-save');
+            const campaignOutreachCalendarButton = document.getElementById('campaign-outreach-calendar');
+            const campaignOutreachRefreshButton = document.getElementById('campaign-outreach-refresh');
+            const campaignTemplatePerformance = document.getElementById('campaign-template-performance');
             const CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE = 'campaignSmsTemplateSettings';
             const CAMPAIGN_NO_REPLIES_TEMPLATE_STORAGE_KEY_BASE = 'campaignNoRepliesTemplateBody';
+            const CAMPAIGN_PLANNER_STORAGE_KEY = 'personalTodoGoalsByUser';
             const CAMPAIGN_TEMPLATE_DEFAULTS = {
                 'first-touch': 'Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.',
                 'follow-up': 'Checking back in, [Agent First Name]. We are still buying in [Area], especially probate, heavy fixer, and failed-escrow opportunities. If you want, I can text over our exact buy box and close timeline. Reply STOP to opt out.',
@@ -3101,6 +3174,7 @@
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
             let activeTwilioReactionPickerMessageId = 0;
+            let outreachDashboard = null;
 
             function escapeCampaignReplyCopyHtml(value) {
                 return String(value || '')
@@ -3109,6 +3183,250 @@
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;');
+            }
+
+            function normalizeCampaignIdentityValue(value) {
+                return String(value || '').trim().toLowerCase();
+            }
+
+            function normalizeCampaignUserNameKey(value) {
+                return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            }
+
+            function getCampaignWorkspaceUserContext() {
+                let profile = {};
+                let user = {};
+                try {
+                    profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+                } catch (_error) {
+                    profile = {};
+                }
+                try {
+                    user = JSON.parse(localStorage.getItem('user') || '{}');
+                } catch (_error) {
+                    user = {};
+                }
+
+                const email = normalizeCampaignIdentityValue(user.email || profile.email || '');
+                const name = String(user.name || profile.name || 'User').trim();
+                return {
+                    key: email || normalizeCampaignUserNameKey(name) || 'default-user',
+                    email,
+                    name
+                };
+            }
+
+            function getCampaignPlannerItems() {
+                const workspaceUser = getCampaignWorkspaceUserContext();
+                let store = {};
+                try {
+                    store = JSON.parse(localStorage.getItem(CAMPAIGN_PLANNER_STORAGE_KEY) || '{}');
+                } catch (_error) {
+                    store = {};
+                }
+                return Array.isArray(store?.[workspaceUser.key]) ? store[workspaceUser.key] : [];
+            }
+
+            function setCampaignPlannerItems(items) {
+                const workspaceUser = getCampaignWorkspaceUserContext();
+                let store = {};
+                try {
+                    store = JSON.parse(localStorage.getItem(CAMPAIGN_PLANNER_STORAGE_KEY) || '{}');
+                } catch (_error) {
+                    store = {};
+                }
+                store[workspaceUser.key] = Array.isArray(items) ? items : [];
+                localStorage.setItem(CAMPAIGN_PLANNER_STORAGE_KEY, JSON.stringify(store));
+                window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+            }
+
+            function toCampaignPlannerPriority(priority) {
+                if (priority === 'high') {
+                    return 'p1';
+                }
+                if (priority === 'low') {
+                    return 'p3';
+                }
+                return 'p2';
+            }
+
+            function formatCampaignOutreachTimestamp(value) {
+                const date = Number(value) ? new Date(Number(value)) : null;
+                if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                    return 'Not tracked yet';
+                }
+                return new Intl.DateTimeFormat('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                }).format(date);
+            }
+
+            async function fetchCampaignOutreachDashboard() {
+                if (!token) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/outreach-intelligence/dashboard?channel=twilio', {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to load outreach intelligence.');
+                    }
+                    outreachDashboard = data;
+                    renderCampaignOutreachPanel();
+                } catch (error) {
+                    campaignOutreachSummary.innerHTML = `<p class="outreach-empty">${escapeCampaignReplyCopyHtml(error.message || 'Unable to load outreach intelligence.')}</p>`;
+                }
+            }
+
+            function getActiveTwilioOutreachContact() {
+                const contacts = Array.isArray(outreachDashboard?.contacts) ? outreachDashboard.contacts : [];
+                const conversation = twilioInboxConversations.find((item) => item.conversationKey === activeTwilioConversationKey) || null;
+                if (!conversation) {
+                    return null;
+                }
+                return contacts.find((contact) => {
+                    return String(contact?.conversationKey || '').trim() === String(conversation.conversationKey || '').trim()
+                        || String(contact?.contactPhone || '').trim() === String(conversation.contactPhone || '').trim();
+                }) || null;
+            }
+
+            function renderCampaignOutreachSequences() {
+                const sequences = Array.isArray(outreachDashboard?.sequences) ? outreachDashboard.sequences : [];
+                campaignOutreachSequence.replaceChildren();
+                if (!sequences.length) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No sequences yet';
+                    campaignOutreachSequence.appendChild(option);
+                    return;
+                }
+
+                sequences.forEach((sequence) => {
+                    const option = document.createElement('option');
+                    option.value = String(sequence.id || '');
+                    option.textContent = `${sequence.name} (${sequence.steps.length} steps)`;
+                    option.dataset.steps = JSON.stringify(sequence.steps || []);
+                    campaignOutreachSequence.appendChild(option);
+                });
+            }
+
+            function renderCampaignTemplatePerformance() {
+                const rows = Array.isArray(outreachDashboard?.templatePerformance) ? outreachDashboard.templatePerformance : [];
+                campaignTemplatePerformance.replaceChildren();
+                if (!rows.length) {
+                    campaignTemplatePerformance.innerHTML = '<p class="outreach-empty">Template performance will appear after the first tracked outreach sends.</p>';
+                    return;
+                }
+
+                rows.slice(0, 6).forEach((row) => {
+                    const item = document.createElement('div');
+                    item.className = 'outreach-item';
+                    item.innerHTML = `
+                        <div>
+                            <strong>${escapeCampaignReplyCopyHtml(row.templateName || row.templateKey || 'Untitled template')}</strong>
+                            <div class="outreach-meta">Sent ${Number(row.sentCount) || 0} · Replies ${Number(row.replyCount) || 0}</div>
+                        </div>
+                        <span class="outreach-meta">${Number(row.replyRate) || 0}% reply rate</span>
+                    `;
+                    campaignTemplatePerformance.appendChild(item);
+                });
+            }
+
+            function renderCampaignOutreachPanel() {
+                renderCampaignOutreachSequences();
+                renderCampaignTemplatePerformance();
+
+                const conversation = twilioInboxConversations.find((item) => item.conversationKey === activeTwilioConversationKey) || null;
+                const contact = getActiveTwilioOutreachContact();
+                if (!conversation) {
+                    campaignOutreachSummary.innerHTML = '<p class="outreach-empty">Choose a Twilio thread to load follow-up risk and template reporting.</p>';
+                    campaignOutreachSaveButton.disabled = true;
+                    campaignOutreachCalendarButton.disabled = true;
+                    return;
+                }
+
+                const riskLevel = String(contact?.riskLevel || 'low');
+                campaignOutreachSummary.innerHTML = `
+                    <div class="outreach-item">
+                        <div>
+                            <strong>${escapeCampaignReplyCopyHtml(conversation.contactName || conversation.contactPhone || 'Contact')}</strong>
+                            <div class="outreach-meta">${escapeCampaignReplyCopyHtml(conversation.contactPhone || '')} · ${escapeCampaignReplyCopyHtml(riskLevel)} risk</div>
+                        </div>
+                        <span class="outreach-meta">${escapeCampaignReplyCopyHtml(formatCampaignOutreachTimestamp(contact?.lastContactedAt))}</span>
+                    </div>
+                    <div class="outreach-item">
+                        <div>
+                            <strong>Last response</strong>
+                            <div class="outreach-meta">${escapeCampaignReplyCopyHtml(formatCampaignOutreachTimestamp(contact?.lastResponseAt))}</div>
+                        </div>
+                        <span class="outreach-meta">Sent ${Number(contact?.sentCount) || 0} · Replies ${Number(contact?.responseCount) || 0}</span>
+                    </div>
+                `;
+                campaignOutreachTag.value = String(contact?.responseTag || 'new');
+                campaignOutreachPriority.value = String(contact?.priority || 'medium');
+                campaignOutreachFollowUp.value = toCampaignDateTimeLocalValue(contact?.nextFollowUpAt || '');
+                campaignOutreachNotes.value = String(contact?.notes || '');
+                campaignOutreachSaveButton.disabled = !contact;
+                campaignOutreachCalendarButton.disabled = !contact;
+            }
+
+            async function saveCampaignOutreachContact(options = {}) {
+                const contact = getActiveTwilioOutreachContact();
+                if (!contact) {
+                    throw new Error('Send the first Twilio touch before updating outreach fields.');
+                }
+
+                const nextFollowUpAt = campaignOutreachFollowUp.value ? new Date(campaignOutreachFollowUp.value).getTime() : 0;
+                const response = await fetch(`/api/outreach-intelligence/contacts/${encodeURIComponent(String(contact.id))}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({
+                        contactName: contact.contactName || '',
+                        responseTag: campaignOutreachTag.value,
+                        priority: campaignOutreachPriority.value,
+                        nextFollowUpAt,
+                        notes: campaignOutreachNotes.value
+                    })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Unable to update the outreach contact.');
+                }
+
+                outreachDashboard = outreachDashboard || {};
+                const contacts = Array.isArray(outreachDashboard.contacts) ? outreachDashboard.contacts.slice() : [];
+                const nextContact = data.contact || null;
+                const contactIndex = contacts.findIndex((entry) => Number(entry?.id) === Number(nextContact?.id));
+                if (contactIndex >= 0 && nextContact) {
+                    contacts.splice(contactIndex, 1, nextContact);
+                } else if (nextContact) {
+                    contacts.unshift(nextContact);
+                }
+                outreachDashboard.contacts = contacts;
+                renderCampaignOutreachPanel();
+
+                if (options.addPlanner) {
+                    const items = getCampaignPlannerItems();
+                    items.unshift({
+                        id: `planner-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                        title: `SMS follow up: ${contact.contactName || contact.contactPhone || 'Contact'}`,
+                        dueDate: new Date(campaignOutreachFollowUp.value).toISOString().slice(0, 10),
+                        priority: toCampaignPlannerPriority(campaignOutreachPriority.value),
+                        completed: false,
+                        updatedAt: Date.now(),
+                        reminderLead: '1-day',
+                        notifications: {}
+                    });
+                    setCampaignPlannerItems(items);
+                }
             }
 
             function handleCampaignReplyThreadCopy(event) {
@@ -4471,6 +4789,9 @@
             async function submitCampaignReply(options = {}) {
                 const body = campaignReplyInput ? campaignReplyInput.value.trim() : '';
                 const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
+                const nextFollowUpAt = campaignOutreachFollowUp && campaignOutreachFollowUp.value
+                    ? new Date(campaignOutreachFollowUp.value).getTime()
+                    : 0;
 
                 if (!activeTwilioConversationKey) {
                     campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
@@ -4507,6 +4828,10 @@
                                     phone: conversation.contactPhone || '',
                                     area: conversation.propertyAddress || ''
                                 }],
+                                templateKey: 'twilio-reply',
+                                templateName: conversation.campaignName || 'Twilio Reply',
+                                priority: campaignOutreachPriority ? campaignOutreachPriority.value : 'medium',
+                                nextFollowUpAt,
                                 mediaUploadIds: pendingReplyMediaItems.map((item) => item.id).filter(Boolean),
                                 scheduleAt
                             }
@@ -4514,6 +4839,10 @@
                                 conversationKey: activeTwilioConversationKey,
                                 body,
                                 campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply',
+                                templateKey: 'twilio-reply',
+                                templateName: conversation.campaignName || 'Twilio Reply',
+                                priority: campaignOutreachPriority ? campaignOutreachPriority.value : 'medium',
+                                nextFollowUpAt,
                                 mediaUploadIds: pendingReplyMediaItems.map((item) => item.id).filter(Boolean)
                             })
                     });
@@ -4536,6 +4865,7 @@
                     }
 
                     campaignReplyStatus.textContent = 'Twilio reply sent.';
+                    fetchCampaignOutreachDashboard().catch(() => {});
                     await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
                     await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: false });
                 } catch (error) {
@@ -4552,6 +4882,9 @@
                 const body = campaignBodyInput ? campaignBodyInput.value.trim() : '';
                 const campaignName = campaignNameInput ? campaignNameInput.value.trim() : 'Agent SMS Campaign';
                 const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
+                const nextFollowUpAt = campaignOutreachFollowUp && campaignOutreachFollowUp.value
+                    ? new Date(campaignOutreachFollowUp.value).getTime()
+                    : 0;
 
                 if (!recipients.length) {
                     campaignSendStatus.textContent = 'Add at least one phone number before sending.';
@@ -4578,6 +4911,10 @@
                             body,
                             senderName: getCurrentSenderName(),
                             recipients,
+                            templateKey: campaignName || 'twilio-campaign',
+                            templateName: campaignName || 'Twilio Campaign',
+                            priority: campaignOutreachPriority ? campaignOutreachPriority.value : 'medium',
+                            nextFollowUpAt,
                             mediaUploadIds: pendingCampaignMediaItems.map((item) => item.id).filter(Boolean),
                             ...(useRepeatHistoryFollowUp ? { useRepeatHistoryFollowUp: true } : {}),
                             ...(scheduleAt ? { scheduleAt } : {})
@@ -4600,6 +4937,7 @@
                         campaignSendStatus.textContent = failedCount > 0
                             ? `Queued ${data.sent.length} SMS. ${failedCount} failed.`
                             : `Queued ${data.sent.length} SMS successfully.`;
+                        fetchCampaignOutreachDashboard().catch(() => {});
                         loadTwilioInboxConversations({ preferredConversationKey: data.sent[0]?.conversationKey || activeTwilioConversationKey, markRead: false });
                     } else {
                         campaignSendStatus.textContent = data.error || 'Failed to queue campaign.';
@@ -5038,6 +5376,7 @@
                     setCampaignRepliesStatus('Sign in to load Twilio replies', 'offline');
                     publishTwilioUnreadState([]);
                     renderTwilioReplyThread([], null);
+                    renderCampaignOutreachPanel();
                     return;
                 }
 
@@ -5063,6 +5402,7 @@
                         'ready'
                     );
                     renderTwilioReplyConversations();
+                    renderCampaignOutreachPanel();
 
                     if (activeTwilioConversationKey) {
                         await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: Boolean(options.markRead) });
@@ -5076,6 +5416,7 @@
                     activeTwilioConversationKey = '';
                     renderTwilioReplyConversations();
                     renderTwilioReplyThread([], null);
+                    renderCampaignOutreachPanel();
                 }
             }
 
@@ -5134,6 +5475,7 @@
 
                 activeTwilioConversationKey = conversationKey;
                 renderTwilioReplyConversations();
+                renderCampaignOutreachPanel();
 
                 try {
                     const response = await fetch(`/api/twilio/inbox/messages?conversationKey=${encodeURIComponent(conversationKey)}`, {
@@ -5391,6 +5733,64 @@
                 });
             }
 
+            if (campaignOutreachSequence) {
+                campaignOutreachSequence.addEventListener('change', () => {
+                    const selectedOption = campaignOutreachSequence.options[campaignOutreachSequence.selectedIndex];
+                    const steps = selectedOption?.dataset.steps ? JSON.parse(selectedOption.dataset.steps) : [];
+                    const nextStep = Array.isArray(steps) ? steps[0] : null;
+                    if (!nextStep) {
+                        return;
+                    }
+
+                    campaignOutreachPriority.value = String(nextStep.priority || 'medium');
+                    if (!campaignOutreachFollowUp.value) {
+                        const scheduledAt = new Date(Date.now() + ((Number(nextStep.dayOffset) || 0) * 86400000));
+                        campaignOutreachFollowUp.value = toCampaignDateTimeLocalValue(scheduledAt.toISOString());
+                    }
+
+                    if (campaignBodyInput && nextStep.templateKey && campaignTemplateSettings.templates[nextStep.templateKey]) {
+                        campaignBodyInput.value = campaignTemplateSettings.templates[nextStep.templateKey];
+                    }
+                });
+            }
+
+            if (campaignOutreachSaveButton) {
+                campaignOutreachSaveButton.addEventListener('click', async () => {
+                    campaignOutreachSaveButton.disabled = true;
+                    try {
+                        await saveCampaignOutreachContact();
+                        campaignReplyStatus.textContent = 'Outreach contact updated.';
+                    } catch (error) {
+                        campaignReplyStatus.textContent = error.message || 'Unable to update the outreach contact.';
+                    } finally {
+                        renderCampaignOutreachPanel();
+                    }
+                });
+            }
+
+            if (campaignOutreachCalendarButton) {
+                campaignOutreachCalendarButton.addEventListener('click', async () => {
+                    campaignOutreachCalendarButton.disabled = true;
+                    try {
+                        await saveCampaignOutreachContact({ addPlanner: true });
+                        campaignReplyStatus.textContent = 'Follow-up added to the dashboard calendar.';
+                    } catch (error) {
+                        campaignReplyStatus.textContent = error.message || 'Unable to add the follow-up to the calendar.';
+                    } finally {
+                        renderCampaignOutreachPanel();
+                    }
+                });
+            }
+
+            if (campaignOutreachRefreshButton) {
+                campaignOutreachRefreshButton.addEventListener('click', () => {
+                    campaignOutreachRefreshButton.disabled = true;
+                    fetchCampaignOutreachDashboard().finally(() => {
+                        campaignOutreachRefreshButton.disabled = false;
+                    });
+                });
+            }
+
             copyButtons.forEach((button) => {
                 button.addEventListener('click', async () => {
                     const targetId = button.getAttribute('data-copy-target');
@@ -5612,6 +6012,7 @@
             syncCampaignReplyInputHeight();
 
             loadTwilioStatus();
+            fetchCampaignOutreachDashboard();
             loadTwilioInboxConversations({ markRead: true });
 
             if (!twilioInboxRefreshHandle) {
