@@ -5517,6 +5517,26 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS my_deals_imported_properties (
+      owner_user_id INTEGER NOT NULL,
+      record_id TEXT NOT NULL,
+      property_key TEXT NOT NULL DEFAULT '',
+      payload_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (owner_user_id, record_id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating my_deals_imported_properties table:', err);
+    } else {
+      console.log('My Deals imported properties table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_my_deals_imported_properties_owner_updated ON my_deals_imported_properties(owner_user_id, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_my_deals_imported_properties_property_key ON my_deals_imported_properties(property_key)', () => {});
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS team_tasks (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -6905,11 +6925,139 @@ async function clearMlsImportSpreadsheetRowsForUser(ownerUserId) {
 
   await dbRun('DELETE FROM mls_import_rows WHERE owner_user_id = ?', [normalizedOwnerUserId]);
   await dbRun('DELETE FROM mls_import_runs WHERE requester_user_id = ?', [normalizedOwnerUserId]);
+  await dbRun('DELETE FROM my_deals_imported_properties WHERE owner_user_id = ?', [normalizedOwnerUserId]);
 
   return {
     clearedAt,
     cancelledJobCount
   };
+}
+
+function sanitizeMyDealsImportedPropertyRecord(recordLike) {
+  const record = recordLike && typeof recordLike === 'object' ? recordLike : null;
+  if (!record) {
+    return null;
+  }
+
+  const id = String(record.id || '').trim();
+  const address = String(record.address || record.propertySnapshot?.address || '').trim();
+  if (!id || !address) {
+    return null;
+  }
+
+  const clickedAt = Number(record.clickedAt) || Date.now();
+  const propertyKey = normalizePropertyAddressForComparison(address) || normalizePropertyAssignmentKey(id);
+
+  return {
+    ...record,
+    id,
+    address,
+    propertyKey,
+    clickedAt,
+    propertySnapshot: record.propertySnapshot && typeof record.propertySnapshot === 'object'
+      ? record.propertySnapshot
+      : { address }
+  };
+}
+
+function mapMyDealsImportedPropertyRow(rowLike) {
+  const row = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  let payload = null;
+  try {
+    payload = JSON.parse(String(row.payload_json || row.payloadJson || '{}'));
+  } catch (error) {
+    payload = null;
+  }
+
+  const sanitized = sanitizeMyDealsImportedPropertyRecord(payload);
+  if (!sanitized) {
+    return null;
+  }
+
+  return {
+    ...sanitized,
+    id: String(row.record_id || sanitized.id || '').trim() || sanitized.id,
+    propertyKey: String(row.property_key || sanitized.propertyKey || '').trim() || sanitized.propertyKey,
+    createdAt: Number(row.created_at) || Number(sanitized.createdAt) || Number(sanitized.clickedAt) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(sanitized.updatedAt) || Number(sanitized.clickedAt) || Date.now()
+  };
+}
+
+async function loadMyDealsImportedPropertiesForUser(ownerUserId, options = {}) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  const limit = Math.max(1, Math.min(Number(options.limit) || 500, 500));
+  const rows = await dbAll(
+    `SELECT owner_user_id, record_id, property_key, payload_json, created_at, updated_at
+       FROM my_deals_imported_properties
+      WHERE owner_user_id = ?
+      ORDER BY updated_at DESC, created_at DESC, record_id DESC
+      LIMIT ?`,
+    [normalizedOwnerUserId, limit]
+  );
+
+  return Array.isArray(rows)
+    ? rows.map(mapMyDealsImportedPropertyRow).filter(Boolean)
+    : [];
+}
+
+async function saveMyDealsImportedPropertyForUser(ownerUserId, recordLike) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  const record = sanitizeMyDealsImportedPropertyRecord(recordLike);
+  if (!normalizedOwnerUserId || !record) {
+    throw new Error('A valid imported property record is required.');
+  }
+
+  const now = Date.now();
+  const existingRow = await dbGet(
+    'SELECT created_at FROM my_deals_imported_properties WHERE owner_user_id = ? AND record_id = ?',
+    [normalizedOwnerUserId, record.id]
+  );
+  const createdAt = Number(existingRow && existingRow.created_at) || Number(record.createdAt) || Number(record.clickedAt) || now;
+  const nextRecord = {
+    ...record,
+    createdAt,
+    updatedAt: now,
+    clickedAt: Number(record.clickedAt) || now
+  };
+
+  await dbRun(
+    `INSERT INTO my_deals_imported_properties (
+       owner_user_id, record_id, property_key, payload_json, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(owner_user_id, record_id) DO UPDATE SET
+       property_key = excluded.property_key,
+       payload_json = excluded.payload_json,
+       updated_at = excluded.updated_at`,
+    [
+      normalizedOwnerUserId,
+      nextRecord.id,
+      nextRecord.propertyKey,
+      JSON.stringify(nextRecord),
+      createdAt,
+      now
+    ]
+  );
+
+  return nextRecord;
+}
+
+async function deleteMyDealsImportedPropertyForUser(ownerUserId, recordId) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  const normalizedRecordId = String(recordId || '').trim();
+  if (!normalizedOwnerUserId || !normalizedRecordId) {
+    return false;
+  }
+
+  const existingRow = await dbGet(
+    'SELECT record_id FROM my_deals_imported_properties WHERE owner_user_id = ? AND record_id = ?',
+    [normalizedOwnerUserId, normalizedRecordId]
+  );
+  if (!existingRow) {
+    return false;
+  }
+
+  await dbRun('DELETE FROM my_deals_imported_properties WHERE owner_user_id = ? AND record_id = ?', [normalizedOwnerUserId, normalizedRecordId]);
+  return true;
 }
 
 async function cancelMlsImportPdfJobForUser(jobId, ownerUserId) {
@@ -18324,6 +18472,58 @@ app.get('/api/mls-imports/rows', async (req, res) => {
   } catch (error) {
     console.error('Failed to load user MLS import rows:', error);
     return res.status(500).json({ error: 'Failed to load MLS import rows.' });
+  }
+});
+
+app.get('/api/my-deals/imported-properties', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const items = await loadMyDealsImportedPropertiesForUser(decoded.id, { limit: 500 });
+    return res.json({ success: true, items });
+  } catch (error) {
+    console.error('Failed to load My Deals imported properties:', error);
+    return res.status(500).json({ error: 'Failed to load imported properties.' });
+  }
+});
+
+app.post('/api/my-deals/imported-properties', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const savedRecord = await saveMyDealsImportedPropertyForUser(decoded.id, req.body?.record);
+    return res.json({ success: true, record: savedRecord });
+  } catch (error) {
+    const errorMessage = String(error && error.message || '').trim();
+    const statusCode = /required/i.test(errorMessage) ? 400 : 500;
+    if (statusCode === 500) {
+      console.error('Failed to save My Deals imported property:', error);
+    }
+    return res.status(statusCode).json({ error: errorMessage || 'Failed to save imported property.' });
+  }
+});
+
+app.delete('/api/my-deals/imported-properties/:recordId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const deleted = await deleteMyDealsImportedPropertyForUser(decoded.id, req.params.recordId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Imported property not found.' });
+    }
+    return res.json({ success: true, recordId: String(req.params.recordId || '').trim() });
+  } catch (error) {
+    console.error('Failed to delete My Deals imported property:', error);
+    return res.status(500).json({ error: 'Failed to delete imported property.' });
   }
 });
 

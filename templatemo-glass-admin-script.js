@@ -1619,7 +1619,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     }
 
     async function syncPropertyAssignmentRecordToServer(propertyKey, assignmentRecord) {
-        const token = String(localStorage.getItem('authToken') || '').trim();
+        const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
         if (!token) {
             return assignmentRecord;
         }
@@ -20142,11 +20142,40 @@ function initNavbarDateTime() {
             };
         }
 
-        function saveImportedProperty(record) {
+        async function saveImportedProperty(record) {
+            const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            if (!authToken) {
+                throw new Error('You need to be signed in before importing a property.');
+            }
+
+            const response = await fetch('/api/my-deals/imported-properties', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ record })
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload && payload.error ? payload.error : 'Unable to save the imported property.');
+            }
+
+            const savedRecord = payload && payload.record && typeof payload.record === 'object'
+                ? payload.record
+                : record;
             const items = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
-            const nextItems = [record, ...items.filter(item => String(item.id || '') !== record.id)].slice(0, 120);
+            const nextItems = [savedRecord, ...items.filter(item => String(item.id || '') !== savedRecord.id)].slice(0, 120);
+            hydratedImportedItems = mergeImportedItemsByAddress(
+                Array.isArray(hydratedImportedItems)
+                    ? hydratedImportedItems.filter(item => String(item?.id || '') !== savedRecord.id)
+                    : [],
+                [savedRecord]
+            );
             setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextItems);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+            return savedRecord;
         }
 
         function formatDealsListingStatus(value) {
@@ -20505,29 +20534,45 @@ function initNavbarDateTime() {
             }
 
             try {
-                const response = await fetch('/api/mls-imports/rows?offset=0&limit=500', {
-                    headers: {
-                        Authorization: `Bearer ${authToken}`
-                    }
-                });
+                const [manualResponse, spreadsheetResponse] = await Promise.all([
+                    fetch('/api/my-deals/imported-properties', {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`
+                        }
+                    }),
+                    fetch('/api/mls-imports/rows?offset=0&limit=500', {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`
+                        }
+                    })
+                ]);
 
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(payload && payload.error ? payload.error : 'Unable to load imported MLS rows.');
+                const manualPayload = await manualResponse.json().catch(() => ({}));
+                if (!manualResponse.ok) {
+                    throw new Error(manualPayload && manualPayload.error ? manualPayload.error : 'Unable to load imported properties.');
                 }
 
-                const serverItems = (Array.isArray(payload.rows) ? payload.rows : [])
+                const spreadsheetPayload = await spreadsheetResponse.json().catch(() => ({}));
+                if (!spreadsheetResponse.ok) {
+                    throw new Error(spreadsheetPayload && spreadsheetPayload.error ? spreadsheetPayload.error : 'Unable to load imported MLS rows.');
+                }
+
+                const manualItems = (Array.isArray(manualPayload.items) ? manualPayload.items : [])
+                    .map((item) => sanitizeImportedPropertyItem(item))
+                    .filter(Boolean);
+                const serverItems = (Array.isArray(spreadsheetPayload.rows) ? spreadsheetPayload.rows : [])
                     .map((row) => buildImportedPropertyRecordFromServerRow(row))
                     .filter(Boolean);
+                const persistedItems = mergeImportedItemsByAddress(manualItems, serverItems);
 
-                if (!serverItems.length) {
+                if (!persistedItems.length) {
                     hydratedImportedItems = [];
                     return;
                 }
 
                 const existingItems = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
-                const mergedItems = mergeImportedItemsByAddress(existingItems, serverItems);
-                hydratedImportedItems = mergedItems.slice();
+                const mergedItems = mergeImportedItemsByAddress(existingItems, persistedItems);
+                hydratedImportedItems = persistedItems.slice();
 
                 const existingSerialized = JSON.stringify(existingItems);
                 const mergedSerialized = JSON.stringify(mergedItems);
@@ -20676,7 +20721,7 @@ function initNavbarDateTime() {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
-        function deleteImportedProperty(item) {
+        async function deleteImportedProperty(item) {
             if (!item || typeof item !== 'object') {
                 return;
             }
@@ -20691,8 +20736,35 @@ function initNavbarDateTime() {
                 return;
             }
 
+            if (itemId.toLowerCase().startsWith('manual:')) {
+                const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                if (!authToken) {
+                    showDashboardToast('error', 'Delete Failed', 'You need to be signed in before imported properties can be deleted.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/my-deals/imported-properties/${encodeURIComponent(itemId)}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${authToken}`
+                        }
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok && response.status !== 404) {
+                        throw new Error(payload && payload.error ? payload.error : 'Unable to delete the imported property.');
+                    }
+                } catch (error) {
+                    showDashboardToast('error', 'Delete Failed', error && error.message ? error.message : 'The imported property could not be deleted.');
+                    return;
+                }
+            }
+
             const items = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
             const nextItems = items.filter(entry => String(entry.id || '') !== itemId);
+            hydratedImportedItems = Array.isArray(hydratedImportedItems)
+                ? hydratedImportedItems.filter(entry => String(entry?.id || '') !== itemId)
+                : [];
             setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextItems);
             showDashboardToast('success', 'Imported Property Removed', `${propertyLabel} was removed from Imported Properties.`);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
@@ -20807,7 +20879,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                if (!usersMatch(item.assignedTo || {}, activeSessionUser)) {
+                if (!usersMatch(item.assignedTo || {}, workspaceUser)) {
                     return;
                 }
 
@@ -20834,7 +20906,7 @@ function initNavbarDateTime() {
                 const snapshotAssignment = snapshot?.propertyAssignment && typeof snapshot.propertyAssignment === 'object'
                     ? snapshot.propertyAssignment
                     : null;
-                if (!snapshotAssignment || !usersMatch(snapshotAssignment.assignedTo || {}, activeSessionUser)) {
+                if (!snapshotAssignment || !usersMatch(snapshotAssignment.assignedTo || {}, workspaceUser)) {
                     return;
                 }
 
@@ -21124,7 +21196,7 @@ function initNavbarDateTime() {
                     deleteButton.addEventListener('click', (event) => {
                         event.preventDefault();
                         event.stopPropagation();
-                        deleteImportedProperty(item);
+                        void deleteImportedProperty(item);
                     });
                 }
 
@@ -21260,11 +21332,12 @@ function initNavbarDateTime() {
         }
 
         if (importForm) {
-            importForm.addEventListener('submit', event => {
+            importForm.addEventListener('submit', async event => {
                 event.preventDefault();
 
                 const addressInput = document.getElementById('deals-import-address');
                 const priceInput = document.getElementById('deals-import-price');
+                const submitButton = importForm.querySelector('button[type="submit"]');
                 if (!addressInput || !String(addressInput.value || '').trim()) {
                     showDashboardToast('error', 'Address Required', 'Enter the property address before importing.');
                     return;
@@ -21274,19 +21347,31 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const payload = new FormData(importForm);
-                const record = createImportedPropertyRecord(payload);
-                saveImportedProperty(record);
-                persistSelectedPropertyDetail(withPropertyDetailOrigin(record.propertySnapshot, 'deals'));
-                importForm.reset();
-                closeImportWidget();
-                const defaultStatus = document.getElementById('deals-import-status');
-                if (defaultStatus) {
-                    defaultStatus.value = 'active';
+                if (submitButton) {
+                    submitButton.disabled = true;
                 }
-                showDashboardToast('success', 'Property Imported', 'Your MLS property was added to Imported Properties and opened in the system.');
-                render();
-                window.location.href = 'property-details.html';
+
+                try {
+                    const payload = new FormData(importForm);
+                    const record = createImportedPropertyRecord(payload);
+                    const savedRecord = await saveImportedProperty(record);
+                    persistSelectedPropertyDetail(withPropertyDetailOrigin(savedRecord.propertySnapshot, 'deals'));
+                    importForm.reset();
+                    closeImportWidget();
+                    const defaultStatus = document.getElementById('deals-import-status');
+                    if (defaultStatus) {
+                        defaultStatus.value = 'active';
+                    }
+                    showDashboardToast('success', 'Property Imported', 'Your MLS property was saved to your account and opened in the system.');
+                    render();
+                    window.location.href = 'property-details.html';
+                } catch (error) {
+                    showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'The imported property could not be saved to your account.');
+                } finally {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                }
             });
         }
 
