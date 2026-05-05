@@ -705,6 +705,178 @@
             z-index: 1;
         }
 
+        .deal-pipeline-toolbar {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 14px;
+        }
+
+        .deal-pipeline-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .deal-pipeline-metric {
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .deal-pipeline-metric strong {
+            display: block;
+            font-size: 1.35rem;
+            margin-top: 4px;
+        }
+
+        .deal-pipeline-board {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(290px, 1fr);
+            gap: 14px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .deal-pipeline-column {
+            display: grid;
+            align-content: start;
+            gap: 12px;
+            min-height: 280px;
+            padding: 16px;
+            border-radius: 22px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.22);
+        }
+
+        .deal-pipeline-column-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .deal-pipeline-column-head h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .deal-pipeline-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            min-height: 34px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.18);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .deal-pipeline-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .deal-pipeline-card {
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(255, 255, 255, 0.05);
+            display: grid;
+            gap: 10px;
+        }
+
+        .deal-pipeline-card-head,
+        .deal-pipeline-card-meta,
+        .deal-pipeline-card-actions {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .deal-pipeline-card-title {
+            margin: 0;
+            font-size: 0.96rem;
+        }
+
+        .deal-pipeline-card-copy,
+        .deal-pipeline-card-history {
+            display: grid;
+            gap: 6px;
+        }
+
+        .deal-pipeline-source-chip,
+        .deal-pipeline-priority-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(255, 255, 255, 0.06);
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .deal-pipeline-priority-chip[data-priority="high"] {
+            color: #fecaca;
+            border-color: rgba(248, 113, 113, 0.32);
+        }
+
+        .deal-pipeline-priority-chip[data-priority="medium"] {
+            color: #fde68a;
+            border-color: rgba(250, 204, 21, 0.28);
+        }
+
+        .deal-pipeline-priority-chip[data-priority="low"] {
+            color: #bbf7d0;
+            border-color: rgba(74, 222, 128, 0.24);
+        }
+
+        .deal-pipeline-card-copy p,
+        .deal-pipeline-card-history p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+
+        .deal-pipeline-controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .deal-pipeline-controls .form-group {
+            margin: 0;
+        }
+
+        .deal-pipeline-notes {
+            min-height: 88px;
+            resize: vertical;
+        }
+
+        .deal-pipeline-history {
+            padding-top: 2px;
+            border-top: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .deal-pipeline-empty {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
         .admin-control-panel .card-title {
             font-size: 1.2rem;
         }
@@ -863,6 +1035,10 @@
             .admin-control-panel[data-span="6"],
             .admin-control-panel[data-span="8"] {
                 grid-column: span 12;
+            }
+
+            .deal-pipeline-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .admin-feature-access-row {
@@ -1115,6 +1291,29 @@
                     </div>
                     <div id="admin-access-requests-list" class="outreach-list">
                         <p class="outreach-empty">No access requests loaded yet.</p>
+                    </div>
+                </div>
+
+                <div id="deal-pipeline-card" class="glass-card glass-card-3d widget-card outreach-card admin-control-panel" data-span="12" data-widget-id="deal-pipeline" data-widget-title="Deal Desk Pipeline" style="--panel-index:2;">
+                    <span class="admin-panel-accent" aria-hidden="true"></span>
+                    <div class="card-header">
+                        <div>
+                            <div class="admin-panel-eyebrow">Deal Desk</div>
+                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16"></path><path d="M4 12h10"></path><path d="M4 17h7"></path><circle cx="18" cy="17" r="3"></circle></svg></span><span>Deal Desk Pipeline</span></h2>
+                            <p class="card-subtitle" id="deal-pipeline-subtitle">Track seller submissions and assigned MLS opportunities across the full deal flow.</p>
+                        </div>
+                        <button id="deal-pipeline-refresh-btn" type="button" class="card-btn">Refresh</button>
+                    </div>
+                    <div class="deal-pipeline-toolbar">
+                        <div id="deal-pipeline-summary" class="deal-pipeline-summary">
+                            <div class="deal-pipeline-metric"><span>Open Deals</span><strong>0</strong></div>
+                            <div class="deal-pipeline-metric"><span>Negotiating</span><strong>0</strong></div>
+                            <div class="deal-pipeline-metric"><span>Under Contract</span><strong>0</strong></div>
+                            <div class="deal-pipeline-metric"><span>Closed</span><strong>0</strong></div>
+                        </div>
+                        <div id="admin-deal-pipeline-board" class="deal-pipeline-board">
+                            <p class="deal-pipeline-empty">Loading deal desk pipeline...</p>
+                        </div>
                     </div>
                 </div>
 

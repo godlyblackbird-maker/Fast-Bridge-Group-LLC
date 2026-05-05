@@ -3284,10 +3284,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         const workspaceUser = getWorkspaceUserContext();
+        const workspaceName = String(workspaceUser.name || '').trim();
+        const normalizedWorkspaceName = normalizeUserIdentityValue(workspaceName);
         const workspaceAliases = Array.isArray(workspaceUser.aliases) ? workspaceUser.aliases : [];
         const workspaceKeys = [
             String(workspaceUser.key || '').trim(),
             normalizeUserIdentityValue(workspaceUser.email || ''),
+            workspaceName,
+            normalizedWorkspaceName,
             normalizeUserNameKey(workspaceUser.name || ''),
             ...workspaceAliases.map((alias) => normalizeUserIdentityValue(alias))
         ].filter(Boolean);
@@ -14911,6 +14915,322 @@ function initNavbarDateTime() {
         }
 
         loadRequests();
+    }
+
+    function initAdminDealDeskPipeline() {
+        const board = document.getElementById('admin-deal-pipeline-board');
+        if (!board) {
+            return;
+        }
+
+        const subtitle = document.getElementById('deal-pipeline-subtitle');
+        const summary = document.getElementById('deal-pipeline-summary');
+        const refreshButton = document.getElementById('deal-pipeline-refresh-btn');
+        const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        const stageOrder = ['new-lead', 'underwriting', 'offer-out', 'negotiating', 'under-contract', 'closed', 'dead'];
+        const stageLabels = {
+            'new-lead': 'New Lead',
+            underwriting: 'Underwriting',
+            'offer-out': 'Offer Out',
+            negotiating: 'Negotiating',
+            'under-contract': 'Under Contract',
+            closed: 'Closed',
+            dead: 'Dead'
+        };
+        let currentUser = null;
+
+        try {
+            currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        } catch (error) {
+            currentUser = null;
+        }
+
+        if (!currentUser || currentUser.role !== 'admin') {
+            if (subtitle) {
+                subtitle.textContent = 'Only admin accounts can manage the deal desk pipeline.';
+            }
+            board.innerHTML = '<p class="deal-pipeline-empty">Admin access required.</p>';
+            return;
+        }
+
+        function escapeDealText(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function notify(type, title, message) {
+            if (typeof showDashboardToast === 'function') {
+                showDashboardToast(type, title, message, { persist: false });
+                return;
+            }
+            window.alert(message);
+        }
+
+        function renderSummary(items) {
+            if (!summary) {
+                return;
+            }
+
+            const sourceItems = Array.isArray(items) ? items : [];
+            const openDeals = sourceItems.filter((item) => item.stage !== 'closed' && item.stage !== 'dead').length;
+            const negotiating = sourceItems.filter((item) => item.stage === 'negotiating').length;
+            const underContract = sourceItems.filter((item) => item.stage === 'under-contract').length;
+            const closed = sourceItems.filter((item) => item.stage === 'closed').length;
+
+            summary.innerHTML = `
+                <div class="deal-pipeline-metric"><span>Open Deals</span><strong>${openDeals}</strong></div>
+                <div class="deal-pipeline-metric"><span>Negotiating</span><strong>${negotiating}</strong></div>
+                <div class="deal-pipeline-metric"><span>Under Contract</span><strong>${underContract}</strong></div>
+                <div class="deal-pipeline-metric"><span>Closed</span><strong>${closed}</strong></div>
+            `;
+        }
+
+        async function openSellerPortal(item, triggerButton) {
+            if (!token) {
+                throw new Error('Missing auth token. Please sign in again.');
+            }
+
+            if (triggerButton) {
+                triggerButton.disabled = true;
+                triggerButton.textContent = 'Opening...';
+            }
+
+            try {
+                const detail = item && item.detail && typeof item.detail === 'object' ? item.detail : {};
+                const response = await fetch('/api/client-portals', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        portalType: 'seller',
+                        sourceKind: 'property-submission',
+                        sourceRef: String(item.sourceRef || ''),
+                        title: item.propertyAddress || item.title || detail.sellerName || 'Seller portal',
+                        contactName: detail.sellerName || item.ownerName,
+                        contactEmail: item.ownerEmail || '',
+                        contactPhone: detail.sellerPhone || '',
+                        companyName: '',
+                        propertyAddress: item.propertyAddress || item.title || '',
+                        status: item.stage || 'new',
+                        summary: item.notes || 'Seller submission received. Status, next steps, documents, and communication history now live here.',
+                        notes: '',
+                        deadlineAt: ''
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to open the seller portal.');
+                }
+
+                const portal = payload && payload.portal ? payload.portal : null;
+                if (!portal || !portal.id) {
+                    throw new Error('Portal response was incomplete.');
+                }
+
+                window.open(portal.adminUrl || `/portal.html?portal=${encodeURIComponent(portal.id)}`, '_blank', 'noopener');
+            } finally {
+                if (triggerButton) {
+                    triggerButton.disabled = false;
+                    triggerButton.textContent = 'Seller Portal';
+                }
+            }
+        }
+
+        function formatHistoryEntry(entry) {
+            const timestamp = entry && entry.at ? new Date(entry.at).toLocaleString() : 'Updated recently';
+            const actorName = entry && entry.actorName ? entry.actorName : 'FAST BRIDGE GROUP';
+            const fromLabel = stageLabels[String(entry && entry.fromStage || 'new-lead').trim()] || 'New Lead';
+            const toLabel = stageLabels[String(entry && entry.toStage || 'new-lead').trim()] || 'New Lead';
+            return `${actorName} moved ${fromLabel} -> ${toLabel} on ${timestamp}`;
+        }
+
+        function renderBoard(items) {
+            const sourceItems = Array.isArray(items) ? items.slice() : [];
+            renderSummary(sourceItems);
+
+            if (subtitle) {
+                subtitle.textContent = sourceItems.length
+                    ? `${sourceItems.length} active pipeline record${sourceItems.length === 1 ? '' : 's'} across seller intake and MLS assignments.`
+                    : 'Track seller submissions and assigned MLS opportunities across the full deal flow.';
+            }
+
+            if (!sourceItems.length) {
+                board.innerHTML = '<p class="deal-pipeline-empty">No deals have entered the pipeline yet.</p>';
+                return;
+            }
+
+            const grouped = new Map(stageOrder.map((stage) => [stage, []]));
+            sourceItems.forEach((item) => {
+                const stage = grouped.has(item.stage) ? item.stage : 'new-lead';
+                grouped.get(stage).push(item);
+            });
+
+            board.innerHTML = stageOrder.map((stage) => {
+                const stageItems = grouped.get(stage) || [];
+                return `
+                    <section class="deal-pipeline-column" data-stage="${stage}">
+                        <div class="deal-pipeline-column-head">
+                            <h3>${stageLabels[stage]}</h3>
+                            <span class="deal-pipeline-count">${stageItems.length}</span>
+                        </div>
+                        <div class="deal-pipeline-list">
+                            ${stageItems.length ? stageItems.map((item) => {
+                                const detail = item && item.detail && typeof item.detail === 'object' ? item.detail : {};
+                                const sourceLabel = item.sourceKind === 'property-assignment' ? 'MLS Assignment' : 'Seller Intake';
+                                const detailLine = item.sourceKind === 'property-assignment'
+                                    ? `Assigned to ${escapeDealText(detail.assignedTo && detail.assignedTo.name || item.ownerName || 'team')}`
+                                    : `Seller: ${escapeDealText(detail.sellerName || item.ownerName || 'Unknown seller')}`;
+                                const secondaryLine = item.sourceKind === 'property-assignment'
+                                    ? `Agent status: ${escapeDealText(detail.piqAgentStatus || 'Not set')}`
+                                    : `Phone: ${escapeDealText(formatPhoneDisplayValue(detail.sellerPhone || '')) || 'No phone'}`;
+                                const historyMarkup = Array.isArray(item.history) && item.history.length
+                                    ? item.history.slice(0, 2).map((entry) => `<p>${escapeDealText(formatHistoryEntry(entry))}</p>`).join('')
+                                    : '<p>No stage moves logged yet.</p>';
+                                return `
+                                    <article class="deal-pipeline-card" data-record-id="${escapeDealText(item.id)}" data-source-kind="${escapeDealText(item.sourceKind)}">
+                                        <div class="deal-pipeline-card-head">
+                                            <div>
+                                                <p class="deal-pipeline-card-title">${escapeDealText(item.title || 'Deal')}</p>
+                                            </div>
+                                            <span class="deal-pipeline-source-chip">${escapeDealText(sourceLabel)}</span>
+                                        </div>
+                                        <div class="deal-pipeline-card-meta">
+                                            <span class="deal-pipeline-priority-chip" data-priority="${escapeDealText(item.priority || 'medium')}">${escapeDealText(item.priority || 'medium')} priority</span>
+                                            ${item.amountLabel ? `<span class="deal-pipeline-source-chip">${escapeDealText(item.amountLabel)}</span>` : ''}
+                                        </div>
+                                        <div class="deal-pipeline-card-copy">
+                                            <p>${escapeDealText(item.propertyAddress || 'No property address')}</p>
+                                            <p>${detailLine}</p>
+                                            <p>${secondaryLine}</p>
+                                        </div>
+                                        <div class="deal-pipeline-controls">
+                                            <div class="form-group">
+                                                <label>Stage</label>
+                                                <select class="form-input deal-pipeline-stage-select">${stageOrder.map((option) => `<option value="${option}"${option === item.stage ? ' selected' : ''}>${stageLabels[option]}</option>`).join('')}</select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Priority</label>
+                                                <select class="form-input deal-pipeline-priority-select">
+                                                    <option value="high"${item.priority === 'high' ? ' selected' : ''}>High</option>
+                                                    <option value="medium"${item.priority === 'medium' ? ' selected' : ''}>Medium</option>
+                                                    <option value="low"${item.priority === 'low' ? ' selected' : ''}>Low</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Notes</label>
+                                            <textarea class="form-input deal-pipeline-notes">${escapeDealText(item.notes || '')}</textarea>
+                                        </div>
+                                        <div class="deal-pipeline-card-actions">
+                                            <button type="button" class="card-btn active deal-pipeline-save-btn">Save</button>
+                                            ${item.sourceKind === 'property-submission' ? '<button type="button" class="card-btn deal-pipeline-portal-btn">Seller Portal</button>' : ''}
+                                        </div>
+                                        <div class="deal-pipeline-card-history deal-pipeline-history">
+                                            ${historyMarkup}
+                                        </div>
+                                    </article>
+                                `;
+                            }).join('') : '<p class="deal-pipeline-empty">No deals in this stage.</p>'}
+                        </div>
+                    </section>
+                `;
+            }).join('');
+
+            board.querySelectorAll('.deal-pipeline-save-btn').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const card = button.closest('.deal-pipeline-card');
+                    if (!card) {
+                        return;
+                    }
+
+                    const recordId = card.getAttribute('data-record-id') || '';
+                    const stageSelect = card.querySelector('.deal-pipeline-stage-select');
+                    const prioritySelect = card.querySelector('.deal-pipeline-priority-select');
+                    const notesField = card.querySelector('.deal-pipeline-notes');
+
+                    button.disabled = true;
+                    button.textContent = 'Saving...';
+                    try {
+                        const response = await fetch(`/api/deal-pipeline/${encodeURIComponent(recordId)}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                stage: stageSelect ? stageSelect.value : 'new-lead',
+                                priority: prioritySelect ? prioritySelect.value : 'medium',
+                                notes: notesField ? notesField.value : ''
+                            })
+                        });
+                        const payload = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                            throw new Error(payload && payload.error ? payload.error : 'Unable to update the pipeline record.');
+                        }
+                        notify('success', 'Deal Desk Updated', 'Pipeline stage saved.');
+                        await loadPipeline();
+                    } catch (error) {
+                        notify('error', 'Deal Desk Update Failed', error.message || 'Unable to update the pipeline record.');
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = 'Save';
+                    }
+                });
+            });
+
+            board.querySelectorAll('.deal-pipeline-portal-btn').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const card = button.closest('.deal-pipeline-card');
+                    const recordId = card && card.getAttribute('data-record-id');
+                    const item = sourceItems.find((entry) => entry.id === recordId);
+                    if (!item) {
+                        return;
+                    }
+                    try {
+                        await openSellerPortal(item, button);
+                    } catch (error) {
+                        notify('error', 'Seller Portal Failed', error.message || 'Unable to open the seller portal.');
+                    }
+                });
+            });
+        }
+
+        async function loadPipeline() {
+            if (!token) {
+                board.innerHTML = '<p class="deal-pipeline-empty">Missing auth token. Please sign in again.</p>';
+                return;
+            }
+
+            try {
+                board.innerHTML = '<p class="deal-pipeline-empty">Loading deal desk pipeline...</p>';
+                const response = await fetch('/api/deal-pipeline', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load the deal desk pipeline.');
+                }
+                renderBoard(Array.isArray(data.items) ? data.items : []);
+            } catch (error) {
+                board.innerHTML = `<p class="deal-pipeline-empty">${escapeDealText(String(error.message || 'Unable to load the deal desk pipeline.'))}</p>`;
+            }
+        }
+
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => {
+                loadPipeline();
+            });
+        }
+
+        loadPipeline();
     }
 
     function initAdminPropertySubmissions() {
@@ -30859,6 +31179,7 @@ function initNavbarDateTime() {
             ['initAdminAnnouncementsWidget', initAdminAnnouncementsWidget],
             ['initAdminOnlineUsersWidget', initAdminOnlineUsersWidget],
             ['initAdminAccessRequests', initAdminAccessRequests],
+            ['initAdminDealDeskPipeline', initAdminDealDeskPipeline],
             ['initAdminPropertySubmissions', initAdminPropertySubmissions],
             ['initAdminSmtpApprovals', initAdminSmtpApprovals],
             ['initAdminFeatureAccessControls', initAdminFeatureAccessControls],

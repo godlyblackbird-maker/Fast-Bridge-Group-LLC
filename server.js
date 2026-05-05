@@ -5485,6 +5485,35 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS deal_pipeline_records (
+      id TEXT PRIMARY KEY,
+      source_kind TEXT NOT NULL,
+      source_ref TEXT NOT NULL,
+      title TEXT NOT NULL,
+      property_address TEXT,
+      owner_name TEXT,
+      owner_email TEXT,
+      stage TEXT NOT NULL DEFAULT 'new-lead',
+      priority TEXT NOT NULL DEFAULT 'medium',
+      amount_label TEXT,
+      detail_json TEXT NOT NULL DEFAULT '{}',
+      notes TEXT NOT NULL DEFAULT '',
+      history_json TEXT NOT NULL DEFAULT '[]',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      UNIQUE(source_kind, source_ref)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating deal_pipeline_records table:', err);
+    } else {
+      console.log('Deal pipeline table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_deal_pipeline_stage_updated ON deal_pipeline_records(stage, updated_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_deal_pipeline_source ON deal_pipeline_records(source_kind, source_ref)', () => {});
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS team_tasks (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -8398,6 +8427,8 @@ const CLIENT_PORTAL_VISIBILITIES = new Set(['portal', 'internal']);
 const OUTREACH_PRIORITY_VALUES = new Set(['high', 'medium', 'low']);
 const OUTREACH_TAG_VALUES = new Set(['new', 'attempting-contact', 'engaged', 'responsive', 'warm', 'hot', 'cold', 'no-response', 'do-not-contact']);
 const OUTREACH_SEQUENCE_CHANNELS = new Set(['gmail', 'twilio']);
+const DEAL_PIPELINE_STAGE_VALUES = new Set(['new-lead', 'underwriting', 'offer-out', 'negotiating', 'under-contract', 'closed', 'dead']);
+const DEAL_PIPELINE_SOURCE_VALUES = new Set(['property-submission', 'property-assignment']);
 const TEAM_TASK_PRIORITY_VALUES = new Set(['p1', 'p2', 'p3', 'p4']);
 const TEAM_TASK_STATUS_VALUES = new Set(['open', 'in-progress', 'done']);
 
@@ -8942,6 +8973,228 @@ function normalizeTeamTaskPriority(value) {
 function normalizeTeamTaskStatus(value) {
   const normalized = String(value || '').trim().toLowerCase();
   return TEAM_TASK_STATUS_VALUES.has(normalized) ? normalized : 'open';
+}
+
+function normalizeDealPipelineSourceKind(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return DEAL_PIPELINE_SOURCE_VALUES.has(normalized) ? normalized : 'property-submission';
+}
+
+function normalizeDealPipelineStage(value, sourceKind = 'property-submission') {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (DEAL_PIPELINE_STAGE_VALUES.has(normalized)) {
+    return normalized;
+  }
+
+  return normalizeDealPipelineSourceKind(sourceKind) === 'property-assignment'
+    ? 'underwriting'
+    : 'new-lead';
+}
+
+function normalizeDealPipelinePriority(value) {
+  return normalizeOutreachPriority(value);
+}
+
+function normalizeDealPipelineText(value, maxLength = 240) {
+  return normalizeClientPortalPlainText(value || '', maxLength);
+}
+
+function normalizeDealPipelineNotes(value) {
+  return normalizeClientPortalPlainText(value || '', 4000);
+}
+
+function normalizeDealPipelineHistoryEntries(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      const source = entry && typeof entry === 'object' ? entry : {};
+      const at = Number(source.at) || Date.now();
+      const fromStage = normalizeDealPipelineStage(source.fromStage || 'new-lead');
+      const toStage = normalizeDealPipelineStage(source.toStage || 'new-lead');
+      const actorName = normalizeDealPipelineText(source.actorName || '', 160) || 'FAST BRIDGE GROUP';
+      if (!toStage) {
+        return null;
+      }
+      return {
+        at,
+        fromStage,
+        toStage,
+        actorName,
+        note: normalizeDealPipelineText(source.note || '', 240)
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => Number(right.at || 0) - Number(left.at || 0))
+    .slice(0, 20);
+}
+
+function parseDealPipelineHistory(historyJson) {
+  try {
+    return normalizeDealPipelineHistoryEntries(JSON.parse(String(historyJson || '[]')));
+  } catch (error) {
+    return [];
+  }
+}
+
+function parseDealPipelineDetail(detailJson) {
+  try {
+    const parsed = JSON.parse(String(detailJson || '{}'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function serializeDealPipelineRecord(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: String(row.id || '').trim(),
+    sourceKind: normalizeDealPipelineSourceKind(row.source_kind),
+    sourceRef: String(row.source_ref || '').trim(),
+    title: normalizeDealPipelineText(row.title || '', 200) || 'Deal',
+    propertyAddress: normalizeDealPipelineText(row.property_address || '', 240),
+    ownerName: normalizeDealPipelineText(row.owner_name || '', 160),
+    ownerEmail: normalizeKnownEmail(row.owner_email || ''),
+    stage: normalizeDealPipelineStage(row.stage, row.source_kind),
+    priority: normalizeDealPipelinePriority(row.priority),
+    amountLabel: normalizeDealPipelineText(row.amount_label || '', 120),
+    detail: parseDealPipelineDetail(row.detail_json),
+    notes: normalizeDealPipelineNotes(row.notes || ''),
+    history: parseDealPipelineHistory(row.history_json),
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Number(row.created_at) || Date.now()
+  };
+}
+
+function buildDealPipelineAmountLabel(askingPrice, estimatedValue) {
+  const asking = normalizeDealPipelineText(askingPrice || '', 60);
+  const estimate = normalizeDealPipelineText(estimatedValue || '', 60);
+  if (asking && estimate) {
+    return `${asking} ask / ${estimate} ARV`;
+  }
+  return asking || estimate || '';
+}
+
+function buildPropertySubmissionPipelineSeed(row) {
+  const submissionId = Number(row?.id) || 0;
+  if (!submissionId) {
+    return null;
+  }
+
+  const propertyLine = [row.property_address, row.property_city, row.property_state, row.property_zip]
+    .map((entry) => normalizeDealPipelineText(entry || '', 80))
+    .filter(Boolean)
+    .join(', ');
+  const askingPrice = normalizeDealPipelineText(row.asking_price || '', 60);
+  const estimatedValue = normalizeDealPipelineText(row.estimated_value || '', 60);
+  const createdAt = Number(Date.parse(String(row.created_at || ''))) || Date.now();
+  const statusValue = String(row.status || '').trim().toLowerCase();
+
+  return {
+    id: `deal-property-submission-${submissionId}`,
+    sourceKind: 'property-submission',
+    sourceRef: String(submissionId),
+    title: propertyLine || normalizeDealPipelineText(row.seller_name || '', 160) || `Seller submission ${submissionId}`,
+    propertyAddress: propertyLine,
+    ownerName: normalizeDealPipelineText(row.seller_name || '', 160),
+    ownerEmail: normalizeKnownEmail(row.seller_email || ''),
+    stage: normalizeDealPipelineStage(statusValue || 'new-lead', 'property-submission'),
+    priority: 'medium',
+    amountLabel: buildDealPipelineAmountLabel(askingPrice, estimatedValue),
+    detail: {
+      sellerName: normalizeDealPipelineText(row.seller_name || '', 160),
+      sellerPhone: normalizeSmsPhone(row.seller_phone || '') || normalizeDealPipelineText(row.seller_phone || '', 80),
+      askingPrice,
+      estimatedValue,
+      propertyType: normalizeDealPipelineText(row.property_type || '', 120),
+      financingType: normalizeDealPipelineText(row.financing_type || '', 120),
+      timeline: normalizeDealPipelineText(row.timeline || '', 120),
+      submissionId
+    },
+    createdAt,
+    updatedAt: createdAt
+  };
+}
+
+function buildPropertyAssignmentPipelineSeed(record) {
+  if (!record || !record.propertyKey) {
+    return null;
+  }
+
+  const assignedTo = record.assignedTo && typeof record.assignedTo === 'object' ? record.assignedTo : {};
+  const assignedBy = record.assignedBy && typeof record.assignedBy === 'object' ? record.assignedBy : {};
+  const assignedAt = Number(Date.parse(String(record.assignedAt || ''))) || Date.now();
+  const snapshot = record.propertySnapshot && typeof record.propertySnapshot === 'object' ? record.propertySnapshot : {};
+
+  return {
+    id: `deal-property-assignment-${String(record.propertyKey || '').trim()}`,
+    sourceKind: 'property-assignment',
+    sourceRef: String(record.propertyKey || '').trim(),
+    title: normalizeDealPipelineText(record.propertyAddress || snapshot.address || '', 200) || 'Assigned property',
+    propertyAddress: normalizeDealPipelineText(record.propertyAddress || snapshot.address || '', 240),
+    ownerName: normalizeDealPipelineText(assignedTo.name || '', 160),
+    ownerEmail: normalizeKnownEmail(assignedTo.email || ''),
+    stage: 'underwriting',
+    priority: 'medium',
+    amountLabel: normalizeDealPipelineText(snapshot.price || snapshot.askingPrice || '', 120),
+    detail: {
+      propertyKey: String(record.propertyKey || '').trim(),
+      assignedTo: {
+        key: normalizeDealPipelineText(assignedTo.key || '', 160),
+        name: normalizeDealPipelineText(assignedTo.name || '', 160),
+        email: normalizeKnownEmail(assignedTo.email || '')
+      },
+      assignedBy: {
+        key: normalizeDealPipelineText(assignedBy.key || '', 160),
+        name: normalizeDealPipelineText(assignedBy.name || '', 160),
+        email: normalizeKnownEmail(assignedBy.email || '')
+      },
+      assignedAt,
+      piqAgentStatus: normalizeDealPipelineText(snapshot.piqAgentStatus || '', 120)
+    },
+    createdAt: assignedAt,
+    updatedAt: assignedAt
+  };
+}
+
+async function upsertDealPipelineSeeds(seeds) {
+  const sourceSeeds = Array.isArray(seeds) ? seeds.filter(Boolean) : [];
+  for (const seed of sourceSeeds) {
+    await dbRun(
+      `INSERT INTO deal_pipeline_records (
+        id, source_kind, source_ref, title, property_address, owner_name, owner_email,
+        stage, priority, amount_label, detail_json, notes, history_json, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '[]', ?, ?)
+      ON CONFLICT(source_kind, source_ref) DO UPDATE SET
+        title = excluded.title,
+        property_address = excluded.property_address,
+        owner_name = excluded.owner_name,
+        owner_email = excluded.owner_email,
+        amount_label = excluded.amount_label,
+        detail_json = excluded.detail_json`,
+      [
+        seed.id,
+        seed.sourceKind,
+        seed.sourceRef,
+        seed.title,
+        seed.propertyAddress,
+        seed.ownerName,
+        seed.ownerEmail,
+        normalizeDealPipelineStage(seed.stage, seed.sourceKind),
+        normalizeDealPipelinePriority(seed.priority),
+        seed.amountLabel,
+        JSON.stringify(seed.detail || {}),
+        Number(seed.createdAt) || Date.now(),
+        Number(seed.updatedAt) || Number(seed.createdAt) || Date.now()
+      ]
+    );
+  }
+}
+
+async function getDealPipelineRecordById(recordId) {
+  return dbGet('SELECT * FROM deal_pipeline_records WHERE id = ?', [String(recordId || '').trim()]);
 }
 
 function normalizeTeamTaskDueAt(value) {
@@ -22226,6 +22479,120 @@ app.post('/api/property-assignments', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ error: 'Unable to save property assignment' });
+  }
+});
+
+app.get('/api/deal-pipeline', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const [submissionRows, assignmentRows] = await Promise.all([
+      dbAll(
+        `SELECT id, seller_name, seller_email, seller_phone, property_address, property_city, property_state, property_zip,
+                property_type, financing_type, asking_price, estimated_value, timeline, status, created_at
+           FROM property_submissions
+          ORDER BY datetime(created_at) DESC, id DESC`
+      ),
+      dbAll(
+        `SELECT property_key, property_address, assigned_to_key, assigned_to_email, assigned_to_name,
+                assigned_by_key, assigned_by_email, assigned_by_name, assigned_at, payload_json
+           FROM property_assignments`,
+        []
+      )
+    ]);
+
+    const assignmentStore = await sanitizePropertyAssignments(assignmentRows);
+    const seeds = [
+      ...(Array.isArray(submissionRows) ? submissionRows.map((row) => buildPropertySubmissionPipelineSeed(row)) : []),
+      ...Object.values(assignmentStore || {}).map((record) => buildPropertyAssignmentPipelineSeed(record))
+    ].filter(Boolean);
+
+    await upsertDealPipelineSeeds(seeds);
+
+    const rows = await dbAll(
+      `SELECT *
+         FROM deal_pipeline_records
+        ORDER BY CASE stage
+          WHEN 'under-contract' THEN 0
+          WHEN 'negotiating' THEN 1
+          WHEN 'offer-out' THEN 2
+          WHEN 'underwriting' THEN 3
+          WHEN 'new-lead' THEN 4
+          WHEN 'closed' THEN 5
+          ELSE 6
+        END,
+        updated_at DESC,
+        created_at DESC`
+    );
+
+    return res.json({
+      items: rows.map((row) => serializeDealPipelineRecord(row)).filter(Boolean)
+    });
+  } catch (error) {
+    console.error('Deal pipeline load error:', error);
+    return res.status(500).json({ error: 'Unable to load the deal desk pipeline.' });
+  }
+});
+
+app.patch('/api/deal-pipeline/:id', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const recordId = String(req.params?.id || '').trim();
+  if (!recordId) {
+    return res.status(400).json({ error: 'Pipeline record id is required.' });
+  }
+
+  try {
+    const currentRow = await getDealPipelineRecordById(recordId);
+    if (!currentRow) {
+      return res.status(404).json({ error: 'Pipeline record not found.' });
+    }
+
+    const currentRecord = serializeDealPipelineRecord(currentRow);
+    const nextStage = normalizeDealPipelineStage(req.body?.stage || currentRecord.stage, currentRecord.sourceKind);
+    const nextPriority = normalizeDealPipelinePriority(req.body?.priority || currentRecord.priority);
+    const nextNotes = normalizeDealPipelineNotes(req.body?.notes != null ? req.body.notes : currentRecord.notes);
+    const history = normalizeDealPipelineHistoryEntries(currentRecord.history);
+
+    if (nextStage !== currentRecord.stage) {
+      history.unshift({
+        at: Date.now(),
+        fromStage: currentRecord.stage,
+        toStage: nextStage,
+        actorName: normalizeDealPipelineText(decoded.name || decoded.email || 'FAST BRIDGE GROUP', 160),
+        note: normalizeDealPipelineText(req.body?.historyNote || '', 240)
+      });
+    }
+
+    await dbRun(
+      `UPDATE deal_pipeline_records
+          SET stage = ?,
+              priority = ?,
+              notes = ?,
+              history_json = ?,
+              updated_at = ?
+        WHERE id = ?`,
+      [
+        nextStage,
+        nextPriority,
+        nextNotes,
+        JSON.stringify(normalizeDealPipelineHistoryEntries(history)),
+        Date.now(),
+        recordId
+      ]
+    );
+
+    const updatedRow = await getDealPipelineRecordById(recordId);
+    return res.json({ success: true, item: serializeDealPipelineRecord(updatedRow) });
+  } catch (error) {
+    console.error('Deal pipeline update error:', error);
+    return res.status(500).json({ error: 'Unable to update the deal desk pipeline.' });
   }
 });
 
