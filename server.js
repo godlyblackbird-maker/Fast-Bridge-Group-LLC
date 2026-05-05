@@ -18254,6 +18254,23 @@ app.get('/api/admin/mls-imports/extract-pdf-jobs', async (req, res) => {
   }
 });
 
+app.get('/api/mls-imports/rows', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const limit = Math.max(1, Math.min(Number.parseInt(String(req.query?.limit || '150'), 10) || 150, 500));
+    const offset = Math.max(0, Number.parseInt(String(req.query?.offset || '0'), 10) || 0);
+    const payload = await loadMlsImportSpreadsheetRowsForUser(decoded.id, { limit, offset });
+    return res.json(payload);
+  } catch (error) {
+    console.error('Failed to load user MLS import rows:', error);
+    return res.status(500).json({ error: 'Failed to load MLS import rows.' });
+  }
+});
+
 app.get('/api/admin/mls-imports/rows', async (req, res) => {
   const decoded = requireAdmin(req, res);
   if (!decoded) {

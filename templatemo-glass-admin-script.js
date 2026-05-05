@@ -20033,6 +20033,190 @@ function initNavbarDateTime() {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
 
+        function normalizeServerImportedStatus(value) {
+            const rawValue = String(value || '').trim().toLowerCase();
+            if (!rawValue) {
+                return 'active';
+            }
+            if (rawValue.includes('closed')) {
+                return 'closed';
+            }
+            if (rawValue.includes('pending') || rawValue.includes('contract')) {
+                return 'pending';
+            }
+            if (rawValue.includes('hold') || rawValue.includes('off-market') || rawValue.includes('off market')) {
+                return 'on-hold';
+            }
+            return 'active';
+        }
+
+        function buildImportedPropertyRecordFromServerRow(row) {
+            const propertyAddress = String(row && row.propertyAddress || '').trim();
+            if (!propertyAddress) {
+                return null;
+            }
+
+            const importDateText = String(row && row.importDate || '').trim();
+            const importedAt = Number(Date.parse(importDateText)) || Date.now();
+            const normalizedStatus = normalizeServerImportedStatus(row && row.status);
+            const statusLabel = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).replace('-', ' ');
+            const marketLabel = extractCityFromPropertyAddress(propertyAddress) || 'MLS Spreadsheet Import';
+            const agentName = String(row && row.laName || '').trim() || 'Listing Agent';
+            const agentPhone = String(row && (row.laCell || row.laDirect || row.loPhone) || '').trim() || 'TBD';
+            const agentEmail = String(row && (row.laEmail || row.offersEmail) || '').trim() || 'TBD';
+            const pdfFile = String(row && row.pdfFile || '').trim();
+            const rowMatchKey = String(row && row.matchKey || '').trim();
+            const rowIdentifier = String(row && row.id || rowMatchKey || propertyAddress).trim();
+            const noteFragments = [
+                'Imported from the MLS spreadsheet.',
+                pdfFile ? `Source PDF: ${pdfFile}.` : '',
+                rowMatchKey ? `Row key: ${rowMatchKey}.` : ''
+            ].filter(Boolean);
+            const notes = noteFragments.join(' ');
+
+            return {
+                id: `mls-row:${rowIdentifier}`,
+                address: propertyAddress,
+                location: marketLabel,
+                price: 'Price TBD',
+                beds: '- Beds',
+                baths: '- Baths',
+                area: '- sqft',
+                garage: '-',
+                lotSize: 'Lot Size TBD',
+                status: normalizedStatus,
+                roi: '0.0',
+                imageUrl: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80',
+                clickedAt: importedAt,
+                propertySnapshot: {
+                    address: propertyAddress,
+                    propertyImages: ['https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80'],
+                    propertyDetails: 'MLS Spreadsheet Import / - Br / - Ba / - Gar / - / - sqft / - / Pool: Unknown',
+                    listPrice: 'Price TBD',
+                    propensity: 5,
+                    moderatePain: 'Imported MLS row',
+                    taxDelinquency: rowMatchKey ? `MLS Row ${rowMatchKey}` : 'MLS Spreadsheet Import',
+                    highDebt: 'Review disclosures, title, debt, and seller motivation before drafting terms.',
+                    marketInfo: importDateText ? `Imported ${importDateText} / ${statusLabel}` : statusLabel,
+                    dom: 0,
+                    cdom: 0,
+                    askingVsArv: 'N/A',
+                    arv: 'TBD',
+                    compData: 'Imported MLS spreadsheet row',
+                    piq: notes,
+                    comps: '',
+                    ia: 'Imported from the MLS spreadsheet. Complete pricing, photos, and underwriting after opening the property detail workspace.',
+                    offer: 'MLS spreadsheet import: confirm status, gather pricing, and build your offer plan here.',
+                    recordCreated: importDateText || new Date(importedAt).toLocaleDateString(),
+                    listingDate: importDateText || new Date(importedAt).toLocaleDateString(),
+                    idx: 'MLS Spreadsheet Import',
+                    propertyType: 'Residential',
+                    mlsNumber: rowMatchKey || `MLS-ROW-${rowIdentifier}`,
+                    statusLabel,
+                    autoTracker: importDateText ? `Imported ${importDateText}` : 'Imported MLS Row',
+                    areaLabel: marketLabel,
+                    propertyCover: propertyAddress,
+                    publicComments: notes,
+                    agentComments: 'Imported from the MLS spreadsheet. Open the full property workspace to continue underwriting and communication tracking.',
+                    apn: '-',
+                    unitNumber: '-',
+                    totalFloors: '-',
+                    sewer: '-',
+                    propertyCondition: '-',
+                    zoning: '-',
+                    associationDues: '-',
+                    commonWalls: '-',
+                    garageCount: '-',
+                    lotSize: 'Lot Size TBD',
+                    yearBuilt: '-',
+                    lockboxType: '-',
+                    occupied: '-',
+                    showing: '-',
+                    agentRecord: {
+                        name: agentName,
+                        title: 'Agent Record',
+                        phone: agentPhone,
+                        email: agentEmail,
+                        brokerage: 'MLS Spreadsheet Import',
+                        avgResponse: 'Unknown',
+                        averageDealsPerYear: '-',
+                        specialties: 'Imported listing'
+                    }
+                }
+            };
+        }
+
+        function mergeImportedItemsByAddress(primaryItems, secondaryItems) {
+            const mergedItems = [];
+            const seenPropertyKeys = new Set();
+
+            [...(Array.isArray(primaryItems) ? primaryItems : []), ...(Array.isArray(secondaryItems) ? secondaryItems : [])].forEach((item) => {
+                if (!item || typeof item !== 'object') {
+                    return;
+                }
+
+                const propertyKey = makePropertyStorageKey(
+                    item.propertySnapshot?.address
+                    || item.address
+                    || item.propertyAddress
+                    || item.id
+                );
+
+                if (!propertyKey || seenPropertyKeys.has(propertyKey)) {
+                    return;
+                }
+
+                seenPropertyKeys.add(propertyKey);
+                mergedItems.push(item);
+            });
+
+            return mergedItems
+                .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
+                .slice(0, 500);
+        }
+
+        async function hydrateImportedPropertiesFromServer() {
+            const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            if (!authToken) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/mls-imports/rows?offset=0&limit=500', {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`
+                    }
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to load imported MLS rows.');
+                }
+
+                const serverItems = (Array.isArray(payload.rows) ? payload.rows : [])
+                    .map((row) => buildImportedPropertyRecordFromServerRow(row))
+                    .filter(Boolean);
+
+                if (!serverItems.length) {
+                    return;
+                }
+
+                const existingItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
+                const mergedItems = mergeImportedItemsByAddress(existingItems, serverItems);
+
+                const existingSerialized = JSON.stringify(existingItems);
+                const mergedSerialized = JSON.stringify(mergedItems);
+                if (existingSerialized === mergedSerialized) {
+                    return;
+                }
+
+                setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, mergedItems, { silent: true });
+                window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+            } catch (error) {
+                console.error('Failed to hydrate imported properties from server rows:', error);
+            }
+        }
+
         function migrateLegacyImportedPropertiesForWorkspaceUser() {
             const normalizedWorkspaceKey = String(workspaceUser.key || '').trim();
             if (!normalizedWorkspaceKey || normalizedWorkspaceKey === 'default-user') {
@@ -20675,6 +20859,7 @@ function initNavbarDateTime() {
         migrateImportedPropertiesAcrossUsers();
         migrateLegacyImportedPropertiesForWorkspaceUser();
         migrateLegacyClickedPropertiesForWorkspaceUser();
+        await hydrateImportedPropertiesFromServer();
         render();
         window.addEventListener('storage', render);
         window.addEventListener('dashboard-data-updated', render);
