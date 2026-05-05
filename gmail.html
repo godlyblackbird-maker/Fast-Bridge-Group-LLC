@@ -2121,58 +2121,6 @@
                         <span id="gmail-reader-footer">No message selected.</span>
                         <span id="gmail-reader-mailbox"></span>
                     </div>
-                    <div class="gmail-outreach-panel" id="gmail-outreach-panel" hidden>
-                        <div class="gmail-outreach-head">
-                            <div>
-                                <h3>Outreach Intelligence</h3>
-                                <p id="gmail-outreach-status">Open a message to review follow-up risk, tag the contact, and push the next touch into the dashboard calendar.</p>
-                            </div>
-                            <div class="gmail-outreach-chip" id="gmail-outreach-risk" data-risk="low">low</div>
-                        </div>
-                        <div class="gmail-outreach-metrics">
-                            <div class="gmail-outreach-metric"><strong>Last Contacted</strong><span id="gmail-outreach-last-contacted">Not tracked yet</span></div>
-                            <div class="gmail-outreach-metric"><strong>Last Response</strong><span id="gmail-outreach-last-response">Not tracked yet</span></div>
-                            <div class="gmail-outreach-metric"><strong>Sent Count</strong><span id="gmail-outreach-sent-count">0</span></div>
-                            <div class="gmail-outreach-metric"><strong>Replies</strong><span id="gmail-outreach-response-count">0</span></div>
-                        </div>
-                        <div class="gmail-outreach-fields">
-                            <label class="gmail-outreach-field">
-                                <span>Response Tag</span>
-                                <select id="gmail-outreach-tag">
-                                    <option value="new">New</option>
-                                    <option value="attempting-contact">Attempting Contact</option>
-                                    <option value="engaged">Engaged</option>
-                                    <option value="responsive">Responsive</option>
-                                    <option value="warm">Warm</option>
-                                    <option value="hot">Hot</option>
-                                    <option value="cold">Cold</option>
-                                    <option value="no-response">No Response</option>
-                                    <option value="do-not-contact">Do Not Contact</option>
-                                </select>
-                            </label>
-                            <label class="gmail-outreach-field">
-                                <span>Priority</span>
-                                <select id="gmail-outreach-priority">
-                                    <option value="high">High</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="low">Low</option>
-                                </select>
-                            </label>
-                            <label class="gmail-outreach-field">
-                                <span>Next Follow Up</span>
-                                <input id="gmail-outreach-follow-up" type="datetime-local">
-                            </label>
-                            <label class="gmail-outreach-field">
-                                <span>Notes</span>
-                                <textarea id="gmail-outreach-notes" placeholder="Reason for the next touch, negotiation state, or reply context."></textarea>
-                            </label>
-                        </div>
-                        <div class="gmail-outreach-actions">
-                            <button class="gmail-outreach-button" id="gmail-outreach-save" type="button">Save Contact</button>
-                            <button class="gmail-outreach-button is-primary" id="gmail-outreach-calendar" type="button">Add To Calendar</button>
-                            <button class="gmail-outreach-button" id="gmail-outreach-refresh" type="button">Refresh Intelligence</button>
-                        </div>
-                    </div>
                 </section>
             </section>
         </main>
@@ -2378,20 +2326,6 @@
             const composeCalendarButton = document.getElementById('gmail-compose-calendar-btn');
             const composeMoreButton = document.getElementById('gmail-compose-more-btn');
             const composeTrashButton = document.getElementById('gmail-compose-trash-btn');
-            const gmailOutreachPanel = document.getElementById('gmail-outreach-panel');
-            const gmailOutreachStatus = document.getElementById('gmail-outreach-status');
-            const gmailOutreachRisk = document.getElementById('gmail-outreach-risk');
-            const gmailOutreachLastContacted = document.getElementById('gmail-outreach-last-contacted');
-            const gmailOutreachLastResponse = document.getElementById('gmail-outreach-last-response');
-            const gmailOutreachSentCount = document.getElementById('gmail-outreach-sent-count');
-            const gmailOutreachResponseCount = document.getElementById('gmail-outreach-response-count');
-            const gmailOutreachTag = document.getElementById('gmail-outreach-tag');
-            const gmailOutreachPriority = document.getElementById('gmail-outreach-priority');
-            const gmailOutreachFollowUp = document.getElementById('gmail-outreach-follow-up');
-            const gmailOutreachNotes = document.getElementById('gmail-outreach-notes');
-            const gmailOutreachSave = document.getElementById('gmail-outreach-save');
-            const gmailOutreachCalendar = document.getElementById('gmail-outreach-calendar');
-            const gmailOutreachRefresh = document.getElementById('gmail-outreach-refresh');
             const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
             const GMAIL_COMPOSE_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
             const GMAIL_PLANNER_STORAGE_KEY = 'personalTodoGoalsByUser';
@@ -2425,10 +2359,16 @@
                 composeSignatureLoaded: false,
                 readerHeaderCollapsed: false,
                 selectedMessageDetail: null,
-                selectedThreadMessages: [],
-                outreachDashboard: null,
-                activeOutreachContactId: 0
+                selectedThreadMessages: []
             };
+
+            function renderGmailOutreachPanel() {
+                // Outreach Intelligence was removed from Gmail.
+            }
+
+            async function loadGmailOutreachDashboard() {
+                // Outreach Intelligence was removed from Gmail.
+            }
 
             function getComposeDefaultStatus() {
                 return state.connected
@@ -2538,20 +2478,6 @@
                 return normalizeIdentityValue(match ? match[1] : raw);
             }
 
-            function formatOutreachTimestamp(value) {
-                const date = Number(value) ? new Date(Number(value)) : null;
-                if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-                    return 'Not tracked yet';
-                }
-
-                return new Intl.DateTimeFormat('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit'
-                }).format(date);
-            }
-
             function getSelectedMessageContactEmail() {
                 const message = state.selectedMessageDetail;
                 if (!message) {
@@ -2568,60 +2494,6 @@
 
                 return toCandidates.find((candidate) => candidate !== mailboxEmail) || fromEmail || '';
             }
-
-            function getActiveOutreachContact() {
-                const contacts = Array.isArray(state.outreachDashboard?.contacts) ? state.outreachDashboard.contacts : [];
-                const selectedEmail = getSelectedMessageContactEmail();
-                const selectedThreadId = String(state.selectedMessageDetail?.threadId || '').trim();
-                return contacts.find((contact) => {
-                    return String(contact?.contactEmail || '').trim().toLowerCase() === selectedEmail
-                        || (selectedThreadId && String(contact?.threadId || '').trim() === selectedThreadId);
-                }) || null;
-            }
-
-            function renderGmailOutreachPanel() {
-                const hasMessage = Boolean(state.selectedMessageDetail);
-                const contact = getActiveOutreachContact();
-                state.activeOutreachContactId = Number(contact?.id) || 0;
-
-                gmailOutreachPanel.hidden = !hasMessage;
-                if (!hasMessage) {
-                    return;
-                }
-
-                gmailOutreachRisk.textContent = String(contact?.riskLevel || 'low').replace(/-/g, ' ');
-                gmailOutreachRisk.dataset.risk = String(contact?.riskLevel || 'low');
-                gmailOutreachStatus.textContent = contact
-                    ? `Tracking ${contact.contactEmail || contact.contactName || 'this thread'} with ${contact.riskLevel} follow-up risk.`
-                    : 'No outreach record exists yet for this contact. Your next Gmail send will create one automatically.';
-                gmailOutreachLastContacted.textContent = formatOutreachTimestamp(contact?.lastContactedAt);
-                gmailOutreachLastResponse.textContent = formatOutreachTimestamp(contact?.lastResponseAt);
-                gmailOutreachSentCount.textContent = String(contact?.sentCount || 0);
-                gmailOutreachResponseCount.textContent = String(contact?.responseCount || 0);
-                gmailOutreachTag.value = String(contact?.responseTag || 'new');
-                gmailOutreachPriority.value = String(contact?.priority || 'medium');
-                gmailOutreachFollowUp.value = formatDateTimeLocalInput(contact?.nextFollowUpAt || '');
-                gmailOutreachNotes.value = String(contact?.notes || '');
-                gmailOutreachSave.disabled = !contact;
-                gmailOutreachCalendar.disabled = !contact;
-            }
-
-            async function loadGmailOutreachDashboard() {
-                if (!state.connected) {
-                    state.outreachDashboard = null;
-                    renderGmailOutreachPanel();
-                    return;
-                }
-
-                try {
-                    state.outreachDashboard = await apiFetch('/api/outreach-intelligence/dashboard?channel=gmail');
-                } catch (error) {
-                    console.warn('Unable to load Gmail outreach intelligence:', error);
-                }
-
-                renderGmailOutreachPanel();
-            }
-
             function addPlannerFollowUpLocal(options) {
                 const dueDateValue = String(options?.dueAt || '').trim();
                 const dueDate = dueDateValue ? new Date(dueDateValue) : null;
@@ -2641,46 +2513,6 @@
                     notifications: {}
                 });
                 setPlannerItemsLocal(items);
-            }
-
-            async function saveGmailOutreachContact(options = {}) {
-                const contact = getActiveOutreachContact();
-                if (!contact) {
-                    throw new Error('Send or log the first Gmail touch before updating outreach fields.');
-                }
-
-                const nextFollowUpAt = gmailOutreachFollowUp.value ? new Date(gmailOutreachFollowUp.value).getTime() : 0;
-                const payload = await apiFetch(`/api/outreach-intelligence/contacts/${encodeURIComponent(String(contact.id))}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({
-                        contactName: contact.contactName || getSelectedMessageContactEmail(),
-                        responseTag: gmailOutreachTag.value,
-                        priority: gmailOutreachPriority.value,
-                        nextFollowUpAt,
-                        notes: gmailOutreachNotes.value
-                    })
-                });
-
-                state.outreachDashboard = state.outreachDashboard || {};
-                const contacts = Array.isArray(state.outreachDashboard.contacts) ? state.outreachDashboard.contacts.slice() : [];
-                const nextContact = payload?.contact || null;
-                const contactIndex = contacts.findIndex((entry) => Number(entry?.id) === Number(nextContact?.id));
-                if (contactIndex >= 0 && nextContact) {
-                    contacts.splice(contactIndex, 1, nextContact);
-                } else if (nextContact) {
-                    contacts.unshift(nextContact);
-                }
-                state.outreachDashboard.contacts = contacts;
-                renderGmailOutreachPanel();
-
-                if (options.addPlanner) {
-                    addPlannerFollowUpLocal({
-                        title: `Email follow up: ${contact.contactName || contact.contactEmail || 'Contact'}`,
-                        dueAt: gmailOutreachFollowUp.value,
-                        priority: gmailOutreachPriority.value,
-                        reminderLead: '1-day'
-                    });
-                }
             }
 
             function syncComposeHeaderUi() {
@@ -3857,8 +3689,8 @@
                             bodyHtml,
                             templateKey: state.composeReplyContext ? 'gmail-reply' : 'gmail-compose',
                             templateName: state.composeReplyContext ? 'Gmail Reply' : 'Manual Gmail Send',
-                            priority: gmailOutreachPriority ? gmailOutreachPriority.value : 'medium',
-                            nextFollowUpAt: gmailOutreachFollowUp && gmailOutreachFollowUp.value ? new Date(gmailOutreachFollowUp.value).getTime() : 0,
+                            priority: 'medium',
+                            nextFollowUpAt: 0,
                             sourceKind: 'gmail-compose',
                             sourceRef: state.selectedMessageDetail && state.selectedMessageDetail.id || '',
                             attachments: state.composeAttachments.map((attachment) => ({
@@ -3870,7 +3702,6 @@
                     });
 
                     setBanner('Gmail message sent successfully.', 'success');
-                    loadGmailOutreachDashboard().catch(() => {});
                     closeComposeWindow(true);
                     const sentButton = folderButtons.find((button) => button.dataset.gmailView === 'sent');
                     if (sentButton) {
@@ -4028,9 +3859,7 @@
                 if (!title) {
                     return;
                 }
-                const suggestedDate = gmailOutreachFollowUp && gmailOutreachFollowUp.value
-                    ? gmailOutreachFollowUp.value
-                    : formatDateTimeLocalInput(Date.now() + (24 * 60 * 60 * 1000));
+                const suggestedDate = formatDateTimeLocalInput(Date.now() + (24 * 60 * 60 * 1000));
                 const eventTime = window.prompt('Follow-up date and time (YYYY-MM-DDTHH:MM)', suggestedDate);
                 if (!eventTime) {
                     return;
@@ -4039,12 +3868,9 @@
                     addPlannerFollowUpLocal({
                         title,
                         dueAt: eventTime,
-                        priority: gmailOutreachPriority ? gmailOutreachPriority.value : 'medium',
+                        priority: 'medium',
                         reminderLead: '1-day'
                     });
-                    if (gmailOutreachFollowUp) {
-                        gmailOutreachFollowUp.value = eventTime;
-                    }
                     insertComposeHtml(`<blockquote><strong>${escapeHtml(title)}</strong><br>${escapeHtml(eventTime)}</blockquote>`);
                     setBanner('Follow-up added to the dashboard calendar.', 'success');
                 } catch (error) {
@@ -4156,35 +3982,6 @@
                     readerStarButton.disabled = false;
                 }
             });
-            gmailOutreachSave.addEventListener('click', async () => {
-                gmailOutreachSave.disabled = true;
-                try {
-                    await saveGmailOutreachContact();
-                    setBanner('Outreach contact updated.', 'success');
-                } catch (error) {
-                    setBanner(error.message || 'Unable to update the outreach contact.', 'error');
-                } finally {
-                    renderGmailOutreachPanel();
-                }
-            });
-            gmailOutreachCalendar.addEventListener('click', async () => {
-                gmailOutreachCalendar.disabled = true;
-                try {
-                    await saveGmailOutreachContact({ addPlanner: true });
-                    setBanner('Follow-up added to the dashboard calendar.', 'success');
-                } catch (error) {
-                    setBanner(error.message || 'Unable to add the follow-up to the calendar.', 'error');
-                } finally {
-                    renderGmailOutreachPanel();
-                }
-            });
-            gmailOutreachRefresh.addEventListener('click', () => {
-                gmailOutreachRefresh.disabled = true;
-                loadGmailOutreachDashboard().finally(() => {
-                    gmailOutreachRefresh.disabled = false;
-                });
-            });
-
             searchForm.addEventListener('submit', (event) => {
                 event.preventDefault();
                 state.searchText = String(searchInput.value || '').trim();

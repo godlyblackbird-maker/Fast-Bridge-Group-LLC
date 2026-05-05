@@ -19386,6 +19386,7 @@ function initNavbarDateTime() {
         };
         let importBackdropPointerDown = false;
         let importSource = 'redfin';
+        let hydratedImportedItems = [];
 
         if (!list || !count || !listPagination || !importedList || !importedCount || !importedPagination || !assignedList || !assignedCount || !assignedPagination) {
             return;
@@ -20178,6 +20179,7 @@ function initNavbarDateTime() {
         async function hydrateImportedPropertiesFromServer() {
             const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             if (!authToken) {
+                hydratedImportedItems = [];
                 return;
             }
 
@@ -20198,11 +20200,13 @@ function initNavbarDateTime() {
                     .filter(Boolean);
 
                 if (!serverItems.length) {
+                    hydratedImportedItems = [];
                     return;
                 }
 
                 const existingItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
                 const mergedItems = mergeImportedItemsByAddress(existingItems, serverItems);
+                hydratedImportedItems = mergedItems.slice();
 
                 const existingSerialized = JSON.stringify(existingItems);
                 const mergedSerialized = JSON.stringify(mergedItems);
@@ -20213,6 +20217,7 @@ function initNavbarDateTime() {
                 setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, mergedItems, { silent: true });
                 window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
             } catch (error) {
+                hydratedImportedItems = [];
                 console.error('Failed to hydrate imported properties from server rows:', error);
             }
         }
@@ -20417,6 +20422,7 @@ function initNavbarDateTime() {
         function getAssignedItemsForWorkspaceUser() {
             const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
             const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const importedItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
             const mergedAssignments = new Map();
 
             Object.entries(assignmentStore).forEach(([storedPropertyKey, item]) => {
@@ -20440,7 +20446,7 @@ function initNavbarDateTime() {
                 });
             });
 
-            clickedItems.forEach((item) => {
+            [...clickedItems, ...importedItems].forEach((item) => {
                 if (!item || typeof item !== 'object') {
                     return;
                 }
@@ -20481,7 +20487,10 @@ function initNavbarDateTime() {
         }
 
         function getImportedItemsForWorkspaceUser() {
-            return getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key)
+            return mergeImportedItemsByAddress(
+                getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key),
+                hydratedImportedItems
+            )
                 .slice()
                 .sort((a, b) => (Number(b.clickedAt) || 0) - (Number(a.clickedAt) || 0));
         }
