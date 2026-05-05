@@ -884,6 +884,13 @@
             flex-wrap: wrap;
         }
 
+        .buyers-sheet-recent-import-top-right {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .buyers-sheet-recent-import-file {
             font-size: 14px;
             font-weight: 600;
@@ -935,6 +942,28 @@
         .buyers-sheet-recent-import-message {
             font-size: 12px;
             color: var(--text-secondary);
+        }
+
+        .buyers-sheet-recent-import-dismiss {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 30px;
+            min-height: 30px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(15, 23, 42, 0.18);
+            color: var(--buyers-note);
+            cursor: pointer;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+
+        .buyers-sheet-recent-import-dismiss:hover {
+            border-color: rgba(248, 113, 113, 0.48);
+            background: rgba(248, 113, 113, 0.12);
+            color: #fecaca;
+            transform: translateY(-1px);
         }
 
         .buyers-sheet-recent-import-empty {
@@ -1669,8 +1698,42 @@
                     status.dataset.status = String(job.status || '').trim().toLowerCase() || 'queued';
                     status.textContent = formatRecentImportStatus(job.status);
 
+                    const topRight = document.createElement('div');
+                    topRight.className = 'buyers-sheet-recent-import-top-right';
+                    topRight.appendChild(status);
+
+                    const normalizedStatus = String(job.status || '').trim().toLowerCase();
+                    if (normalizedStatus === 'running' || normalizedStatus === 'queued' || normalizedStatus === 'failed') {
+                        const dismissButton = document.createElement('button');
+                        dismissButton.type = 'button';
+                        dismissButton.className = 'buyers-sheet-recent-import-dismiss';
+                        dismissButton.setAttribute('aria-label', `Dismiss ${file.textContent}`);
+                        dismissButton.title = normalizedStatus === 'failed'
+                            ? 'Dismiss failed PDF import'
+                            : 'Dismiss running PDF import';
+                        dismissButton.textContent = 'Dismiss';
+                        dismissButton.addEventListener('click', async () => {
+                            dismissButton.disabled = true;
+                            try {
+                                await fetchJsonWithAuth(`/api/admin/mls-imports/extract-pdf-job/${encodeURIComponent(String(job.id || '').trim())}`, {
+                                    method: 'DELETE'
+                                });
+                                if (String(activePdfJobId || '').trim() === String(job.id || '').trim()) {
+                                    resetPdfUploadUi();
+                                }
+                                activeRecentJobPolls.delete(String(job.id || '').trim());
+                                recentPdfJobs = recentPdfJobs.filter((entry) => String(entry && entry.id || '').trim() !== String(job.id || '').trim());
+                                renderRecentPdfJobs();
+                            } catch (error) {
+                                dismissButton.disabled = false;
+                                window.alert(error && error.message ? error.message : 'The PDF import could not be dismissed.');
+                            }
+                        });
+                        topRight.appendChild(dismissButton);
+                    }
+
                     top.appendChild(file);
-                    top.appendChild(status);
+                    top.appendChild(topRight);
 
                     const meta = document.createElement('div');
                     meta.className = 'buyers-sheet-recent-import-meta';
@@ -2873,6 +2936,11 @@
                 if (!templateModal) {
                     return;
                 }
+
+                if (templateModal.contains(document.activeElement) && copyTemplatesButton) {
+                    copyTemplatesButton.focus();
+                }
+
                 draftTemplateSettings = null;
                 templateModal.hidden = true;
                 templateModal.setAttribute('aria-hidden', 'true');

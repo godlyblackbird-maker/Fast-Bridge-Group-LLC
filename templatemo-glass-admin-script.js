@@ -30360,10 +30360,10 @@ function initNavbarDateTime() {
             arvInput.value = String(parseMoney(detailData.arv || 694592));
 
             const buySideRate = 0.006617;
-            let otherCosts = [];
+            let otherCosts = [{ name: 'Whole sale', amount: 15000 }];
             let targetMode = 'dollar';
             let offerPriceMode = 'target';
-            let financingHoldCollapsed = false;
+            let financingHoldCollapsed = true;
             let iaSummaryMessage = '';
             let investorSummaryMessage = '';
             let strikeZoneTargetOffer = null;

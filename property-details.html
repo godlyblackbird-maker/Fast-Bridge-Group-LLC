@@ -936,12 +936,12 @@
                                         <button id="ia-add-other-cost" type="button">Add</button>
                                     </div>
                                     <div class="ia-other-inputs">
-                                        <input id="ia-other-cost-name" type="text" list="ia-other-cost-presets" placeholder="Select or type cost...">
+                                        <input id="ia-other-cost-name" type="text" list="ia-other-cost-presets" placeholder="Select or type cost..." value="Whole sale">
                                         <datalist id="ia-other-cost-presets">
                                             <option value="Whole sale"></option>
                                             <option value="Cash for Keys"></option>
                                         </datalist>
-                                        <input id="ia-other-cost-amount" type="text" inputmode="numeric" autocomplete="off" value="0" placeholder="0">
+                                        <input id="ia-other-cost-amount" type="text" inputmode="numeric" autocomplete="off" value="15000" placeholder="0">
                                     </div>
                                     <ul id="ia-other-cost-list" class="ia-other-list"></ul>
                                     <div class="ia-readout">Other Cost Total: <strong id="ia-other-cost-total">$0</strong></div>
@@ -985,15 +985,15 @@
                             </div>
                         </section>
 
-                        <section class="ia-section ia-collapsible-section" id="ia-financing-section">
+                        <section class="ia-section ia-collapsible-section is-collapsed" id="ia-financing-section">
                             <div class="ia-section-header">
                                 <h3>Financing &amp; Hold</h3>
-                                <button type="button" class="ia-section-toggle" id="ia-financing-toggle" aria-expanded="true" aria-controls="ia-financing-body">
-                                    <span class="ia-section-toggle-text">Minimize</span>
-                                    <span class="ia-section-toggle-icon" aria-hidden="true">-</span>
+                                <button type="button" class="ia-section-toggle" id="ia-financing-toggle" aria-expanded="false" aria-controls="ia-financing-body">
+                                    <span class="ia-section-toggle-text">Open</span>
+                                    <span class="ia-section-toggle-icon" aria-hidden="true">+</span>
                                 </button>
                             </div>
-                            <div class="ia-grid ia-section-body" id="ia-financing-body">
+                            <div class="ia-grid ia-section-body" id="ia-financing-body" hidden>
                                 <label>
                                     <span class="ia-label-row">
                                         <span>Financing Program</span>
@@ -1176,7 +1176,7 @@
                                     <input id="offer-purchase-price" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g., 500000">
                                 </label>
                                 <label>Close of Escrow (Days)*
-                                    <input id="offer-close-escrow-days" type="text" inputmode="numeric" autocomplete="off" value="10" placeholder="e.g., 21">
+                                    <input id="offer-close-escrow-days" type="text" inputmode="numeric" autocomplete="off" value="15" placeholder="e.g., 21">
                                 </label>
                             </div>
                         </div>

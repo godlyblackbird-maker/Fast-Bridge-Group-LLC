@@ -7097,6 +7097,28 @@ async function cancelMlsImportPdfJobForUser(jobId, ownerUserId) {
   return cancelledJob;
 }
 
+async function dismissMlsImportPdfJobForUser(jobId, ownerUserId) {
+  const normalizedJobId = String(jobId || '').trim();
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  if (!normalizedJobId || !normalizedOwnerUserId) {
+    return null;
+  }
+
+  const currentJob = mlsImportPdfJobs.get(normalizedJobId) || await loadMlsImportPdfJobRecord(normalizedJobId);
+  if (!currentJob) {
+    return null;
+  }
+
+  if (Number(currentJob.requesterId) !== normalizedOwnerUserId) {
+    return false;
+  }
+
+  mlsImportPdfJobs.delete(normalizedJobId);
+  await dbRun('DELETE FROM mls_import_runs WHERE id = ? AND requester_user_id = ?', [normalizedJobId, normalizedOwnerUserId]);
+
+  return currentJob;
+}
+
 function wasMlsImportSpreadsheetClearedSince(ownerUserId, startedAt) {
   const normalizedOwnerUserId = Number(ownerUserId) || 0;
   const clearedAt = Number(mlsImportSpreadsheetClearedAtByUser.get(normalizedOwnerUserId)) || 0;
@@ -18427,18 +18449,18 @@ app.delete('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => 
   }
 
   try {
-    const cancelledJob = await cancelMlsImportPdfJobForUser(jobId, decoded.id);
-    if (cancelledJob === false) {
+    const dismissedJob = await dismissMlsImportPdfJobForUser(jobId, decoded.id);
+    if (dismissedJob === false) {
       return res.status(403).json({ error: 'You do not have access to this MLS PDF extraction job.' });
     }
-    if (!cancelledJob) {
+    if (!dismissedJob) {
       return res.status(404).json({ error: 'The MLS PDF extraction job was not found.' });
     }
 
-    return res.json({ success: true, job: serializeMlsImportPdfJob(cancelledJob) });
+    return res.json({ success: true, job: serializeMlsImportPdfJob(dismissedJob) });
   } catch (error) {
-    console.error('Failed to cancel MLS import PDF job:', error);
-    return res.status(500).json({ error: 'Failed to cancel the MLS PDF extraction job.' });
+    console.error('Failed to dismiss MLS import PDF job:', error);
+    return res.status(500).json({ error: 'Failed to dismiss the MLS PDF extraction job.' });
   }
 });
 
