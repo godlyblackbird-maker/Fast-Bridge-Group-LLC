@@ -20514,6 +20514,50 @@ body.analytics-reboot .analytics-my-file-count {
     transition: all var(--transition-fast);
 }
 
+.deals-compact-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--deals-toggle-border);
+    background: var(--deals-toggle-bg);
+    color: var(--deals-meta-color);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.deals-compact-action-btn:hover,
+.deals-compact-action-btn:focus-visible {
+    border-color: var(--deals-toggle-hover-border);
+    color: var(--text-primary);
+    background: var(--deals-toggle-hover-bg);
+    outline: none;
+    box-shadow: 0 12px 26px -20px rgba(var(--accent-rgb), 0.45);
+}
+
+.deals-compact-action-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+}
+
+.deals-compact-clear-btn {
+    border-color: rgba(239, 68, 68, 0.28);
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+}
+
+.deals-compact-clear-btn:hover,
+.deals-compact-clear-btn:focus-visible {
+    border-color: rgba(248, 113, 113, 0.42);
+    background: rgba(239, 68, 68, 0.18);
+    color: #fecaca;
+}
+
 .deals-compact-toggle-btn:hover,
 .deals-compact-toggle-btn:focus-visible {
     border-color: var(--deals-toggle-hover-border);

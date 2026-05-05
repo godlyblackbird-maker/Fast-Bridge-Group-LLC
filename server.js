@@ -18414,6 +18414,21 @@ app.delete('/api/admin/mls-imports/rows', async (req, res) => {
   }
 });
 
+app.delete('/api/mls-imports/rows', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const result = await clearMlsImportSpreadsheetRowsForUser(decoded.id);
+    return res.json({ success: true, cancelledJobCount: Number(result && result.cancelledJobCount) || 0 });
+  } catch (error) {
+    console.error('Failed to clear user MLS import rows:', error);
+    return res.status(500).json({ error: 'Failed to clear MLS import rows.' });
+  }
+});
+
 app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: MLS_IMPORT_PDF_BODY_LIMIT }), async (req, res) => {
   const decoded = requireAdmin(req, res);
   if (!decoded) {

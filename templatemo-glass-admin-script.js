@@ -2302,8 +2302,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
             ? workspaceUserLike
             : getWorkspaceUserContext();
-        const importedItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
-        const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+        const importedItems = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
+        const clickedItems = getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
         const summaryParts = String(detail.propertyDetails || '')
             .split('/')
             .map(part => String(part || '').trim())
@@ -3372,6 +3372,33 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return mergedItems;
     }
 
+    function getExactUserScopedItems(storageKey, userKey) {
+        const scopedUserKey = String(userKey || '').trim();
+        if (!scopedUserKey) {
+            return [];
+        }
+
+        let store = {};
+        try {
+            store = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (error) {
+            store = {};
+        }
+
+        if (Array.isArray(store)) {
+            const migrated = { [scopedUserKey]: store };
+            localStorage.setItem(storageKey, JSON.stringify(migrated));
+            return store;
+        }
+
+        if (!store || typeof store !== 'object') {
+            return [];
+        }
+
+        const items = store[scopedUserKey];
+        return Array.isArray(items) ? items : [];
+    }
+
     function setUserScopedItems(storageKey, userKey, items, options) {
         const config = options && typeof options === 'object' ? options : {};
         let store = {};
@@ -3390,6 +3417,73 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         if (!config.silent) {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
+    }
+
+    function collapseUserScopedItemsToPrimaryKey(storageKey, workspaceUserLike, options) {
+        const config = options && typeof options === 'object' ? options : {};
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const primaryKey = String(workspaceUser && workspaceUser.key || '').trim();
+        if (!primaryKey || primaryKey === 'default-user') {
+            return [];
+        }
+
+        let store = {};
+        try {
+            store = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (error) {
+            store = {};
+        }
+
+        if (!store || typeof store !== 'object' || Array.isArray(store)) {
+            return [];
+        }
+
+        const candidateKeys = Array.from(new Set([
+            primaryKey,
+            ...getScopedStorageCandidateKeys(primaryKey)
+        ])).filter(Boolean);
+        const mergedItems = [];
+        const seenSignatures = new Set();
+
+        candidateKeys.forEach((candidateKey) => {
+            const items = store[candidateKey];
+            if (!Array.isArray(items)) {
+                return;
+            }
+
+            items.forEach((item) => {
+                const signature = getScopedItemSignature(item);
+                if (seenSignatures.has(signature)) {
+                    return;
+                }
+
+                seenSignatures.add(signature);
+                mergedItems.push(item);
+            });
+        });
+
+        const existingPrimaryItems = Array.isArray(store[primaryKey]) ? store[primaryKey] : [];
+        const existingPrimarySerialized = JSON.stringify(existingPrimaryItems);
+        const mergedSerialized = JSON.stringify(mergedItems);
+        const aliasKeys = candidateKeys.filter((candidateKey) => candidateKey !== primaryKey && Array.isArray(store[candidateKey]));
+
+        if (existingPrimarySerialized === mergedSerialized && !aliasKeys.length) {
+            return mergedItems;
+        }
+
+        store[primaryKey] = mergedItems;
+        aliasKeys.forEach((candidateKey) => {
+            delete store[candidateKey];
+        });
+        localStorage.setItem(storageKey, JSON.stringify(store));
+
+        if (!config.silent) {
+            window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+
+        return mergedItems;
     }
 
     function updateUserScopedItems(storageKey, userKey, updater, options) {
@@ -12322,11 +12416,11 @@ function initNavbarDateTime() {
                 itemMap.set(resolvedItem.propertyKey, mergeFilterItem(existingItem, resolvedItem, sourceKey));
             }
 
-            getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key).forEach((item) => {
+            getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key).forEach((item) => {
                 addResolvedItem(item, 'clicked');
             });
 
-            getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key).forEach((item) => {
+            getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key).forEach((item) => {
                 addResolvedItem(item, 'imported');
             });
 
@@ -17000,7 +17094,7 @@ function initNavbarDateTime() {
 
         function rememberClickedProperty(card, propertyPayload, status, roi) {
             const workspaceUser = getWorkspaceUserContext();
-            const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const items = getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
             const priceText = parseMetricText(card, 0, '$0');
             const bedsText = parseMetricText(card, 1, '0 Beds');
             const bathsText = parseMetricText(card, 2, '0 Baths');
@@ -19360,6 +19454,7 @@ function initNavbarDateTime() {
         const importedList = document.getElementById('imported-properties-list');
         const importedCount = document.getElementById('imported-properties-count');
         const importedPagination = document.getElementById('imported-properties-pagination');
+        const importedClearButton = document.getElementById('imported-properties-clear');
         const assignedList = document.getElementById('assigned-properties-list');
         const assignedCount = document.getElementById('assigned-properties-count');
         const assignedPagination = document.getElementById('assigned-properties-pagination');
@@ -19396,6 +19491,8 @@ function initNavbarDateTime() {
 
         const workspaceUser = getWorkspaceUserContext();
         const activeSessionUser = mergeUserIdentityRecords(workspaceUser, getStoredCurrentUserIdentity());
+        collapseUserScopedItemsToPrimaryKey(IMPORTED_PROPERTIES_KEY, workspaceUser, { silent: true });
+        collapseUserScopedItemsToPrimaryKey(DEALS_CLICKED_KEY, workspaceUser, { silent: true });
         const dealsPanelStateKey = `fast-deals-panel-state:${String(workspaceUser.key || 'default-user').trim() || 'default-user'}`;
         const dealsPanelState = readDealsPanelState();
 
@@ -20046,10 +20143,95 @@ function initNavbarDateTime() {
         }
 
         function saveImportedProperty(record) {
-            const items = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
+            const items = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
             const nextItems = [record, ...items.filter(item => String(item.id || '') !== record.id)].slice(0, 120);
             setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextItems);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+
+        function formatDealsListingStatus(value) {
+            const rawValue = String(value || '').trim();
+            if (!rawValue) {
+                return 'Active';
+            }
+
+            return rawValue
+                .replace(/[_-]+/g, ' ')
+                .replace(/\b\w/g, (character) => character.toUpperCase());
+        }
+
+        function resolveDealsListItemState(item) {
+            const rawItem = item && typeof item === 'object' ? item : {};
+            const rawSnapshot = rawItem.propertySnapshot && typeof rawItem.propertySnapshot === 'object'
+                ? { ...rawItem.propertySnapshot }
+                : {};
+            const propertyAddress = String(rawItem.propertyAddress || rawSnapshot.address || rawItem.address || 'Property').trim() || 'Property';
+            const propertyKey = makePropertyStorageKey(rawItem.propertyKey || propertyAddress);
+            const assignmentMeta = propertyKey ? getPropertyAssignmentRecord(propertyKey) : null;
+            const assignmentSnapshot = assignmentMeta && assignmentMeta.propertySnapshot && typeof assignmentMeta.propertySnapshot === 'object'
+                ? assignmentMeta.propertySnapshot
+                : null;
+            const snapshot = {
+                ...(assignmentSnapshot && typeof assignmentSnapshot === 'object' ? assignmentSnapshot : {}),
+                ...rawSnapshot,
+                address: String(rawSnapshot.address || assignmentSnapshot?.address || propertyAddress).trim() || propertyAddress
+            };
+            const fallbackImageUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=900&q=80';
+            const imageUrl = String(rawItem.imageUrl || snapshot.propertyImages?.[0] || '').trim() || fallbackImageUrl;
+
+            if (!Array.isArray(snapshot.propertyImages) || !snapshot.propertyImages.length) {
+                snapshot.propertyImages = [imageUrl];
+            }
+
+            const rawStatusValue = String(rawItem.status || snapshot.statusLabel || 'active').trim();
+
+            return {
+                snapshot,
+                propertyAddress,
+                imageUrl,
+                locationLabel: String(rawItem.location || snapshot.areaLabel || snapshot.location || snapshot.marketInfo || '-').trim() || '-',
+                statusLabel: formatDealsListingStatus(snapshot.statusLabel || rawStatusValue),
+                statusClassName: `is-${String(rawStatusValue || 'active').toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'active'}`,
+                assignmentMeta,
+                assignmentSummary: assignmentMeta ? buildAssignedByLabel(assignmentMeta) : ''
+            };
+        }
+
+        function buildImportedPropertyMeta(item, resolvedState) {
+            const sourceDetails = item && item.sourceDetails && typeof item.sourceDetails === 'object'
+                ? item.sourceDetails
+                : {};
+            const parts = [String(item.location || resolvedState.locationLabel || '-').trim() || '-'];
+
+            if (sourceDetails.importDate) {
+                parts.push(`Imported ${sourceDetails.importDate}`);
+            }
+
+            if (sourceDetails.agentName) {
+                parts.push(sourceDetails.agentName);
+            }
+
+            return parts.filter(Boolean).join(' • ');
+        }
+
+        function buildImportedPropertySupportText(item) {
+            const sourceDetails = item && item.sourceDetails && typeof item.sourceDetails === 'object'
+                ? item.sourceDetails
+                : {};
+            const contactParts = [
+                String(sourceDetails.agentPhone || '').trim(),
+                String(sourceDetails.agentEmail || '').trim()
+            ].filter(Boolean);
+
+            if (contactParts.length) {
+                return contactParts.join(' • ');
+            }
+
+            if (sourceDetails.pdfFile) {
+                return sourceDetails.pdfFile;
+            }
+
+            return '';
         }
 
         function normalizeServerImportedStatus(value) {
@@ -20097,35 +20279,43 @@ function initNavbarDateTime() {
                 id: `mls-row:${rowIdentifier}`,
                 address: propertyAddress,
                 location: marketLabel,
-                price: 'Price TBD',
-                beds: '- Beds',
-                baths: '- Baths',
-                area: '- sqft',
-                garage: '-',
-                lotSize: 'Lot Size TBD',
+                price: '',
+                beds: '',
+                baths: '',
+                area: '',
+                garage: '',
+                lotSize: '',
                 status: normalizedStatus,
-                roi: '0.0',
-                imageUrl: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80',
+                roi: '',
+                imageUrl: 'png photos/FAST LOGO 777.png',
                 clickedAt: importedAt,
+                sourceDetails: {
+                    importDate: importDateText,
+                    agentName,
+                    agentPhone: agentPhone === 'TBD' ? '' : agentPhone,
+                    agentEmail: agentEmail === 'TBD' ? '' : agentEmail,
+                    pdfFile,
+                    rowMatchKey
+                },
                 propertySnapshot: {
                     address: propertyAddress,
-                    propertyImages: ['https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80'],
-                    propertyDetails: 'MLS Spreadsheet Import / - Br / - Ba / - Gar / - / - sqft / - / Pool: Unknown',
-                    listPrice: 'Price TBD',
-                    propensity: 5,
-                    moderatePain: 'Imported MLS row',
+                    propertyImages: ['png photos/FAST LOGO 777.png'],
+                    propertyDetails: 'MLS Spreadsheet Import',
+                    listPrice: '',
+                    propensity: 0,
+                    moderatePain: 'MLS Spreadsheet Import',
                     taxDelinquency: rowMatchKey ? `MLS Row ${rowMatchKey}` : 'MLS Spreadsheet Import',
-                    highDebt: 'Review disclosures, title, debt, and seller motivation before drafting terms.',
+                    highDebt: '',
                     marketInfo: importDateText ? `Imported ${importDateText} / ${statusLabel}` : statusLabel,
                     dom: 0,
                     cdom: 0,
-                    askingVsArv: 'N/A',
-                    arv: 'TBD',
+                    askingVsArv: '',
+                    arv: '',
                     compData: 'Imported MLS spreadsheet row',
                     piq: notes,
                     comps: '',
-                    ia: 'Imported from the MLS spreadsheet. Complete pricing, photos, and underwriting after opening the property detail workspace.',
-                    offer: 'MLS spreadsheet import: confirm status, gather pricing, and build your offer plan here.',
+                    ia: 'Imported from the MLS spreadsheet.',
+                    offer: '',
                     recordCreated: importDateText || new Date(importedAt).toLocaleDateString(),
                     listingDate: importDateText || new Date(importedAt).toLocaleDateString(),
                     idx: 'MLS Spreadsheet Import',
@@ -20136,60 +20326,173 @@ function initNavbarDateTime() {
                     areaLabel: marketLabel,
                     propertyCover: propertyAddress,
                     publicComments: notes,
-                    agentComments: 'Imported from the MLS spreadsheet. Open the full property workspace to continue underwriting and communication tracking.',
-                    apn: '-',
-                    unitNumber: '-',
-                    totalFloors: '-',
-                    sewer: '-',
-                    propertyCondition: '-',
-                    zoning: '-',
-                    associationDues: '-',
-                    commonWalls: '-',
-                    garageCount: '-',
-                    lotSize: 'Lot Size TBD',
-                    yearBuilt: '-',
-                    lockboxType: '-',
-                    occupied: '-',
-                    showing: '-',
+                    agentComments: '',
+                    apn: '',
+                    unitNumber: '',
+                    totalFloors: '',
+                    sewer: '',
+                    propertyCondition: '',
+                    zoning: '',
+                    associationDues: '',
+                    commonWalls: '',
+                    garageCount: '',
+                    lotSize: '',
+                    yearBuilt: '',
+                    lockboxType: '',
+                    occupied: '',
+                    showing: '',
                     agentRecord: {
                         name: agentName,
                         title: 'Agent Record',
-                        phone: agentPhone,
-                        email: agentEmail,
+                        phone: agentPhone === 'TBD' ? '' : agentPhone,
+                        email: agentEmail === 'TBD' ? '' : agentEmail,
                         brokerage: 'MLS Spreadsheet Import',
-                        avgResponse: 'Unknown',
-                        averageDealsPerYear: '-',
+                        avgResponse: '',
+                        averageDealsPerYear: '',
                         specialties: 'Imported listing'
                     }
                 }
             };
         }
 
-        function mergeImportedItemsByAddress(primaryItems, secondaryItems) {
-            const mergedItems = [];
-            const seenPropertyKeys = new Set();
+        function sanitizeImportedPropertyItem(item) {
+            if (!item || typeof item !== 'object') {
+                return null;
+            }
 
-            [...(Array.isArray(primaryItems) ? primaryItems : []), ...(Array.isArray(secondaryItems) ? secondaryItems : [])].forEach((item) => {
-                if (!item || typeof item !== 'object') {
-                    return;
+            const normalizedItem = { ...item };
+            const normalizedSnapshot = normalizedItem.propertySnapshot && typeof normalizedItem.propertySnapshot === 'object'
+                ? { ...normalizedItem.propertySnapshot }
+                : {};
+            const placeholderImageUrl = 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80';
+            const isSpreadsheetImport = String(normalizedSnapshot.idx || '').trim() === 'MLS Spreadsheet Import'
+                || String(normalizedSnapshot.propertyDetails || '').includes('MLS Spreadsheet Import')
+                || String(normalizedSnapshot.taxDelinquency || '').includes('MLS Row ');
+
+            if (!isSpreadsheetImport) {
+                return normalizedItem;
+            }
+
+            normalizedItem.price = '';
+            normalizedItem.beds = '';
+            normalizedItem.baths = '';
+            normalizedItem.area = '';
+            normalizedItem.garage = '';
+            normalizedItem.lotSize = '';
+            normalizedItem.roi = '';
+
+            if (!normalizedItem.sourceDetails || typeof normalizedItem.sourceDetails !== 'object') {
+                normalizedItem.sourceDetails = {};
+            } else {
+                normalizedItem.sourceDetails = { ...normalizedItem.sourceDetails };
+            }
+
+            if (String(normalizedItem.imageUrl || '').trim() === placeholderImageUrl) {
+                normalizedItem.imageUrl = DEFAULT_THEME_LOGO_PATH;
+            }
+
+            if (String(normalizedSnapshot.listPrice || '').trim() === 'Price TBD') {
+                normalizedSnapshot.listPrice = '';
+            }
+            if (String(normalizedSnapshot.askingVsArv || '').trim() === 'N/A') {
+                normalizedSnapshot.askingVsArv = '';
+            }
+            if (String(normalizedSnapshot.arv || '').trim() === 'TBD') {
+                normalizedSnapshot.arv = '';
+            }
+            if (String(normalizedSnapshot.highDebt || '').includes('Review disclosures, title, debt, and seller motivation')) {
+                normalizedSnapshot.highDebt = '';
+            }
+            if (String(normalizedSnapshot.offer || '').includes('MLS spreadsheet import: confirm status')) {
+                normalizedSnapshot.offer = '';
+            }
+            if (String(normalizedSnapshot.ia || '').includes('Complete pricing, photos, and underwriting')) {
+                normalizedSnapshot.ia = 'Imported from the MLS spreadsheet.';
+            }
+            if (String(normalizedSnapshot.agentComments || '').includes('Open the full property workspace')) {
+                normalizedSnapshot.agentComments = '';
+            }
+
+            [
+                'apn',
+                'unitNumber',
+                'totalFloors',
+                'sewer',
+                'propertyCondition',
+                'zoning',
+                'associationDues',
+                'commonWalls',
+                'garageCount',
+                'lotSize',
+                'yearBuilt',
+                'lockboxType',
+                'occupied',
+                'showing'
+            ].forEach((fieldName) => {
+                const value = String(normalizedSnapshot[fieldName] || '').trim();
+                if (value === '-' || value === 'Lot Size TBD') {
+                    normalizedSnapshot[fieldName] = '';
                 }
-
-                const propertyKey = makePropertyStorageKey(
-                    item.propertySnapshot?.address
-                    || item.address
-                    || item.propertyAddress
-                    || item.id
-                );
-
-                if (!propertyKey || seenPropertyKeys.has(propertyKey)) {
-                    return;
-                }
-
-                seenPropertyKeys.add(propertyKey);
-                mergedItems.push(item);
             });
 
-            return mergedItems
+            if (Array.isArray(normalizedSnapshot.propertyImages) && normalizedSnapshot.propertyImages[0] === placeholderImageUrl) {
+                normalizedSnapshot.propertyImages = [DEFAULT_THEME_LOGO_PATH];
+            }
+            if (String(normalizedSnapshot.propertyDetails || '').includes('/ - Br / - Ba / - Gar / - / - sqft')) {
+                normalizedSnapshot.propertyDetails = 'MLS Spreadsheet Import';
+            }
+            if (Number(normalizedSnapshot.propensity) === 5) {
+                normalizedSnapshot.propensity = 0;
+            }
+            if (String(normalizedSnapshot.moderatePain || '').trim() === 'Imported MLS row') {
+                normalizedSnapshot.moderatePain = 'MLS Spreadsheet Import';
+            }
+
+            if (normalizedSnapshot.agentRecord && typeof normalizedSnapshot.agentRecord === 'object') {
+                normalizedSnapshot.agentRecord = { ...normalizedSnapshot.agentRecord };
+                if (String(normalizedSnapshot.agentRecord.avgResponse || '').trim() === 'Unknown') {
+                    normalizedSnapshot.agentRecord.avgResponse = '';
+                }
+                if (String(normalizedSnapshot.agentRecord.averageDealsPerYear || '').trim() === '-') {
+                    normalizedSnapshot.agentRecord.averageDealsPerYear = '';
+                }
+            }
+
+            normalizedItem.propertySnapshot = normalizedSnapshot;
+            return normalizedItem;
+        }
+
+        function mergeImportedItemsByAddress(primaryItems, secondaryItems) {
+            const mergedItemsByKey = new Map();
+
+            const mergeIntoMap = (items, shouldOverrideExisting) => {
+                (Array.isArray(items) ? items : []).forEach((item) => {
+                    const sanitizedItem = sanitizeImportedPropertyItem(item);
+                    if (!sanitizedItem) {
+                        return;
+                    }
+
+                    const propertyKey = makePropertyStorageKey(
+                        sanitizedItem.propertySnapshot?.address
+                        || sanitizedItem.address
+                        || sanitizedItem.propertyAddress
+                        || sanitizedItem.id
+                    );
+
+                    if (!propertyKey) {
+                        return;
+                    }
+
+                    if (!mergedItemsByKey.has(propertyKey) || shouldOverrideExisting) {
+                        mergedItemsByKey.set(propertyKey, sanitizedItem);
+                    }
+                });
+            };
+
+            mergeIntoMap(primaryItems, false);
+            mergeIntoMap(secondaryItems, true);
+
+            return Array.from(mergedItemsByKey.values())
                 .sort((a, b) => (Number(b?.clickedAt) || 0) - (Number(a?.clickedAt) || 0))
                 .slice(0, 500);
         }
@@ -20222,7 +20525,7 @@ function initNavbarDateTime() {
                     return;
                 }
 
-                const existingItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
+                const existingItems = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
                 const mergedItems = mergeImportedItemsByAddress(existingItems, serverItems);
                 hydratedImportedItems = mergedItems.slice();
 
@@ -20277,7 +20580,7 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const existingItems = getUserScopedItems(IMPORTED_PROPERTIES_KEY, normalizedWorkspaceKey);
+            const existingItems = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, normalizedWorkspaceKey);
             const mergedItems = [...importedLegacyItems, ...existingItems]
                 .filter((item, index, collection) => {
                     const signature = getScopedItemSignature(item);
@@ -20329,7 +20632,7 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const existingItems = getUserScopedItems(DEALS_CLICKED_KEY, normalizedWorkspaceKey);
+            const existingItems = getExactUserScopedItems(DEALS_CLICKED_KEY, normalizedWorkspaceKey);
             const mergedItems = [...legacyClickedItems, ...existingItems]
                 .filter((item, index, collection) => {
                     const signature = getScopedItemSignature(item);
@@ -20366,7 +20669,7 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const items = getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
             const nextItems = items.filter(entry => String(entry.id || '') !== itemId);
             setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
             showDashboardToast('success', 'Property Removed', `${propertyLabel} was removed from your My Deals list.`);
@@ -20388,11 +20691,68 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const items = getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
+            const items = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
             const nextItems = items.filter(entry => String(entry.id || '') !== itemId);
             setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextItems);
             showDashboardToast('success', 'Imported Property Removed', `${propertyLabel} was removed from Imported Properties.`);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+        }
+
+        async function clearAllImportedProperties() {
+            const currentItems = getImportedItemsForWorkspaceUser();
+            if (!currentItems.length) {
+                return;
+            }
+
+            const propertyCount = currentItems.length;
+            const confirmationMessage = propertyCount === 1
+                ? 'Clear your only imported property and remove it from My Deals?'
+                : `Clear all ${propertyCount} imported properties and remove them from My Deals?`;
+
+            if (!window.confirm(confirmationMessage)) {
+                return;
+            }
+
+            const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            if (!authToken) {
+                showDashboardToast('error', 'Clear Failed', 'You need to be signed in before imports can be cleared.');
+                return;
+            }
+
+            if (importedClearButton) {
+                importedClearButton.disabled = true;
+                importedClearButton.textContent = 'Clearing...';
+            }
+
+            try {
+                const response = await fetch('/api/mls-imports/rows', {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${authToken}`
+                    }
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Unable to clear imported properties.');
+                }
+
+                hydratedImportedItems = [];
+                paginationState.imported = 1;
+                setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, [], { silent: true });
+                renderImported();
+                showDashboardToast('success', 'Imports Cleared', propertyCount === 1
+                    ? 'Your imported property was removed.'
+                    : `${propertyCount} imported properties were removed.`);
+                window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+            } catch (error) {
+                showDashboardToast('error', 'Clear Failed', error && error.message ? error.message : 'Imported properties could not be cleared.');
+            } finally {
+                if (importedClearButton) {
+                    importedClearButton.textContent = 'Clear All';
+                    importedClearButton.disabled = getImportedItemsForWorkspaceUser().length === 0;
+                }
+            }
         }
 
         async function deleteAssignedProperty(item) {
@@ -20439,7 +20799,7 @@ function initNavbarDateTime() {
 
         function getAssignedItemsForWorkspaceUser() {
             const assignmentStore = getGlobalObject(PROPERTY_ASSIGNMENTS_KEY);
-            const clickedItems = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
+            const clickedItems = getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
             const mergedAssignments = new Map();
 
             Object.entries(assignmentStore).forEach(([storedPropertyKey, item]) => {
@@ -20505,7 +20865,7 @@ function initNavbarDateTime() {
 
         function getImportedItemsForWorkspaceUser() {
             return mergeImportedItemsByAddress(
-                getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key),
+                getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key),
                 hydratedImportedItems
             )
                 .slice()
@@ -20608,7 +20968,7 @@ function initNavbarDateTime() {
             const visibleItems = items.slice(startIndex, startIndex + pageSize);
 
             visibleItems.forEach(item => {
-                const resolvedState = resolveDealWorkspaceState(item);
+                const resolvedState = resolveDealsListItemState(item);
                 const snapshot = resolvedState.snapshot;
                 const roiText = Number(snapshot.roi || item.roi || 0).toFixed(1);
                 const assignedByLabel = buildAssignedByLabel({
@@ -20692,6 +21052,9 @@ function initNavbarDateTime() {
             const items = getImportedItemsForWorkspaceUser();
             paginationState.imported = clampPage(paginationState.imported, items.length);
             importedCount.textContent = String(items.length);
+            if (importedClearButton) {
+                importedClearButton.disabled = items.length === 0;
+            }
             importedList.innerHTML = '';
 
             if (items.length === 0) {
@@ -20704,8 +21067,8 @@ function initNavbarDateTime() {
             const visibleItems = items.slice(startIndex, startIndex + pageSize);
 
             visibleItems.forEach(item => {
-                const resolvedState = resolveDealWorkspaceState(item);
-                const roiText = Number(item.roi || resolvedState.snapshot.roi || 0).toFixed(1);
+                const resolvedState = resolveDealsListItemState(item);
+                const supportText = buildImportedPropertySupportText(item);
 
                 const row = document.createElement('div');
                 row.className = 'deals-compact-row';
@@ -20727,14 +21090,13 @@ function initNavbarDateTime() {
                     </div>
                     <div class="deals-compact-main">
                         <p class="deals-compact-address">${String(resolvedState.propertyAddress || item.address || 'Property')}</p>
-                        <p class="deals-compact-meta">${String(item.location || resolvedState.locationLabel || '-')}
-                        <span>•</span> ${String(item.price || '$0')} <span>•</span> ${String(item.beds || '0 Beds')} <span>•</span> ${String(item.baths || '0 Baths')} <span>•</span> ${String(item.area || '0 sqft')}</p>
+                        <p class="deals-compact-meta">${buildImportedPropertyMeta(item, resolvedState)}</p>
+                        ${supportText ? `<p class="deals-assigned-by"><strong>${supportText}</strong></p>` : ''}
                         ${resolvedState.assignmentSummary ? `<p class="deals-assigned-by"><strong>${resolvedState.assignmentSummary}</strong></p>` : ''}
                     </div>
                     <div class="deals-compact-side">
                         <span class="deals-assigned-pill">Imported</span>
                         <span class="deals-status-pill ${resolvedState.statusClassName}">${resolvedState.statusLabel}</span>
-                        <span class="deals-roi">ROI ${roiText}%</span>
                     </div>
                 `;
 
@@ -20781,7 +21143,7 @@ function initNavbarDateTime() {
         }
 
         function render() {
-            const items = getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key)
+            const items = getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key)
                 .filter(item => !isImportedPropertyItem(item))
                 .slice()
                 .sort((a, b) => (Number(b.clickedAt) || 0) - (Number(a.clickedAt) || 0));
@@ -20802,7 +21164,7 @@ function initNavbarDateTime() {
             const visibleItems = items.slice(startIndex, startIndex + pageSize);
 
             visibleItems.forEach(item => {
-                const resolvedState = resolveDealWorkspaceState(item);
+                const resolvedState = resolveDealsListItemState(item);
                 const row = document.createElement('div');
                 row.className = 'deals-compact-row';
                 row.tabIndex = 0;
@@ -20890,6 +21252,12 @@ function initNavbarDateTime() {
         window.addEventListener('storage', render);
         window.addEventListener('dashboard-data-updated', render);
         window.addEventListener('property-assignment-updated', render);
+
+        if (importedClearButton) {
+            importedClearButton.addEventListener('click', () => {
+                void clearAllImportedProperties();
+            });
+        }
 
         if (importForm) {
             importForm.addEventListener('submit', event => {
