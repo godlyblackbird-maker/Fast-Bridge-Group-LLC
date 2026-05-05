@@ -17298,8 +17298,15 @@ body.analytics-reboot .analytics-my-file-count {
 
 .mls-listings-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 300px));
+    justify-content: start;
     gap: 16px;
+}
+
+@media (max-width: 640px) {
+    .mls-listings-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .mls-property-card {
