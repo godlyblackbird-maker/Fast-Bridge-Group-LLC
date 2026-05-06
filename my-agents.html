@@ -1055,6 +1055,23 @@
                 return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
+            function getAllMyAgentsStorageKeys() {
+                const keys = [getStorageKey(), LEGACY_STORAGE_KEY];
+
+                try {
+                    for (let index = 0; index < localStorage.length; index += 1) {
+                        const storageKey = String(localStorage.key(index) || '');
+                        if (storageKey === LEGACY_STORAGE_KEY || storageKey.startsWith(`${STORAGE_KEY_BASE}:`)) {
+                            keys.push(storageKey);
+                        }
+                    }
+                } catch (error) {
+                    // Ignore localStorage enumeration failures and fall back to the current key set.
+                }
+
+                return Array.from(new Set(keys.filter(Boolean)));
+            }
+
             function getCopiedStorageKey() {
                 return `${COPIED_STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
@@ -1936,7 +1953,8 @@
             }
 
             function loadRows() {
-                const storageCandidates = [getStorageKey(), LEGACY_STORAGE_KEY];
+                const storageCandidates = getAllMyAgentsStorageKeys();
+                let bestRecoveredRows = null;
 
                 for (const storageKey of storageCandidates) {
                     try {
@@ -1952,11 +1970,25 @@
 
                         const normalized = dedupeRows(parsed.map(normalizeStoredRow).filter(Boolean));
                         if (normalized.length > 0) {
-                            return normalized;
+                            if (storageKey === getStorageKey() || storageKey === LEGACY_STORAGE_KEY) {
+                                if (storageKey !== getStorageKey()) {
+                                    localStorage.setItem(getStorageKey(), JSON.stringify(normalized));
+                                }
+                                return normalized;
+                            }
+
+                            if (!bestRecoveredRows || normalized.length > bestRecoveredRows.length) {
+                                bestRecoveredRows = normalized;
+                            }
                         }
                     } catch (error) {
                         // Ignore invalid stored values.
                     }
+                }
+
+                if (bestRecoveredRows && bestRecoveredRows.length > 0) {
+                    localStorage.setItem(getStorageKey(), JSON.stringify(bestRecoveredRows));
+                    return bestRecoveredRows;
                 }
 
                 return DEFAULT_ROWS.slice();
