@@ -3629,6 +3629,19 @@
                 persistDismissedNoRepliesConversationMap();
             }
 
+            function clearDismissedActiveConversation(conversation) {
+                const normalizedConversationKey = String(conversation?.conversationKey || '').trim();
+                if (!normalizedConversationKey || activeTwilioConversationKey !== normalizedConversationKey) {
+                    return;
+                }
+
+                activeTwilioConversationKey = '';
+                setCampaignReplyComposerEnabled(false);
+                setCampaignReplyAddress('');
+                renderTwilioReplyThread([], null);
+                renderCampaignOutreachPanel();
+            }
+
             function pruneDismissedUnreadConversations() {
                 const activeConversationKeys = new Set();
                 twilioInboxConversations.forEach((conversation) => {
@@ -3701,6 +3714,8 @@
                     }
 
                     dismissConversationFromUnread(conversation);
+                    clearDismissedActiveConversation(conversation);
+                    renderTwilioReplyConversations();
                     await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
                     campaignReplyStatus.textContent = 'Unread thread dismissed from the unread view.';
                 } catch (error) {
@@ -3716,6 +3731,7 @@
                 }
 
                 dismissConversationFromNoReplies(conversation);
+                clearDismissedActiveConversation(conversation);
                 renderTwilioReplyConversations();
                 campaignReplyStatus.textContent = 'No-reply property dismissed from this view.';
             }
