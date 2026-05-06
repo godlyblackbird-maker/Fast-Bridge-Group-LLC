@@ -1428,6 +1428,25 @@
     <script src="profile.js"></script>
     <script>
         (function () {
+            const KNOWN_EMAIL_GROUPS = [
+                {
+                    canonical: 'isaac.haro@fastbridgegroupllc.com',
+                    aliases: [
+                        'isaac.haro@fastbridgegroupllc.com',
+                        'isaacs.hesed@fastbridgegroup.com',
+                        'isaacs.hesed@gmail.com'
+                    ]
+                },
+                {
+                    canonical: 'steve.medina@fastbridgegroupllc.com',
+                    aliases: [
+                        'steve.medina@fastbridgegroupllc.com',
+                        'medinafbg@gmail.com',
+                        'medinastj@gmail.com'
+                    ]
+                }
+            ];
+            const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
             const COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetCopiedRows';
             const PHONE_COPIED_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetPhoneCopiedRows';
             const SENT_STORAGE_KEY_BASE = 'mlsImportsSpreadsheetSentRows';
@@ -1435,6 +1454,12 @@
             const MY_AGENTS_STORAGE_KEY_BASE = 'myAgentsSheetRows';
             const ROWS_PAGE_SIZE = 150;
             const JOB_HISTORY_LIMIT = 25;
+
+            KNOWN_EMAIL_GROUPS.forEach((group) => {
+                group.aliases.forEach((alias) => {
+                    KNOWN_EMAIL_ALIAS_LOOKUP.set(alias, group.canonical);
+                });
+            });
 
             function safeReadJson(key) {
                 try {
@@ -1444,17 +1469,128 @@
                 }
             }
 
+            function normalizeKnownEmail(email) {
+                const normalizedEmail = String(email || '').trim().toLowerCase();
+                return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
+            }
+
+            function getKnownEmailCandidates(email) {
+                const normalizedEmail = normalizeKnownEmail(email);
+                if (!normalizedEmail) {
+                    return [];
+                }
+
+                const group = KNOWN_EMAIL_GROUPS.find((entry) => entry.canonical === normalizedEmail);
+                return group ? group.aliases.slice() : [normalizedEmail];
+            }
+
+            function toStorageSlug(value) {
+                return String(value || '').trim().toLowerCase().replace(/\s+/g, '-');
+            }
+
             function getUserContext() {
                 const profile = safeReadJson('userProfile');
                 const user = safeReadJson('user');
                 const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-                const userEmail = String(user.email || '').trim().toLowerCase();
-                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const rawUserEmail = String(user.email || '').trim().toLowerCase();
+                const rawProfileEmail = String(profile.email || '').trim().toLowerCase();
+                const userEmail = normalizeKnownEmail(rawUserEmail);
+                const profileEmail = normalizeKnownEmail(rawProfileEmail);
                 const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
                 const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
-                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'default-user').trim();
-                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
-                return { email, name, userKey };
+                const rawUserName = String(user.name || '').trim();
+                const rawProfileName = String(profile.name || '').trim();
+                const name = String(rawUserName || (canUseProfileIdentity ? rawProfileName : '') || 'default-user').trim();
+                const userKey = email || toStorageSlug(name) || 'default-user';
+                return {
+                    email,
+                    name,
+                    userKey,
+                    rawUserEmail,
+                    rawProfileEmail,
+                    rawUserName,
+                    rawProfileName
+                };
+            }
+
+            function getScopedStorageKeys(baseKey) {
+                const userContext = getUserContext();
+                const currentKey = `${baseKey}:${userContext.userKey}`;
+                const keys = [currentKey];
+                const suffixes = new Set([String(userContext.userKey || '').trim().toLowerCase()]);
+
+                [userContext.email, userContext.rawUserEmail, userContext.rawProfileEmail].forEach((value) => {
+                    const normalizedValue = normalizeKnownEmail(value);
+                    if (normalizedValue) {
+                        suffixes.add(normalizedValue);
+                        getKnownEmailCandidates(normalizedValue).forEach((candidate) => {
+                            const normalizedCandidate = String(candidate || '').trim().toLowerCase();
+                            if (normalizedCandidate) {
+                                suffixes.add(normalizedCandidate);
+                            }
+                        });
+                    }
+                });
+
+                [userContext.name, userContext.rawUserName, userContext.rawProfileName].forEach((value) => {
+                    const slug = toStorageSlug(value);
+                    if (slug) {
+                        suffixes.add(slug);
+                    }
+                });
+
+                suffixes.forEach((suffix) => {
+                    if (suffix) {
+                        keys.push(`${baseKey}:${suffix}`);
+                    }
+                });
+
+                try {
+                    for (let index = 0; index < localStorage.length; index += 1) {
+                        const storageKey = String(localStorage.key(index) || '');
+                        if (!storageKey.startsWith(`${baseKey}:`)) {
+                            continue;
+                        }
+
+                        const suffix = storageKey.slice(baseKey.length + 1).trim().toLowerCase();
+                        if (suffixes.has(suffix) || normalizeKnownEmail(suffix) === userContext.email) {
+                            keys.push(storageKey);
+                        }
+                    }
+                } catch (error) {
+                    // Ignore localStorage enumeration failures and fall back to the current scoped key set.
+                }
+
+                return Array.from(new Set(keys.filter(Boolean)));
+            }
+
+            function readScopedLocalStorageJson(baseKey, isValidValue) {
+                const scopedKeys = getScopedStorageKeys(baseKey);
+                const currentKey = scopedKeys[0] || `${baseKey}:default-user`;
+
+                for (const storageKey of scopedKeys) {
+                    try {
+                        const rawValue = localStorage.getItem(storageKey);
+                        if (!rawValue) {
+                            continue;
+                        }
+
+                        const parsedValue = JSON.parse(rawValue);
+                        if (!isValidValue(parsedValue)) {
+                            continue;
+                        }
+
+                        if (storageKey !== currentKey) {
+                            localStorage.setItem(currentKey, rawValue);
+                        }
+
+                        return parsedValue;
+                    } catch (error) {
+                        // Ignore invalid values and keep checking the remaining scoped keys.
+                    }
+                }
+
+                return null;
             }
 
             function getCopiedStorageKey() {
@@ -2247,7 +2383,15 @@
                     return '';
                 }
 
-                return normalized.split(' ')[0] || normalized;
+                const withoutParentheses = normalized.replace(/\([^)]*\)/g, ' ');
+                const commaParts = withoutParentheses.split(',').map((part) => normalizeCellValue(part)).filter(Boolean);
+                const candidateSource = commaParts.length > 1 ? commaParts[1] : withoutParentheses;
+                const firstToken = candidateSource
+                    .split(/[\s/&|;]+/)
+                    .map((part) => String(part || '').replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9'.-]+$/g, ''))
+                    .find(Boolean);
+
+                return firstToken || normalizeCellValue(candidateSource);
             }
 
             function normalizeSpreadsheetStatusLabel(value) {
@@ -2417,11 +2561,10 @@
             }
 
             function loadTemplateSettings() {
-                try {
-                    return normalizeTemplateSettings(JSON.parse(localStorage.getItem(getTemplateSettingsStorageKey()) || '{}'));
-                } catch (error) {
-                    return buildDefaultTemplateSettings();
-                }
+                const storedSettings = readScopedLocalStorageJson(TEMPLATE_SETTINGS_KEY_BASE, (value) => {
+                    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+                });
+                return normalizeTemplateSettings(storedSettings || {});
             }
 
             function persistTemplateSettings(value) {
@@ -2462,13 +2605,9 @@
             }
 
             function loadCopiedRowSignatures() {
-                try {
-                    const stored = JSON.parse(localStorage.getItem(getCopiedStorageKey()) || '[]');
-                    if (Array.isArray(stored)) {
-                        return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
-                    }
-                } catch (error) {
-                    // Ignore invalid stored values and fall back to empty state.
+                const stored = readScopedLocalStorageJson(COPIED_STORAGE_KEY_BASE, Array.isArray);
+                if (Array.isArray(stored)) {
+                    return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
                 }
 
                 return new Set();
@@ -2482,12 +2621,9 @@
             const copiedRowSignatures = loadCopiedRowSignatures();
 
             function loadSentRowRecords() {
-                try {
-                    const stored = JSON.parse(localStorage.getItem(getSentStorageKey()) || '{}');
-                    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
-                } catch (error) {
-                    return {};
-                }
+                return readScopedLocalStorageJson(SENT_STORAGE_KEY_BASE, (value) => {
+                    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+                }) || {};
             }
 
             function persistSentRowRecords(records) {
@@ -2496,12 +2632,9 @@
             }
 
             function loadSmsPhonePreferences() {
-                try {
-                    const stored = JSON.parse(localStorage.getItem(getSmsPhonePreferenceStorageKey()) || '{}');
-                    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
-                } catch (error) {
-                    return {};
-                }
+                return readScopedLocalStorageJson(SMS_PHONE_PREFERENCE_STORAGE_KEY_BASE, (value) => {
+                    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+                }) || {};
             }
 
             function persistSmsPhonePreferences(records) {
@@ -2528,13 +2661,9 @@
             }
 
             function loadPhoneCopiedSignatures() {
-                try {
-                    const stored = JSON.parse(localStorage.getItem(getPhoneCopiedStorageKey()) || '[]');
-                    if (Array.isArray(stored)) {
-                        return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
-                    }
-                } catch (error) {
-                    // Ignore invalid stored values and fall back to empty state.
+                const stored = readScopedLocalStorageJson(PHONE_COPIED_STORAGE_KEY_BASE, Array.isArray);
+                if (Array.isArray(stored)) {
+                    return new Set(stored.map((value) => String(value || '').trim()).filter(Boolean));
                 }
 
                 return new Set();
@@ -2694,7 +2823,7 @@
 
             function getSmsRecipientName(rowData) {
                 const laName = normalizeCellValue(rowData && rowData.laName);
-                return laName || 'Listing Agent';
+                return getAgentFirstName(laName) || laName || 'Listing Agent';
             }
 
             async function sendMlsTemplateToAgent(rowData, button) {
