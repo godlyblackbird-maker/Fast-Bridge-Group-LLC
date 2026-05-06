@@ -5807,6 +5807,24 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS my_agents_sheets (
+      owner_user_id INTEGER PRIMARY KEY,
+      rows_json TEXT NOT NULL DEFAULT '[]',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by_name TEXT,
+      updated_by_email TEXT,
+      revision INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating my_agents_sheets table:', err);
+    } else {
+      console.log('My agents sheets table ready');
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS auth_sessions (
       id TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,
@@ -6106,6 +6124,135 @@ async function saveActiveBuyersSheet(rows, actor) {
   );
 
   return loadActiveBuyersSheet();
+}
+
+function normalizeMyAgentsSheetCell(value, maxLength = 4000) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .slice(0, maxLength)
+    .trim();
+}
+
+function normalizeMyAgentsSheetRow(row) {
+  const source = row && typeof row === 'object' ? row : {};
+  return {
+    importDate: normalizeMyAgentsSheetCell(source.importDate, 40),
+    propertyAddress: normalizeMyAgentsSheetCell(source.propertyAddress, 500),
+    laName: normalizeMyAgentsSheetCell(source.laName, 300),
+    loPhone: normalizeMyAgentsSheetCell(source.loPhone, 120),
+    offersEmail: normalizeMyAgentsSheetCell(source.offersEmail, 320),
+    laCell: normalizeMyAgentsSheetCell(source.laCell, 120),
+    status: normalizeMyAgentsSheetCell(source.status, 160),
+    pdfFile: normalizeMyAgentsSheetCell(source.pdfFile, 1000)
+  };
+}
+
+function normalizeMyAgentsSheetRows(rows) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows
+    .slice(0, 10000)
+    .map((row) => normalizeMyAgentsSheetRow(row))
+    .filter((row) => Object.values(row).some(Boolean));
+}
+
+function parseMyAgentsSheetRows(rowsJson) {
+  try {
+    return normalizeMyAgentsSheetRows(JSON.parse(String(rowsJson || '[]')));
+  } catch (error) {
+    return [];
+  }
+}
+
+function serializeMyAgentsSheet(sheetRow) {
+  const row = sheetRow && typeof sheetRow === 'object' ? sheetRow : {};
+  const updatedByName = String(row.updated_by_name || '').trim();
+  const updatedByEmail = String(row.updated_by_email || '').trim().toLowerCase();
+  const updatedByLabel = updatedByName || updatedByEmail || '';
+
+  return {
+    rows: parseMyAgentsSheetRows(row.rows_json),
+    revision: Math.max(0, Number(row.revision) || 0),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+    updatedBy: updatedByLabel
+      ? {
+          name: updatedByName,
+          email: updatedByEmail,
+          label: updatedByLabel
+        }
+      : null
+  };
+}
+
+async function loadMyAgentsSheetForUser(ownerUserId) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  if (!normalizedOwnerUserId) {
+    return {
+      rows: [],
+      revision: 0,
+      updatedAt: null,
+      updatedBy: null
+    };
+  }
+
+  const row = await dbGet(
+    `SELECT owner_user_id, rows_json, updated_at, updated_by_name, updated_by_email, revision
+       FROM my_agents_sheets
+      WHERE owner_user_id = ?`,
+    [normalizedOwnerUserId]
+  );
+
+  if (!row) {
+    return {
+      rows: [],
+      revision: 0,
+      updatedAt: null,
+      updatedBy: null
+    };
+  }
+
+  return serializeMyAgentsSheet(row);
+}
+
+async function saveMyAgentsSheetForUser(ownerUserId, rows, actor) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  if (!normalizedOwnerUserId) {
+    throw new Error('A valid owner user id is required to save My Agents.');
+  }
+
+  const normalizedRows = normalizeMyAgentsSheetRows(rows);
+  const actorName = String(actor && actor.name || '').trim();
+  const actorEmail = normalizeKnownEmail(actor && actor.email || '');
+  const updatedAt = new Date().toISOString();
+
+  await dbRun(
+    `INSERT INTO my_agents_sheets (
+      owner_user_id,
+      rows_json,
+      updated_at,
+      updated_by_name,
+      updated_by_email,
+      revision
+    ) VALUES (?, ?, ?, ?, ?, 1)
+    ON CONFLICT(owner_user_id) DO UPDATE SET
+      rows_json = excluded.rows_json,
+      updated_at = excluded.updated_at,
+      updated_by_name = excluded.updated_by_name,
+      updated_by_email = excluded.updated_by_email,
+      revision = my_agents_sheets.revision + 1`,
+    [
+      normalizedOwnerUserId,
+      JSON.stringify(normalizedRows),
+      updatedAt,
+      actorName,
+      actorEmail
+    ]
+  );
+
+  return loadMyAgentsSheetForUser(normalizedOwnerUserId);
 }
 
 function parseCurrencyNumber(value) {
@@ -19049,6 +19196,37 @@ app.put('/api/admin/active-buyers', express.json({ limit: '5mb' }), async (req, 
   } catch (error) {
     console.error('Failed to save active buyers sheet:', error);
     return res.status(500).json({ error: 'Failed to save the active buyers sheet.' });
+  }
+});
+
+app.get('/api/my-agents', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const sheet = await loadMyAgentsSheetForUser(decoded.id);
+    return res.json({ sheet });
+  } catch (error) {
+    console.error('Failed to load My Agents sheet:', error);
+    return res.status(500).json({ error: 'Failed to load My Agents.' });
+  }
+});
+
+app.put('/api/my-agents', express.json({ limit: '5mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : [];
+    const sheet = await saveMyAgentsSheetForUser(decoded.id, rows, decoded);
+    return res.json({ success: true, sheet });
+  } catch (error) {
+    console.error('Failed to save My Agents sheet:', error);
+    return res.status(500).json({ error: 'Failed to save My Agents.' });
   }
 });
 

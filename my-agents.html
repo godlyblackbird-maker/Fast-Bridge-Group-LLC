@@ -1086,6 +1086,33 @@
                 }
             }
 
+            function getAuthToken() {
+                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            }
+
+            function getAuthorizedHeaders(extraHeaders) {
+                const token = getAuthToken();
+                return {
+                    ...(extraHeaders || {}),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                };
+            }
+
+            async function fetchJson(url, options) {
+                const response = await fetch(url, {
+                    cache: 'no-store',
+                    ...options,
+                    headers: getAuthorizedHeaders(options && options.headers)
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Request failed.');
+                }
+
+                return payload;
+            }
+
             function downloadCsvFile(fileName, content) {
                 const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
@@ -1243,6 +1270,9 @@
 
             let templateSettings = loadTemplateSettings();
             let draftTemplateSettings = null;
+            let remoteSaveInFlight = null;
+            let pendingRemoteRows = null;
+            let pendingRemoteSaveTimer = null;
 
             async function copyTextToClipboard(value) {
                 const text = normalizeCellValue(value);
@@ -1939,6 +1969,7 @@
 
                     renderRows(mergedRows);
                     persistRows(mergedRows);
+                    scheduleRowsSaveToServer(mergedRows);
 
                     if (addedCount === 0) {
                         showToast('success', 'Contacts Already Added', 'Those .vcf contacts are already in My Agents.');
@@ -1950,6 +1981,90 @@
                 } finally {
                     vcfInput.value = '';
                 }
+            }
+
+            function scheduleRowsSaveToServer(rows) {
+                if (!getAuthToken()) {
+                    return;
+                }
+
+                pendingRemoteRows = dedupeRows(Array.isArray(rows) ? rows : []);
+
+                if (pendingRemoteSaveTimer) {
+                    window.clearTimeout(pendingRemoteSaveTimer);
+                }
+
+                pendingRemoteSaveTimer = window.setTimeout(() => {
+                    pendingRemoteSaveTimer = null;
+                    void flushQueuedRowsToServer();
+                }, 400);
+            }
+
+            async function flushQueuedRowsToServer() {
+                if (!getAuthToken()) {
+                    return null;
+                }
+
+                if (remoteSaveInFlight) {
+                    return remoteSaveInFlight;
+                }
+
+                if (pendingRemoteRows === null) {
+                    return null;
+                }
+
+                const rowsToSave = dedupeRows(pendingRemoteRows);
+                pendingRemoteRows = null;
+
+                remoteSaveInFlight = fetchJson('/api/my-agents', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rows: rowsToSave })
+                }).then((payload) => {
+                    const sheet = payload && payload.sheet ? payload.sheet : { rows: rowsToSave };
+                    const remoteRows = dedupeRows((Array.isArray(sheet.rows) ? sheet.rows : []).map(normalizeStoredRow).filter(Boolean));
+                    persistRows(remoteRows);
+                    return sheet;
+                }).catch((error) => {
+                    showToast('error', 'Sync Failed', error && error.message ? error.message : 'My Agents could not be saved to the server.');
+                    throw error;
+                }).finally(() => {
+                    remoteSaveInFlight = null;
+                    if (pendingRemoteRows !== null) {
+                        void flushQueuedRowsToServer();
+                    }
+                });
+
+                return remoteSaveInFlight;
+            }
+
+            async function loadRowsFromServer() {
+                if (!getAuthToken()) {
+                    return null;
+                }
+
+                const payload = await fetchJson('/api/my-agents');
+                const sheet = payload && payload.sheet ? payload.sheet : null;
+                if (!sheet) {
+                    throw new Error('The My Agents sheet payload was missing.');
+                }
+
+                const remoteRows = dedupeRows((Array.isArray(sheet.rows) ? sheet.rows : []).map(normalizeStoredRow).filter(Boolean));
+                if (remoteRows.length > 0) {
+                    renderRows(remoteRows);
+                    persistRows(remoteRows);
+                    return sheet;
+                }
+
+                const recoveredRows = dedupeRows(loadRows());
+                if (recoveredRows.length > 0) {
+                    pendingRemoteRows = recoveredRows;
+                    await flushQueuedRowsToServer();
+                }
+
+                return sheet;
             }
 
             function loadRows() {
@@ -2015,6 +2130,7 @@
             function saveRows() {
                 const rows = dedupeRows(getRowsFromDom());
                 persistRows(rows);
+                scheduleRowsSaveToServer(rows);
             }
 
             function escapeCsvValue(value) {
@@ -2056,7 +2172,9 @@
                 localStorage.removeItem(getStorageKey());
                 localStorage.removeItem(getCopiedStorageKey());
                 copiedRowSignatures.clear();
+                persistRows([]);
                 renderRows(DEFAULT_ROWS.slice());
+                scheduleRowsSaveToServer([]);
                 showToast('success', 'Sheet Cleared', 'My Agents was reset to a blank starter row.');
             }
 
@@ -2133,7 +2251,12 @@
                 });
             }
 
-            renderRows(loadRows());
+            const initialRows = loadRows();
+            renderRows(initialRows);
+            void loadRowsFromServer().catch((error) => {
+                const message = error && error.message ? error.message : 'My Agents could not be loaded from the server.';
+                showToast('error', 'Sync Failed', message);
+            });
         })();
     </script>
 </body>
