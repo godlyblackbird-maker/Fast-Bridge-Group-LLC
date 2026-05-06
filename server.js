@@ -4307,6 +4307,33 @@ async function deleteTwilioConversation(conversationKey) {
   return Math.max(Number(result?.changes) || 0, 0);
 }
 
+async function deleteTwilioOutreachContactState(ownerUserId, conversationKey, contactPhone) {
+  const normalizedOwnerUserId = Number(ownerUserId) || 0;
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  const normalizedContactPhone = normalizeSmsPhone(contactPhone || '') || String(contactPhone || '').trim();
+
+  if (!normalizedOwnerUserId || (!normalizedConversationKey && !normalizedContactPhone)) {
+    return 0;
+  }
+
+  const clauses = ['owner_user_id = ?', "channel = 'twilio'"];
+  const params = [normalizedOwnerUserId];
+
+  if (normalizedConversationKey && normalizedContactPhone) {
+    clauses.push('(conversation_key = ? OR contact_phone = ? OR contact_key = ?)');
+    params.push(normalizedConversationKey, normalizedContactPhone, buildOutreachContactKey({ channel: 'twilio', phone: normalizedContactPhone }));
+  } else if (normalizedConversationKey) {
+    clauses.push('conversation_key = ?');
+    params.push(normalizedConversationKey);
+  } else {
+    clauses.push('(contact_phone = ? OR contact_key = ?)');
+    params.push(normalizedContactPhone, buildOutreachContactKey({ channel: 'twilio', phone: normalizedContactPhone }));
+  }
+
+  const result = await dbRun(`DELETE FROM outreach_contacts WHERE ${clauses.join(' AND ')}`, params);
+  return Math.max(Number(result?.changes) || 0, 0);
+}
+
 async function queryOpenAiAssistant(question) {
   const apiKeys = getOpenAiApiKeyCandidates();
   if (apiKeys.length === 0) {
@@ -22521,7 +22548,12 @@ app.delete('/api/twilio/inbox/conversation', async (req, res) => {
     }
 
     const deletedCount = await deleteTwilioConversation(conversationKey);
-    return res.json({ success: true, conversationKey, deletedCount });
+    const deletedContactCount = await deleteTwilioOutreachContactState(
+      Number(decoded.id) || 0,
+      conversationKey,
+      String(existingRow.contact_phone || '').trim()
+    );
+    return res.json({ success: true, conversationKey, deletedCount, deletedContactCount });
   } catch (error) {
     console.error('Failed to delete Twilio conversation:', error);
     return res.status(500).json({ error: 'Unable to delete the Twilio conversation.' });

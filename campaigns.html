@@ -4976,14 +4976,14 @@
             async function deleteTwilioConversationByKey(conversationKey, contactLabel, options = {}) {
                 const normalizedConversationKey = String(conversationKey || '').trim();
                 const normalizedContactLabel = String(contactLabel || 'this contact').trim() || 'this contact';
-                const statusMessage = String(options.statusMessage || 'Deleting Twilio conversation...').trim() || 'Deleting Twilio conversation...';
+                const statusMessage = String(options.statusMessage || 'Deleting Twilio contact...').trim() || 'Deleting Twilio contact...';
 
                 if (!normalizedConversationKey) {
                     campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
                     return false;
                 }
 
-                if (!window.confirm(`Delete the Twilio conversation with ${normalizedContactLabel}? This clears the thread from the inbox.`)) {
+                if (!window.confirm(`Delete the Twilio contact ${normalizedContactLabel}? This clears the active thread and removes the saved Twilio contact from this inbox.`)) {
                     return false;
                 }
 
@@ -5000,17 +5000,17 @@
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok || !data.success) {
-                        throw new Error(data.error || 'Unable to delete the Twilio conversation.');
+                        throw new Error(data.error || 'Unable to delete the Twilio contact.');
                     }
 
                     if (activeTwilioConversationKey === normalizedConversationKey) {
                         activeTwilioConversationKey = '';
                     }
                     await loadTwilioInboxConversations({ markRead: false });
-                    campaignReplyStatus.textContent = 'Twilio conversation deleted.';
+                    campaignReplyStatus.textContent = 'Twilio contact deleted from Active Threads.';
                     return true;
                 } catch (error) {
-                    campaignReplyStatus.textContent = error.message || 'Unable to delete the Twilio conversation.';
+                    campaignReplyStatus.textContent = error.message || 'Unable to delete the Twilio contact.';
                     return false;
                 }
             }
@@ -5148,7 +5148,7 @@
                     deleteButton.type = 'button';
                     deleteButton.className = 'campaign-reply-conversation-delete';
                     deleteButton.setAttribute('aria-label', `Delete ${conversation.contactName || conversation.contactPhone || 'conversation'}`);
-                    deleteButton.title = 'Delete conversation';
+                    deleteButton.title = 'Delete contact';
                     deleteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
                     deleteButton.addEventListener('click', async (event) => {
                         event.preventDefault();
@@ -5156,7 +5156,7 @@
                         await deleteTwilioConversationByKey(
                             conversation.conversationKey,
                             conversation.contactName || conversation.contactPhone || 'this contact',
-                            { statusMessage: 'Deleting Twilio conversation from Active Threads...' }
+                            { statusMessage: 'Deleting Twilio contact from Active Threads...' }
                         );
                     });
                     actions.appendChild(deleteButton);
