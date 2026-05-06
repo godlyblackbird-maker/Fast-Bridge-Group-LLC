@@ -17662,7 +17662,7 @@ function isNoisePdfFieldValue(value) {
     return true;
   }
 
-  return /office contact priority|submit offers|offer instructions|showingtime|private remarks|public remarks|agent remarks|broker remarks|confidential|occupant|tenant occupied|call listing office|see remarks/i.test(normalized);
+  return /office contact priority|submit offers|offer instructions|showingtime|private remarks|public remarks|agent remarks|broker remarks|confidential|occupant|tenant occupied|call listing office|see remarks|show contact ph(?:one)?|show contact type|lock box type|broker lock box type|owner'?s name|supra/i.test(normalized);
 }
 
 function isLikelyPersonName(value) {
