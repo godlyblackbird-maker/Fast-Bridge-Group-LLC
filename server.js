@@ -10,7 +10,9 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
-const { Worker } = require('worker_threads');
+const { PDFParse } = require('pdf-parse');
+const { execFile } = require('child_process');
+const { createWorker, OEM } = require('tesseract.js');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
 let PostgresPool = null;
@@ -7157,13 +7159,68 @@ async function loadMlsImportPdfJobRecord(jobId) {
   }
 
   const row = await dbGet('SELECT * FROM mls_import_runs WHERE id = ?', [normalizedJobId]);
-  return mapMlsImportPdfJobRecord(row);
+  return normalizeLoadedMlsImportPdfJob(mapMlsImportPdfJobRecord(row));
+}
+
+function shouldFailStaleMlsImportPdfJob(job) {
+  if (!job || typeof job !== 'object') {
+    return false;
+  }
+
+  const normalizedStatus = String(job.status || '').trim().toLowerCase();
+  if (normalizedStatus !== 'running' && normalizedStatus !== 'queued') {
+    return false;
+  }
+
+  if (mlsImportPdfJobs.has(String(job.id || '').trim())) {
+    return false;
+  }
+
+  return true;
+}
+
+async function normalizeLoadedMlsImportPdfJob(job) {
+  if (!shouldFailStaleMlsImportPdfJob(job)) {
+    return job;
+  }
+
+  const failedJob = {
+    ...job,
+    status: 'failed',
+    progressPercent: 100,
+    message: 'MLS PDF extraction stopped before completion. Please retry the PDF upload.',
+    error: String(job.error || '').trim() || 'The extraction worker stopped before finishing this PDF.',
+    updatedAt: Date.now()
+  };
+
+  await persistMlsImportPdfJobRecord(failedJob);
+  return failedJob;
+}
+
+function sanitizeMlsImportPdfJobText(value, options = {}) {
+  const input = String(value || '').trim();
+  if (!input) {
+    return '';
+  }
+
+  const fallback = String(options.fallback || '').trim();
+  const normalized = input.toLowerCase();
+  if (
+    normalized.includes('openai image extraction failed')
+    || normalized.includes('ocr extraction failed')
+    || normalized.includes('<!doctype html')
+    || normalized.includes('<html')
+  ) {
+    return fallback || 'This PDF is scanned or image-only and does not contain readable MLS text.';
+  }
+
+  return input;
 }
 
 async function loadMlsImportPdfJobsForUser(ownerUserId, options = {}) {
   const limit = Math.max(1, Math.min(Number(options.limit) || 25, 100));
   const rows = await dbAll(
-    `SELECT id, requester_user_id, file_name, status, message, page_count, progress_percent, started_at, updated_at, completed_at, error
+    `SELECT id, requester_user_id, file_name, status, message, page_count, progress_percent, persisted_row_count, started_at, updated_at, completed_at, error
      FROM mls_import_runs
      WHERE requester_user_id = ?
      ORDER BY updated_at DESC, started_at DESC, id DESC
@@ -7171,9 +7228,12 @@ async function loadMlsImportPdfJobsForUser(ownerUserId, options = {}) {
     [Number(ownerUserId) || 0, limit]
   );
 
-  return Array.isArray(rows)
-    ? rows.map(mapMlsImportPdfJobRecord).filter(Boolean)
-    : [];
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
+
+  const jobs = rows.map(mapMlsImportPdfJobRecord).filter(Boolean);
+  return Promise.all(jobs.map((job) => normalizeLoadedMlsImportPdfJob(job)));
 }
 
 async function persistMlsImportPdfJobRecord(job) {
@@ -16626,6 +16686,137 @@ function shouldUseOpenAiMlsFallback(rows, pageCount) {
   return false;
 }
 
+function buildMlsImportLocalOcrPageSegments(pageCount) {
+  const totalPages = Math.max(0, Number(pageCount) || 0);
+  const pagesPerSegment = totalPages >= 120 ? 2 : totalPages >= 40 ? 4 : 6;
+  const segments = [];
+
+  for (let startPage = 1; startPage <= totalPages; startPage += pagesPerSegment) {
+    const endPage = Math.min(totalPages, startPage + pagesPerSegment - 1);
+    segments.push(Array.from({ length: endPage - startPage + 1 }, (_, index) => startPage + index));
+  }
+
+  return segments;
+}
+
+async function renderMlsImportPdfPagesForLocalOcr(pdfSource, pageNumbers) {
+  const sourcePath = typeof pdfSource === 'string' ? pdfSource.trim() : '';
+  const requestedPages = Array.from(new Set((Array.isArray(pageNumbers) ? pageNumbers : [])
+    .map((pageNumber) => Math.max(1, Number(pageNumber) || 0))
+    .filter(Boolean)));
+  if (!sourcePath || requestedPages.length === 0) {
+    return [];
+  }
+
+  return new Promise((resolve, reject) => {
+    const rendererScriptPath = path.join(__dirname, 'scripts', 'mls-pdf-ocr-renderer.js');
+    execFile(
+      process.execPath,
+      [rendererScriptPath, sourcePath, JSON.stringify(requestedPages)],
+      {
+        cwd: __dirname,
+        maxBuffer: 64 * 1024 * 1024,
+        windowsHide: true
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(String(stderr || error.message || 'Failed to render scanned PDF pages for local OCR.').trim()));
+          return;
+        }
+
+        try {
+          const payload = JSON.parse(String(stdout || '{}'));
+          const images = Array.isArray(payload && payload.images) ? payload.images : [];
+          resolve(images.map((image) => ({
+            pageNumber: Math.max(1, Number(image && image.pageNumber) || 0),
+            imageBase64: String(image && image.imageBase64 || '').trim(),
+            mimeType: String(image && image.mimeType || 'image/png').trim() || 'image/png'
+          })).filter((image) => image.pageNumber > 0 && image.imageBase64));
+        } catch (parseError) {
+          reject(new Error(`Failed to parse local OCR renderer output: ${parseError.message}`));
+        }
+      }
+    );
+  });
+}
+
+async function extractTextFromScannedPdfWithLocalOcr(pdfSource, options = {}) {
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+  const pageCount = Math.max(0, Number(options.pageCount) || 0);
+  if (pageCount <= 0) {
+    return { text: '', pageTexts: [] };
+  }
+
+  const pageSegments = buildMlsImportLocalOcrPageSegments(pageCount);
+  const pageTexts = Array.from({ length: pageCount }, () => '');
+  const worker = await createWorker('eng', OEM.LSTM_ONLY, {
+    logger: () => {}
+  }, {
+    preserve_interword_spaces: '1'
+  });
+
+  try {
+    for (let index = 0; index < pageSegments.length; index += 1) {
+      const pageNumbers = pageSegments[index];
+      const startPage = Number(pageNumbers[0]) || 0;
+      const endPage = Number(pageNumbers[pageNumbers.length - 1]) || startPage;
+
+      if (onProgress) {
+        onProgress({
+          phase: 'local-ocr-rendering-pages',
+          pageCount,
+          startPage,
+          endPage,
+          processedSegments: index,
+          totalSegments: pageSegments.length,
+          message: `Preparing scanned pages ${startPage}-${endPage} of ${pageCount} for local OCR...`
+        });
+      }
+
+      const renderedPages = await renderMlsImportPdfPagesForLocalOcr(pdfSource, pageNumbers);
+      for (const renderedPage of renderedPages) {
+        if (onProgress) {
+          onProgress({
+            phase: 'local-ocr-reading-pages',
+            pageCount,
+            startPage: renderedPage.pageNumber,
+            endPage: renderedPage.pageNumber,
+            processedPages: renderedPage.pageNumber - 1,
+            totalPages: pageCount,
+            message: `Running local OCR on page ${renderedPage.pageNumber} of ${pageCount}...`
+          });
+        }
+
+        const imageBuffer = Buffer.from(renderedPage.imageBase64, 'base64');
+        const result = await worker.recognize(imageBuffer);
+        pageTexts[renderedPage.pageNumber - 1] = normalizePdfExtractText(result?.data?.text);
+
+        if (onProgress) {
+          onProgress({
+            phase: 'local-ocr-reading-pages',
+            pageCount,
+            startPage: renderedPage.pageNumber,
+            endPage: renderedPage.pageNumber,
+            processedPages: renderedPage.pageNumber,
+            totalPages: pageCount,
+            message: `Running local OCR on page ${renderedPage.pageNumber} of ${pageCount}...`
+          });
+        }
+      }
+
+      await waitForMlsImportAnalysisTurn();
+    }
+  } finally {
+    await worker.terminate().catch(() => {});
+  }
+
+  const resolvedPageTexts = pageTexts.map((pageText) => normalizePdfExtractText(pageText)).filter(Boolean);
+  return {
+    text: resolvedPageTexts.join('\n\n'),
+    pageTexts
+  };
+}
+
 async function extractMlsImportRowsWithOpenAi(fullText, pageTexts, options = {}) {
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
   const onRows = typeof options.onRows === 'function' ? options.onRows : null;
@@ -16776,7 +16967,12 @@ function createMlsImportPdfJob({ requesterId, fileName }) {
     fileName: String(fileName || '').trim(),
     status: 'queued',
     message: 'Queued MLS PDF extraction...',
+    phase: 'queued',
     pageCount: 0,
+    startPage: 0,
+    endPage: 0,
+    batchIndex: 0,
+    totalBatches: 0,
     progressPercent: 0,
     persistedRowCount: 0,
     startedAt: now,
@@ -16818,18 +17014,30 @@ function serializeMlsImportPdfJob(job) {
     return null;
   }
 
+  const safeMessage = sanitizeMlsImportPdfJobText(job.message, {
+    fallback: 'This PDF is scanned or image-only and does not contain readable MLS text.'
+  });
+  const safeError = sanitizeMlsImportPdfJobText(job.error, {
+    fallback: 'This PDF is scanned or image-only and does not contain readable MLS text. Upload a text-based MLS PDF export.'
+  });
+
   return {
     id: job.id,
     fileName: job.fileName,
     status: job.status,
-    message: job.message,
+    message: safeMessage,
+    phase: String(job.phase || '').trim().toLowerCase(),
     pageCount: Number(job.pageCount) || 0,
+    startPage: Math.max(0, Number(job.startPage) || 0),
+    endPage: Math.max(0, Number(job.endPage) || 0),
+    batchIndex: Math.max(0, Number(job.batchIndex) || 0),
+    totalBatches: Math.max(0, Number(job.totalBatches) || 0),
     progressPercent: Math.max(0, Math.min(100, Number(job.progressPercent) || 0)),
     persistedRowCount: Math.max(0, Number(job.persistedRowCount) || 0),
     startedAt: job.startedAt,
     updatedAt: job.updatedAt,
     extracted: job.status === 'completed' ? job.extracted : null,
-    error: job.status === 'failed' ? String(job.error || '').trim() : ''
+    error: job.status === 'failed' ? safeError : ''
   };
 }
 
@@ -16860,6 +17068,20 @@ function getMlsImportPdfProgressPercent(progress) {
     return Math.round(12 + (ratio * 58));
   }
 
+  if (phase === 'local-ocr-rendering-pages') {
+    const totalSegments = Math.max(1, Number(state.totalSegments) || 1);
+    const processedSegments = Math.max(0, Number(state.processedSegments) || 0);
+    const ratio = Math.min(1, processedSegments / totalSegments);
+    return Math.round(18 + (ratio * 20));
+  }
+
+  if (phase === 'local-ocr-reading-pages') {
+    const totalPages = Math.max(1, Number(state.totalPages) || 1);
+    const processedPages = Math.max(0, Number(state.processedPages) || 0);
+    const ratio = Math.min(1, processedPages / totalPages);
+    return Math.round(38 + (ratio * 30));
+  }
+
   if (phase === 'analyzing') {
     return 72;
   }
@@ -16884,79 +17106,236 @@ function getMlsImportPdfProgressPercent(progress) {
 function extractPdfTextInWorker(source, options = {}) {
   const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
   const sourcePath = typeof source === 'string' ? source.trim() : '';
-  const workerBytes = sourcePath ? null : Uint8Array.from(source || []);
+  const pdfBuffer = sourcePath ? fs.readFileSync(sourcePath) : Buffer.from(source || []);
+  const PDF_METADATA_TIMEOUT_MS = 15000;
 
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    let timeoutId = null;
-    const worker = new Worker(path.join(__dirname, 'scripts', 'mls-pdf-text-worker.js'), {
-      workerData: {
-        pdfBytes: workerBytes,
-        pdfPath: sourcePath,
-        defaultBatchSize: MLS_IMPORT_PDF_PAGE_BATCH_SIZE
-      }
-    });
+  const withTimeout = (promise, timeoutMs, message) => {
+    const duration = Math.max(1, Number(timeoutMs) || 1);
 
-    const cleanup = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      worker.removeAllListeners();
-    };
-
-    const finishResolve = (value) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-      resolve(value);
-    };
-
-    const finishReject = (error) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-      reject(error);
-    };
-
-    timeoutId = setTimeout(() => {
-      worker.terminate().catch(() => {});
-      finishReject(new Error('The PDF extraction took too long. Try a smaller file or retry the upload.'));
-    }, MLS_IMPORT_PDF_WORKER_TIMEOUT_MS);
-
-    worker.on('message', (message) => {
-      const payload = message && typeof message === 'object' ? message : {};
-      if (payload.type === 'progress') {
-        if (onProgress) {
-          onProgress(payload.progress || {});
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const timeoutId = setTimeout(() => {
+        if (settled) {
+          return;
         }
-        return;
-      }
+        settled = true;
+        const timeoutError = new Error(String(message || 'Operation timed out.'));
+        timeoutError.name = 'TimeoutError';
+        reject(timeoutError);
+      }, duration);
 
-      if (payload.type === 'result') {
-        finishResolve(payload.result || {});
-        return;
-      }
-
-      if (payload.type === 'error') {
-        finishReject(new Error(String(payload.error || 'Failed to extract PDF text.').trim()));
-      }
+      Promise.resolve(promise).then((value) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve(value);
+      }).catch((error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timeoutId);
+        reject(error);
+      });
     });
+  };
 
-    worker.on('error', (error) => {
-      finishReject(error instanceof Error ? error : new Error('Failed to extract PDF text.'));
-    });
+  const buildFullPdfText = (parsedResult) => {
+    const parsed = parsedResult && typeof parsedResult === 'object' ? parsedResult : {};
+    const pageTexts = Array.isArray(parsed.pages)
+      ? parsed.pages
+          .map((page) => normalizePdfExtractText(page && typeof page === 'object' ? page.text : ''))
+          .filter(Boolean)
+      : [];
+    const mergedPageText = pageTexts.join('\n\n');
+    const aggregateText = normalizePdfExtractText(parsed.text);
 
-    worker.on('exit', (code) => {
-      if (!settled && code !== 0) {
-        finishReject(new Error(`PDF extraction worker stopped unexpectedly (exit code ${code}).`));
+    if (mergedPageText.length > aggregateText.length) {
+      return {
+        text: mergedPageText,
+        pageTexts,
+        parsedPageCount: pageTexts.length
+      };
+    }
+
+    return {
+      text: aggregateText || mergedPageText,
+      pageTexts,
+      parsedPageCount: pageTexts.length
+    };
+  };
+
+  const buildPdfPartialPageList = (pageCount) => {
+    const totalPages = Number(pageCount) || 0;
+    if (totalPages <= 0) {
+      return undefined;
+    }
+
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  };
+
+  const getBatchSize = (pageCount) => {
+    const totalPages = Math.max(0, Number(pageCount) || 0);
+    if (totalPages >= 300) {
+      return 10;
+    }
+    if (totalPages >= 180) {
+      return 12;
+    }
+    if (totalPages >= 100) {
+      return 16;
+    }
+    if (totalPages >= 60) {
+      return 24;
+    }
+    if (totalPages >= 40) {
+      return 8;
+    }
+    return Math.max(1, Number(MLS_IMPORT_PDF_PAGE_BATCH_SIZE) || 40);
+  };
+
+  const splitPdfPagesIntoBatches = (pageCount, batchSize) => {
+    const totalPages = Number(pageCount) || 0;
+    const safeBatchSize = Math.max(1, Number(batchSize) || MLS_IMPORT_PDF_PAGE_BATCH_SIZE);
+    const batches = [];
+
+    if (totalPages <= 0) {
+      return batches;
+    }
+
+    for (let startPage = 1; startPage <= totalPages; startPage += safeBatchSize) {
+      const endPage = Math.min(totalPages, startPage + safeBatchSize - 1);
+      batches.push(Array.from({ length: endPage - startPage + 1 }, (_, index) => startPage + index));
+    }
+
+    return batches;
+  };
+
+  const extractPdfTextByPageBatches = async (parser, pageCount) => {
+    const pageBatches = splitPdfPagesIntoBatches(pageCount, getBatchSize(pageCount));
+
+    if (pageBatches.length === 0) {
+      const parsed = await parser.getText({ pageJoiner: '\n\n' });
+      return buildFullPdfText(parsed);
+    }
+
+    const combinedPageTexts = [];
+    const combinedTexts = [];
+
+    for (let batchIndex = 0; batchIndex < pageBatches.length; batchIndex += 1) {
+      const partialPages = pageBatches[batchIndex];
+      const startPage = Number(partialPages[0]) || 0;
+      const endPage = Number(partialPages[partialPages.length - 1]) || startPage;
+      if (onProgress) {
+        onProgress({
+          phase: 'parsing-pages',
+          batchIndex: batchIndex + 1,
+          totalBatches: pageBatches.length,
+          pageCount,
+          startPage,
+          endPage,
+          message: `Parsing pages ${startPage}-${endPage} of ${pageCount}...`
+        });
       }
-    });
-  });
+
+      const parsed = await parser.getText({
+        partial: partialPages,
+        pageJoiner: '\n\n'
+      });
+      const batchResult = buildFullPdfText(parsed);
+      if (Array.isArray(batchResult.pageTexts) && batchResult.pageTexts.length > 0) {
+        combinedPageTexts.push(...batchResult.pageTexts);
+      } else if (batchResult.text) {
+        combinedTexts.push(batchResult.text);
+      }
+
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+
+    const resolvedPageTexts = combinedPageTexts.map((pageText) => normalizePdfExtractText(pageText)).filter(Boolean);
+    const mergedText = resolvedPageTexts.length > 0
+      ? resolvedPageTexts.join('\n\n')
+      : normalizePdfExtractText(combinedTexts.join('\n\n'));
+
+    return {
+      text: mergedText,
+      pageTexts: resolvedPageTexts,
+      parsedPageCount: resolvedPageTexts.length
+    };
+  };
+
+  return (async () => {
+    const parser = new PDFParse({ data: pdfBuffer });
+
+    try {
+      if (onProgress) {
+        onProgress({ phase: 'metadata', message: 'Reading PDF metadata...' });
+      }
+
+      let info = null;
+      try {
+        info = await withTimeout(
+          parser.getInfo(),
+          PDF_METADATA_TIMEOUT_MS,
+          'Reading PDF metadata took too long.'
+        );
+      } catch (error) {
+        if (onProgress) {
+          onProgress({
+            phase: 'prepare',
+            message: error instanceof Error && error.name === 'TimeoutError'
+              ? 'PDF metadata is taking too long. Trying direct text extraction instead...'
+              : 'PDF metadata was unavailable. Trying direct text extraction instead...'
+          });
+        }
+      }
+
+      let pageCount = Number(info && info.total) || 0;
+      if (pageCount > 0 && onProgress) {
+        onProgress({
+          phase: 'prepare',
+          pageCount,
+          message: `Preparing ${pageCount} PDF page${pageCount === 1 ? '' : 's'} for extraction...`
+        });
+      }
+
+      if (pageCount > 0 && pageCount <= MLS_IMPORT_PDF_PAGE_BATCH_SIZE && onProgress) {
+        onProgress({
+          phase: 'parsing-pages',
+          batchIndex: 1,
+          totalBatches: 1,
+          pageCount,
+          startPage: 1,
+          endPage: pageCount,
+          message: `Parsing pages 1-${pageCount} of ${pageCount}...`
+        });
+      }
+
+      const fullTextResult = pageCount > MLS_IMPORT_PDF_PAGE_BATCH_SIZE
+        ? await extractPdfTextByPageBatches(parser, pageCount)
+        : buildFullPdfText(await parser.getText({
+            partial: buildPdfPartialPageList(pageCount),
+            pageJoiner: '\n\n'
+          }));
+
+      if (!pageCount && Number(fullTextResult && fullTextResult.parsedPageCount) > 0) {
+        pageCount = Number(fullTextResult.parsedPageCount) || 0;
+      }
+
+      return {
+        text: normalizePdfExtractText(fullTextResult && fullTextResult.text),
+        pageTexts: Array.isArray(fullTextResult && fullTextResult.pageTexts) ? fullTextResult.pageTexts : [],
+        parsedPageCount: Number(fullTextResult && fullTextResult.parsedPageCount) || 0,
+        pageCount
+      };
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to extract PDF text.');
+    } finally {
+      await parser.destroy().catch(() => {});
+    }
+  })();
 }
 
 function extractPdfFieldByLabel(lines, labels, valuePattern, options = {}) {
@@ -18190,7 +18569,19 @@ async function extractMlsImportPdfFields(pdfSource) {
   }
 
   if (!normalizedText) {
-    throw new Error('The PDF did not contain readable text.');
+    if (pageCount > 0) {
+      const localOcrResult = await extractTextFromScannedPdfWithLocalOcr(pdfSource, { pageCount, onProgress });
+      normalizedText = normalizePdfExtractText(localOcrResult && localOcrResult.text);
+      pageTexts = Array.isArray(localOcrResult && localOcrResult.pageTexts) ? localOcrResult.pageTexts : [];
+
+      if (!normalizedText) {
+        throw new Error('This scanned PDF could not be read with local OCR. Upload a clearer export or a text-based MLS PDF export.');
+      }
+    }
+
+    if (!normalizedText) {
+      throw new Error('The PDF did not contain readable text.');
+    }
   }
 
   if (onProgress) {
@@ -18317,6 +18708,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
       const job = createMlsImportPdfJob({ requesterId: decoded.id, fileName });
       const queuedJob = updateMlsImportPdfJob(job.id, {
         status: 'running',
+        phase: 'queued',
         message: 'Starting MLS PDF extraction...',
         progressPercent: 2
       });
@@ -18340,7 +18732,12 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
 
               const nextJob = updateMlsImportPdfJob(job.id, {
                 status: 'running',
+                phase: String(progress && progress.phase || '').trim().toLowerCase(),
                 pageCount: Number(progress && progress.pageCount) || 0,
+                startPage: Math.max(0, Number(progress && progress.startPage) || 0),
+                endPage: Math.max(0, Number(progress && progress.endPage) || 0),
+                batchIndex: Math.max(0, Number(progress && progress.batchIndex) || 0),
+                totalBatches: Math.max(0, Number(progress && progress.totalBatches) || 0),
                 message: String(progress && progress.message || 'Extracting MLS PDF...').trim(),
                 progressPercent: getMlsImportPdfProgressPercent(progress),
                 persistedRowCount
@@ -18348,6 +18745,30 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
 
               void persistMlsImportPdfJobRecord(nextJob).catch((error) => {
                 console.error('Failed to persist MLS import job progress:', error);
+              });
+            },
+            onRows: async (rows) => {
+              if (isSpreadsheetClearCancelled()) {
+                return;
+              }
+
+              const partialPersistResult = await persistMlsImportSpreadsheetRowsForUser(decoded.id, Array.isArray(rows) ? rows : [], {
+                importRunId: job.id,
+                pdfFile: fileName
+              });
+              persistedRowCount = Array.isArray(partialPersistResult && partialPersistResult.rows)
+                ? partialPersistResult.rows.length
+                : persistedRowCount;
+
+              const partialJob = updateMlsImportPdfJob(job.id, {
+                persistedRowCount,
+                message: persistedRowCount > 0
+                  ? `Saved ${persistedRowCount} MLS row${persistedRowCount === 1 ? '' : 's'} so far...`
+                  : 'Extracting MLS PDF...'
+              });
+
+              void persistMlsImportPdfJobRecord(partialJob).catch((error) => {
+                console.error('Failed to persist incremental MLS import rows:', error);
               });
             }
           });
@@ -18366,9 +18787,14 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
 
           const completedJob = updateMlsImportPdfJob(job.id, {
             status: 'completed',
+            phase: 'completed',
             pageCount: Number(extracted && extracted.pageCount) || 0,
             progressPercent: 100,
             persistedRowCount,
+            startPage: 0,
+            endPage: 0,
+            batchIndex: 0,
+            totalBatches: 0,
             message: Number(extracted && extracted.pageCount) > 0
               ? `Finished parsing all ${Number(extracted.pageCount)} pages.`
               : 'Finished parsing the PDF.',
@@ -18388,8 +18814,13 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
           console.error('Failed to extract MLS import PDF fields:', error);
           const failedJob = updateMlsImportPdfJob(job.id, {
             status: 'failed',
+            phase: 'failed',
             progressPercent: 100,
             persistedRowCount,
+            startPage: 0,
+            endPage: 0,
+            batchIndex: 0,
+            totalBatches: 0,
             message: 'MLS PDF extraction failed.',
             error: error && error.message ? error.message : 'Failed to extract fields from the uploaded PDF.'
           });

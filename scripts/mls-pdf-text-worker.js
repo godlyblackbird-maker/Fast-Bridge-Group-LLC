@@ -3,6 +3,44 @@ const fs = require('fs');
 const { PDFParse } = require('pdf-parse');
 
 const DEFAULT_BATCH_SIZE = Math.max(1, Number(workerData && workerData.defaultBatchSize) || 40);
+const PDF_METADATA_TIMEOUT_MS = 15000;
+
+function isTimeoutError(error) {
+  return error instanceof Error && error.name === 'TimeoutError';
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  const duration = Math.max(1, Number(timeoutMs) || 1);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timeoutId = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      const timeoutError = new Error(String(message || 'Operation timed out.'));
+      timeoutError.name = 'TimeoutError';
+      reject(timeoutError);
+    }, duration);
+
+    Promise.resolve(promise).then((value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeoutId);
+      resolve(value);
+    }).catch((error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeoutId);
+      reject(error);
+    });
+  });
+}
 
 function normalizePdfExtractText(value) {
   return String(value || '')
@@ -60,6 +98,9 @@ function getBatchSize(pageCount) {
   }
   if (totalPages >= 60) {
     return 24;
+  }
+  if (totalPages >= 40) {
+    return 12;
   }
   return DEFAULT_BATCH_SIZE;
 }
@@ -157,7 +198,27 @@ async function main() {
 
   try {
     postProgress({ phase: 'metadata', message: 'Reading PDF metadata...' });
-    const info = await parser.getInfo();
+    let info = null;
+    try {
+      info = await withTimeout(
+        parser.getInfo(),
+        PDF_METADATA_TIMEOUT_MS,
+        'Reading PDF metadata took too long.'
+      );
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        postProgress({
+          phase: 'prepare',
+          message: 'PDF metadata is taking too long. Trying direct text extraction instead...'
+        });
+      } else {
+        postProgress({
+          phase: 'prepare',
+          message: 'PDF metadata was unavailable. Trying direct text extraction instead...'
+        });
+      }
+    }
+
     let pageCount = Number(info && info.total) || 0;
     if (pageCount > 0) {
       postProgress({

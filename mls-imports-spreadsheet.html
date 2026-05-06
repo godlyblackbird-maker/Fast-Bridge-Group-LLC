@@ -2140,6 +2140,39 @@
                     throw new Error('The MLS PDF extraction job did not return a valid id.');
                 }
 
+                function buildPdfJobProgressMeta(job) {
+                    const phase = String(job && job.phase || '').trim().toLowerCase();
+                    const pageCount = Math.max(0, Number(job && job.pageCount) || 0);
+                    const startPage = Math.max(0, Number(job && job.startPage) || 0);
+                    const endPage = Math.max(0, Number(job && job.endPage) || 0);
+                    const batchIndex = Math.max(0, Number(job && job.batchIndex) || 0);
+                    const totalBatches = Math.max(0, Number(job && job.totalBatches) || 0);
+
+                    if (phase === 'parsing-pages' && pageCount > 0) {
+                        const rangeText = startPage > 0 && endPage >= startPage
+                            ? `Parsing pages ${startPage}-${endPage} of ${pageCount}`
+                            : `Parsing ${pageCount} PDF pages`;
+                        const batchText = batchIndex > 0 && totalBatches > 0
+                            ? ` Batch ${batchIndex}/${totalBatches}.`
+                            : '.';
+                        return `${rangeText} on the server.${batchText}`;
+                    }
+
+                    if (phase === 'analyzing-rows' && pageCount > 0) {
+                        return `Parsed ${pageCount} page${pageCount === 1 ? '' : 's'}. Matching listing rows now.`;
+                    }
+
+                    if (phase === 'analyzing' && pageCount > 0) {
+                        return `Finished parsing ${pageCount} page${pageCount === 1 ? '' : 's'}. Preparing extracted rows.`;
+                    }
+
+                    if (pageCount > 0) {
+                        return `Processing ${pageCount} PDF page${pageCount === 1 ? '' : 's'} on the server.`;
+                    }
+
+                    return 'Server extraction is in progress.';
+                }
+
                 while (true) {
                     if (isMlsPdfImportCancelled()) {
                         throw createMlsPdfImportCancelledError();
@@ -2182,9 +2215,7 @@
                         setPdfProgressState(
                             job.message,
                             Number(job.progressPercent) || 0,
-                            Number(job.pageCount) > 0
-                                ? `Processing ${Number(job.pageCount)} PDF page${Number(job.pageCount) === 1 ? '' : 's'} on the server.`
-                                : 'Server extraction is in progress.'
+                            buildPdfJobProgressMeta(job)
                         );
                     }
 
