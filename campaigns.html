@@ -2408,8 +2408,8 @@
 
             body.campaigns-page .campaign-replies-thread-shell {
                 grid-template-rows: auto minmax(0, 1fr) auto;
-                min-height: 560px;
-                max-height: none;
+                min-height: clamp(420px, 58vh, 560px);
+                max-height: clamp(420px, 58vh, 560px);
                 background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 94%, rgba(255, 255, 255, 0.04) 6%), color-mix(in srgb, var(--glass-bg) 90%, rgba(15, 23, 42, 0.05) 10%));
             }
 
@@ -2475,6 +2475,7 @@
 
             body.campaigns-page .campaign-replies-list-body {
                 padding: 14px;
+                max-height: clamp(320px, 44vh, 440px);
                 overscroll-behavior-y: contain;
                 scrollbar-width: none;
             }
@@ -2512,8 +2513,8 @@
             body.campaigns-page .campaign-reply-thread {
                 gap: 12px;
                 padding: 16px;
-                min-height: 360px;
-                height: auto;
+                min-height: 0;
+                height: 100%;
                 overflow-y: auto;
                 overscroll-behavior-y: contain;
                 background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
@@ -2636,8 +2637,8 @@
 
             .campaign-replies-thread-shell {
                 grid-template-rows: auto minmax(0, 1fr) auto;
-                min-height: 560px;
-                max-height: none;
+                min-height: clamp(420px, 58vh, 560px);
+                max-height: clamp(420px, 58vh, 560px);
             }
 
             .campaign-replies-list-head,
@@ -2661,6 +2662,7 @@
 
             .campaign-replies-list-body {
                 min-height: 0;
+                max-height: clamp(320px, 44vh, 440px);
                 padding-top: 16px;
                 padding-bottom: 18px;
                 overflow-y: auto;
@@ -2708,9 +2710,8 @@
                 gap: 12px;
                 padding-top: 16px;
                 padding-bottom: 16px;
-                min-height: 360px;
-                height: auto;
-                max-height: none;
+                min-height: 0;
+                height: 100%;
                 overflow-y: auto;
                 overflow-x: hidden;
                 overscroll-behavior-y: contain;
