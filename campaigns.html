@@ -469,12 +469,22 @@
             position: relative;
             overflow: hidden;
             padding: 0;
-            border-color: rgba(244, 114, 182, 0.18);
+            border-color: var(--glass-border);
             background:
-                radial-gradient(circle at top right, rgba(244, 114, 182, 0.16), transparent 28%),
-                radial-gradient(circle at left center, rgba(56, 189, 248, 0.14), transparent 32%),
-                linear-gradient(160deg, rgba(15, 23, 42, 0.86), rgba(30, 41, 59, 0.78));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 28px 64px rgba(15, 23, 42, 0.22);
+                radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.14), transparent 28%),
+                radial-gradient(circle at left center, rgba(var(--accent-light-rgb), 0.12), transparent 32%),
+                linear-gradient(160deg, color-mix(in srgb, var(--glass-bg) 96%, rgba(255, 255, 255, 0.08) 4%), color-mix(in srgb, var(--glass-bg) 90%, rgba(15, 23, 42, 0.04) 10%));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 28px 64px var(--glass-shadow);
+        }
+
+        .twilio-quick-send-card:hover,
+        .twilio-quick-send-card:focus-within {
+            border-color: var(--glass-border);
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.14), transparent 28%),
+                radial-gradient(circle at left center, rgba(var(--accent-light-rgb), 0.12), transparent 32%),
+                linear-gradient(160deg, color-mix(in srgb, var(--glass-bg) 96%, rgba(255, 255, 255, 0.08) 4%), color-mix(in srgb, var(--glass-bg) 90%, rgba(15, 23, 42, 0.04) 10%));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 28px 64px var(--glass-shadow);
         }
 
         .twilio-quick-send-card::before {
@@ -483,8 +493,8 @@
             inset: 0;
             pointer-events: none;
             background:
-                linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 28%),
-                linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.18));
+                linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 28%),
+                linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.04));
         }
 
         .twilio-quick-send-shell {
@@ -501,11 +511,11 @@
             gap: 18px;
             align-items: end;
             padding: 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid var(--glass-border);
             background:
-                radial-gradient(circle at 12% 18%, rgba(244, 114, 182, 0.18), transparent 24%),
-                radial-gradient(circle at 88% 16%, rgba(56, 189, 248, 0.16), transparent 24%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+                radial-gradient(circle at 12% 18%, rgba(var(--accent-rgb), 0.16), transparent 24%),
+                radial-gradient(circle at 88% 16%, rgba(var(--accent-light-rgb), 0.14), transparent 24%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
         }
 
         .twilio-quick-send-kicker {
@@ -515,9 +525,9 @@
             width: fit-content;
             padding: 7px 12px;
             border-radius: 999px;
-            border: 1px solid rgba(244, 114, 182, 0.24);
-            background: rgba(244, 114, 182, 0.12);
-            color: #fbcfe8;
+            border: 1px solid rgba(var(--accent-rgb), 0.24);
+            background: rgba(var(--accent-rgb), 0.12);
+            color: var(--text-primary);
             font-size: 11px;
             font-weight: 800;
             letter-spacing: 0.08em;
@@ -535,7 +545,7 @@
         .twilio-quick-send-lead {
             margin: 10px 0 0;
             max-width: 760px;
-            color: rgba(241, 245, 249, 0.82);
+            color: var(--text-secondary);
             font-size: 15px;
             line-height: 1.7;
         }
@@ -582,8 +592,8 @@
         .twilio-quick-send-main {
             padding: 22px;
             border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.42), rgba(15, 23, 42, 0.24));
+            border: 1px solid var(--glass-border);
+            background: color-mix(in srgb, var(--glass-bg) 88%, rgba(255, 255, 255, 0.12) 12%);
         }
 
         .twilio-quick-send-side {
@@ -593,9 +603,9 @@
         .twilio-quick-send-side-card {
             padding: 18px;
             border-radius: 22px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--glass-border);
+            background: color-mix(in srgb, var(--glass-bg) 90%, rgba(255, 255, 255, 0.1) 10%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
         .twilio-quick-send-side-card h3 {
@@ -635,8 +645,8 @@
             align-items: flex-start;
             padding: 16px 18px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            background: color-mix(in srgb, var(--glass-bg) 88%, rgba(255, 255, 255, 0.12) 12%);
         }
 
         .twilio-quick-send-card .campaign-provider-inline-copy p {
@@ -655,10 +665,10 @@
             gap: 12px;
             padding: 18px;
             border-radius: 22px;
-            border-color: rgba(96, 165, 250, 0.16);
+            border-color: var(--glass-border);
             background:
-                radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 34%),
-                linear-gradient(180deg, rgba(15, 23, 42, 0.44), rgba(15, 23, 42, 0.24));
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.14), transparent 34%),
+                linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 90%, rgba(255, 255, 255, 0.12) 10%), color-mix(in srgb, var(--glass-bg) 84%, rgba(15, 23, 42, 0.05) 16%));
         }
 
         .twilio-quick-send-card .outreach-input-grid {
@@ -666,14 +676,14 @@
         }
 
         .twilio-quick-send-card .form-input {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.1);
+            background: color-mix(in srgb, var(--glass-bg) 88%, rgba(255, 255, 255, 0.16) 12%);
+            border-color: var(--glass-border);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
         }
 
         .twilio-quick-send-card .form-input:focus {
-            box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.14);
-            border-color: rgba(244, 114, 182, 0.34);
+            box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.14);
+            border-color: rgba(var(--accent-rgb), 0.34);
         }
 
         .twilio-quick-send-card .outreach-textarea {
@@ -687,8 +697,8 @@
         .twilio-quick-send-card .campaign-media-toolbar {
             padding: 14px;
             border-radius: 18px;
-            border: 1px dashed rgba(255, 255, 255, 0.14);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px dashed var(--glass-border);
+            background: color-mix(in srgb, var(--glass-bg) 84%, rgba(255, 255, 255, 0.12) 16%);
         }
 
         .twilio-quick-send-card .outreach-actions {
@@ -1323,6 +1333,17 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        input.campaign-reply-address-chip {
+            min-width: min(100%, 260px);
+            outline: none;
+            cursor: text;
+        }
+
+        input.campaign-reply-address-chip:focus-visible {
+            border-color: rgba(var(--accent-rgb), 0.3);
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
         }
 
         .campaign-reply-edit-name:hover,
@@ -2267,6 +2288,288 @@
         }
 
         @media (max-width: 720px) {
+            body.campaigns-page {
+                overscroll-behavior-y: none;
+            }
+
+            body.campaigns-page .main-content {
+                padding-left: 12px;
+                padding-right: 12px;
+                padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+            }
+
+            body.campaigns-page .navbar {
+                min-height: auto;
+                padding: 18px 18px 16px;
+                margin-bottom: 14px;
+                border-color: var(--glass-border);
+                background: color-mix(in srgb, var(--glass-bg) 92%, rgba(255, 255, 255, 0.08) 8%);
+                box-shadow: 0 22px 40px var(--glass-shadow);
+                backdrop-filter: blur(18px);
+            }
+
+            body.campaigns-page .navbar-right,
+            body.campaigns-page .campaign-tools-head {
+                display: none;
+            }
+
+            body.campaigns-page .campaign-page-title-group {
+                gap: 10px;
+                align-items: flex-start;
+            }
+
+            body.campaigns-page .campaign-page-title-logo {
+                width: 44px;
+                margin-top: 0;
+            }
+
+            body.campaigns-page .campaign-page-title-group .page-title {
+                font-size: clamp(1.15rem, 5.8vw, 1.55rem);
+                line-height: 1.02;
+                letter-spacing: -0.08em;
+                max-width: 14ch;
+            }
+
+            body.campaigns-page .campaigns-wrap {
+                margin-top: 10px;
+                gap: 12px;
+            }
+
+            body.campaigns-page .campaign-tools-section {
+                padding: 10px;
+                gap: 10px;
+                border-radius: 30px;
+                border: 1px solid var(--glass-border);
+                background:
+                    radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.16), transparent 28%),
+                    linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 96%, rgba(255, 255, 255, 0.06) 4%), color-mix(in srgb, var(--glass-bg) 92%, rgba(15, 23, 42, 0.04) 8%));
+                box-shadow:
+                    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+                    0 28px 54px var(--glass-shadow);
+                overflow: hidden;
+            }
+
+            body.campaigns-page .campaign-tools-head p,
+            body.campaigns-page .campaign-replies-head-copy p {
+                color: var(--text-secondary);
+            }
+
+            body.campaigns-page .campaign-replies-card {
+                border-radius: 28px;
+                border: 1px solid var(--glass-border);
+                background:
+                    radial-gradient(circle at top center, rgba(var(--accent-light-rgb), 0.16), transparent 26%),
+                    linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 98%, rgba(255, 255, 255, 0.04) 2%), color-mix(in srgb, var(--glass-bg) 92%, rgba(15, 23, 42, 0.06) 8%));
+                box-shadow:
+                    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                    0 26px 54px var(--glass-shadow);
+                min-height: 0;
+                overflow: visible;
+            }
+
+            body.campaigns-page .campaign-replies-head {
+                padding: 20px 18px 0;
+                gap: 12px;
+            }
+
+            body.campaigns-page .campaign-replies-head .card-title,
+            body.campaigns-page .campaign-replies-list-head h4,
+            body.campaigns-page .campaign-replies-thread-head h4,
+            body.campaigns-page .campaign-reply-name-group h4,
+            body.campaigns-page .campaign-reply-conversation-name,
+            body.campaigns-page .campaign-reply-message {
+                color: var(--text-primary);
+            }
+
+            body.campaigns-page .campaign-status-pill {
+                border-color: var(--glass-border);
+                background: rgba(255, 255, 255, 0.08);
+                color: var(--text-primary);
+            }
+
+            body.campaigns-page .campaign-replies-shell {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+                min-height: 0;
+                height: auto;
+                margin-top: 10px;
+                border-top: 1px solid var(--glass-border);
+                background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 98%, rgba(255, 255, 255, 0.03) 2%), color-mix(in srgb, var(--glass-bg) 92%, rgba(15, 23, 42, 0.04) 8%));
+            }
+
+            body.campaigns-page .campaign-replies-list {
+                grid-template-rows: auto minmax(0, 1fr);
+                min-height: 320px;
+                max-height: none;
+                border-right: 0;
+                border-bottom: 1px solid var(--glass-border);
+                background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 96%, rgba(255, 255, 255, 0.06) 4%), color-mix(in srgb, var(--glass-bg) 90%, rgba(15, 23, 42, 0.05) 10%));
+            }
+
+            body.campaigns-page .campaign-replies-thread-shell {
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                min-height: 560px;
+                max-height: none;
+                background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 94%, rgba(255, 255, 255, 0.04) 6%), color-mix(in srgb, var(--glass-bg) 90%, rgba(15, 23, 42, 0.05) 10%));
+            }
+
+            body.campaigns-page .campaign-replies-list-head,
+            body.campaigns-page .campaign-replies-thread-head {
+                padding-left: 16px;
+                padding-right: 16px;
+                border-bottom: 1px solid var(--glass-border);
+                background: color-mix(in srgb, var(--glass-bg) 92%, rgba(255, 255, 255, 0.08) 8%);
+                backdrop-filter: blur(20px);
+            }
+
+            body.campaigns-page .campaign-replies-list-head p,
+            body.campaigns-page .campaign-replies-thread-head p,
+            body.campaigns-page .campaign-reply-conversation-preview,
+            body.campaigns-page .campaign-reply-conversation-meta,
+            body.campaigns-page .campaign-reply-conversation-time,
+            body.campaigns-page .campaign-reply-thread-meta,
+            body.campaigns-page .campaign-reply-status,
+            body.campaigns-page .campaign-reply-subtitle {
+                color: var(--text-secondary);
+            }
+
+            body.campaigns-page .campaign-reply-search input {
+                border-color: var(--glass-border);
+                background: color-mix(in srgb, var(--glass-bg) 92%, rgba(255, 255, 255, 0.18) 8%);
+                color: var(--text-primary);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            }
+
+            body.campaigns-page .campaign-reply-search input::placeholder,
+            body.campaigns-page .campaign-reply-search svg {
+                color: var(--text-muted);
+            }
+
+            body.campaigns-page .campaign-reply-search input:focus {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(96, 165, 250, 0.34);
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
+            }
+
+            body.campaigns-page .campaign-reply-filters {
+                border-color: rgba(255, 255, 255, 0.08);
+                background: rgba(255, 255, 255, 0.06);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 16px 30px rgba(2, 6, 23, 0.22);
+            }
+
+            body.campaigns-page .campaign-reply-filters::before {
+                border-color: rgba(96, 165, 250, 0.28);
+                background: linear-gradient(135deg, rgba(59, 130, 246, 0.7), rgba(14, 165, 233, 0.42));
+                box-shadow: 0 10px 18px rgba(59, 130, 246, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            }
+
+            body.campaigns-page .campaign-reply-filter-button {
+                color: var(--text-secondary);
+            }
+
+            body.campaigns-page .campaign-reply-filter-button:hover,
+            body.campaigns-page .campaign-reply-filter-button:focus-visible,
+            body.campaigns-page .campaign-reply-filter-button.is-active {
+                color: var(--text-primary);
+            }
+
+            body.campaigns-page .campaign-replies-list-body {
+                padding: 14px;
+                overscroll-behavior-y: contain;
+                scrollbar-width: none;
+            }
+
+            body.campaigns-page .campaign-replies-list-body::-webkit-scrollbar,
+            body.campaigns-page .campaign-reply-thread::-webkit-scrollbar {
+                display: none;
+            }
+
+            body.campaigns-page .campaign-reply-conversation {
+                border-color: var(--glass-border);
+                background: color-mix(in srgb, var(--glass-bg) 88%, rgba(255, 255, 255, 0.16) 12%);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 32px var(--glass-shadow);
+            }
+
+            body.campaigns-page .campaign-reply-conversation:hover,
+            body.campaigns-page .campaign-reply-conversation.is-active {
+                border-color: rgba(96, 165, 250, 0.34);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 24px 40px rgba(2, 6, 23, 0.28);
+            }
+
+            body.campaigns-page .campaign-reply-badge,
+            body.campaigns-page .campaign-reply-status-tag {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: var(--glass-border);
+                color: var(--text-primary);
+            }
+
+            body.campaigns-page .campaign-reply-badge.is-unread {
+                background: rgba(34, 197, 94, 0.18);
+                border-color: rgba(34, 197, 94, 0.24);
+                color: #bbf7d0;
+            }
+
+            body.campaigns-page .campaign-reply-thread {
+                gap: 12px;
+                padding: 16px;
+                min-height: 360px;
+                height: auto;
+                overflow-y: auto;
+                overscroll-behavior-y: contain;
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+            }
+
+            body.campaigns-page .campaign-reply-message {
+                background: color-mix(in srgb, var(--glass-bg) 84%, rgba(255, 255, 255, 0.2) 16%);
+                border-color: var(--glass-border);
+                color: var(--text-primary);
+                box-shadow: 0 18px 30px var(--glass-shadow);
+            }
+
+            body.campaigns-page .campaign-reply-message.is-outgoing {
+                background: linear-gradient(135deg, #1493ff 0%, #007aff 52%, #0063cf 100%);
+                border-color: rgba(96, 165, 250, 0.34);
+                box-shadow: 0 18px 32px rgba(0, 122, 255, 0.24);
+            }
+
+            body.campaigns-page .campaign-reply-attachment-link,
+            body.campaigns-page .campaign-reply-attachment-download,
+            body.campaigns-page .campaign-reply-address-chip,
+            body.campaigns-page .campaign-reply-edit-name,
+            body.campaigns-page .campaign-reply-block-contact,
+            body.campaigns-page .campaign-reply-delete-thread,
+            body.campaigns-page .campaign-reply-copy-address,
+            body.campaigns-page .campaign-reply-conversation-dismiss,
+            body.campaigns-page .campaign-reply-conversation-delete,
+            body.campaigns-page .campaign-reply-conversation-follow-up {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: var(--glass-border);
+                color: var(--text-primary);
+                box-shadow: 0 12px 24px var(--glass-shadow);
+            }
+
+            body.campaigns-page input.campaign-reply-address-chip {
+                background: rgba(255, 255, 255, 0.08);
+                color: var(--text-primary);
+            }
+
+            body.campaigns-page .campaign-reply-empty,
+            body.campaigns-page .campaign-reply-thread-empty {
+                border-radius: 22px;
+                border: 1px dashed var(--glass-border);
+                background: rgba(255, 255, 255, 0.04);
+                color: var(--text-secondary);
+            }
+
+            body.campaigns-page .campaign-reply-form {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+                border-top: 1px solid var(--glass-border);
+                background: color-mix(in srgb, var(--glass-bg) 94%, rgba(255, 255, 255, 0.06) 6%);
+                backdrop-filter: blur(18px);
+            }
+
             .campaign-brand-strip {
                 min-height: 108px;
                 padding-top: 0;
@@ -2318,22 +2621,23 @@
             .campaign-replies-shell {
                 grid-template-columns: 1fr;
                 grid-template-rows: auto auto;
+                min-height: 0;
                 height: auto;
                 margin-top: 14px;
             }
 
             .campaign-replies-list {
                 grid-template-rows: auto minmax(0, 1fr);
-                max-height: min(34dvh, 320px);
-                min-height: 0;
+                min-height: 320px;
+                max-height: none;
                 border-right: 0;
                 border-bottom: 1px solid rgba(15, 23, 42, 0.08);
             }
 
             .campaign-replies-thread-shell {
                 grid-template-rows: auto minmax(0, 1fr) auto;
-                max-height: min(68dvh, 560px);
-                min-height: 0;
+                min-height: 560px;
+                max-height: none;
             }
 
             .campaign-replies-list-head,
@@ -2404,8 +2708,8 @@
                 gap: 12px;
                 padding-top: 16px;
                 padding-bottom: 16px;
-                min-height: 0;
-                height: 100%;
+                min-height: 360px;
+                height: auto;
                 max-height: none;
                 overflow-y: auto;
                 overflow-x: hidden;
@@ -2420,8 +2724,6 @@
                 min-height: 160px;
                 padding: 26px 18px;
                 border-radius: 18px;
-                background: rgba(255, 255, 255, 0.52);
-                border: 1px dashed rgba(148, 163, 184, 0.24);
                 font-size: 15px;
                 line-height: 1.7;
             }
@@ -2455,12 +2757,13 @@
 
             .campaign-reply-form {
                 gap: 10px;
-                padding-top: 14px;
-                padding-bottom: 16px;
+                padding-top: 12px;
+                padding-bottom: 12px;
             }
 
             .campaign-reply-form .outreach-textarea {
-                min-height: 112px;
+                min-height: 72px;
+                max-height: 148px;
             }
 
             .campaign-reply-action-group {
@@ -2486,7 +2789,7 @@
         }
     </style>
 </head>
-<body>
+<body class="campaigns-page">
     <div class="background"></div>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
@@ -2735,7 +3038,7 @@
                                                     </button>
                                                 </div>
                                                 <div id="campaign-reply-address-group" class="campaign-reply-address-group" hidden>
-                                                    <span id="campaign-reply-address" class="campaign-reply-address-chip"></span>
+                                                    <input id="campaign-reply-address" class="campaign-reply-address-chip" type="text" placeholder="Edit property address" autocomplete="off" spellcheck="false">
                                                     <button id="campaign-reply-copy-address" type="button" class="campaign-reply-copy-address" aria-label="Copy property address" title="Copy property address">
                                                         <svg viewBox="0 0 24 24" aria-hidden="true">
                                                             <rect x="9" y="9" width="11" height="11" rx="2"></rect>
@@ -3161,6 +3464,7 @@
             const campaignTemplatePerformance = document.getElementById('campaign-template-performance');
             const CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE = 'campaignSmsTemplateSettings';
             const CAMPAIGN_NO_REPLIES_TEMPLATE_STORAGE_KEY_BASE = 'campaignNoRepliesTemplateBody';
+            const CAMPAIGN_REPLY_ADDRESS_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyAddressOverrides';
             const CAMPAIGN_PLANNER_STORAGE_KEY = 'personalTodoGoalsByUser';
             const CAMPAIGN_TEMPLATE_DEFAULTS = {
                 'first-touch': 'Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.',
@@ -3171,10 +3475,18 @@
             let campaignTemplateSettings = loadCampaignTemplateSettings();
             let campaignNoRepliesTemplateValue = loadCampaignNoRepliesTemplateBody();
             let campaignNoRepliesTemplateDraft = campaignNoRepliesTemplateValue;
+            let campaignReplyAddressOverrides = loadCampaignReplyAddressOverrides();
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
             let activeTwilioReactionPickerMessageId = 0;
             let outreachDashboard = null;
+            let twilioMessagingAccessState = {
+                allowed: true,
+                checked: false,
+                error: '',
+                isAdmin: false,
+                ownerEmail: ''
+            };
 
             function escapeCampaignReplyCopyHtml(value) {
                 return String(value || '')
@@ -3214,6 +3526,117 @@
                     email,
                     name
                 };
+            }
+
+            function getTwilioMessagingBlockedMessage(access = twilioMessagingAccessState) {
+                return String(access && access.error ? access.error : '').trim()
+                    || 'Twilio messaging is only available to admins or users with an assigned number.';
+            }
+
+            function renderTwilioMessagingBlockedState(message) {
+                const blockedMessage = String(message || '').trim() || getTwilioMessagingBlockedMessage();
+
+                twilioInboxConversations = [];
+                activeTwilioConversationKey = '';
+                activeTwilioReactionPickerMessageId = 0;
+
+                if (campaignReplyConversations) {
+                    const empty = document.createElement('p');
+                    empty.className = 'campaign-reply-empty';
+                    empty.textContent = blockedMessage;
+                    campaignReplyConversations.replaceChildren(empty);
+                }
+
+                if (campaignReplyThread) {
+                    const empty = document.createElement('p');
+                    empty.className = 'campaign-reply-thread-empty';
+                    empty.textContent = blockedMessage;
+                    campaignReplyThread.replaceChildren(empty);
+                }
+
+                if (campaignReplyTitle) {
+                    campaignReplyTitle.textContent = 'Twilio access blocked';
+                }
+
+                if (campaignReplySubtitle) {
+                    campaignReplySubtitle.textContent = blockedMessage;
+                }
+
+                if (campaignReplyStatus) {
+                    campaignReplyStatus.textContent = blockedMessage;
+                }
+
+                syncCampaignReplyThreadCount(0);
+                setCampaignReplyAddress('');
+                setCampaignReplyComposerEnabled(false);
+                syncCampaignReplyBlockState(false);
+            }
+
+            function setTwilioMessagingWorkspaceEnabled(enabled, message = '') {
+                const blockedMessage = String(message || '').trim() || getTwilioMessagingBlockedMessage();
+
+                [
+                    campaignNameInput,
+                    campaignRecipientsInput,
+                    campaignBodyInput,
+                    campaignMediaAttachButton,
+                    campaignSendButton,
+                    campaignScheduleButton,
+                    campaignReplySearchInput,
+                    campaignReplyFilterAllButton,
+                    campaignReplyFilterUnreadButton,
+                    campaignReplyFilterNoRepliesButton,
+                    campaignReplyNoRepliesFollowUpButton,
+                    campaignReplyNoRepliesCopyTemplateButton
+                ].forEach((element) => {
+                    if (element) {
+                        element.disabled = !enabled;
+                    }
+                });
+
+                if (campaignRecipientsInput) {
+                    campaignRecipientsInput.placeholder = enabled
+                        ? 'One per line. Use Name | Phone | Area or just Phone.'
+                        : blockedMessage;
+                }
+
+                if (campaignBodyInput) {
+                    campaignBodyInput.placeholder = enabled
+                        ? 'Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out.'
+                        : blockedMessage;
+                }
+
+                if (campaignSendStatus && !enabled) {
+                    campaignSendStatus.textContent = blockedMessage;
+                }
+
+                if (!enabled) {
+                    renderTwilioMessagingBlockedState(blockedMessage);
+                    setCampaignRepliesStatus(blockedMessage, 'offline');
+                }
+            }
+
+            function setTwilioMessagingAccessState(access = {}) {
+                twilioMessagingAccessState = {
+                    allowed: Boolean(access.allowed),
+                    checked: true,
+                    error: String(access.error || '').trim(),
+                    isAdmin: Boolean(access.isAdmin),
+                    ownerEmail: String(access.ownerEmail || '').trim()
+                };
+
+                if (!twilioMessagingAccessState.allowed) {
+                    const blockedMessage = getTwilioMessagingBlockedMessage(twilioMessagingAccessState);
+                    if (campaignStatus) {
+                        campaignStatus.textContent = blockedMessage;
+                        campaignStatus.classList.remove('ready');
+                        campaignStatus.classList.add('offline');
+                    }
+                    setTwilioMessagingWorkspaceEnabled(false, blockedMessage);
+                    return;
+                }
+
+                setTwilioMessagingWorkspaceEnabled(true);
             }
 
             function getCampaignPlannerItems() {
@@ -3743,15 +4166,92 @@
                 }
 
                 if (!propertyAddress) {
-                    campaignReplyAddress.textContent = '';
+                    campaignReplyAddress.value = '';
                     campaignReplyAddress.dataset.copyValue = '';
+                    campaignReplyAddress.disabled = true;
                     campaignReplyAddressGroup.setAttribute('hidden', 'hidden');
                     return;
                 }
 
-                campaignReplyAddress.textContent = propertyAddress;
+                campaignReplyAddress.value = propertyAddress;
                 campaignReplyAddress.dataset.copyValue = propertyAddress;
+                campaignReplyAddress.disabled = false;
                 campaignReplyAddressGroup.removeAttribute('hidden');
+            }
+
+            function normalizeCampaignReplyAddressValue(value) {
+                return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+            }
+
+            function getCampaignReplyAddressOverridesStorageKey() {
+                return `${CAMPAIGN_REPLY_ADDRESS_OVERRIDES_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
+            }
+
+            function normalizeCampaignReplyAddressOverrides(value) {
+                const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+                const normalized = {};
+                Object.entries(source).forEach(([conversationKey, addressValue]) => {
+                    const normalizedConversationKey = String(conversationKey || '').trim();
+                    const normalizedAddressValue = normalizeCampaignReplyAddressValue(addressValue);
+                    if (normalizedConversationKey && normalizedAddressValue) {
+                        normalized[normalizedConversationKey] = normalizedAddressValue;
+                    }
+                });
+                return normalized;
+            }
+
+            function loadCampaignReplyAddressOverrides() {
+                try {
+                    return normalizeCampaignReplyAddressOverrides(JSON.parse(localStorage.getItem(getCampaignReplyAddressOverridesStorageKey()) || '{}'));
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function persistCampaignReplyAddressOverrides(value) {
+                localStorage.setItem(
+                    getCampaignReplyAddressOverridesStorageKey(),
+                    JSON.stringify(normalizeCampaignReplyAddressOverrides(value))
+                );
+            }
+
+            function getConversationPropertyAddress(conversation) {
+                const normalizedConversationKey = String(conversation?.conversationKey || '').trim();
+                const overrideValue = normalizedConversationKey
+                    ? normalizeCampaignReplyAddressValue(campaignReplyAddressOverrides[normalizedConversationKey] || '')
+                    : '';
+                if (overrideValue) {
+                    return overrideValue;
+                }
+                return normalizeCampaignReplyAddressValue(conversation?.propertyAddress || '');
+            }
+
+            function setConversationPropertyAddressOverride(conversationKey, value) {
+                const normalizedConversationKey = String(conversationKey || '').trim();
+                if (!normalizedConversationKey) {
+                    return;
+                }
+
+                const normalizedAddressValue = normalizeCampaignReplyAddressValue(value);
+                if (normalizedAddressValue) {
+                    campaignReplyAddressOverrides[normalizedConversationKey] = normalizedAddressValue;
+                } else {
+                    delete campaignReplyAddressOverrides[normalizedConversationKey];
+                }
+                persistCampaignReplyAddressOverrides(campaignReplyAddressOverrides);
+
+                twilioInboxConversations.forEach((conversation) => {
+                    if (String(conversation?.conversationKey || '').trim() === normalizedConversationKey) {
+                        conversation.propertyAddress = normalizedAddressValue;
+                    }
+                });
+
+                if (normalizedConversationKey === activeTwilioConversationKey) {
+                    setCampaignReplyAddress(normalizedAddressValue);
+                    if (campaignNoRepliesTemplateModal && !campaignNoRepliesTemplateModal.hidden) {
+                        syncCampaignNoRepliesTemplateEditor();
+                    }
+                }
             }
 
             function setActiveTwilioConversationContactName(contactName) {
@@ -4051,7 +4551,7 @@
                 const source = conversation || getPrimaryNoRepliesConversation() || null;
                 const firstName = getConversationFirstName(source);
                 const fullName = String(source?.contactName || '').trim() || firstName;
-                const propertyAddress = String(source?.propertyAddress || '').trim() || 'your property';
+                const propertyAddress = getConversationPropertyAddress(source) || 'your property';
                 const phoneNumber = String(source?.contactPhone || '').trim() || 'this number';
                 const bodyTemplate = normalizeCampaignNoRepliesTemplateBody(template);
                 const includesTimeGreetingToken = /\{timeGreeting\}/.test(bodyTemplate);
@@ -4429,7 +4929,7 @@
                     const haystack = [
                         conversation?.contactName,
                         conversation?.contactPhone,
-                        conversation?.propertyAddress,
+                        getConversationPropertyAddress(conversation),
                         conversation?.campaignName,
                         conversation?.searchText,
                         conversation?.lastMessagePreview,
@@ -4453,7 +4953,7 @@
 
             function buildNoRepliesFollowUpMessage(conversation) {
                 const firstName = getConversationFirstName(conversation);
-                const propertyAddress = String(conversation?.propertyAddress || '').trim() || 'your property';
+                const propertyAddress = getConversationPropertyAddress(conversation) || 'your property';
                 return `Hey ${firstName} just following up on ${propertyAddress}?`;
             }
 
@@ -4803,6 +5303,11 @@
             }
 
             async function submitCampaignReply(options = {}) {
+                if (twilioMessagingAccessState.checked && !twilioMessagingAccessState.allowed) {
+                    campaignReplyStatus.textContent = getTwilioMessagingBlockedMessage();
+                    return;
+                }
+
                 const body = campaignReplyInput ? campaignReplyInput.value.trim() : '';
                 const scheduleAt = String(options && options.scheduleAt ? options.scheduleAt : '').trim();
                 const nextFollowUpAt = campaignOutreachFollowUp && campaignOutreachFollowUp.value
@@ -4890,6 +5395,11 @@
             }
 
             async function submitCampaignSend(options = {}) {
+                if (twilioMessagingAccessState.checked && !twilioMessagingAccessState.allowed) {
+                    campaignSendStatus.textContent = getTwilioMessagingBlockedMessage();
+                    return;
+                }
+
                 if (campaignRecipientsInput) {
                     campaignRecipientsInput.value = normalizeCampaignRecipientsInputValue(campaignRecipientsInput.value);
                 }
@@ -5329,7 +5839,7 @@
                 }
 
                 campaignReplyTitle.textContent = conversation.contactName || conversation.contactPhone || 'Twilio contact';
-                setCampaignReplyAddress(conversation.propertyAddress || '');
+                setCampaignReplyAddress(getConversationPropertyAddress(conversation));
                 campaignReplySubtitle.textContent = conversation.campaignName
                     ? `${conversation.contactPhone} • ${conversation.campaignName}${conversation.isBlocked ? ' • Outbound blocked, inbound allowed' : ''}`
                     : `${conversation.contactPhone} • Direct Twilio thread${conversation.isBlocked ? ' • Outbound blocked, inbound allowed' : ''}`;
@@ -5396,12 +5906,26 @@
                     return;
                 }
 
+                if (twilioMessagingAccessState.checked && !twilioMessagingAccessState.allowed) {
+                    const blockedMessage = getTwilioMessagingBlockedMessage();
+                    setCampaignRepliesStatus(blockedMessage, 'offline');
+                    renderTwilioMessagingBlockedState(blockedMessage);
+                    renderCampaignOutreachPanel();
+                    return;
+                }
+
                 try {
                     const response = await fetch('/api/twilio/inbox/conversations', {
                         headers: token ? { Authorization: `Bearer ${token}` } : {}
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) {
+                        if (response.status === 401 || response.status === 403) {
+                            setTwilioMessagingAccessState({
+                                allowed: false,
+                                error: data.error || 'Twilio messaging is only available to admins or users with an assigned number.'
+                            });
+                        }
                         throw new Error(data.error || 'Unable to load Twilio conversations.');
                     }
 
@@ -5552,9 +6076,17 @@
                 }
 
                 try {
-                    const response = await fetch('/api/twilio/status');
+                    const response = await fetch('/api/twilio/status', {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
                     const data = await response.json();
                     setTwilioWebhookUiState(data);
+                    if (data && data.access) {
+                        setTwilioMessagingAccessState(data.access);
+                    }
+                    if (data && data.access && !data.access.allowed) {
+                        return;
+                    }
                     if (data.configured) {
                         const modeLabel = data.messagingServiceSidConfigured
                             ? 'Messaging Service connected'
@@ -5869,9 +6401,9 @@
                 campaignReplyCopyAddressButton.addEventListener('click', async () => {
                     const activeConversation = twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
                     const value = String(
-                        activeConversation?.propertyAddress
+                        getConversationPropertyAddress(activeConversation)
                         || campaignReplyAddress?.dataset.copyValue
-                        || campaignReplyAddress?.textContent
+                        || campaignReplyAddress?.value
                         || ''
                     ).trim();
                     if (!value) {
@@ -5888,6 +6420,17 @@
                     } catch (error) {
                         campaignReplyStatus.textContent = 'Could not copy the property address.';
                     }
+                });
+            }
+
+            if (campaignReplyAddress) {
+                campaignReplyAddress.addEventListener('input', () => {
+                    if (!activeTwilioConversationKey) {
+                        return;
+                    }
+                    const nextValue = normalizeCampaignReplyAddressValue(campaignReplyAddress.value || '');
+                    campaignReplyAddress.dataset.copyValue = nextValue;
+                    setConversationPropertyAddressOverride(activeTwilioConversationKey, nextValue);
                 });
             }
 

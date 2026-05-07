@@ -1441,18 +1441,52 @@ function getConfiguredTwilioSenderOwnerEmail(config = getTwilioMessagingConfig()
   return getAssignedTwilioOwnerEmailForNumber(config?.fromNumber || '');
 }
 
+function isTwilioMessagingAdmin(userLike) {
+  const normalizedEmail = normalizeKnownEmail(userLike?.email || '');
+  const normalizedRole = String(userLike?.role || '').trim().toLowerCase();
+  return normalizedRole === 'admin' || isKnownAdminEmail(normalizedEmail);
+}
+
 function ensureTwilioSenderAccess(userLike, config = getTwilioMessagingConfig()) {
-  const ownerEmail = getConfiguredTwilioSenderOwnerEmail(config);
-  if (!ownerEmail) {
-    return { allowed: true, statusCode: 200, error: '', ownerEmail: '' };
-  }
-
   const authenticatedEmail = normalizeKnownEmail(userLike?.email || '');
-  if (authenticatedEmail !== ownerEmail) {
-    return { allowed: false, statusCode: 403, error: 'Configure a number via twilio, contact admin', ownerEmail };
+  const adminAccess = isTwilioMessagingAdmin(userLike);
+  const ownerEmail = getConfiguredTwilioSenderOwnerEmail(config);
+
+  if (adminAccess) {
+    return { allowed: true, statusCode: 200, error: '', ownerEmail, isAdmin: true };
   }
 
-  return { allowed: true, statusCode: 200, error: '', ownerEmail };
+  if (!authenticatedEmail) {
+    return {
+      allowed: false,
+      statusCode: 401,
+      error: 'Sign in again before using Twilio messaging.',
+      ownerEmail,
+      isAdmin: false
+    };
+  }
+
+  if (!ownerEmail) {
+    return {
+      allowed: false,
+      statusCode: 403,
+      error: 'Twilio messaging is only available to admins or users with an assigned number.',
+      ownerEmail: '',
+      isAdmin: false
+    };
+  }
+
+  if (authenticatedEmail !== ownerEmail) {
+    return {
+      allowed: false,
+      statusCode: 403,
+      error: 'Twilio messaging is only available to admins or users with an assigned number.',
+      ownerEmail,
+      isAdmin: false
+    };
+  }
+
+  return { allowed: true, statusCode: 200, error: '', ownerEmail, isAdmin: false };
 }
 
 function extractTwilioInboxNumber(rowOrPayload) {
@@ -1506,9 +1540,21 @@ async function ensureTwilioConversationAccess(decoded, conversationKey) {
     return { allowed: false, statusCode: 400, error: 'conversationKey is required.', ownerEmail: '', conversationKey: '' };
   }
 
+  const senderAccess = ensureTwilioSenderAccess(decoded);
+  if (!senderAccess.allowed) {
+    return {
+      ...senderAccess,
+      conversationKey: normalizedConversationKey
+    };
+  }
+
   const ownerEmail = await resolveTwilioConversationOwnerEmail(normalizedConversationKey);
   if (!ownerEmail) {
     return { allowed: false, statusCode: 404, error: 'Conversation not found.', ownerEmail: '', conversationKey: normalizedConversationKey };
+  }
+
+  if (senderAccess.isAdmin) {
+    return { allowed: true, statusCode: 200, error: '', ownerEmail, conversationKey: normalizedConversationKey, isAdmin: true };
   }
 
   const authenticatedEmail = normalizeKnownEmail(decoded?.email || '');
@@ -1516,7 +1562,7 @@ async function ensureTwilioConversationAccess(decoded, conversationKey) {
     return { allowed: false, statusCode: 403, error: 'This Twilio conversation is assigned to another user.', ownerEmail, conversationKey: normalizedConversationKey };
   }
 
-  return { allowed: true, statusCode: 200, error: '', ownerEmail, conversationKey: normalizedConversationKey };
+  return { allowed: true, statusCode: 200, error: '', ownerEmail, conversationKey: normalizedConversationKey, isAdmin: false };
 }
 
 async function ensureTwilioMessageAccess(decoded, messageSid) {
@@ -21471,6 +21517,11 @@ app.post('/api/twilio/media-uploads', (req, res) => {
     return;
   }
 
+  const senderAccess = ensureTwilioSenderAccess(decoded);
+  if (!senderAccess.allowed) {
+    return res.status(senderAccess.statusCode).json({ error: senderAccess.error });
+  }
+
   userUploadMemory.single('file')(req, res, async (uploadError) => {
     if (uploadError) {
       const uploadMessage = uploadError instanceof multer.MulterError && uploadError.code === 'LIMIT_FILE_SIZE'
@@ -21538,6 +21589,11 @@ app.delete('/api/twilio/media-uploads/:documentId', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
+  }
+
+  const senderAccess = ensureTwilioSenderAccess(decoded);
+  if (!senderAccess.allowed) {
+    return res.status(senderAccess.statusCode).json({ error: senderAccess.error });
   }
 
   try {
@@ -22000,9 +22056,11 @@ app.delete('/api/team-tasks/:taskId', async (req, res) => {
   }
 });
 
-app.get('/api/twilio/status', (req, res) => {
+app.get('/api/twilio/status', async (req, res) => {
   const config = getTwilioMessagingConfig();
   const voiceConfig = getTwilioVoiceConfig();
+  const authenticatedUser = await getAuthenticatedUserFromBearerHeader(req.headers.authorization || '');
+  const access = authenticatedUser ? ensureTwilioSenderAccess(authenticatedUser, config) : null;
 
   return res.json({
     configured: isTwilioConfigured(config),
@@ -22013,7 +22071,16 @@ app.get('/api/twilio/status', (req, res) => {
     statusWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/webhook/status'),
     voiceConfigured: isTwilioVoiceConfigured(voiceConfig),
     voiceWebhookUrl: buildTwilioWebhookUrl(req, '/api/twilio/voice/webhook/incoming'),
-    activeVoiceSessions: listActiveTwilioVoicePresence().length
+    activeVoiceSessions: listActiveTwilioVoicePresence().length,
+    access: access
+      ? {
+        allowed: Boolean(access.allowed),
+        statusCode: Number(access.statusCode) || 200,
+        error: String(access.error || '').trim(),
+        ownerEmail: String(access.ownerEmail || '').trim(),
+        isAdmin: Boolean(access.isAdmin)
+      }
+      : null
   });
 });
 
@@ -22251,6 +22318,11 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
     return;
+  }
+
+  const senderAccess = ensureTwilioSenderAccess(decoded);
+  if (!senderAccess.allowed) {
+    return res.status(senderAccess.statusCode).json({ error: senderAccess.error });
   }
 
   try {
