@@ -16857,7 +16857,7 @@ function sanitizeMlsImportAiRow(rowLike) {
   const source = stripCompensationFieldsFromFeedData(rowLike && typeof rowLike === 'object' ? rowLike : {});
   const rawAddress = normalizePdfPropertyAddressValue(source.propertyAddress || source.address || source.property || '');
   const normalizedAddress = extractPropertyAddressCandidateFromLine(rawAddress);
-  const normalizedName = formatPersonName(source.laName || source.agentName || source.listingAgent || source.name || '');
+  const normalizedName = normalizeMlsAgentNameValue(source.laName || source.agentName || source.listingAgent || source.name || '');
   const normalizedOfficePhone = extractPhoneNumber(source.loPhone || source.officePhone || source.brokerPhone || '');
   const normalizedOffersEmail = extractEmailAddress(source.offersEmail || source.offerEmail || source.email || '');
   const normalizedLaCell = extractPhoneNumber(source.laCell || source.agentCell || source.mobile || source.phone || '');
@@ -17763,6 +17763,24 @@ function isLikelyPersonName(value) {
   return true;
 }
 
+function isDisallowedMlsAgentNameValue(value) {
+  const normalized = cleanPersonName(value).toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+
+  return /\b(?:please\s+(?:text|call)|text\s+agent|call\s+agent|agent\s+only|show\s+contact|show\s+instructions?|realty|real\s+estate|homeservices|properties|prop\.|brokerage|brokers?|group|associates|company|corp\.?|inc\.?|llc)\b/i.test(normalized);
+}
+
+function normalizeMlsAgentNameValue(value) {
+  const cleaned = cleanPersonName(value);
+  if (!cleaned || isDisallowedMlsAgentNameValue(cleaned) || !isLikelyPersonName(cleaned)) {
+    return '';
+  }
+
+  return formatPersonName(cleaned);
+}
+
 function normalizePdfPropertyAddressValue(value) {
   return String(value || '')
     .replace(/\u00a0/g, ' ')
@@ -17954,7 +17972,30 @@ function extractLaNameFromLine(line) {
     .replace(/^[\\/]+\s*/, '')
     .replace(/\s+/g, ' ')
     .trim();
-  return isLikelyPersonName(candidate) ? candidate : '';
+
+  const trimmedCandidate = candidate
+    .replace(/\b(?:la|lo|cola|colo|bo|cobo)\s+state\s+license\b.*$/i, '')
+    .replace(/\b(?:la|lo|cola|colo|bo|cobo)\s+(?:cell|direct|phone|email|fax)\b.*$/i, '')
+    .replace(/\boffers\s+email\b.*$/i, '')
+    .replace(/\b(?:show\s+instructions?|show\s+contact\s+(?:name|type|ph(?:one)?)|directions?|occupant\s+type|owner'?s\s+name)\b.*$/i, '')
+    .replace(/\s{2,}.+$/, '')
+    .trim();
+
+  const normalizedCandidate = normalizeMlsAgentNameValue(trimmedCandidate);
+  if (normalizedCandidate) {
+    return normalizedCandidate;
+  }
+
+  const words = trimmedCandidate.match(/[A-Za-z][A-Za-z.'-]*/g) || [];
+  for (let length = Math.min(words.length, 4); length >= 2; length -= 1) {
+    const leadingCandidate = words.slice(0, length).join(' ').trim();
+    const normalizedLeadingCandidate = normalizeMlsAgentNameValue(leadingCandidate);
+    if (normalizedLeadingCandidate) {
+      return normalizedLeadingCandidate;
+    }
+  }
+
+  return '';
 }
 
 function isAgentOfficeContactPriorityBoundary(line) {
@@ -18147,8 +18188,8 @@ function extractAgentNameFromPdfText(lines) {
     /^(?:show contact name)\s*[:#-]?\s*(.+)$/i,
     {
       lookahead: 2,
-      transform: (value) => formatPersonName(value),
-      validate: (value) => isLikelyPersonName(value)
+      transform: (value) => normalizeMlsAgentNameValue(value),
+      validate: (value) => Boolean(normalizeMlsAgentNameValue(value))
     }
   );
   if (showContactName) {
@@ -18556,7 +18597,7 @@ function normalizeMlsImportRow(row) {
   const source = stripCompensationFieldsFromFeedData(row && typeof row === 'object' ? row : {});
   const normalizedRow = {
     propertyAddress: String(source.propertyAddress || '').trim(),
-    laName: String(source.laName || '').trim(),
+    laName: normalizeMlsAgentNameValue(source.laName || ''),
     loPhone: String(source.loPhone || '').trim(),
     offersEmail: String(source.offersEmail || '').trim(),
     laCell: String(source.laCell || '').trim(),
