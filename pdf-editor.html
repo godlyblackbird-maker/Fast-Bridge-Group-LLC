@@ -552,9 +552,10 @@
             top: 28px;
             left: 28px;
             min-width: 180px;
-            max-width: min(360px, calc(100% - 32px));
+            width: max-content;
+            max-width: none;
             display: grid;
-            grid-template-columns: auto auto auto 1fr auto;
+            grid-template-columns: auto auto auto auto 1fr auto;
             align-items: start;
             gap: 8px;
             padding: 10px 12px;
@@ -606,6 +607,8 @@
 
         .pdf-editor-text-item .pdf-editor-overlay-handle,
         .pdf-editor-text-item .pdf-editor-overlay-size,
+        .pdf-editor-text-item .pdf-editor-overlay-duplicate,
+        .pdf-editor-text-item .pdf-editor-overlay-indent,
         .pdf-editor-signature-item .pdf-editor-overlay-handle,
         .pdf-editor-signature-item .pdf-editor-overlay-size,
         .pdf-editor-initials-item .pdf-editor-overlay-handle,
@@ -616,6 +619,8 @@
         }
 
         .pdf-editor-text-item .pdf-editor-overlay-remove,
+        .pdf-editor-text-item .pdf-editor-overlay-duplicate,
+        .pdf-editor-text-item .pdf-editor-overlay-indent,
         .pdf-editor-signature-item .pdf-editor-overlay-remove,
         .pdf-editor-initials-item .pdf-editor-overlay-remove,
         .pdf-editor-image-item .pdf-editor-overlay-remove {
@@ -627,8 +632,22 @@
             background: rgba(254, 226, 226, 0.92);
         }
 
+        .pdf-editor-text-item .pdf-editor-overlay-duplicate {
+            color: #1d4ed8;
+            background: rgba(219, 234, 254, 0.96);
+        }
+
+        .pdf-editor-text-item .pdf-editor-overlay-indent {
+            color: #7c2d12;
+            background: rgba(255, 237, 213, 0.96);
+        }
+
         .pdf-editor-text-item .pdf-editor-overlay-remove:hover,
         .pdf-editor-text-item .pdf-editor-overlay-remove:focus-visible,
+        .pdf-editor-text-item .pdf-editor-overlay-duplicate:hover,
+        .pdf-editor-text-item .pdf-editor-overlay-duplicate:focus-visible,
+        .pdf-editor-text-item .pdf-editor-overlay-indent:hover,
+        .pdf-editor-text-item .pdf-editor-overlay-indent:focus-visible,
         .pdf-editor-signature-item .pdf-editor-overlay-remove:hover,
         .pdf-editor-signature-item .pdf-editor-overlay-remove:focus-visible,
         .pdf-editor-initials-item .pdf-editor-overlay-remove:hover,
@@ -637,6 +656,18 @@
         .pdf-editor-image-item .pdf-editor-overlay-remove:focus-visible {
             background: rgba(252, 165, 165, 0.96);
             color: #991b1b;
+        }
+
+        .pdf-editor-text-item .pdf-editor-overlay-duplicate:hover,
+        .pdf-editor-text-item .pdf-editor-overlay-duplicate:focus-visible {
+            background: rgba(147, 197, 253, 0.98);
+            color: #1e3a8a;
+        }
+
+        .pdf-editor-text-item .pdf-editor-overlay-indent:hover,
+        .pdf-editor-text-item .pdf-editor-overlay-indent:focus-visible {
+            background: rgba(253, 186, 116, 0.98);
+            color: #7c2d12;
         }
 
         .pdf-editor-image-item {
@@ -677,6 +708,8 @@
 
         .pdf-editor-overlay-handle,
         .pdf-editor-overlay-size,
+        .pdf-editor-overlay-duplicate,
+        .pdf-editor-overlay-indent,
         .pdf-editor-overlay-remove,
         .pdf-editor-image-rotate,
         .pdf-editor-image-resize {
@@ -702,6 +735,8 @@
 
         .pdf-editor-text-item.is-active .pdf-editor-overlay-handle,
         .pdf-editor-text-item.is-active .pdf-editor-overlay-size,
+        .pdf-editor-text-item.is-active .pdf-editor-overlay-duplicate,
+        .pdf-editor-text-item.is-active .pdf-editor-overlay-indent,
         .pdf-editor-text-item.is-active .pdf-editor-overlay-remove,
         .pdf-editor-signature-item.is-active .pdf-editor-overlay-handle,
         .pdf-editor-signature-item.is-active .pdf-editor-overlay-size,
@@ -749,6 +784,10 @@
         .pdf-editor-overlay-handle:focus-visible,
         .pdf-editor-overlay-size:hover,
         .pdf-editor-overlay-size:focus-visible,
+        .pdf-editor-overlay-duplicate:hover,
+        .pdf-editor-overlay-duplicate:focus-visible,
+        .pdf-editor-overlay-indent:hover,
+        .pdf-editor-overlay-indent:focus-visible,
         .pdf-editor-overlay-remove:hover,
         .pdf-editor-overlay-remove:focus-visible,
         .pdf-editor-image-rotate:hover,
@@ -757,6 +796,18 @@
         .pdf-editor-image-resize:focus-visible {
             background: rgba(255, 255, 255, 0.16);
             outline: none;
+        }
+
+        .pdf-editor-overlay-duplicate svg {
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+        }
+
+        .pdf-editor-overlay-indent svg {
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
         }
 
         .pdf-editor-image-item .pdf-editor-overlay-handle,
@@ -800,7 +851,9 @@
             font-weight: 600;
             line-height: 1.4;
             color: inherit;
-            word-break: break-word;
+            white-space: pre;
+            word-break: normal;
+            overflow-wrap: normal;
             cursor: text;
             user-select: text;
         }
@@ -1792,6 +1845,24 @@
                 increaseButton.setAttribute('aria-label', options.increaseLabel);
                 increaseButton.textContent = 'A+';
 
+                let duplicateButton = null;
+                if (options.duplicateLabel) {
+                    duplicateButton = document.createElement('button');
+                    duplicateButton.type = 'button';
+                    duplicateButton.className = 'pdf-editor-overlay-duplicate';
+                    duplicateButton.setAttribute('aria-label', options.duplicateLabel);
+                    duplicateButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V7a2 2 0 0 1 2 -2h8"></path></svg>';
+                }
+
+                let indentButton = null;
+                if (options.indentLabel) {
+                    indentButton = document.createElement('button');
+                    indentButton.type = 'button';
+                    indentButton.className = 'pdf-editor-overlay-indent';
+                    indentButton.setAttribute('aria-label', options.indentLabel);
+                    indentButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h8"></path><path d="M4 18h16"></path><path d="M14 10l4 4-4 4"></path></svg>';
+                }
+
                 const removeButton = document.createElement('button');
                 removeButton.type = 'button';
                 removeButton.className = 'pdf-editor-overlay-remove';
@@ -1801,12 +1872,19 @@
                 item.appendChild(dragHandle);
                 item.appendChild(decreaseButton);
                 item.appendChild(increaseButton);
+                if (duplicateButton) {
+                    item.appendChild(duplicateButton);
+                }
+                if (indentButton) {
+                    item.appendChild(indentButton);
+                }
 
-                return { dragHandle, decreaseButton, increaseButton, removeButton };
+                return { dragHandle, decreaseButton, increaseButton, duplicateButton, indentButton, removeButton };
             }
 
-            function appendItemToActivePage(item) {
-                const pageRecord = getActivePageRecord();
+            function appendItemToPage(item, pageIndex) {
+                const normalizedIndex = Number.parseInt(String(pageIndex), 10);
+                const pageRecord = renderedPages[normalizedIndex] || null;
                 if (!pageRecord) {
                     status.textContent = 'Upload a PDF before adding changes.';
                     return false;
@@ -1818,18 +1896,139 @@
                 return true;
             }
 
-            function createTextItem() {
+            function appendItemToActivePage(item) {
+                const pageRecord = getActivePageRecord();
+                return pageRecord ? appendItemToPage(item, pageRecord.pageIndex) : false;
+            }
+
+            function getNearbyTextPosition(sourceItem, overlayLayer) {
+                const baseLeft = Number.parseFloat(sourceItem.style.left) || 0;
+                const baseTop = Number.parseFloat(sourceItem.style.top) || 0;
+                const itemWidth = sourceItem.offsetWidth || 140;
+                const itemHeight = sourceItem.offsetHeight || 40;
+                const maxLeft = Math.max(overlayLayer.clientWidth - itemWidth - 8, 0);
+                const maxTop = Math.max(overlayLayer.clientHeight - itemHeight - 8, 0);
+                const offsetCandidates = [
+                    { left: baseLeft + 26, top: baseTop + 22 },
+                    { left: baseLeft + 26, top: baseTop - 22 },
+                    { left: baseLeft - 26, top: baseTop + 22 },
+                    { left: baseLeft - 26, top: baseTop - 22 },
+                    { left: baseLeft + 38, top: baseTop + 12 }
+                ];
+
+                for (const candidate of offsetCandidates) {
+                    const nextLeft = clampValue(candidate.left, 0, maxLeft);
+                    const nextTop = clampValue(candidate.top, 0, maxTop);
+                    if (Math.abs(nextLeft - baseLeft) >= 8 || Math.abs(nextTop - baseTop) >= 8) {
+                        return { left: nextLeft, top: nextTop };
+                    }
+                }
+
+                return {
+                    left: clampValue(baseLeft + 18, 0, maxLeft),
+                    top: clampValue(baseTop + 18, 0, maxTop)
+                };
+            }
+
+            function focusTextContent(content) {
+                window.requestAnimationFrame(() => {
+                    content.focus();
+                    const selection = window.getSelection();
+                    if (!selection) {
+                        return;
+                    }
+                    const range = document.createRange();
+                    range.selectNodeContents(content);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                });
+            }
+
+            function insertTextLineBreak(item) {
+                if (!(item instanceof HTMLElement) || !item.classList.contains('pdf-editor-text-item')) {
+                    return;
+                }
+                const content = item.querySelector('.pdf-editor-text-content');
+                if (!(content instanceof HTMLElement)) {
+                    return;
+                }
+
+                content.focus();
+                const selection = window.getSelection();
+                if (!selection) {
+                    return;
+                }
+
+                let range = selection.rangeCount ? selection.getRangeAt(0) : null;
+                if (!range || !content.contains(range.startContainer)) {
+                    range = document.createRange();
+                    range.selectNodeContents(content);
+                    range.collapse(false);
+                }
+
+                range.deleteContents();
+                const lineBreak = document.createElement('br');
+                const caretMarker = document.createTextNode('\u200b');
+                range.insertNode(caretMarker);
+                range.insertNode(lineBreak);
+
+                const nextRange = document.createRange();
+                nextRange.setStartAfter(caretMarker);
+                nextRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(nextRange);
+
+                status.textContent = 'Line break inserted.';
+            }
+
+            function duplicateTextItem(sourceItem) {
+                if (!(sourceItem instanceof HTMLElement) || !sourceItem.classList.contains('pdf-editor-text-item')) {
+                    return;
+                }
+
+                const sourceContent = sourceItem.querySelector('.pdf-editor-text-content');
+                const overlayLayer = getOverlayLayerForItem(sourceItem);
+                if (!(sourceContent instanceof HTMLElement) || !(overlayLayer instanceof HTMLElement)) {
+                    return;
+                }
+
+                const sourceStyles = window.getComputedStyle(sourceContent);
+                const itemStyles = window.getComputedStyle(sourceItem);
+                const position = getNearbyTextPosition(sourceItem, overlayLayer);
+                const pageIndex = Number.parseInt(sourceItem.dataset.pageIndex || '0', 10);
+
+                createTextItem({
+                    pageIndex,
+                    left: position.left,
+                    top: position.top,
+                    text: sourceContent.textContent || '',
+                    fontFamily: sourceStyles.fontFamily || (textFontSelect.value || "'Outfit', sans-serif"),
+                    fontSize: Number.parseFloat(sourceStyles.fontSize) || 18,
+                    color: normalizeColorValue(sourceStyles.color, '#000000'),
+                    opacity: Number.parseFloat(itemStyles.opacity),
+                    strokeColor: sourceContent.dataset.strokeColor || '#000000',
+                    strokeWidth: sourceContent.dataset.strokeWidth || '0'
+                });
+
+                status.textContent = 'Text duplicated. Edit the new copy or drag it into place.';
+            }
+
+            function createTextItem(config) {
+                const textConfig = config && typeof config === 'object' ? config : {};
                 textCounter += 1;
 
                 const item = document.createElement('div');
                 item.className = 'pdf-editor-text-item';
-                item.style.left = '28px';
-                item.style.top = `${28 + ((textCounter - 1) % 5) * 18}px`;
+                item.style.left = Number.isFinite(textConfig.left) ? `${textConfig.left}px` : '28px';
+                item.style.top = Number.isFinite(textConfig.top) ? `${textConfig.top}px` : `${28 + ((textCounter - 1) % 5) * 18}px`;
 
                 const controls = createOverlayChrome(item, {
                     dragLabel: 'Drag text box',
                     decreaseLabel: 'Decrease text size',
                     increaseLabel: 'Increase text size',
+                    duplicateLabel: 'Duplicate text box',
+                    indentLabel: 'Insert line break',
                     removeLabel: 'Remove text box'
                 });
 
@@ -1838,17 +2037,26 @@
                 content.contentEditable = 'true';
                 content.spellcheck = false;
                 content.setAttribute('aria-label', 'Editable text');
-                content.style.fontFamily = textFontSelect.value || "'Outfit', sans-serif";
-                content.style.fontSize = '18px';
-                content.style.color = textColorInput.value || '#000000';
-                content.textContent = 'Add text';
+                content.style.fontFamily = textConfig.fontFamily || textFontSelect.value || "'Outfit', sans-serif";
+                content.style.fontSize = `${Number.isFinite(textConfig.fontSize) ? textConfig.fontSize : 18}px`;
+                content.style.color = textConfig.color || textColorInput.value || '#000000';
+                content.textContent = typeof textConfig.text === 'string' ? textConfig.text : 'Add text';
                 item.style.backgroundColor = 'transparent';
-                item.style.opacity = String(clampValue(Number.parseFloat(textOpacityInput.value || '82') / 100, 0, 1));
-                applyContentStroke(content, textStrokeColorInput.value || '#000000', textStrokeWidthInput.value || '0');
+                item.style.opacity = String(clampValue(Number.isFinite(textConfig.opacity) ? textConfig.opacity : (Number.parseFloat(textOpacityInput.value || '82') / 100), 0, 1));
+                applyContentStroke(content, textConfig.strokeColor || textStrokeColorInput.value || '#000000', textConfig.strokeWidth || '0');
 
                 item.appendChild(content);
+                if (controls.duplicateButton) {
+                    item.appendChild(controls.duplicateButton);
+                }
+                if (controls.indentButton) {
+                    item.appendChild(controls.indentButton);
+                }
                 item.appendChild(controls.removeButton);
-                if (!appendItemToActivePage(item)) {
+                const didAppend = Number.isInteger(textConfig.pageIndex)
+                    ? appendItemToPage(item, textConfig.pageIndex)
+                    : appendItemToActivePage(item);
+                if (!didAppend) {
                     return;
                 }
                 setActiveOverlayItem(item);
@@ -1861,7 +2069,7 @@
                         if (!target) {
                             return false;
                         }
-                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size')) {
+                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size, .pdf-editor-overlay-duplicate, .pdf-editor-overlay-indent')) {
                             return false;
                         }
                         if (target.closest('.pdf-editor-text-content')) {
@@ -1885,6 +2093,18 @@
                     }
                     item.remove();
                 });
+                if (controls.duplicateButton) {
+                    controls.duplicateButton.addEventListener('click', () => {
+                        setActiveOverlayItem(item);
+                        duplicateTextItem(item);
+                    });
+                }
+                if (controls.indentButton) {
+                    controls.indentButton.addEventListener('click', () => {
+                        setActiveOverlayItem(item);
+                        insertTextLineBreak(item);
+                    });
+                }
                 content.addEventListener('keydown', (event) => {
                     if (event.key !== 'Enter' || event.shiftKey) {
                         return;
@@ -1895,18 +2115,7 @@
                     status.textContent = 'Text added. Click it again if you want to move or edit it.';
                 });
 
-                window.requestAnimationFrame(() => {
-                    content.focus();
-                    const selection = window.getSelection();
-                    if (!selection) {
-                        return;
-                    }
-                    const range = document.createRange();
-                    range.selectNodeContents(content);
-                    range.collapse(false);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                });
+                focusTextContent(content);
             }
 
             function createSignatureItem() {
@@ -2512,6 +2721,11 @@
                 return wrappedLines.length ? wrappedLines : [''];
             }
 
+            function getManualTextLines(text) {
+                const lines = String(text || '').replace(/\u200b/g, '').split(/\r?\n/);
+                return lines.length ? lines : [''];
+            }
+
             function canvasToPngBytes(canvas) {
                 return new Promise((resolve, reject) => {
                     canvas.toBlob((blob) => {
@@ -2559,7 +2773,10 @@
                 context.strokeStyle = strokeColor;
                 context.lineWidth = strokeWidth;
 
-                const lines = wrapText(context, content.innerText || content.textContent || '', Math.max(10, contentRect.width));
+                const textValue = content.innerText || content.textContent || '';
+                const lines = item.classList.contains('pdf-editor-text-item')
+                    ? getManualTextLines(textValue)
+                    : wrapText(context, textValue, Math.max(10, contentRect.width));
                 let cursorY = contentRect.y;
                 lines.forEach((line) => {
                     if (strokeWidth > 0) {
