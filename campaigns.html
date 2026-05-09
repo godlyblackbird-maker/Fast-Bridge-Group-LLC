@@ -3479,6 +3479,7 @@
             let campaignReplyAddressOverrides = loadCampaignReplyAddressOverrides();
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
+            const campaignReplyScheduledStatusByConversationKey = new Map();
             let activeTwilioReactionPickerMessageId = 0;
             let outreachDashboard = null;
             let twilioMessagingAccessState = {
@@ -5145,6 +5146,25 @@
                 }
             }
 
+            function syncCampaignReplyScheduledStatus() {
+                if (!campaignReplyStatus) {
+                    return;
+                }
+
+                const scopedStatus = activeTwilioConversationKey
+                    ? String(campaignReplyScheduledStatusByConversationKey.get(activeTwilioConversationKey) || '').trim()
+                    : '';
+
+                if (scopedStatus) {
+                    campaignReplyStatus.textContent = scopedStatus;
+                    return;
+                }
+
+                if (/^Reply scheduled for\b/i.test(String(campaignReplyStatus.textContent || '').trim())) {
+                    campaignReplyStatus.textContent = '';
+                }
+            }
+
             function renderTwilioPendingMedia(items, container, onRemove) {
                 if (!container) {
                     return;
@@ -5381,11 +5401,14 @@
                     renderPendingReplyMedia();
 
                     if (scheduleAt && data.scheduled && data.scheduledMessage) {
-                        campaignReplyStatus.textContent = `Reply scheduled for ${formatCampaignScheduledAt(data.scheduledMessage.scheduledFor || scheduleAt)}.`;
+                        const scheduledStatusMessage = `Reply scheduled for ${formatCampaignScheduledAt(data.scheduledMessage.scheduledFor || scheduleAt)}.`;
+                        campaignReplyScheduledStatusByConversationKey.set(activeTwilioConversationKey, scheduledStatusMessage);
+                        campaignReplyStatus.textContent = scheduledStatusMessage;
                         closeCampaignScheduleModal();
                         return;
                     }
 
+                    campaignReplyScheduledStatusByConversationKey.delete(activeTwilioConversationKey);
                     campaignReplyStatus.textContent = 'Twilio reply sent.';
                     fetchCampaignOutreachDashboard().catch(() => {});
                     await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
@@ -5836,6 +5859,7 @@
                     campaignReplyThread.appendChild(empty);
                     setCampaignReplyComposerEnabled(false);
                     syncCampaignReplyBlockState(false);
+                    syncCampaignReplyScheduledStatus();
                     return;
                 }
 
@@ -5846,6 +5870,7 @@
                     : `${conversation.contactPhone} • Direct Twilio thread${conversation.isBlocked ? ' • Outbound blocked, inbound allowed' : ''}`;
                 setCampaignReplyComposerEnabled(true);
                 syncCampaignReplyBlockState(Boolean(conversation.isBlocked));
+                syncCampaignReplyScheduledStatus();
 
                 if (!Array.isArray(messages) || !messages.length) {
                     const empty = document.createElement('p');
@@ -6015,6 +6040,7 @@
                 }
 
                 activeTwilioConversationKey = conversationKey;
+                syncCampaignReplyScheduledStatus();
                 renderTwilioReplyConversations();
                 renderCampaignOutreachPanel();
 

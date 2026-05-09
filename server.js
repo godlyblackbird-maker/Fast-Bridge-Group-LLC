@@ -177,7 +177,7 @@ const SQLITE_BACKUP_INTERVAL_HOURS = Math.max(1, Number.parseInt(String(process.
 const SQLITE_BACKUP_INTERVAL_MS = SQLITE_BACKUP_INTERVAL_HOURS * 60 * 60 * 1000;
 const SQLITE_BACKUP_STARTUP_DELAY_MS = Math.max(15 * 1000, Number.parseInt(String(process.env.SQLITE_BACKUP_STARTUP_DELAY_MS || 2 * 60 * 1000), 10) || (2 * 60 * 1000));
 const SQLITE_BACKUP_S3_PREFIX = String(process.env.SQLITE_BACKUP_S3_PREFIX || 'database-backups/sqlite').trim().replace(/\/+$/g, '');
-const TWILIO_SCHEDULE_POLL_MS = Math.max(15 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_POLL_MS || 30 * 1000), 10) || (30 * 1000));
+const TWILIO_SCHEDULE_POLL_MS = Math.max(5 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_POLL_MS || 5 * 1000), 10) || (5 * 1000));
 const TWILIO_SCHEDULE_MIN_LEAD_MS = Math.max(60 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MIN_LEAD_MS || 60 * 1000), 10) || (60 * 1000));
 const TWILIO_SCHEDULE_MAX_BATCH = Math.max(1, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MAX_BATCH || 20), 10) || 20);
 const ACTIVE_BUYERS_SHEET_ROW_ID = 1;
@@ -4171,33 +4171,39 @@ async function processDueTwilioScheduledMessages() {
   }
 
   twilioScheduledMessageRunPromise = (async () => {
-    const queuedRows = await getQueuedTwilioScheduledMessages(new Date().toISOString(), TWILIO_SCHEDULE_MAX_BATCH);
-    for (const row of queuedRows) {
-      const claimed = await markTwilioScheduledMessageProcessing(row.id);
-      if (!claimed) {
-        continue;
+    while (true) {
+      const queuedRows = await getQueuedTwilioScheduledMessages(new Date().toISOString(), TWILIO_SCHEDULE_MAX_BATCH);
+      if (!Array.isArray(queuedRows) || queuedRows.length === 0) {
+        break;
       }
 
-      const scheduledMessage = serializeTwilioScheduledMessage(row);
-      const ownerUserId = Number(row.owner_user_id) || 0;
+      for (const row of queuedRows) {
+        const claimed = await markTwilioScheduledMessageProcessing(row.id);
+        if (!claimed) {
+          continue;
+        }
 
-      try {
-        const authenticatedUser = ownerUserId > 0
-          ? await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [ownerUserId])
-          : null;
-        const sendResult = await sendTwilioCampaignMessages({
-          body: scheduledMessage.body,
-          campaignName: scheduledMessage.campaignName,
-          recipients: scheduledMessage.recipients,
-          mediaUploadIds: scheduledMessage.mediaUploadIds,
-          authenticatedUser,
-          senderName: scheduledMessage.senderName,
-          requestOrigin: scheduledMessage.requestOrigin
-        });
-        await markTwilioScheduledMessageSent(row.id, sendResult);
-      } catch (error) {
-        await markTwilioScheduledMessageFailed(row.id, error, error && error.sendResult ? error.sendResult : null);
-        console.error('Failed to process scheduled Twilio campaign:', row && row.id, error);
+        const scheduledMessage = serializeTwilioScheduledMessage(row);
+        const ownerUserId = Number(row.owner_user_id) || 0;
+
+        try {
+          const authenticatedUser = ownerUserId > 0
+            ? await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [ownerUserId])
+            : null;
+          const sendResult = await sendTwilioCampaignMessages({
+            body: scheduledMessage.body,
+            campaignName: scheduledMessage.campaignName,
+            recipients: scheduledMessage.recipients,
+            mediaUploadIds: scheduledMessage.mediaUploadIds,
+            authenticatedUser,
+            senderName: scheduledMessage.senderName,
+            requestOrigin: scheduledMessage.requestOrigin
+          });
+          await markTwilioScheduledMessageSent(row.id, sendResult);
+        } catch (error) {
+          await markTwilioScheduledMessageFailed(row.id, error, error && error.sendResult ? error.sendResult : null);
+          console.error('Failed to process scheduled Twilio campaign:', row && row.id, error);
+        }
       }
     }
   })()
