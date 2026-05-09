@@ -208,6 +208,82 @@
             border: 0;
         }
 
+        .training-resources-card {
+            margin-top: 18px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .training-resources-grid {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+        }
+
+        .training-resource-item {
+            display: grid;
+            gap: 14px;
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 18px 36px -28px var(--glass-shadow);
+        }
+
+        .training-resource-preview {
+            display: grid;
+            place-items: center;
+            min-height: 220px;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .training-resource-preview img {
+            width: min(100%, 220px);
+            height: auto;
+            display: block;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .training-resource-file-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 108px;
+            min-height: 108px;
+            padding: 18px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
+            color: var(--text-color, #f8fafc);
+            font-family: 'Space Mono', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .training-resource-name {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.25;
+            font-weight: 700;
+        }
+
+        .training-resource-copy {
+            margin: 0;
+            color: var(--muted-text, rgba(226, 232, 240, 0.74));
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .training-resource-download {
+            justify-self: start;
+        }
+
         @media (min-width: 1200px) {
             .training-library-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -468,6 +544,57 @@
                     </div>
                 </section>
             </div>
+
+            <section class="glass-card training-resources-card" aria-labelledby="training-resources-title">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title" id="training-resources-title">Resources</h2>
+                        <p class="card-subtitle">Download FAST training resources and shareable assets from one place.</p>
+                    </div>
+                </div>
+                <div class="training-resources-grid">
+                    <article class="training-resource-item">
+                        <div class="training-resource-preview">
+                            <img src="png photos/Submit Property - QR CODE.png" alt="Submit Property QR Code resource preview">
+                        </div>
+                        <div>
+                            <h3 class="training-resource-name">Submit Property - QR CODE</h3>
+                            <p class="training-resource-copy">Download the QR code image so users can scan straight into the FAST property submission page.</p>
+                        </div>
+                        <a class="card-btn active training-resource-download" href="png photos/Submit Property - QR CODE.png" download="Submit Property - QR CODE.png">Download Resource</a>
+                    </article>
+                    <article class="training-resource-item">
+                        <div class="training-resource-preview">
+                            <img src="png photos/FAST LOGO 777.png" alt="FAST LOGO 777 resource preview">
+                        </div>
+                        <div>
+                            <h3 class="training-resource-name">FAST LOGO 777</h3>
+                            <p class="training-resource-copy">Download the FAST LOGO 777 image for brand assets, marketing material, and quick design use.</p>
+                        </div>
+                        <a class="card-btn active training-resource-download" href="png photos/FAST LOGO 777.png" download="FAST LOGO 777.png">Download Resource</a>
+                    </article>
+                    <article class="training-resource-item">
+                        <div class="training-resource-preview">
+                            <span class="training-resource-file-badge" aria-hidden="true">PDF</span>
+                        </div>
+                        <div>
+                            <h3 class="training-resource-name">Buy Dispo 2024 FAST BRIDGE GROUP</h3>
+                            <p class="training-resource-copy">Download the Buy Dispo 2024 FAST BRIDGE GROUP document from the Resources folder for team reference and sharing.</p>
+                        </div>
+                        <a class="card-btn active training-resource-download" href="Resources/Buy Dispo 2024 FAST BRIDGE GROUP.pdf" download="Buy Dispo 2024 FAST BRIDGE GROUP.pdf">Download Resource</a>
+                    </article>
+                    <article class="training-resource-item">
+                        <div class="training-resource-preview">
+                            <span class="training-resource-file-badge" aria-hidden="true">PDF</span>
+                        </div>
+                        <div>
+                            <h3 class="training-resource-name">Appraisal Rules Q1- 2024 - FAST BRIDGE GROUP</h3>
+                            <p class="training-resource-copy">Download the Appraisal Rules Q1- 2024 - FAST BRIDGE GROUP PDF from the Resources folder for appraisal reference and team use.</p>
+                        </div>
+                        <a class="card-btn active training-resource-download" href="Resources/Appraisal Rules Q1- 2024  - FAST BRIDGE GROUP.pdf" download="Appraisal Rules Q1- 2024  - FAST BRIDGE GROUP.pdf">Download Resource</a>
+                    </article>
+                </div>
+            </section>
         </main>
     </div>
 

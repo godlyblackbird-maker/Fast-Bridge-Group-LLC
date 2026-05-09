@@ -507,6 +507,83 @@
             pointer-events: none;
         }
 
+        .pdf-editor-image-measure {
+            position: absolute;
+            left: 50%;
+            top: -44px;
+            transform: translateX(-50%);
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.84);
+            border: 1px solid rgba(125, 211, 252, 0.26);
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(15, 23, 42, 0.4);
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.24);
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .pdf-editor-image-item.is-active .pdf-editor-image-measure,
+        .pdf-editor-image-item.is-dragging .pdf-editor-image-measure {
+            display: inline-flex;
+        }
+
+        .pdf-editor-image-measure-axis {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pdf-editor-image-measure-axis strong {
+            color: rgba(125, 211, 252, 0.96);
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .pdf-editor-image-measure-axis span {
+            color: rgba(255, 255, 255, 0.96);
+        }
+
+        .pdf-editor-image-measure-divider {
+            width: 1px;
+            height: 14px;
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .pdf-editor-overlay-layer.is-image-snap-grid::before,
+        .pdf-editor-overlay-layer.is-image-snap-grid::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .pdf-editor-overlay-layer.is-image-snap-grid::before {
+            background-image:
+                linear-gradient(to right, rgba(14, 165, 233, 0.18) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(14, 165, 233, 0.18) 1px, transparent 1px);
+            background-size: 24px 24px;
+            background-position: center center;
+            opacity: 0.85;
+        }
+
+        .pdf-editor-overlay-layer.is-image-snap-grid::after {
+            background-image:
+                linear-gradient(to right, transparent calc(50% - 1px), rgba(251, 191, 36, 0.78) calc(50% - 1px), rgba(251, 191, 36, 0.78) calc(50% + 1px), transparent calc(50% + 1px)),
+                linear-gradient(to bottom, transparent calc(50% - 1px), rgba(251, 191, 36, 0.78) calc(50% - 1px), rgba(251, 191, 36, 0.78) calc(50% + 1px), transparent calc(50% + 1px));
+            opacity: 0.72;
+        }
+
         .pdf-editor-page-badge {
             position: absolute;
             top: 12px;
@@ -901,7 +978,7 @@
             width: 100%;
             height: 100%;
             border-radius: 0;
-            overflow: hidden;
+            overflow: visible;
             background: transparent;
         }
 
@@ -1104,6 +1181,10 @@
                                     <label for="pdf-editor-image-opacity-input">Image Opacity <span id="pdf-editor-image-opacity-value" class="pdf-editor-range-value">100%</span></label>
                                     <input id="pdf-editor-image-opacity-input" type="range" min="0" max="100" step="1" value="100">
                                 </div>
+                                <div class="pdf-editor-field">
+                                    <label for="pdf-editor-image-snap-input">Image Snap <span id="pdf-editor-image-snap-value" class="pdf-editor-range-value">60%</span></label>
+                                    <input id="pdf-editor-image-snap-input" type="range" min="0" max="100" step="5" value="60">
+                                </div>
                             </div>
                         </div>
 
@@ -1305,6 +1386,8 @@
             const signatureOpacityValue = document.getElementById('pdf-editor-signature-opacity-value');
             const imageOpacityInput = document.getElementById('pdf-editor-image-opacity-input');
             const imageOpacityValue = document.getElementById('pdf-editor-image-opacity-value');
+            const imageSnapInput = document.getElementById('pdf-editor-image-snap-input');
+            const imageSnapValue = document.getElementById('pdf-editor-image-snap-value');
             const imagePanel = document.getElementById('pdf-editor-image-panel');
             const textPanel = document.getElementById('pdf-editor-text-panel');
             const signaturePanel = document.getElementById('pdf-editor-signature-panel');
@@ -1321,7 +1404,7 @@
             const previewStage = document.getElementById('pdf-editor-preview-stage');
             const previewPages = document.getElementById('pdf-editor-preview-pages');
 
-            if (!fileInput || !imageInput || !dropzone || !selectButton || !clearButton || !status || !previewMeta || !previewName || !previewDetails || !previewToolbar || !addTextButton || !addImageButton || !addEraserButton || !addSignatureButton || !addInitialsButton || !downloadButton || !bottomActions || !downloadButtonBottom || !textFontSelect || !textColorInput || !textStrokeColorInput || !textStrokeWidthInput || !textStrokeWidthValue || !textOpacityInput || !textOpacityValue || !signatureColorInput || !signatureStrokeColorInput || !signatureStrokeWidthInput || !signatureStrokeWidthValue || !signatureOpacityInput || !signatureOpacityValue || !imageOpacityInput || !imageOpacityValue || !imagePanel || !textPanel || !signaturePanel || !signatureInput || !signatureFontSelect || !insertSignatureButton || !signaturePreview || !initialsPanel || !initialsInput || !initialsFontSelect || !insertInitialsButton || !initialsPreview || !previewEmpty || !previewStage || !previewPages) {
+            if (!fileInput || !imageInput || !dropzone || !selectButton || !clearButton || !status || !previewMeta || !previewName || !previewDetails || !previewToolbar || !addTextButton || !addImageButton || !addEraserButton || !addSignatureButton || !addInitialsButton || !downloadButton || !bottomActions || !downloadButtonBottom || !textFontSelect || !textColorInput || !textStrokeColorInput || !textStrokeWidthInput || !textStrokeWidthValue || !textOpacityInput || !textOpacityValue || !signatureColorInput || !signatureStrokeColorInput || !signatureStrokeWidthInput || !signatureStrokeWidthValue || !signatureOpacityInput || !signatureOpacityValue || !imageOpacityInput || !imageOpacityValue || !imageSnapInput || !imageSnapValue || !imagePanel || !textPanel || !signaturePanel || !signatureInput || !signatureFontSelect || !insertSignatureButton || !signaturePreview || !initialsPanel || !initialsInput || !initialsFontSelect || !insertInitialsButton || !initialsPreview || !previewEmpty || !previewStage || !previewPages) {
                 return;
             }
 
@@ -1337,7 +1420,7 @@
             let initialsCounter = 0;
             let renderSequence = 0;
             let exportInProgress = false;
-
+            const IMAGE_SNAP_GRID_SIZE = 24;
             function clampValue(value, min, max) {
                 if (!Number.isFinite(value)) {
                     return min;
@@ -1400,7 +1483,13 @@
                     imagePanel.hidden = false;
                     imageOpacityInput.value = normalizeOpacityPercent(window.getComputedStyle(activeOverlayItem).opacity, 100);
                     updateOpacityLabel(imageOpacityInput, imageOpacityValue);
+                    const overlayLayer = getOverlayLayerForItem(activeOverlayItem);
+                    if (overlayLayer) {
+                        updateImageMeasurement(activeOverlayItem, overlayLayer, Number.parseFloat(activeOverlayItem.style.left) || 0, Number.parseFloat(activeOverlayItem.style.top) || 0);
+                    }
                 }
+
+                updateImageSnapGridVisibility();
             }
 
             function normalizeColorValue(colorValue, fallback) {
@@ -1574,6 +1663,84 @@
                 label.textContent = `${input.value}%`;
             }
 
+            function getImageSnapStrength() {
+                return clampValue(Number.parseFloat(String(imageSnapInput.value || '0')) / 100, 0, 1);
+            }
+
+            function updateImageSnapGridVisibility() {
+                renderedPages.forEach((pageRecord) => {
+                    if (pageRecord && pageRecord.overlayLayer instanceof HTMLElement) {
+                        pageRecord.overlayLayer.classList.remove('is-image-snap-grid');
+                    }
+                });
+
+                if (!(activeOverlayItem instanceof HTMLElement) || !activeOverlayItem.classList.contains('pdf-editor-image-item')) {
+                    return;
+                }
+
+                if (getImageSnapStrength() <= 0) {
+                    return;
+                }
+
+                const overlayLayer = getOverlayLayerForItem(activeOverlayItem);
+                if (overlayLayer instanceof HTMLElement) {
+                    overlayLayer.classList.add('is-image-snap-grid');
+                }
+            }
+
+            function updateImageMeasurement(item, overlayLayer, left, top) {
+                if (!(item instanceof HTMLElement) || !(overlayLayer instanceof HTMLElement)) {
+                    return;
+                }
+
+                const xValue = item.querySelector('[data-image-measure="x"]');
+                const yValue = item.querySelector('[data-image-measure="y"]');
+                if (!(xValue instanceof HTMLElement) || !(yValue instanceof HTMLElement)) {
+                    return;
+                }
+
+                const centerX = left + (item.offsetWidth / 2) - (overlayLayer.clientWidth / 2);
+                const centerY = top + (item.offsetHeight / 2) - (overlayLayer.clientHeight / 2);
+                xValue.textContent = `${Math.round(centerX)}px`;
+                yValue.textContent = `${Math.round(centerY)}px`;
+            }
+
+            function getSnappedImagePosition(item, overlayLayer, left, top) {
+                if (!(item instanceof HTMLElement) || !(overlayLayer instanceof HTMLElement)) {
+                    return { left, top };
+                }
+
+                const snapStrength = getImageSnapStrength();
+                if (snapStrength <= 0) {
+                    return { left, top };
+                }
+
+                let nextLeft = left;
+                let nextTop = top;
+                const gridThreshold = (IMAGE_SNAP_GRID_SIZE / 2) * snapStrength;
+                const centerThreshold = 48 * snapStrength;
+                const gridLeft = Math.round(left / IMAGE_SNAP_GRID_SIZE) * IMAGE_SNAP_GRID_SIZE;
+                const gridTop = Math.round(top / IMAGE_SNAP_GRID_SIZE) * IMAGE_SNAP_GRID_SIZE;
+
+                if (Math.abs(left - gridLeft) <= gridThreshold) {
+                    nextLeft = gridLeft;
+                }
+                if (Math.abs(top - gridTop) <= gridThreshold) {
+                    nextTop = gridTop;
+                }
+
+                const centerLeft = (overlayLayer.clientWidth - item.offsetWidth) / 2;
+                const centerTop = (overlayLayer.clientHeight - item.offsetHeight) / 2;
+                if (Math.abs(left - centerLeft) <= centerThreshold) {
+                    nextLeft = centerLeft;
+                }
+                if (Math.abs(top - centerTop) <= centerThreshold) {
+                    nextTop = centerTop;
+                }
+
+                return { left: nextLeft, top: nextTop };
+            }
+
             function applyOverlayOpacity(item, percentValue) {
                 if (!(item instanceof HTMLElement)) {
                     return;
@@ -1615,6 +1782,7 @@
                 renderedPages.forEach((pageRecord, pageRecordIndex) => {
                     pageRecord.wrapper.classList.toggle('is-active', pageRecordIndex === activePageIndex);
                 });
+                updateImageSnapGridVisibility();
             }
 
             function getOverlayItems() {
@@ -1663,6 +1831,15 @@
                     ? dragOptions.shouldStartDrag
                     : () => true;
                 const allowPageTransfer = Boolean(dragOptions.allowPageTransfer);
+                const getSnapPosition = typeof dragOptions.getSnapPosition === 'function'
+                    ? dragOptions.getSnapPosition
+                    : null;
+                const onDragMove = typeof dragOptions.onDragMove === 'function'
+                    ? dragOptions.onDragMove
+                    : null;
+                const onDragEnd = typeof dragOptions.onDragEnd === 'function'
+                    ? dragOptions.onDragEnd
+                    : null;
 
                 dragRoot.addEventListener('pointerdown', (event) => {
                     if (!shouldStartDrag(event)) {
@@ -1707,16 +1884,27 @@
                         const minTop = -Math.max(item.offsetHeight - 8, 0);
                         const maxLeft = Math.max(overlayLayer.clientWidth - 8, 0);
                         const maxTop = Math.max(overlayLayer.clientHeight - 8, 0);
-                        const nextLeft = clampValue(moveEvent.clientX - stageRect.left - offsetX, minLeft, maxLeft);
-                        const nextTop = clampValue(moveEvent.clientY - stageRect.top - offsetY, minTop, maxTop);
+                        const rawLeft = clampValue(moveEvent.clientX - stageRect.left - offsetX, minLeft, maxLeft);
+                        const rawTop = clampValue(moveEvent.clientY - stageRect.top - offsetY, minTop, maxTop);
+                        const snappedPosition = getSnapPosition
+                            ? getSnapPosition({ item, overlayLayer, left: rawLeft, top: rawTop, moveEvent })
+                            : { left: rawLeft, top: rawTop };
+                        const nextLeft = clampValue(Number(snappedPosition.left), minLeft, maxLeft);
+                        const nextTop = clampValue(Number(snappedPosition.top), minTop, maxTop);
                         item.style.left = `${nextLeft}px`;
                         item.style.top = `${nextTop}px`;
+                        if (onDragMove) {
+                            onDragMove({ item, overlayLayer, left: nextLeft, top: nextTop, moveEvent });
+                        }
                     };
 
                     const stop = () => {
                         item.classList.remove('is-dragging');
                         window.removeEventListener('pointermove', handleMove);
                         window.removeEventListener('pointerup', stop);
+                        if (onDragEnd) {
+                            onDragEnd({ item, overlayLayer, left: Number.parseFloat(item.style.left) || 0, top: Number.parseFloat(item.style.top) || 0 });
+                        }
                     };
 
                     window.addEventListener('pointermove', handleMove);
@@ -2439,6 +2627,10 @@
                 const controls = document.createElement('div');
                 controls.className = 'pdf-editor-image-controls';
 
+                const measure = document.createElement('div');
+                measure.className = 'pdf-editor-image-measure';
+                measure.innerHTML = '<span class="pdf-editor-image-measure-axis"><strong>X</strong><span data-image-measure="x">0px</span></span><span class="pdf-editor-image-measure-divider" aria-hidden="true"></span><span class="pdf-editor-image-measure-axis"><strong>Y</strong><span data-image-measure="y">0px</span></span>';
+
                 const handleGroup = document.createElement('div');
                 handleGroup.className = 'pdf-editor-image-handle-group';
 
@@ -2471,6 +2663,7 @@
                 controls.appendChild(handleGroup);
                 controls.appendChild(removeButton);
                 body.appendChild(image);
+                body.appendChild(measure);
                 body.appendChild(controls);
                 body.appendChild(resizeButton);
                 item.appendChild(body);
@@ -2484,6 +2677,9 @@
                 attachDragBehavior(item, dragHandle, {
                     dragRoot: body,
                     allowPageTransfer: true,
+                    getSnapPosition: ({ item: dragItem, overlayLayer, left, top }) => getSnappedImagePosition(dragItem, overlayLayer, left, top),
+                    onDragMove: ({ item: dragItem, overlayLayer, left, top }) => updateImageMeasurement(dragItem, overlayLayer, left, top),
+                    onDragEnd: ({ item: dragItem, overlayLayer, left, top }) => updateImageMeasurement(dragItem, overlayLayer, left, top),
                     shouldStartDrag: (event) => {
                         const target = event.target instanceof HTMLElement ? event.target : null;
                         if (!target) {
@@ -2518,6 +2714,13 @@
 
                 body.addEventListener('pointerleave', () => {
                     body.style.cursor = '';
+                });
+
+                body.addEventListener('pointerenter', () => {
+                    const overlayLayer = getOverlayLayerForItem(item);
+                    if (overlayLayer) {
+                        updateImageMeasurement(item, overlayLayer, Number.parseFloat(item.style.left) || 0, Number.parseFloat(item.style.top) || 0);
+                    }
                 });
 
                 rotateButton.addEventListener('pointerdown', (event) => {
@@ -3326,6 +3529,10 @@
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-image-item')) {
                     applyOverlayOpacity(activeOverlayItem, imageOpacityInput.value || '100');
                 }
+            });
+            imageSnapInput.addEventListener('input', () => {
+                updateOpacityLabel(imageSnapInput, imageSnapValue);
+                updateImageSnapGridVisibility();
             });
 
             dropzone.addEventListener('click', () => fileInput.click());
