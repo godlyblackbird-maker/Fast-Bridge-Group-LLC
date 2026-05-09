@@ -15446,6 +15446,14 @@ function initNavbarDateTime() {
                     ? item.conditionIssues.map((issue) => escapeSubmissionText(issue)).join(' • ')
                     : 'No condition issues selected';
                 const sellerPhone = formatPhoneDisplayValue(item.sellerPhone || '');
+                const paidOffLabel = String(item.propertyPaidOff || '').trim().toLowerCase() === 'yes'
+                    ? 'Yes'
+                    : String(item.propertyPaidOff || '').trim().toLowerCase() === 'no'
+                        ? 'No'
+                        : 'Not provided';
+                const mortgageBalanceLine = String(item.propertyPaidOff || '').trim().toLowerCase() === 'no'
+                    ? escapeSubmissionText(item.mortgageBalance || 'Not provided')
+                    : 'N/A';
                 const buyerMatches = Array.isArray(item.buyerMatches) ? item.buyerMatches.slice(0, 3) : [];
                 const buyerMatchSummary = item && item.buyerMatchSummary && Number(item.buyerMatchSummary.totalMatches) > 0
                     ? `<p class="outreach-owner">Buyer Match Routing: ${escapeSubmissionText(String(item.buyerMatchSummary.totalMatches))} fit${Number(item.buyerMatchSummary.totalMatches) === 1 ? '' : 's'} | Top score ${escapeSubmissionText(String(item.buyerMatchSummary.topScore || 0))}</p>`
@@ -15478,6 +15486,8 @@ function initNavbarDateTime() {
                     <p class="outreach-owner">Beds / Baths / Sq Ft: ${escapeSubmissionText(item.bedrooms || '-') } / ${escapeSubmissionText(item.bathrooms || '-') } / ${escapeSubmissionText(item.squareFeet || '-')}</p>
                     <p class="outreach-owner">Target Price: ${escapeSubmissionText(item.askingPrice || 'Not provided')}</p>
                     <p class="outreach-owner">Estimated Value / ARV: ${escapeSubmissionText(item.estimatedValue || 'Not provided')}</p>
+                    <p class="outreach-owner">Property Paid Off: ${escapeSubmissionText(paidOffLabel)}</p>
+                    <p class="outreach-owner">Mortgage Balance: ${mortgageBalanceLine}</p>
                     <p class="outreach-owner">Timeline: ${escapeSubmissionText(item.timeline || 'Not provided')}</p>
                     <p class="outreach-owner">Submitted: ${escapeSubmissionText(createdAt)}</p>
                     ${buyerMatchSummary}

@@ -5229,6 +5229,8 @@ function initializeDatabase() {
       asking_price TEXT,
       estimated_value TEXT,
       timeline TEXT,
+      property_paid_off TEXT,
+      mortgage_balance TEXT,
       condition_issues TEXT,
       issue_notes TEXT,
       status TEXT DEFAULT 'new',
@@ -5248,6 +5250,8 @@ function initializeDatabase() {
   db.run(`ALTER TABLE property_submissions ADD COLUMN referred_by TEXT`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN financing_type TEXT`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN estimated_value TEXT`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN property_paid_off TEXT`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN mortgage_balance TEXT`, () => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS mls_saved_searches (
@@ -20431,6 +20435,8 @@ app.post('/api/property-submissions', async (req, res) => {
   const askingPrice = String(req.body?.askingPrice || '').trim();
   const estimatedValue = String(req.body?.estimatedValue || '').trim();
   const timeline = String(req.body?.timeline || '').trim();
+  const propertyPaidOff = String(req.body?.propertyPaidOff || '').trim().toLowerCase();
+  const mortgageBalance = String(req.body?.mortgageBalance || '').trim();
   const issueNotes = String(req.body?.issueNotes || '').trim();
   const rawIssues = Array.isArray(req.body?.conditionIssues) ? req.body.conditionIssues : [];
   const conditionIssues = rawIssues
@@ -20452,6 +20458,14 @@ app.post('/api/property-submissions', async (req, res) => {
 
   if (!smsConsent) {
     return res.status(400).json({ error: 'Explicit SMS consent is required for property inquiry messaging.' });
+  }
+
+  if (!['yes', 'no'].includes(propertyPaidOff)) {
+    return res.status(400).json({ error: 'Select whether the property is paid off.' });
+  }
+
+  if (propertyPaidOff === 'no' && !mortgageBalance) {
+    return res.status(400).json({ error: 'Enter how much is still owed on the mortgage.' });
   }
 
   try {
@@ -20476,9 +20490,11 @@ app.post('/api/property-submissions', async (req, res) => {
       asking_price,
       estimated_value,
       timeline,
+      property_paid_off,
+      mortgage_balance,
       condition_issues,
       issue_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
       [
       sellerName,
       sellerEmail,
@@ -20498,6 +20514,8 @@ app.post('/api/property-submissions', async (req, res) => {
       askingPrice,
       estimatedValue,
       timeline,
+      propertyPaidOff,
+      propertyPaidOff === 'no' ? mortgageBalance : '',
       JSON.stringify(conditionIssues),
       issueNotes
       ]
@@ -20535,6 +20553,8 @@ app.post('/api/property-submissions', async (req, res) => {
         askingPrice,
         estimatedValue,
         timeline,
+        propertyPaidOff,
+        mortgageBalance: propertyPaidOff === 'no' ? mortgageBalance : '',
         conditionIssues,
         issueNotes,
         status: 'new'
@@ -20576,6 +20596,8 @@ app.get('/api/property-submissions', async (req, res) => {
       asking_price,
       estimated_value,
       timeline,
+      property_paid_off,
+      mortgage_balance,
       condition_issues,
       issue_notes,
       status,
@@ -20624,6 +20646,8 @@ app.get('/api/property-submissions', async (req, res) => {
             askingPrice: String(row.asking_price || ''),
             estimatedValue: String(row.estimated_value || ''),
             timeline: String(row.timeline || ''),
+            propertyPaidOff: String(row.property_paid_off || ''),
+            mortgageBalance: String(row.mortgage_balance || ''),
             conditionIssues,
             issueNotes: String(row.issue_notes || ''),
             status: String(row.status || 'new'),

@@ -989,24 +989,6 @@
             <div class="submit-copy-panel">
                 <p class="submit-kicker">Selling Your Home?</p>
                 <h1>Submit your property and let FAST review the deal.</h1>
-                <p>
-                    Give us your contact info, tell us about the house, and show us what shape it is in.
-                    The more direct you are, the faster our team can review it and decide whether it fits our buy box.
-                </p>
-                <div class="submit-points">
-                    <div class="submit-point">
-                        <strong>Fast intake</strong>
-                        <span>Send the basics once instead of repeating the same property story over and over.</span>
-                    </div>
-                    <div class="submit-point">
-                        <strong>Clear expectations</strong>
-                        <span>Tell us the price you hope to get and what issues the property has up front.</span>
-                    </div>
-                    <div class="submit-point">
-                        <strong>Direct review</strong>
-                        <span>Your submission routes straight into the FAST admin workspace so the team can work it immediately.</span>
-                    </div>
-                </div>
             </div>
 
             <div>
@@ -1094,6 +1076,17 @@
                             <div class="submit-field">
                                 <label for="timeline">Ideal Selling Timeline</label>
                                 <input id="timeline" name="timeline" type="text" placeholder="ASAP, 30 days, 60 days, flexible">
+                            </div>
+                            <div class="submit-field full-width submit-checkbox-group">
+                                <span>Is the property paid off?</span>
+                                <div class="submit-checkbox-grid">
+                                    <label class="submit-checkbox"><input id="property-paid-off-yes" name="propertyPaidOff" type="radio" value="yes" required><span>Yes</span></label>
+                                    <label class="submit-checkbox"><input id="property-paid-off-no" name="propertyPaidOff" type="radio" value="no" required><span>No</span></label>
+                                </div>
+                            </div>
+                            <div class="submit-field full-width" id="mortgage-balance-field" hidden>
+                                <label for="mortgage-balance">How much do you owe on the mortgage?</label>
+                                <input id="mortgage-balance" name="mortgageBalance" type="text" inputmode="numeric" data-submit-auto-commas="true" placeholder="$285,000" disabled>
                             </div>
                             <div class="submit-field full-width submit-checkbox-group">
                                 <span>What Is Wrong With It?</span>
@@ -1187,6 +1180,9 @@
             const successCard = document.getElementById('seller-property-success-card');
             const routingNote = document.getElementById('seller-property-routing-note');
             const sellerPhoneInput = document.getElementById('seller-phone');
+            const paidOffInputs = Array.from(form.querySelectorAll('input[name="propertyPaidOff"]'));
+            const mortgageBalanceField = document.getElementById('mortgage-balance-field');
+            const mortgageBalanceInput = document.getElementById('mortgage-balance');
             const themeSwitchButton = document.getElementById('submit-theme-switch');
             const themeLabel = document.getElementById('submit-theme-label');
 
@@ -1325,6 +1321,25 @@
                 }
             }
 
+            function syncMortgageBalanceField() {
+                if (!(mortgageBalanceField instanceof HTMLElement) || !(mortgageBalanceInput instanceof HTMLInputElement)) {
+                    return '';
+                }
+
+                const selectedPaidOff = paidOffInputs.find((input) => input.checked);
+                const shouldShowMortgageBalance = selectedPaidOff && selectedPaidOff.value === 'no';
+
+                mortgageBalanceField.hidden = !shouldShowMortgageBalance;
+                mortgageBalanceInput.disabled = !shouldShowMortgageBalance;
+                mortgageBalanceInput.required = Boolean(shouldShowMortgageBalance);
+
+                if (!shouldShowMortgageBalance) {
+                    mortgageBalanceInput.value = '';
+                }
+
+                return shouldShowMortgageBalance ? String(mortgageBalanceInput.value || '').trim() : '';
+            }
+
             Array.from(form.querySelectorAll('[data-submit-auto-commas="true"]')).forEach(function (input) {
                 input.addEventListener('input', function () {
                     applySubmitDigitGrouping(input);
@@ -1340,18 +1355,25 @@
                 sellerPhoneInput.addEventListener('change', applySellerPhoneFormatting);
             }
 
+            paidOffInputs.forEach(function (input) {
+                input.addEventListener('change', syncMortgageBalanceField);
+            });
+
+            syncMortgageBalanceField();
+
             form.addEventListener('submit', async function (event) {
                 event.preventDefault();
                 setFeedback('', '');
 
                 const formData = new FormData(form);
                 const normalizedSellerPhone = applySellerPhoneFormatting();
+                const mortgageBalance = syncMortgageBalanceField();
                 const conditionIssues = formData.getAll('conditionIssues').map((item) => String(item || '').trim()).filter(Boolean);
                 const payload = {
                     sellerName: String(formData.get('sellerName') || '').trim(),
                     sellerEmail: String(formData.get('sellerEmail') || '').trim(),
                     sellerPhone: normalizedSellerPhone || String(formData.get('sellerPhone') || '').trim(),
-                        referredBy: String(formData.get('referredBy') || '').trim(),
+                    referredBy: String(formData.get('referredBy') || '').trim(),
                     smsConsent: formData.get('smsConsent') === 'yes',
                     propertyAddress: String(formData.get('propertyAddress') || '').trim(),
                     propertyCity: String(formData.get('propertyCity') || '').trim(),
@@ -1365,6 +1387,8 @@
                     askingPrice: String(formData.get('askingPrice') || '').trim(),
                     estimatedValue: String(formData.get('estimatedValue') || '').trim(),
                     timeline: String(formData.get('timeline') || '').trim(),
+                    propertyPaidOff: String(formData.get('propertyPaidOff') || '').trim(),
+                    mortgageBalance,
                     conditionIssues,
                     issueNotes: String(formData.get('issueNotes') || '').trim()
                 };
@@ -1381,6 +1405,16 @@
 
                 if (!normalizedSellerPhone) {
                     setFeedback('Enter the phone number in E.164 format, for example +15551234567.', 'error');
+                    return;
+                }
+
+                if (!payload.propertyPaidOff) {
+                    setFeedback('Select whether the property is paid off.', 'error');
+                    return;
+                }
+
+                if (payload.propertyPaidOff === 'no' && !payload.mortgageBalance) {
+                    setFeedback('Enter how much is still owed on the mortgage.', 'error');
                     return;
                 }
 
