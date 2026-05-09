@@ -555,7 +555,7 @@
             width: max-content;
             max-width: none;
             display: grid;
-            grid-template-columns: auto auto auto auto 1fr auto;
+            grid-template-columns: auto auto auto 1fr auto;
             align-items: start;
             gap: 8px;
             padding: 10px 12px;
@@ -563,6 +563,11 @@
             background: transparent;
             border: 0;
             box-shadow: none;
+        }
+
+        .pdf-editor-text-item.is-active {
+            border: 2px dashed rgba(107, 114, 128, 0.92);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72);
         }
 
         .pdf-editor-signature-item {
@@ -597,7 +602,6 @@
             box-shadow: none;
         }
 
-        .pdf-editor-text-item.is-active,
         .pdf-editor-signature-item.is-active,
         .pdf-editor-initials-item.is-active,
         .pdf-editor-eraser-item.is-active {
@@ -686,6 +690,11 @@
             background: rgba(255, 255, 255, 0.98);
             box-shadow: none;
             overflow: visible;
+        }
+
+        .pdf-editor-eraser-item.is-active {
+            border: 2px dashed rgba(107, 114, 128, 0.92);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72);
         }
 
         .pdf-editor-image-item {
@@ -805,6 +814,12 @@
         }
 
         .pdf-editor-overlay-indent svg {
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+        }
+
+        .pdf-editor-overlay-remove svg {
             width: 16px;
             height: 16px;
             pointer-events: none;
@@ -1356,6 +1371,7 @@
                 }
 
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-signature-item')) {
+                    signaturePanel.hidden = false;
                     const content = activeOverlayItem.querySelector('.pdf-editor-signature-content');
                     if (content instanceof HTMLElement) {
                         signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#000000');
@@ -1368,6 +1384,7 @@
                 }
 
                 if (activeOverlayItem && activeOverlayItem.classList.contains('pdf-editor-initials-item')) {
+                    initialsPanel.hidden = false;
                     const content = activeOverlayItem.querySelector('.pdf-editor-initials-content');
                     if (content instanceof HTMLElement) {
                         signatureColorInput.value = normalizeColorValue(window.getComputedStyle(content).color, '#000000');
@@ -1796,6 +1813,34 @@
                 window.addEventListener('pointerup', stop);
             }
 
+            function startTextResize(item, content, event) {
+                event.preventDefault();
+                setActiveOverlayItem(item);
+                item.classList.add('is-transforming');
+                setActivePage(Number(item.dataset.pageIndex || '0'));
+
+                const startSize = Number.parseFloat(content.style.fontSize) || Number.parseFloat(window.getComputedStyle(content).fontSize) || 18;
+                const startX = event.clientX;
+                const startY = event.clientY;
+
+                const handleMove = (moveEvent) => {
+                    const deltaX = moveEvent.clientX - startX;
+                    const deltaY = moveEvent.clientY - startY;
+                    const delta = Math.max(deltaX, deltaY);
+                    const nextSize = clampValue(startSize + (delta / 3), 12, 96);
+                    content.style.fontSize = `${nextSize}px`;
+                };
+
+                const stop = () => {
+                    item.classList.remove('is-transforming');
+                    window.removeEventListener('pointermove', handleMove);
+                    window.removeEventListener('pointerup', stop);
+                };
+
+                window.addEventListener('pointermove', handleMove);
+                window.addEventListener('pointerup', stop);
+            }
+
             function attachSizeControls(item, content, decreaseButton, increaseButton, config) {
                 const defaultSize = config.defaultSize;
                 const step = config.step;
@@ -2032,6 +2077,9 @@
                     removeLabel: 'Remove text box'
                 });
 
+                controls.decreaseButton.remove();
+                controls.increaseButton.remove();
+
                 const content = document.createElement('div');
                 content.className = 'pdf-editor-text-content';
                 content.contentEditable = 'true';
@@ -2069,24 +2117,44 @@
                         if (!target) {
                             return false;
                         }
-                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size, .pdf-editor-overlay-duplicate, .pdf-editor-overlay-indent')) {
+                        if (isPointerNearImageResizeEdge(item, event)) {
                             return false;
                         }
-                        if (target.closest('.pdf-editor-text-content')) {
+                        if (target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-size, .pdf-editor-overlay-duplicate, .pdf-editor-overlay-indent')) {
                             return false;
                         }
                         return true;
                     }
                 });
-                attachSizeControls(item, content, controls.decreaseButton, controls.increaseButton, {
-                    defaultSize: 18,
-                    minSize: 12,
-                    maxSize: 72,
-                    step: 2
-                });
 
-                item.addEventListener('pointerdown', () => setActiveOverlayItem(item));
+                item.addEventListener('pointerdown', (event) => {
+                    const target = event.target instanceof HTMLElement ? event.target : null;
+                    if (target && target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-duplicate, .pdf-editor-overlay-indent')) {
+                        return;
+                    }
+                    if (isPointerNearImageResizeEdge(item, event)) {
+                        startTextResize(item, content, event);
+                        return;
+                    }
+                    setActiveOverlayItem(item);
+                });
+                item.addEventListener('pointermove', (event) => {
+                    const target = event.target instanceof HTMLElement ? event.target : null;
+                    if (target && target.closest('.pdf-editor-overlay-remove, .pdf-editor-overlay-duplicate, .pdf-editor-overlay-indent')) {
+                        item.style.cursor = '';
+                        return;
+                    }
+                    item.style.cursor = isPointerNearImageResizeEdge(item, event) ? 'nwse-resize' : '';
+                });
+                item.addEventListener('pointerleave', () => {
+                    item.style.cursor = '';
+                });
                 content.addEventListener('focus', () => setActiveOverlayItem(item));
+                content.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    setActiveOverlayItem(item);
+                    focusTextContent(content);
+                });
                 controls.removeButton.addEventListener('click', () => {
                     if (activeOverlayItem === item) {
                         setActiveOverlayItem(null);
@@ -2183,7 +2251,6 @@
                     item.remove();
                 });
 
-                setActiveOverlayItem(null);
                 status.textContent = 'Signature added. Click it again if you want to move or edit it.';
             }
 
@@ -2252,7 +2319,6 @@
                     item.remove();
                 });
 
-                setActiveOverlayItem(null);
                 status.textContent = 'Initials added. Click them again if you want to move or edit them.';
             }
 
@@ -2271,6 +2337,8 @@
                     increaseLabel: 'Unused',
                     removeLabel: 'Remove eraser'
                 });
+
+                controls.removeButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
 
                 controls.decreaseButton.remove();
                 controls.increaseButton.remove();
@@ -3290,9 +3358,26 @@
                 if (!(event.target instanceof HTMLElement)) {
                     return;
                 }
+                if (event.target.closest('.pdf-editor-toolbar') || event.target.closest('.pdf-editor-signature-panel') || event.target.closest('.pdf-editor-style-grid') || event.target.closest('.pdf-editor-field')) {
+                    return;
+                }
                 if (!event.target.closest('.pdf-editor-text-item') && !event.target.closest('.pdf-editor-signature-item') && !event.target.closest('.pdf-editor-initials-item') && !event.target.closest('.pdf-editor-image-item') && !event.target.closest('.pdf-editor-eraser-item')) {
                     setActiveOverlayItem(null);
                 }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+                    return;
+                }
+                if (!(activeOverlayItem instanceof HTMLElement) || !activeOverlayItem.classList.contains('pdf-editor-eraser-item')) {
+                    return;
+                }
+                if (event.target instanceof HTMLElement && (event.target.isContentEditable || event.target.closest('input, textarea, select, button'))) {
+                    return;
+                }
+                event.preventDefault();
+                setActiveOverlayItem(null);
             });
 
             window.addEventListener('beforeunload', () => {

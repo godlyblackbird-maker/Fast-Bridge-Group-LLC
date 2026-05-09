@@ -1028,7 +1028,7 @@
     const targetAreasField = document.getElementById('ecard-target-areas');
 
     const displayName = nameField ? nameField.value.trim() : (profileData.ecardDisplayName || profileData.name || 'User').trim();
-    const displayPhone = phoneField ? (normalizePhoneToE164(phoneField.value) || phoneField.value.trim()) : formatPhoneDisplayValue(profileData.ecardDisplayPhone || profileData.phone || '');
+    const displayPhone = formatPhoneDisplayValue(phoneField ? phoneField.value : (profileData.ecardDisplayPhone || profileData.phone || ''));
     const displayEmail = emailField ? emailField.value.trim() : (profileData.ecardDisplayEmail || profileData.email || '').trim();
     const displayTitle = titleField ? titleField.value.trim() : toRoleLabel(profileData.jobTitle || profileData.role);
     const displayLicense = licenseField ? licenseField.value.trim() : (profileData.licenseNumber || '').trim();
@@ -1536,13 +1536,16 @@
 
   let eCardAutosaveTimer = null;
 
-  ['ecard-display-name', 'ecard-display-phone', 'ecard-display-email', 'ecard-display-title', 'ecard-license', 'ecard-buy-box', 'ecard-target-areas'].forEach(id => {
+  ['ecard-display-name', 'ecard-display-phone', 'ecard-display-email', 'ecard-display-title', 'ecard-license', 'ecard-website', 'ecard-buy-box', 'ecard-target-areas'].forEach(id => {
     const input = document.getElementById(id);
     if (input) {
       if (id === 'ecard-display-phone') {
         preparePhoneInput(input);
       }
       input.addEventListener('input', () => {
+        if (id === 'ecard-display-phone') {
+          preparePhoneInput(input);
+        }
         updateECardPreviewFromInputs();
 
         if (eCardAutosaveTimer) {
