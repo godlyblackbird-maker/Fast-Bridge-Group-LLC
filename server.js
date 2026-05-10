@@ -3538,8 +3538,57 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
   };
 }
 
+function buildTwilioReplySuggestionContext(conversation, messages = []) {
+  const safeMessages = (Array.isArray(messages) ? messages : [])
+    .filter(Boolean)
+    .map((message) => ({
+      direction: String(message?.direction || '').trim() === 'inbound' ? 'inbound' : 'outgoing',
+      body: String(message?.body || '').trim(),
+      createdAt: normalizeApiTimestamp(message?.createdAt) || ''
+    }))
+    .filter((message) => message.body || message.createdAt);
+
+  const latestMessage = safeMessages[safeMessages.length - 1] || null;
+  const latestInbound = safeMessages.slice().reverse().find((message) => message.direction === 'inbound') || null;
+  const latestOutbound = safeMessages.slice().reverse().find((message) => message.direction === 'outgoing') || null;
+  const now = Date.now();
+  const hoursSince = (value) => {
+    const timestamp = Date.parse(String(value || ''));
+    if (!timestamp) {
+      return null;
+    }
+    return Math.max(0, Math.round((now - timestamp) / 3600000));
+  };
+
+  const transcript = safeMessages
+    .slice(-14)
+    .map((message) => {
+      const speaker = message.direction === 'inbound' ? 'Lead' : 'FAST';
+      const timestamp = message.createdAt ? `[${message.createdAt}] ` : '';
+      const body = message.body || '(no text body)';
+      return `${timestamp}${speaker}: ${body}`;
+    })
+    .join('\n');
+
+  return {
+    messageCount: safeMessages.length,
+    latestMessageDirection: latestMessage?.direction || '',
+    latestMessageBody: String(latestMessage?.body || '').trim(),
+    latestMessageAt: latestMessage?.createdAt || '',
+    latestInboundBody: String(latestInbound?.body || '').trim(),
+    latestInboundAt: latestInbound?.createdAt || '',
+    latestOutboundBody: String(latestOutbound?.body || '').trim(),
+    latestOutboundAt: latestOutbound?.createdAt || '',
+    hoursSinceLatestMessage: hoursSince(latestMessage?.createdAt),
+    hoursSinceLatestInbound: hoursSince(latestInbound?.createdAt),
+    hoursSinceLatestOutbound: hoursSince(latestOutbound?.createdAt),
+    transcript
+  };
+}
+
 async function generateTwilioReplySuggestion(conversation, messages = []) {
   const fallback = buildTwilioReplySuggestionFallback(conversation, messages);
+  const context = buildTwilioReplySuggestionContext(conversation, messages);
   const recentMessages = (Array.isArray(messages) ? messages : [])
     .slice(-12)
     .map((message) => ({
@@ -3557,8 +3606,12 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     'You generate one SMS reply suggestion for a real-estate acquisitions team using Twilio.',
     'Return strict JSON with keys: reply, reason, type.',
     'Keep the reply under 320 characters, natural, direct, and human.',
-    'If there has been a long gap, propose a soft follow-up.',
+    'Ground the reply in the actual transcript and the latest message, not a generic seller script.',
+    'If the latest message is inbound, directly respond to what the lead said before asking the next best question.',
+    'If there has been a long gap after FAST sent the last text, propose a soft follow-up tied to the prior topic.',
     'If the lead asked something, answer briefly and ask the next best question.',
+    'Do not ignore recent context, and do not repeat points the thread already covered unless needed.',
+    'The reason must explain why this exact reply fits the latest chat context.',
     'If the latest inbound message is an opt-out, confirm messaging will stop.',
     'Do not use markdown or multiple options.'
   ].join(' ');
@@ -3568,6 +3621,7 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     contactPhone: String(conversation?.contactPhone || '').trim(),
     propertyAddress: String(conversation?.propertyAddress || '').trim(),
     campaignName: String(conversation?.campaignName || '').trim(),
+    context,
     messages: recentMessages,
     fallback
   });

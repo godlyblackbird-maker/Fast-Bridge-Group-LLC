@@ -3588,6 +3588,7 @@
             let activeTwilioReactionPickerMessageId = 0;
             let activeCampaignReplySuggestionText = '';
             let campaignReplySuggestionRequestId = 0;
+            const campaignReplySuggestionByConversationKey = new Map();
             let outreachDashboard = null;
             let twilioMessagingAccessState = {
                 allowed: true,
@@ -3631,10 +3632,12 @@
                 activeCampaignReplySuggestionText = canUse ? copy : '';
             }
 
-            async function loadCampaignReplySuggestion() {
+            async function loadCampaignReplySuggestion(options = {}) {
                 if (!campaignReplyAiSuggestion) {
                     return;
                 }
+
+                const forceRefresh = Boolean(options && options.force);
 
                 if (!token || !activeTwilioConversationKey) {
                     renderCampaignReplySuggestionState({
@@ -3642,6 +3645,17 @@
                         reason: 'The suggestion engine needs an active conversation.',
                         type: 'Suggestion',
                         canUse: false
+                    });
+                    return;
+                }
+
+                const cachedSuggestion = campaignReplySuggestionByConversationKey.get(activeTwilioConversationKey);
+                if (!forceRefresh && cachedSuggestion) {
+                    renderCampaignReplySuggestionState({
+                        copy: String(cachedSuggestion.copy || '').trim(),
+                        reason: String(cachedSuggestion.reason || '').trim(),
+                        type: String(cachedSuggestion.type || 'Suggestion').trim(),
+                        canUse: Boolean(String(cachedSuggestion.copy || '').trim())
                     });
                     return;
                 }
@@ -3676,10 +3690,18 @@
                     const typeLabel = String(suggestion.type || 'suggested reply')
                         .replace(/[-_]+/g, ' ')
                         .replace(/\b\w/g, (character) => character.toUpperCase());
+                    const renderedType = `${typeLabel}${String(suggestion.source || '').trim() === 'fallback' ? ' Fallback' : ''}`;
+                    const renderedCopy = String(suggestion.reply || '').trim();
+                    const renderedReason = String(suggestion.reason || '').trim();
+                    campaignReplySuggestionByConversationKey.set(activeTwilioConversationKey, {
+                        copy: renderedCopy,
+                        reason: renderedReason,
+                        type: renderedType
+                    });
                     renderCampaignReplySuggestionState({
-                        copy: String(suggestion.reply || '').trim(),
-                        reason: String(suggestion.reason || '').trim(),
-                        type: `${typeLabel}${String(suggestion.source || '').trim() === 'fallback' ? ' Fallback' : ''}`,
+                        copy: renderedCopy,
+                        reason: renderedReason,
+                        type: renderedType,
                         canUse: true
                     });
                 } catch (error) {
@@ -6779,7 +6801,7 @@
             if (campaignReplyForm) {
                 if (campaignReplyAiRefreshButton) {
                     campaignReplyAiRefreshButton.addEventListener('click', () => {
-                        void loadCampaignReplySuggestion();
+                        void loadCampaignReplySuggestion({ force: true });
                     });
                 }
 
