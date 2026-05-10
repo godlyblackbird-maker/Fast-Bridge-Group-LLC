@@ -3449,11 +3449,133 @@ function getTwilioReplySuggestionFirstName(value) {
   return rawValue.split(/\s+/)[0] || 'there';
 }
 
+function buildTwilioReplySuggestionGreeting(firstName, timestamp = Date.now()) {
+  const date = new Date(timestamp);
+  const hour = Number.isFinite(date.getHours()) ? date.getHours() : 12;
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const safeFirstName = String(firstName || '').trim();
+  const namePart = safeFirstName && safeFirstName.toLowerCase() !== 'there'
+    ? ` ${safeFirstName}`
+    : '';
+
+  if (hour < 12) {
+    return `Good morning${namePart}, hope you're having a good ${weekday}.`;
+  }
+  if (hour < 17) {
+    return `Good afternoon${namePart}, hope you're having a great afternoon.`;
+  }
+  return `Good evening${namePart}, hope you're having a good ${weekday} evening.`;
+}
+
+function ensureTwilioReplySuggestionGreeting(reply, firstName, timestamp = Date.now()) {
+  const normalizedReply = normalizeTwilioReplySuggestionText(reply);
+  if (!normalizedReply) {
+    return buildTwilioReplySuggestionGreeting(firstName, timestamp);
+  }
+
+  const greeting = buildTwilioReplySuggestionGreeting(firstName, timestamp);
+  const lowerReply = normalizedReply.toLowerCase();
+  const lowerFirstName = String(firstName || '').trim().toLowerCase();
+  const alreadyGreeting = lowerReply.startsWith('good morning')
+    || lowerReply.startsWith('good afternoon')
+    || lowerReply.startsWith('good evening')
+    || lowerReply.startsWith('hope you')
+    || (lowerFirstName && lowerReply.startsWith(`hey ${lowerFirstName}`))
+    || (lowerFirstName && lowerReply.startsWith(`hi ${lowerFirstName}`));
+
+  if (alreadyGreeting) {
+    return normalizedReply;
+  }
+
+  return `${greeting} ${normalizedReply}`;
+}
+
+function stripTwilioReplySuggestionGreeting(value) {
+  return normalizeTwilioReplySuggestionText(value)
+    .replace(/^(good morning|good afternoon|good evening)[^a-z0-9]{0,3}(?:[a-z'\-]+)?[^a-z0-9]{0,3}(?:hope you(?:'re| are) having [^.?!]+[.?!])?/i, '')
+    .replace(/^(hey|hi)\s+[a-z'\-]+[^a-z0-9]{0,3}(?:hope you(?:'re| are) having [^.?!]+[.?!])?/i, '')
+    .trim();
+}
+
+function tokenizeTwilioReplySuggestion(value) {
+  return new Set(
+    stripTwilioReplySuggestionGreeting(value)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 4)
+  );
+}
+
+function isTwilioReplySuggestionTooSimilar(candidate, previousOutbound) {
+  const normalizedCandidate = stripTwilioReplySuggestionGreeting(candidate);
+  const normalizedPrevious = stripTwilioReplySuggestionGreeting(previousOutbound);
+  if (!normalizedCandidate || !normalizedPrevious) {
+    return false;
+  }
+
+  const candidateLower = normalizedCandidate.toLowerCase();
+  const previousLower = normalizedPrevious.toLowerCase();
+  if (candidateLower === previousLower) {
+    return true;
+  }
+
+  if (candidateLower.includes(previousLower) || previousLower.includes(candidateLower)) {
+    return true;
+  }
+
+  const candidateTokens = tokenizeTwilioReplySuggestion(normalizedCandidate);
+  const previousTokens = tokenizeTwilioReplySuggestion(normalizedPrevious);
+  if (!candidateTokens.size || !previousTokens.size) {
+    return false;
+  }
+
+  let overlap = 0;
+  candidateTokens.forEach((token) => {
+    if (previousTokens.has(token)) {
+      overlap += 1;
+    }
+  });
+
+  const similarity = overlap / Math.max(candidateTokens.size, previousTokens.size);
+  return similarity >= 0.6;
+}
+
 function normalizeTwilioReplySuggestionText(value) {
   return String(value || '')
     .replace(/\s+/g, ' ')
     .replace(/\s+([?.!,])/g, '$1')
     .trim();
+}
+
+function extractEmailAddressesFromText(value) {
+  const matches = String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [];
+  return Array.from(new Set(matches.map((item) => String(item || '').trim().toLowerCase()).filter((item) => isValidEmailAddress(item))));
+}
+
+function extractPhoneCandidatesFromText(value) {
+  const matches = String(value || '').match(/(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}/g) || [];
+  return Array.from(new Set(matches.map((item) => String(item || '').trim()).filter(Boolean)));
+}
+
+function buildTwilioReplyProgressionSignals(conversation, messages = []) {
+  const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
+  const allText = safeMessages.map((message) => String(message?.body || '').trim()).filter(Boolean).join('\n');
+  const normalizedText = allText.toLowerCase();
+  const emails = extractEmailAddressesFromText(allText);
+  const phoneCandidates = extractPhoneCandidatesFromText(allText);
+  const normalizedContactPhone = normalizeSmsPhone(conversation?.contactPhone || '');
+  const altPhoneCandidates = phoneCandidates.filter((candidate) => normalizeSmsPhone(candidate) !== normalizedContactPhone);
+
+  return {
+    hasEmailInThread: emails.length > 0,
+    emailCount: emails.length,
+    hasAlternatePhoneInThread: altPhoneCandidates.length > 0,
+    alternatePhoneCount: altPhoneCandidates.length,
+    mentionsOffer: /\b(offer|cash offer|number|price|pricing|proposal)\b/.test(normalizedText),
+    mentionsSchedule: /\b(call|talk|time|available|tomorrow|today|meeting|schedule)\b/.test(normalizedText),
+    mentionsDecisionMaker: /\b(husband|wife|partner|attorney|brother|sister|mother|father|decision maker)\b/.test(normalizedText)
+  };
 }
 
 function buildTwilioReplySuggestionFallback(conversation, messages = []) {
@@ -3475,10 +3597,12 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
   const latestOutboundAgeHours = latestOutbound ? Math.max(0, Math.round((now - (Date.parse(String(latestOutbound.createdAt || '')) || now)) / 3600000)) : null;
   const latestInboundBody = String(latestInbound?.body || '').trim();
   const normalizedInbound = latestInboundBody.toLowerCase();
+  const greeting = buildTwilioReplySuggestionGreeting(firstName, now);
+  const progression = buildTwilioReplyProgressionSignals(conversation, safeMessages);
 
   if (!latestMessage) {
     return {
-      reply: normalizeTwilioReplySuggestionText(`Hey ${firstName}, this is FAST BRIDGE GROUP. Wanted to reach out and see if you would be open to a quick conversation about ${locationLabel}.`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} This is FAST BRIDGE GROUP. Wanted to reach out and see if you would be open to a quick conversation about ${locationLabel}.`),
       reason: 'No saved messages exist yet, so a light first-touch text is the safest default.',
       type: 'first-touch',
       source: 'fallback'
@@ -3487,7 +3611,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
   if (latestInbound && /\b(stop|unsubscribe|wrong number|do not contact|dont contact)\b/.test(normalizedInbound)) {
     return {
-      reply: 'Understood. We will stop messaging this number. Thank you for letting us know.',
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Understood. We will stop messaging this number. Thank you for letting us know.`),
       reason: 'The latest inbound message looks like an opt-out or do-not-contact request.',
       type: 'compliance',
       source: 'fallback'
@@ -3495,8 +3619,11 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
   }
 
   if (latestInbound && /\b(price|offer|cash offer|best offer|how much|number)\b/.test(normalizedInbound)) {
+    const emailFollowUp = progression.hasEmailInThread
+      ? 'Before I do, can you tell me the property\'s current condition and the timeline you are working with?'
+      : 'Before I do, what\'s the best offer email you want me to send it to, and can you tell me the property\'s current condition and timeline?';
     return {
-      reply: normalizeTwilioReplySuggestionText(`Thanks ${firstName}. I can work up a clean number for ${locationLabel}. Before I do, can you tell me the property's current condition and the timeline you are working with?`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} I can work up a clean number for ${locationLabel}. ${emailFollowUp}`),
       reason: 'The contact appears to be asking about price or an offer, so the next message should collect the missing underwriting details.',
       type: 'qualify-offer',
       source: 'fallback'
@@ -3505,7 +3632,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
   if (latestInbound && /\b(call|phone|talk|available|when can you)\b/.test(normalizedInbound)) {
     return {
-      reply: normalizeTwilioReplySuggestionText(`Absolutely ${firstName}. I can talk today. What time works best for you, and is ${locationLabel} the property you want to discuss?`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} I can talk today. What time works best for you, and is ${locationLabel} the property you want to discuss?`),
       reason: 'The latest inbound message suggests they are open to a live conversation, so the next step is scheduling.',
       type: 'schedule-call',
       source: 'fallback'
@@ -3514,7 +3641,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
   if (latestMessage && String(latestMessage.direction || '').trim() === 'outgoing' && latestOutboundAgeHours !== null && latestOutboundAgeHours >= 48) {
     return {
-      reply: normalizeTwilioReplySuggestionText(`Hey ${firstName}, just following back up on ${locationLabel}. If you are still open to selling or want to compare a fast as-is option, I can text over a few next steps.`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Just following back up on ${locationLabel}. If you are still open to selling or want to compare a fast as-is option, I can text over a few next steps.`),
       reason: `Your last outbound message was about ${latestOutboundAgeHours} hours ago and there has not been a newer reply, so a soft follow-up fits best.`,
       type: 'follow-up',
       source: 'fallback'
@@ -3522,16 +3649,43 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
   }
 
   if (latestInbound && latestInboundAgeHours !== null && latestInboundAgeHours <= 24) {
+    if (!progression.hasEmailInThread && progression.mentionsOffer) {
+      return {
+        reply: normalizeTwilioReplySuggestionText(`${greeting} To keep this moving, what\'s the best offer email you want me to use for ${locationLabel}?`),
+        reason: 'The thread looks active and offer-oriented, but there is no email in the conversation yet, so capturing the best offer email is the clearest next step.',
+        type: 'capture-email',
+        source: 'fallback'
+      };
+    }
+
+    if (!progression.hasAlternatePhoneInThread && progression.mentionsDecisionMaker) {
+      return {
+        reply: normalizeTwilioReplySuggestionText(`${greeting} If someone else is helping make the decision on ${locationLabel}, what\'s the best number to reach them at so I can keep everything together?`),
+        reason: 'The thread suggests another decision-maker may be involved, so capturing the best callback number is a useful next step.',
+        type: 'capture-number',
+        source: 'fallback'
+      };
+    }
+
     return {
-      reply: normalizeTwilioReplySuggestionText(`Thanks ${firstName}. Just so I point you the right way on ${locationLabel}, what would you say is the biggest thing you want solved right now: speed, price, repairs, or certainty?`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Just so I point you the right way on ${locationLabel}, what would you say is the biggest thing you want solved right now: speed, price, repairs, or certainty?`),
       reason: 'The contact replied recently, so a short qualifying question is the highest-value next text.',
       type: 'qualifying-question',
       source: 'fallback'
     };
   }
 
+  if (!progression.hasEmailInThread && progression.mentionsOffer) {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Quick one so I can keep this moving on ${locationLabel}: what\'s the best offer email you want me to use?`),
+      reason: 'The thread is offer-oriented, but there is still no email in the conversation, so capturing it is the clearest next step.',
+      type: 'capture-email',
+      source: 'fallback'
+    };
+  }
+
   return {
-    reply: normalizeTwilioReplySuggestionText(`Hey ${firstName}, wanted to circle back on ${locationLabel}. If the timing is still right, I can ask a couple quick questions and see whether a FAST offer makes sense.`),
+    reply: normalizeTwilioReplySuggestionText(`${greeting} Wanted to circle back on ${locationLabel}. If the timing is still right, I can ask a couple quick questions and see whether a FAST offer makes sense.`),
     reason: 'This thread is quiet enough for a re-engagement text, but there is not a stronger signal for a specialized reply.',
     type: 'follow-up',
     source: 'fallback'
@@ -3582,6 +3736,7 @@ function buildTwilioReplySuggestionContext(conversation, messages = []) {
     hoursSinceLatestMessage: hoursSince(latestMessage?.createdAt),
     hoursSinceLatestInbound: hoursSince(latestInbound?.createdAt),
     hoursSinceLatestOutbound: hoursSince(latestOutbound?.createdAt),
+    progression: buildTwilioReplyProgressionSignals(conversation, safeMessages),
     transcript
   };
 }
@@ -3606,10 +3761,16 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     'You generate one SMS reply suggestion for a real-estate acquisitions team using Twilio.',
     'Return strict JSON with keys: reply, reason, type.',
     'Keep the reply under 320 characters, natural, direct, and human.',
+    'The reply must greet the contact by first name and open with a natural time-based or day-based greeting, such as good morning, good afternoon, or hope they are having a good Monday.',
     'Ground the reply in the actual transcript and the latest message, not a generic seller script.',
     'If the latest message is inbound, directly respond to what the lead said before asking the next best question.',
     'If there has been a long gap after FAST sent the last text, propose a soft follow-up tied to the prior topic.',
+    'Be progressive and look for the next missing step that would move the deal forward, such as capturing the best offer email, the best callback number, the decision maker, property condition, timeline, or the next appointment.',
+    'If no email appears anywhere in the thread and the conversation is warm enough, it is good to ask for the best email to send the offer or details to.',
+    'If another person seems involved and there is no alternate number in the thread, it is good to ask for the best number to reach them.',
     'If the lead asked something, answer briefly and ask the next best question.',
+    'Do not repeat, paraphrase, or lightly rewrite FAST\'s most recent outbound message.',
+    'The suggestion should feel like a fresh check-in or next-step response that moves the conversation forward.',
     'Do not ignore recent context, and do not repeat points the thread already covered unless needed.',
     'The reason must explain why this exact reply fits the latest chat context.',
     'If the latest inbound message is an opt-out, confirm messaging will stop.',
@@ -3639,8 +3800,19 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     return fallback;
   }
 
+  const firstName = getTwilioReplySuggestionFirstName(conversation?.contactName || '');
+  const finalReply = ensureTwilioReplySuggestionGreeting(reply, firstName).slice(0, 320);
+
+  if (isTwilioReplySuggestionTooSimilar(finalReply, context.latestOutboundBody || '')) {
+    return {
+      ...fallback,
+      reason: 'The AI draft was too close to the last outbound message, so a fresher follow-up suggestion was used instead.',
+      source: 'fallback'
+    };
+  }
+
   return {
-    reply: reply.slice(0, 320),
+    reply: finalReply,
     reason: reason || fallback.reason,
     type: type || fallback.type,
     source: 'openai'
