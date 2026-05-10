@@ -1561,6 +1561,18 @@
             text-transform: uppercase;
         }
 
+        .campaign-reply-conversation-time.is-age-green {
+            color: #15803d;
+        }
+
+        .campaign-reply-conversation-time.is-age-yellow {
+            color: #a16207;
+        }
+
+        .campaign-reply-conversation-time.is-age-red {
+            color: #b91c1c;
+        }
+
         .campaign-reply-badge,
         .campaign-reply-status-tag {
             display: inline-flex;
@@ -1633,6 +1645,19 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+        }
+
+        .campaign-reply-ai-toggle {
+            min-width: 92px;
+        }
+
+        .campaign-reply-ai-body {
+            display: grid;
+            gap: 10px;
+        }
+
+        .campaign-reply-ai-suggestion.is-collapsed .campaign-reply-ai-body {
+            display: none;
         }
 
         .campaign-reply-ai-copy {
@@ -3155,12 +3180,15 @@
                                                     <span id="campaign-reply-ai-type" class="campaign-reply-ai-type">Thinking</span>
                                                 </div>
                                                 <div class="campaign-reply-ai-actions">
+                                                    <button id="campaign-reply-ai-toggle" type="button" class="card-btn campaign-reply-ai-toggle" aria-expanded="true">Minimize</button>
                                                     <button id="campaign-reply-ai-refresh" type="button" class="card-btn" disabled>Refresh</button>
                                                     <button id="campaign-reply-ai-use" type="button" class="card-btn active" disabled>Insert Into Draft</button>
                                                 </div>
                                             </div>
-                                            <p id="campaign-reply-ai-copy" class="campaign-reply-ai-copy">Choose a Twilio thread to load a suggested reply.</p>
-                                            <p id="campaign-reply-ai-reason" class="campaign-reply-ai-reason"><strong>Why this reply:</strong> The AI will read the conversation and suggest the next best text.</p>
+                                            <div id="campaign-reply-ai-body" class="campaign-reply-ai-body">
+                                                <p id="campaign-reply-ai-copy" class="campaign-reply-ai-copy">Choose a Twilio thread to load a suggested reply.</p>
+                                                <p id="campaign-reply-ai-reason" class="campaign-reply-ai-reason"><strong>Why this reply:</strong> The AI will read the conversation and suggest the next best text.</p>
+                                            </div>
                                         </div>
                                         <div id="campaign-reply-status" class="campaign-reply-status"></div>
                                         <input id="campaign-reply-media-input" class="campaign-media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.xml,.json" multiple>
@@ -3552,8 +3580,10 @@
             const campaignReplySendButton = document.getElementById('campaign-reply-send');
             const campaignReplyAiSuggestion = document.getElementById('campaign-reply-ai-suggestion');
             const campaignReplyAiType = document.getElementById('campaign-reply-ai-type');
+            const campaignReplyAiBody = document.getElementById('campaign-reply-ai-body');
             const campaignReplyAiCopy = document.getElementById('campaign-reply-ai-copy');
             const campaignReplyAiReason = document.getElementById('campaign-reply-ai-reason');
+            const campaignReplyAiToggleButton = document.getElementById('campaign-reply-ai-toggle');
             const campaignReplyAiRefreshButton = document.getElementById('campaign-reply-ai-refresh');
             const campaignReplyAiUseButton = document.getElementById('campaign-reply-ai-use');
             const campaignReplyStatus = document.getElementById('campaign-reply-status');
@@ -3587,6 +3617,7 @@
             const campaignReplyScheduledStatusByConversationKey = new Map();
             let activeTwilioReactionPickerMessageId = 0;
             let activeCampaignReplySuggestionText = '';
+            let campaignReplySuggestionCollapsed = false;
             let campaignReplySuggestionRequestId = 0;
             const campaignReplySuggestionByConversationKey = new Map();
             let outreachDashboard = null;
@@ -3620,6 +3651,15 @@
                 const canUse = Boolean(options.canUse && copy);
 
                 campaignReplyAiSuggestion.hidden = false;
+                campaignReplyAiSuggestion.classList.toggle('is-collapsed', campaignReplySuggestionCollapsed);
+                if (campaignReplyAiBody) {
+                    campaignReplyAiBody.hidden = campaignReplySuggestionCollapsed;
+                }
+                if (campaignReplyAiToggleButton) {
+                    campaignReplyAiToggleButton.textContent = campaignReplySuggestionCollapsed ? 'Expand' : 'Minimize';
+                    campaignReplyAiToggleButton.setAttribute('aria-expanded', campaignReplySuggestionCollapsed ? 'false' : 'true');
+                    campaignReplyAiToggleButton.disabled = false;
+                }
                 campaignReplyAiType.textContent = loading ? 'Thinking' : type;
                 campaignReplyAiCopy.textContent = copy || 'Choose a Twilio thread to load a suggested reply.';
                 campaignReplyAiReason.innerHTML = `<strong>Why this reply:</strong> ${escapeCampaignReplyCopyHtml(reason || 'The AI will read the conversation and suggest the next best text.')}`;
@@ -3630,6 +3670,22 @@
                     campaignReplyAiUseButton.disabled = !canUse;
                 }
                 activeCampaignReplySuggestionText = canUse ? copy : '';
+            }
+
+            function toggleCampaignReplySuggestionCollapsed() {
+                if (!campaignReplyAiSuggestion || campaignReplyAiSuggestion.hidden) {
+                    return;
+                }
+
+                campaignReplySuggestionCollapsed = !campaignReplySuggestionCollapsed;
+                campaignReplyAiSuggestion.classList.toggle('is-collapsed', campaignReplySuggestionCollapsed);
+                if (campaignReplyAiBody) {
+                    campaignReplyAiBody.hidden = campaignReplySuggestionCollapsed;
+                }
+                if (campaignReplyAiToggleButton) {
+                    campaignReplyAiToggleButton.textContent = campaignReplySuggestionCollapsed ? 'Expand' : 'Minimize';
+                    campaignReplyAiToggleButton.setAttribute('aria-expanded', campaignReplySuggestionCollapsed ? 'false' : 'true');
+                }
             }
 
             async function loadCampaignReplySuggestion(options = {}) {
@@ -4984,6 +5040,43 @@
                 }).format(date);
             }
 
+            function getCampaignReplyConversationAgeClass(value) {
+                const date = value ? new Date(value) : null;
+                if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                    return '';
+                }
+
+                const ageInDays = Math.floor((Date.now() - date.getTime()) / 86400000);
+                if (ageInDays >= 1 && ageInDays <= 3) {
+                    return 'is-age-green';
+                }
+                if (ageInDays >= 4 && ageInDays <= 7) {
+                    return 'is-age-yellow';
+                }
+                if (ageInDays > 7) {
+                    return 'is-age-red';
+                }
+
+                return '';
+            }
+
+            function formatCampaignReplyConversationAgeLabel(value) {
+                const date = value ? new Date(value) : null;
+                if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                    return 'Unknown time';
+                }
+
+                const ageInDays = Math.floor((Date.now() - date.getTime()) / 86400000);
+                if (ageInDays <= 0) {
+                    return 'Today';
+                }
+                if (ageInDays === 1) {
+                    return '1d ago';
+                }
+
+                return `${ageInDays}d ago`;
+            }
+
             function formatCampaignScheduledAt(value) {
                 const date = value ? new Date(value) : null;
                 if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
@@ -5860,7 +5953,12 @@
 
                     const time = document.createElement('span');
                     time.className = 'campaign-reply-conversation-time';
-                    time.textContent = formatCampaignReplyTimestamp(conversation.lastMessageAt);
+                    const timeAgeClass = getCampaignReplyConversationAgeClass(conversation.lastMessageAt);
+                    if (timeAgeClass) {
+                        time.classList.add(timeAgeClass);
+                    }
+                    time.textContent = formatCampaignReplyConversationAgeLabel(conversation.lastMessageAt);
+                    time.title = formatCampaignReplyTimestamp(conversation.lastMessageAt);
 
                     top.append(name, time);
 
@@ -6808,6 +6906,12 @@
                 if (campaignReplyAiUseButton) {
                     campaignReplyAiUseButton.addEventListener('click', () => {
                         applyCampaignReplySuggestion();
+                    });
+                }
+
+                if (campaignReplyAiToggleButton) {
+                    campaignReplyAiToggleButton.addEventListener('click', () => {
+                        toggleCampaignReplySuggestionCollapsed();
                     });
                 }
 
