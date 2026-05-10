@@ -4631,6 +4631,24 @@ async function markTwilioScheduledMessageFailed(scheduleId, error, sendResult = 
   );
 }
 
+async function getTwilioScheduledMessageById(scheduleId) {
+  return dbGet('SELECT * FROM twilio_scheduled_messages WHERE id = ?', [Number(scheduleId) || 0]);
+}
+
+async function cancelTwilioScheduledMessage(scheduleId) {
+  const result = await dbRun(
+    `UPDATE twilio_scheduled_messages
+        SET status = 'cancelled',
+            error_message = NULL,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND status = 'queued'`,
+    [Number(scheduleId) || 0]
+  );
+
+  return Number(result?.changes) > 0;
+}
+
 async function sendTwilioCampaignMessages({ body, campaignName, recipients, mediaUploadIds, authenticatedUser, senderName, requestOrigin, useRepeatHistoryFollowUp = false }) {
   const config = getTwilioMessagingConfig();
   if (!isTwilioConfigured(config)) {
@@ -23645,6 +23663,49 @@ app.post('/api/twilio/send-sms', async (req, res) => {
       failed: Array.isArray(error?.sendResult?.failed) ? error.sendResult.failed : [],
       campaignName
     });
+  }
+});
+
+app.delete('/api/twilio/scheduled-messages/:id', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const senderAccess = ensureTwilioSenderAccess(decoded);
+  if (!senderAccess.allowed) {
+    return res.status(senderAccess.statusCode).json({ error: senderAccess.error });
+  }
+
+  const scheduleId = Number(req.params?.id) || 0;
+  if (!scheduleId) {
+    return res.status(400).json({ error: 'A valid scheduled message id is required.' });
+  }
+
+  try {
+    const row = await getTwilioScheduledMessageById(scheduleId);
+    if (!row) {
+      return res.status(404).json({ error: 'Scheduled message not found.' });
+    }
+
+    if (!senderAccess.isAdmin && Number(row.owner_user_id) !== Number(decoded.id)) {
+      return res.status(403).json({ error: 'This scheduled message is assigned to another user.' });
+    }
+
+    if (String(row.status || '').trim().toLowerCase() !== 'queued') {
+      return res.status(409).json({ error: 'Only queued scheduled messages can be cancelled.' });
+    }
+
+    const cancelled = await cancelTwilioScheduledMessage(scheduleId);
+    if (!cancelled) {
+      return res.status(409).json({ error: 'This scheduled message is no longer queued.' });
+    }
+
+    const scheduledMessage = serializeTwilioScheduledMessage(await getTwilioScheduledMessageById(scheduleId));
+    return res.json({ success: true, scheduledMessage });
+  } catch (error) {
+    console.error('Failed to cancel Twilio scheduled message:', error);
+    return res.status(500).json({ error: 'Unable to cancel the scheduled Twilio message.' });
   }
 });
 

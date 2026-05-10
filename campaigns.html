@@ -1438,7 +1438,9 @@
 
         .campaign-reply-conversation-actions {
             display: inline-flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 8px;
         }
 
@@ -1660,6 +1662,41 @@
             display: none;
         }
 
+        .campaign-reply-ai-suggestion.is-collapsed {
+            gap: 0;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            border-radius: 14px;
+        }
+
+        .campaign-reply-ai-suggestion.is-collapsed .campaign-reply-ai-head {
+            align-items: center;
+            gap: 8px;
+        }
+
+        .campaign-reply-ai-suggestion.is-collapsed .campaign-reply-ai-title-wrap {
+            gap: 2px;
+        }
+
+        .campaign-reply-ai-suggestion.is-collapsed .campaign-reply-ai-actions {
+            gap: 6px;
+        }
+
+        .campaign-reply-ai-suggestion.is-collapsed .campaign-reply-ai-eyebrow {
+            font-size: 9px;
+            letter-spacing: 0.1em;
+        }
+
+        .campaign-reply-ai-suggestion.is-collapsed .campaign-reply-ai-type {
+            padding: 4px 8px;
+            font-size: 9px;
+        }
+
+        .campaign-reply-ai-suggestion.is-collapsed #campaign-reply-ai-refresh,
+        .campaign-reply-ai-suggestion.is-collapsed #campaign-reply-ai-use {
+            display: none;
+        }
+
         .campaign-reply-ai-copy {
             margin: 0;
             padding: 14px 16px;
@@ -1721,6 +1758,89 @@
             background: linear-gradient(135deg, #2f95ff 0%, #007aff 100%);
             color: #f8fafc;
             border-color: rgba(0, 122, 255, 0.42);
+        }
+
+        .campaign-reply-message.is-scheduled-pending {
+            opacity: 0.58;
+            box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
+        }
+
+        .campaign-reply-message.is-outgoing.is-scheduled-pending {
+            background: linear-gradient(135deg, rgba(47, 149, 255, 0.78) 0%, rgba(0, 122, 255, 0.74) 100%);
+            border-color: rgba(0, 122, 255, 0.28);
+        }
+
+        .campaign-reply-scheduled-edit-indicator {
+            position: absolute;
+            top: 10px;
+            left: -18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.26);
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+            color: #0f172a;
+            opacity: 0;
+            transform: translateY(4px) scale(0.96);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+            z-index: 2;
+        }
+
+        .campaign-reply-scheduled-cancel {
+            position: absolute;
+            top: 10px;
+            right: -18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 113, 113, 0.28);
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+            color: #b91c1c;
+            opacity: 0;
+            transform: translateY(4px) scale(0.96);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+            z-index: 2;
+        }
+
+        .campaign-reply-message.is-scheduled-pending:hover .campaign-reply-scheduled-edit-indicator,
+        .campaign-reply-message.is-scheduled-pending:focus-within .campaign-reply-scheduled-edit-indicator,
+        .campaign-reply-message.is-scheduled-pending:hover .campaign-reply-scheduled-cancel,
+        .campaign-reply-message.is-scheduled-pending:focus-within .campaign-reply-scheduled-cancel {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .campaign-reply-scheduled-edit-indicator svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .campaign-reply-scheduled-cancel:hover,
+        .campaign-reply-scheduled-cancel:focus-visible {
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #991b1b;
+        }
+
+        .campaign-reply-scheduled-cancel svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
 
         .campaign-reply-message-body {
@@ -3176,7 +3296,6 @@
                                             <div class="campaign-reply-ai-head">
                                                 <div class="campaign-reply-ai-title-wrap">
                                                     <p class="campaign-reply-ai-eyebrow">AI Suggested Reply</p>
-                                                    <h5 class="campaign-reply-ai-title">Suggested next text</h5>
                                                     <span id="campaign-reply-ai-type" class="campaign-reply-ai-type">Thinking</span>
                                                 </div>
                                                 <div class="campaign-reply-ai-actions">
@@ -3620,6 +3739,7 @@
             let campaignReplySuggestionCollapsed = false;
             let campaignReplySuggestionRequestId = 0;
             const campaignReplySuggestionByConversationKey = new Map();
+            const campaignReplyScheduledMessageByConversationKey = new Map();
             let outreachDashboard = null;
             let twilioMessagingAccessState = {
                 allowed: true,
@@ -5071,10 +5191,10 @@
                     return 'Today';
                 }
                 if (ageInDays === 1) {
-                    return '1d ago';
+                    return '1 DAY AGO';
                 }
 
-                return `${ageInDays}d ago`;
+                return `${ageInDays} DAYS AGO`;
             }
 
             function formatCampaignScheduledAt(value) {
@@ -5739,13 +5859,16 @@
                     renderPendingReplyMedia();
 
                     if (scheduleAt && data.scheduled && data.scheduledMessage) {
+                        campaignReplyScheduledMessageByConversationKey.set(activeTwilioConversationKey, data.scheduledMessage);
                         const scheduledStatusMessage = `Reply scheduled for ${formatCampaignScheduledAt(data.scheduledMessage.scheduledFor || scheduleAt)}.`;
                         campaignReplyScheduledStatusByConversationKey.set(activeTwilioConversationKey, scheduledStatusMessage);
                         campaignReplyStatus.textContent = scheduledStatusMessage;
+                        renderTwilioReplyThread(activeTwilioInboxMessages, conversation);
                         closeCampaignScheduleModal();
                         return;
                     }
 
+                    campaignReplyScheduledMessageByConversationKey.delete(activeTwilioConversationKey);
                     campaignReplyScheduledStatusByConversationKey.delete(activeTwilioConversationKey);
                     campaignReplyStatus.textContent = 'Twilio reply sent.';
                     fetchCampaignOutreachDashboard().catch(() => {});
@@ -5994,48 +6117,7 @@
                     const actions = document.createElement('div');
                     actions.className = 'campaign-reply-conversation-actions';
 
-                    if (campaignReplyFilterMode === 'unread' && (Number(conversation.unreadCount) > 0 || String(conversation.lastDirection || '').trim().toLowerCase() === 'inbound')) {
-                        const dismissButton = document.createElement('button');
-                        dismissButton.type = 'button';
-                        dismissButton.className = 'campaign-reply-conversation-dismiss';
-                        dismissButton.setAttribute('aria-label', `Dismiss ${conversation.contactName || conversation.contactPhone || 'thread'} from unread`);
-                        dismissButton.title = 'Dismiss from unread';
-                        dismissButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"></path></svg>';
-                        dismissButton.addEventListener('click', async (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            await dismissTwilioUnreadConversation(conversation);
-                        });
-                        actions.appendChild(dismissButton);
-                    }
-
-                    if (campaignReplyFilterMode === 'no-replies' && !conversation?.hasInboundReplies) {
-                        const dismissNoRepliesButton = document.createElement('button');
-                        dismissNoRepliesButton.type = 'button';
-                        dismissNoRepliesButton.className = 'campaign-reply-conversation-dismiss';
-                        dismissNoRepliesButton.setAttribute('aria-label', `Dismiss ${conversation.contactName || conversation.contactPhone || 'property'} from no replies`);
-                        dismissNoRepliesButton.title = 'Dismiss from no replies';
-                        dismissNoRepliesButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"></path></svg>';
-                        dismissNoRepliesButton.addEventListener('click', async (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            await dismissTwilioNoRepliesConversation(conversation);
-                        });
-                        actions.appendChild(dismissNoRepliesButton);
-
-                        const followUpButton = document.createElement('button');
-                        followUpButton.type = 'button';
-                        followUpButton.className = 'campaign-reply-conversation-follow-up';
-                        followUpButton.setAttribute('aria-label', `Send quick follow up to ${conversation.contactName || conversation.contactPhone || 'thread'}`);
-                        followUpButton.title = 'Send quick follow up';
-                        followUpButton.textContent = 'FU';
-                        followUpButton.addEventListener('click', async (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            await sendSingleNoRepliesFollowUpMessage(conversation);
-                        });
-                        actions.appendChild(followUpButton);
-                    }
+                    const dismissButtons = [];
 
                     const deleteButton = document.createElement('button');
                     deleteButton.type = 'button';
@@ -6053,6 +6135,53 @@
                         );
                     });
                     actions.appendChild(deleteButton);
+
+                    if (campaignReplyFilterMode === 'unread' && (Number(conversation.unreadCount) > 0 || String(conversation.lastDirection || '').trim().toLowerCase() === 'inbound')) {
+                        const dismissButton = document.createElement('button');
+                        dismissButton.type = 'button';
+                        dismissButton.className = 'campaign-reply-conversation-dismiss';
+                        dismissButton.setAttribute('aria-label', `Dismiss ${conversation.contactName || conversation.contactPhone || 'thread'} from unread`);
+                        dismissButton.title = 'Dismiss from unread';
+                        dismissButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"></path></svg>';
+                        dismissButton.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            await dismissTwilioUnreadConversation(conversation);
+                        });
+                        dismissButtons.push(dismissButton);
+                    }
+
+                    if (campaignReplyFilterMode === 'no-replies' && !conversation?.hasInboundReplies) {
+                        const dismissNoRepliesButton = document.createElement('button');
+                        dismissNoRepliesButton.type = 'button';
+                        dismissNoRepliesButton.className = 'campaign-reply-conversation-dismiss';
+                        dismissNoRepliesButton.setAttribute('aria-label', `Dismiss ${conversation.contactName || conversation.contactPhone || 'property'} from no replies`);
+                        dismissNoRepliesButton.title = 'Dismiss from no replies';
+                        dismissNoRepliesButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"></path></svg>';
+                        dismissNoRepliesButton.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            await dismissTwilioNoRepliesConversation(conversation);
+                        });
+                        dismissButtons.push(dismissNoRepliesButton);
+
+                        const followUpButton = document.createElement('button');
+                        followUpButton.type = 'button';
+                        followUpButton.className = 'campaign-reply-conversation-follow-up';
+                        followUpButton.setAttribute('aria-label', `Send quick follow up to ${conversation.contactName || conversation.contactPhone || 'thread'}`);
+                        followUpButton.title = 'Send quick follow up';
+                        followUpButton.textContent = 'FU';
+                        followUpButton.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            await sendSingleNoRepliesFollowUpMessage(conversation);
+                        });
+                        actions.appendChild(followUpButton);
+                    }
+
+                    dismissButtons.forEach((dismissButton) => {
+                        actions.appendChild(dismissButton);
+                    });
 
                     item.append(button, actions);
                     campaignReplyConversations.appendChild(item);
@@ -6185,6 +6314,88 @@
                 }
             }
 
+            function getPendingScheduledThreadMessages(conversation, messages = []) {
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                if (!conversationKey) {
+                    return [];
+                }
+
+                const scheduledMessage = campaignReplyScheduledMessageByConversationKey.get(conversationKey) || null;
+                if (!scheduledMessage) {
+                    return [];
+                }
+
+                const scheduledFor = String(scheduledMessage.scheduledFor || '').trim();
+                const scheduledBody = String(scheduledMessage.body || '').trim();
+                const scheduledTime = Date.parse(scheduledFor || '');
+                const hasMatchingSentMessage = (Array.isArray(messages) ? messages : []).some((message) => {
+                    if (!message || String(message.direction || '').trim() !== 'outgoing') {
+                        return false;
+                    }
+
+                    const messageBody = String(message.body || '').trim();
+                    const messageTime = Date.parse(String(message.createdAt || '').trim() || '');
+                    if (!scheduledBody || messageBody !== scheduledBody) {
+                        return false;
+                    }
+
+                    if (!scheduledTime || !messageTime) {
+                        return true;
+                    }
+
+                    return messageTime >= (scheduledTime - 300000);
+                });
+
+                if (hasMatchingSentMessage) {
+                    campaignReplyScheduledMessageByConversationKey.delete(conversationKey);
+                    return [];
+                }
+
+                return [{
+                    id: `scheduled-${conversationKey}-${scheduledFor || 'pending'}`,
+                    direction: 'outgoing',
+                    body: scheduledBody,
+                    attachments: [],
+                    reactions: [],
+                    status: String(scheduledMessage.status || 'scheduled').trim() || 'scheduled',
+                    errorMessage: '',
+                    createdAt: scheduledFor || new Date().toISOString(),
+                    isScheduledPending: true
+                }];
+            }
+
+            async function cancelScheduledReplyMessage(conversation, scheduledMessage) {
+                const scheduleId = Number(scheduledMessage?.id) || 0;
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                if (!scheduleId || !conversationKey || !token) {
+                    return;
+                }
+
+                if (!window.confirm('Cancel this scheduled message?')) {
+                    return;
+                }
+
+                campaignReplyStatus.textContent = 'Cancelling scheduled reply...';
+
+                try {
+                    const response = await fetch(`/api/twilio/scheduled-messages/${encodeURIComponent(scheduleId)}`, {
+                        method: 'DELETE',
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Unable to cancel the scheduled reply.');
+                    }
+
+                    campaignReplyScheduledMessageByConversationKey.delete(conversationKey);
+                    campaignReplyScheduledStatusByConversationKey.delete(conversationKey);
+                    campaignReplyStatus.textContent = 'Scheduled reply cancelled.';
+                    renderTwilioReplyThread(activeTwilioInboxMessages, conversation);
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || 'Unable to cancel the scheduled reply.';
+                }
+            }
+
             function renderTwilioReplyThread(messages, conversation) {
                 if (!campaignReplyThread || !campaignReplyTitle || !campaignReplySubtitle) {
                     return;
@@ -6223,7 +6434,16 @@
                 syncCampaignReplyBlockState(Boolean(conversation.isBlocked));
                 syncCampaignReplyScheduledStatus();
 
-                if (!Array.isArray(messages) || !messages.length) {
+                const threadMessages = [
+                    ...(Array.isArray(messages) ? messages : []),
+                    ...getPendingScheduledThreadMessages(conversation, messages)
+                ].sort((left, right) => {
+                    const leftTime = Date.parse(String(left?.createdAt || '')) || 0;
+                    const rightTime = Date.parse(String(right?.createdAt || '')) || 0;
+                    return leftTime - rightTime;
+                });
+
+                if (!threadMessages.length) {
                     const empty = document.createElement('p');
                     empty.className = 'campaign-reply-thread-empty';
                     empty.textContent = 'No persisted messages yet for this Twilio conversation.';
@@ -6231,9 +6451,32 @@
                     return;
                 }
 
-                messages.forEach((message) => {
+                threadMessages.forEach((message) => {
                     const bubble = document.createElement('article');
                     bubble.className = `campaign-reply-message ${message.direction === 'outgoing' ? 'is-outgoing' : 'is-incoming'}`;
+                    if (message.isScheduledPending) {
+                        bubble.classList.add('is-scheduled-pending');
+
+                        const editIndicator = document.createElement('span');
+                        editIndicator.className = 'campaign-reply-scheduled-edit-indicator';
+                        editIndicator.setAttribute('aria-hidden', 'true');
+                        editIndicator.title = 'Scheduled message can be edited';
+                        editIndicator.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
+                        bubble.appendChild(editIndicator);
+
+                        const cancelButton = document.createElement('button');
+                        cancelButton.type = 'button';
+                        cancelButton.className = 'campaign-reply-scheduled-cancel';
+                        cancelButton.setAttribute('aria-label', 'Cancel scheduled message');
+                        cancelButton.title = 'Cancel scheduled message';
+                        cancelButton.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><path d="M3 6h18"></path><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                        cancelButton.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            await cancelScheduledReplyMessage(conversation, message);
+                        });
+                        bubble.appendChild(cancelButton);
+                    }
 
                     if (message.body) {
                         const body = document.createElement('p');
@@ -6250,7 +6493,7 @@
 
                     const meta = document.createElement('span');
                     meta.className = 'campaign-reply-thread-meta';
-                    meta.textContent = `${message.direction === 'outgoing' ? 'Sent' : 'Reply'} • ${formatCampaignReplyTimestamp(message.createdAt)}`;
+                    meta.textContent = `${message.isScheduledPending ? 'Scheduled' : (message.direction === 'outgoing' ? 'Sent' : 'Reply')} • ${formatCampaignReplyTimestamp(message.createdAt)}`;
 
                     foot.appendChild(meta);
 
