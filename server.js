@@ -3449,10 +3449,27 @@ function getTwilioReplySuggestionFirstName(value) {
   return rawValue.split(/\s+/)[0] || 'there';
 }
 
-function buildTwilioReplySuggestionGreeting(firstName, timestamp = Date.now()) {
+const FAST_BUSINESS_TIME_ZONE = 'America/Los_Angeles';
+
+function getFastBusinessDateParts(timestamp = Date.now()) {
   const date = new Date(timestamp);
-  const hour = Number.isFinite(date.getHours()) ? date.getHours() : 12;
-  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: FAST_BUSINESS_TIME_ZONE,
+    weekday: 'long',
+    hour: 'numeric',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(date);
+  const weekday = String(parts.find((part) => part.type === 'weekday')?.value || '').trim() || 'today';
+  const hour = Number.parseInt(String(parts.find((part) => part.type === 'hour')?.value || '12'), 10);
+  return {
+    weekday,
+    hour: Number.isFinite(hour) ? hour : 12
+  };
+}
+
+function buildTwilioReplySuggestionGreeting(firstName, timestamp = Date.now()) {
+  const { hour, weekday } = getFastBusinessDateParts(timestamp);
   const safeFirstName = String(firstName || '').trim();
   const namePart = safeFirstName && safeFirstName.toLowerCase() !== 'there'
     ? ` ${safeFirstName}`
@@ -3620,8 +3637,8 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
   if (latestInbound && /\b(price|offer|cash offer|best offer|how much|number)\b/.test(normalizedInbound)) {
     const emailFollowUp = progression.hasEmailInThread
-      ? 'Before I do, can you tell me the property\'s current condition and the timeline you are working with?'
-      : 'Before I do, what\'s the best offer email you want me to send it to, and can you tell me the property\'s current condition and timeline?';
+      ? 'What condition is the property in right now?'
+      : 'What email should I send the offer to?';
     return {
       reply: normalizeTwilioReplySuggestionText(`${greeting} I can work up a clean number for ${locationLabel}. ${emailFollowUp}`),
       reason: 'The contact appears to be asking about price or an offer, so the next message should collect the missing underwriting details.',
@@ -3632,7 +3649,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
   if (latestInbound && /\b(call|phone|talk|available|when can you)\b/.test(normalizedInbound)) {
     return {
-      reply: normalizeTwilioReplySuggestionText(`${greeting} I can talk today. What time works best for you, and is ${locationLabel} the property you want to discuss?`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} I can talk today. What time works best for you?`),
       reason: 'The latest inbound message suggests they are open to a live conversation, so the next step is scheduling.',
       type: 'schedule-call',
       source: 'fallback'
@@ -3641,7 +3658,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
   if (latestMessage && String(latestMessage.direction || '').trim() === 'outgoing' && latestOutboundAgeHours !== null && latestOutboundAgeHours >= 48) {
     return {
-      reply: normalizeTwilioReplySuggestionText(`${greeting} Just following back up on ${locationLabel}. If you are still open to selling or want to compare a fast as-is option, I can text over a few next steps.`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Just checking back in on ${locationLabel}. Are you still open to an offer?`),
       reason: `Your last outbound message was about ${latestOutboundAgeHours} hours ago and there has not been a newer reply, so a soft follow-up fits best.`,
       type: 'follow-up',
       source: 'fallback'
@@ -3660,7 +3677,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
     if (!progression.hasAlternatePhoneInThread && progression.mentionsDecisionMaker) {
       return {
-        reply: normalizeTwilioReplySuggestionText(`${greeting} If someone else is helping make the decision on ${locationLabel}, what\'s the best number to reach them at so I can keep everything together?`),
+        reply: normalizeTwilioReplySuggestionText(`${greeting} If someone else is involved on ${locationLabel}, what\'s the best number to reach them at?`),
         reason: 'The thread suggests another decision-maker may be involved, so capturing the best callback number is a useful next step.',
         type: 'capture-number',
         source: 'fallback'
@@ -3668,7 +3685,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
     }
 
     return {
-      reply: normalizeTwilioReplySuggestionText(`${greeting} Just so I point you the right way on ${locationLabel}, what would you say is the biggest thing you want solved right now: speed, price, repairs, or certainty?`),
+      reply: normalizeTwilioReplySuggestionText(`${greeting} What\'s the biggest thing you want solved on ${locationLabel} right now?`),
       reason: 'The contact replied recently, so a short qualifying question is the highest-value next text.',
       type: 'qualifying-question',
       source: 'fallback'
@@ -3685,7 +3702,7 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
   }
 
   return {
-    reply: normalizeTwilioReplySuggestionText(`${greeting} Wanted to circle back on ${locationLabel}. If the timing is still right, I can ask a couple quick questions and see whether a FAST offer makes sense.`),
+    reply: normalizeTwilioReplySuggestionText(`${greeting} Wanted to circle back on ${locationLabel}. Are you still open to an offer?`),
     reason: 'This thread is quiet enough for a re-engagement text, but there is not a stronger signal for a specialized reply.',
     type: 'follow-up',
     source: 'fallback'
@@ -3760,7 +3777,7 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
   const systemPrompt = [
     'You generate one SMS reply suggestion for a real-estate acquisitions team using Twilio.',
     'Return strict JSON with keys: reply, reason, type.',
-    'Keep the reply under 320 characters, natural, direct, and human.',
+    'Keep the reply short, usually 1 to 2 sentences and under 220 characters.',
     'The reply must greet the contact by first name and open with a natural time-based or day-based greeting, such as good morning, good afternoon, or hope they are having a good Monday.',
     'Ground the reply in the actual transcript and the latest message, not a generic seller script.',
     'If the latest message is inbound, directly respond to what the lead said before asking the next best question.',
@@ -3769,6 +3786,8 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     'If no email appears anywhere in the thread and the conversation is warm enough, it is good to ask for the best email to send the offer or details to.',
     'If another person seems involved and there is no alternate number in the thread, it is good to ask for the best number to reach them.',
     'If the lead asked something, answer briefly and ask the next best question.',
+    'Ask only one clear next-step question whenever possible.',
+    'Do not stack multiple asks in the same message unless the thread absolutely requires it.',
     'Do not repeat, paraphrase, or lightly rewrite FAST\'s most recent outbound message.',
     'The suggestion should feel like a fresh check-in or next-step response that moves the conversation forward.',
     'Do not ignore recent context, and do not repeat points the thread already covered unless needed.',
