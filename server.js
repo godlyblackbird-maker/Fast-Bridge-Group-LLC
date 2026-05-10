@@ -3558,6 +3558,15 @@ function isTwilioReplySuggestionTooSimilar(candidate, previousOutbound) {
   return similarity >= 0.6;
 }
 
+function isTwilioReplySuggestionPhoneOrCallOriented(value) {
+  const normalized = normalizeTwilioReplySuggestionText(value).toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return /\b(call|phone call|talk today|talk tomorrow|talk this week|hop on a call|jump on a call|best number to reach|best number to contact|reach you at|call you|callback|give me a call|speak by phone)\b/.test(normalized);
+}
+
 function normalizeTwilioReplySuggestionText(value) {
   return String(value || '')
     .replace(/\s+/g, ' ')
@@ -3595,6 +3604,149 @@ function buildTwilioReplyProgressionSignals(conversation, messages = []) {
   };
 }
 
+function hasTwilioReplySuggestionMessageMatch(messages, direction, pattern) {
+  return (Array.isArray(messages) ? messages : []).some((message) => {
+    if (!message || typeof message !== 'object') {
+      return false;
+    }
+
+    const normalizedDirection = String(message.direction || '').trim().toLowerCase() === 'inbound' ? 'inbound' : 'outgoing';
+    if (direction && normalizedDirection !== direction) {
+      return false;
+    }
+
+    return pattern.test(String(message.body || ''));
+  });
+}
+
+function extractTwilioReplySuggestionMoneyMentions(value) {
+  const matches = String(value || '').match(/\$\s?\d[\d,]*(?:\.\d{1,2})?(?:\s?[kK])?/g) || [];
+  return Array.from(new Set(matches.map((item) => normalizeTwilioReplySuggestionText(item)).filter(Boolean)));
+}
+
+function buildTwilioReplySuggestionScriptStage(conversation, messages = []) {
+  const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
+  const latestInbound = safeMessages.slice().reverse().find((message) => String(message?.direction || '').trim() === 'inbound') || null;
+  const latestOutbound = safeMessages.slice().reverse().find((message) => String(message?.direction || '').trim() === 'outgoing') || null;
+  const latestInboundBody = String(latestInbound?.body || '').trim();
+  const latestInboundLower = latestInboundBody.toLowerCase();
+  const progression = buildTwilioReplyProgressionSignals(conversation, safeMessages);
+  const latestInboundPrices = extractTwilioReplySuggestionMoneyMentions(latestInboundBody);
+  const hasInboundEmail = (Array.isArray(messages) ? messages : []).some((message) => {
+    if (!message || typeof message !== 'object') {
+      return false;
+    }
+    return String(message.direction || '').trim() === 'inbound' && extractEmailAddressesFromText(message.body || '').length > 0;
+  });
+  const outboundAskedEmail = hasTwilioReplySuggestionMessageMatch(safeMessages, 'outgoing', /\b(what email|best email|email should i use|email should i send|send the agreement|offer email)\b/i);
+  const outboundAskedFullName = hasTwilioReplySuggestionMessageMatch(safeMessages, 'outgoing', /\b(full name|put it on the agreement|put that on the agreement|anyone else on title|spouse|title with you)\b/i);
+  const outboundAskedCloseTiming = hasTwilioReplySuggestionMessageMatch(safeMessages, 'outgoing', /\b(3 weeks|enough time to close|time to close|close on your timeline|close quickly)\b/i);
+  const outboundAskedOccupancy = hasTwilioReplySuggestionMessageMatch(safeMessages, 'outgoing', /\b(vacant|living in the home|occupied|tenant|someone living)\b/i);
+  const outboundAskedAgreementReady = hasTwilioReplySuggestionMessageMatch(safeMessages, 'outgoing', /\b(agreement ready|near your email|send it over|send it out|in front of your computer)\b/i);
+  const outboundSaidAgreementSent = hasTwilioReplySuggestionMessageMatch(safeMessages, 'outgoing', /\b(i just sent it|open it up|take a look|initial and approve|let me know once you\'ve approved|let me know if you have any questions)\b/i);
+  const outboundAskedOffer = hasTwilioReplySuggestionMessageMatch(safeMessages, 'outgoing', /\b(best price|best you can do|cash offer|what price|lowest price|lowest you can go|as-is.*cash|offer like that)\b/i);
+  const latestInboundApproved = /\b(approved|signed|completed|done|sent it back|finished signing)\b/.test(latestInboundLower);
+  const latestInboundWarm = /\b(yes|yeah|yep|sure|ok|okay|sounds good|that works|works for me|deal|let\'s do it|lets do it)\b/.test(latestInboundLower);
+  const latestInboundMakeOffer = /\b(you make me an offer|make me an offer|send me an offer|what\s+is your offer|what\'s your offer|what can you offer|make an offer)\b/.test(latestInboundLower);
+  const latestInboundAvailability = /\b(still for sale|still available|available|yes it is|yes it\'s|yes)\b/.test(latestInboundLower);
+
+  if (!safeMessages.length) {
+    return {
+      stage: 'initial-contact',
+      guidance: 'Open by confirming the property is still for sale.'
+    };
+  }
+
+  if (latestInboundApproved) {
+    return {
+      stage: 'post-signature',
+      guidance: 'Acknowledge the signed agreement, then move to the next logistics step for seeing the property or closing.'
+    };
+  }
+
+  if (hasInboundEmail && outboundAskedEmail && !outboundAskedFullName) {
+    return {
+      stage: 'capture-title-details',
+      guidance: 'After they give an email, ask for the full legal name and whether anyone else should be included on title.'
+    };
+  }
+
+  if (outboundAskedFullName && !outboundAskedCloseTiming) {
+    return {
+      stage: 'confirm-closing-timeline',
+      guidance: 'After title names, confirm whether the closing timeline works for them.'
+    };
+  }
+
+  if (outboundAskedCloseTiming && !outboundAskedOccupancy) {
+    return {
+      stage: 'confirm-occupancy',
+      guidance: 'After the timeline, ask whether the home is vacant or occupied.'
+    };
+  }
+
+  if (outboundAskedOccupancy && !outboundAskedAgreementReady) {
+    return {
+      stage: 'prepare-agreement',
+      guidance: 'Once occupancy is covered, check whether they are ready for the agreement to be sent.'
+    };
+  }
+
+  if (outboundAskedAgreementReady && !outboundSaidAgreementSent) {
+    return {
+      stage: 'send-agreement',
+      guidance: 'If they are ready, tell them you are sending the agreement now and what to do next.'
+    };
+  }
+
+  if (outboundSaidAgreementSent) {
+    return {
+      stage: 'review-agreement',
+      guidance: 'After the agreement is sent, prompt them to review it and send back any questions or approval.'
+    };
+  }
+
+  if (latestInboundWarm && outboundAskedOffer && !progression.hasEmailInThread) {
+    return {
+      stage: 'capture-email',
+      guidance: 'If they are aligned on price, ask for the email address for the agreement or offer.'
+    };
+  }
+
+  if (latestInboundPrices.length > 0) {
+    return {
+      stage: 'push-lowest-price',
+      guidance: 'If the seller gives a price, press for the lowest number they can do with an as-is cash close.'
+    };
+  }
+
+  if (latestInboundMakeOffer) {
+    return {
+      stage: 'seller-wants-offer',
+      guidance: 'If the seller asks you to make the offer first, respond with a concise as-is cash framing and avoid inventing numbers you do not have.'
+    };
+  }
+
+  if (latestInboundAvailability && !outboundAskedOffer) {
+    return {
+      stage: 'ask-best-price',
+      guidance: 'If they confirm the property is still available, ask for the best as-is cash price they can do.'
+    };
+  }
+
+  if (!latestOutbound) {
+    return {
+      stage: 'initial-contact',
+      guidance: 'Open by confirming the property is still for sale.'
+    };
+  }
+
+  return {
+    stage: 'general-follow-up',
+    guidance: 'Use the latest transcript to ask for the single next step that moves the deal forward.'
+  };
+}
+
 function buildTwilioReplySuggestionFallback(conversation, messages = []) {
   const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
   const sortedMessages = safeMessages.slice().sort((left, right) => {
@@ -3616,12 +3768,13 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
   const normalizedInbound = latestInboundBody.toLowerCase();
   const greeting = buildTwilioReplySuggestionGreeting(firstName, now);
   const progression = buildTwilioReplyProgressionSignals(conversation, safeMessages);
+  const scriptStage = buildTwilioReplySuggestionScriptStage(conversation, safeMessages);
 
   if (!latestMessage) {
     return {
-      reply: normalizeTwilioReplySuggestionText(`${greeting} This is FAST BRIDGE GROUP. Wanted to reach out and see if you would be open to a quick conversation about ${locationLabel}.`),
-      reason: 'No saved messages exist yet, so a light first-touch text is the safest default.',
-      type: 'first-touch',
+      reply: normalizeTwilioReplySuggestionText(`${greeting} This is FAST with FAST BRIDGE GROUP. I saw ${locationLabel}. Is it still for sale?`),
+      reason: 'No saved messages exist yet, so the first step in the script is to confirm the property is still available.',
+      type: 'initial-contact',
       source: 'fallback'
     };
   }
@@ -3631,6 +3784,105 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
       reply: normalizeTwilioReplySuggestionText(`${greeting} Understood. We will stop messaging this number. Thank you for letting us know.`),
       reason: 'The latest inbound message looks like an opt-out or do-not-contact request.',
       type: 'compliance',
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'ask-best-price') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Great. If we buy ${locationLabel} as-is for cash and close on your timeline, what is the best price you could do?`),
+      reason: 'The seller appears to have confirmed the property is still available, so the script moves next to their best as-is cash price.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'seller-wants-offer') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Totally fair. For an as-is cash deal where we cover closing costs, what is the lowest number you would seriously consider on ${locationLabel}?`),
+      reason: 'The seller pushed the pricing question back, so the script should keep anchoring on their lowest workable number without inventing offer math.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'push-lowest-price') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Thanks for sharing that. Is that the best you can do if we buy ${locationLabel} as-is, cover closing costs, and close on your timeline?`),
+      reason: 'The seller gave a price, so the script next presses for the lowest number they can really do.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'capture-email') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Sounds good. What email should I send the agreement to for ${locationLabel}?`),
+      reason: 'The conversation looks aligned enough on price that the next script step is getting the agreement email.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'capture-title-details') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Perfect. What full name should I put on the agreement, and is anyone else on title I should include?`),
+      reason: 'They already provided the email, so the next script step is collecting the legal names for the agreement.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'confirm-closing-timeline') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} I want to make this easy for you. Does about 3 weeks give you enough time to close?`),
+      reason: 'After agreement details, the script checks whether the closing timeline works for the seller.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'confirm-occupancy') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} One last thing: is the home vacant, or is someone living there right now?`),
+      reason: 'Once the closing timeline is covered, the script asks whether the property is vacant or occupied.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'prepare-agreement') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Perfect. I have the agreement ready. Are you near your email so I can send it over?`),
+      reason: 'The seller answered the deal basics, so the next script step is checking that they are ready to receive the agreement.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'send-agreement') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Perfect. I am sending it over now. Open it up, take a look, and let me know if any questions come up.`),
+      reason: 'The seller appears ready, so the script moves into the agreement-send step.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'review-agreement') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Just checking in on the agreement I sent. Have you had a chance to review it yet?`),
+      reason: 'The agreement appears to have been sent already, so the next script step is a light review follow-up.',
+      type: scriptStage.stage,
+      source: 'fallback'
+    };
+  }
+
+  if (scriptStage.stage === 'post-signature') {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`${greeting} I received it back. I will follow up shortly with closing details. What time tomorrow works best for a quick walk-through of ${locationLabel}?`),
+      reason: 'The seller appears to have completed the agreement, so the next script step is moving into property access and closing logistics.',
+      type: scriptStage.stage,
       source: 'fallback'
     };
   }
@@ -3649,9 +3901,9 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
 
   if (latestInbound && /\b(call|phone|talk|available|when can you)\b/.test(normalizedInbound)) {
     return {
-      reply: normalizeTwilioReplySuggestionText(`${greeting} I can talk today. What time works best for you?`),
-      reason: 'The latest inbound message suggests they are open to a live conversation, so the next step is scheduling.',
-      type: 'schedule-call',
+      reply: normalizeTwilioReplySuggestionText(`${greeting} Happy to keep this moving by text. What detail do you want me to clarify first on ${locationLabel}?`),
+      reason: 'The latest inbound message points toward live discussion, so the suggestion keeps momentum while staying text-first.',
+      type: 'text-follow-up',
       source: 'fallback'
     };
   }
@@ -3671,15 +3923,6 @@ function buildTwilioReplySuggestionFallback(conversation, messages = []) {
         reply: normalizeTwilioReplySuggestionText(`${greeting} To keep this moving, what\'s the best offer email you want me to use for ${locationLabel}?`),
         reason: 'The thread looks active and offer-oriented, but there is no email in the conversation yet, so capturing the best offer email is the clearest next step.',
         type: 'capture-email',
-        source: 'fallback'
-      };
-    }
-
-    if (!progression.hasAlternatePhoneInThread && progression.mentionsDecisionMaker) {
-      return {
-        reply: normalizeTwilioReplySuggestionText(`${greeting} If someone else is involved on ${locationLabel}, what\'s the best number to reach them at?`),
-        reason: 'The thread suggests another decision-maker may be involved, so capturing the best callback number is a useful next step.',
-        type: 'capture-number',
         source: 'fallback'
       };
     }
@@ -3754,6 +3997,7 @@ function buildTwilioReplySuggestionContext(conversation, messages = []) {
     hoursSinceLatestInbound: hoursSince(latestInbound?.createdAt),
     hoursSinceLatestOutbound: hoursSince(latestOutbound?.createdAt),
     progression: buildTwilioReplyProgressionSignals(conversation, safeMessages),
+    scriptFlow: buildTwilioReplySuggestionScriptStage(conversation, safeMessages),
     transcript
   };
 }
@@ -3782,9 +4026,12 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     'Ground the reply in the actual transcript and the latest message, not a generic seller script.',
     'If the latest message is inbound, directly respond to what the lead said before asking the next best question.',
     'If there has been a long gap after FAST sent the last text, propose a soft follow-up tied to the prior topic.',
-    'Be progressive and look for the next missing step that would move the deal forward, such as capturing the best offer email, the best callback number, the decision maker, property condition, timeline, or the next appointment.',
+    'Prefer this rough flow whenever the transcript supports it: confirm the property is still for sale, ask for the best as-is cash price, if they push for your offer then respond with concise as-is cash framing using only known numbers, if they give a price then press for their lowest number, then capture email, legal names/title, closing timing, occupancy, and agreement steps.',
+    'Use the provided scriptFlow stage and guidance as the default next-step unless the newest inbound message clearly requires a different direct response.',
+    'Do not invent Zestimate values, exact offer amounts, net-to-seller math, or other blanks unless the transcript or context already provides them.',
+    'Be progressive and look for the next missing step that would move the deal forward, such as capturing the best offer email, confirming the decision maker, property condition, timeline, or the next text-based step.',
     'If no email appears anywhere in the thread and the conversation is warm enough, it is good to ask for the best email to send the offer or details to.',
-    'If another person seems involved and there is no alternate number in the thread, it is good to ask for the best number to reach them.',
+    'Never suggest hopping on a call, speaking by phone, or asking for the best number to reach someone.',
     'If the lead asked something, answer briefly and ask the next best question.',
     'Ask only one clear next-step question whenever possible.',
     'Do not stack multiple asks in the same message unless the thread absolutely requires it.',
@@ -3826,6 +4073,14 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     return {
       ...fallback,
       reason: 'The AI draft was too close to the last outbound message, so a fresher follow-up suggestion was used instead.',
+      source: 'fallback'
+    };
+  }
+
+  if (isTwilioReplySuggestionPhoneOrCallOriented(finalReply)) {
+    return {
+      ...fallback,
+      reason: 'The AI draft leaned toward a phone-call suggestion, so a text-first follow-up suggestion was used instead.',
       source: 'fallback'
     };
   }

@@ -3156,7 +3156,7 @@
                                                 </div>
                                                 <div class="campaign-reply-ai-actions">
                                                     <button id="campaign-reply-ai-refresh" type="button" class="card-btn" disabled>Refresh</button>
-                                                    <button id="campaign-reply-ai-use" type="button" class="card-btn active" disabled>Use Suggestion</button>
+                                                    <button id="campaign-reply-ai-use" type="button" class="card-btn active" disabled>Insert Into Draft</button>
                                                 </div>
                                             </div>
                                             <p id="campaign-reply-ai-copy" class="campaign-reply-ai-copy">Choose a Twilio thread to load a suggested reply.</p>
@@ -3726,7 +3726,7 @@
                 syncCampaignReplyInputHeight();
                 campaignReplyInput.focus();
                 campaignReplyInput.setSelectionRange(campaignReplyInput.value.length, campaignReplyInput.value.length);
-                campaignReplyStatus.textContent = 'AI suggestion inserted into the reply box.';
+                campaignReplyStatus.textContent = 'AI suggestion inserted into the draft box. Review and edit it before sending.';
             }
 
             function escapeCampaignReplyCopyHtml(value) {
