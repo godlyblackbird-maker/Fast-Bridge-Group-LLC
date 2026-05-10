@@ -6299,6 +6299,10 @@ function initNavbarDateTime() {
             const title = section.querySelector('.nav-section-title');
             return /main menu/i.test(String(title && title.textContent || ''));
         });
+        const accountSection = mainMenuSections.find((section) => {
+            const title = section.querySelector('.nav-section-title');
+            return /account/i.test(String(title && title.textContent || ''));
+        });
         const menuList = mainMenuSection ? mainMenuSection.querySelector('ul') : null;
 
         if (!menuList) {
@@ -6507,6 +6511,21 @@ function initNavbarDateTime() {
         duplicateItems.forEach((item) => {
             item.remove();
         });
+
+        if (accountSection) {
+            const accountLinks = Array.from(accountSection.querySelectorAll('.nav-link[href]'));
+            accountLinks.forEach((link) => {
+                const href = normalizeHrefValue(link.getAttribute('href'));
+                if (!href || !canonicalHrefs.has(href)) {
+                    return;
+                }
+
+                const navItem = link.closest('.nav-item');
+                if (navItem) {
+                    navItem.remove();
+                }
+            });
+        }
 
         const activeHref = activeHrefByPage[currentPage] || currentPage;
         const fragment = document.createDocumentFragment();

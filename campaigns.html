@@ -1574,6 +1574,89 @@
             width: fit-content;
         }
 
+        .campaign-reply-ai-suggestion {
+            display: grid;
+            gap: 12px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(var(--accent-rgb), 0.18);
+            background: linear-gradient(145deg, rgba(249, 250, 251, 0.98), rgba(236, 245, 241, 0.98));
+            box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .campaign-reply-ai-suggestion[hidden] {
+            display: none;
+        }
+
+        .campaign-reply-ai-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .campaign-reply-ai-title-wrap {
+            display: grid;
+            gap: 4px;
+        }
+
+        .campaign-reply-ai-eyebrow {
+            margin: 0;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(5, 150, 105, 0.9);
+        }
+
+        .campaign-reply-ai-title {
+            margin: 0;
+            font-size: 15px;
+            color: #0f172a;
+        }
+
+        .campaign-reply-ai-type {
+            display: inline-flex;
+            width: fit-content;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-rgb), 0.16);
+            background: rgba(var(--accent-rgb), 0.12);
+            color: #0f172a;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .campaign-reply-ai-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .campaign-reply-ai-copy {
+            margin: 0;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(255, 255, 255, 0.68);
+            color: #111827;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .campaign-reply-ai-reason {
+            margin: 0;
+            color: #4b5563;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .campaign-reply-ai-reason strong {
+            color: #065f46;
+        }
+
         .campaign-reply-badge.is-unread {
             background: rgba(16, 185, 129, 0.14);
             border-color: rgba(16, 185, 129, 0.24);
@@ -3064,6 +3147,21 @@
                                         <p class="campaign-reply-thread-empty">Replies will appear here once a contact answers a Twilio campaign.</p>
                                     </div>
                                     <form id="campaign-reply-form" class="campaign-reply-form">
+                                        <div id="campaign-reply-ai-suggestion" class="campaign-reply-ai-suggestion" hidden>
+                                            <div class="campaign-reply-ai-head">
+                                                <div class="campaign-reply-ai-title-wrap">
+                                                    <p class="campaign-reply-ai-eyebrow">AI Suggested Reply</p>
+                                                    <h5 class="campaign-reply-ai-title">Suggested next text</h5>
+                                                    <span id="campaign-reply-ai-type" class="campaign-reply-ai-type">Thinking</span>
+                                                </div>
+                                                <div class="campaign-reply-ai-actions">
+                                                    <button id="campaign-reply-ai-refresh" type="button" class="card-btn" disabled>Refresh</button>
+                                                    <button id="campaign-reply-ai-use" type="button" class="card-btn active" disabled>Use Suggestion</button>
+                                                </div>
+                                            </div>
+                                            <p id="campaign-reply-ai-copy" class="campaign-reply-ai-copy">Choose a Twilio thread to load a suggested reply.</p>
+                                            <p id="campaign-reply-ai-reason" class="campaign-reply-ai-reason"><strong>Why this reply:</strong> The AI will read the conversation and suggest the next best text.</p>
+                                        </div>
                                         <div id="campaign-reply-status" class="campaign-reply-status"></div>
                                         <input id="campaign-reply-media-input" class="campaign-media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.xml,.json" multiple>
                                         <div id="campaign-reply-media-pending" class="campaign-media-pending" hidden></div>
@@ -3452,6 +3550,12 @@
             const campaignReplyNewlineButton = document.getElementById('campaign-reply-newline');
             const campaignReplyScheduleButton = document.getElementById('campaign-reply-schedule');
             const campaignReplySendButton = document.getElementById('campaign-reply-send');
+            const campaignReplyAiSuggestion = document.getElementById('campaign-reply-ai-suggestion');
+            const campaignReplyAiType = document.getElementById('campaign-reply-ai-type');
+            const campaignReplyAiCopy = document.getElementById('campaign-reply-ai-copy');
+            const campaignReplyAiReason = document.getElementById('campaign-reply-ai-reason');
+            const campaignReplyAiRefreshButton = document.getElementById('campaign-reply-ai-refresh');
+            const campaignReplyAiUseButton = document.getElementById('campaign-reply-ai-use');
             const campaignReplyStatus = document.getElementById('campaign-reply-status');
             const campaignOutreachSummary = document.getElementById('campaign-outreach-summary');
             const campaignOutreachSequence = document.getElementById('campaign-outreach-sequence');
@@ -3479,8 +3583,11 @@
             let campaignReplyAddressOverrides = loadCampaignReplyAddressOverrides();
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
+            let activeTwilioInboxMessages = [];
             const campaignReplyScheduledStatusByConversationKey = new Map();
             let activeTwilioReactionPickerMessageId = 0;
+            let activeCampaignReplySuggestionText = '';
+            let campaignReplySuggestionRequestId = 0;
             let outreachDashboard = null;
             let twilioMessagingAccessState = {
                 allowed: true,
@@ -3489,6 +3596,116 @@
                 isAdmin: false,
                 ownerEmail: ''
             };
+
+            function renderCampaignReplySuggestionState(options = {}) {
+                if (!campaignReplyAiSuggestion || !campaignReplyAiCopy || !campaignReplyAiReason || !campaignReplyAiType) {
+                    return;
+                }
+
+                const hidden = Boolean(options.hidden);
+                if (hidden) {
+                    campaignReplyAiSuggestion.hidden = true;
+                    activeCampaignReplySuggestionText = '';
+                    if (campaignReplyAiUseButton) {
+                        campaignReplyAiUseButton.disabled = true;
+                    }
+                    return;
+                }
+
+                const copy = String(options.copy || '').trim();
+                const reason = String(options.reason || '').trim();
+                const type = String(options.type || 'Suggestion').trim();
+                const loading = Boolean(options.loading);
+                const canUse = Boolean(options.canUse && copy);
+
+                campaignReplyAiSuggestion.hidden = false;
+                campaignReplyAiType.textContent = loading ? 'Thinking' : type;
+                campaignReplyAiCopy.textContent = copy || 'Choose a Twilio thread to load a suggested reply.';
+                campaignReplyAiReason.innerHTML = `<strong>Why this reply:</strong> ${escapeCampaignReplyCopyHtml(reason || 'The AI will read the conversation and suggest the next best text.')}`;
+                if (campaignReplyAiRefreshButton) {
+                    campaignReplyAiRefreshButton.disabled = loading || !activeTwilioConversationKey;
+                }
+                if (campaignReplyAiUseButton) {
+                    campaignReplyAiUseButton.disabled = !canUse;
+                }
+                activeCampaignReplySuggestionText = canUse ? copy : '';
+            }
+
+            async function loadCampaignReplySuggestion() {
+                if (!campaignReplyAiSuggestion) {
+                    return;
+                }
+
+                if (!token || !activeTwilioConversationKey) {
+                    renderCampaignReplySuggestionState({
+                        copy: 'Choose a Twilio thread to load a suggested reply.',
+                        reason: 'The suggestion engine needs an active conversation.',
+                        type: 'Suggestion',
+                        canUse: false
+                    });
+                    return;
+                }
+
+                const requestId = ++campaignReplySuggestionRequestId;
+                renderCampaignReplySuggestionState({
+                    copy: 'Reading the conversation and drafting a suggested reply...',
+                    reason: 'This uses the active Twilio thread to build the next best text.',
+                    type: 'Thinking',
+                    loading: true,
+                    canUse: false
+                });
+
+                try {
+                    const response = await fetch('/api/twilio/inbox/reply-suggestion', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify({ conversationKey: activeTwilioConversationKey })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (requestId !== campaignReplySuggestionRequestId) {
+                        return;
+                    }
+                    if (!response.ok || !data.success || !data.suggestion) {
+                        throw new Error(data.error || 'Unable to load an AI reply suggestion.');
+                    }
+
+                    const suggestion = data.suggestion || {};
+                    const typeLabel = String(suggestion.type || 'suggested reply')
+                        .replace(/[-_]+/g, ' ')
+                        .replace(/\b\w/g, (character) => character.toUpperCase());
+                    renderCampaignReplySuggestionState({
+                        copy: String(suggestion.reply || '').trim(),
+                        reason: String(suggestion.reason || '').trim(),
+                        type: `${typeLabel}${String(suggestion.source || '').trim() === 'fallback' ? ' Fallback' : ''}`,
+                        canUse: true
+                    });
+                } catch (error) {
+                    if (requestId !== campaignReplySuggestionRequestId) {
+                        return;
+                    }
+                    renderCampaignReplySuggestionState({
+                        copy: 'Could not load an AI suggestion for this thread yet.',
+                        reason: error.message || 'The suggestion endpoint is unavailable right now.',
+                        type: 'Unavailable',
+                        canUse: false
+                    });
+                }
+            }
+
+            function applyCampaignReplySuggestion() {
+                if (!campaignReplyInput || campaignReplyInput.disabled || !activeCampaignReplySuggestionText) {
+                    return;
+                }
+
+                campaignReplyInput.value = activeCampaignReplySuggestionText;
+                syncCampaignReplyInputHeight();
+                campaignReplyInput.focus();
+                campaignReplyInput.setSelectionRange(campaignReplyInput.value.length, campaignReplyInput.value.length);
+                campaignReplyStatus.textContent = 'AI suggestion inserted into the reply box.';
+            }
 
             function escapeCampaignReplyCopyHtml(value) {
                 return String(value || '')
@@ -5144,6 +5361,12 @@
                 if (campaignReplySendButton) {
                     campaignReplySendButton.disabled = !enabled;
                 }
+                if (campaignReplyAiRefreshButton) {
+                    campaignReplyAiRefreshButton.disabled = !enabled || !activeTwilioConversationKey;
+                }
+                if (campaignReplyAiUseButton) {
+                    campaignReplyAiUseButton.disabled = !enabled || !activeCampaignReplySuggestionText;
+                }
             }
 
             function syncCampaignReplyScheduledStatus() {
@@ -5847,6 +6070,8 @@
                     return;
                 }
 
+                activeTwilioInboxMessages = Array.isArray(messages) ? messages.slice() : [];
+
                 campaignReplyThread.replaceChildren();
 
                 if (!conversation) {
@@ -5860,6 +6085,12 @@
                     setCampaignReplyComposerEnabled(false);
                     syncCampaignReplyBlockState(false);
                     syncCampaignReplyScheduledStatus();
+                    renderCampaignReplySuggestionState({
+                        copy: 'Choose a Twilio thread to load a suggested reply.',
+                        reason: 'The suggestion engine needs an active conversation.',
+                        type: 'Suggestion',
+                        canUse: false
+                    });
                     return;
                 }
 
@@ -6054,7 +6285,9 @@
                     }
 
                     const conversation = twilioInboxConversations.find((item) => item.conversationKey === conversationKey) || null;
-                    renderTwilioReplyThread(Array.isArray(data.messages) ? data.messages : [], conversation);
+                    const messages = Array.isArray(data.messages) ? data.messages : [];
+                    renderTwilioReplyThread(messages, conversation);
+                    void loadCampaignReplySuggestion();
 
                     if (options.markRead) {
                         await fetch('/api/twilio/inbox/messages/read', {
@@ -6068,7 +6301,14 @@
                         await loadTwilioInboxConversations({ preferredConversationKey: conversationKey, markRead: false });
                     }
                 } catch (error) {
+                    activeTwilioInboxMessages = [];
                     campaignReplyStatus.textContent = error.message || 'Unable to load this Twilio thread.';
+                    renderCampaignReplySuggestionState({
+                        copy: 'Could not load an AI suggestion for this thread yet.',
+                        reason: error.message || 'The conversation could not be loaded.',
+                        type: 'Unavailable',
+                        canUse: false
+                    });
                 }
             }
 
@@ -6537,6 +6777,18 @@
             }
 
             if (campaignReplyForm) {
+                if (campaignReplyAiRefreshButton) {
+                    campaignReplyAiRefreshButton.addEventListener('click', () => {
+                        void loadCampaignReplySuggestion();
+                    });
+                }
+
+                if (campaignReplyAiUseButton) {
+                    campaignReplyAiUseButton.addEventListener('click', () => {
+                        applyCampaignReplySuggestion();
+                    });
+                }
+
                 if (campaignReplyAttachButton && campaignReplyMediaInput) {
                     campaignReplyAttachButton.addEventListener('click', () => {
                         if (!campaignReplyAttachButton.disabled) {

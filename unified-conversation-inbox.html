@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Conversation Inbox | FAST BRIDGE GROUP LLC</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="FAST unified conversation inbox concept page for Gmail, Twilio, call notes, tasks, forms, and property status tracking.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css?v=20260418a">
+    <style>
+        .inbox-shell {
+            display: grid;
+            gap: 22px;
+        }
+
+        .inbox-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.9fr);
+            gap: 22px;
+        }
+
+        .inbox-hero-card,
+        .inbox-panel,
+        .inbox-timeline-card,
+        .inbox-sources-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .inbox-hero-card::before,
+        .inbox-panel::before,
+        .inbox-timeline-card::before,
+        .inbox-sources-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), transparent 58%);
+            pointer-events: none;
+        }
+
+        .inbox-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-light-rgb, 52, 211, 153), 0.24);
+            background: rgba(var(--accent-rgb, 5, 150, 105), 0.16);
+            color: rgba(226, 232, 240, 0.95);
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .inbox-hero-copy {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 18px;
+        }
+
+        .inbox-hero-title {
+            margin: 0;
+            font-size: clamp(2rem, 3vw, 3rem);
+            line-height: 1.05;
+        }
+
+        .inbox-hero-text,
+        .inbox-panel-copy,
+        .inbox-timeline-note {
+            margin: 0;
+            color: rgba(226, 232, 240, 0.76);
+            max-width: 68ch;
+        }
+
+        .inbox-action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .inbox-stat-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            align-content: start;
+        }
+
+        .inbox-stat {
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 14, 24, 0.34);
+        }
+
+        .inbox-stat-label {
+            display: block;
+            margin-bottom: 8px;
+            color: rgba(226, 232, 240, 0.68);
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .inbox-stat strong {
+            font-size: 1.5rem;
+        }
+
+        .inbox-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+            gap: 22px;
+        }
+
+        .inbox-sources-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .inbox-source {
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 14, 24, 0.34);
+            display: grid;
+            gap: 8px;
+        }
+
+        .inbox-source span {
+            color: rgba(226, 232, 240, 0.68);
+            font-size: 0.84rem;
+        }
+
+        .inbox-timeline {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 14px;
+        }
+
+        .inbox-event {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 14px;
+            align-items: start;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 14, 24, 0.34);
+        }
+
+        .inbox-event-dot {
+            width: 12px;
+            height: 12px;
+            margin-top: 5px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--emerald-light, #34d399), var(--emerald, #059669));
+            box-shadow: 0 0 0 6px rgba(52, 211, 153, 0.12);
+        }
+
+        .inbox-event h3,
+        .inbox-source h3,
+        .inbox-panel-title {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .inbox-event p {
+            margin: 6px 0 0;
+            color: rgba(226, 232, 240, 0.74);
+        }
+
+        .inbox-event-time {
+            color: rgba(226, 232, 240, 0.58);
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .inbox-panel-list {
+            margin: 0;
+            padding-left: 18px;
+            color: rgba(226, 232, 240, 0.78);
+            display: grid;
+            gap: 10px;
+        }
+
+        .inbox-page-breadcrumb {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            color: rgba(226, 232, 240, 0.68);
+            font-size: 0.9rem;
+        }
+
+        .inbox-page-breadcrumb a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        @media (max-width: 1100px) {
+            .inbox-hero,
+            .inbox-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .inbox-sources-grid,
+            .inbox-stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .inbox-event {
+                grid-template-columns: auto 1fr;
+            }
+
+            .inbox-event-time {
+                grid-column: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="dashboard">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP LLC</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item"><a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
+                        <li class="nav-item"><a href="gmail.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Gmail</a></li>
+                        <li class="nav-item"><a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a></li>
+                        <li class="nav-item"><a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a></li>
+                        <li class="nav-item"><a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent workspace</a></li>
+                    </ul>
+                </li>
+                <li class="nav-section">
+                    <span class="nav-section-title">Admin</span>
+                    <ul>
+                        <li class="nav-item"><a href="admin-controls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>Admin Controls</a></li>
+                        <li class="nav-item"><a href="unified-conversation-inbox.html" class="nav-link active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>Unified Inbox</a></li>
+                        <li class="nav-item"><a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My agents</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">FB</div>
+                    <div class="user-info">
+                        <div class="user-name">FAST Admin</div>
+                        <div class="user-role">Conversation Ops</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-header">
+                    <div class="page-title-group">
+                        <h1 class="page-title">Unified Conversation Inbox</h1>
+                        <div class="inbox-page-breadcrumb">
+                            <a href="dashboard.html">Dashboard</a>
+                            <span>/</span>
+                            <a href="admin-controls.html">Admin Controls</a>
+                            <span>/</span>
+                            <span>Unified Inbox</span>
+                        </div>
+                    </div>
+                    <p class="navbar-datetime" id="navbar-datetime" aria-live="polite"></p>
+                </div>
+                <div class="navbar-right">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" class="search-input" placeholder="Search conversations...">
+                    </div>
+                </div>
+            </nav>
+
+            <div class="inbox-shell">
+                <section class="glass-card inbox-hero-card">
+                    <div class="inbox-hero">
+                        <div class="inbox-hero-copy">
+                            <span class="inbox-badge">Admin concept page</span>
+                            <h2 class="inbox-hero-title">One contact timeline for Gmail, Twilio, calls, forms, tasks, and property updates.</h2>
+                            <p class="inbox-hero-text">This page is the FAST launch point for a unified conversation inbox. The goal is simple: every user sees the full story in one place without bouncing between Gmail, Twilio Messaging, seller forms, and deal notes.</p>
+                            <div class="inbox-action-row">
+                                <a class="card-btn active" href="admin-controls.html">Back To Admin Controls</a>
+                                <a class="card-btn" href="gmail.html">Open Gmail</a>
+                                <a class="card-btn" href="campaigns.html">Open Twilio</a>
+                            </div>
+                        </div>
+                        <div class="inbox-stat-grid">
+                            <div class="inbox-stat">
+                                <span class="inbox-stat-label">Sources merged</span>
+                                <strong>6</strong>
+                            </div>
+                            <div class="inbox-stat">
+                                <span class="inbox-stat-label">Primary view</span>
+                                <strong>1 timeline</strong>
+                            </div>
+                            <div class="inbox-stat">
+                                <span class="inbox-stat-label">Admin goal</span>
+                                <strong>Faster response</strong>
+                            </div>
+                            <div class="inbox-stat">
+                                <span class="inbox-stat-label">Context added</span>
+                                <strong>Tasks + notes</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="inbox-grid">
+                    <section class="glass-card inbox-timeline-card">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">Example Contact Timeline</h2>
+                                <p class="card-subtitle">What the merged activity stream should feel like when one lead is touched across multiple channels.</p>
+                            </div>
+                        </div>
+                        <div class="inbox-timeline">
+                            <article class="inbox-event">
+                                <span class="inbox-event-dot" aria-hidden="true"></span>
+                                <div>
+                                    <h3>Seller form submitted from homepage</h3>
+                                    <p>123 Main St, Riverside, CA came in with motivation notes, asking price, and preferred callback window.</p>
+                                </div>
+                                <span class="inbox-event-time">9:12 AM</span>
+                            </article>
+                            <article class="inbox-event">
+                                <span class="inbox-event-dot" aria-hidden="true"></span>
+                                <div>
+                                    <h3>Twilio SMS sent</h3>
+                                    <p>Initial response text went out with opt-out language and acquisition follow-up tag.</p>
+                                </div>
+                                <span class="inbox-event-time">9:14 AM</span>
+                            </article>
+                            <article class="inbox-event">
+                                <span class="inbox-event-dot" aria-hidden="true"></span>
+                                <div>
+                                    <h3>Call note logged</h3>
+                                    <p>Owner confirmed probate timing, roof issues, and openness to a cash offer inside 7 days.</p>
+                                </div>
+                                <span class="inbox-event-time">9:27 AM</span>
+                            </article>
+                            <article class="inbox-event">
+                                <span class="inbox-event-dot" aria-hidden="true"></span>
+                                <div>
+                                    <h3>Task created for acquisitions</h3>
+                                    <p>Review comps, confirm repair budget, and send written offer before 1:00 PM.</p>
+                                </div>
+                                <span class="inbox-event-time">9:31 AM</span>
+                            </article>
+                            <article class="inbox-event">
+                                <span class="inbox-event-dot" aria-hidden="true"></span>
+                                <div>
+                                    <h3>Property status updated</h3>
+                                    <p>Lead moved from New Intake to Offer Prep with the latest note pinned on the record.</p>
+                                </div>
+                                <span class="inbox-event-time">9:44 AM</span>
+                            </article>
+                        </div>
+                    </section>
+
+                    <section class="glass-card inbox-sources-card">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">Sources To Merge</h2>
+                                <p class="card-subtitle">These are the channels and updates that should feed the same contact record.</p>
+                            </div>
+                        </div>
+                        <div class="inbox-sources-grid">
+                            <article class="inbox-source">
+                                <h3>Gmail</h3>
+                                <span>Inbound and outbound threads, approvals, and send status.</span>
+                            </article>
+                            <article class="inbox-source">
+                                <h3>Twilio</h3>
+                                <span>SMS history, delivery status, replies, and opt-out events.</span>
+                            </article>
+                            <article class="inbox-source">
+                                <h3>Call Notes</h3>
+                                <span>Manual notes, call outcomes, recordings, and next-step summaries.</span>
+                            </article>
+                            <article class="inbox-source">
+                                <h3>Forms</h3>
+                                <span>Seller submissions, buyer intake, contact requests, and uploads.</span>
+                            </article>
+                            <article class="inbox-source">
+                                <h3>Tasks</h3>
+                                <span>Assigned follow-ups, due dates, accountability, and team handoffs.</span>
+                            </article>
+                            <article class="inbox-source">
+                                <h3>Property Status</h3>
+                                <span>Pipeline changes, comp notes, offer status, and contract milestones.</span>
+                            </article>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="glass-card inbox-panel">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Why This Matters</h2>
+                            <p class="card-subtitle">The page exists to define the workflow target before you wire the full API stack behind it.</p>
+                        </div>
+                    </div>
+                    <p class="inbox-panel-copy">A unified inbox removes channel switching. Instead of checking separate Gmail threads, Twilio threads, call logs, seller forms, and property updates, the team works from one record with one timeline and one next action.</p>
+                    <ol class="inbox-panel-list">
+                        <li>Every user sees the latest message, note, and task without guessing which tool has the newest update.</li>
+                        <li>Admins can audit contact history faster because every activity lands on the same timeline.</li>
+                        <li>Acquisitions and dispositions can hand off a lead without losing context.</li>
+                        <li>Property notes and deal-stage changes stay attached to the same contact thread.</li>
+                    </ol>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            const dateElement = document.getElementById('navbar-datetime');
+            if (!dateElement) {
+                return;
+            }
+
+            const renderDateTime = () => {
+                const now = new Date();
+                dateElement.textContent = now.toLocaleString([], {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            };
+
+            renderDateTime();
+            window.setInterval(renderDateTime, 60000);
+        })();
+    </script>
+</body>
+</html>

@@ -3440,6 +3440,159 @@ function serializeTwilioInboxMessage(row) {
   };
 }
 
+function getTwilioReplySuggestionFirstName(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) {
+    return 'there';
+  }
+
+  return rawValue.split(/\s+/)[0] || 'there';
+}
+
+function normalizeTwilioReplySuggestionText(value) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([?.!,])/g, '$1')
+    .trim();
+}
+
+function buildTwilioReplySuggestionFallback(conversation, messages = []) {
+  const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
+  const sortedMessages = safeMessages.slice().sort((left, right) => {
+    const leftTime = Date.parse(String(left?.createdAt || '')) || 0;
+    const rightTime = Date.parse(String(right?.createdAt || '')) || 0;
+    return leftTime - rightTime;
+  });
+  const contactName = String(conversation?.contactName || '').trim();
+  const firstName = getTwilioReplySuggestionFirstName(contactName);
+  const propertyAddress = String(conversation?.propertyAddress || '').trim();
+  const locationLabel = propertyAddress || 'the property';
+  const latestMessage = sortedMessages[sortedMessages.length - 1] || null;
+  const latestInbound = sortedMessages.slice().reverse().find((message) => String(message?.direction || '').trim() === 'inbound') || null;
+  const latestOutbound = sortedMessages.slice().reverse().find((message) => String(message?.direction || '').trim() === 'outgoing') || null;
+  const now = Date.now();
+  const latestInboundAgeHours = latestInbound ? Math.max(0, Math.round((now - (Date.parse(String(latestInbound.createdAt || '')) || now)) / 3600000)) : null;
+  const latestOutboundAgeHours = latestOutbound ? Math.max(0, Math.round((now - (Date.parse(String(latestOutbound.createdAt || '')) || now)) / 3600000)) : null;
+  const latestInboundBody = String(latestInbound?.body || '').trim();
+  const normalizedInbound = latestInboundBody.toLowerCase();
+
+  if (!latestMessage) {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`Hey ${firstName}, this is FAST BRIDGE GROUP. Wanted to reach out and see if you would be open to a quick conversation about ${locationLabel}.`),
+      reason: 'No saved messages exist yet, so a light first-touch text is the safest default.',
+      type: 'first-touch',
+      source: 'fallback'
+    };
+  }
+
+  if (latestInbound && /\b(stop|unsubscribe|wrong number|do not contact|dont contact)\b/.test(normalizedInbound)) {
+    return {
+      reply: 'Understood. We will stop messaging this number. Thank you for letting us know.',
+      reason: 'The latest inbound message looks like an opt-out or do-not-contact request.',
+      type: 'compliance',
+      source: 'fallback'
+    };
+  }
+
+  if (latestInbound && /\b(price|offer|cash offer|best offer|how much|number)\b/.test(normalizedInbound)) {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`Thanks ${firstName}. I can work up a clean number for ${locationLabel}. Before I do, can you tell me the property's current condition and the timeline you are working with?`),
+      reason: 'The contact appears to be asking about price or an offer, so the next message should collect the missing underwriting details.',
+      type: 'qualify-offer',
+      source: 'fallback'
+    };
+  }
+
+  if (latestInbound && /\b(call|phone|talk|available|when can you)\b/.test(normalizedInbound)) {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`Absolutely ${firstName}. I can talk today. What time works best for you, and is ${locationLabel} the property you want to discuss?`),
+      reason: 'The latest inbound message suggests they are open to a live conversation, so the next step is scheduling.',
+      type: 'schedule-call',
+      source: 'fallback'
+    };
+  }
+
+  if (latestMessage && String(latestMessage.direction || '').trim() === 'outgoing' && latestOutboundAgeHours !== null && latestOutboundAgeHours >= 48) {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`Hey ${firstName}, just following back up on ${locationLabel}. If you are still open to selling or want to compare a fast as-is option, I can text over a few next steps.`),
+      reason: `Your last outbound message was about ${latestOutboundAgeHours} hours ago and there has not been a newer reply, so a soft follow-up fits best.`,
+      type: 'follow-up',
+      source: 'fallback'
+    };
+  }
+
+  if (latestInbound && latestInboundAgeHours !== null && latestInboundAgeHours <= 24) {
+    return {
+      reply: normalizeTwilioReplySuggestionText(`Thanks ${firstName}. Just so I point you the right way on ${locationLabel}, what would you say is the biggest thing you want solved right now: speed, price, repairs, or certainty?`),
+      reason: 'The contact replied recently, so a short qualifying question is the highest-value next text.',
+      type: 'qualifying-question',
+      source: 'fallback'
+    };
+  }
+
+  return {
+    reply: normalizeTwilioReplySuggestionText(`Hey ${firstName}, wanted to circle back on ${locationLabel}. If the timing is still right, I can ask a couple quick questions and see whether a FAST offer makes sense.`),
+    reason: 'This thread is quiet enough for a re-engagement text, but there is not a stronger signal for a specialized reply.',
+    type: 'follow-up',
+    source: 'fallback'
+  };
+}
+
+async function generateTwilioReplySuggestion(conversation, messages = []) {
+  const fallback = buildTwilioReplySuggestionFallback(conversation, messages);
+  const recentMessages = (Array.isArray(messages) ? messages : [])
+    .slice(-12)
+    .map((message) => ({
+      direction: String(message?.direction || '').trim() === 'inbound' ? 'inbound' : 'outgoing',
+      body: String(message?.body || '').trim(),
+      createdAt: normalizeApiTimestamp(message?.createdAt) || ''
+    }))
+    .filter((message) => message.body || message.createdAt);
+
+  if (!recentMessages.length) {
+    return fallback;
+  }
+
+  const systemPrompt = [
+    'You generate one SMS reply suggestion for a real-estate acquisitions team using Twilio.',
+    'Return strict JSON with keys: reply, reason, type.',
+    'Keep the reply under 320 characters, natural, direct, and human.',
+    'If there has been a long gap, propose a soft follow-up.',
+    'If the lead asked something, answer briefly and ask the next best question.',
+    'If the latest inbound message is an opt-out, confirm messaging will stop.',
+    'Do not use markdown or multiple options.'
+  ].join(' ');
+
+  const userPrompt = JSON.stringify({
+    contactName: String(conversation?.contactName || '').trim(),
+    contactPhone: String(conversation?.contactPhone || '').trim(),
+    propertyAddress: String(conversation?.propertyAddress || '').trim(),
+    campaignName: String(conversation?.campaignName || '').trim(),
+    messages: recentMessages,
+    fallback
+  });
+
+  const result = await queryOpenAiForStructuredJson(systemPrompt, userPrompt, { maxInputChars: 12000 });
+  if (!result.ok || !result.payload || typeof result.payload !== 'object') {
+    return fallback;
+  }
+
+  const reply = normalizeTwilioReplySuggestionText(result.payload.reply || '');
+  const reason = normalizeTwilioReplySuggestionText(result.payload.reason || '');
+  const type = normalizeTwilioReplySuggestionText(result.payload.type || fallback.type || 'follow-up');
+
+  if (!reply) {
+    return fallback;
+  }
+
+  return {
+    reply: reply.slice(0, 320),
+    reason: reason || fallback.reason,
+    type: type || fallback.type,
+    source: 'openai'
+  };
+}
+
 function parseTwilioScheduledRecipients(value) {
   try {
     const parsed = JSON.parse(String(value || '[]'));
@@ -22456,6 +22609,47 @@ app.get('/api/twilio/inbox/messages', async (req, res) => {
   } catch (error) {
     console.error('Failed to load Twilio inbox messages:', error);
     return res.status(500).json({ error: 'Unable to load Twilio inbox messages.' });
+  }
+});
+
+app.post('/api/twilio/inbox/reply-suggestion', express.json({ limit: '50kb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const conversationKey = String(req.body?.conversationKey || '').trim();
+  if (!conversationKey) {
+    return res.status(400).json({ error: 'conversationKey is required.' });
+  }
+
+  try {
+    const access = await ensureTwilioConversationAccess(decoded, conversationKey);
+    if (!access.allowed) {
+      return res.status(access.statusCode).json({ error: access.error });
+    }
+
+    const latestRow = await getLatestTwilioConversationRow(conversationKey);
+    if (!latestRow) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    const rows = await listTwilioInboxMessages(conversationKey);
+    const messages = rows.map(serializeTwilioInboxMessage).filter(Boolean);
+    const conversation = {
+      conversationKey,
+      campaignName: String(latestRow.campaign_name || '').trim(),
+      propertyAddress: getTwilioMessagePropertyAddress(latestRow),
+      contactName: String(latestRow.contact_name || '').trim() || String(latestRow.contact_phone || '').trim(),
+      contactPhone: String(latestRow.contact_phone || '').trim(),
+      platformIdentity: String(latestRow.platform_identity || '').trim()
+    };
+
+    const suggestion = await generateTwilioReplySuggestion(conversation, messages);
+    return res.json({ success: true, conversationKey, suggestion });
+  } catch (error) {
+    console.error('Failed to generate Twilio reply suggestion:', error);
+    return res.status(500).json({ error: 'Unable to generate a Twilio reply suggestion.' });
   }
 });
 

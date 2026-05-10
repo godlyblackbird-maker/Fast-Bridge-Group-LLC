@@ -2256,6 +2256,8 @@
             display: grid;
             gap: 14px;
             padding: 20px;
+            position: relative;
+            left: 0;
             border-radius: 24px;
             border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
             background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
@@ -2264,7 +2266,47 @@
             box-shadow: var(--shadow);
             color: var(--text);
             text-decoration: none;
+            will-change: left, transform;
             transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .social-card.social-card-wave {
+            animation: social-card-wave 6.4s linear infinite;
+        }
+
+        .social-card.social-card-wave-1 {
+            animation-delay: 0s;
+        }
+
+        .social-card.social-card-wave-2 {
+            animation-delay: 0.24s;
+        }
+
+        .social-card.social-card-wave-3 {
+            animation-delay: 0.48s;
+        }
+
+        .social-card.social-card-wave-4 {
+            animation-delay: 0.72s;
+        }
+
+        @keyframes social-card-wave {
+            0%,
+            100% {
+                left: 0;
+            }
+
+            25% {
+                left: 14px;
+            }
+
+            50% {
+                left: 0;
+            }
+
+            75% {
+                left: -14px;
+            }
         }
 
         .social-card:hover,
@@ -2923,35 +2965,28 @@
                 </div>
 
                 <div class="social-grid">
-                    <a class="social-card" href="https://www.instagram.com/fastbridgegroupllc/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Instagram">
+                    <a class="social-card social-card-wave social-card-wave-1" href="https://www.instagram.com/fastbridgegroupllc/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Instagram">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-instagram.svg" alt="">
                         <h3>Instagram</h3>
                         <p>Show the brand, the energy, and the deals in a format built for attention and fast recognition.</p>
                         <span>Follow the feed</span>
                     </a>
 
-                    <a class="social-card" href="https://www.youtube.com/channel/UCgC8bg859J0Kjmvs1Si5fFw" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on YouTube">
+                    <a class="social-card social-card-wave social-card-wave-2" href="https://www.youtube.com/channel/UCgC8bg859J0Kjmvs1Si5fFw" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on YouTube">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-youtube.svg" alt="">
                         <h3>YouTube</h3>
                         <p>Break down strategy, showcase the platform, and turn deeper content into trust at scale.</p>
                         <span>Watch the channel</span>
                     </a>
 
-                    <a class="social-card" href="https://x.com/fastbridgegroup" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on X">
-                        <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-x.svg" alt="">
-                        <h3>X</h3>
-                        <p>Move fast with updates, ideas, and sharper real-time conversation around deals and market motion.</p>
-                        <span>Join the conversation</span>
-                    </a>
-
-                    <a class="social-card" href="https://www.facebook.com/profile.php?id=61576494107729" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Facebook">
+                    <a class="social-card social-card-wave social-card-wave-3" href="https://www.facebook.com/profile.php?id=61576494107729" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Facebook">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-facebook.svg" alt="">
                         <h3>Facebook</h3>
                         <p>Keep your broader audience connected to the brand with updates, wins, and platform credibility.</p>
                         <span>See the page</span>
                     </a>
 
-                    <a class="social-card" href="https://www.tiktok.com/@fastbridgegroupllc" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on TikTok">
+                    <a class="social-card social-card-wave social-card-wave-4" href="https://www.tiktok.com/@fastbridgegroupllc" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on TikTok">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-tiktok.svg" alt="">
                         <h3>TikTok</h3>
                         <p>Package attention-grabbing clips, fast lessons, and brand personality into content people actually stop for.</p>
