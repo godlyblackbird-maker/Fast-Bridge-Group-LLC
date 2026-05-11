@@ -932,6 +932,10 @@
             text-shadow: 0 0 10px rgba(115, 255, 0, 0.26), 0 0 22px rgba(255, 84, 196, 0.14);
         }
 
+        html[data-theme='blacklight'] .brand-kicker {
+            animation: blacklightBrandRgbShift 7.2s linear infinite;
+        }
+
         html[data-theme='blacklight'] .hero-panel h1,
         html[data-theme='blacklight'] .hero-panel strong,
         html[data-theme='blacklight'] .metric strong,
@@ -2434,6 +2438,25 @@
             100% {
                 background-position: 0% 50%;
                 filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+            }
+        }
+
+        @keyframes blacklightBrandRgbShift {
+            0% {
+                color: #ff355e;
+                text-shadow: 0 0 10px rgba(255, 53, 94, 0.34), 0 0 22px rgba(255, 53, 94, 0.16);
+            }
+            33% {
+                color: #73ff00;
+                text-shadow: 0 0 10px rgba(115, 255, 0, 0.32), 0 0 22px rgba(115, 255, 0, 0.14);
+            }
+            66% {
+                color: #00e5ff;
+                text-shadow: 0 0 10px rgba(0, 229, 255, 0.34), 0 0 22px rgba(0, 229, 255, 0.16);
+            }
+            100% {
+                color: #ff355e;
+                text-shadow: 0 0 10px rgba(255, 53, 94, 0.34), 0 0 22px rgba(255, 53, 94, 0.16);
             }
         }
 
