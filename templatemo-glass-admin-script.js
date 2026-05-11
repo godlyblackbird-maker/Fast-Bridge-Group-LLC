@@ -34,6 +34,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     };
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
+    const BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
     const USER_THEME_KEY = 'dashboardThemeByUser';
     const SIDEBAR_STATE_KEY = 'dashboardSidebarStateByUser';
     const DEFAULT_THEME_LOGO_PATH = 'png photos/FAST LOGO 777.png';
@@ -41,6 +42,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         christmas: 'png photos/Christmas Theme Logo.png',
         swamp: 'png photos/Swamp Theme Logo.png',
         cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+        blacklight: 'png photos/FAST LOGO 777.png',
         japan: 'png photos/Japan Theme Mode Logo.png'
     };
     const THEME_LOGO_SELECTOR = 'img.logo-img, img.ecard-logo-image, img.flyer-logo-image';
@@ -66,7 +68,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
+    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'blacklight', 'japan', 'holloween', 'christmas'];
     const KNOWN_EMAIL_GROUPS = [
         {
             canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -225,6 +227,27 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     let themeAwareLogosInitialized = false;
     let themeLogoObserver = null;
     let themeBackgroundMediaInitialized = false;
+    let blacklightFluidCursorInitialized = false;
+    let blacklightFluidCursorModulePromise = null;
+    let blacklightFluidCursorCleanup = null;
+    let blacklightFluidCursorSyncTimer = null;
+    let blacklightFluidCursorConfigSignature = '';
+    const DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS = Object.freeze({
+        size: 0.42,
+        velocity: 5400,
+        colorMode: 'dynamic',
+        colorDynamics: 0.35,
+        brightness: 1,
+        solidColor: '#ff54c4'
+    });
+    const BLACKLIGHT_FLUID_CURSOR_CONTROL_KEYS = Object.freeze([
+        'id:blacklight-fluid-size',
+        'id:blacklight-fluid-velocity',
+        'id:blacklight-fluid-color-mode',
+        'id:blacklight-fluid-dynamics',
+        'id:blacklight-fluid-brightness',
+        'id:blacklight-fluid-solid-color'
+    ]);
 
     function getSoundSettings() {
         const defaults = {
@@ -3014,6 +3037,188 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
     }
 
+    function syncBlacklightFluidCursor(theme) {
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+        const fluidConfig = getBlacklightFluidCursorConfig();
+        const nextSignature = JSON.stringify({
+            theme: resolvedTheme,
+            size: fluidConfig.splatRadius,
+            velocity: fluidConfig.splatForce,
+            colorMode: fluidConfig.colorMode,
+            colorDynamics: fluidConfig.colorUpdateSpeed,
+            brightness: fluidConfig.brightness,
+            solidColor: fluidConfig.solidColor
+        });
+
+        if (resolvedTheme !== 'blacklight') {
+            document.documentElement.dataset.blacklightFluidCursor = 'off';
+            blacklightFluidCursorConfigSignature = '';
+            if (typeof blacklightFluidCursorCleanup === 'function') {
+                blacklightFluidCursorCleanup();
+                blacklightFluidCursorCleanup = null;
+            }
+            return Promise.resolve(false);
+        }
+
+        if (!document.body) {
+            return Promise.resolve(false);
+        }
+
+        if (typeof blacklightFluidCursorCleanup === 'function' && blacklightFluidCursorConfigSignature === nextSignature) {
+            document.documentElement.dataset.blacklightFluidCursor = 'on';
+            return Promise.resolve(true);
+        }
+
+        if (typeof blacklightFluidCursorCleanup === 'function') {
+            blacklightFluidCursorCleanup();
+            blacklightFluidCursorCleanup = null;
+        }
+
+        document.documentElement.dataset.blacklightFluidCursor = 'loading';
+
+        if (!blacklightFluidCursorModulePromise) {
+            blacklightFluidCursorModulePromise = import('./temp-smokey-fluid/smokey-fluid-cursor.js').catch((error) => {
+                blacklightFluidCursorModulePromise = null;
+                throw error;
+            });
+        }
+
+        return blacklightFluidCursorModulePromise
+            .then((module) => {
+                const activeTheme = resolveTheme(document.documentElement.getAttribute('data-theme') || getThemePreference());
+                if (activeTheme !== 'blacklight') {
+                    document.documentElement.dataset.blacklightFluidCursor = 'off';
+                    return false;
+                }
+
+                const mountBlacklightFluidCursor = module && typeof module.mountBlacklightFluidCursor === 'function'
+                    ? module.mountBlacklightFluidCursor
+                    : null;
+
+                if (!mountBlacklightFluidCursor) {
+                    document.documentElement.dataset.blacklightFluidCursor = 'failed';
+                    return false;
+                }
+
+                blacklightFluidCursorCleanup = mountBlacklightFluidCursor(fluidConfig);
+                blacklightFluidCursorConfigSignature = nextSignature;
+                document.documentElement.dataset.blacklightFluidCursor = typeof blacklightFluidCursorCleanup === 'function' ? 'on' : 'failed';
+                return document.documentElement.dataset.blacklightFluidCursor === 'on';
+            })
+            .catch(() => {
+                document.documentElement.dataset.blacklightFluidCursor = 'failed';
+                return false;
+            });
+    }
+
+    function normalizeBlacklightFluidCursorSettings(settingsLike, fallbackSettings) {
+        const source = settingsLike && typeof settingsLike === 'object' ? settingsLike : {};
+        const fallback = fallbackSettings && typeof fallbackSettings === 'object'
+            ? fallbackSettings
+            : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS;
+
+        const parseNumber = (value, fallbackValue, min, max) => {
+            const numeric = Number.parseFloat(String(value ?? '').trim());
+            if (!Number.isFinite(numeric)) {
+                return fallbackValue;
+            }
+            return Math.min(max, Math.max(min, numeric));
+        };
+
+        const parseColorMode = (value, fallbackValue) => {
+            const normalized = String(value || '').trim().toLowerCase();
+            if (normalized === 'dynamic' || normalized === 'solid') {
+                return normalized;
+            }
+            return fallbackValue;
+        };
+
+        const parseHexColor = (value, fallbackValue) => {
+            const normalized = String(value || '').trim();
+            return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized.toLowerCase() : fallbackValue;
+        };
+
+        return {
+            size: parseNumber(source.size, fallback.size, 0.2, 0.9),
+            velocity: parseNumber(source.velocity, fallback.velocity, 2400, 9000),
+            colorMode: parseColorMode(source.colorMode, fallback.colorMode),
+            colorDynamics: parseNumber(source.colorDynamics, fallback.colorDynamics, 0, 4),
+            brightness: parseNumber(source.brightness, fallback.brightness, 0.2, 2.2),
+            solidColor: parseHexColor(source.solidColor, fallback.solidColor)
+        };
+    }
+
+    function getLegacyBlacklightFluidCursorSettings() {
+        const workspaceUser = getWorkspaceUserContext();
+        const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
+        const controls = remembered && remembered.controls && typeof remembered.controls === 'object'
+            ? remembered.controls
+            : {};
+
+        return normalizeBlacklightFluidCursorSettings({
+            size: controls['id:blacklight-fluid-size'],
+            velocity: controls['id:blacklight-fluid-velocity'],
+            colorMode: controls['id:blacklight-fluid-color-mode'],
+            colorDynamics: controls['id:blacklight-fluid-dynamics'],
+            brightness: controls['id:blacklight-fluid-brightness'],
+            solidColor: controls['id:blacklight-fluid-solid-color']
+        }, DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS);
+    }
+
+    function getSavedBlacklightFluidCursorSettings() {
+        const workspaceUser = getWorkspaceUserContext();
+        const stored = getUserScopedObject(BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY, workspaceUser.key);
+        const hasDedicatedSettings = stored
+            && typeof stored === 'object'
+            && (
+                Object.prototype.hasOwnProperty.call(stored, 'size')
+                || Object.prototype.hasOwnProperty.call(stored, 'velocity')
+                || Object.prototype.hasOwnProperty.call(stored, 'colorMode')
+                || Object.prototype.hasOwnProperty.call(stored, 'colorDynamics')
+                || Object.prototype.hasOwnProperty.call(stored, 'brightness')
+                || Object.prototype.hasOwnProperty.call(stored, 'solidColor')
+            );
+
+        if (hasDedicatedSettings) {
+            return normalizeBlacklightFluidCursorSettings(stored, getLegacyBlacklightFluidCursorSettings());
+        }
+
+        const legacySettings = getLegacyBlacklightFluidCursorSettings();
+        setUserScopedObject(BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY, workspaceUser.key, legacySettings, { silent: true });
+        return legacySettings;
+    }
+
+    function persistBlacklightFluidCursorSettings(settingsLike) {
+        const workspaceUser = getWorkspaceUserContext();
+        const normalized = normalizeBlacklightFluidCursorSettings(settingsLike, getSavedBlacklightFluidCursorSettings());
+        setUserScopedObject(BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY, workspaceUser.key, normalized, { silent: true });
+        return normalized;
+    }
+
+    function getBlacklightFluidCursorConfig() {
+        const settings = getSavedBlacklightFluidCursorSettings();
+
+        return {
+            splatRadius: settings.size,
+            splatForce: settings.velocity,
+            colorMode: settings.colorMode,
+            colorUpdateSpeed: settings.colorDynamics,
+            brightness: settings.brightness,
+            solidColor: settings.solidColor
+        };
+    }
+
+    function queueBlacklightFluidCursorSync(theme) {
+        if (blacklightFluidCursorSyncTimer) {
+            window.clearTimeout(blacklightFluidCursorSyncTimer);
+        }
+
+        blacklightFluidCursorSyncTimer = window.setTimeout(() => {
+            blacklightFluidCursorSyncTimer = null;
+            syncBlacklightFluidCursor(theme);
+        }, 90);
+    }
+
     function notifyThemeUpdated(theme) {
         const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
         window.dispatchEvent(new CustomEvent('dashboard-theme-updated', {
@@ -3074,6 +3279,52 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         window.addEventListener('dashboard-theme-updated', (event) => {
             syncThemeLogoImages(event && event.detail ? event.detail.theme : document.documentElement.getAttribute('data-theme'));
+        });
+    }
+
+    function initBlacklightFluidCursor() {
+        syncBlacklightFluidCursor(document.documentElement.getAttribute('data-theme') || getThemePreference());
+
+        if (blacklightFluidCursorInitialized) {
+            return;
+        }
+
+        blacklightFluidCursorInitialized = true;
+
+        window.addEventListener('dashboard-theme-updated', (event) => {
+            queueBlacklightFluidCursorSync(event && event.detail ? event.detail.theme : document.documentElement.getAttribute('data-theme'));
+        });
+
+        window.addEventListener('dashboard-user-settings-updated', (event) => {
+            const controls = event && event.detail && event.detail.controls && typeof event.detail.controls === 'object'
+                ? event.detail.controls
+                : null;
+
+            if (!controls) {
+                return;
+            }
+
+            if (!Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-size')
+                && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-velocity')
+                && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-color-mode')
+                && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-dynamics')
+                && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-brightness')
+                && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-solid-color')) {
+                return;
+            }
+
+            queueBlacklightFluidCursorSync(document.documentElement.getAttribute('data-theme') || getThemePreference());
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (blacklightFluidCursorSyncTimer) {
+                window.clearTimeout(blacklightFluidCursorSyncTimer);
+                blacklightFluidCursorSyncTimer = null;
+            }
+            if (typeof blacklightFluidCursorCleanup === 'function') {
+                blacklightFluidCursorCleanup();
+                blacklightFluidCursorCleanup = null;
+            }
         });
     }
 
@@ -5866,6 +6117,7 @@ function initNavbarDateTime() {
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
             cyberpunk: 'Symbols/Dark Mode.svg',
+            blacklight: 'Symbols/Dark Mode.svg',
             space: 'Symbols/Dark Mode.svg'
         };
 
@@ -5913,6 +6165,7 @@ function initNavbarDateTime() {
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
             cyberpunk: 'Symbols/Dark Mode.svg',
+            blacklight: 'Symbols/Dark Mode.svg',
             space: 'Symbols/Dark Mode.svg'
         };
         const resolvedTheme = themeSymbols[effectiveTheme] ? effectiveTheme : 'beach';
@@ -5972,6 +6225,8 @@ function initNavbarDateTime() {
                                 ? 'space'
                                 : currentTheme === 'space'
                                     ? 'cyberpunk'
+                                : currentTheme === 'cyberpunk'
+                                    ? 'blacklight'
                             : 'dark';
             setTheme(nextTheme);
         });
@@ -7552,9 +7807,83 @@ function initNavbarDateTime() {
         const themeSelect = document.getElementById('theme-select');
         const accentSelect = document.getElementById('accent-color-select');
         const accentGlowToggle = document.getElementById('accent-glow-toggle');
+        const blacklightFluidRows = Array.from(document.querySelectorAll('.blacklight-fluid-settings'));
+        const blacklightFluidSize = document.getElementById('blacklight-fluid-size');
+        const blacklightFluidVelocity = document.getElementById('blacklight-fluid-velocity');
+        const blacklightFluidColorMode = document.getElementById('blacklight-fluid-color-mode');
+        const blacklightFluidDynamics = document.getElementById('blacklight-fluid-dynamics');
+        const blacklightFluidBrightness = document.getElementById('blacklight-fluid-brightness');
+        const blacklightFluidSolidColor = document.getElementById('blacklight-fluid-solid-color');
+        const blacklightFluidSizeValue = document.getElementById('blacklight-fluid-size-value');
+        const blacklightFluidVelocityValue = document.getElementById('blacklight-fluid-velocity-value');
+        const blacklightFluidDynamicsValue = document.getElementById('blacklight-fluid-dynamics-value');
+        const blacklightFluidBrightnessValue = document.getElementById('blacklight-fluid-brightness-value');
+        const blacklightFluidSolidColorValue = document.getElementById('blacklight-fluid-solid-color-value');
+        const blacklightFluidDynamicsRow = document.getElementById('blacklight-fluid-dynamics-row');
+        const blacklightFluidSolidColorRow = document.getElementById('blacklight-fluid-solid-color-row');
+
+        function syncBlacklightFluidSliderFill(slider) {
+            if (!(slider instanceof HTMLInputElement) || String(slider.type || '').toLowerCase() !== 'range') {
+                return;
+            }
+
+            const min = Number.parseFloat(slider.min || '0');
+            const max = Number.parseFloat(slider.max || '100');
+            const value = Number.parseFloat(slider.value || slider.min || '0');
+            const safeRange = max > min ? max - min : 1;
+            const progress = ((value - min) / safeRange) * 100;
+            slider.style.setProperty('--range-progress', `${Math.min(100, Math.max(0, progress))}%`);
+        }
+
+        function syncBlacklightFluidControlVisibility(themeValue) {
+            const effectiveTheme = resolveTheme(themeValue || (themeSelect ? themeSelect.value : document.documentElement.getAttribute('data-theme')));
+            const showControls = effectiveTheme === 'blacklight';
+            const colorMode = blacklightFluidColorMode ? String(blacklightFluidColorMode.value || DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode).trim().toLowerCase() : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode;
+
+            blacklightFluidRows.forEach((row) => {
+                row.hidden = !showControls;
+            });
+
+            if (blacklightFluidDynamicsRow) {
+                blacklightFluidDynamicsRow.hidden = !showControls || colorMode !== 'dynamic';
+            }
+
+            if (blacklightFluidSolidColorRow) {
+                blacklightFluidSolidColorRow.hidden = !showControls || colorMode !== 'solid';
+            }
+        }
+
+        function syncBlacklightFluidControlLabels() {
+            if (blacklightFluidSize && blacklightFluidSizeValue) {
+                const sizePercent = Math.round(Number.parseFloat(blacklightFluidSize.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.size)) * 100);
+                blacklightFluidSizeValue.textContent = `${sizePercent}%`;
+                syncBlacklightFluidSliderFill(blacklightFluidSize);
+            }
+
+            if (blacklightFluidVelocity && blacklightFluidVelocityValue) {
+                blacklightFluidVelocityValue.textContent = String(Math.round(Number.parseFloat(blacklightFluidVelocity.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.velocity))));
+                syncBlacklightFluidSliderFill(blacklightFluidVelocity);
+            }
+
+            if (blacklightFluidDynamics && blacklightFluidDynamicsValue) {
+                blacklightFluidDynamicsValue.textContent = `${Number.parseFloat(blacklightFluidDynamics.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorDynamics)).toFixed(2)}x`;
+                syncBlacklightFluidSliderFill(blacklightFluidDynamics);
+            }
+
+            if (blacklightFluidBrightness && blacklightFluidBrightnessValue) {
+                const brightnessPercent = Math.round(Number.parseFloat(blacklightFluidBrightness.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.brightness)) * 100);
+                blacklightFluidBrightnessValue.textContent = `${brightnessPercent}%`;
+                syncBlacklightFluidSliderFill(blacklightFluidBrightness);
+            }
+
+            if (blacklightFluidSolidColor && blacklightFluidSolidColorValue) {
+                blacklightFluidSolidColorValue.textContent = String(blacklightFluidSolidColor.value || DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.solidColor).toUpperCase();
+            }
+        }
         if (themeSelect) {
             const currentTheme = getThemePreference();
             themeSelect.value = currentTheme === 'system' ? 'dark' : resolveTheme(currentTheme);
+            syncBlacklightFluidControlVisibility(themeSelect.value);
 
             themeSelect.addEventListener('change', () => {
                 const theme = themeSelect.value;
@@ -7567,11 +7896,14 @@ function initNavbarDateTime() {
                 syncThemeLogoImages(effectiveTheme);
                 syncThemeBackgroundMedia(effectiveTheme);
                 notifyThemeUpdated(effectiveTheme);
+                syncBlacklightFluidControlVisibility(effectiveTheme);
                 if (themeToggle) {
                     const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
                     themeToggle.title = `Theme: ${modeLabel} Mode`;
                 }
             });
+        } else {
+            syncBlacklightFluidControlVisibility(document.documentElement.getAttribute('data-theme') || getThemePreference());
         }
 
         if (accentSelect) {
@@ -7601,6 +7933,7 @@ function initNavbarDateTime() {
         const workspaceUser = getWorkspaceUserContext();
         const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
         const settingsState = remembered.controls && typeof remembered.controls === 'object' ? remembered.controls : {};
+        const savedBlacklightFluidSettings = getSavedBlacklightFluidCursorSettings();
         const tabsToPersist = ['tab-security', 'tab-notifications', 'tab-subscriptions', 'tab-appearance'];
 
         function getControlStateKey(control) {
@@ -7668,6 +8001,18 @@ function initNavbarDateTime() {
                     } else {
                         settingsState[key] = control.value;
                     }
+
+                    if (BLACKLIGHT_FLUID_CURSOR_CONTROL_KEYS.includes(key)) {
+                        persistBlacklightFluidCursorSettings({
+                            size: settingsState['id:blacklight-fluid-size'],
+                            velocity: settingsState['id:blacklight-fluid-velocity'],
+                            colorMode: settingsState['id:blacklight-fluid-color-mode'],
+                            colorDynamics: settingsState['id:blacklight-fluid-dynamics'],
+                            brightness: settingsState['id:blacklight-fluid-brightness'],
+                            solidColor: settingsState['id:blacklight-fluid-solid-color']
+                        });
+                    }
+
                     writeSettingsState();
                 };
 
@@ -7677,6 +8022,64 @@ function initNavbarDateTime() {
                 }
             });
         });
+
+        if (blacklightFluidSize) {
+            blacklightFluidSize.value = String(savedBlacklightFluidSettings.size);
+        }
+
+        if (blacklightFluidVelocity) {
+            blacklightFluidVelocity.value = String(savedBlacklightFluidSettings.velocity);
+        }
+
+        if (blacklightFluidColorMode) {
+            blacklightFluidColorMode.value = savedBlacklightFluidSettings.colorMode;
+        }
+
+        if (blacklightFluidDynamics) {
+            blacklightFluidDynamics.value = String(savedBlacklightFluidSettings.colorDynamics);
+        }
+
+        if (blacklightFluidBrightness) {
+            blacklightFluidBrightness.value = String(savedBlacklightFluidSettings.brightness);
+        }
+
+        if (blacklightFluidSolidColor) {
+            blacklightFluidSolidColor.value = savedBlacklightFluidSettings.solidColor;
+        }
+
+        syncBlacklightFluidControlLabels();
+        syncBlacklightFluidControlVisibility(themeSelect ? themeSelect.value : document.documentElement.getAttribute('data-theme'));
+
+        if (blacklightFluidSize) {
+            blacklightFluidSize.addEventListener('input', syncBlacklightFluidControlLabels);
+            blacklightFluidSize.addEventListener('change', syncBlacklightFluidControlLabels);
+        }
+
+        if (blacklightFluidVelocity) {
+            blacklightFluidVelocity.addEventListener('input', syncBlacklightFluidControlLabels);
+            blacklightFluidVelocity.addEventListener('change', syncBlacklightFluidControlLabels);
+        }
+
+        if (blacklightFluidColorMode) {
+            blacklightFluidColorMode.addEventListener('change', () => {
+                syncBlacklightFluidControlVisibility(themeSelect ? themeSelect.value : document.documentElement.getAttribute('data-theme'));
+            });
+        }
+
+        if (blacklightFluidDynamics) {
+            blacklightFluidDynamics.addEventListener('input', syncBlacklightFluidControlLabels);
+            blacklightFluidDynamics.addEventListener('change', syncBlacklightFluidControlLabels);
+        }
+
+        if (blacklightFluidBrightness) {
+            blacklightFluidBrightness.addEventListener('input', syncBlacklightFluidControlLabels);
+            blacklightFluidBrightness.addEventListener('change', syncBlacklightFluidControlLabels);
+        }
+
+        if (blacklightFluidSolidColor) {
+            blacklightFluidSolidColor.addEventListener('input', syncBlacklightFluidControlLabels);
+            blacklightFluidSolidColor.addEventListener('change', syncBlacklightFluidControlLabels);
+        }
 
         function initSecuritySettingsControls() {
             const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || '').trim();
@@ -24603,6 +25006,7 @@ function initNavbarDateTime() {
             const compsMapStatusBadgeTitle = document.getElementById('comps-map-status-badge-title');
             const compsMapStatusBadgeText = document.getElementById('comps-map-status-badge-text');
             const compsMapDiagnosticsToggle = document.getElementById('comps-map-diagnostics-toggle');
+            const compsMapDiagnosticsMinimize = document.getElementById('comps-map-diagnostics-minimize');
             const compsMapDiagnosticsBar = document.getElementById('comps-map-diagnostics-bar');
             const compsMapDiagnosticsSummary = document.getElementById('comps-map-diagnostics-summary');
             const compsMapDiagnosticsSummaryTitle = document.getElementById('comps-map-diagnostics-summary-title');
@@ -24846,6 +25250,12 @@ function initNavbarDateTime() {
                 setDiagnosticsExpanded(false);
                 compsMapDiagnosticsToggle.addEventListener('click', () => {
                     setDiagnosticsExpanded(!diagnosticsExpanded);
+                });
+            }
+
+            if (compsMapDiagnosticsMinimize) {
+                compsMapDiagnosticsMinimize.addEventListener('click', () => {
+                    setDiagnosticsExpanded(false);
                 });
             }
 
@@ -31832,6 +32242,7 @@ function initNavbarDateTime() {
             ['initAccentPreference', initAccentPreference],
             ['initMyAgentsAccessRules', initMyAgentsAccessRules],
             ['initThemeAwareLogos', initThemeAwareLogos],
+            ['initBlacklightFluidCursor', initBlacklightFluidCursor],
             ['initThemeToggle', initThemeToggle],
             ['initBuildVersionLabel', initBuildVersionLabel],
             ['initNavbarDateTime', initNavbarDateTime],

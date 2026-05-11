@@ -46,7 +46,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|blacklight|japan|holloween|christmas)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
@@ -56,6 +56,7 @@
                     christmas: 'png photos/Christmas Theme Logo.png',
                     swamp: 'png photos/Swamp Theme Logo.png',
                     cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    blacklight: 'png photos/FAST LOGO 777.png',
                     japan: 'png photos/Japan Theme Mode Logo.png'
                 };
                 const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;

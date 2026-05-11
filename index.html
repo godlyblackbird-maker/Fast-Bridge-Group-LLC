@@ -20,7 +20,7 @@
             try {
                 const HOMEPAGE_THEME_KEY = 'homepageTheme';
                 const USER_THEME_KEY = 'dashboardThemeByUser';
-                const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
+                const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk', 'blacklight'];
                 const readJson = (key) => {
                     try {
                         return JSON.parse(localStorage.getItem(key) || '{}');
@@ -52,7 +52,7 @@
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
-                if (isAuthenticated && !/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(theme)) {
+                if (isAuthenticated && !/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|blacklight|japan|holloween|christmas)$/.test(theme)) {
                     theme = 'beach';
                 }
 
@@ -114,54 +114,6 @@
             --feature-card-overlay-a: rgba(255, 255, 255, 0.18);
             --feature-card-overlay-b: rgba(14, 165, 233, 0.1);
             --feature-image-shadow: 0 18px 34px rgba(8, 47, 73, 0.16);
-        }
-
-        html[data-theme='light'] {
-            color-scheme: light;
-            --bg: #edf6ff;
-            --panel: rgba(255, 255, 255, 0.72);
-            --border: rgba(56, 92, 130, 0.16);
-            --text: #10273b;
-            --muted: rgba(16, 39, 59, 0.72);
-            --accent: #2563eb;
-            --accent-soft: #60a5fa;
-            --sand: #f59e0b;
-            --shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
-            --surface-top: rgba(255, 255, 255, 0.74);
-            --surface-bottom: rgba(255, 255, 255, 0.46);
-            --hero-orb: radial-gradient(circle, rgba(59, 130, 246, 0.18), transparent 70%);
-            --body-glow-a: rgba(37, 99, 235, 0.18);
-            --body-glow-b: rgba(245, 158, 11, 0.12);
-            --body-glow-c: #f8fbff;
-            --body-glow-d: #e2ecff;
-            --body-glow-e: #f7f0d9;
-            --orb-a: rgba(96, 165, 250, 0.16);
-            --orb-b: rgba(245, 158, 11, 0.12);
-            --login-border: rgba(37, 99, 235, 0.22);
-            --login-shadow: 0 16px 34px rgba(37, 99, 235, 0.16);
-            --login-hover-border: rgba(37, 99, 235, 0.42);
-            --login-hover-shadow: 0 20px 38px rgba(37, 99, 235, 0.2);
-            --eyebrow-border: rgba(37, 99, 235, 0.14);
-            --eyebrow-bg: rgba(255, 255, 255, 0.78);
-            --secondary-border: rgba(37, 99, 235, 0.14);
-            --secondary-bg: rgba(255, 255, 255, 0.58);
-            --metric-bg: rgba(255, 255, 255, 0.54);
-            --metric-border: rgba(37, 99, 235, 0.1);
-            --ops-bg: rgba(255, 255, 255, 0.6);
-            --ops-border: rgba(37, 99, 235, 0.1);
-            --footer-text: rgba(16, 39, 59, 0.58);
-            --brand-shadow: rgba(15, 23, 42, 0.18);
-            --primary-cta-start: rgba(37, 99, 235, 1);
-            --primary-cta-end: rgba(245, 158, 11, 0.92);
-            --feature-card-border: rgba(37, 99, 235, 0.16);
-            --feature-card-bg-top: rgba(255, 255, 255, 0.82);
-            --feature-card-bg-bottom: rgba(255, 255, 255, 0.56);
-            --feature-card-shadow: 0 18px 34px rgba(37, 99, 235, 0.12);
-            --feature-card-hover-border: rgba(37, 99, 235, 0.32);
-            --feature-card-hover-shadow: 0 22px 40px rgba(15, 23, 42, 0.14);
-            --feature-card-overlay-a: rgba(255, 255, 255, 0.24);
-            --feature-card-overlay-b: rgba(37, 99, 235, 0.1);
-            --feature-image-shadow: 0 18px 34px rgba(37, 99, 235, 0.14);
         }
 
         html[data-theme='dark'] {
@@ -540,6 +492,54 @@
             --feature-image-shadow: 0 0 0 1px rgba(66, 243, 255, 0.08), 0 0 22px rgba(66, 243, 255, 0.16), 0 0 32px rgba(217, 70, 239, 0.14);
         }
 
+        html[data-theme='blacklight'] {
+            color-scheme: dark;
+            --bg: #050607;
+            --panel: rgba(7, 9, 8, 0.82);
+            --border: rgba(115, 255, 0, 0.24);
+            --text: #f8fff2;
+            --muted: rgba(248, 255, 242, 0.78);
+            --accent: #73ff00;
+            --accent-soft: #b9ff6a;
+            --sand: #ff54c4;
+            --shadow: 0 30px 80px rgba(0, 0, 0, 0.62), 0 0 34px rgba(115, 255, 0, 0.08);
+            --surface-top: rgba(255, 255, 255, 0.08);
+            --surface-bottom: rgba(255, 255, 255, 0.025);
+            --hero-orb: radial-gradient(circle, rgba(115, 255, 0, 0.24), transparent 70%);
+            --body-glow-a: rgba(115, 255, 0, 0.16);
+            --body-glow-b: rgba(255, 84, 196, 0.18);
+            --body-glow-c: #020503;
+            --body-glow-d: #061108;
+            --body-glow-e: #160813;
+            --orb-a: rgba(115, 255, 0, 0.14);
+            --orb-b: rgba(255, 84, 196, 0.16);
+            --login-border: rgba(115, 255, 0, 0.26);
+            --login-shadow: 0 16px 34px rgba(0, 0, 0, 0.42), 0 0 20px rgba(115, 255, 0, 0.08);
+            --login-hover-border: rgba(255, 84, 196, 0.42);
+            --login-hover-shadow: 0 20px 38px rgba(0, 0, 0, 0.54), 0 0 24px rgba(255, 84, 196, 0.12);
+            --eyebrow-border: rgba(115, 255, 0, 0.22);
+            --eyebrow-bg: rgba(7, 9, 8, 0.78);
+            --secondary-border: rgba(115, 255, 0, 0.18);
+            --secondary-bg: rgba(255, 255, 255, 0.06);
+            --metric-bg: rgba(255, 255, 255, 0.05);
+            --metric-border: rgba(255, 84, 196, 0.18);
+            --ops-bg: rgba(255, 255, 255, 0.05);
+            --ops-border: rgba(115, 255, 0, 0.16);
+            --footer-text: rgba(248, 255, 242, 0.68);
+            --brand-shadow: rgba(0, 0, 0, 0.34);
+            --primary-cta-start: rgba(115, 255, 0, 1);
+            --primary-cta-end: rgba(255, 84, 196, 0.94);
+            --feature-card-border: rgba(115, 255, 0, 0.2);
+            --feature-card-bg-top: rgba(8, 10, 8, 0.88);
+            --feature-card-bg-bottom: rgba(18, 8, 16, 0.72);
+            --feature-card-shadow: 0 0 0 1px rgba(115, 255, 0, 0.04), 0 0 20px rgba(115, 255, 0, 0.08), 0 0 28px rgba(255, 84, 196, 0.08);
+            --feature-card-hover-border: rgba(255, 84, 196, 0.28);
+            --feature-card-hover-shadow: 0 0 20px rgba(115, 255, 0, 0.14), 0 0 32px rgba(255, 84, 196, 0.14);
+            --feature-card-overlay-a: rgba(115, 255, 0, 0.08);
+            --feature-card-overlay-b: rgba(255, 84, 196, 0.1);
+            --feature-image-shadow: 0 0 0 1px rgba(115, 255, 0, 0.06), 0 0 18px rgba(115, 255, 0, 0.1), 0 0 28px rgba(255, 84, 196, 0.08);
+        }
+
         html[data-theme='japan'] {
             color-scheme: light;
             --bg: #fff8f8;
@@ -851,6 +851,99 @@
             transform: scale(1.03);
             transform-origin: center;
             pointer-events: none;
+        }
+
+        html[data-theme='blacklight'] body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            background:
+                linear-gradient(180deg, rgba(3, 6, 3, 0.58), rgba(10, 4, 10, 0.42)),
+                url("Themes/Black Light Theme.jpg") center center / cover no-repeat;
+            opacity: 0.34;
+            filter: blur(2px) saturate(0.94) contrast(1.04);
+            transform: scale(1.03);
+            transform-origin: center;
+            pointer-events: none;
+        }
+
+        html[data-theme='blacklight'] body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            background:
+                radial-gradient(38% 32% at 14% 18%, rgba(115, 255, 0, 0.2) 0%, rgba(115, 255, 0, 0) 72%),
+                radial-gradient(34% 30% at 86% 18%, rgba(255, 84, 196, 0.22) 0%, rgba(255, 84, 196, 0) 72%),
+                radial-gradient(40% 34% at 50% 82%, rgba(182, 228, 255, 0.12) 0%, rgba(182, 228, 255, 0) 74%),
+                linear-gradient(180deg, rgba(6, 10, 6, 0.16), rgba(4, 2, 5, 0.42));
+            pointer-events: none;
+        }
+
+        html[data-theme='blacklight'] .hero-panel,
+        html[data-theme='blacklight'] .hero-side,
+        html[data-theme='blacklight'] .login-card,
+        html[data-theme='blacklight'] .metric,
+        html[data-theme='blacklight'] .ops-item,
+        html[data-theme='blacklight'] .section-card,
+        html[data-theme='blacklight'] .social-card,
+        html[data-theme='blacklight'] .access-request-modal,
+        html[data-theme='blacklight'] .homepage-blacklight-panel,
+        html[data-theme='blacklight'] .homepage-blacklight-row {
+            background:
+                linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
+                linear-gradient(135deg, rgba(115, 255, 0, 0.02), rgba(255, 84, 196, 0.03));
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 0 18px rgba(115, 255, 0, 0.05), 0 0 24px rgba(255, 84, 196, 0.05);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        html[data-theme='blacklight'] .section-card:hover,
+        html[data-theme='blacklight'] .section-card:focus-within,
+        html[data-theme='blacklight'] .social-card:hover,
+        html[data-theme='blacklight'] .social-card:focus-visible,
+        html[data-theme='blacklight'] .ops-item:hover,
+        html[data-theme='blacklight'] .ops-item:focus-within {
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
+                linear-gradient(135deg, rgba(115, 255, 0, 0.028), rgba(255, 84, 196, 0.034));
+            border-color: rgba(255, 255, 255, 0.14);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.025), 0 0 20px rgba(115, 255, 0, 0.06), 0 0 28px rgba(255, 84, 196, 0.06);
+        }
+
+        html[data-theme='blacklight'] .brand-kicker,
+        html[data-theme='blacklight'] .eyebrow,
+        html[data-theme='blacklight'] .broker-hero-kicker,
+        html[data-theme='blacklight'] .seller-cta-kicker,
+        html[data-theme='blacklight'] .seller-cta-side-label,
+        html[data-theme='blacklight'] .seller-cta-pill,
+        html[data-theme='blacklight'] .social-card span,
+        html[data-theme='blacklight'] .theme-switch-btn .theme-switch-current {
+            color: #73ff00;
+            text-shadow: 0 0 10px rgba(115, 255, 0, 0.26), 0 0 22px rgba(255, 84, 196, 0.14);
+        }
+
+        html[data-theme='blacklight'] .hero-panel h1,
+        html[data-theme='blacklight'] .hero-panel strong,
+        html[data-theme='blacklight'] .metric strong,
+        html[data-theme='blacklight'] .ops-item strong,
+        html[data-theme='blacklight'] .brand-wordmark,
+        html[data-theme='blacklight'] .login-card h2 {
+            color: #f8fff2;
+            text-shadow: 0 0 10px rgba(115, 255, 0, 0.18), 0 0 20px rgba(255, 84, 196, 0.1);
+        }
+
+        html[data-theme='blacklight'] .theme-switch-btn::before {
+            box-shadow: 0 0 0 4px rgba(115, 255, 0, 0.1), 0 0 14px rgba(255, 84, 196, 0.24);
         }
 
         html[data-theme='cyberpunk'] body::after {
@@ -1272,6 +1365,263 @@
             font-weight: 700;
             letter-spacing: 0.04em;
             opacity: 1;
+        }
+
+        .homepage-blacklight-settings-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            min-width: 42px;
+            height: 42px;
+            padding: 0;
+            border-radius: 16px;
+        }
+
+        .homepage-blacklight-settings-btn[hidden] {
+            display: none !important;
+        }
+
+        .homepage-blacklight-settings-btn svg {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+        }
+
+        .homepage-blacklight-settings-btn::before {
+            display: none;
+        }
+
+        .homepage-blacklight-modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(2, 4, 3, 0.58);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.22s ease;
+            z-index: 2400;
+        }
+
+        .homepage-blacklight-modal.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .homepage-blacklight-panel {
+            width: min(480px, calc(100vw - 32px));
+            max-height: min(760px, calc(100vh - 32px));
+            overflow: auto;
+            border-radius: 26px;
+            border: 1px solid rgba(115, 255, 0, 0.22);
+            background:
+                linear-gradient(180deg, rgba(9, 12, 9, 0.96), rgba(18, 8, 16, 0.88)),
+                linear-gradient(135deg, rgba(115, 255, 0, 0.04), rgba(255, 84, 196, 0.06));
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46), 0 0 0 1px rgba(115, 255, 0, 0.04), 0 0 24px rgba(255, 84, 196, 0.08);
+            color: #f8fff2;
+        }
+
+        .homepage-blacklight-panel-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 22px 22px 14px;
+        }
+
+        .homepage-blacklight-panel-title {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .homepage-blacklight-panel-copy {
+            margin: 6px 0 0;
+            color: rgba(248, 255, 242, 0.72);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .homepage-blacklight-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8fff2;
+            cursor: pointer;
+        }
+
+        .homepage-blacklight-close:hover,
+        .homepage-blacklight-close:focus-visible {
+            border-color: rgba(255, 84, 196, 0.32);
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        .homepage-blacklight-panel-body {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 0 22px 22px;
+        }
+
+        .homepage-blacklight-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+        }
+
+        .homepage-blacklight-row[hidden] {
+            display: none !important;
+        }
+
+        .homepage-blacklight-label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .homepage-blacklight-label strong {
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .homepage-blacklight-label span {
+            color: rgba(248, 255, 242, 0.66);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .homepage-blacklight-slider {
+            --range-progress: 50%;
+            width: 100%;
+            height: 14px;
+            border-radius: 999px;
+            appearance: none;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, rgba(115, 255, 0, 0.94) 0%, rgba(255, 84, 196, 0.92) var(--range-progress), rgba(255, 255, 255, 0.08) var(--range-progress), rgba(255, 255, 255, 0.08) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.34);
+            cursor: pointer;
+        }
+
+        .homepage-blacklight-slider::-webkit-slider-runnable-track {
+            height: 14px;
+            background: transparent;
+        }
+
+        .homepage-blacklight-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            margin-top: -4px;
+            border-radius: 50%;
+            border: 2px solid rgba(5, 6, 5, 0.74);
+            background: #fffdfb;
+            box-shadow: 0 0 0 4px rgba(255, 84, 196, 0.14), 0 6px 16px rgba(0, 0, 0, 0.34);
+        }
+
+        .homepage-blacklight-slider::-moz-range-track {
+            height: 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .homepage-blacklight-slider::-moz-range-progress {
+            height: 14px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(115, 255, 0, 0.94), rgba(255, 84, 196, 0.92));
+        }
+
+        .homepage-blacklight-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(5, 6, 5, 0.74);
+            background: #fffdfb;
+            box-shadow: 0 0 0 4px rgba(255, 84, 196, 0.14), 0 6px 16px rgba(0, 0, 0, 0.34);
+        }
+
+        .homepage-blacklight-slider-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: rgba(248, 255, 242, 0.62);
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .homepage-blacklight-inline-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .homepage-blacklight-value {
+            color: #f8fff2;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .homepage-blacklight-select,
+        .homepage-blacklight-color {
+            min-height: 44px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+            color: #f8fff2;
+        }
+
+        .homepage-blacklight-select {
+            width: 100%;
+            padding: 0 14px;
+        }
+
+        .homepage-blacklight-color {
+            width: 58px;
+            padding: 4px;
+        }
+
+        .homepage-blacklight-panel-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 2px;
+        }
+
+        .homepage-blacklight-action {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8fff2;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .homepage-blacklight-action:hover,
+        .homepage-blacklight-action:focus-visible {
+            border-color: rgba(115, 255, 0, 0.28);
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
         }
 
         .hero {
@@ -2204,7 +2554,59 @@
         }
 
         .social-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            flex-wrap: wrap;
             padding: 6px 0 40px;
+        }
+
+        .social-strip a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            outline: none;
+        }
+
+        .social-strip img {
+            width: 74px;
+            height: 74px;
+            display: block;
+            object-fit: contain;
+            filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.14));
+            transform-origin: center;
+            cursor: pointer;
+            will-change: transform, filter, opacity;
+            transition: filter 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+        }
+
+        .social-strip:hover img {
+            opacity: 0.72;
+        }
+
+        .social-strip a:hover img,
+        .social-strip a:focus-visible img {
+            animation: social-strip-icon-breathe 1.9s ease-in-out infinite;
+            opacity: 1;
+            transform: translateY(-8px) scale(1.14);
+            filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.22)) drop-shadow(0 0 26px rgba(255, 255, 255, 0.24));
+        }
+
+        @keyframes social-strip-icon-breathe {
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            35% {
+                transform: translateY(-4px) scale(1.08);
+            }
+
+            65% {
+                transform: translateY(-2px) scale(1.04);
+            }
         }
 
         .social-strip-head {
@@ -3421,6 +3823,20 @@
                 font-size: 11px;
             }
 
+            .homepage-blacklight-settings-btn {
+                grid-column: auto;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .homepage-blacklight-modal {
+                padding: 14px;
+            }
+
+            .homepage-blacklight-panel {
+                width: min(100vw - 28px, 480px);
+            }
+
             .hero-panel,
             .hero-side,
             .section-card {
@@ -3655,14 +4071,102 @@
                 </div>
             </a>
             <div class="topbar-actions">
-                <button class="theme-switch-btn" id="homepage-theme-switch" type="button" aria-label="Switch homepage theme between Beach and Sunset">
+                <button class="theme-switch-btn" id="homepage-theme-switch" type="button" aria-label="Switch homepage theme">
                     <span class="theme-switch-label">Theme</span>
                     <span class="theme-switch-current" id="homepage-theme-label">Beach</span>
+                </button>
+                <button class="theme-switch-btn homepage-blacklight-settings-btn" id="homepage-blacklight-settings-toggle" type="button" aria-label="Open BLACK LIGHT liquid settings" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.91 4h.09a1.65 1.65 0 0 0 1.51-1V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .66.39 1.26 1 1.51H21a2 2 0 0 1 0 4h-.09c-.61.25-1 .85-1 1.49Z"></path></svg>
                 </button>
                 <a class="login-btn topbar-download-btn" href="https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/releases/latest/download/FAST.BRIDGE.GROUP.Setup.1.4.8.exe">Download App</a>
                 <a class="login-btn" href="login.html">Log In</a>
             </div>
         </header>
+
+        <div class="homepage-blacklight-modal" id="homepage-blacklight-modal" aria-hidden="true">
+            <div class="homepage-blacklight-panel" role="dialog" aria-modal="true" aria-labelledby="homepage-blacklight-panel-title">
+                <div class="homepage-blacklight-panel-header">
+                    <div>
+                        <h2 class="homepage-blacklight-panel-title" id="homepage-blacklight-panel-title">BLACK LIGHT Liquid Settings</h2>
+                        <p class="homepage-blacklight-panel-copy">Adjust the homepage liquid cursor without leaving the homepage. These controls use the same saved BLACK LIGHT liquid settings as the main app.</p>
+                    </div>
+                    <button class="homepage-blacklight-close" id="homepage-blacklight-close" type="button" aria-label="Close BLACK LIGHT liquid settings">×</button>
+                </div>
+                <div class="homepage-blacklight-panel-body">
+                    <div class="homepage-blacklight-row">
+                        <div class="homepage-blacklight-label">
+                            <strong>BLACK LIGHT Cursor Size</strong>
+                            <span>Controls how wide the liquid trail splashes around the cursor while BLACK LIGHT mode is active.</span>
+                        </div>
+                        <input id="homepage-blacklight-fluid-size" class="homepage-blacklight-slider" type="range" min="0.20" max="0.90" step="0.02" value="0.42">
+                        <div class="homepage-blacklight-slider-meta">
+                            <span>Smaller</span>
+                            <span class="homepage-blacklight-value" id="homepage-blacklight-fluid-size-value">42%</span>
+                            <span>Larger</span>
+                        </div>
+                    </div>
+                    <div class="homepage-blacklight-row">
+                        <div class="homepage-blacklight-label">
+                            <strong>BLACK LIGHT Color Mode</strong>
+                            <span>Choose whether the fluid shifts through the blacklight palette or stays locked to one solid color.</span>
+                        </div>
+                        <select id="homepage-blacklight-fluid-color-mode" class="homepage-blacklight-select">
+                            <option value="dynamic">Dynamic Palette</option>
+                            <option value="solid">Solid Color</option>
+                        </select>
+                    </div>
+                    <div class="homepage-blacklight-row" id="homepage-blacklight-fluid-dynamics-row">
+                        <div class="homepage-blacklight-label">
+                            <strong>BLACK LIGHT Color Dynamics</strong>
+                            <span>Controls how quickly the fluid shifts between blacklight colors while Dynamic Palette mode is active.</span>
+                        </div>
+                        <input id="homepage-blacklight-fluid-dynamics" class="homepage-blacklight-slider" type="range" min="0" max="4" step="0.10" value="0.35">
+                        <div class="homepage-blacklight-slider-meta">
+                            <span>Still</span>
+                            <span class="homepage-blacklight-value" id="homepage-blacklight-fluid-dynamics-value">0.35x</span>
+                            <span>Chaotic</span>
+                        </div>
+                    </div>
+                    <div class="homepage-blacklight-row">
+                        <div class="homepage-blacklight-label">
+                            <strong>BLACK LIGHT Fluid Brightness</strong>
+                            <span>Raises or lowers how bright the liquid glow renders while BLACK LIGHT mode is active.</span>
+                        </div>
+                        <input id="homepage-blacklight-fluid-brightness" class="homepage-blacklight-slider" type="range" min="0.20" max="2.20" step="0.10" value="1.00">
+                        <div class="homepage-blacklight-slider-meta">
+                            <span>Dimmer</span>
+                            <span class="homepage-blacklight-value" id="homepage-blacklight-fluid-brightness-value">100%</span>
+                            <span>Brighter</span>
+                        </div>
+                    </div>
+                    <div class="homepage-blacklight-row" id="homepage-blacklight-fluid-solid-color-row" hidden>
+                        <div class="homepage-blacklight-label">
+                            <strong>BLACK LIGHT Solid Color</strong>
+                            <span>Choose the exact solid fluid color used when Solid Color mode is active.</span>
+                        </div>
+                        <div class="homepage-blacklight-inline-control">
+                            <input id="homepage-blacklight-fluid-solid-color" class="homepage-blacklight-color" type="color" value="#ff54c4">
+                            <span class="homepage-blacklight-value" id="homepage-blacklight-fluid-solid-color-value">#FF54C4</span>
+                        </div>
+                    </div>
+                    <div class="homepage-blacklight-row">
+                        <div class="homepage-blacklight-label">
+                            <strong>BLACK LIGHT Cursor Velocity</strong>
+                            <span>Controls how aggressively the liquid throws and stretches when you move the cursor in BLACK LIGHT mode.</span>
+                        </div>
+                        <input id="homepage-blacklight-fluid-velocity" class="homepage-blacklight-slider" type="range" min="2400" max="9000" step="200" value="5400">
+                        <div class="homepage-blacklight-slider-meta">
+                            <span>Smoother</span>
+                            <span class="homepage-blacklight-value" id="homepage-blacklight-fluid-velocity-value">5400</span>
+                            <span>Faster</span>
+                        </div>
+                    </div>
+                    <div class="homepage-blacklight-panel-actions">
+                        <button class="homepage-blacklight-action" id="homepage-blacklight-close-footer" type="button">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <main>
             <section class="hero">
@@ -3741,43 +4245,19 @@
                 </article>
             </section>
 
-            <section class="social-strip" aria-labelledby="social-strip-title">
-                <div class="social-strip-head">
-                    <div class="social-strip-copy">
-                        <h2 id="social-strip-title">Stay plugged into FAST everywhere</h2>
-                    </div>
-                    <div class="social-strip-badge">Social Media</div>
-                </div>
-
-                <div class="social-grid">
-                    <a class="social-card social-card-wave social-card-wave-1 social-card-instagram" href="https://www.instagram.com/fastbridgegroupllc/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Instagram">
-                        <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-instagram.svg" alt="">
-                        <h3>Instagram</h3>
-                        <p>Show the brand, the energy, and the deals in a format built for attention and fast recognition.</p>
-                        <span>Follow the feed</span>
-                    </a>
-
-                    <a class="social-card social-card-wave social-card-wave-2 social-card-youtube" href="https://www.youtube.com/channel/UCgC8bg859J0Kjmvs1Si5fFw" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on YouTube">
-                        <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-youtube.svg" alt="">
-                        <h3>YouTube</h3>
-                        <p>Break down strategy, showcase the platform, and turn deeper content into trust at scale.</p>
-                        <span>Watch the channel</span>
-                    </a>
-
-                    <a class="social-card social-card-wave social-card-wave-3 social-card-facebook" href="https://www.facebook.com/profile.php?id=61576494107729" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Facebook">
-                        <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-facebook.svg" alt="">
-                        <h3>Facebook</h3>
-                        <p>Keep your broader audience connected to the brand with updates, wins, and platform credibility.</p>
-                        <span>See the page</span>
-                    </a>
-
-                    <a class="social-card social-card-wave social-card-wave-4 social-card-tiktok" href="https://www.tiktok.com/@fastbridgegroupllc" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on TikTok">
-                        <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-tiktok.svg" alt="">
-                        <h3>TikTok</h3>
-                        <p>Package attention-grabbing clips, fast lessons, and brand personality into content people actually stop for.</p>
-                        <span>Catch the clips</span>
-                    </a>
-                </div>
+            <section class="social-strip" aria-label="FAST social media">
+                <a href="https://www.instagram.com/fastbridgegroupllc/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Instagram">
+                    <img src="Symbols/Social%20Media%20SVG/icons8-instagram.svg" alt="Instagram">
+                </a>
+                <a href="https://www.youtube.com/channel/UCgC8bg859J0Kjmvs1Si5fFw" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on YouTube">
+                    <img src="Symbols/Social%20Media%20SVG/icons8-youtube.svg" alt="YouTube">
+                </a>
+                <a href="https://www.facebook.com/profile.php?id=61576494107729" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Facebook">
+                    <img src="Symbols/Social%20Media%20SVG/icons8-facebook.svg" alt="Facebook">
+                </a>
+                <a href="https://www.tiktok.com/@fastbridgegroupllc" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on TikTok">
+                    <img src="Symbols/Social%20Media%20SVG/icons8-tiktok.svg" alt="TikTok">
+                </a>
             </section>
         </main>
 
@@ -3851,12 +4331,25 @@
         (function () {
             const HOMEPAGE_THEME_KEY = 'homepageTheme';
             const USER_THEME_KEY = 'dashboardThemeByUser';
-            const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
+            const BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
+            const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk', 'blacklight'];
             const THEME_LABELS = {
                 beach: 'Beach',
                 sunset: 'Sunset',
-                cyberpunk: 'Cyberpunk'
+                cyberpunk: 'Cyberpunk',
+                blacklight: 'BLACK LIGHT'
             };
+            const DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS = Object.freeze({
+                size: 0.42,
+                velocity: 5400,
+                colorMode: 'dynamic',
+                colorDynamics: 0.35,
+                brightness: 1,
+                solidColor: '#ff54c4'
+            });
+            let homepageBlacklightFluidModulePromise = null;
+            let homepageBlacklightFluidCleanup = null;
+            let homepageBlacklightFluidSignature = '';
 
             const readJson = (key) => {
                 try {
@@ -3928,9 +4421,110 @@
                 localStorage.setItem('theme', normalized);
             };
 
+            const getUserScopedObject = (key, userKey) => {
+                const store = readJson(key);
+                return store && typeof store === 'object' ? store[userKey] : null;
+            };
+
+            const setUserScopedObject = (key, userKey, value) => {
+                const store = readJson(key);
+                const nextStore = store && typeof store === 'object' ? store : {};
+                nextStore[userKey] = value;
+                localStorage.setItem(key, JSON.stringify(nextStore));
+            };
+
+            const normalizeBlacklightFluidCursorSettings = (settingsLike, fallbackSettings) => {
+                const source = settingsLike && typeof settingsLike === 'object' ? settingsLike : {};
+                const fallback = fallbackSettings && typeof fallbackSettings === 'object'
+                    ? fallbackSettings
+                    : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS;
+
+                const parseNumber = (value, fallbackValue, min, max) => {
+                    const numeric = Number.parseFloat(String(value ?? '').trim());
+                    if (!Number.isFinite(numeric)) {
+                        return fallbackValue;
+                    }
+                    return Math.min(max, Math.max(min, numeric));
+                };
+
+                const parseColorMode = (value, fallbackValue) => {
+                    const normalized = String(value || '').trim().toLowerCase();
+                    return normalized === 'dynamic' || normalized === 'solid' ? normalized : fallbackValue;
+                };
+
+                const parseHexColor = (value, fallbackValue) => {
+                    const normalized = String(value || '').trim();
+                    return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized.toLowerCase() : fallbackValue;
+                };
+
+                return {
+                    size: parseNumber(source.size, fallback.size, 0.2, 0.9),
+                    velocity: parseNumber(source.velocity, fallback.velocity, 2400, 9000),
+                    colorMode: parseColorMode(source.colorMode, fallback.colorMode),
+                    colorDynamics: parseNumber(source.colorDynamics, fallback.colorDynamics, 0, 4),
+                    brightness: parseNumber(source.brightness, fallback.brightness, 0.2, 2.2),
+                    solidColor: parseHexColor(source.solidColor, fallback.solidColor)
+                };
+            };
+
+            const getLegacyBlacklightFluidCursorSettings = () => {
+                const { userKey } = getUserThemeContext();
+                const remembered = getUserScopedObject(USER_THEME_KEY, userKey) || getUserScopedObject(USER_THEME_KEY, 'default-user') || {};
+                const controls = remembered && remembered.controls && typeof remembered.controls === 'object' ? remembered.controls : {};
+                return normalizeBlacklightFluidCursorSettings({
+                    size: controls['id:blacklight-fluid-size'],
+                    velocity: controls['id:blacklight-fluid-velocity'],
+                    colorMode: controls['id:blacklight-fluid-color-mode'],
+                    colorDynamics: controls['id:blacklight-fluid-dynamics'],
+                    brightness: controls['id:blacklight-fluid-brightness'],
+                    solidColor: controls['id:blacklight-fluid-solid-color']
+                }, DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS);
+            };
+
+            const getSavedBlacklightFluidCursorSettings = () => {
+                const { userKey } = getUserThemeContext();
+                const stored = getUserScopedObject(BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY, userKey) || getUserScopedObject(BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY, 'default-user');
+                const hasDedicatedSettings = stored
+                    && typeof stored === 'object'
+                    && (
+                        Object.prototype.hasOwnProperty.call(stored, 'size')
+                        || Object.prototype.hasOwnProperty.call(stored, 'velocity')
+                        || Object.prototype.hasOwnProperty.call(stored, 'colorMode')
+                        || Object.prototype.hasOwnProperty.call(stored, 'colorDynamics')
+                        || Object.prototype.hasOwnProperty.call(stored, 'brightness')
+                        || Object.prototype.hasOwnProperty.call(stored, 'solidColor')
+                    );
+
+                if (hasDedicatedSettings) {
+                    return normalizeBlacklightFluidCursorSettings(stored, getLegacyBlacklightFluidCursorSettings());
+                }
+
+                return getLegacyBlacklightFluidCursorSettings();
+            };
+
+            const persistBlacklightFluidCursorSettings = (settingsLike) => {
+                const { userKey } = getUserThemeContext();
+                const normalized = normalizeBlacklightFluidCursorSettings(settingsLike, getSavedBlacklightFluidCursorSettings());
+                setUserScopedObject(BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY, userKey, normalized);
+                return normalized;
+            };
+
+            const getBlacklightFluidCursorConfig = () => {
+                const settings = getSavedBlacklightFluidCursorSettings();
+                return {
+                    splatRadius: settings.size,
+                    splatForce: settings.velocity,
+                    colorMode: settings.colorMode,
+                    colorUpdateSpeed: settings.colorDynamics,
+                    brightness: settings.brightness,
+                    solidColor: settings.solidColor
+                };
+            };
+
             const updateThemeSwitchUi = (activeTheme) => {
                 const themeSwitchLabel = document.getElementById('homepage-theme-label');
                 const themeSwitchButton = document.getElementById('homepage-theme-switch');
+                const blacklightSettingsButton = document.getElementById('homepage-blacklight-settings-toggle');
                 if (themeSwitchLabel) {
                     themeSwitchLabel.textContent = THEME_LABELS[activeTheme] || 'Beach';
                 }
@@ -3938,6 +4532,68 @@
                     themeSwitchButton.setAttribute('data-theme-choice', activeTheme);
                     themeSwitchButton.setAttribute('aria-label', `Switch homepage theme. Current theme: ${THEME_LABELS[activeTheme] || 'Beach'}`);
                 }
+                if (blacklightSettingsButton) {
+                    const shouldShowBlacklightSettings = activeTheme === 'blacklight';
+                    blacklightSettingsButton.hidden = !shouldShowBlacklightSettings;
+                    blacklightSettingsButton.setAttribute('aria-hidden', shouldShowBlacklightSettings ? 'false' : 'true');
+                }
+            };
+
+            const syncHomepageBlacklightFluidCursor = (themeValue) => {
+                const activeTheme = resolveTheme(themeValue || getHomepageTheme());
+                const config = getBlacklightFluidCursorConfig();
+                const nextSignature = JSON.stringify({
+                    theme: activeTheme,
+                    size: config.splatRadius,
+                    velocity: config.splatForce,
+                    colorMode: config.colorMode,
+                    colorDynamics: config.colorUpdateSpeed,
+                    brightness: config.brightness,
+                    solidColor: config.solidColor
+                });
+
+                if (activeTheme !== 'blacklight') {
+                    homepageBlacklightFluidSignature = '';
+                    if (typeof homepageBlacklightFluidCleanup === 'function') {
+                        homepageBlacklightFluidCleanup();
+                        homepageBlacklightFluidCleanup = null;
+                    }
+                    return Promise.resolve(false);
+                }
+
+                if (!document.body) {
+                    return Promise.resolve(false);
+                }
+
+                if (typeof homepageBlacklightFluidCleanup === 'function' && homepageBlacklightFluidSignature === nextSignature) {
+                    return Promise.resolve(true);
+                }
+
+                if (typeof homepageBlacklightFluidCleanup === 'function') {
+                    homepageBlacklightFluidCleanup();
+                    homepageBlacklightFluidCleanup = null;
+                }
+
+                if (!homepageBlacklightFluidModulePromise) {
+                    homepageBlacklightFluidModulePromise = import('./temp-smokey-fluid/smokey-fluid-cursor.js').catch((error) => {
+                        homepageBlacklightFluidModulePromise = null;
+                        throw error;
+                    });
+                }
+
+                return homepageBlacklightFluidModulePromise.then((module) => {
+                    const mountBlacklightFluidCursor = module && typeof module.mountBlacklightFluidCursor === 'function'
+                        ? module.mountBlacklightFluidCursor
+                        : null;
+
+                    if (!mountBlacklightFluidCursor) {
+                        return false;
+                    }
+
+                    homepageBlacklightFluidCleanup = mountBlacklightFluidCursor(config);
+                    homepageBlacklightFluidSignature = nextSignature;
+                    return typeof homepageBlacklightFluidCleanup === 'function';
+                }).catch(() => false);
             };
 
             const applyStoredTheme = () => {
@@ -3946,6 +4602,7 @@
                 document.documentElement.setAttribute('data-theme', activeTheme);
                 document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
                 updateThemeSwitchUi(activeTheme);
+                syncHomepageBlacklightFluidCursor(activeTheme);
             };
 
             const modal = document.getElementById('access-request-modal');
@@ -3959,6 +4616,129 @@
             const swayCards = Array.from(document.querySelectorAll('#platform .section-card'));
             const swayOpsItems = Array.from(document.querySelectorAll('.ops-item'));
             const homepageThemeSwitchButton = document.getElementById('homepage-theme-switch');
+            const homepageBlacklightSettingsToggle = document.getElementById('homepage-blacklight-settings-toggle');
+            const homepageBlacklightModal = document.getElementById('homepage-blacklight-modal');
+            const homepageBlacklightClose = document.getElementById('homepage-blacklight-close');
+            const homepageBlacklightCloseFooter = document.getElementById('homepage-blacklight-close-footer');
+            const homepageBlacklightFluidSize = document.getElementById('homepage-blacklight-fluid-size');
+            const homepageBlacklightFluidVelocity = document.getElementById('homepage-blacklight-fluid-velocity');
+            const homepageBlacklightFluidColorMode = document.getElementById('homepage-blacklight-fluid-color-mode');
+            const homepageBlacklightFluidDynamics = document.getElementById('homepage-blacklight-fluid-dynamics');
+            const homepageBlacklightFluidBrightness = document.getElementById('homepage-blacklight-fluid-brightness');
+            const homepageBlacklightFluidSolidColor = document.getElementById('homepage-blacklight-fluid-solid-color');
+            const homepageBlacklightFluidSizeValue = document.getElementById('homepage-blacklight-fluid-size-value');
+            const homepageBlacklightFluidVelocityValue = document.getElementById('homepage-blacklight-fluid-velocity-value');
+            const homepageBlacklightFluidDynamicsValue = document.getElementById('homepage-blacklight-fluid-dynamics-value');
+            const homepageBlacklightFluidBrightnessValue = document.getElementById('homepage-blacklight-fluid-brightness-value');
+            const homepageBlacklightFluidSolidColorValue = document.getElementById('homepage-blacklight-fluid-solid-color-value');
+            const homepageBlacklightFluidDynamicsRow = document.getElementById('homepage-blacklight-fluid-dynamics-row');
+            const homepageBlacklightFluidSolidColorRow = document.getElementById('homepage-blacklight-fluid-solid-color-row');
+
+            const syncHomepageBlacklightSliderFill = (slider) => {
+                if (!(slider instanceof HTMLInputElement) || String(slider.type || '').toLowerCase() !== 'range') {
+                    return;
+                }
+                const min = Number.parseFloat(slider.min || '0');
+                const max = Number.parseFloat(slider.max || '100');
+                const value = Number.parseFloat(slider.value || slider.min || '0');
+                const safeRange = max > min ? max - min : 1;
+                const progress = ((value - min) / safeRange) * 100;
+                slider.style.setProperty('--range-progress', `${Math.min(100, Math.max(0, progress))}%`);
+            };
+
+            const syncHomepageBlacklightControlVisibility = () => {
+                const activeTheme = getHomepageTheme();
+                const colorMode = homepageBlacklightFluidColorMode ? String(homepageBlacklightFluidColorMode.value || DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode).trim().toLowerCase() : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode;
+                if (homepageBlacklightFluidDynamicsRow) {
+                    homepageBlacklightFluidDynamicsRow.hidden = activeTheme !== 'blacklight' || colorMode !== 'dynamic';
+                }
+                if (homepageBlacklightFluidSolidColorRow) {
+                    homepageBlacklightFluidSolidColorRow.hidden = activeTheme !== 'blacklight' || colorMode !== 'solid';
+                }
+                if (homepageBlacklightModal && activeTheme !== 'blacklight') {
+                    homepageBlacklightModal.classList.remove('is-open');
+                    homepageBlacklightModal.setAttribute('aria-hidden', 'true');
+                }
+            };
+
+            const syncHomepageBlacklightControlLabels = () => {
+                if (homepageBlacklightFluidSize && homepageBlacklightFluidSizeValue) {
+                    homepageBlacklightFluidSizeValue.textContent = `${Math.round(Number.parseFloat(homepageBlacklightFluidSize.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.size)) * 100)}%`;
+                    syncHomepageBlacklightSliderFill(homepageBlacklightFluidSize);
+                }
+                if (homepageBlacklightFluidVelocity && homepageBlacklightFluidVelocityValue) {
+                    homepageBlacklightFluidVelocityValue.textContent = String(Math.round(Number.parseFloat(homepageBlacklightFluidVelocity.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.velocity))));
+                    syncHomepageBlacklightSliderFill(homepageBlacklightFluidVelocity);
+                }
+                if (homepageBlacklightFluidDynamics && homepageBlacklightFluidDynamicsValue) {
+                    homepageBlacklightFluidDynamicsValue.textContent = `${Number.parseFloat(homepageBlacklightFluidDynamics.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorDynamics)).toFixed(2)}x`;
+                    syncHomepageBlacklightSliderFill(homepageBlacklightFluidDynamics);
+                }
+                if (homepageBlacklightFluidBrightness && homepageBlacklightFluidBrightnessValue) {
+                    homepageBlacklightFluidBrightnessValue.textContent = `${Math.round(Number.parseFloat(homepageBlacklightFluidBrightness.value || String(DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.brightness)) * 100)}%`;
+                    syncHomepageBlacklightSliderFill(homepageBlacklightFluidBrightness);
+                }
+                if (homepageBlacklightFluidSolidColor && homepageBlacklightFluidSolidColorValue) {
+                    homepageBlacklightFluidSolidColorValue.textContent = String(homepageBlacklightFluidSolidColor.value || DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.solidColor).toUpperCase();
+                }
+            };
+
+            const populateHomepageBlacklightControls = () => {
+                const settings = getSavedBlacklightFluidCursorSettings();
+                if (homepageBlacklightFluidSize) {
+                    homepageBlacklightFluidSize.value = String(settings.size);
+                }
+                if (homepageBlacklightFluidVelocity) {
+                    homepageBlacklightFluidVelocity.value = String(settings.velocity);
+                }
+                if (homepageBlacklightFluidColorMode) {
+                    homepageBlacklightFluidColorMode.value = settings.colorMode;
+                }
+                if (homepageBlacklightFluidDynamics) {
+                    homepageBlacklightFluidDynamics.value = String(settings.colorDynamics);
+                }
+                if (homepageBlacklightFluidBrightness) {
+                    homepageBlacklightFluidBrightness.value = String(settings.brightness);
+                }
+                if (homepageBlacklightFluidSolidColor) {
+                    homepageBlacklightFluidSolidColor.value = settings.solidColor;
+                }
+                syncHomepageBlacklightControlLabels();
+                syncHomepageBlacklightControlVisibility();
+            };
+
+            const saveHomepageBlacklightControls = () => {
+                persistBlacklightFluidCursorSettings({
+                    size: homepageBlacklightFluidSize ? homepageBlacklightFluidSize.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.size,
+                    velocity: homepageBlacklightFluidVelocity ? homepageBlacklightFluidVelocity.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.velocity,
+                    colorMode: homepageBlacklightFluidColorMode ? homepageBlacklightFluidColorMode.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode,
+                    colorDynamics: homepageBlacklightFluidDynamics ? homepageBlacklightFluidDynamics.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorDynamics,
+                    brightness: homepageBlacklightFluidBrightness ? homepageBlacklightFluidBrightness.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.brightness,
+                    solidColor: homepageBlacklightFluidSolidColor ? homepageBlacklightFluidSolidColor.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.solidColor
+                });
+                syncHomepageBlacklightFluidCursor(getHomepageTheme());
+            };
+
+            const openHomepageBlacklightModal = () => {
+                if (!homepageBlacklightModal || getHomepageTheme() !== 'blacklight') {
+                    return;
+                }
+                populateHomepageBlacklightControls();
+                homepageBlacklightModal.classList.add('is-open');
+                homepageBlacklightModal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            };
+
+            const closeHomepageBlacklightModal = () => {
+                if (!homepageBlacklightModal) {
+                    return;
+                }
+                homepageBlacklightModal.classList.remove('is-open');
+                homepageBlacklightModal.setAttribute('aria-hidden', 'true');
+                if (!modal || !modal.classList.contains('is-open')) {
+                    document.body.style.overflow = '';
+                }
+            };
 
             const setFeedback = (message, state) => {
                 if (!feedback) {
@@ -4065,7 +4845,62 @@
                 if (event.key === 'Escape' && modal && modal.classList.contains('is-open')) {
                     closeModal();
                 }
+                if (event.key === 'Escape' && homepageBlacklightModal && homepageBlacklightModal.classList.contains('is-open')) {
+                    closeHomepageBlacklightModal();
+                }
             });
+
+            if (homepageBlacklightSettingsToggle) {
+                homepageBlacklightSettingsToggle.addEventListener('click', openHomepageBlacklightModal);
+            }
+
+            if (homepageBlacklightClose) {
+                homepageBlacklightClose.addEventListener('click', closeHomepageBlacklightModal);
+            }
+
+            if (homepageBlacklightCloseFooter) {
+                homepageBlacklightCloseFooter.addEventListener('click', closeHomepageBlacklightModal);
+            }
+
+            if (homepageBlacklightModal) {
+                homepageBlacklightModal.addEventListener('click', (event) => {
+                    if (event.target === homepageBlacklightModal) {
+                        closeHomepageBlacklightModal();
+                    }
+                });
+            }
+
+            [homepageBlacklightFluidSize, homepageBlacklightFluidVelocity, homepageBlacklightFluidDynamics, homepageBlacklightFluidBrightness].forEach((control) => {
+                if (!(control instanceof HTMLInputElement)) {
+                    return;
+                }
+                control.addEventListener('input', () => {
+                    syncHomepageBlacklightControlLabels();
+                    saveHomepageBlacklightControls();
+                });
+                control.addEventListener('change', () => {
+                    syncHomepageBlacklightControlLabels();
+                    saveHomepageBlacklightControls();
+                });
+            });
+
+            if (homepageBlacklightFluidColorMode) {
+                homepageBlacklightFluidColorMode.addEventListener('change', () => {
+                    syncHomepageBlacklightControlVisibility();
+                    saveHomepageBlacklightControls();
+                });
+            }
+
+            if (homepageBlacklightFluidSolidColor) {
+                homepageBlacklightFluidSolidColor.addEventListener('input', () => {
+                    syncHomepageBlacklightControlLabels();
+                    saveHomepageBlacklightControls();
+                });
+                homepageBlacklightFluidSolidColor.addEventListener('change', () => {
+                    syncHomepageBlacklightControlLabels();
+                    saveHomepageBlacklightControls();
+                });
+            }
 
             if (form) {
                 form.addEventListener('submit', async (event) => {
@@ -4190,6 +5025,7 @@
             }
 
             window.addEventListener('storage', applyStoredTheme);
+            populateHomepageBlacklightControls();
             applyStoredTheme();
         })();
     </script>

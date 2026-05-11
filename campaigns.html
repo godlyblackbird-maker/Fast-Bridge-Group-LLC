@@ -47,7 +47,7 @@
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|blacklight|japan|holloween|christmas)$/.test(String(theme))) {
                     theme = 'beach';
                 }
                 root.setAttribute('data-theme', theme);
@@ -57,6 +57,7 @@
                     christmas: 'png photos/Christmas Theme Logo.png',
                     swamp: 'png photos/Swamp Theme Logo.png',
                     cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    blacklight: 'png photos/FAST LOGO 777.png',
                     japan: 'png photos/Japan Theme Mode Logo.png'
                 };
                 const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
@@ -1268,7 +1269,8 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            min-width: 0;
         }
 
         .campaign-reply-edit-name,
@@ -1321,6 +1323,7 @@
         .campaign-reply-address-chip {
             display: inline-flex;
             align-items: center;
+            flex: 1 1 auto;
             max-width: min(100%, 420px);
             padding: 6px 10px;
             border-radius: 999px;
@@ -1336,6 +1339,7 @@
         }
 
         input.campaign-reply-address-chip {
+            width: 100%;
             min-width: min(100%, 260px);
             outline: none;
             cursor: text;
@@ -2788,6 +2792,88 @@
                 border: 1px dashed var(--glass-border);
                 background: rgba(255, 255, 255, 0.04);
                 color: var(--text-secondary);
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-replies-shell,
+            [data-theme="blacklight"] body.campaigns-page .campaign-replies-list,
+            [data-theme="blacklight"] body.campaigns-page .campaign-replies-thread-shell {
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.008));
+                border-color: rgba(255, 255, 255, 0.08);
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.025), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+                backdrop-filter: blur(10px) saturate(1.01);
+                -webkit-backdrop-filter: blur(10px) saturate(1.01);
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-replies-list-head,
+            [data-theme="blacklight"] body.campaigns-page .campaign-replies-thread-head,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-form,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-ai-suggestion {
+                background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+                border-color: rgba(255, 255, 255, 0.08);
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.025), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+                backdrop-filter: blur(10px) saturate(1.01);
+                -webkit-backdrop-filter: blur(10px) saturate(1.01);
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-thread {
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.004));
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-conversation,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-empty,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-thread-empty {
+                background: linear-gradient(145deg, rgba(255, 255, 255, 0.034), rgba(255, 255, 255, 0.01));
+                border-color: rgba(255, 255, 255, 0.08);
+                color: #fff8ff;
+                box-shadow: 0 18px 30px rgba(4, 1, 16, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px) saturate(1.01);
+                -webkit-backdrop-filter: blur(10px) saturate(1.01);
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message.is-outgoing {
+                background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+                box-shadow: 0 18px 30px rgba(4, 1, 16, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-conversation:hover,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-conversation.is-active {
+                border-color: rgba(255, 255, 255, 0.12);
+                box-shadow: 0 20px 34px rgba(4, 1, 16, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-badge,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-status-tag,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-attachment-link,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-attachment-download,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-address-chip,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-edit-name,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-block-contact,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-delete-thread,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-copy-address,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-conversation-dismiss,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-conversation-delete,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-conversation-follow-up,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-reaction-chip,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-reaction-launcher,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-reaction-picker,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-scheduled-edit-indicator,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-scheduled-cancel {
+                background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+                border-color: rgba(255, 255, 255, 0.08);
+                color: #fff8ff;
+                box-shadow: 0 12px 24px rgba(4, 1, 16, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            }
+
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message.is-outgoing .campaign-reply-attachment-link,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message.is-outgoing .campaign-reply-attachment-download,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message.is-outgoing .campaign-reply-reaction-chip,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message.is-outgoing .campaign-reply-status-tag,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message.is-outgoing .campaign-reply-thread-meta,
+            [data-theme="blacklight"] body.campaigns-page .campaign-reply-message.is-outgoing .campaign-reply-attachment-meta {
+                color: #fff8ff;
             }
 
             body.campaigns-page .campaign-reply-form {
