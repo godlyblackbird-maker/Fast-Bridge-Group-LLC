@@ -1,0 +1,18 @@
+export const metadata = {
+  title: 'Trail Cursor Effect',
+  description:
+    'An interactive React component that generates a trail of cursors following the main cursor, creating a dynamic and visually engaging ghosting effect in real time.',
+  tags: ['cursor', 'trail', 'ghost', 'following'],
+  category: 'cursor',
+};
+
+<ComponentCodePreview name='trail-cursor' />
+
+## Props
+
+| Prop           | Type          | Default                                                                                  | Description                                                            |
+| -------------- | ------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `element`      | `HTMLElement` | `undefined`                                                                              | The HTML element to which the trailing cursor effect is applied.       |
+| `particles`    | `number`      | `15`                                                                                     | The number of particles in the trailing cursor effect.                 |
+| `rate`         | `number`      | `0.4`                                                                                    | The rate of trailing cursor movement.                                  |
+| `baseImageSrc` | `string`      | `'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAATCAYAAACk9eypAAA...'` (truncated) | Base64 image string used as the default particle for the cursor trail. |

@@ -23143,47 +23143,6 @@ app.get('/api/twilio/inbox/messages', async (req, res) => {
   }
 });
 
-app.post('/api/twilio/inbox/reply-suggestion', express.json({ limit: '50kb' }), async (req, res) => {
-  const decoded = requireAuth(req, res);
-  if (!decoded) {
-    return;
-  }
-
-  const conversationKey = String(req.body?.conversationKey || '').trim();
-  if (!conversationKey) {
-    return res.status(400).json({ error: 'conversationKey is required.' });
-  }
-
-  try {
-    const access = await ensureTwilioConversationAccess(decoded, conversationKey);
-    if (!access.allowed) {
-      return res.status(access.statusCode).json({ error: access.error });
-    }
-
-    const latestRow = await getLatestTwilioConversationRow(conversationKey);
-    if (!latestRow) {
-      return res.status(404).json({ error: 'Conversation not found.' });
-    }
-
-    const rows = await listTwilioInboxMessages(conversationKey);
-    const messages = rows.map(serializeTwilioInboxMessage).filter(Boolean);
-    const conversation = {
-      conversationKey,
-      campaignName: String(latestRow.campaign_name || '').trim(),
-      propertyAddress: getTwilioMessagePropertyAddress(latestRow),
-      contactName: String(latestRow.contact_name || '').trim() || String(latestRow.contact_phone || '').trim(),
-      contactPhone: String(latestRow.contact_phone || '').trim(),
-      platformIdentity: String(latestRow.platform_identity || '').trim()
-    };
-
-    const suggestion = await generateTwilioReplySuggestion(conversation, messages);
-    return res.json({ success: true, conversationKey, suggestion });
-  } catch (error) {
-    console.error('Failed to generate Twilio reply suggestion:', error);
-    return res.status(500).json({ error: 'Unable to generate a Twilio reply suggestion.' });
-  }
-});
-
 app.get('/api/twilio/inbox/contact-history', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {

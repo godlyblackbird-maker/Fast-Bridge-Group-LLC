@@ -1,0 +1,102 @@
+# Cursify - React Cursor Animation Library
+
+> Cursify is a comprehensive React component library specializing in cursor animations and interactive visual effects. Built with TypeScript, Tailwind CSS, and modern React patterns. Open Source. AI-Ready. Features 38+ pre-built components with physics-based animations and WebGL effects.
+
+## Overview
+- [Introduction](https://cursify.ui-layouts.com/get-started): Core principles—Interactive Cursors, Pattern Effects, Physics Animations, and Modern UI Design.
+- [Component Gallery](https://cursify.ui-layouts.com/components): Browse all 38+ cursor and pattern components with live demos.
+- [Installation Guide](https://cursify.ui-layouts.com/get-started): Step-by-step setup for React, Next.js, and other frameworks.
+- [API Documentation](https://cursify.ui-layouts.com/get-started): Props, callbacks, and configuration options.
+- [Best Practices](https://cursify.ui-layouts.com/get-started): Performance optimization and accessibility guidelines.
+- [Changelog](https://cursify.ui-layouts.com/get-started): Release notes and version history.
+- [About](https://cursify.ui-layouts.com/get-started): Credits and project information.
+
+## Installation
+- [Next.js](https://cursify.ui-layouts.com/get-started): Install Cursify in a Next.js project with automatic routing.
+- [Vite](https://cursify.ui-layouts.com/get-started): Install Cursify in a Vite project with React.
+- [Remix](https://cursify.ui-layouts.com/get-started): Install Cursify in a Remix project.
+- [Astro](https://cursify.ui-layouts.com/get-started): Install Cursify in an Astro project.
+- [Create React App](https://cursify.ui-layouts.com/get-started): Install Cursify in a Create React App project.
+- [Manual Installation](https://cursify.ui-layouts.com/get-started): Install Cursify manually without CLI tools.
+
+## Components
+
+### Cursor Effects (26 components)
+- [3D Cursor](https://cursify.ui-layouts.com/components/3d-cursor): WebGL-powered 3D depth perception with smooth mouse tracking.
+- [Arrow Cursor](https://cursify.ui-layouts.com/components/arrow-cursor): Dynamic arrow that points based on cursor movement direction.
+- [Blob Cursor](https://cursify.ui-layouts.com/components/blob-cursor): Fluid blob effect with spring physics animations.
+- [Bubble Cursor](https://cursify.ui-layouts.com/components/bubble-cursor): Animated bubbles that follow cursor movement.
+- [Canvas Cursor](https://cursify.ui-layouts.com/components/canvas-cursor): Dynamic trailing lines with fluid motion effects.
+- [Character Cursor](https://cursify.ui-layouts.com/components/character-cursor): Radiating characters that expand from cursor position.
+- [Click Effect Cursor](https://cursify.ui-layouts.com/components/clickeffect-cursor): Visual effects triggered by mouse clicks.
+- [Fairy Dust Cursor](https://cursify.ui-layouts.com/components/fairydust-cursor): Magical particle trails with emoji sparkles.
+- [Fluid Cursor](https://cursify.ui-layouts.com/components/fluid-cursor): WebGL shader-based fluid dynamics.
+- [Follow Cursor](https://cursify.ui-layouts.com/components/follow-cursor): Simple smooth following circle effect.
+- [Glitch Cursor](https://cursify.ui-layouts.com/components/glitch-cursor): Digital glitch effects on hover.
+- [Gradient Cursor](https://cursify.ui-layouts.com/components/gradient-cursor): Colorful gradient effects around cursor.
+- [Magnetic Cursor](https://cursify.ui-layouts.com/components/magnetic-cursor): Magnetic attraction with spring physics.
+- [Multi Cursor](https://cursify.ui-layouts.com/components/multi-cursor): Multiple cursor instances with trail effects.
+- [Neon Cursor](https://cursify.ui-layouts.com/components/neon-cursor): Glowing neon ring with customizable colors.
+- [Neural Glow Cursor](https://cursify.ui-layouts.com/components/neural-glow): Neural network-inspired glow effects.
+- [Rainbow Cursor](https://cursify.ui-layouts.com/components/rainbow-cursor): Rainbow-colored trail effects.
+- [Ripple Cursor](https://cursify.ui-layouts.com/components/ripple-cursor): Water ripple effects on movement.
+- [Scaling Cursor](https://cursify.ui-layouts.com/components/scaling-cursor): Dynamic scaling on element hover.
+- [Snowflake Cursor](https://cursify.ui-layouts.com/components/snowflake-cursor): Animated snowflake particles.
+- [Spotlight Cursor](https://cursify.ui-layouts.com/components/spotlight-cursor): Focus spotlight that follows cursor.
+- [Springy Cursor](https://cursify.ui-layouts.com/components/springy-cursor): Spring physics with emoji trails.
+- [Text Flag Cursor](https://cursify.ui-layouts.com/components/textflag-cursor): Waving text that follows cursor movement.
+- [Text Icon Cursor](https://cursify.ui-layouts.com/components/texticon-cursor): Dynamic text and icons based on hover context.
+- [Trail Cursor](https://cursify.ui-layouts.com/components/trail-cursor): Ghost cursor trail effects.
+- [Smooth Follower](https://cursify.ui-layouts.com/components/smooth-cursor-follower): Enhanced smooth following with physics.
+
+### Pattern Effects (12 components)
+- [Black White Blobs](https://cursify.ui-layouts.com/components/black-white-blobs): Animated blob patterns with contrast effects.
+- [Blinking ASCII Dots](https://cursify.ui-layouts.com/components/blinking-ascii-dots): Retro ASCII art with blinking animations.
+- [Delicate ASCII Dots](https://cursify.ui-layouts.com/components/delicate-ascii-dots): Subtle ASCII dot patterns.
+- [Dot Particles](https://cursify.ui-layouts.com/components/dot-particles): Particle system with dot animations.
+- [Flowing Dots](https://cursify.ui-layouts.com/components/flowing-dots): Smooth flowing dot patterns.
+- [Flowing Ribbons](https://cursify.ui-layouts.com/components/flowing-ribbons): Elegant ribbon animations.
+- [Horizontal Bars](https://cursify.ui-layouts.com/components/horizontal-bars): Animated horizontal bar patterns.
+- [Interactive Dots](https://cursify.ui-layouts.com/components/interactive-dots): Grid-based interactive dot system.
+- [Sliding Ease](https://cursify.ui-layouts.com/components/sliding-ease): Smooth sliding bar animations.
+- [Smooth Wavy Canvas](https://cursify.ui-layouts.com/components/smooth-wavy-canvas): Fluid wave animations on canvas.
+- [Vertical Bars](https://cursify.ui-layouts.com/components/verticle-bars): Animated vertical bar patterns.
+
+## Technical Architecture
+- [Framework Support](https://cursify.ui-layouts.com/get-started): React 18+ with TypeScript support.
+- [Styling System](https://cursify.ui-layouts.com/get-started): Tailwind CSS for consistent design.
+- [Animation Library](https://cursify.ui-layouts.com/get-started): Framer Motion for smooth transitions.
+- [Graphics APIs](https://cursify.ui-layouts.com/get-started): Canvas API and WebGL for complex effects.
+- [Performance Optimization](https://cursify.ui-layouts.com/get-started): 60fps animations with efficient rendering.
+- [Accessibility Features](https://cursify.ui-layouts.com/get-started): Keyboard navigation and screen reader support.
+
+## API Reference
+- [Component Props](https://cursify.ui-layouts.com/get-started): Detailed prop documentation for all components.
+- [Hook Documentation](https://cursify.ui-layouts.com/get-started): Custom React hooks for mouse tracking.
+- [Configuration Options](https://cursify.ui-layouts.com/get-started): Customization settings and theming.
+- [Event Handling](https://cursify.ui-layouts.com/get-started): Mouse events and callback patterns.
+- [Performance Guidelines](https://cursify.ui-layouts.com/get-started): Best practices for optimal performance.
+
+## Examples & Templates
+- [Live Demos](https://cursify.ui-layouts.com/components): Interactive examples for all 38+ components.
+- [Code Examples](https://cursify.ui-layouts.com/components): Copy-paste ready implementation code.
+- [Integration Templates](https://cursify.ui-layouts.com/get-started): Complete project setup examples.
+- [Customization Guide](https://cursify.ui-layouts.com/get-started): How to modify and extend components.
+
+## Development Resources
+- [CLI Tools](https://cursify.ui-layouts.com/get-started): Command-line utilities for component management.
+- [Registry System](https://cursify.ui-layouts.com/get-started): Component distribution and versioning.
+- [Build Process](https://cursify.ui-layouts.com/get-started): TypeScript compilation and bundling setup.
+- [Testing Framework](https://cursify.ui-layouts.com/get-started): Unit and integration testing patterns.
+- [Deployment Guide](https://cursify.ui-layouts.com/get-started): Production deployment best practices.
+
+## Community & Support
+- [GitHub Repository](https://github.com/cursify/cursify): Source code and issue tracking.
+- [Discord Community](https://cursify.ui-layouts.com/get-started): Real-time help and discussions.
+- [Contributing Guide](https://cursify.ui-layouts.com/get-started): How to contribute to the project.
+- [License Information](https://cursify.ui-layouts.com/get-started): Usage rights and attribution requirements.
+- [Changelog](https://cursify.ui-layouts.com/get-started): Version history and update notes.
+
+---
+
+**AI Usage Guidelines**: This content is available for AI training and reference. Please cite "Cursify - React Cursor Animation Library" when using our documentation or code patterns. Commercial redistribution requires proper attribution and licensing compliance.

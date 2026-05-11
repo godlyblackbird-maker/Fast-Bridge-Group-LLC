@@ -232,6 +232,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     let blacklightFluidCursorCleanup = null;
     let blacklightFluidCursorSyncTimer = null;
     let blacklightFluidCursorConfigSignature = '';
+    let cursorLabInitialized = false;
+    let cursorLabScriptPromise = null;
+    let cursorLabConfigSignature = '';
+    let cyberpunkCursorInitialized = false;
+    let cyberpunkCursorModulePromise = null;
+    let cyberpunkCursorCleanup = null;
     const DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS = Object.freeze({
         size: 0.42,
         velocity: 5400,
@@ -241,12 +247,31 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         solidColor: '#ff54c4'
     });
     const BLACKLIGHT_FLUID_CURSOR_CONTROL_KEYS = Object.freeze([
+        'id:blacklight-fluid-all-themes-toggle',
         'id:blacklight-fluid-size',
         'id:blacklight-fluid-velocity',
         'id:blacklight-fluid-color-mode',
         'id:blacklight-fluid-dynamics',
         'id:blacklight-fluid-brightness',
         'id:blacklight-fluid-solid-color'
+    ]);
+    const DEFAULT_CURSOR_LAB_SETTINGS = Object.freeze({
+        enabled: false,
+        trailType: 'circle',
+        pointerStyle: 'default',
+        size: 24,
+        thickness: 2,
+        delay: 0.1,
+        color: '#34d399'
+    });
+    const CURSOR_LAB_CONTROL_KEYS = Object.freeze([
+        'id:cursor-lab-enabled',
+        'id:cursor-lab-trail-type',
+        'id:cursor-lab-pointer-style',
+        'id:cursor-lab-size',
+        'id:cursor-lab-thickness',
+        'id:cursor-lab-delay',
+        'id:cursor-lab-color'
     ]);
 
     function getSoundSettings() {
@@ -3040,8 +3065,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function syncBlacklightFluidCursor(theme) {
         const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
         const fluidConfig = getBlacklightFluidCursorConfig();
+        const allowAllThemes = isBlacklightFluidCursorEnabledForAllThemes();
         const nextSignature = JSON.stringify({
             theme: resolvedTheme,
+            allowAllThemes,
             size: fluidConfig.splatRadius,
             velocity: fluidConfig.splatForce,
             colorMode: fluidConfig.colorMode,
@@ -3050,7 +3077,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             solidColor: fluidConfig.solidColor
         });
 
-        if (resolvedTheme !== 'blacklight') {
+        if (resolvedTheme !== 'blacklight' && !allowAllThemes) {
             document.documentElement.dataset.blacklightFluidCursor = 'off';
             blacklightFluidCursorConfigSignature = '';
             if (typeof blacklightFluidCursorCleanup === 'function') {
@@ -3086,7 +3113,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return blacklightFluidCursorModulePromise
             .then((module) => {
                 const activeTheme = resolveTheme(document.documentElement.getAttribute('data-theme') || getThemePreference());
-                if (activeTheme !== 'blacklight') {
+                if (activeTheme !== 'blacklight' && !isBlacklightFluidCursorEnabledForAllThemes()) {
                     document.documentElement.dataset.blacklightFluidCursor = 'off';
                     return false;
                 }
@@ -3107,6 +3134,277 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             })
             .catch(() => {
                 document.documentElement.dataset.blacklightFluidCursor = 'failed';
+                return false;
+            });
+    }
+
+    function normalizeCursorLabSettings(settingsLike, fallbackSettings) {
+        const source = settingsLike && typeof settingsLike === 'object' ? settingsLike : {};
+        const fallback = fallbackSettings && typeof fallbackSettings === 'object'
+            ? fallbackSettings
+            : DEFAULT_CURSOR_LAB_SETTINGS;
+
+        const parseBoolean = (value, fallbackValue) => {
+            if (typeof value === 'boolean') {
+                return value;
+            }
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+                if (normalized === 'true' || normalized === '1' || normalized === 'on') {
+                    return true;
+                }
+                if (normalized === 'false' || normalized === '0' || normalized === 'off') {
+                    return false;
+                }
+            }
+            return fallbackValue;
+        };
+
+        const parseNumber = (value, fallbackValue, min, max) => {
+            const numeric = Number.parseFloat(String(value ?? '').trim());
+            if (!Number.isFinite(numeric)) {
+                return fallbackValue;
+            }
+            return Math.min(max, Math.max(min, numeric));
+        };
+
+        const parseTrailType = (value, fallbackValue) => {
+            const normalized = String(value || '').trim().toLowerCase();
+            return ['circle', 'circle-filled', 'square', 'square-filled', 'triangle', 'star', 'dot'].includes(normalized)
+                ? normalized
+                : fallbackValue;
+        };
+
+        const parsePointerStyle = (value, fallbackValue) => {
+            const normalized = String(value || '').trim().toLowerCase();
+            return ['default', 'crosshair', 'grab', 'copy', 'none'].includes(normalized)
+                ? normalized
+                : fallbackValue;
+        };
+
+        const parseHexColor = (value, fallbackValue) => {
+            const normalized = String(value || '').trim();
+            return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized.toLowerCase() : fallbackValue;
+        };
+
+        return {
+            enabled: parseBoolean(source.enabled, fallback.enabled),
+            trailType: parseTrailType(source.trailType, fallback.trailType),
+            pointerStyle: parsePointerStyle(source.pointerStyle, fallback.pointerStyle),
+            size: parseNumber(source.size, fallback.size, 10, 48),
+            thickness: parseNumber(source.thickness, fallback.thickness, 1, 8),
+            delay: parseNumber(source.delay, fallback.delay, 0.02, 0.35),
+            color: parseHexColor(source.color, fallback.color)
+        };
+    }
+
+    function getSavedCursorLabSettings() {
+        const workspaceUser = getWorkspaceUserContext();
+        const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
+        const controls = remembered && remembered.controls && typeof remembered.controls === 'object'
+            ? remembered.controls
+            : {};
+
+        return normalizeCursorLabSettings({
+            enabled: controls['id:cursor-lab-enabled'],
+            trailType: controls['id:cursor-lab-trail-type'],
+            pointerStyle: controls['id:cursor-lab-pointer-style'],
+            size: controls['id:cursor-lab-size'],
+            thickness: controls['id:cursor-lab-thickness'],
+            delay: controls['id:cursor-lab-delay'],
+            color: controls['id:cursor-lab-color']
+        }, DEFAULT_CURSOR_LAB_SETTINGS);
+    }
+
+    function cleanupCursorLabEffect() {
+        const existingInstance = window.cursorLabInstance;
+
+        if (existingInstance && typeof existingInstance.setNormalCursor === 'function') {
+            try {
+                existingInstance.setNormalCursor();
+            } catch (error) {
+                // Ignore cleanup errors.
+            }
+        }
+
+        if (window.CursorLab && typeof window.CursorLab.setNormalCursor === 'function') {
+            try {
+                window.CursorLab.setNormalCursor();
+            } catch (error) {
+                // Ignore cleanup errors.
+            }
+        }
+
+        if (window.CursorLab && typeof window.CursorLab.destroy === 'function') {
+            try {
+                window.CursorLab.destroy();
+            } catch (error) {
+                // Ignore cleanup errors.
+            }
+        }
+
+        ['cursorlab-styles', 'cursorlab-custom-style'].forEach((styleId) => {
+            const styleNode = document.getElementById(styleId);
+            if (styleNode) {
+                styleNode.remove();
+            }
+        });
+
+        if (Object.prototype.hasOwnProperty.call(window, 'cursorLabInstance')) {
+            try {
+                delete window.cursorLabInstance;
+            } catch (error) {
+                window.cursorLabInstance = null;
+            }
+        }
+
+        cursorLabConfigSignature = '';
+        document.documentElement.dataset.cursorLab = 'off';
+    }
+
+    function loadCursorLabRuntime() {
+        if (window.CursorLab && typeof window.CursorLab.startTrail === 'function') {
+            return Promise.resolve(window.CursorLab);
+        }
+
+        if (cursorLabScriptPromise) {
+            return cursorLabScriptPromise;
+        }
+
+        cursorLabScriptPromise = new Promise((resolve, reject) => {
+            const existingScript = document.querySelector('script[data-cursorlab-runtime="true"]');
+            if (existingScript) {
+                existingScript.addEventListener('load', () => resolve(window.CursorLab), { once: true });
+                existingScript.addEventListener('error', () => reject(new Error('CursorLab runtime failed to load.')), { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = './CursorLab-main/CursorLab-main/browser.js';
+            script.async = true;
+            script.dataset.cursorlabRuntime = 'true';
+            script.onload = () => {
+                if (window.CursorLab && typeof window.CursorLab.startTrail === 'function') {
+                    resolve(window.CursorLab);
+                    return;
+                }
+                reject(new Error('CursorLab runtime loaded without the expected API.'));
+            };
+            script.onerror = () => reject(new Error('CursorLab runtime failed to load.'));
+            document.head.appendChild(script);
+        }).catch((error) => {
+            cursorLabScriptPromise = null;
+            throw error;
+        });
+
+        return cursorLabScriptPromise;
+    }
+
+    function syncCursorLabEffect() {
+        const settings = getSavedCursorLabSettings();
+        const nextSignature = JSON.stringify(settings);
+
+        if (!settings.enabled || window.matchMedia('(pointer: coarse)').matches) {
+            cleanupCursorLabEffect();
+            return Promise.resolve(false);
+        }
+
+        if (!document.body) {
+            return Promise.resolve(false);
+        }
+
+        if (cursorLabConfigSignature === nextSignature && window.cursorLabInstance && typeof window.cursorLabInstance.isActive === 'function' && window.cursorLabInstance.isActive()) {
+            document.documentElement.dataset.cursorLab = 'on';
+            return Promise.resolve(true);
+        }
+
+        cleanupCursorLabEffect();
+        document.documentElement.dataset.cursorLab = 'loading';
+
+        return loadCursorLabRuntime()
+            .then((CursorLab) => {
+                if (!CursorLab || typeof CursorLab.setCursorTrail !== 'function') {
+                    document.documentElement.dataset.cursorLab = 'failed';
+                    return false;
+                }
+
+                let cursorChain = CursorLab.setCursorTrail(settings.trailType)
+                    .setColor(settings.color)
+                    .setSize(settings.size)
+                    .setThickness(settings.thickness)
+                    .trailDelay(settings.delay);
+
+                if (settings.pointerStyle === 'crosshair') {
+                    cursorChain = cursorChain.setCustomCursor('crosshair', 2, Math.max(14, Math.round(settings.size * 0.75)));
+                } else if (settings.pointerStyle !== 'default') {
+                    cursorChain = cursorChain.setCustomCursor(settings.pointerStyle);
+                }
+
+                cursorChain.startTrail();
+                cursorLabConfigSignature = nextSignature;
+                document.documentElement.dataset.cursorLab = 'on';
+                return true;
+            })
+            .catch(() => {
+                cleanupCursorLabEffect();
+                document.documentElement.dataset.cursorLab = 'failed';
+                return false;
+            });
+    }
+
+    function syncCyberpunkCursorEffect(theme) {
+        const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+
+        if (resolvedTheme !== 'cyberpunk') {
+            document.documentElement.dataset.cyberpunkCursor = 'off';
+            if (typeof cyberpunkCursorCleanup === 'function') {
+                cyberpunkCursorCleanup();
+                cyberpunkCursorCleanup = null;
+            }
+            return Promise.resolve(false);
+        }
+
+        if (!document.body) {
+            return Promise.resolve(false);
+        }
+
+        if (typeof cyberpunkCursorCleanup === 'function') {
+            document.documentElement.dataset.cyberpunkCursor = 'on';
+            return Promise.resolve(true);
+        }
+
+        document.documentElement.dataset.cyberpunkCursor = 'loading';
+
+        if (!cyberpunkCursorModulePromise) {
+            cyberpunkCursorModulePromise = import('./temp-cyberpunk-cursor/cyberpunk-neon-cursor.js').catch((error) => {
+                cyberpunkCursorModulePromise = null;
+                throw error;
+            });
+        }
+
+        return cyberpunkCursorModulePromise
+            .then((module) => {
+                const activeTheme = resolveTheme(document.documentElement.getAttribute('data-theme') || getThemePreference());
+                if (activeTheme !== 'cyberpunk') {
+                    document.documentElement.dataset.cyberpunkCursor = 'off';
+                    return false;
+                }
+
+                const mountCyberpunkCursorEffect = module && typeof module.mountCyberpunkCursorEffect === 'function'
+                    ? module.mountCyberpunkCursorEffect
+                    : null;
+
+                if (!mountCyberpunkCursorEffect) {
+                    document.documentElement.dataset.cyberpunkCursor = 'failed';
+                    return false;
+                }
+
+                cyberpunkCursorCleanup = mountCyberpunkCursorEffect();
+                document.documentElement.dataset.cyberpunkCursor = typeof cyberpunkCursorCleanup === 'function' ? 'on' : 'failed';
+                return document.documentElement.dataset.cyberpunkCursor === 'on';
+            })
+            .catch(() => {
+                document.documentElement.dataset.cyberpunkCursor = 'failed';
                 return false;
             });
     }
@@ -3186,6 +3484,26 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const legacySettings = getLegacyBlacklightFluidCursorSettings();
         setUserScopedObject(BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY, workspaceUser.key, legacySettings, { silent: true });
         return legacySettings;
+    }
+
+    function isBlacklightFluidCursorEnabledForAllThemes() {
+        const workspaceUser = getWorkspaceUserContext();
+        const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
+        const controls = remembered && remembered.controls && typeof remembered.controls === 'object'
+            ? remembered.controls
+            : {};
+        const rawValue = controls['id:blacklight-fluid-all-themes-toggle'];
+
+        if (typeof rawValue === 'boolean') {
+            return rawValue;
+        }
+
+        if (typeof rawValue === 'string') {
+            const normalized = rawValue.trim().toLowerCase();
+            return normalized === 'true' || normalized === '1' || normalized === 'on';
+        }
+
+        return false;
     }
 
     function persistBlacklightFluidCursorSettings(settingsLike) {
@@ -3305,11 +3623,20 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             }
 
             if (!Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-size')
+                && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-all-themes-toggle')
                 && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-velocity')
                 && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-color-mode')
                 && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-dynamics')
                 && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-brightness')
                 && !Object.prototype.hasOwnProperty.call(controls, 'id:blacklight-fluid-solid-color')) {
+                return;
+            }
+
+            queueBlacklightFluidCursorSync(document.documentElement.getAttribute('data-theme') || getThemePreference());
+        });
+
+        window.addEventListener('storage', (event) => {
+            if (!event || (event.key !== USER_SETTINGS_KEY && event.key !== BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY)) {
                 return;
             }
 
@@ -3325,6 +3652,64 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 blacklightFluidCursorCleanup();
                 blacklightFluidCursorCleanup = null;
             }
+        });
+    }
+
+    function initCyberpunkCursorEffect() {
+        syncCyberpunkCursorEffect(document.documentElement.getAttribute('data-theme') || getThemePreference());
+
+        if (cyberpunkCursorInitialized) {
+            return;
+        }
+
+        cyberpunkCursorInitialized = true;
+
+        window.addEventListener('dashboard-theme-updated', (event) => {
+            syncCyberpunkCursorEffect(event && event.detail ? event.detail.theme : document.documentElement.getAttribute('data-theme'));
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (typeof cyberpunkCursorCleanup === 'function') {
+                cyberpunkCursorCleanup();
+                cyberpunkCursorCleanup = null;
+            }
+        });
+    }
+
+    function initCursorLabEffect() {
+        syncCursorLabEffect();
+
+        if (cursorLabInitialized) {
+            return;
+        }
+
+        cursorLabInitialized = true;
+
+        window.addEventListener('dashboard-user-settings-updated', (event) => {
+            const controls = event && event.detail && event.detail.controls && typeof event.detail.controls === 'object'
+                ? event.detail.controls
+                : null;
+
+            if (!controls) {
+                return;
+            }
+
+            if (!CURSOR_LAB_CONTROL_KEYS.some((key) => Object.prototype.hasOwnProperty.call(controls, key))) {
+                return;
+            }
+
+            syncCursorLabEffect();
+        });
+
+        window.addEventListener('storage', (event) => {
+            if (!event || event.key !== USER_SETTINGS_KEY) {
+                return;
+            }
+            syncCursorLabEffect();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            cleanupCursorLabEffect();
         });
     }
 
@@ -7807,6 +8192,20 @@ function initNavbarDateTime() {
         const themeSelect = document.getElementById('theme-select');
         const accentSelect = document.getElementById('accent-color-select');
         const accentGlowToggle = document.getElementById('accent-glow-toggle');
+        const blacklightFluidAllThemesToggle = document.getElementById('blacklight-fluid-all-themes-toggle');
+        const cursorLabEnabled = document.getElementById('cursor-lab-enabled');
+        const cursorLabTrailType = document.getElementById('cursor-lab-trail-type');
+        const cursorLabPointerStyle = document.getElementById('cursor-lab-pointer-style');
+        const cursorLabSize = document.getElementById('cursor-lab-size');
+        const cursorLabThickness = document.getElementById('cursor-lab-thickness');
+        const cursorLabDelay = document.getElementById('cursor-lab-delay');
+        const cursorLabColor = document.getElementById('cursor-lab-color');
+        const cursorLabSizeValue = document.getElementById('cursor-lab-size-value');
+        const cursorLabThicknessValue = document.getElementById('cursor-lab-thickness-value');
+        const cursorLabDelayValue = document.getElementById('cursor-lab-delay-value');
+        const cursorLabColorValue = document.getElementById('cursor-lab-color-value');
+        const cursorLabResetButton = document.getElementById('cursor-lab-reset');
+        const cursorLabTurnOffButton = document.getElementById('cursor-lab-turn-off');
         const blacklightFluidRows = Array.from(document.querySelectorAll('.blacklight-fluid-settings'));
         const blacklightFluidSize = document.getElementById('blacklight-fluid-size');
         const blacklightFluidVelocity = document.getElementById('blacklight-fluid-velocity');
@@ -7835,9 +8234,88 @@ function initNavbarDateTime() {
             slider.style.setProperty('--range-progress', `${Math.min(100, Math.max(0, progress))}%`);
         }
 
+        function syncCursorLabSliderFill(slider) {
+            if (!(slider instanceof HTMLInputElement) || String(slider.type || '').toLowerCase() !== 'range') {
+                return;
+            }
+
+            const min = Number.parseFloat(slider.min || '0');
+            const max = Number.parseFloat(slider.max || '100');
+            const value = Number.parseFloat(slider.value || slider.min || '0');
+            const safeRange = max > min ? max - min : 1;
+            const progress = ((value - min) / safeRange) * 100;
+            slider.style.setProperty('--range-progress', `${Math.min(100, Math.max(0, progress))}%`);
+        }
+
+        function syncCursorLabControlLabels() {
+            if (cursorLabSize && cursorLabSizeValue) {
+                cursorLabSizeValue.textContent = `${Math.round(Number.parseFloat(cursorLabSize.value || String(DEFAULT_CURSOR_LAB_SETTINGS.size)))}px`;
+                syncCursorLabSliderFill(cursorLabSize);
+            }
+
+            if (cursorLabThickness && cursorLabThicknessValue) {
+                cursorLabThicknessValue.textContent = `${Math.round(Number.parseFloat(cursorLabThickness.value || String(DEFAULT_CURSOR_LAB_SETTINGS.thickness)))}px`;
+                syncCursorLabSliderFill(cursorLabThickness);
+            }
+
+            if (cursorLabDelay && cursorLabDelayValue) {
+                cursorLabDelayValue.textContent = Number.parseFloat(cursorLabDelay.value || String(DEFAULT_CURSOR_LAB_SETTINGS.delay)).toFixed(2);
+                syncCursorLabSliderFill(cursorLabDelay);
+            }
+
+            if (cursorLabColor && cursorLabColorValue) {
+                cursorLabColorValue.textContent = String(cursorLabColor.value || DEFAULT_CURSOR_LAB_SETTINGS.color).toUpperCase();
+            }
+        }
+
+        function applyCursorLabSettingsToControls(settingsLike) {
+            const settings = normalizeCursorLabSettings(settingsLike, DEFAULT_CURSOR_LAB_SETTINGS);
+
+            if (cursorLabEnabled) {
+                cursorLabEnabled.checked = settings.enabled;
+            }
+
+            if (cursorLabTrailType) {
+                cursorLabTrailType.value = settings.trailType;
+            }
+
+            if (cursorLabPointerStyle) {
+                cursorLabPointerStyle.value = settings.pointerStyle;
+            }
+
+            if (cursorLabSize) {
+                cursorLabSize.value = String(settings.size);
+            }
+
+            if (cursorLabThickness) {
+                cursorLabThickness.value = String(settings.thickness);
+            }
+
+            if (cursorLabDelay) {
+                cursorLabDelay.value = String(settings.delay);
+            }
+
+            if (cursorLabColor) {
+                cursorLabColor.value = settings.color;
+            }
+
+            syncCursorLabControlLabels();
+        }
+
+        function dispatchCursorLabControlPersist(control) {
+            if (!(control instanceof HTMLElement)) {
+                return;
+            }
+
+            const inputEvent = new Event('input', { bubbles: true });
+            const changeEvent = new Event('change', { bubbles: true });
+            control.dispatchEvent(inputEvent);
+            control.dispatchEvent(changeEvent);
+        }
+
         function syncBlacklightFluidControlVisibility(themeValue) {
             const effectiveTheme = resolveTheme(themeValue || (themeSelect ? themeSelect.value : document.documentElement.getAttribute('data-theme')));
-            const showControls = effectiveTheme === 'blacklight';
+            const showControls = effectiveTheme === 'blacklight' || Boolean(blacklightFluidAllThemesToggle && blacklightFluidAllThemesToggle.checked);
             const colorMode = blacklightFluidColorMode ? String(blacklightFluidColorMode.value || DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode).trim().toLowerCase() : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode;
 
             blacklightFluidRows.forEach((row) => {
@@ -7934,7 +8412,7 @@ function initNavbarDateTime() {
         const remembered = getUserScopedObject(USER_SETTINGS_KEY, workspaceUser.key);
         const settingsState = remembered.controls && typeof remembered.controls === 'object' ? remembered.controls : {};
         const savedBlacklightFluidSettings = getSavedBlacklightFluidCursorSettings();
-        const tabsToPersist = ['tab-security', 'tab-notifications', 'tab-subscriptions', 'tab-appearance'];
+        const tabsToPersist = ['tab-security', 'tab-notifications', 'tab-subscriptions', 'tab-appearance', 'tab-cursorlab'];
 
         function getControlStateKey(control) {
             if (control.id) {
@@ -8047,6 +8525,8 @@ function initNavbarDateTime() {
             blacklightFluidSolidColor.value = savedBlacklightFluidSettings.solidColor;
         }
 
+        applyCursorLabSettingsToControls(getSavedCursorLabSettings());
+
         syncBlacklightFluidControlLabels();
         syncBlacklightFluidControlVisibility(themeSelect ? themeSelect.value : document.documentElement.getAttribute('data-theme'));
 
@@ -8079,6 +8559,39 @@ function initNavbarDateTime() {
         if (blacklightFluidSolidColor) {
             blacklightFluidSolidColor.addEventListener('input', syncBlacklightFluidControlLabels);
             blacklightFluidSolidColor.addEventListener('change', syncBlacklightFluidControlLabels);
+        }
+
+        if (blacklightFluidAllThemesToggle) {
+            blacklightFluidAllThemesToggle.addEventListener('change', () => {
+                syncBlacklightFluidControlVisibility(themeSelect ? themeSelect.value : document.documentElement.getAttribute('data-theme'));
+            });
+        }
+
+        [cursorLabSize, cursorLabThickness, cursorLabDelay].forEach((control) => {
+            if (!(control instanceof HTMLInputElement)) {
+                return;
+            }
+            control.addEventListener('input', syncCursorLabControlLabels);
+            control.addEventListener('change', syncCursorLabControlLabels);
+        });
+
+        if (cursorLabColor) {
+            cursorLabColor.addEventListener('input', syncCursorLabControlLabels);
+            cursorLabColor.addEventListener('change', syncCursorLabControlLabels);
+        }
+
+        if (cursorLabResetButton) {
+            cursorLabResetButton.addEventListener('click', () => {
+                applyCursorLabSettingsToControls(DEFAULT_CURSOR_LAB_SETTINGS);
+                [cursorLabEnabled, cursorLabTrailType, cursorLabPointerStyle, cursorLabSize, cursorLabThickness, cursorLabDelay, cursorLabColor].forEach(dispatchCursorLabControlPersist);
+            });
+        }
+
+        if (cursorLabTurnOffButton && cursorLabEnabled) {
+            cursorLabTurnOffButton.addEventListener('click', () => {
+                cursorLabEnabled.checked = false;
+                dispatchCursorLabControlPersist(cursorLabEnabled);
+            });
         }
 
         function initSecuritySettingsControls() {
@@ -32243,6 +32756,8 @@ function initNavbarDateTime() {
             ['initMyAgentsAccessRules', initMyAgentsAccessRules],
             ['initThemeAwareLogos', initThemeAwareLogos],
             ['initBlacklightFluidCursor', initBlacklightFluidCursor],
+            ['initCursorLabEffect', initCursorLabEffect],
+            ['initCyberpunkCursorEffect', initCyberpunkCursorEffect],
             ['initThemeToggle', initThemeToggle],
             ['initBuildVersionLabel', initBuildVersionLabel],
             ['initNavbarDateTime', initNavbarDateTime],

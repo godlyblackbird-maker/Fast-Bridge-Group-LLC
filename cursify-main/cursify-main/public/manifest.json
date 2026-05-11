@@ -1,0 +1,73 @@
+{
+  "name": "Cursify - React Cursor Animations",
+  "short_name": "Cursify",
+  "description": "A comprehensive library of stunning cursor animations and interactive effects for React and Next.js applications",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#78ffd6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["design", "development", "ui", "animations"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Cursify Desktop Interface"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Cursify Mobile Interface"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Components",
+      "short_name": "Components",
+      "description": "Browse all cursor and pattern components",
+      "url": "/components",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Get Started",
+      "short_name": "Docs",
+      "description": "Learn how to install and use Cursify",
+      "url": "/get-started",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

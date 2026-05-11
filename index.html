@@ -921,6 +921,7 @@
         }
 
         html[data-theme='blacklight'] .brand-kicker,
+        html[data-theme='blacklight'] .side-heading,
         html[data-theme='blacklight'] .eyebrow,
         html[data-theme='blacklight'] .broker-hero-kicker,
         html[data-theme='blacklight'] .seller-cta-kicker,
@@ -932,8 +933,18 @@
             text-shadow: 0 0 10px rgba(115, 255, 0, 0.26), 0 0 22px rgba(255, 84, 196, 0.14);
         }
 
-        html[data-theme='blacklight'] .brand-kicker {
+        html[data-theme='blacklight'] .brand-kicker,
+        html[data-theme='blacklight'] .brand-name,
+        html[data-theme='blacklight'] .brand-tagline {
             animation: blacklightBrandRgbShift 7.2s linear infinite;
+        }
+
+        html[data-theme='blacklight'] .brand-name {
+            animation-delay: -1.8s;
+        }
+
+        html[data-theme='blacklight'] .brand-tagline {
+            animation-delay: -3.6s;
         }
 
         html[data-theme='blacklight'] .hero-panel h1,
@@ -948,6 +959,26 @@
 
         html[data-theme='blacklight'] .theme-switch-btn::before {
             box-shadow: 0 0 0 4px rgba(115, 255, 0, 0.1), 0 0 14px rgba(255, 84, 196, 0.24);
+        }
+
+        html[data-theme='blacklight'] .login-btn:not(.topbar-download-btn):not(#submit-access-request),
+        html[data-theme='blacklight'] .hero-actions .primary-cta,
+        html[data-theme='blacklight'] .seller-cta-actions .primary-cta {
+            border-color: rgba(115, 255, 0, 0.42);
+            background: linear-gradient(135deg, rgba(115, 255, 0, 0.98), rgba(61, 214, 36, 0.96));
+            color: #041002;
+            text-shadow: none;
+            box-shadow: 0 0 0 1px rgba(115, 255, 0, 0.1), 0 0 18px rgba(115, 255, 0, 0.2), 0 0 30px rgba(115, 255, 0, 0.14);
+        }
+
+        html[data-theme='blacklight'] .login-btn:not(.topbar-download-btn):not(#submit-access-request):hover,
+        html[data-theme='blacklight'] .login-btn:not(.topbar-download-btn):not(#submit-access-request):focus-visible,
+        html[data-theme='blacklight'] .hero-actions .primary-cta:hover,
+        html[data-theme='blacklight'] .hero-actions .primary-cta:focus-visible,
+        html[data-theme='blacklight'] .seller-cta-actions .primary-cta:hover,
+        html[data-theme='blacklight'] .seller-cta-actions .primary-cta:focus-visible {
+            border-color: rgba(173, 255, 120, 0.5);
+            box-shadow: 0 0 0 1px rgba(115, 255, 0, 0.14), 0 0 22px rgba(115, 255, 0, 0.24), 0 0 36px rgba(115, 255, 0, 0.18);
         }
 
         html[data-theme='cyberpunk'] body::after {
@@ -4373,6 +4404,8 @@
             let homepageBlacklightFluidModulePromise = null;
             let homepageBlacklightFluidCleanup = null;
             let homepageBlacklightFluidSignature = '';
+            let homepageCyberpunkCursorModulePromise = null;
+            let homepageCyberpunkCursorCleanup = null;
 
             const readJson = (key) => {
                 try {
@@ -4525,6 +4558,24 @@
                 return getLegacyBlacklightFluidCursorSettings();
             };
 
+            const isHomepageBlacklightFluidEnabledForAllThemes = () => {
+                const { userKey } = getUserThemeContext();
+                const remembered = getUserScopedObject(USER_THEME_KEY, userKey) || getUserScopedObject(USER_THEME_KEY, 'default-user') || {};
+                const controls = remembered && remembered.controls && typeof remembered.controls === 'object' ? remembered.controls : {};
+                const rawValue = controls['id:blacklight-fluid-all-themes-toggle'];
+
+                if (typeof rawValue === 'boolean') {
+                    return rawValue;
+                }
+
+                if (typeof rawValue === 'string') {
+                    const normalized = rawValue.trim().toLowerCase();
+                    return normalized === 'true' || normalized === '1' || normalized === 'on';
+                }
+
+                return false;
+            };
+
             const persistBlacklightFluidCursorSettings = (settingsLike) => {
                 const { userKey } = getUserThemeContext();
                 const normalized = normalizeBlacklightFluidCursorSettings(settingsLike, getSavedBlacklightFluidCursorSettings());
@@ -4565,8 +4616,10 @@
             const syncHomepageBlacklightFluidCursor = (themeValue) => {
                 const activeTheme = resolveTheme(themeValue || getHomepageTheme());
                 const config = getBlacklightFluidCursorConfig();
+                const allowAllThemes = isHomepageBlacklightFluidEnabledForAllThemes();
                 const nextSignature = JSON.stringify({
                     theme: activeTheme,
+                    allowAllThemes,
                     size: config.splatRadius,
                     velocity: config.splatForce,
                     colorMode: config.colorMode,
@@ -4575,7 +4628,7 @@
                     solidColor: config.solidColor
                 });
 
-                if (activeTheme !== 'blacklight') {
+                if (activeTheme !== 'blacklight' && !allowAllThemes) {
                     homepageBlacklightFluidSignature = '';
                     if (typeof homepageBlacklightFluidCleanup === 'function') {
                         homepageBlacklightFluidCleanup();
@@ -4605,6 +4658,10 @@
                 }
 
                 return homepageBlacklightFluidModulePromise.then((module) => {
+                    if (resolveTheme(getHomepageTheme()) !== 'blacklight' && !isHomepageBlacklightFluidEnabledForAllThemes()) {
+                        return false;
+                    }
+
                     const mountBlacklightFluidCursor = module && typeof module.mountBlacklightFluidCursor === 'function'
                         ? module.mountBlacklightFluidCursor
                         : null;
@@ -4619,6 +4676,46 @@
                 }).catch(() => false);
             };
 
+            const syncHomepageCyberpunkCursor = (themeValue) => {
+                const activeTheme = resolveTheme(themeValue || getHomepageTheme());
+
+                if (activeTheme !== 'cyberpunk') {
+                    if (typeof homepageCyberpunkCursorCleanup === 'function') {
+                        homepageCyberpunkCursorCleanup();
+                        homepageCyberpunkCursorCleanup = null;
+                    }
+                    return Promise.resolve(false);
+                }
+
+                if (!document.body) {
+                    return Promise.resolve(false);
+                }
+
+                if (typeof homepageCyberpunkCursorCleanup === 'function') {
+                    return Promise.resolve(true);
+                }
+
+                if (!homepageCyberpunkCursorModulePromise) {
+                    homepageCyberpunkCursorModulePromise = import('./temp-cyberpunk-cursor/cyberpunk-neon-cursor.js').catch((error) => {
+                        homepageCyberpunkCursorModulePromise = null;
+                        throw error;
+                    });
+                }
+
+                return homepageCyberpunkCursorModulePromise.then((module) => {
+                    const mountCyberpunkCursorEffect = module && typeof module.mountCyberpunkCursorEffect === 'function'
+                        ? module.mountCyberpunkCursorEffect
+                        : null;
+
+                    if (!mountCyberpunkCursorEffect) {
+                        return false;
+                    }
+
+                    homepageCyberpunkCursorCleanup = mountCyberpunkCursorEffect();
+                    return typeof homepageCyberpunkCursorCleanup === 'function';
+                }).catch(() => false);
+            };
+
             const applyStoredTheme = () => {
                 const activeTheme = getHomepageTheme();
                 const { isAuthenticated } = getUserThemeContext();
@@ -4626,6 +4723,7 @@
                 document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
                 updateThemeSwitchUi(activeTheme);
                 syncHomepageBlacklightFluidCursor(activeTheme);
+                syncHomepageCyberpunkCursor(activeTheme);
             };
 
             const modal = document.getElementById('access-request-modal');

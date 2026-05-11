@@ -1,0 +1,27 @@
+export const metadata = {
+  title: 'Character Cursor Effect',
+  description:
+    'A React component that tracks cursor movement and creates characters that radiate outward, generating a dynamic and expanding effect.',
+  tags: ['cursor', 'character', 'radiating', 'animation'],
+  category: 'cursor',
+};
+
+<ComponentCodePreview name='character-cursor' />
+
+```
+
+## Props
+
+| Prop                            | Type                                                                                  | Default                                                                                         | Description                                                                                                  |
+|---------------------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `characters`                    | `string[]`                                                                            | `['h', 'e', 'l', 'l', 'o']`                                                                    | Array of characters to display as the cursor effect.                                                        |
+| `colors`                        | `string[]`                                                                            | `['#6622CC', '#A755C2', '#B07C9E', '#B59194', '#D2A1B8']`                                       | Array of colors for the characters.                                                                         |
+| `cursorOffset`                  | `{ x: number; y: number }`                                                            | `{ x: 0, y: 0 }`                                                                                | Offset for the cursor position.                                                                             |
+| `font`                          | `string`                                                                              | `'15px serif'`                                                                                  | Font style for the characters.                                                                              |
+| `characterLifeSpanFunction`     | `() => number`                                                                        | `() => Math.floor(Math.random() * 60 + 80)`                                                     | Function to determine the lifespan of each character in frames.                                             |
+| `initialCharacterVelocityFunction` | `() => { x: number; y: number }`                                                    | `() => ({ x: (Math.random() < 0.5 ? -1 : 1) * Math.random() * 5, y: (Math.random() < 0.5 ? -1 : 1) * Math.random() * 5 })` | Function to set the initial velocity of each character.                                                     |
+| `characterVelocityChangeFunctions` | `{ x_func: (age: number, lifeSpan: number) => number; y_func: (age: number, lifeSpan: number) => number }` | `{ x_func: () => (Math.random() < 0.5 ? -1 : 1) / 30, y_func: () => (Math.random() < 0.5 ? -1 : 1) / 15 }` | Functions to update the velocity of each character over time for `x` and `y` axes.                          |
+| `characterScalingFunction`      | `(age: number, lifeSpan: number) => number`                                           | `(age, lifeSpan) => Math.max(((lifeSpan - age) / lifeSpan) * 2, 0)`                              | Function to determine the scaling of each character based on its age and lifespan.                          |
+| `characterNewRotationDegreesFunction` | `(age: number, lifeSpan: number) => number`                                      | `(age, lifeSpan) => (lifeSpan - age) / 5`                                                      | Function to determine the rotation of each character in degrees based on its age and lifespan.              |
+| `wrapperElement`                | `HTMLElement`                                                                         | `undefined`                                                                                     | Element that wraps the canvas. Defaults to the full document body if not provided.                          |
+```

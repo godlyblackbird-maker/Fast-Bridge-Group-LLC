@@ -1,0 +1,24 @@
+export const metadata = {
+  title: 'Rainbow Cursor Effect',
+  description:
+    'An interactive React component that adds a dynamic rainbow effect, visually tracking cursor movement in real time.',
+  tags: ['cursor', 'rainbow', 'colorful', 'trail'],
+  category: 'cursor',
+};
+
+<ComponentCodePreview name='rainbow-cursor' />
+
+## Props
+
+| Prop              | Type          | Default                                                              | Description                                                                                |
+| ----------------- | ------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `element`         | `HTMLElement` | `undefined`                                                          | The HTML element where the cursor effect will be applied. Defaults to the entire document. |
+| `length`          | `number`      | `20`                                                                 | The number of particles in the cursor trail.                                               |
+| `colors`          | `string[]`    | `['#FE0000', '#FD8C00', '#FFE500', '#119F0B', '#0644B3', '#C22EDC']` | The array of colors for the cursor trail.                                                  |
+| `size`            | `number`      | `3`                                                                  | The size of the particles in the cursor trail.                                             |
+| `trailSpeed`      | `number`      | `0.4`                                                                | The speed at which the trail follows the cursor.                                           |
+| `colorCycleSpeed` | `number`      | `0.002`                                                              | The speed of the color transition for the trail.                                           |
+| `blur`            | `number`      | `0`                                                                  | The amount of blur applied to the trail.                                                   |
+| `pulseSpeed`      | `number`      | `0.01`                                                               | The speed of the pulsing effect for the particle size.                                     |
+| `pulseMin`        | `number`      | `0.8`                                                                | The minimum size multiplier for the pulsing effect.                                        |
+| `pulseMax`        | `number`      | `1.2`                                                                | The maximum size multiplier for the pulsing effect.                                        |

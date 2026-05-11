@@ -211,6 +211,157 @@
             display: none !important;
         }
 
+        .cursorlab-preview-card {
+            display: grid;
+            gap: 14px;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(var(--accent-rgb), 0.16);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.54));
+            box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+        }
+
+        .cursorlab-preview-card strong {
+            font-size: 1rem;
+            color: var(--heading-color);
+        }
+
+        .cursorlab-preview-card p {
+            margin: 0;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .cursorlab-preview-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .cursorlab-preview-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 0 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-rgb), 0.18);
+            background: rgba(var(--accent-rgb), 0.1);
+            color: var(--heading-color);
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .cursorlab-note {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+
+        .cursorlab-control {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: min(320px, 100%);
+        }
+
+        .cursorlab-inline-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .cursorlab-slider {
+            --range-progress: 50%;
+            width: 100%;
+            height: 14px;
+            border-radius: 999px;
+            appearance: none;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.96) 0%, rgba(var(--accent-light-rgb), 0.92) var(--range-progress), rgba(255, 255, 255, 0.09) var(--range-progress), rgba(255, 255, 255, 0.09) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .cursorlab-slider::-webkit-slider-runnable-track {
+            height: 14px;
+            border-radius: 999px;
+            background: transparent;
+        }
+
+        .cursorlab-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            margin-top: -4px;
+            border-radius: 50%;
+            border: 2px solid rgba(7, 7, 7, 0.72);
+            background: #fffdfb;
+            box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.16), 0 8px 18px rgba(0, 0, 0, 0.34);
+        }
+
+        .cursorlab-slider::-moz-range-track {
+            height: 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.09);
+            border: none;
+        }
+
+        .cursorlab-slider::-moz-range-progress {
+            height: 14px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.96), rgba(var(--accent-light-rgb), 0.92));
+        }
+
+        .cursorlab-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(7, 7, 7, 0.72);
+            border-radius: 50%;
+            background: #fffdfb;
+            box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.16), 0 8px 18px rgba(0, 0, 0, 0.34);
+        }
+
+        .cursorlab-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .cursorlab-value {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--heading-color);
+        }
+
+        .cursorlab-color-input {
+            width: 54px;
+            height: 42px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 14px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .cursorlab-color-input::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .cursorlab-color-input::-webkit-color-swatch {
+            border: none;
+            border-radius: 12px;
+        }
+
         .blacklight-fluid-control {
             display: flex;
             flex-direction: column;
@@ -566,6 +717,14 @@ https://templatemo.com/tm-607-glass-admin
                                     <path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/>
                                 </svg>
                                 Appearance
+                            </a>
+                        </li>
+                        <li class="settings-nav-item">
+                            <a href="#" class="settings-nav-link" data-tab="cursorlab">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 3l14 9-6 1 1 6-3 2-2-6-4 3V3z"/>
+                                </svg>
+                                Cursor Lab
                             </a>
                         </li>
                         <li class="settings-nav-item">
@@ -1125,10 +1284,20 @@ https://templatemo.com/tm-607-glass-admin
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Smoke Cursor On All Themes</span>
+                                    <span class="settings-label-desc">Turn this on to use the smoke cursor outside BLACK LIGHT mode. Turn it off to keep the smoke effect exclusive to BLACK LIGHT.</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="blacklight-fluid-all-themes-toggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
                             <div class="settings-row blacklight-fluid-settings" id="blacklight-fluid-size-row" hidden>
                                 <div class="settings-label">
-                                    <span class="settings-label-title">BLACK LIGHT Cursor Size</span>
-                                    <span class="settings-label-desc">Controls how wide the liquid trail splashes around the cursor while BLACK LIGHT mode is active.</span>
+                                    <span class="settings-label-title">Smoke Cursor Size</span>
+                                    <span class="settings-label-desc">Controls how wide the liquid trail splashes around the cursor while the smoke cursor is active.</span>
                                 </div>
                                 <div class="blacklight-fluid-control">
                                     <input id="blacklight-fluid-size" class="blacklight-fluid-slider" type="range" min="0.20" max="0.90" step="0.02" value="0.42">
@@ -1141,8 +1310,8 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="settings-row blacklight-fluid-settings" id="blacklight-fluid-color-mode-row" hidden>
                                 <div class="settings-label">
-                                    <span class="settings-label-title">BLACK LIGHT Color Mode</span>
-                                    <span class="settings-label-desc">Choose whether the fluid shifts through the blacklight palette or stays locked to one solid color.</span>
+                                    <span class="settings-label-title">Smoke Cursor Color Mode</span>
+                                    <span class="settings-label-desc">Choose whether the smoke shifts through the blacklight palette or stays locked to one solid color.</span>
                                 </div>
                                 <select class="settings-select" id="blacklight-fluid-color-mode">
                                     <option value="dynamic">Dynamic Palette</option>
@@ -1151,8 +1320,8 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="settings-row blacklight-fluid-settings" id="blacklight-fluid-dynamics-row" hidden>
                                 <div class="settings-label">
-                                    <span class="settings-label-title">BLACK LIGHT Color Dynamics</span>
-                                    <span class="settings-label-desc">Controls how quickly the fluid shifts between blacklight colors while Dynamic Palette mode is active.</span>
+                                    <span class="settings-label-title">Smoke Cursor Color Dynamics</span>
+                                    <span class="settings-label-desc">Controls how quickly the smoke shifts between blacklight colors while Dynamic Palette mode is active.</span>
                                 </div>
                                 <div class="blacklight-fluid-control">
                                     <input id="blacklight-fluid-dynamics" class="blacklight-fluid-slider" type="range" min="0" max="4" step="0.10" value="0.35">
@@ -1165,8 +1334,8 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="settings-row blacklight-fluid-settings" id="blacklight-fluid-brightness-row" hidden>
                                 <div class="settings-label">
-                                    <span class="settings-label-title">BLACK LIGHT Fluid Brightness</span>
-                                    <span class="settings-label-desc">Raises or lowers how bright the liquid glow renders while BLACK LIGHT mode is active.</span>
+                                    <span class="settings-label-title">Smoke Cursor Brightness</span>
+                                    <span class="settings-label-desc">Raises or lowers how bright the liquid glow renders while the smoke cursor is active.</span>
                                 </div>
                                 <div class="blacklight-fluid-control">
                                     <input id="blacklight-fluid-brightness" class="blacklight-fluid-slider" type="range" min="0.20" max="2.20" step="0.10" value="1.00">
@@ -1179,7 +1348,7 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="settings-row blacklight-fluid-settings" id="blacklight-fluid-solid-color-row" hidden>
                                 <div class="settings-label">
-                                    <span class="settings-label-title">BLACK LIGHT Solid Color</span>
+                                    <span class="settings-label-title">Smoke Cursor Solid Color</span>
                                     <span class="settings-label-desc">Choose the exact solid fluid color used when Solid Color mode is active.</span>
                                 </div>
                                 <div class="blacklight-fluid-inline-control">
@@ -1189,8 +1358,8 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="settings-row blacklight-fluid-settings" id="blacklight-fluid-velocity-row" hidden>
                                 <div class="settings-label">
-                                    <span class="settings-label-title">BLACK LIGHT Cursor Velocity</span>
-                                    <span class="settings-label-desc">Controls how aggressively the liquid throws and stretches when you move the cursor in BLACK LIGHT mode.</span>
+                                    <span class="settings-label-title">Smoke Cursor Velocity</span>
+                                    <span class="settings-label-desc">Controls how aggressively the liquid throws and stretches when you move the cursor while the smoke cursor is active.</span>
                                 </div>
                                 <div class="blacklight-fluid-control">
                                     <input id="blacklight-fluid-velocity" class="blacklight-fluid-slider" type="range" min="2400" max="9000" step="200" value="5400">
@@ -1207,6 +1376,121 @@ https://templatemo.com/tm-607-glass-admin
                         <div class="btn-group">
                             <button class="btn btn-primary" style="width: auto;">Apply Changes</button>
                             <button class="btn btn-secondary" style="width: auto;">Reset to Default</button>
+                        </div>
+                    </div>
+
+                    <!-- Cursor Lab Tab -->
+                    <div class="settings-tab-content" id="tab-cursorlab">
+                        <div class="settings-section">
+                            <h3 class="settings-section-title">Personal Cursor Studio</h3>
+                            <div class="cursorlab-preview-card">
+                                <strong>Live Cursor Preview</strong>
+                                <p>Turn your personal cursor on, then move around this page to test changes in real time. These settings save per workspace user and follow that user across dashboard pages.</p>
+                                <div class="cursorlab-preview-actions">
+                                    <span class="cursorlab-preview-chip">Hover Target</span>
+                                    <span class="cursorlab-preview-chip">Resize Test</span>
+                                    <span class="cursorlab-preview-chip">Color Check</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Enable Personal Cursor</span>
+                                    <span class="settings-label-desc">Turns your saved CursorLab trail on across dashboard pages for your user only.</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="cursor-lab-enabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Trail Shape</span>
+                                    <span class="settings-label-desc">Choose the shape that follows your cursor.</span>
+                                </div>
+                                <select class="settings-select" id="cursor-lab-trail-type">
+                                    <option value="circle">Circle Outline</option>
+                                    <option value="circle-filled">Circle Filled</option>
+                                    <option value="square">Square Outline</option>
+                                    <option value="square-filled">Square Filled</option>
+                                    <option value="triangle">Triangle</option>
+                                    <option value="star">Star</option>
+                                    <option value="dot">Dot</option>
+                                </select>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Pointer Style</span>
+                                    <span class="settings-label-desc">Keep the normal pointer or swap it for a simple custom cursor style.</span>
+                                </div>
+                                <select class="settings-select" id="cursor-lab-pointer-style">
+                                    <option value="default">System Default</option>
+                                    <option value="crosshair">Crosshair</option>
+                                    <option value="grab">Grab</option>
+                                    <option value="copy">Copy</option>
+                                    <option value="none">Hidden</option>
+                                </select>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Trail Size</span>
+                                    <span class="settings-label-desc">Increase or decrease how large the trail shape renders.</span>
+                                </div>
+                                <div class="cursorlab-control">
+                                    <input id="cursor-lab-size" class="cursorlab-slider" type="range" min="10" max="48" step="1" value="24">
+                                    <div class="cursorlab-meta">
+                                        <span>Small</span>
+                                        <span class="cursorlab-value" id="cursor-lab-size-value">24px</span>
+                                        <span>Large</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Trail Thickness</span>
+                                    <span class="settings-label-desc">Adjust outline thickness for hollow trail shapes.</span>
+                                </div>
+                                <div class="cursorlab-control">
+                                    <input id="cursor-lab-thickness" class="cursorlab-slider" type="range" min="1" max="8" step="1" value="2">
+                                    <div class="cursorlab-meta">
+                                        <span>Thin</span>
+                                        <span class="cursorlab-value" id="cursor-lab-thickness-value">2px</span>
+                                        <span>Bold</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Follow Speed</span>
+                                    <span class="settings-label-desc">Lower values feel smoother and slower. Higher values follow the mouse more tightly.</span>
+                                </div>
+                                <div class="cursorlab-control">
+                                    <input id="cursor-lab-delay" class="cursorlab-slider" type="range" min="0.02" max="0.35" step="0.01" value="0.10">
+                                    <div class="cursorlab-meta">
+                                        <span>Smoother</span>
+                                        <span class="cursorlab-value" id="cursor-lab-delay-value">0.10</span>
+                                        <span>Tighter</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-label-title">Trail Color</span>
+                                    <span class="settings-label-desc">Pick the exact color for your custom cursor trail.</span>
+                                </div>
+                                <div class="cursorlab-inline-control">
+                                    <input id="cursor-lab-color" class="cursorlab-color-input" type="color" value="#34d399">
+                                    <span class="cursorlab-value" id="cursor-lab-color-value">#34D399</span>
+                                </div>
+                            </div>
+                            <p class="cursorlab-note">These controls save automatically. Reset puts your personal cursor back to the default CursorLab preset, and Turn Off disables it without clearing your saved design.</p>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="cursor-lab-reset" type="button" style="width: auto;">Reset Cursor</button>
+                            <button class="btn btn-secondary" id="cursor-lab-turn-off" type="button" style="width: auto;">Turn Off Cursor</button>
                         </div>
                     </div>
 
