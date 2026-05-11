@@ -2257,7 +2257,9 @@
             gap: 14px;
             padding: 20px;
             position: relative;
+            isolation: isolate;
             left: 0;
+            overflow: hidden;
             border-radius: 24px;
             border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
             background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
@@ -2266,16 +2268,295 @@
             box-shadow: var(--shadow);
             color: var(--text);
             text-decoration: none;
-            will-change: left, transform;
-            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+            will-change: left, transform, box-shadow, border-color;
+            transform-origin: center;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+        }
+
+        .social-card > * {
+            position: relative;
+            z-index: 1;
         }
 
         .social-card.social-card-wave {
-            animation: social-card-wave 6.4s linear infinite;
+            animation: social-card-wave 6.4s linear infinite, social-card-breathe 4.8s ease-in-out infinite, social-card-glow 4.6s ease-in-out infinite;
+            box-shadow:
+                var(--shadow),
+                0 0 0 1px color-mix(in srgb, var(--accent-soft) 12%, transparent 88%),
+                0 0 28px color-mix(in srgb, var(--accent) 12%, transparent 88%);
+        }
+
+        .social-card.social-card-wave::selection {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .social-card.social-card-wave .social-icon {
+            animation: social-icon-bob 4.2s ease-in-out infinite;
+            filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+            transition: transform 0.25s ease, filter 0.25s ease;
+        }
+
+        .social-card.social-card-wave::before,
+        .social-card.social-card-wave::after {
+            content: '';
+            position: absolute;
+            inset: auto;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.2);
+            border: 2px solid color-mix(in srgb, var(--accent-soft) 68%, white 32%);
+            box-shadow:
+                0 0 0 6px color-mix(in srgb, var(--accent-soft) 18%, transparent 82%),
+                0 0 30px color-mix(in srgb, var(--accent) 26%, transparent 74%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.08) 58%, rgba(255, 255, 255, 0) 72%);
+        }
+
+        .social-card.social-card-wave::marker {
+            content: none;
+        }
+
+        .social-card.social-card-wave::after,
+        .social-card.social-card-wave::before {
+            transition: opacity 0.25s ease;
+        }
+
+        .social-card.social-card-wave::selection,
+        .social-card.social-card-wave *::selection {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .social-card.social-card-wave::before,
+        .social-card.social-card-wave::after,
+        .social-card.social-card-wave > * {
+            backface-visibility: hidden;
+        }
+
+        .social-card.social-card-wave::before {
+            top: 26%;
+            left: 78%;
+            animation: social-card-ripple 4.8s ease-out infinite;
+        }
+
+        .social-card.social-card-wave::after {
+            top: 78%;
+            left: 22%;
+            animation: social-card-ripple 4.8s ease-out infinite 1.4s;
         }
 
         .social-card.social-card-wave-1 {
             animation-delay: 0s;
+        }
+
+        .social-card.social-card-instagram {
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)),
+                radial-gradient(circle at 18% 18%, rgba(255, 214, 165, 0.52), transparent 34%),
+                radial-gradient(circle at 82% 20%, rgba(255, 110, 199, 0.42), transparent 38%),
+                radial-gradient(circle at 76% 82%, rgba(126, 91, 255, 0.36), transparent 40%),
+                linear-gradient(135deg, rgba(255, 94, 98, 0.22), rgba(255, 154, 0, 0.16) 34%, rgba(188, 42, 141, 0.24) 68%, rgba(88, 81, 219, 0.22));
+            background-size: 100% 100%, 120% 120%, 140% 140%, 140% 140%, 220% 220%;
+            border-color: rgba(255, 151, 163, 0.28);
+            box-shadow:
+                0 24px 54px rgba(31, 11, 43, 0.2),
+                0 0 0 1px rgba(255, 166, 125, 0.16),
+                0 0 36px rgba(188, 42, 141, 0.24);
+            animation:
+                social-card-wave 6.4s linear infinite,
+                social-card-breathe 4.4s ease-in-out infinite,
+                instagram-card-bloom 7.2s linear infinite,
+                instagram-card-glow 3.8s ease-in-out infinite;
+        }
+
+        .social-card.social-card-instagram::before,
+        .social-card.social-card-instagram::after {
+            opacity: 0.42;
+            border-color: rgba(255, 214, 165, 0.7);
+            box-shadow:
+                0 0 0 10px rgba(255, 255, 255, 0.06),
+                0 0 32px rgba(255, 84, 160, 0.3),
+                0 0 54px rgba(136, 84, 255, 0.22);
+        }
+
+        .social-card.social-card-instagram .social-icon {
+            width: 56px;
+            height: 56px;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.16)) drop-shadow(0 0 18px rgba(255, 82, 142, 0.24));
+            animation: social-icon-bob 4.2s ease-in-out infinite, instagram-icon-flare 3.1s ease-in-out infinite;
+        }
+
+        .social-card.social-card-instagram h3 {
+            text-shadow: 0 0 18px rgba(255, 255, 255, 0.12);
+            animation: instagram-heading-shift 5.4s ease-in-out infinite;
+        }
+
+        .social-card.social-card-instagram span {
+            color: rgba(255, 244, 236, 0.96);
+            text-shadow: 0 0 14px rgba(255, 166, 125, 0.34);
+            letter-spacing: 0.16em;
+        }
+
+        .social-card.social-card-instagram p {
+            color: rgba(255, 246, 244, 0.88);
+        }
+
+        .social-card.social-card-youtube {
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+                radial-gradient(circle at 18% 20%, rgba(255, 247, 247, 0.26), transparent 30%),
+                radial-gradient(circle at 82% 22%, rgba(255, 101, 101, 0.34), transparent 36%),
+                radial-gradient(circle at 70% 82%, rgba(255, 45, 45, 0.28), transparent 42%),
+                linear-gradient(135deg, rgba(35, 7, 7, 0.22), rgba(255, 0, 0, 0.24) 38%, rgba(255, 93, 93, 0.18) 70%, rgba(255, 255, 255, 0.08));
+            background-size: 100% 100%, 125% 125%, 140% 140%, 150% 150%, 220% 220%;
+            border-color: rgba(255, 120, 120, 0.3);
+            box-shadow:
+                0 24px 54px rgba(38, 7, 7, 0.22),
+                0 0 0 1px rgba(255, 123, 123, 0.16),
+                0 0 34px rgba(255, 51, 51, 0.24);
+            animation:
+                social-card-wave 6.2s linear infinite,
+                social-card-breathe 4.5s ease-in-out infinite,
+                youtube-card-scan 6.5s linear infinite,
+                youtube-card-glow 3.6s ease-in-out infinite;
+        }
+
+        .social-card.social-card-youtube::before,
+        .social-card.social-card-youtube::after {
+            opacity: 0.44;
+            border-color: rgba(255, 212, 212, 0.72);
+            box-shadow:
+                0 0 0 10px rgba(255, 255, 255, 0.06),
+                0 0 30px rgba(255, 62, 62, 0.3),
+                0 0 56px rgba(255, 96, 96, 0.22);
+        }
+
+        .social-card.social-card-youtube .social-icon {
+            width: 56px;
+            height: 56px;
+            filter: drop-shadow(0 0 10px rgba(255, 242, 242, 0.16)) drop-shadow(0 0 18px rgba(255, 61, 61, 0.26));
+            animation: social-icon-bob 4.2s ease-in-out infinite, youtube-icon-pulse 2.8s ease-in-out infinite;
+        }
+
+        .social-card.social-card-youtube h3 {
+            text-shadow: 0 0 18px rgba(255, 220, 220, 0.12);
+            animation: youtube-heading-surge 4.8s ease-in-out infinite;
+        }
+
+        .social-card.social-card-youtube span {
+            color: rgba(255, 245, 245, 0.96);
+            text-shadow: 0 0 14px rgba(255, 123, 123, 0.34);
+            letter-spacing: 0.16em;
+        }
+
+        .social-card.social-card-youtube p {
+            color: rgba(255, 242, 242, 0.88);
+        }
+
+        .social-card.social-card-facebook {
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)),
+                radial-gradient(circle at 18% 16%, rgba(214, 233, 255, 0.36), transparent 30%),
+                radial-gradient(circle at 84% 18%, rgba(127, 179, 255, 0.36), transparent 34%),
+                radial-gradient(circle at 78% 82%, rgba(24, 119, 242, 0.26), transparent 42%),
+                linear-gradient(135deg, rgba(11, 42, 91, 0.22), rgba(24, 119, 242, 0.22) 42%, rgba(116, 174, 255, 0.16) 74%, rgba(255, 255, 255, 0.08));
+            background-size: 100% 100%, 125% 125%, 145% 145%, 145% 145%, 220% 220%;
+            border-color: rgba(121, 170, 255, 0.28);
+            box-shadow:
+                0 24px 54px rgba(8, 31, 77, 0.2),
+                0 0 0 1px rgba(143, 188, 255, 0.16),
+                0 0 36px rgba(24, 119, 242, 0.22);
+            animation:
+                social-card-wave 6.6s linear infinite,
+                social-card-breathe 4.9s ease-in-out infinite,
+                facebook-card-drift 7s linear infinite,
+                facebook-card-glow 4s ease-in-out infinite;
+        }
+
+        .social-card.social-card-facebook::before,
+        .social-card.social-card-facebook::after {
+            opacity: 0.42;
+            border-color: rgba(198, 222, 255, 0.72);
+            box-shadow:
+                0 0 0 10px rgba(255, 255, 255, 0.06),
+                0 0 30px rgba(76, 144, 255, 0.24),
+                0 0 56px rgba(24, 119, 242, 0.18);
+        }
+
+        .social-card.social-card-facebook .social-icon {
+            width: 56px;
+            height: 56px;
+            filter: drop-shadow(0 0 10px rgba(229, 240, 255, 0.16)) drop-shadow(0 0 18px rgba(24, 119, 242, 0.24));
+            animation: social-icon-bob 4.2s ease-in-out infinite, facebook-icon-orbit 3.4s ease-in-out infinite;
+        }
+
+        .social-card.social-card-facebook h3 {
+            text-shadow: 0 0 18px rgba(233, 242, 255, 0.14);
+            animation: facebook-heading-sway 5.4s ease-in-out infinite;
+        }
+
+        .social-card.social-card-facebook span {
+            color: rgba(241, 247, 255, 0.96);
+            text-shadow: 0 0 14px rgba(137, 182, 255, 0.34);
+            letter-spacing: 0.16em;
+        }
+
+        .social-card.social-card-facebook p {
+            color: rgba(241, 247, 255, 0.88);
+        }
+
+        .social-card.social-card-tiktok {
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+                radial-gradient(circle at 18% 20%, rgba(95, 255, 237, 0.24), transparent 30%),
+                radial-gradient(circle at 82% 18%, rgba(255, 80, 125, 0.24), transparent 34%),
+                radial-gradient(circle at 76% 82%, rgba(34, 34, 34, 0.2), transparent 40%),
+                linear-gradient(135deg, rgba(5, 5, 5, 0.32), rgba(0, 242, 234, 0.14) 32%, rgba(255, 0, 80, 0.16) 66%, rgba(255, 255, 255, 0.04));
+            background-size: 100% 100%, 125% 125%, 145% 145%, 150% 150%, 230% 230%;
+            border-color: rgba(132, 255, 245, 0.22);
+            box-shadow:
+                0 24px 54px rgba(5, 5, 5, 0.24),
+                0 0 0 1px rgba(120, 255, 240, 0.12),
+                0 0 38px rgba(255, 0, 80, 0.16);
+            animation:
+                social-card-wave 6s linear infinite,
+                social-card-breathe 4.2s ease-in-out infinite,
+                tiktok-card-flicker 5.2s linear infinite,
+                tiktok-card-glow 3.4s ease-in-out infinite;
+        }
+
+        .social-card.social-card-tiktok::before,
+        .social-card.social-card-tiktok::after {
+            opacity: 0.44;
+            border-color: rgba(168, 255, 245, 0.7);
+            box-shadow:
+                0 0 0 10px rgba(255, 255, 255, 0.04),
+                -8px 0 28px rgba(0, 242, 234, 0.22),
+                8px 0 28px rgba(255, 0, 80, 0.2);
+        }
+
+        .social-card.social-card-tiktok .social-icon {
+            width: 56px;
+            height: 56px;
+            filter: drop-shadow(-4px 0 12px rgba(0, 242, 234, 0.18)) drop-shadow(4px 0 12px rgba(255, 0, 80, 0.16));
+            animation: social-icon-bob 4.2s ease-in-out infinite, tiktok-icon-glitch 2.6s steps(2, end) infinite;
+        }
+
+        .social-card.social-card-tiktok h3 {
+            text-shadow: -2px 0 10px rgba(0, 242, 234, 0.12), 2px 0 10px rgba(255, 0, 80, 0.12);
+            animation: tiktok-heading-glitch 4.6s steps(2, end) infinite;
+        }
+
+        .social-card.social-card-tiktok span {
+            color: rgba(243, 255, 253, 0.96);
+            text-shadow: -2px 0 10px rgba(0, 242, 234, 0.2), 2px 0 10px rgba(255, 0, 80, 0.2);
+            letter-spacing: 0.16em;
+        }
+
+        .social-card.social-card-tiktok p {
+            color: rgba(240, 250, 248, 0.86);
         }
 
         .social-card.social-card-wave-2 {
@@ -2288,6 +2569,54 @@
 
         .social-card.social-card-wave-4 {
             animation-delay: 0.72s;
+        }
+
+        .social-card.social-card-wave-1::before,
+        .social-card.social-card-wave-1::after {
+        }
+
+        .social-card.social-card-wave-1::before {
+            animation-delay: 0s;
+        }
+
+        .social-card.social-card-wave-1::after {
+            animation-delay: 1.4s;
+        }
+
+        .social-card.social-card-wave-2::before,
+        .social-card.social-card-wave-2::after {
+        }
+
+        .social-card.social-card-wave-2::before {
+            animation-delay: 0.35s;
+        }
+
+        .social-card.social-card-wave-2::after {
+            animation-delay: 1.75s;
+        }
+
+        .social-card.social-card-wave-3::before,
+        .social-card.social-card-wave-3::after {
+        }
+
+        .social-card.social-card-wave-3::before {
+            animation-delay: 0.7s;
+        }
+
+        .social-card.social-card-wave-3::after {
+            animation-delay: 2.1s;
+        }
+
+        .social-card.social-card-wave-4::before,
+        .social-card.social-card-wave-4::after {
+        }
+
+        .social-card.social-card-wave-4::before {
+            animation-delay: 1.05s;
+        }
+
+        .social-card.social-card-wave-4::after {
+            animation-delay: 2.45s;
         }
 
         @keyframes social-card-wave {
@@ -2309,11 +2638,468 @@
             }
         }
 
+        @keyframes social-card-breathe {
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            25% {
+                transform: translateY(-6px) scale(1.018);
+            }
+
+            50% {
+                transform: translateY(-10px) scale(1.03);
+            }
+
+            75% {
+                transform: translateY(-4px) scale(1.014);
+            }
+        }
+
+        @keyframes social-card-glow {
+            0%,
+            100% {
+                border-color: color-mix(in srgb, var(--border) 82%, white 18%);
+                box-shadow:
+                    var(--shadow),
+                    0 0 0 1px color-mix(in srgb, var(--accent-soft) 12%, transparent 88%),
+                    0 0 24px color-mix(in srgb, var(--accent) 10%, transparent 90%);
+            }
+
+            50% {
+                border-color: color-mix(in srgb, var(--accent-soft) 34%, white 16%);
+                box-shadow:
+                    0 24px 52px rgba(0, 0, 0, 0.16),
+                    0 0 0 1px color-mix(in srgb, var(--accent-soft) 18%, transparent 82%),
+                    0 0 42px color-mix(in srgb, var(--accent) 22%, transparent 78%);
+            }
+        }
+
+        @keyframes social-card-ripple {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.2);
+            }
+
+            10% {
+                opacity: 0.9;
+            }
+
+            55% {
+                opacity: 0.28;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(8.6);
+            }
+        }
+
+        @keyframes instagram-card-bloom {
+            0% {
+                background-position: 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+            }
+
+            50% {
+                background-position: 0% 0%, 22% 16%, 84% 18%, 78% 86%, 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+            }
+        }
+
+        @keyframes instagram-card-glow {
+            0%,
+            100% {
+                box-shadow:
+                    0 24px 54px rgba(31, 11, 43, 0.2),
+                    0 0 0 1px rgba(255, 166, 125, 0.16),
+                    0 0 36px rgba(188, 42, 141, 0.24);
+            }
+
+            50% {
+                box-shadow:
+                    0 32px 66px rgba(31, 11, 43, 0.24),
+                    0 0 0 1px rgba(255, 206, 138, 0.28),
+                    0 0 54px rgba(255, 85, 153, 0.34),
+                    0 0 86px rgba(96, 74, 255, 0.18);
+            }
+        }
+
+        @keyframes instagram-icon-flare {
+            0%,
+            100% {
+                filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.16)) drop-shadow(0 0 18px rgba(255, 82, 142, 0.24));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 14px rgba(255, 241, 230, 0.28)) drop-shadow(0 0 24px rgba(255, 104, 180, 0.4)) drop-shadow(0 0 34px rgba(104, 94, 255, 0.24));
+            }
+        }
+
+        @keyframes instagram-heading-shift {
+            0%,
+            100% {
+                transform: translateX(0);
+                letter-spacing: -0.03em;
+            }
+
+            50% {
+                transform: translateX(2px);
+                letter-spacing: -0.015em;
+            }
+        }
+
+        @keyframes youtube-card-scan {
+            0% {
+                background-position: 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+            }
+
+            50% {
+                background-position: 0% 0%, 18% 12%, 84% 16%, 74% 88%, 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+            }
+        }
+
+        @keyframes youtube-card-glow {
+            0%,
+            100% {
+                box-shadow:
+                    0 24px 54px rgba(38, 7, 7, 0.22),
+                    0 0 0 1px rgba(255, 123, 123, 0.16),
+                    0 0 34px rgba(255, 51, 51, 0.24);
+            }
+
+            50% {
+                box-shadow:
+                    0 32px 68px rgba(38, 7, 7, 0.26),
+                    0 0 0 1px rgba(255, 170, 170, 0.3),
+                    0 0 54px rgba(255, 51, 51, 0.36),
+                    0 0 84px rgba(255, 129, 129, 0.18);
+            }
+        }
+
+        @keyframes youtube-icon-pulse {
+            0%,
+            100% {
+                filter: drop-shadow(0 0 10px rgba(255, 242, 242, 0.16)) drop-shadow(0 0 18px rgba(255, 61, 61, 0.26));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 14px rgba(255, 244, 244, 0.3)) drop-shadow(0 0 26px rgba(255, 39, 39, 0.42)) drop-shadow(0 0 36px rgba(255, 122, 122, 0.24));
+            }
+        }
+
+        @keyframes youtube-heading-surge {
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            50% {
+                transform: translateX(3px);
+            }
+        }
+
+        @keyframes facebook-card-drift {
+            0% {
+                background-position: 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+            }
+
+            50% {
+                background-position: 0% 0%, 16% 14%, 86% 18%, 74% 84%, 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+            }
+        }
+
+        @keyframes facebook-card-glow {
+            0%,
+            100% {
+                box-shadow:
+                    0 24px 54px rgba(8, 31, 77, 0.2),
+                    0 0 0 1px rgba(143, 188, 255, 0.16),
+                    0 0 36px rgba(24, 119, 242, 0.22);
+            }
+
+            50% {
+                box-shadow:
+                    0 32px 66px rgba(8, 31, 77, 0.24),
+                    0 0 0 1px rgba(188, 216, 255, 0.28),
+                    0 0 54px rgba(24, 119, 242, 0.3),
+                    0 0 86px rgba(137, 182, 255, 0.18);
+            }
+        }
+
+        @keyframes facebook-icon-orbit {
+            0%,
+            100% {
+                filter: drop-shadow(0 0 10px rgba(229, 240, 255, 0.16)) drop-shadow(0 0 18px rgba(24, 119, 242, 0.24));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 14px rgba(239, 246, 255, 0.28)) drop-shadow(0 0 24px rgba(72, 149, 255, 0.36)) drop-shadow(0 0 34px rgba(24, 119, 242, 0.2));
+            }
+        }
+
+        @keyframes facebook-heading-sway {
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            50% {
+                transform: translateX(2px);
+            }
+        }
+
+        @keyframes tiktok-card-flicker {
+            0%,
+            100% {
+                background-position: 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+            }
+
+            20% {
+                background-position: 0% 0%, 4% 3%, 96% 2%, 97% 96%, 22% 50%;
+            }
+
+            55% {
+                background-position: 0% 0%, 18% 12%, 86% 18%, 74% 84%, 100% 50%;
+            }
+
+            75% {
+                background-position: 0% 0%, 10% 8%, 92% 10%, 84% 92%, 72% 50%;
+            }
+        }
+
+        @keyframes tiktok-card-glow {
+            0%,
+            100% {
+                box-shadow:
+                    0 24px 54px rgba(5, 5, 5, 0.24),
+                    0 0 0 1px rgba(120, 255, 240, 0.12),
+                    0 0 38px rgba(255, 0, 80, 0.16);
+            }
+
+            50% {
+                box-shadow:
+                    0 32px 68px rgba(5, 5, 5, 0.28),
+                    0 0 0 1px rgba(168, 255, 245, 0.24),
+                    -10px 0 48px rgba(0, 242, 234, 0.18),
+                    10px 0 48px rgba(255, 0, 80, 0.18);
+            }
+        }
+
+        @keyframes tiktok-icon-glitch {
+            0%,
+            100% {
+                transform: translateY(0) translateX(0);
+            }
+
+            20% {
+                transform: translateY(-2px) translateX(-2px);
+            }
+
+            22% {
+                transform: translateY(1px) translateX(2px);
+            }
+
+            55% {
+                transform: translateY(-4px) translateX(0);
+            }
+
+            57% {
+                transform: translateY(-4px) translateX(2px);
+            }
+        }
+
+        @keyframes tiktok-heading-glitch {
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            18% {
+                transform: translateX(-1px);
+            }
+
+            20% {
+                transform: translateX(2px);
+            }
+
+            52% {
+                transform: translateX(0);
+            }
+
+            54% {
+                transform: translateX(2px);
+            }
+        }
+
+        @keyframes social-icon-bob {
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-4px) rotate(-3deg);
+            }
+        }
+
         .social-card:hover,
         .social-card:focus-visible {
-            transform: translateY(-5px);
+            transform: translateY(-12px) scale(1.028);
             border-color: color-mix(in srgb, var(--accent-soft) 48%, white 12%);
-            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
+            box-shadow:
+                0 28px 58px rgba(0, 0, 0, 0.2),
+                0 0 0 1px color-mix(in srgb, var(--accent-soft) 22%, transparent 78%),
+                0 0 52px color-mix(in srgb, var(--accent) 26%, transparent 74%);
+        }
+
+        .social-card.social-card-wave:hover,
+        .social-card.social-card-wave:focus-visible {
+            animation-play-state: running, running, running;
+        }
+
+        .social-card.social-card-instagram:hover,
+        .social-card.social-card-instagram:focus-visible {
+            transform: translateY(-16px) scale(1.045) rotate(-1.2deg);
+            border-color: rgba(255, 214, 165, 0.54);
+            box-shadow:
+                0 36px 78px rgba(31, 11, 43, 0.28),
+                0 0 0 1px rgba(255, 219, 175, 0.34),
+                0 0 62px rgba(255, 94, 152, 0.42),
+                0 0 110px rgba(99, 82, 255, 0.24);
+            background-size: 100% 100%, 130% 130%, 150% 150%, 150% 150%, 260% 260%;
+        }
+
+        .social-card.social-card-instagram:hover .social-icon,
+        .social-card.social-card-instagram:focus-visible .social-icon {
+            transform: translateY(-8px) scale(1.16) rotate(-8deg);
+            filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.34)) drop-shadow(0 0 30px rgba(255, 105, 180, 0.46)) drop-shadow(0 0 42px rgba(102, 92, 255, 0.3));
+        }
+
+        .social-card.social-card-instagram:hover h3,
+        .social-card.social-card-instagram:focus-visible h3 {
+            transform: translateY(-2px);
+            text-shadow: 0 0 28px rgba(255, 255, 255, 0.22), 0 0 44px rgba(255, 105, 180, 0.26);
+        }
+
+        .social-card.social-card-instagram:hover span,
+        .social-card.social-card-instagram:focus-visible span {
+            letter-spacing: 0.2em;
+            text-shadow: 0 0 22px rgba(255, 214, 165, 0.42);
+        }
+
+        .social-card.social-card-youtube:hover,
+        .social-card.social-card-youtube:focus-visible {
+            transform: translateY(-16px) scale(1.044) rotate(1deg);
+            border-color: rgba(255, 200, 200, 0.52);
+            box-shadow:
+                0 36px 78px rgba(38, 7, 7, 0.28),
+                0 0 0 1px rgba(255, 202, 202, 0.32),
+                0 0 64px rgba(255, 45, 45, 0.4),
+                0 0 108px rgba(255, 126, 126, 0.24);
+            background-size: 100% 100%, 132% 132%, 152% 152%, 152% 152%, 260% 260%;
+        }
+
+        .social-card.social-card-youtube:hover .social-icon,
+        .social-card.social-card-youtube:focus-visible .social-icon {
+            transform: translateY(-8px) scale(1.16) rotate(6deg);
+            filter: drop-shadow(0 0 18px rgba(255, 245, 245, 0.32)) drop-shadow(0 0 30px rgba(255, 42, 42, 0.44)) drop-shadow(0 0 42px rgba(255, 133, 133, 0.28));
+        }
+
+        .social-card.social-card-youtube:hover h3,
+        .social-card.social-card-youtube:focus-visible h3 {
+            transform: translateY(-2px);
+            text-shadow: 0 0 28px rgba(255, 234, 234, 0.24), 0 0 42px rgba(255, 61, 61, 0.24);
+        }
+
+        .social-card.social-card-youtube:hover span,
+        .social-card.social-card-youtube:focus-visible span {
+            letter-spacing: 0.2em;
+            text-shadow: 0 0 22px rgba(255, 170, 170, 0.4);
+        }
+
+        .social-card.social-card-facebook:hover,
+        .social-card.social-card-facebook:focus-visible {
+            transform: translateY(-15px) scale(1.042) rotate(-0.9deg);
+            border-color: rgba(201, 223, 255, 0.48);
+            box-shadow:
+                0 36px 76px rgba(8, 31, 77, 0.28),
+                0 0 0 1px rgba(201, 223, 255, 0.3),
+                0 0 62px rgba(24, 119, 242, 0.34),
+                0 0 106px rgba(132, 179, 255, 0.22);
+            background-size: 100% 100%, 130% 130%, 152% 152%, 152% 152%, 250% 250%;
+        }
+
+        .social-card.social-card-facebook:hover .social-icon,
+        .social-card.social-card-facebook:focus-visible .social-icon {
+            transform: translateY(-8px) scale(1.15) rotate(-6deg);
+            filter: drop-shadow(0 0 18px rgba(242, 248, 255, 0.32)) drop-shadow(0 0 30px rgba(72, 149, 255, 0.38)) drop-shadow(0 0 40px rgba(24, 119, 242, 0.24));
+        }
+
+        .social-card.social-card-facebook:hover h3,
+        .social-card.social-card-facebook:focus-visible h3 {
+            transform: translateY(-2px);
+            text-shadow: 0 0 28px rgba(236, 245, 255, 0.24), 0 0 42px rgba(72, 149, 255, 0.22);
+        }
+
+        .social-card.social-card-facebook:hover span,
+        .social-card.social-card-facebook:focus-visible span {
+            letter-spacing: 0.2em;
+            text-shadow: 0 0 22px rgba(160, 198, 255, 0.38);
+        }
+
+        .social-card.social-card-tiktok:hover,
+        .social-card.social-card-tiktok:focus-visible {
+            transform: translateY(-16px) scale(1.045) rotate(1deg);
+            border-color: rgba(180, 255, 246, 0.44);
+            box-shadow:
+                0 36px 80px rgba(5, 5, 5, 0.3),
+                0 0 0 1px rgba(180, 255, 246, 0.24),
+                -14px 0 58px rgba(0, 242, 234, 0.2),
+                14px 0 58px rgba(255, 0, 80, 0.2);
+            background-size: 100% 100%, 132% 132%, 154% 154%, 154% 154%, 270% 270%;
+        }
+
+        .social-card.social-card-tiktok:hover .social-icon,
+        .social-card.social-card-tiktok:focus-visible .social-icon {
+            transform: translateY(-8px) scale(1.16) rotate(-3deg);
+            filter: drop-shadow(-8px 0 18px rgba(0, 242, 234, 0.34)) drop-shadow(8px 0 18px rgba(255, 0, 80, 0.3)) drop-shadow(0 0 36px rgba(255, 255, 255, 0.16));
+        }
+
+        .social-card.social-card-tiktok:hover h3,
+        .social-card.social-card-tiktok:focus-visible h3 {
+            transform: translateY(-2px);
+            text-shadow: -3px 0 18px rgba(0, 242, 234, 0.18), 3px 0 18px rgba(255, 0, 80, 0.18);
+        }
+
+        .social-card.social-card-tiktok:hover span,
+        .social-card.social-card-tiktok:focus-visible span {
+            letter-spacing: 0.2em;
+            text-shadow: -2px 0 16px rgba(0, 242, 234, 0.24), 2px 0 16px rgba(255, 0, 80, 0.24);
+        }
+
+        .social-card.social-card-wave:hover .social-icon,
+        .social-card.social-card-wave:focus-visible .social-icon {
+            transform: translateY(-6px) scale(1.08) rotate(-4deg);
+            filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent-soft) 38%, transparent 62%));
+        }
+
+        .social-card.social-card-wave:hover::before,
+        .social-card.social-card-wave:hover::after,
+        .social-card.social-card-wave:focus-visible::before,
+        .social-card.social-card-wave:focus-visible::after {
+            opacity: 1;
         }
 
         .social-icon {
@@ -2959,34 +3745,33 @@
                 <div class="social-strip-head">
                     <div class="social-strip-copy">
                         <h2 id="social-strip-title">Stay plugged into FAST everywhere</h2>
-                        <p>Watch the brand, follow the momentum, and keep FAST in the mix across every social channel your audience already lives on.</p>
                     </div>
                     <div class="social-strip-badge">Social Media</div>
                 </div>
 
                 <div class="social-grid">
-                    <a class="social-card social-card-wave social-card-wave-1" href="https://www.instagram.com/fastbridgegroupllc/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Instagram">
+                    <a class="social-card social-card-wave social-card-wave-1 social-card-instagram" href="https://www.instagram.com/fastbridgegroupllc/" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Instagram">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-instagram.svg" alt="">
                         <h3>Instagram</h3>
                         <p>Show the brand, the energy, and the deals in a format built for attention and fast recognition.</p>
                         <span>Follow the feed</span>
                     </a>
 
-                    <a class="social-card social-card-wave social-card-wave-2" href="https://www.youtube.com/channel/UCgC8bg859J0Kjmvs1Si5fFw" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on YouTube">
+                    <a class="social-card social-card-wave social-card-wave-2 social-card-youtube" href="https://www.youtube.com/channel/UCgC8bg859J0Kjmvs1Si5fFw" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on YouTube">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-youtube.svg" alt="">
                         <h3>YouTube</h3>
                         <p>Break down strategy, showcase the platform, and turn deeper content into trust at scale.</p>
                         <span>Watch the channel</span>
                     </a>
 
-                    <a class="social-card social-card-wave social-card-wave-3" href="https://www.facebook.com/profile.php?id=61576494107729" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Facebook">
+                    <a class="social-card social-card-wave social-card-wave-3 social-card-facebook" href="https://www.facebook.com/profile.php?id=61576494107729" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on Facebook">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-facebook.svg" alt="">
                         <h3>Facebook</h3>
                         <p>Keep your broader audience connected to the brand with updates, wins, and platform credibility.</p>
                         <span>See the page</span>
                     </a>
 
-                    <a class="social-card social-card-wave social-card-wave-4" href="https://www.tiktok.com/@fastbridgegroupllc" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on TikTok">
+                    <a class="social-card social-card-wave social-card-wave-4 social-card-tiktok" href="https://www.tiktok.com/@fastbridgegroupllc" target="_blank" rel="noreferrer noopener" aria-label="Visit FAST on TikTok">
                         <img class="social-icon" src="Symbols/Social%20Media%20SVG/icons8-tiktok.svg" alt="">
                         <h3>TikTok</h3>
                         <p>Package attention-grabbing clips, fast lessons, and brand personality into content people actually stop for.</p>

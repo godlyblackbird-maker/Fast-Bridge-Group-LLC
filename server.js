@@ -4013,9 +4013,18 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
       createdAt: normalizeApiTimestamp(message?.createdAt) || ''
     }))
     .filter((message) => message.body || message.createdAt);
+  const hasInboundMessages = recentMessages.some((message) => message.direction === 'inbound');
 
   if (!recentMessages.length) {
     return fallback;
+  }
+
+  if (!hasInboundMessages) {
+    return {
+      ...fallback,
+      reason: 'This thread only contains outbound FAST messages so far, so the suggestion stays in follow-up mode instead of answering as the contact.',
+      source: 'fallback'
+    };
   }
 
   const systemPrompt = [
@@ -4024,6 +4033,10 @@ async function generateTwilioReplySuggestion(conversation, messages = []) {
     'Keep the reply short, usually 1 to 2 sentences and under 220 characters.',
     'The reply must greet the contact by first name and open with a natural time-based or day-based greeting, such as good morning, good afternoon, or hope they are having a good Monday.',
     'Ground the reply in the actual transcript and the latest message, not a generic seller script.',
+    'Treat messages labeled outbound or spoken by FAST as messages our team already sent.',
+    'Treat messages labeled inbound or spoken by Lead as messages the contact sent to FAST.',
+    'You are writing the next outbound FAST text only, never the contact\'s side of the conversation.',
+    'Never answer FAST\'s own earlier question as if you were the seller or agent on the other side.',
     'If the latest message is inbound, directly respond to what the lead said before asking the next best question.',
     'If there has been a long gap after FAST sent the last text, propose a soft follow-up tied to the prior topic.',
     'Prefer this rough flow whenever the transcript supports it: confirm the property is still for sale, ask for the best as-is cash price, if they push for your offer then respond with concise as-is cash framing using only known numbers, if they give a price then press for their lowest number, then capture email, legal names/title, closing timing, occupancy, and agreement steps.',
