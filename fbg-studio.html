@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FBG Studio | FAST BRIDGE GROUP LLC</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="FAST BRIDGE GROUP browser studio for screen, camera, and microphone recording.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css?v=20260418a">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        :root {
+            --studio-stage-height: min(68vh, 760px);
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        .studio-shell {
+            width: min(1440px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 24px 0 72px;
+        }
+
+        .studio-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+            gap: 24px;
+            padding: 32px;
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.18), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(var(--accent-rgb), 0.18), transparent 32%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
+                var(--glass-bg);
+            box-shadow: 0 24px 50px var(--glass-shadow);
+        }
+
+        .studio-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.22);
+            background: rgba(var(--accent-rgb), 0.14);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .studio-title {
+            margin: 18px 0 12px;
+            font-size: clamp(2rem, 4vw, 3.6rem);
+            line-height: 1;
+        }
+
+        .studio-copy {
+            max-width: 820px;
+            margin: 0 0 24px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .studio-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .studio-hero-metrics {
+            display: grid;
+            gap: 14px;
+            align-content: start;
+        }
+
+        .studio-metric,
+        .studio-panel,
+        .studio-stage-card {
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 24px 40px rgba(5, 10, 18, 0.16);
+        }
+
+        .studio-metric {
+            padding: 20px 22px;
+        }
+
+        .studio-metric-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .studio-metric-value {
+            display: block;
+            font-size: 1.45rem;
+            font-weight: 700;
+        }
+
+        .studio-workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.72fr);
+            gap: 22px;
+            margin-top: 22px;
+        }
+
+        .studio-stage-card {
+            padding: 22px;
+        }
+
+        .studio-stage-header,
+        .studio-stage-footer,
+        .studio-panel-head,
+        .studio-source-row,
+        .studio-record-row,
+        .studio-download-item,
+        .studio-source-toggles {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .studio-stage-header {
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .studio-stage-title {
+            margin: 0 0 6px;
+            font-size: 1.22rem;
+        }
+
+        .studio-stage-subtitle,
+        .studio-panel-copy,
+        .studio-empty-copy,
+        .studio-recording-note {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .studio-badge-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .studio-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 30px;
+            padding: 0 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(7, 12, 24, 0.42);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .studio-badge.is-live {
+            color: #ffffff;
+            background: rgba(220, 38, 38, 0.88);
+            border-color: rgba(248, 113, 113, 0.58);
+        }
+
+        .studio-stage-shell {
+            position: relative;
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+                radial-gradient(circle at top, rgba(15, 23, 42, 0.45), transparent 52%),
+                linear-gradient(180deg, #101827, #04070d);
+            min-height: var(--studio-stage-height);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        .studio-preview-canvas {
+            display: block;
+            width: 100%;
+            height: var(--studio-stage-height);
+            object-fit: contain;
+            background: transparent;
+        }
+
+        .studio-stage-footer {
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .studio-stage-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .studio-panel-stack {
+            display: grid;
+            gap: 16px;
+            align-content: start;
+        }
+
+        .studio-panel {
+            padding: 20px;
+        }
+
+        .studio-panel-title {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .studio-panel-head {
+            margin-bottom: 14px;
+            align-items: flex-start;
+        }
+
+        .studio-source-list,
+        .studio-record-stack,
+        .studio-download-list,
+        .studio-layout-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .studio-source-row,
+        .studio-record-row,
+        .studio-download-item {
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            background: rgba(7, 12, 24, 0.32);
+        }
+
+        .studio-source-row {
+            align-items: flex-start;
+        }
+
+        .studio-source-name,
+        .studio-download-name {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .studio-source-meta,
+        .studio-download-meta {
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
+
+        .studio-source-toggles {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .studio-chip-button,
+        .studio-ghost-button,
+        .studio-primary-button,
+        .studio-select {
+            min-height: 40px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font: inherit;
+        }
+
+        .studio-chip-button,
+        .studio-ghost-button,
+        .studio-primary-button {
+            padding: 0 14px;
+            cursor: pointer;
+            transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+        }
+
+        .studio-chip-button,
+        .studio-ghost-button {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .studio-chip-button:hover,
+        .studio-chip-button:focus-visible,
+        .studio-ghost-button:hover,
+        .studio-ghost-button:focus-visible,
+        .studio-primary-button:hover,
+        .studio-primary-button:focus-visible {
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        .studio-chip-button:hover,
+        .studio-chip-button:focus-visible,
+        .studio-ghost-button:hover,
+        .studio-ghost-button:focus-visible {
+            background: rgba(var(--accent-rgb), 0.16);
+            border-color: rgba(var(--accent-light-rgb), 0.34);
+        }
+
+        .studio-primary-button {
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.92), rgba(var(--accent-light-rgb), 0.72));
+            color: #ffffff;
+            border-color: rgba(var(--accent-light-rgb), 0.5);
+            box-shadow: 0 12px 24px -18px rgba(var(--accent-rgb), 0.75);
+        }
+
+        .studio-primary-button.is-danger {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.96), rgba(248, 113, 113, 0.78));
+            border-color: rgba(254, 202, 202, 0.4);
+        }
+
+        .studio-select {
+            width: 100%;
+            padding: 0 14px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .studio-recording-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 12px;
+            min-height: 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 113, 113, 0.22);
+            background: rgba(127, 29, 29, 0.34);
+            color: #fecaca;
+            font-size: 0.82rem;
+        }
+
+        .studio-recording-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: #ef4444;
+            box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.18);
+        }
+
+        .studio-hidden-video {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .studio-empty-copy {
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(7, 12, 24, 0.24);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 1120px) {
+            .studio-hero,
+            .studio-workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .studio-shell {
+                width: min(100%, calc(100% - 24px));
+            }
+
+            .studio-hero,
+            .studio-stage-card,
+            .studio-panel {
+                padding: 20px;
+                border-radius: 24px;
+            }
+
+            .studio-stage-shell,
+            .studio-preview-canvas {
+                min-height: 320px;
+                height: min(52vh, 420px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP LLC</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item"><a href="admin-controls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>Admin Controls</a></li>
+                        <li class="nav-item"><a href="fbg-studio.html" class="nav-link active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M8 8h8"></path><path d="M8 12h5"></path><path d="M16 12h.01"></path><path d="M8 16h8"></path></svg>FBG Studio</a></li>
+                        <li class="nav-item"><a href="word-document-maker.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"></path><polyline points="14 3 14 9 20 9"></polyline><path d="M8 13h8"></path><path d="M8 17h8"></path><path d="M8 9h3"></path></svg>Word Maker</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-title-group">
+                    <h1 class="page-title">FBG Studio</h1>
+                    <p class="navbar-datetime">OBS-style browser studio for recording screen, camera, and microphone sources.</p>
+                </div>
+            </nav>
+
+            <div class="studio-shell">
+                <section class="studio-hero">
+                    <div>
+                        <div class="studio-kicker">Live Production</div>
+                        <h1 class="studio-title">Record screen and camera in one FAST studio.</h1>
+                        <p class="studio-copy">This page is now the web version of an OBS-style studio. The user can share a screen, bring in a camera overlay, mix microphone audio, preview the final output, and download each recording as a local file.</p>
+                        <div class="studio-actions">
+                            <button id="studio-share-screen" class="studio-primary-button" type="button">Share Screen</button>
+                            <button id="studio-open-camera" class="studio-ghost-button" type="button">Open Camera</button>
+                            <button id="studio-open-mic" class="studio-ghost-button" type="button">Open Mic</button>
+                            <a class="card-btn" href="admin-controls.html">Back To Admin Controls</a>
+                        </div>
+                    </div>
+                    <div class="studio-hero-metrics">
+                        <article class="studio-metric">
+                            <span class="studio-metric-label">Program Layout</span>
+                            <span class="studio-metric-value" id="studio-layout-label">Screen + Camera</span>
+                        </article>
+                        <article class="studio-metric">
+                            <span class="studio-metric-label">Recorder</span>
+                            <span class="studio-metric-value" id="studio-recorder-status">Idle</span>
+                        </article>
+                        <article class="studio-metric">
+                            <span class="studio-metric-label">Output</span>
+                            <span class="studio-metric-value">WebM Studio Capture</span>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="studio-workspace" aria-label="FBG Studio workspace">
+                    <div class="studio-stage-card">
+                        <div class="studio-stage-header">
+                            <div>
+                                <h2 class="studio-stage-title">Program Output</h2>
+                                <p id="studio-stage-status" class="studio-stage-subtitle">Load a screen or camera source to start building the live program view.</p>
+                            </div>
+                            <div class="studio-badge-row">
+                                <span id="studio-screen-badge" class="studio-badge">Screen Off</span>
+                                <span id="studio-camera-badge" class="studio-badge">Camera Off</span>
+                                <span id="studio-mic-badge" class="studio-badge">Mic Off</span>
+                            </div>
+                        </div>
+                        <div class="studio-stage-shell">
+                            <canvas id="studio-preview" class="studio-preview-canvas" width="1280" height="720"></canvas>
+                        </div>
+                        <div class="studio-stage-footer">
+                            <div class="studio-stage-info">
+                                <span id="studio-resolution-badge" class="studio-badge">1280 x 720</span>
+                                <span id="studio-overlay-badge" class="studio-badge">Camera Overlay On</span>
+                                <span id="studio-audio-badge" class="studio-badge">Audio Mix Ready</span>
+                            </div>
+                            <div id="studio-timer" class="studio-recording-pill" hidden>
+                                <span class="studio-recording-dot" aria-hidden="true"></span>
+                                <span>REC 00:00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="studio-panel-stack">
+                        <article class="studio-panel">
+                            <div class="studio-panel-head">
+                                <div>
+                                    <h2 class="studio-panel-title">Sources</h2>
+                                    <p class="studio-panel-copy">Bring screen, camera, and microphone feeds into the canvas like an OBS scene stack.</p>
+                                </div>
+                            </div>
+                            <div class="studio-source-list">
+                                <div class="studio-source-row">
+                                    <div>
+                                        <span class="studio-source-name">Display Capture</span>
+                                        <span id="studio-screen-meta" class="studio-source-meta">No screen is currently shared.</span>
+                                    </div>
+                                    <div class="studio-source-toggles">
+                                        <button id="studio-screen-toggle" class="studio-chip-button" type="button">Share Screen</button>
+                                        <button id="studio-screen-stop" class="studio-ghost-button" type="button">Remove</button>
+                                    </div>
+                                </div>
+                                <div class="studio-source-row">
+                                    <div>
+                                        <span class="studio-source-name">Camera Feed</span>
+                                        <span id="studio-camera-meta" class="studio-source-meta">Camera overlay is available for presenter mode.</span>
+                                    </div>
+                                    <div class="studio-source-toggles">
+                                        <button id="studio-camera-toggle" class="studio-chip-button" type="button">Open Camera</button>
+                                        <button id="studio-camera-stop" class="studio-ghost-button" type="button">Remove</button>
+                                    </div>
+                                </div>
+                                <div class="studio-source-row">
+                                    <div>
+                                        <span class="studio-source-name">Microphone</span>
+                                        <span id="studio-mic-meta" class="studio-source-meta">Add narration or room audio into the recording mix.</span>
+                                    </div>
+                                    <div class="studio-source-toggles">
+                                        <button id="studio-mic-toggle" class="studio-chip-button" type="button">Open Mic</button>
+                                        <button id="studio-mic-stop" class="studio-ghost-button" type="button">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="studio-panel">
+                            <div class="studio-panel-head">
+                                <div>
+                                    <h2 class="studio-panel-title">Layout</h2>
+                                    <p class="studio-panel-copy">Switch how the camera sits inside the program output and control its visibility.</p>
+                                </div>
+                            </div>
+                            <div class="studio-layout-grid">
+                                <label>
+                                    <span class="studio-source-meta">Program canvas</span>
+                                    <select id="studio-layout" class="studio-select" aria-label="Studio layout mode">
+                                        <option value="screen-camera">Screen with camera overlay</option>
+                                        <option value="camera-only">Camera only</option>
+                                        <option value="screen-only">Screen only</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span class="studio-source-meta">Camera position</span>
+                                    <select id="studio-camera-position" class="studio-select" aria-label="Camera position">
+                                        <option value="bottom-right">Bottom right</option>
+                                        <option value="bottom-left">Bottom left</option>
+                                        <option value="top-right">Top right</option>
+                                        <option value="top-left">Top left</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span class="studio-source-meta">Camera size</span>
+                                    <select id="studio-camera-size" class="studio-select" aria-label="Camera size">
+                                        <option value="small">Small overlay</option>
+                                        <option value="medium" selected>Medium overlay</option>
+                                        <option value="large">Large overlay</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </article>
+
+                        <article class="studio-panel">
+                            <div class="studio-panel-head">
+                                <div>
+                                    <h2 class="studio-panel-title">Recorder</h2>
+                                    <p class="studio-panel-copy">Capture the live program canvas with mixed screen and mic audio into a downloadable file.</p>
+                                </div>
+                            </div>
+                            <div class="studio-record-stack">
+                                <div class="studio-record-row">
+                                    <button id="studio-record-start" class="studio-primary-button" type="button">Start Recording</button>
+                                    <button id="studio-record-stop" class="studio-primary-button is-danger" type="button">Stop Recording</button>
+                                </div>
+                                <p class="studio-recording-note">The recording saves as a .webm file from the final live program output shown on this page.</p>
+                            </div>
+                        </article>
+
+                        <article class="studio-panel">
+                            <div class="studio-panel-head">
+                                <div>
+                                    <h2 class="studio-panel-title">Recordings</h2>
+                                    <p class="studio-panel-copy">Each take appears here as soon as the recorder stops.</p>
+                                </div>
+                            </div>
+                            <div id="studio-downloads" class="studio-download-list">
+                                <div class="studio-empty-copy">No recordings yet. Start the recorder after loading at least one source.</div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <video id="studio-screen-video" class="studio-hidden-video" autoplay playsinline muted></video>
+    <video id="studio-camera-video" class="studio-hidden-video" autoplay playsinline muted></video>
+
+    <script>
+        (() => {
+            const previewCanvas = document.getElementById('studio-preview');
+            const previewContext = previewCanvas.getContext('2d');
+            const screenVideo = document.getElementById('studio-screen-video');
+            const cameraVideo = document.getElementById('studio-camera-video');
+
+            const screenBadge = document.getElementById('studio-screen-badge');
+            const cameraBadge = document.getElementById('studio-camera-badge');
+            const micBadge = document.getElementById('studio-mic-badge');
+            const stageStatus = document.getElementById('studio-stage-status');
+            const recorderStatus = document.getElementById('studio-recorder-status');
+            const layoutLabel = document.getElementById('studio-layout-label');
+            const overlayBadge = document.getElementById('studio-overlay-badge');
+            const audioBadge = document.getElementById('studio-audio-badge');
+            const timerNode = document.getElementById('studio-timer');
+            const timerText = timerNode ? timerNode.querySelector('span:last-child') : null;
+            const downloadsNode = document.getElementById('studio-downloads');
+
+            const screenMeta = document.getElementById('studio-screen-meta');
+            const cameraMeta = document.getElementById('studio-camera-meta');
+            const micMeta = document.getElementById('studio-mic-meta');
+
+            const screenToggle = document.getElementById('studio-screen-toggle');
+            const screenStop = document.getElementById('studio-screen-stop');
+            const cameraToggle = document.getElementById('studio-camera-toggle');
+            const cameraStop = document.getElementById('studio-camera-stop');
+            const micToggle = document.getElementById('studio-mic-toggle');
+            const micStop = document.getElementById('studio-mic-stop');
+            const recordStart = document.getElementById('studio-record-start');
+            const recordStop = document.getElementById('studio-record-stop');
+            const layoutSelect = document.getElementById('studio-layout');
+            const cameraPositionSelect = document.getElementById('studio-camera-position');
+            const cameraSizeSelect = document.getElementById('studio-camera-size');
+
+            const state = {
+                screenStream: null,
+                cameraStream: null,
+                micStream: null,
+                recorder: null,
+                recordedChunks: [],
+                timerInterval: null,
+                startedAt: 0,
+                audioContext: null,
+                audioDestination: null
+            };
+
+            function stopStream(stream) {
+                if (!stream) {
+                    return;
+                }
+                stream.getTracks().forEach((track) => track.stop());
+            }
+
+            function setBadge(node, label, isOn) {
+                if (!node) {
+                    return;
+                }
+                node.textContent = label;
+                node.classList.toggle('is-live', isOn);
+            }
+
+            function formatDuration(milliseconds) {
+                const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+                const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                const seconds = String(totalSeconds % 60).padStart(2, '0');
+                return `${minutes}:${seconds}`;
+            }
+
+            function getCameraBox() {
+                const width = previewCanvas.width;
+                const height = previewCanvas.height;
+                const sizes = { small: 0.2, medium: 0.26, large: 0.34 };
+                const ratio = sizes[cameraSizeSelect.value] || sizes.medium;
+                const boxWidth = Math.round(width * ratio);
+                const boxHeight = Math.round(boxWidth * 9 / 16);
+                const padding = 26;
+
+                const positions = {
+                    'bottom-right': { x: width - boxWidth - padding, y: height - boxHeight - padding },
+                    'bottom-left': { x: padding, y: height - boxHeight - padding },
+                    'top-right': { x: width - boxWidth - padding, y: padding },
+                    'top-left': { x: padding, y: padding }
+                };
+
+                const position = positions[cameraPositionSelect.value] || positions['bottom-right'];
+                return { x: position.x, y: position.y, width: boxWidth, height: boxHeight };
+            }
+
+            function drawPlaceholder() {
+                const gradient = previewContext.createLinearGradient(0, 0, previewCanvas.width, previewCanvas.height);
+                gradient.addColorStop(0, '#08111d');
+                gradient.addColorStop(1, '#162235');
+                previewContext.fillStyle = gradient;
+                previewContext.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+                previewContext.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                previewContext.fillRect(64, 64, previewCanvas.width - 128, previewCanvas.height - 128);
+
+                previewContext.fillStyle = '#f8fafc';
+                previewContext.font = '700 42px Outfit, sans-serif';
+                previewContext.fillText('FBG Studio', 96, 136);
+
+                previewContext.fillStyle = 'rgba(226, 232, 240, 0.86)';
+                previewContext.font = '500 24px Outfit, sans-serif';
+                previewContext.fillText('Share a screen or open a camera source to start the live program view.', 96, 184);
+            }
+
+            function drawRoundedVideo(video, x, y, width, height, radius) {
+                previewContext.save();
+                previewContext.beginPath();
+                previewContext.moveTo(x + radius, y);
+                previewContext.lineTo(x + width - radius, y);
+                previewContext.quadraticCurveTo(x + width, y, x + width, y + radius);
+                previewContext.lineTo(x + width, y + height - radius);
+                previewContext.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                previewContext.lineTo(x + radius, y + height);
+                previewContext.quadraticCurveTo(x, y + height, x, y + height - radius);
+                previewContext.lineTo(x, y + radius);
+                previewContext.quadraticCurveTo(x, y, x + radius, y);
+                previewContext.closePath();
+                previewContext.clip();
+                previewContext.drawImage(video, x, y, width, height);
+                previewContext.restore();
+            }
+
+            function renderStage() {
+                previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                const layout = layoutSelect.value;
+                const hasScreen = state.screenStream && screenVideo.readyState >= 2;
+                const hasCamera = state.cameraStream && cameraVideo.readyState >= 2;
+
+                if (!hasScreen && !hasCamera) {
+                    drawPlaceholder();
+                    window.requestAnimationFrame(renderStage);
+                    return;
+                }
+
+                previewContext.fillStyle = '#020617';
+                previewContext.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+                if (hasScreen && layout !== 'camera-only') {
+                    previewContext.drawImage(screenVideo, 0, 0, previewCanvas.width, previewCanvas.height);
+                }
+
+                if (hasCamera) {
+                    if (layout === 'camera-only') {
+                        previewContext.drawImage(cameraVideo, 0, 0, previewCanvas.width, previewCanvas.height);
+                    } else if (layout !== 'screen-only') {
+                        const box = getCameraBox();
+                        previewContext.fillStyle = 'rgba(15, 23, 42, 0.65)';
+                        previewContext.fillRect(box.x - 8, box.y - 8, box.width + 16, box.height + 16);
+                        drawRoundedVideo(cameraVideo, box.x, box.y, box.width, box.height, 22);
+                    }
+                }
+
+                window.requestAnimationFrame(renderStage);
+            }
+
+            async function attachVideoStream(videoNode, stream) {
+                videoNode.srcObject = stream;
+                await videoNode.play();
+            }
+
+            async function startScreen() {
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { frameRate: 30 },
+                        audio: true
+                    }).catch(async () => {
+                        return navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false });
+                    });
+
+                    stopStream(state.screenStream);
+                    state.screenStream = stream;
+                    await attachVideoStream(screenVideo, stream);
+                    const videoTrack = stream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        videoTrack.addEventListener('ended', () => {
+                            stopScreen();
+                        }, { once: true });
+                    }
+                    updateStudioState();
+                } catch (error) {
+                    console.error('Unable to start screen capture.', error);
+                    window.alert('Screen capture was not started.');
+                }
+            }
+
+            function stopScreen() {
+                stopStream(state.screenStream);
+                state.screenStream = null;
+                screenVideo.srcObject = null;
+                updateStudioState();
+            }
+
+            async function startCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    stopStream(state.cameraStream);
+                    state.cameraStream = stream;
+                    await attachVideoStream(cameraVideo, stream);
+                    updateStudioState();
+                } catch (error) {
+                    console.error('Unable to start camera.', error);
+                    window.alert('Camera access was not granted.');
+                }
+            }
+
+            function stopCamera() {
+                stopStream(state.cameraStream);
+                state.cameraStream = null;
+                cameraVideo.srcObject = null;
+                updateStudioState();
+            }
+
+            async function startMic() {
+                try {
+                    stopStream(state.micStream);
+                    state.micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    updateStudioState();
+                } catch (error) {
+                    console.error('Unable to start microphone.', error);
+                    window.alert('Microphone access was not granted.');
+                }
+            }
+
+            function stopMic() {
+                stopStream(state.micStream);
+                state.micStream = null;
+                updateStudioState();
+            }
+
+            function buildRecordingStream() {
+                const videoTrack = previewCanvas.captureStream(30).getVideoTracks()[0];
+                const tracks = [videoTrack];
+
+                const audioStreams = [];
+                if (state.screenStream && state.screenStream.getAudioTracks().length) {
+                    audioStreams.push(state.screenStream);
+                }
+                if (state.micStream && state.micStream.getAudioTracks().length) {
+                    audioStreams.push(state.micStream);
+                }
+
+                if (audioStreams.length) {
+                    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextCtor) {
+                        state.audioContext = new AudioContextCtor();
+                        state.audioDestination = state.audioContext.createMediaStreamDestination();
+                        audioStreams.forEach((stream) => {
+                            const source = state.audioContext.createMediaStreamSource(stream);
+                            const gain = state.audioContext.createGain();
+                            gain.gain.value = 1;
+                            source.connect(gain).connect(state.audioDestination);
+                        });
+                        state.audioDestination.stream.getAudioTracks().forEach((track) => tracks.push(track));
+                    }
+                }
+
+                return new MediaStream(tracks);
+            }
+
+            function resetAudioMix() {
+                if (state.audioContext) {
+                    state.audioContext.close().catch(() => {});
+                }
+                state.audioContext = null;
+                state.audioDestination = null;
+            }
+
+            function getRecordingMimeType() {
+                const candidates = [
+                    'video/webm;codecs=vp9,opus',
+                    'video/webm;codecs=vp8,opus',
+                    'video/webm'
+                ];
+                return candidates.find((candidate) => window.MediaRecorder.isTypeSupported(candidate)) || '';
+            }
+
+            function addRecording(blob) {
+                const emptyState = downloadsNode.querySelector('.studio-empty-copy');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+
+                const url = URL.createObjectURL(blob);
+                const item = document.createElement('div');
+                item.className = 'studio-download-item';
+                const name = `fbg-studio-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+                item.innerHTML = `
+                    <div>
+                        <span class="studio-download-name">${name}</span>
+                        <span class="studio-download-meta">${(blob.size / (1024 * 1024)).toFixed(2)} MB recorded from the live program output.</span>
+                    </div>
+                    <a class="studio-primary-button" href="${url}" download="${name}">Download</a>`;
+                downloadsNode.prepend(item);
+            }
+
+            function stopRecording() {
+                if (!state.recorder) {
+                    return;
+                }
+                state.recorder.stop();
+            }
+
+            function startRecording() {
+                if (state.recorder) {
+                    return;
+                }
+                if (!state.screenStream && !state.cameraStream) {
+                    window.alert('Load at least a screen or camera source before recording.');
+                    return;
+                }
+
+                try {
+                    state.recordedChunks = [];
+                    const stream = buildRecordingStream();
+                    const mimeType = getRecordingMimeType();
+                    state.recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+                    state.recorder.addEventListener('dataavailable', (event) => {
+                        if (event.data && event.data.size > 0) {
+                            state.recordedChunks.push(event.data);
+                        }
+                    });
+                    state.recorder.addEventListener('stop', () => {
+                        const finishedRecorder = state.recorder;
+                        const blob = new Blob(state.recordedChunks, { type: finishedRecorder ? finishedRecorder.mimeType || 'video/webm' : 'video/webm' });
+                        addRecording(blob);
+                        stream.getTracks().forEach((track) => track.stop());
+                        state.recorder = null;
+                        state.recordedChunks = [];
+                        window.clearInterval(state.timerInterval);
+                        state.timerInterval = null;
+                        resetAudioMix();
+                        timerNode.hidden = true;
+                        updateStudioState();
+                    }, { once: true });
+
+                    state.startedAt = Date.now();
+                    timerNode.hidden = false;
+                    timerText.textContent = 'REC 00:00';
+                    state.timerInterval = window.setInterval(() => {
+                        timerText.textContent = `REC ${formatDuration(Date.now() - state.startedAt)}`;
+                    }, 250);
+
+                    state.recorder.start(1000);
+                    updateStudioState();
+                } catch (error) {
+                    console.error('Unable to start recording.', error);
+                    window.alert('Recording could not start with the current browser settings.');
+                    resetAudioMix();
+                }
+            }
+
+            function updateStudioState() {
+                const hasScreen = Boolean(state.screenStream);
+                const hasCamera = Boolean(state.cameraStream);
+                const hasMic = Boolean(state.micStream);
+                const isRecording = Boolean(state.recorder);
+                const layoutMap = {
+                    'screen-camera': 'Screen + Camera',
+                    'camera-only': 'Camera Only',
+                    'screen-only': 'Screen Only'
+                };
+
+                setBadge(screenBadge, hasScreen ? 'Screen Live' : 'Screen Off', hasScreen);
+                setBadge(cameraBadge, hasCamera ? 'Camera Live' : 'Camera Off', hasCamera);
+                setBadge(micBadge, hasMic ? 'Mic Live' : 'Mic Off', hasMic);
+
+                layoutLabel.textContent = layoutMap[layoutSelect.value] || 'Screen + Camera';
+                recorderStatus.textContent = isRecording ? 'Recording' : 'Idle';
+                overlayBadge.textContent = layoutSelect.value === 'screen-only' ? 'Camera Overlay Off' : 'Camera Overlay On';
+                audioBadge.textContent = hasMic || (state.screenStream && state.screenStream.getAudioTracks().length) ? 'Audio Mix Ready' : 'No Audio Source';
+
+                stageStatus.textContent = hasScreen || hasCamera
+                    ? 'Program view is live. Adjust layout and recording controls from the right panel.'
+                    : 'Load a screen or camera source to start building the live program view.';
+
+                screenMeta.textContent = hasScreen ? 'Screen source is active and ready for recording.' : 'No screen is currently shared.';
+                cameraMeta.textContent = hasCamera ? 'Camera source is active for picture-in-picture mode.' : 'Camera overlay is available for presenter mode.';
+                micMeta.textContent = hasMic ? 'Microphone source is live in the recording mix.' : 'Add narration or room audio into the recording mix.';
+
+                screenToggle.textContent = hasScreen ? 'Refresh Screen' : 'Share Screen';
+                cameraToggle.textContent = hasCamera ? 'Refresh Camera' : 'Open Camera';
+                micToggle.textContent = hasMic ? 'Refresh Mic' : 'Open Mic';
+
+                recordStart.disabled = isRecording;
+                recordStop.disabled = !isRecording;
+            }
+
+            document.getElementById('studio-share-screen').addEventListener('click', startScreen);
+            document.getElementById('studio-open-camera').addEventListener('click', startCamera);
+            document.getElementById('studio-open-mic').addEventListener('click', startMic);
+            screenToggle.addEventListener('click', startScreen);
+            cameraToggle.addEventListener('click', startCamera);
+            micToggle.addEventListener('click', startMic);
+            screenStop.addEventListener('click', stopScreen);
+            cameraStop.addEventListener('click', stopCamera);
+            micStop.addEventListener('click', stopMic);
+            recordStart.addEventListener('click', startRecording);
+            recordStop.addEventListener('click', stopRecording);
+            layoutSelect.addEventListener('change', updateStudioState);
+            cameraPositionSelect.addEventListener('change', updateStudioState);
+            cameraSizeSelect.addEventListener('change', updateStudioState);
+
+            window.addEventListener('beforeunload', () => {
+                stopStream(state.screenStream);
+                stopStream(state.cameraStream);
+                stopStream(state.micStream);
+                if (state.recorder && state.recorder.state !== 'inactive') {
+                    state.recorder.stop();
+                }
+                resetAudioMix();
+            });
+
+            updateStudioState();
+            renderStage();
+        })();
+    </script>
+</body>
+</html>

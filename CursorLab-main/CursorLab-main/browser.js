@@ -200,9 +200,16 @@
       this.customCursorElement.style.height = '';
       this.customCursorElement.style.background = '';
       this.customCursorElement.style.border = '';
+      this.customCursorElement.style.borderTop = '';
+      this.customCursorElement.style.borderRight = '';
+      this.customCursorElement.style.borderBottom = '';
+      this.customCursorElement.style.borderLeft = '';
       this.customCursorElement.style.borderRadius = '';
       this.customCursorElement.style.clipPath = '';
       this.customCursorElement.style.boxShadow = '';
+      this.customCursorElement.style.filter = '';
+      this.customCursorElement.style.opacity = '';
+      this.customCursorElement.style.animation = '';
       
       switch (this.trailType) {
         case 'circle':
