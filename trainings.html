@@ -503,11 +503,44 @@
             </nav>
 
             <div class="training-library-grid">
+                <section class="glass-card training-library-card" aria-labelledby="fast-training-video-title">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title" id="fast-training-video-title">FAST Training Videos</h2>
+                            <p class="card-subtitle">Official FAST training walkthroughs live in their own separate category away from the other video references.</p>
+                        </div>
+                    </div>
+                    <div class="training-video-feature">
+                        <h3 class="training-video-title">FAST Full Training Walkthrough</h3>
+                        <p class="training-video-description">Watch the full FAST BRIDGE GROUP training video with the complete dashboard, workflow, and platform walkthrough in one place.</p>
+                        <div class="training-video-stage" data-training-stage="true">
+                            <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-src="https://app.screencastify.com/watch/FrAJXqxSczwRABty3s2k/embed?checkOrg=cfc480e9-9894-42a1-90c7-cf9ab55507ce" aria-label="Play FAST full training walkthrough on this page">
+                                <img src="https://storage.googleapis.com/cfy-prod-thumbnails/0c7fc0b2-6472-4ea3-927f-0102e20013ff%2FFrAJXqxSczwRABty3s2k" alt="FAST full training walkthrough thumbnail">
+                            </button>
+                            <div class="training-video-frame" data-training-player="true">
+                                <iframe src="about:blank" title="FAST full training walkthrough" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="training-video-feature">
+                        <h3 class="training-video-title">FAST Training Walkthrough 2</h3>
+                        <p class="training-video-description">Additional FAST training coverage with another full walkthrough session for the team training library.</p>
+                        <div class="training-video-stage" data-training-stage="true">
+                            <button class="training-video-thumb" type="button" data-training-play="true" data-training-video-src="https://app.screencastify.com/watch/5W4ect7lLAvgMG0e2chn/embed" aria-label="Play FAST training walkthrough 2 on this page">
+                                <img src="https://storage.googleapis.com/cfy-prod-thumbnails/0c7fc0b2-6472-4ea3-927f-0102e20013ff%2F5W4ect7lLAvgMG0e2chn" alt="FAST training walkthrough 2 thumbnail">
+                            </button>
+                            <div class="training-video-frame" data-training-player="true">
+                                <iframe src="about:blank" title="FAST training walkthrough 2" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="glass-card training-library-card" aria-labelledby="trainings-placeholder-title">
                     <div class="card-header">
                         <div>
-                            <h2 class="card-title" id="trainings-placeholder-title">Training Library</h2>
-                            <p class="card-subtitle">FAST training videos, walkthroughs, and onboarding content live here.</p>
+                            <h2 class="card-title" id="trainings-placeholder-title">FAST Video Library</h2>
+                            <p class="card-subtitle">Shorter FAST walkthroughs, onboarding clips, and focused video references live here.</p>
                         </div>
                     </div>
                     <div class="training-video-feature">
@@ -556,7 +589,7 @@
                 <div class="training-resources-grid">
                     <article class="training-resource-item">
                         <div class="training-resource-preview">
-                            <span class="training-resource-file-badge" aria-hidden="true">WEB</span>
+                            <img src="Symbols/colibri-real-estate-logo.svg" alt="Colibri Real Estate logo">
                         </div>
                         <div>
                             <h3 class="training-resource-name">Colibri Real Estate School</h3>
@@ -640,6 +673,24 @@
                 return;
             }
 
+            const appendQueryParams = (baseSrc, paramsToAppend) => {
+                if (!baseSrc) {
+                    return '';
+                }
+
+                const [path, existingQuery = ''] = baseSrc.split('?');
+                const params = new URLSearchParams(existingQuery);
+
+                Object.entries(paramsToAppend).forEach(([key, value]) => {
+                    if (value && !params.has(key)) {
+                        params.set(key, value);
+                    }
+                });
+
+                const query = params.toString();
+                return query ? `${path}?${query}` : path;
+            };
+
             const buildVideoSrc = (videoId, autoplay) => {
                 const params = new URLSearchParams({ rel: '0' });
                 if (autoplay) {
@@ -678,17 +729,23 @@
 
             playButtons.forEach((button) => {
                 const videoId = String(button.getAttribute('data-training-video-id') || '').trim();
+                const directVideoSrc = String(button.getAttribute('data-training-video-src') || '').trim();
                 const videoStage = button.closest('[data-training-stage="true"]');
                 const playerContainer = videoStage instanceof HTMLElement ? videoStage.querySelector('[data-training-player="true"]') : null;
                 const videoFrame = playerContainer instanceof HTMLElement ? playerContainer.querySelector('iframe') : null;
                 const thumbnailImage = button.querySelector('img');
 
-                if (!videoId || !(videoStage instanceof HTMLElement) || !(playerContainer instanceof HTMLElement) || !(videoFrame instanceof HTMLIFrameElement)) {
+                if ((!videoId && !directVideoSrc) || !(videoStage instanceof HTMLElement) || !(playerContainer instanceof HTMLElement) || !(videoFrame instanceof HTMLIFrameElement)) {
                     return;
                 }
 
-                const autoplaySrc = buildVideoSrc(videoId, true);
-                applyBestThumbnail(thumbnailImage, videoId);
+                const autoplaySrc = directVideoSrc
+                    ? appendQueryParams(directVideoSrc, { autoplay: '1' })
+                    : buildVideoSrc(videoId, true);
+
+                if (videoId && !thumbnailImage?.getAttribute('src')) {
+                    applyBestThumbnail(thumbnailImage, videoId);
+                }
 
                 button.addEventListener('click', () => {
                     videoStage.classList.add('is-playing');
