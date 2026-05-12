@@ -118,6 +118,16 @@
         :root {
             --word-paper-width: 8.5in;
             --word-paper-height: 11in;
+            --word-maker-toolbar-bg: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 92%, rgba(255, 255, 255, 0.2) 8%), color-mix(in srgb, var(--glass-bg) 98%, rgba(255, 255, 255, 0.03) 2%));
+            --word-maker-toolbar-border: color-mix(in srgb, var(--glass-border) 88%, rgba(255, 255, 255, 0.12) 12%);
+            --word-maker-group-bg: color-mix(in srgb, var(--glass-bg) 90%, rgba(255, 255, 255, 0.08) 10%);
+            --word-maker-group-bg-open: color-mix(in srgb, var(--glass-bg) 84%, rgba(var(--accent-light-rgb), 0.14) 16%);
+            --word-maker-menu-bg: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 88%, rgba(255, 255, 255, 0.12) 12%), color-mix(in srgb, var(--glass-bg) 98%, rgba(15, 23, 42, 0.04) 2%));
+            --word-maker-chip-bg: color-mix(in srgb, var(--glass-bg) 80%, rgba(var(--accent-rgb), 0.16) 20%);
+            --word-maker-canvas-bg: linear-gradient(135deg, color-mix(in srgb, var(--glass-bg) 78%, rgba(var(--accent-light-rgb), 0.18) 22%), color-mix(in srgb, var(--glass-bg) 92%, rgba(15, 23, 42, 0.06) 8%));
+            --word-maker-ruler-bg: linear-gradient(90deg, color-mix(in srgb, var(--glass-border) 30%, transparent 70%) 0 1px, transparent 1px 48px), linear-gradient(90deg, color-mix(in srgb, var(--glass-border) 75%, transparent 25%) 0 1px, transparent 1px 96px), color-mix(in srgb, var(--glass-bg) 90%, rgba(255, 255, 255, 0.08) 10%);
+            --word-maker-ruler-text: color-mix(in srgb, var(--text-primary) 76%, transparent);
+            --word-maker-ruler-mark: color-mix(in srgb, var(--text-primary) 42%, transparent);
         }
 
         .word-maker-page .navbar {
@@ -165,8 +175,8 @@
             margin-bottom: 16px;
             padding: 10px 12px;
             border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(7, 12, 24, 0.5);
+            border: 1px solid var(--word-maker-toolbar-border);
+            background: var(--word-maker-toolbar-bg);
         }
 
         .word-maker-tool-group {
@@ -174,12 +184,12 @@
             min-width: 150px;
             padding: 8px 10px;
             border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--word-maker-toolbar-border);
+            background: var(--word-maker-group-bg);
         }
 
         .word-maker-tool-group[open] {
-            background: rgba(255, 255, 255, 0.06);
+            background: var(--word-maker-group-bg-open);
             border-color: rgba(var(--accent-light-rgb), 0.2);
         }
 
@@ -356,8 +366,8 @@
             min-width: 220px;
             padding: 10px;
             border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(7, 12, 24, 0.96);
+            border: 1px solid var(--word-maker-toolbar-border);
+            background: var(--word-maker-menu-bg);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
             display: grid;
             gap: 8px;
@@ -451,8 +461,8 @@
             margin-bottom: 16px;
             padding: 10px 12px;
             border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--word-maker-toolbar-border);
+            background: var(--word-maker-group-bg);
         }
 
         .word-maker-resource-chip {
@@ -462,11 +472,26 @@
             min-height: 32px;
             padding: 0 12px;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(7, 12, 24, 0.42);
+            border: 1px solid var(--word-maker-toolbar-border);
+            background: var(--word-maker-chip-bg);
             color: var(--text-secondary);
             font-size: 0.86rem;
             white-space: nowrap;
+        }
+
+        .word-maker-resource-chip.is-action {
+            cursor: pointer;
+            font: inherit;
+            transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .word-maker-resource-chip.is-action:hover,
+        .word-maker-resource-chip.is-action:focus-visible {
+            background: rgba(var(--accent-rgb), 0.16);
+            border-color: rgba(var(--accent-light-rgb), 0.45);
+            color: var(--text-primary);
+            outline: none;
+            transform: translateY(-1px);
         }
 
         .word-maker-resource-chip strong {
@@ -476,12 +501,7 @@
 
         .word-maker-canvas {
             min-height: 820px;
-            padding: 44px;
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background:
-                linear-gradient(135deg, rgba(9, 15, 27, 0.94), rgba(20, 28, 43, 0.82));
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+            padding: 20px 0 0;
             display: flex;
             align-items: flex-start;
             justify-content: center;
@@ -535,24 +555,15 @@
             width: 100%;
             display: grid;
             justify-items: center;
-            gap: 10px;
-        }
-
-        .word-maker-ruler {
-            width: min(100%, var(--word-paper-width));
-            padding: 0 0 10px;
-            position: relative;
+            gap: 6px;
         }
 
         .word-maker-ruler-track {
             position: relative;
             height: 38px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background:
-                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 48px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px 96px),
-                rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--word-maker-toolbar-border);
+            background: var(--word-maker-ruler-bg);
             overflow: hidden;
         }
 
@@ -585,7 +596,7 @@
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            color: rgba(226, 232, 240, 0.84);
+            color: var(--word-maker-ruler-text);
             font-family: 'Outfit', sans-serif;
             font-size: 0.64rem;
             letter-spacing: 0.04em;
@@ -596,7 +607,7 @@
             content: '';
             width: 1px;
             height: 10px;
-            background: rgba(226, 232, 240, 0.5);
+            background: var(--word-maker-ruler-mark);
         }
 
         .word-maker-ruler-track::before {
@@ -1151,10 +1162,6 @@
                 width: 100%;
             }
 
-            .word-maker-ruler {
-                width: 100%;
-            }
-
             .word-maker-paper {
                 width: 100%;
                 height: auto;
@@ -1450,7 +1457,10 @@
                     </div>
                     <div class="word-maker-resource-bar" aria-label="Document resources">
                         <div class="word-maker-resource-chip"><strong>Page</strong> Letter 8.5 x 11</div>
-                        <div class="word-maker-resource-chip"><strong>Body</strong> 1 in margin guide</div>
+                        <button type="button" id="word-maker-margin-guide" class="word-maker-resource-chip is-action" aria-label="Change page margin guide">
+                            <strong>Body</strong>
+                            <span id="word-maker-margin-guide-label">1 in margin guide</span>
+                        </button>
                         <div class="word-maker-resource-chip"><strong>Draft</strong> <span id="word-maker-draft-status">Ready</span></div>
                         <div class="word-maker-resource-chip"><strong>Pages</strong> <span id="word-maker-page-count">1</span></div>
                         <div class="word-maker-resource-chip"><strong>Words</strong> <span id="word-maker-word-count">0</span></div>
@@ -1469,21 +1479,6 @@
                                 </button>
                             </div>
                             <div class="word-maker-page-shell">
-                                <div class="word-maker-ruler" data-word-ruler>
-                                    <div class="word-maker-ruler-track" data-ruler-track>
-                                        <div class="word-maker-ruler-content"></div>
-                                        <button type="button" class="word-maker-ruler-handle" data-ruler-handle="left-margin" aria-label="Drag left margin"></button>
-                                        <button type="button" class="word-maker-ruler-handle" data-ruler-handle="first-line" aria-label="Drag first line indent"></button>
-                                        <button type="button" class="word-maker-ruler-handle" data-ruler-handle="hanging" aria-label="Drag hanging indent"></button>
-                                        <button type="button" class="word-maker-ruler-handle" data-ruler-handle="right-margin" aria-label="Drag right margin"></button>
-                                        <div class="word-maker-ruler-tabs" data-ruler-tabs></div>
-                                    </div>
-                                    <div class="word-maker-ruler-legend" aria-hidden="true">
-                                        <span>Margins</span>
-                                        <span class="is-indent">Indents</span>
-                                        <span class="is-tab">Tabs</span>
-                                    </div>
-                                </div>
                                 <div class="word-maker-paper is-active" aria-label="Blank paper">
                                     <div
                                         id="word-maker-editor"
@@ -1576,6 +1571,8 @@
         const wordMakerExportMenu = window.document.getElementById('word-maker-export-menu');
         const wordMakerExportOptions = Array.from(window.document.querySelectorAll('[data-word-export]'));
         const wordMakerAddPageButton = window.document.getElementById('word-maker-add-page');
+        const wordMakerMarginGuideButton = window.document.getElementById('word-maker-margin-guide');
+        const wordMakerMarginGuideLabel = window.document.getElementById('word-maker-margin-guide-label');
         const wordMakerDraftStatus = window.document.getElementById('word-maker-draft-status');
         const wordMakerPageCount = window.document.getElementById('word-maker-page-count');
         const wordMakerWordCount = window.document.getElementById('word-maker-word-count');
@@ -1596,6 +1593,7 @@
         const WORD_MAKER_TOOL_GROUP_KEY = 'wordMakerToolGroups_v1';
         const WORD_MAKER_SPREADSHEET_DEFAULT_ROWS = 18;
         const WORD_MAKER_SPREADSHEET_DEFAULT_COLUMNS = 8;
+        const WORD_MAKER_PIXELS_PER_INCH = 96;
 
         function getWordMakerEditors() {
             return Array.from(window.document.querySelectorAll('.word-maker-editor'));
@@ -1615,6 +1613,23 @@
 
         function getWordMakerShellForEditor(editor) {
             return editor ? editor.closest('.word-maker-page-shell') : null;
+        }
+
+        function getActiveWordMakerShell() {
+            const selection = window.getSelection();
+            const selectionNode = selection && selection.rangeCount ? selection.getRangeAt(0).commonAncestorContainer : null;
+            const selectionElement = selectionNode && selectionNode.nodeType === Node.ELEMENT_NODE
+                ? selectionNode
+                : selectionNode && selectionNode.parentElement;
+
+            if (selectionElement) {
+                const shellFromSelection = selectionElement.closest('.word-maker-page-shell');
+                if (shellFromSelection) {
+                    return shellFromSelection;
+                }
+            }
+
+            return getWordMakerShellForEditor(getActiveWordMakerEditor()) || getWordMakerPageShells()[0] || null;
         }
 
         function getWordMakerRulerForShell(shell) {
@@ -1757,6 +1772,7 @@
                     ruler.classList.toggle('is-active', shell.contains(editor));
                 }
             });
+            updateWordMakerMarginGuideLabel();
         }
 
         function getWordMakerPaperMetrics(paper) {
@@ -1778,6 +1794,83 @@
                 firstLine: Number.parseFloat(style.getPropertyValue('--word-first-line-indent')) || 0,
                 hanging: Number.parseFloat(style.getPropertyValue('--word-hanging-indent')) || 0
             };
+        }
+
+        function pixelsToWordMakerInches(value) {
+            const pixels = Number.parseFloat(value);
+            if (!Number.isFinite(pixels)) {
+                return 0;
+            }
+            return pixels / WORD_MAKER_PIXELS_PER_INCH;
+        }
+
+        function inchesToWordMakerPixels(value) {
+            const inches = Number.parseFloat(value);
+            if (!Number.isFinite(inches)) {
+                return 0;
+            }
+            return Math.round(inches * WORD_MAKER_PIXELS_PER_INCH);
+        }
+
+        function formatWordMakerMarginGuideLabel(inches) {
+            const rounded = Math.round(inches * 100) / 100;
+            const text = Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/0+$/, '').replace(/\.$/, '');
+            return `${text} in margin guide`;
+        }
+
+        function updateWordMakerMarginGuideLabel() {
+            if (!wordMakerMarginGuideLabel) {
+                return;
+            }
+
+            const activeShell = getActiveWordMakerShell();
+            const paper = activeShell ? activeShell.querySelector('.word-maker-paper') : getWordMakerPapers()[0] || null;
+            if (!paper) {
+                wordMakerMarginGuideLabel.textContent = '1 in margin guide';
+                return;
+            }
+
+            const style = window.getComputedStyle(paper);
+            const marginLeft = Number.parseFloat(style.getPropertyValue('--word-margin-left')) || 40;
+            wordMakerMarginGuideLabel.textContent = formatWordMakerMarginGuideLabel(pixelsToWordMakerInches(marginLeft));
+        }
+
+        function applyWordMakerMarginGuide(inches) {
+            const nextInches = Number.parseFloat(inches);
+            if (!Number.isFinite(nextInches) || nextInches < 0.25 || nextInches > 2.5) {
+                return false;
+            }
+
+            const marginPixels = inchesToWordMakerPixels(nextInches);
+            getWordMakerPapers().forEach((paper) => {
+                paper.style.setProperty('--word-margin-top', `${marginPixels}px`);
+                paper.style.setProperty('--word-margin-right', `${marginPixels}px`);
+                paper.style.setProperty('--word-margin-bottom', `${marginPixels}px`);
+                paper.style.setProperty('--word-margin-left', `${marginPixels}px`);
+            });
+
+            renderAllWordMakerRulers();
+            updateWordMakerMarginGuideLabel();
+            scheduleWordMakerDraftSave();
+            return true;
+        }
+
+        function promptForWordMakerMarginGuide() {
+            const activeShell = getActiveWordMakerShell();
+            const paper = activeShell ? activeShell.querySelector('.word-maker-paper') : getWordMakerPapers()[0] || null;
+            const style = paper ? window.getComputedStyle(paper) : null;
+            const currentInches = pixelsToWordMakerInches(Number.parseFloat(style ? style.getPropertyValue('--word-margin-left') : '40') || 40);
+            const response = window.prompt('Set the page margin guide in inches for all sides.', String(Math.round(currentInches * 100) / 100 || 1));
+            if (response === null) {
+                return;
+            }
+
+            if (!applyWordMakerMarginGuide(response)) {
+                window.alert('Enter a margin between 0.25 and 2.5 inches.');
+                return;
+            }
+
+            updateWordMakerStats();
         }
 
         function getWordMakerTabStops(paper) {
@@ -2134,7 +2227,7 @@
             const style = paper.style;
             return {
                 pageMode: getWordMakerPageModeFromShell(shell),
-                html: editor.innerHTML,
+                html: sanitizeWordMakerPageHtml(editor.innerHTML),
                 spreadsheet: collectWordMakerSpreadsheetData(shell),
                 tabStops: paper.dataset.tabStops || '',
                 guidesHidden: paper.classList.contains('is-guides-hidden'),
@@ -2149,6 +2242,88 @@
             };
         }
 
+        function looksLikeWordMakerScriptLeak(value) {
+            const text = String(value || '');
+            const leakMarkers = [
+                "xt/html;charset=utf-8'); } catch (error)",
+                "console.error('HTML export failed.'",
+                "window.alert('Unable to export the HTML document right now.'",
+                "setActiveWordMakerEditor(initialWordMakerEditor)",
+                "wordMakerPageStack.addEventListener('focusin'",
+                "wordMakerPageStack.addEventListener('mouseup'",
+                "wordMakerPageStack.addEventListener('keyup'",
+                "wordMakerPageStack.addEventListener('keydown'",
+                "wordMakerPageStack.addEventListener('input'",
+                "window.addEventListener('pointermove'",
+                "window.addEventListener('pointerup'",
+                "wordMakerAddPageButton.addEventListener('click'",
+                "wordMakerExportOptions.forEach((button)",
+                "renderAllWordMakerRulers();",
+                "if (!loadWordMakerDraft())"
+            ];
+            const markerHits = leakMarkers.filter((marker) => text.includes(marker)).length;
+            const addEventListenerHits = (text.match(/addEventListener\(/g) || []).length;
+            const wordMakerHits = (text.match(/wordMaker[A-Z]/g) || []).length;
+
+            return markerHits >= 2 || (addEventListenerHits >= 4 && wordMakerHits >= 8);
+        }
+
+        function scrubWordMakerLeakText(root = null) {
+            const scope = root || wordMakerPageStack || window.document.body;
+            if (!scope) {
+                return false;
+            }
+
+            const walker = window.document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+            const nodesToClear = [];
+            let currentNode = walker.nextNode();
+            while (currentNode) {
+                const text = String(currentNode.textContent || '').trim();
+                if (text && looksLikeWordMakerScriptLeak(text)) {
+                    nodesToClear.push(currentNode);
+                }
+                currentNode = walker.nextNode();
+            }
+
+            nodesToClear.forEach((node) => {
+                const parentElement = node.parentElement;
+                if (parentElement && (parentElement.classList.contains('word-maker-editor') || parentElement.closest('.word-maker-editor'))) {
+                    if (parentElement.classList.contains('word-maker-editor')) {
+                        parentElement.innerHTML = '';
+                    } else {
+                        node.textContent = '';
+                    }
+                    return;
+                }
+
+                node.textContent = '';
+            });
+
+            return nodesToClear.length > 0;
+        }
+
+        function sanitizeWordMakerPageHtml(value) {
+            const rawHtml = String(value || '');
+            if (!rawHtml.trim()) {
+                return '';
+            }
+
+            if (looksLikeWordMakerScriptLeak(rawHtml)) {
+                return '';
+            }
+
+            const template = window.document.createElement('template');
+            template.innerHTML = rawHtml;
+            template.content.querySelectorAll('script').forEach((node) => node.remove());
+
+            const textContent = String(template.content.textContent || '').trim();
+            if (!template.content.children.length && looksLikeWordMakerScriptLeak(textContent)) {
+                return '';
+            }
+
+            return template.innerHTML;
+        }
+
         function applyWordMakerPageState(shell, pageState = {}) {
             const paper = shell.querySelector('.word-maker-paper');
             const editor = shell.querySelector('.word-maker-editor');
@@ -2156,7 +2331,7 @@
                 return;
             }
 
-            editor.innerHTML = String(pageState.html || '');
+            editor.innerHTML = sanitizeWordMakerPageHtml(pageState.html);
             enhanceWordMakerTables(editor);
             const margins = pageState.margins || {};
             if (margins.top) {
@@ -2183,6 +2358,7 @@
                 suppressFocus: true,
                 data: Array.isArray(pageState.spreadsheet) ? pageState.spreadsheet : []
             });
+            updateWordMakerMarginGuideLabel();
         }
 
         function collectWordMakerDraftState() {
@@ -2228,6 +2404,14 @@
                     return false;
                 }
 
+                const cleanedPages = pages.map((pageState) => ({
+                    ...pageState,
+                    html: sanitizeWordMakerPageHtml(pageState && typeof pageState === 'object' ? pageState.html : '')
+                }));
+                const hadSanitizedPages = cleanedPages.some((pageState, index) => {
+                    return String(pageState.html || '') !== String((pages[index] && pages[index].html) || '');
+                });
+
                 getWordMakerPageShells().slice(1).forEach((shell) => shell.remove());
                 const baseShell = getWordMakerPageShells()[0];
                 if (!baseShell) {
@@ -2235,8 +2419,8 @@
                     return false;
                 }
 
-                applyWordMakerPageState(baseShell, pages[0]);
-                for (const pageState of pages.slice(1)) {
+                applyWordMakerPageState(baseShell, cleanedPages[0]);
+                for (const pageState of cleanedPages.slice(1)) {
                     const newShell = createWordMakerPageShell();
                     wordMakerPageStack.appendChild(newShell);
                     applyWordMakerPageState(newShell, pageState);
@@ -2254,12 +2438,18 @@
                 setWordMakerOpenToolGroup(restoredOpenGroup);
                 saveWordMakerOpenToolGroupState();
 
+                const removedVisibleLeakText = scrubWordMakerLeakText(wordMakerPageStack);
                 updateWordMakerStats();
                 renderAllWordMakerRulers();
+                if (hadSanitizedPages || removedVisibleLeakText) {
+                    saveWordMakerDraft(true);
+                }
                 const savedAt = draftState.savedAt ? new Date(draftState.savedAt) : null;
-                setWordMakerDraftStatus(savedAt && !Number.isNaN(savedAt.getTime())
-                    ? `Loaded ${savedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-                    : 'Loaded');
+                setWordMakerDraftStatus(hadSanitizedPages || removedVisibleLeakText
+                    ? 'Loaded and cleaned'
+                    : savedAt && !Number.isNaN(savedAt.getTime())
+                        ? `Loaded ${savedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                        : 'Loaded');
                 return true;
             } catch (error) {
                 console.error('Unable to load Word Maker draft.', error);
@@ -2382,18 +2572,71 @@
             }
         }
 
-        function runWordMakerCommand(toolName) {
+        function insertWordMakerHtml(html) {
             const activeEditor = getActiveWordMakerEditor();
             if (!activeEditor) {
-                return;
+                return false;
             }
 
-            const activeShell = getWordMakerShellForEditor(activeEditor);
+            focusWordMakerEditor();
+
+            if (window.document.execCommand('insertHTML', false, html)) {
+                return true;
+            }
+
+            const selection = window.getSelection();
+            if (!selection) {
+                return false;
+            }
+
+            let range = selection.rangeCount ? selection.getRangeAt(0) : null;
+            if (!range || !activeEditor.contains(range.commonAncestorContainer)) {
+                range = window.document.createRange();
+                range.selectNodeContents(activeEditor);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+
+            const fragment = range.createContextualFragment(html);
+            const lastNode = fragment.lastChild;
+            range.deleteContents();
+            range.insertNode(fragment);
+
+            if (lastNode) {
+                range = window.document.createRange();
+                range.setStartAfter(lastNode);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                wordMakerRange = range.cloneRange();
+            }
+
+            return true;
+        }
+
+        function runWordMakerCommand(toolName) {
             if (toolName === 'spreadsheet-mode') {
+                const activeShell = getActiveWordMakerShell();
+                if (!activeShell) {
+                    return;
+                }
                 const nextMode = getWordMakerPageModeFromShell(activeShell) === 'spreadsheet' ? 'document' : 'spreadsheet';
                 setWordMakerPageMode(activeShell, nextMode);
                 updateWordMakerStats();
                 scheduleWordMakerDraftSave();
+                return;
+            }
+
+            let activeEditor = getActiveWordMakerEditor();
+            if (!activeEditor) {
+                const activeShell = getActiveWordMakerShell();
+                activeEditor = activeShell ? activeShell.querySelector('.word-maker-editor') : null;
+                if (activeEditor) {
+                    setActiveWordMakerEditor(activeEditor);
+                }
+            }
+            if (!activeEditor) {
                 return;
             }
 
@@ -2501,8 +2744,7 @@
             const rows = Math.max(1, Number.parseInt(window.prompt('How many rows?', '3') || '3', 10) || 3);
             const columns = Math.max(1, Number.parseInt(window.prompt('How many columns?', '3') || '3', 10) || 3);
 
-            focusWordMakerEditor();
-            window.document.execCommand('insertHTML', false, getWordMakerTableMarkup(rows, columns));
+            insertWordMakerHtml(getWordMakerTableMarkup(rows, columns));
             enhanceWordMakerTables(activeEditor);
             saveWordMakerSelection();
             updateWordMakerStats();
@@ -3725,8 +3967,13 @@ ${pageMarkup}
 
         if (wordMakerAddPageButton) {
             wordMakerAddPageButton.addEventListener('click', () => {
-                const shells = Array.from(window.document.querySelectorAll('.word-maker-page-shell'));
-                addWordMakerPage(shells[shells.length - 1] || null);
+                addWordMakerPage(getActiveWordMakerShell());
+            });
+        }
+
+        if (wordMakerMarginGuideButton) {
+            wordMakerMarginGuideButton.addEventListener('click', () => {
+                promptForWordMakerMarginGuide();
             });
         }
 
@@ -3867,7 +4114,12 @@ ${pageMarkup}
         });
 
         updateWordMakerStats();
+        updateWordMakerMarginGuideLabel();
         renderAllWordMakerRulers();
+        if (scrubWordMakerLeakText(wordMakerPageStack)) {
+            updateWordMakerStats();
+            saveWordMakerDraft(true);
+        }
         if (!loadWordMakerDraft()) {
             restoreWordMakerOpenToolGroupState();
             setWordMakerDraftStatus('Ready');
