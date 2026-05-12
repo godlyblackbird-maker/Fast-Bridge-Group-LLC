@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Document Maker - FAST BRIDGE GROUP</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
+    <meta name="description" content="FAST BRIDGE GROUP Microsoft Word document maker for letters, memos, offers, and client-ready drafts.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Merriweather:wght@400;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (_error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                const themeStore = readJson('dashboardThemeByUser');
+                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|blacklight|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
+                const themeLogoPaths = {
+                    christmas: 'png photos/Christmas Theme Logo.png',
+                    swamp: 'png photos/Swamp Theme Logo.png',
+                    cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    blacklight: 'png photos/FAST LOGO 777.png',
+                    japan: 'png photos/Japan Theme Mode Logo.png'
+                };
+                root.setAttribute('data-theme-logo-path', themeLogoPaths[theme] || defaultThemeLogoPath);
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const r = Number.parseInt(value.slice(0, 2), 16);
+                    const g = Number.parseInt(value.slice(2, 4), 16);
+                    const b = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+                        return '5, 150, 105';
+                    }
+                    return `${r}, ${g}, ${b}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+            } catch (_error) {
+                // Allow base styles to load even if theme preload fails.
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="templatemo-glass-admin-style.css?v=20260418a">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .word-maker-page .navbar {
+            margin-bottom: 24px;
+        }
+
+        .word-maker-shell {
+            width: min(1320px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 12px 0 72px;
+        }
+
+        .word-maker-hero,
+        .word-maker-panel,
+        .word-maker-preview {
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
+                var(--glass-bg);
+            box-shadow: 0 24px 54px var(--glass-shadow);
+            backdrop-filter: blur(20px);
+        }
+
+        .word-maker-hero {
+            display: grid;
+            gap: 20px;
+            padding: 36px;
+            margin-bottom: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.2), transparent 36%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
+                var(--glass-bg);
+        }
+
+        .word-maker-kicker {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.18);
+            color: var(--text-primary);
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .word-maker-kicker::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(var(--accent-light-rgb), 0.96);
+            box-shadow: 0 0 12px rgba(var(--accent-light-rgb), 0.42);
+        }
+
+        .word-maker-title {
+            margin: 0;
+            font-size: clamp(2.2rem, 4vw, 3.7rem);
+            line-height: 1.02;
+        }
+
+        .word-maker-copy {
+            margin: 0;
+            max-width: 70ch;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.75;
+        }
+
+        .word-maker-hero-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .word-maker-metric {
+            padding: 16px 18px;
+            border-radius: 22px;
+            background: rgba(8, 15, 30, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .word-maker-metric span {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .word-maker-metric strong {
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .word-maker-workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .word-maker-panel,
+        .word-maker-preview {
+            padding: 28px;
+        }
+
+        .word-maker-panel-header,
+        .word-maker-preview-header,
+        .word-maker-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .word-maker-panel h2,
+        .word-maker-preview h2,
+        .word-maker-section-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .word-maker-panel p,
+        .word-maker-preview p,
+        .word-maker-section-header p {
+            margin: 4px 0 0;
+            color: var(--text-secondary);
+        }
+
+        .word-maker-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .word-maker-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .word-maker-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .word-maker-field label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .word-maker-field input,
+        .word-maker-field textarea,
+        .word-maker-field select {
+            width: 100%;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(7, 14, 26, 0.58);
+            color: var(--text-primary);
+            padding: 14px 16px;
+            font: inherit;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .word-maker-field textarea {
+            min-height: 118px;
+            resize: vertical;
+        }
+
+        .word-maker-field input:focus,
+        .word-maker-field textarea:focus,
+        .word-maker-field select:focus {
+            outline: none;
+            border-color: rgba(var(--accent-light-rgb), 0.7);
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+            transform: translateY(-1px);
+        }
+
+        .word-maker-actions,
+        .word-maker-secondary-actions,
+        .word-maker-block-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .word-maker-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 48px;
+            border: 0;
+            border-radius: 999px;
+            padding: 0 18px;
+            font: inherit;
+            font-weight: 700;
+            color: #04111d;
+            background: linear-gradient(135deg, rgba(var(--accent-light-rgb), 0.95), rgba(var(--accent-rgb), 0.9));
+            box-shadow: 0 18px 32px rgba(var(--accent-rgb), 0.24);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        .word-maker-button:hover,
+        .word-maker-button:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 38px rgba(var(--accent-rgb), 0.3);
+            outline: none;
+        }
+
+        .word-maker-button.is-secondary {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .word-maker-button.is-ghost {
+            color: var(--text-secondary);
+            background: transparent;
+            box-shadow: none;
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+        }
+
+        .word-maker-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .word-maker-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+            margin: 24px 0;
+        }
+
+        .word-maker-block-list {
+            display: grid;
+            gap: 16px;
+        }
+
+        .word-maker-block {
+            padding: 18px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(5, 10, 20, 0.34);
+        }
+
+        .word-maker-block-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .word-maker-block-top strong {
+            font-size: 0.95rem;
+        }
+
+        .word-maker-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(var(--accent-rgb), 0.16);
+            color: var(--text-primary);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .word-maker-preview-stage {
+            min-height: 880px;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(249, 250, 251, 0.98), rgba(235, 239, 244, 0.98));
+            color: #111827;
+            padding: 44px 48px;
+            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+        }
+
+        .word-maker-preview-sheet {
+            max-width: 720px;
+            margin: 0 auto;
+            font-family: 'Merriweather', serif;
+            line-height: 1.7;
+        }
+
+        .word-maker-preview-sheet h1,
+        .word-maker-preview-sheet h2,
+        .word-maker-preview-sheet h3 {
+            font-family: 'Outfit', sans-serif;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .word-maker-preview-sheet h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .word-maker-preview-sheet h2 {
+            font-size: 1.25rem;
+            margin: 28px 0 10px;
+        }
+
+        .word-maker-preview-sheet h3 {
+            font-size: 1rem;
+            margin: 24px 0 8px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .word-maker-preview-meta {
+            display: grid;
+            gap: 6px;
+            margin-bottom: 24px;
+            color: #475569;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .word-maker-preview-body p,
+        .word-maker-preview-body ul,
+        .word-maker-preview-body ol,
+        .word-maker-preview-body blockquote {
+            margin: 0 0 16px;
+        }
+
+        .word-maker-preview-body ul,
+        .word-maker-preview-body ol {
+            padding-left: 22px;
+        }
+
+        .word-maker-preview-body blockquote {
+            border-left: 4px solid rgba(5, 150, 105, 0.45);
+            padding-left: 16px;
+            color: #334155;
+            font-style: italic;
+        }
+
+        .word-maker-preview-footer {
+            margin-top: 36px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(148, 163, 184, 0.4);
+            color: #64748b;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.94rem;
+        }
+
+        .word-maker-empty {
+            color: var(--text-muted);
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+            text-align: center;
+        }
+
+        .word-maker-status {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 1180px) {
+            .word-maker-workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .word-maker-shell {
+                width: min(100%, calc(100% - 24px));
+            }
+
+            .word-maker-hero,
+            .word-maker-panel,
+            .word-maker-preview {
+                padding: 20px;
+                border-radius: 24px;
+            }
+
+            .word-maker-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .word-maker-preview-stage {
+                padding: 24px 20px;
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+<body class="word-maker-page">
+    <div class="dashboard-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP LLC</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item"><a href="dashboard.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a></li>
+                        <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics</a></li>
+                        <li class="nav-item"><a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a></li>
+                        <li class="nav-item"><a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a></li>
+                        <li class="nav-item"><a href="pdf-editor.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><path d="M9 15h6"/><path d="M9 11h3"/></svg>PDF Editor</a></li>
+                        <li class="nav-item"><a href="word-document-maker.html" class="nav-link active" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h3"/></svg>Word Maker</a></li>
+                        <li class="nav-item"><a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
+                    </ul>
+                </li>
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item"><a href="admin-controls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>Admin Controls</a></li>
+                        <li class="nav-item"><a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My Agents</a></li>
+                        <li class="nav-item"><a href="login.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">FB</div>
+                    <div class="user-info">
+                        <div class="user-name">FAST User</div>
+                        <div class="user-role">Workspace</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <div class="page-title-group">
+                    <h1 class="page-title">Word Document Maker</h1>
+                    <p class="navbar-datetime">Build downloadable Microsoft Word drafts in the browser.</p>
+                </div>
+            </nav>
+
+            <div class="word-maker-shell">
+                <section class="word-maker-hero" aria-label="Word document maker overview">
+                    <span class="word-maker-kicker">Document Tools</span>
+                    <div>
+                        <h2 class="word-maker-title">Microsoft Word document maker for offers, letters, and internal memos</h2>
+                        <p class="word-maker-copy">This works like the PDF editor in the sense that it is a dedicated document workspace, but here you are assembling a fresh `.docx` file. Draft the document structure, stack content blocks, preview the final layout, and download a Word file your team can open in Microsoft Word immediately.</p>
+                    </div>
+                    <div class="word-maker-hero-metrics">
+                        <div class="word-maker-metric"><span>Exports</span><strong>Real `.docx` download</strong></div>
+                        <div class="word-maker-metric"><span>Best For</span><strong>Letters, offer summaries, outreach docs</strong></div>
+                        <div class="word-maker-metric"><span>Workflow</span><strong>Draft, preview, save locally</strong></div>
+                    </div>
+                </section>
+
+                <div class="word-maker-workspace">
+                    <section class="word-maker-panel" aria-label="Word document builder">
+                        <div class="word-maker-panel-header">
+                            <div>
+                                <h2>Document setup</h2>
+                                <p>Set the document shell, then add the content blocks you want exported into Word.</p>
+                            </div>
+                            <div class="word-maker-secondary-actions">
+                                <button id="word-maker-load-sample" class="word-maker-button is-secondary" type="button">Load Sample</button>
+                                <button id="word-maker-reset" class="word-maker-button is-ghost" type="button">Reset</button>
+                            </div>
+                        </div>
+
+                        <div class="word-maker-grid">
+                            <div class="word-maker-field">
+                                <label for="word-maker-file-name">File name</label>
+                                <input id="word-maker-file-name" type="text" value="fast-bridge-document" placeholder="fast-bridge-document">
+                            </div>
+                            <div class="word-maker-field">
+                                <label for="word-maker-date">Document date</label>
+                                <input id="word-maker-date" type="date">
+                            </div>
+                            <div class="word-maker-field full-width">
+                                <label for="word-maker-title">Document title</label>
+                                <input id="word-maker-title" type="text" placeholder="Investor offer summary, client follow-up letter, acquisition memo">
+                            </div>
+                            <div class="word-maker-field full-width">
+                                <label for="word-maker-subtitle">Subtitle or opener</label>
+                                <input id="word-maker-subtitle" type="text" placeholder="Optional subhead, subject line, or short context sentence">
+                            </div>
+                            <div class="word-maker-field">
+                                <label for="word-maker-author">Prepared by</label>
+                                <input id="word-maker-author" type="text" placeholder="Isaac Haro">
+                            </div>
+                            <div class="word-maker-field">
+                                <label for="word-maker-recipient">Recipient</label>
+                                <input id="word-maker-recipient" type="text" placeholder="Seller, agent, attorney, client, team">
+                            </div>
+                            <div class="word-maker-field full-width">
+                                <label for="word-maker-footer">Footer note</label>
+                                <input id="word-maker-footer" type="text" placeholder="FAST BRIDGE GROUP LLC | Confidential working draft">
+                            </div>
+                        </div>
+
+                        <div class="word-maker-divider"></div>
+
+                        <div class="word-maker-section-header">
+                            <div>
+                                <h3>Content blocks</h3>
+                                <p>Stack the sections in the order you want them to appear in the Word file.</p>
+                            </div>
+                            <button id="word-maker-add-block" class="word-maker-button" type="button">Add Block</button>
+                        </div>
+
+                        <div id="word-maker-block-list" class="word-maker-block-list"></div>
+
+                        <div class="word-maker-divider"></div>
+
+                        <div class="word-maker-actions">
+                            <button id="word-maker-download" class="word-maker-button" type="button">Download Word Document</button>
+                            <button id="word-maker-save-draft" class="word-maker-button is-secondary" type="button">Save Draft</button>
+                        </div>
+                        <p id="word-maker-status" class="word-maker-status">Draft changes auto-refresh in the preview.</p>
+                    </section>
+
+                    <aside class="word-maker-preview" aria-label="Word document preview">
+                        <div class="word-maker-preview-header">
+                            <div>
+                                <h2>Live preview</h2>
+                                <p>What you see here is the structure that will be exported into the `.docx` file.</p>
+                            </div>
+                            <span class="word-maker-chip">Preview</span>
+                        </div>
+                        <div class="word-maker-preview-stage">
+                            <div class="word-maker-preview-sheet">
+                                <div id="word-maker-preview-meta" class="word-maker-preview-meta"></div>
+                                <h1 id="word-maker-preview-title">Untitled document</h1>
+                                <p id="word-maker-preview-subtitle"></p>
+                                <div id="word-maker-preview-body" class="word-maker-preview-body"></div>
+                                <div id="word-maker-preview-footer" class="word-maker-preview-footer"></div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <button class="mobile-menu-toggle" type="button" aria-label="Toggle navigation menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+    </button>
+
+    <script type="module">
+        import {
+            AlignmentType,
+            Document as DocxDocument,
+            HeadingLevel,
+            Packer,
+            Paragraph,
+            TextRun
+        } from 'https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm';
+
+        const WORD_MAKER_DRAFT_KEY = 'wordDocumentMakerDraft';
+        const blockList = window.document.getElementById('word-maker-block-list');
+        const addBlockButton = window.document.getElementById('word-maker-add-block');
+        const downloadButton = window.document.getElementById('word-maker-download');
+        const saveDraftButton = window.document.getElementById('word-maker-save-draft');
+        const loadSampleButton = window.document.getElementById('word-maker-load-sample');
+        const resetButton = window.document.getElementById('word-maker-reset');
+        const statusNode = window.document.getElementById('word-maker-status');
+
+        const fileNameInput = window.document.getElementById('word-maker-file-name');
+        const dateInput = window.document.getElementById('word-maker-date');
+        const titleInput = window.document.getElementById('word-maker-title');
+        const subtitleInput = window.document.getElementById('word-maker-subtitle');
+        const authorInput = window.document.getElementById('word-maker-author');
+        const recipientInput = window.document.getElementById('word-maker-recipient');
+        const footerInput = window.document.getElementById('word-maker-footer');
+
+        const previewMeta = window.document.getElementById('word-maker-preview-meta');
+        const previewTitle = window.document.getElementById('word-maker-preview-title');
+        const previewSubtitle = window.document.getElementById('word-maker-preview-subtitle');
+        const previewBody = window.document.getElementById('word-maker-preview-body');
+        const previewFooter = window.document.getElementById('word-maker-preview-footer');
+
+        const blockTypeLabels = {
+            heading: 'Section Heading',
+            paragraph: 'Paragraph',
+            bullets: 'Bullet List',
+            numbered: 'Numbered List',
+            quote: 'Quote'
+        };
+
+        let blocks = [];
+
+        function readJson(key) {
+            try {
+                return JSON.parse(localStorage.getItem(key) || '{}');
+            } catch (_error) {
+                return {};
+            }
+        }
+
+        function getWorkspaceUserKey() {
+            const profile = readJson('userProfile');
+            const user = readJson('user');
+            const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            const userEmail = String(user.email || '').trim().toLowerCase();
+            const profileEmail = String(profile.email || '').trim().toLowerCase();
+            const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+            const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+            const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+            return email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function createBlock(block = {}) {
+            return {
+                id: block.id || `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                type: ['heading', 'paragraph', 'bullets', 'numbered', 'quote'].includes(block.type) ? block.type : 'paragraph',
+                heading: String(block.heading || '').trim(),
+                body: String(block.body || '')
+            };
+        }
+
+        function getDefaultDateValue() {
+            const now = new Date();
+            const offset = now.getTimezoneOffset() * 60000;
+            return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+        }
+
+        function getSampleDraft() {
+            return {
+                fileName: 'offer-summary-fast-bridge',
+                date: getDefaultDateValue(),
+                title: 'Cash Offer Summary',
+                subtitle: 'Working draft for agent review before final delivery.',
+                author: 'FAST BRIDGE GROUP',
+                recipient: 'Listing Agent',
+                footer: 'FAST BRIDGE GROUP LLC | Internal draft before final send',
+                blocks: [
+                    createBlock({ type: 'paragraph', heading: 'Overview', body: 'FAST BRIDGE GROUP is prepared to review this opportunity for a quick close. This draft summarizes the current thinking, target positioning, and the items we still need before locking final terms.' }),
+                    createBlock({ type: 'bullets', heading: 'Key points', body: 'As-is purchase with no repair requests\nFlexible close timing based on seller need\nProof of funds available on request\nNeed updated occupancy and access details' }),
+                    createBlock({ type: 'numbered', heading: 'Next steps', body: 'Confirm current rent and vacancy status\nShare any inspection findings or major deferred maintenance\nReview seller timeline and preferred close window' }),
+                    createBlock({ type: 'quote', heading: 'Positioning note', body: 'Keep the tone direct and clean. We want the agent to feel that we can move quickly without sounding careless on diligence.' })
+                ]
+            };
+        }
+
+        function getDraftStore() {
+            const store = readJson(WORD_MAKER_DRAFT_KEY);
+            return store && typeof store === 'object' ? store : {};
+        }
+
+        function saveDraftToStorage() {
+            const store = getDraftStore();
+            store[getWorkspaceUserKey()] = {
+                fileName: fileNameInput.value.trim(),
+                date: dateInput.value,
+                title: titleInput.value.trim(),
+                subtitle: subtitleInput.value.trim(),
+                author: authorInput.value.trim(),
+                recipient: recipientInput.value.trim(),
+                footer: footerInput.value.trim(),
+                blocks
+            };
+            localStorage.setItem(WORD_MAKER_DRAFT_KEY, JSON.stringify(store));
+        }
+
+        function loadDraftFromStorage() {
+            const store = getDraftStore();
+            const draft = store[getWorkspaceUserKey()];
+            if (!draft || typeof draft !== 'object') {
+                return false;
+            }
+
+            fileNameInput.value = String(draft.fileName || '').trim() || 'fast-bridge-document';
+            dateInput.value = String(draft.date || '').trim() || getDefaultDateValue();
+            titleInput.value = String(draft.title || '').trim();
+            subtitleInput.value = String(draft.subtitle || '').trim();
+            authorInput.value = String(draft.author || '').trim();
+            recipientInput.value = String(draft.recipient || '').trim();
+            footerInput.value = String(draft.footer || '').trim();
+            blocks = Array.isArray(draft.blocks) && draft.blocks.length ? draft.blocks.map((block) => createBlock(block)) : [createBlock()];
+            return true;
+        }
+
+        function setStatus(message) {
+            statusNode.textContent = message;
+        }
+
+        function getLines(value) {
+            return String(value || '')
+                .split(/\r?\n/)
+                .map((item) => item.trim())
+                .filter(Boolean);
+        }
+
+        function renderBlocks() {
+            if (!blocks.length) {
+                blockList.innerHTML = '<div class="word-maker-empty">No blocks added yet. Add one to start building the document.</div>';
+                return;
+            }
+
+            blockList.innerHTML = blocks.map((block, index) => {
+                return `
+                    <article class="word-maker-block" data-block-id="${escapeHtml(block.id)}">
+                        <div class="word-maker-block-top">
+                            <div>
+                                <strong>Block ${index + 1}</strong>
+                                <div class="word-maker-chip">${escapeHtml(blockTypeLabels[block.type] || 'Paragraph')}</div>
+                            </div>
+                            <div class="word-maker-block-actions">
+                                <button class="word-maker-button is-ghost" type="button" data-action="move-up">Up</button>
+                                <button class="word-maker-button is-ghost" type="button" data-action="move-down">Down</button>
+                                <button class="word-maker-button is-secondary" type="button" data-action="delete">Delete</button>
+                            </div>
+                        </div>
+                        <div class="word-maker-grid">
+                            <div class="word-maker-field">
+                                <label>Block type</label>
+                                <select data-field="type">
+                                    <option value="heading"${block.type === 'heading' ? ' selected' : ''}>Section Heading</option>
+                                    <option value="paragraph"${block.type === 'paragraph' ? ' selected' : ''}>Paragraph</option>
+                                    <option value="bullets"${block.type === 'bullets' ? ' selected' : ''}>Bullet List</option>
+                                    <option value="numbered"${block.type === 'numbered' ? ' selected' : ''}>Numbered List</option>
+                                    <option value="quote"${block.type === 'quote' ? ' selected' : ''}>Quote</option>
+                                </select>
+                            </div>
+                            <div class="word-maker-field">
+                                <label>Block heading</label>
+                                <input data-field="heading" type="text" value="${escapeHtml(block.heading)}" placeholder="Optional heading for this block">
+                            </div>
+                            <div class="word-maker-field full-width">
+                                <label>Body</label>
+                                <textarea data-field="body" placeholder="Write the section content here. For lists, use one line per item.">${escapeHtml(block.body)}</textarea>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function renderPreview() {
+            const metaLines = [];
+            const dateValue = dateInput.value;
+            const authorValue = authorInput.value.trim();
+            const recipientValue = recipientInput.value.trim();
+
+            if (dateValue) {
+                metaLines.push(`Date: ${escapeHtml(new Date(`${dateValue}T00:00:00`).toLocaleDateString())}`);
+            }
+            if (authorValue) {
+                metaLines.push(`Prepared by: ${escapeHtml(authorValue)}`);
+            }
+            if (recipientValue) {
+                metaLines.push(`Recipient: ${escapeHtml(recipientValue)}`);
+            }
+
+            previewMeta.innerHTML = metaLines.length
+                ? metaLines.map((line) => `<div>${line}</div>`).join('')
+                : '<div>Draft metadata will appear here once you fill in the fields.</div>';
+
+            previewTitle.textContent = titleInput.value.trim() || 'Untitled document';
+            previewSubtitle.textContent = subtitleInput.value.trim();
+            previewSubtitle.hidden = !subtitleInput.value.trim();
+
+            if (!blocks.length) {
+                previewBody.innerHTML = '<div class="word-maker-empty">Add content blocks to see the document body preview.</div>';
+            } else {
+                previewBody.innerHTML = blocks.map((block) => {
+                    const headingMarkup = block.heading ? `<h2>${escapeHtml(block.heading)}</h2>` : '';
+                    if (block.type === 'heading') {
+                        return `<section>${block.heading ? `<h3>${escapeHtml(block.heading)}</h3>` : ''}</section>`;
+                    }
+                    if (block.type === 'bullets') {
+                        const items = getLines(block.body).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+                        return `<section>${headingMarkup}${items ? `<ul>${items}</ul>` : '<p></p>'}</section>`;
+                    }
+                    if (block.type === 'numbered') {
+                        const items = getLines(block.body).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+                        return `<section>${headingMarkup}${items ? `<ol>${items}</ol>` : '<p></p>'}</section>`;
+                    }
+                    if (block.type === 'quote') {
+                        return `<section>${headingMarkup}<blockquote>${escapeHtml(block.body).replace(/\n/g, '<br>')}</blockquote></section>`;
+                    }
+                    return `<section>${headingMarkup}<p>${escapeHtml(block.body).replace(/\n/g, '<br>')}</p></section>`;
+                }).join('');
+            }
+
+            previewFooter.textContent = footerInput.value.trim() || 'FAST BRIDGE GROUP LLC';
+        }
+
+        function syncUi() {
+            renderBlocks();
+            renderPreview();
+            saveDraftToStorage();
+        }
+
+        function addBlock(block) {
+            blocks.push(createBlock(block));
+            syncUi();
+            setStatus('Block added to the document draft.');
+        }
+
+        function resetDraft(toSample = false) {
+            const draft = toSample ? getSampleDraft() : {
+                fileName: 'fast-bridge-document',
+                date: getDefaultDateValue(),
+                title: '',
+                subtitle: '',
+                author: '',
+                recipient: '',
+                footer: 'FAST BRIDGE GROUP LLC',
+                blocks: [createBlock()]
+            };
+
+            fileNameInput.value = draft.fileName;
+            dateInput.value = draft.date;
+            titleInput.value = draft.title;
+            subtitleInput.value = draft.subtitle;
+            authorInput.value = draft.author;
+            recipientInput.value = draft.recipient;
+            footerInput.value = draft.footer;
+            blocks = draft.blocks.map((block) => createBlock(block));
+            syncUi();
+            setStatus(toSample ? 'Sample document loaded.' : 'Draft reset.');
+        }
+
+        function buildParagraphs() {
+            const children = [];
+            const titleValue = titleInput.value.trim();
+            const subtitleValue = subtitleInput.value.trim();
+            const dateValue = dateInput.value;
+            const authorValue = authorInput.value.trim();
+            const recipientValue = recipientInput.value.trim();
+            const footerValue = footerInput.value.trim();
+
+            if (titleValue) {
+                children.push(new Paragraph({
+                    text: titleValue,
+                    heading: HeadingLevel.TITLE,
+                    alignment: AlignmentType.LEFT,
+                    spacing: { after: 160 }
+                }));
+            }
+
+            if (subtitleValue) {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: subtitleValue, italics: true, color: '475569' })],
+                    spacing: { after: 220 }
+                }));
+            }
+
+            const metaRuns = [];
+            if (dateValue) {
+                metaRuns.push(new TextRun({ text: `Date: ${new Date(`${dateValue}T00:00:00`).toLocaleDateString()}` }));
+            }
+            if (authorValue) {
+                if (metaRuns.length) {
+                    metaRuns.push(new TextRun({ text: ' | ' }));
+                }
+                metaRuns.push(new TextRun({ text: `Prepared by: ${authorValue}` }));
+            }
+            if (recipientValue) {
+                if (metaRuns.length) {
+                    metaRuns.push(new TextRun({ text: ' | ' }));
+                }
+                metaRuns.push(new TextRun({ text: `Recipient: ${recipientValue}` }));
+            }
+            if (metaRuns.length) {
+                children.push(new Paragraph({ children: metaRuns, spacing: { after: 240 } }));
+            }
+
+            blocks.forEach((block) => {
+                const headingValue = String(block.heading || '').trim();
+                const bodyValue = String(block.body || '');
+                const lines = getLines(bodyValue);
+
+                if (block.type === 'heading') {
+                    if (headingValue) {
+                        children.push(new Paragraph({ text: headingValue, heading: HeadingLevel.HEADING_1, spacing: { before: 160, after: 120 } }));
+                    }
+                    return;
+                }
+
+                if (headingValue) {
+                    children.push(new Paragraph({ text: headingValue, heading: HeadingLevel.HEADING_2, spacing: { before: 180, after: 80 } }));
+                }
+
+                if (block.type === 'bullets') {
+                    if (!lines.length) {
+                        children.push(new Paragraph({ text: '' }));
+                    }
+                    lines.forEach((line) => {
+                        children.push(new Paragraph({ text: line, bullet: { level: 0 }, spacing: { after: 60 } }));
+                    });
+                    return;
+                }
+
+                if (block.type === 'numbered') {
+                    if (!lines.length) {
+                        children.push(new Paragraph({ text: '' }));
+                    }
+                    lines.forEach((line, index) => {
+                        children.push(new Paragraph({
+                            children: [new TextRun({ text: `${index + 1}. ${line}` })],
+                            spacing: { after: 60 }
+                        }));
+                    });
+                    return;
+                }
+
+                if (block.type === 'quote') {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: bodyValue || ' ', italics: true, color: '475569' })],
+                        indent: { left: 480 },
+                        border: { left: { color: '059669', size: 10, space: 10 } },
+                        spacing: { after: 180 }
+                    }));
+                    return;
+                }
+
+                const textRuns = bodyValue
+                    ? bodyValue.split(/\r?\n/).flatMap((line, index, array) => {
+                        const runs = [new TextRun({ text: line })];
+                        if (index < array.length - 1) {
+                            runs.push(new TextRun({ text: '', break: 1 }));
+                        }
+                        return runs;
+                    })
+                    : [new TextRun({ text: ' ' })];
+
+                children.push(new Paragraph({ children: textRuns, spacing: { after: 160 } }));
+            });
+
+            if (footerValue) {
+                children.push(new Paragraph({
+                    text: footerValue,
+                    spacing: { before: 260 },
+                    thematicBreak: true
+                }));
+            }
+
+            return children;
+        }
+
+        async function downloadDocument() {
+            downloadButton.disabled = true;
+            setStatus('Building Word document...');
+            try {
+                const doc = new DocxDocument({
+                    creator: authorInput.value.trim() || 'FAST BRIDGE GROUP',
+                    title: titleInput.value.trim() || 'FAST BRIDGE GROUP Document',
+                    description: subtitleInput.value.trim() || 'Document generated in FAST BRIDGE GROUP Word Document Maker.',
+                    sections: [{
+                        properties: {},
+                        children: buildParagraphs()
+                    }]
+                });
+
+                const blob = await Packer.toBlob(doc);
+                const baseName = (fileNameInput.value.trim() || 'fast-bridge-document').replace(/\.docx$/i, '');
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = window.document.createElement('a');
+                link.href = downloadUrl;
+                link.download = `${baseName}.docx`;
+                window.document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(downloadUrl);
+                setStatus('Word document downloaded.');
+            } catch (error) {
+                setStatus(error && error.message ? error.message : 'Unable to build the Word document.');
+            } finally {
+                downloadButton.disabled = false;
+            }
+        }
+
+        function handleBlockInput(event) {
+            const field = event.target.getAttribute('data-field');
+            if (!field) {
+                return;
+            }
+            const blockNode = event.target.closest('[data-block-id]');
+            if (!blockNode) {
+                return;
+            }
+            const block = blocks.find((item) => item.id === blockNode.getAttribute('data-block-id'));
+            if (!block) {
+                return;
+            }
+            block[field] = event.target.value;
+            syncUi();
+        }
+
+        function handleBlockAction(event) {
+            const action = event.target.closest('[data-action]');
+            if (!action) {
+                return;
+            }
+            const blockNode = event.target.closest('[data-block-id]');
+            if (!blockNode) {
+                return;
+            }
+            const blockId = blockNode.getAttribute('data-block-id');
+            const index = blocks.findIndex((item) => item.id === blockId);
+            if (index === -1) {
+                return;
+            }
+
+            const actionName = action.getAttribute('data-action');
+            if (actionName === 'delete') {
+                blocks.splice(index, 1);
+                if (!blocks.length) {
+                    blocks.push(createBlock());
+                }
+                syncUi();
+                setStatus('Block removed.');
+                return;
+            }
+            if (actionName === 'move-up' && index > 0) {
+                const previous = blocks[index - 1];
+                blocks[index - 1] = blocks[index];
+                blocks[index] = previous;
+                syncUi();
+                return;
+            }
+            if (actionName === 'move-down' && index < blocks.length - 1) {
+                const next = blocks[index + 1];
+                blocks[index + 1] = blocks[index];
+                blocks[index] = next;
+                syncUi();
+            }
+        }
+
+        [fileNameInput, dateInput, titleInput, subtitleInput, authorInput, recipientInput, footerInput].forEach((input) => {
+            input.addEventListener('input', () => {
+                syncUi();
+            });
+        });
+
+        blockList.addEventListener('input', handleBlockInput);
+        blockList.addEventListener('click', handleBlockAction);
+
+        addBlockButton.addEventListener('click', () => addBlock());
+        downloadButton.addEventListener('click', downloadDocument);
+        saveDraftButton.addEventListener('click', () => {
+            saveDraftToStorage();
+            setStatus('Draft saved locally on this device.');
+        });
+        loadSampleButton.addEventListener('click', () => resetDraft(true));
+        resetButton.addEventListener('click', () => resetDraft(false));
+
+        const mobileMenuToggle = window.document.querySelector('.mobile-menu-toggle');
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', () => {
+                window.document.body.classList.toggle('sidebar-open');
+            });
+        }
+
+        const profileNode = window.document.getElementById('user-profile-btn');
+        if (profileNode) {
+            let profile = {};
+            let user = {};
+            try {
+                profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+            } catch (_error) {
+                profile = {};
+            }
+            try {
+                user = JSON.parse(localStorage.getItem('user') || '{}');
+            } catch (_error) {
+                user = {};
+            }
+            const name = String(user.name || profile.name || 'FAST User').trim();
+            const role = String(user.role || profile.role || 'Workspace').trim();
+            const avatar = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || 'FB';
+            const avatarNode = profileNode.querySelector('.user-avatar');
+            const nameNode = profileNode.querySelector('.user-name');
+            const roleNode = profileNode.querySelector('.user-role');
+            if (avatarNode) {
+                avatarNode.textContent = avatar;
+            }
+            if (nameNode) {
+                nameNode.textContent = name;
+            }
+            if (roleNode) {
+                roleNode.textContent = role;
+            }
+        }
+
+        if (!loadDraftFromStorage()) {
+            resetDraft(false);
+        } else {
+            syncUi();
+            setStatus('Loaded your saved draft.');
+        }
+    </script>
+</body>
+</html>

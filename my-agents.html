@@ -1011,7 +1011,7 @@
                             <span>Add Good Time Of Day</span>
                         </label>
                     </div>
-                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {timeGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. If you leave it out, the generator adds it at the end.</p>
+                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {timeGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. If you leave it out, no time-of-day greeting is added.</p>
                     <label class="buyers-sheet-template-field">
                         <span class="buyers-sheet-template-field-label">Template Body</span>
                         <textarea id="my-agents-template-body" class="buyers-sheet-template-textarea" spellcheck="true"></textarea>
@@ -1542,10 +1542,6 @@
                 if (body) {
                     parts.push(body);
                 }
-                if (settings.includeTimeOfDay && !includesTimeGreetingToken) {
-                    parts.push(timeGreeting);
-                }
-
                 return parts.join(' ').replace(/\s+([,!.?])/g, '$1').trim();
             }
 

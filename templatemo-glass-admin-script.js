@@ -15956,7 +15956,7 @@ function initNavbarDateTime() {
         const summary = document.getElementById('deal-pipeline-summary');
         const refreshButton = document.getElementById('deal-pipeline-refresh-btn');
         const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-        const stageOrder = ['new-lead', 'underwriting', 'offer-out', 'negotiating', 'under-contract', 'closed', 'dead'];
+        const stageOrder = ['new-lead', 'offer-out', 'negotiating', 'under-contract', 'closed', 'dead'];
         const stageLabels = {
             'new-lead': 'New Lead',
             underwriting: 'Underwriting',
@@ -24626,7 +24626,30 @@ function initNavbarDateTime() {
         }
 
         function getStreetViewAddressQuery(fallbackAddress = '') {
-            return String(detailData.address || fallbackAddress || 'California').trim() || 'California';
+            const baseAddress = String(getCurrentCompsSubjectAddress() || detailData.address || fallbackAddress || '').trim();
+            const propertyCity = String(detailData.city || '').trim();
+            const normalizedBaseAddress = baseAddress.toLowerCase();
+            const hasState = /\bca\b|california/.test(normalizedBaseAddress);
+            const hasZip = /\b\d{5}(?:-\d{4})?\b/.test(baseAddress);
+            const hasCity = propertyCity && normalizedBaseAddress.includes(propertyCity.toLowerCase());
+
+            if (!baseAddress) {
+                return 'California';
+            }
+
+            if ((!propertyCity || hasCity) && (hasState || hasZip)) {
+                return baseAddress;
+            }
+
+            const segments = [baseAddress];
+            if (propertyCity && !hasCity) {
+                segments.push(propertyCity);
+            }
+            if (!hasState) {
+                segments.push('CA');
+            }
+
+            return segments.filter(Boolean).join(', ');
         }
 
         function getGoogleMapsBrowserConfig(options = {}) {
@@ -25858,22 +25881,10 @@ function initNavbarDateTime() {
             }
 
             function getStreetViewTargetLocation() {
-                if (lastSearchResult && Number.isFinite(Number(lastSearchResult.lat)) && Number.isFinite(Number(lastSearchResult.lng))) {
-                    return {
-                        lat: Number(lastSearchResult.lat),
-                        lng: Number(lastSearchResult.lng)
-                    };
-                }
-
                 return getSubjectLocation();
             }
 
             function getStreetViewTargetLabel() {
-                const searchLabel = String(lastSearchResult && lastSearchResult.label || '').trim();
-                if (searchLabel) {
-                    return searchLabel;
-                }
-
                 return String(getCurrentCompsSubjectAddress() || detailData.address || 'Subject property').trim() || 'Subject property';
             }
 
@@ -27191,7 +27202,7 @@ function initNavbarDateTime() {
                     ? storedSubjectLocation
                     : null;
 
-                const address = getCurrentCompsSubjectAddress() || getStreetViewAddressQuery();
+                const address = getStreetViewAddressQuery(getCurrentCompsSubjectAddress());
                 if (address) {
                     try {
                         if (window.google && window.google.maps) {
@@ -27257,9 +27268,6 @@ function initNavbarDateTime() {
                     pitch: streetViewDisplay ? streetViewDisplay.pitch : 8
                 });
                 panoramaInstance.setVisible(true);
-                if (lastSearchResult) {
-                    renderSearchedLocationMarker(streetViewTarget, streetViewTargetLabel);
-                }
                 map.panTo(streetViewTarget);
                 setStreetViewMode(true);
 

@@ -3377,68 +3377,6 @@
                             </div>
                         </div>
 
-                        <div class="glass-card widget-card outreach-card" data-widget-id="outreach-intelligence" data-widget-title="Outreach Intelligence">
-                            <div class="card-header">
-                                <div>
-                                    <h2 class="card-title">Outreach Intelligence</h2>
-                                    <p class="card-subtitle">Apply reply tags, flag risky no-response threads, measure template performance, and send the next touch into the dashboard calendar.</p>
-                                </div>
-                            </div>
-                            <div id="campaign-outreach-summary" class="outreach-list">
-                                <p class="outreach-empty">Choose a Twilio thread to load follow-up risk and template reporting.</p>
-                            </div>
-                            <div class="outreach-input-grid">
-                                <div class="form-group">
-                                    <label for="campaign-outreach-sequence">Sequence</label>
-                                    <select id="campaign-outreach-sequence" class="form-input"></select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="campaign-outreach-tag">Response Tag</label>
-                                    <select id="campaign-outreach-tag" class="form-input">
-                                        <option value="new">New</option>
-                                        <option value="attempting-contact">Attempting Contact</option>
-                                        <option value="engaged">Engaged</option>
-                                        <option value="responsive">Responsive</option>
-                                        <option value="warm">Warm</option>
-                                        <option value="hot">Hot</option>
-                                        <option value="cold">Cold</option>
-                                        <option value="no-response">No Response</option>
-                                        <option value="do-not-contact">Do Not Contact</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="campaign-outreach-priority">Priority</label>
-                                    <select id="campaign-outreach-priority" class="form-input">
-                                        <option value="high">High</option>
-                                        <option value="medium" selected>Medium</option>
-                                        <option value="low">Low</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="campaign-outreach-follow-up">Next Follow Up</label>
-                                    <input id="campaign-outreach-follow-up" class="form-input" type="datetime-local">
-                                </div>
-                                <div class="form-group outreach-full-width">
-                                    <label for="campaign-outreach-notes">Notes</label>
-                                    <textarea id="campaign-outreach-notes" class="form-input outreach-textarea" placeholder="Track why this thread is hot, what to send next, or which offer terms to revisit."></textarea>
-                                </div>
-                            </div>
-                            <div class="outreach-actions">
-                                <button id="campaign-outreach-save" type="button" class="card-btn">Save Contact</button>
-                                <button id="campaign-outreach-calendar" type="button" class="card-btn active">Add To Calendar</button>
-                                <button id="campaign-outreach-refresh" type="button" class="card-btn">Refresh Intelligence</button>
-                            </div>
-                            <div class="card-header">
-                                <div>
-                                    <h3 class="card-title">Template Performance</h3>
-                                    <p class="card-subtitle">Reply lift across your Twilio templates based on attributed inbound replies.</p>
-                                </div>
-                            </div>
-                            <div id="campaign-template-performance" class="outreach-list">
-                                <p class="outreach-empty">Template performance will appear after the first tracked outreach sends.</p>
-                            </div>
-                        </div>
-
                         <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="Agent Templates">
                             <div class="card-header">
                                 <div>
@@ -3544,7 +3482,7 @@
                 </div>
                 <button type="button" class="campaign-template-close" data-campaign-no-replies-template-close="true" aria-label="Close no-replies template manager">×</button>
             </div>
-            <p class="campaign-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}, {dayGreeting}. Aliases also supported here: {firstName}, {fullName}, and {phoneNumber}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. Add {dayGreeting} anywhere to place Happy Monday!/Tuesday/etc. based on the current day. If you leave {timeGreeting} out, the generator adds it at the end.</p>
+            <p class="campaign-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}, {dayGreeting}. Aliases also supported here: {firstName}, {fullName}, and {phoneNumber}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. Add {dayGreeting} anywhere to place Happy Monday!/Tuesday/etc. based on the current day. If you leave {timeGreeting} out, no time-of-day greeting is added.</p>
             <label class="campaign-template-field">
                 <span class="campaign-template-field-label">Template Body</span>
                 <textarea id="campaign-no-replies-template-body" class="campaign-template-textarea" spellcheck="true"></textarea>
@@ -3645,6 +3583,17 @@
             const campaignOutreachCalendarButton = document.getElementById('campaign-outreach-calendar');
             const campaignOutreachRefreshButton = document.getElementById('campaign-outreach-refresh');
             const campaignTemplatePerformance = document.getElementById('campaign-template-performance');
+            const hasCampaignOutreachPanel = Boolean(
+                campaignOutreachSummary
+                && campaignOutreachSequence
+                && campaignOutreachTag
+                && campaignOutreachPriority
+                && campaignOutreachFollowUp
+                && campaignOutreachNotes
+                && campaignOutreachSaveButton
+                && campaignOutreachCalendarButton
+                && campaignTemplatePerformance
+            );
             const CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE = 'campaignSmsTemplateSettings';
             const CAMPAIGN_NO_REPLIES_TEMPLATE_STORAGE_KEY_BASE = 'campaignNoRepliesTemplateBody';
             const CAMPAIGN_REPLY_ADDRESS_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyAddressOverrides';
@@ -3873,7 +3822,7 @@
             }
 
             async function fetchCampaignOutreachDashboard() {
-                if (!token) {
+                if (!token || !hasCampaignOutreachPanel) {
                     return;
                 }
 
@@ -3905,6 +3854,10 @@
             }
 
             function renderCampaignOutreachSequences() {
+                if (!hasCampaignOutreachPanel) {
+                    return;
+                }
+
                 const sequences = Array.isArray(outreachDashboard?.sequences) ? outreachDashboard.sequences : [];
                 campaignOutreachSequence.replaceChildren();
                 if (!sequences.length) {
@@ -3925,6 +3878,10 @@
             }
 
             function renderCampaignTemplatePerformance() {
+                if (!hasCampaignOutreachPanel) {
+                    return;
+                }
+
                 const rows = Array.isArray(outreachDashboard?.templatePerformance) ? outreachDashboard.templatePerformance : [];
                 campaignTemplatePerformance.replaceChildren();
                 if (!rows.length) {
@@ -3947,6 +3904,10 @@
             }
 
             function renderCampaignOutreachPanel() {
+                if (!hasCampaignOutreachPanel) {
+                    return;
+                }
+
                 renderCampaignOutreachSequences();
                 renderCampaignTemplatePerformance();
 
@@ -4759,10 +4720,6 @@
                     })
                     .replace(/\s+([,!.?])/g, '$1')
                     .trim();
-
-                if (!includesTimeGreetingToken && replacements.timeGreeting) {
-                    return `${body} ${replacements.timeGreeting}`.replace(/\s+([,!.?])/g, '$1').trim();
-                }
 
                 return body;
             }

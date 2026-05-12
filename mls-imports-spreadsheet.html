@@ -1380,7 +1380,7 @@
                     <div class="buyers-sheet-template-header">
                         <div>
                             <h3 id="mls-imports-template-title" class="buyers-sheet-template-title">Copy Templates</h3>
-                            <p class="buyers-sheet-template-subtitle">Pick a status and edit the full message, including the opening line and the automatic good morning/afternoon/evening/night close.</p>
+                            <p class="buyers-sheet-template-subtitle">Pick a status and edit the full message, including the opening line and any optional greeting placeholders.</p>
                         </div>
                         <button type="button" class="buyers-sheet-template-close" data-template-close="true" aria-label="Close template manager">×</button>
                     </div>
@@ -1402,7 +1402,7 @@
                             <span>Add Good Time Of Day</span>
                         </label>
                     </div>
-                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}, {dayGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. Add {dayGreeting} anywhere to place Happy Monday!/Tuesday/etc. based on the current day. If you leave {timeGreeting} out, the generator adds it at the end.</p>
+                    <p class="buyers-sheet-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}, {dayGreeting}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. Add {dayGreeting} anywhere to place Happy Monday!/Tuesday/etc. based on the current day. If you leave {timeGreeting} out, no time-of-day greeting is added.</p>
                     <label class="buyers-sheet-template-field">
                         <span class="buyers-sheet-template-field-label">Template Body</span>
                         <textarea id="mls-imports-template-body" class="buyers-sheet-template-textarea" spellcheck="true"></textarea>
@@ -3032,10 +3032,6 @@
                     timeGreeting,
                     dayGreeting
                 }).replace(/\s+([,!.?])/g, '$1').trim();
-
-                if (settings.includeTimeOfDay && !includesTimeGreetingToken && timeGreeting) {
-                    return `${body} ${timeGreeting}`.replace(/\s+([,!.?])/g, '$1').trim();
-                }
 
                 return body;
             }
