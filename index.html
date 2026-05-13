@@ -19,6 +19,7 @@
         (function () {
             try {
                 const HOMEPAGE_THEME_KEY = 'homepageTheme';
+                const HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
                 const USER_THEME_KEY = 'dashboardThemeByUser';
                 const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
                 const readJson = (key) => {
@@ -39,12 +40,20 @@
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const isAuthenticated = Boolean(authToken && (email || name));
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const homepageThemeStore = readJson(HOMEPAGE_THEME_STORE_KEY);
                 const themeStore = readJson(USER_THEME_KEY);
                 const publicThemeValue = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
+                const scopedHomepageThemeValue = String(
+                    (homepageThemeStore && homepageThemeStore[userKey])
+                    || (homepageThemeStore && homepageThemeStore['default-user'])
+                    || ''
+                ).trim().toLowerCase();
                 const storedThemeValue = String(
-                    isAuthenticated
+                    scopedHomepageThemeValue
+                    || publicThemeValue
+                    || (isAuthenticated
                         ? ((themeStore[userKey] && themeStore[userKey].value) || '')
-                        : (((themeStore['default-user'] && themeStore['default-user'].value) || publicThemeValue || ''))
+                        : ((themeStore['default-user'] && themeStore['default-user'].value) || ''))
                 ).trim().toLowerCase();
                 let theme = storedThemeValue || 'beach';
 
@@ -1603,6 +1612,25 @@
             align-items: center;
             gap: 12px;
             flex-wrap: wrap;
+        }
+
+        .homepage-blacklight-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .homepage-blacklight-toggle input {
+            width: 18px;
+            height: 18px;
+            accent-color: #73ff00;
+        }
+
+        .homepage-blacklight-toggle-text {
+            color: rgba(248, 255, 242, 0.86);
+            font-weight: 600;
+            letter-spacing: 0.02em;
         }
 
         .homepage-blacklight-value {
@@ -4128,7 +4156,7 @@
                 <button class="theme-switch-btn homepage-blacklight-settings-btn" id="homepage-blacklight-settings-toggle" type="button" aria-label="Open homepage liquid settings" hidden>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.91 4h.09a1.65 1.65 0 0 0 1.51-1V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .66.39 1.26 1 1.51H21a2 2 0 0 1 0 4h-.09c-.61.25-1 .85-1 1.49Z"></path></svg>
                 </button>
-                <a class="login-btn topbar-download-btn" href="https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/releases/latest/download/FAST.BRIDGE.GROUP.Setup.1.4.8.exe">Download App</a>
+                <a class="login-btn topbar-download-btn" href="https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/releases/latest/download/FAST.BRIDGE.GROUP.Setup.1.4.9.exe">Download App</a>
                 <a class="login-btn" href="login.html">Log In</a>
             </div>
         </header>
@@ -4143,6 +4171,16 @@
                     <button class="homepage-blacklight-close" id="homepage-blacklight-close" type="button" aria-label="Close homepage liquid settings">×</button>
                 </div>
                 <div class="homepage-blacklight-panel-body">
+                    <div class="homepage-blacklight-row">
+                        <div class="homepage-blacklight-label">
+                            <strong>Liquid Smoke Effect</strong>
+                            <span>Turn the homepage liquid smoke effect on or off for the active homepage themes.</span>
+                        </div>
+                        <label class="homepage-blacklight-toggle" for="homepage-blacklight-fluid-enabled">
+                            <input id="homepage-blacklight-fluid-enabled" type="checkbox" checked>
+                            <span class="homepage-blacklight-toggle-text">Enable liquid smoke on the homepage</span>
+                        </label>
+                    </div>
                     <div class="homepage-blacklight-row">
                         <div class="homepage-blacklight-label">
                             <strong>Liquid Cursor Size</strong>
@@ -4380,8 +4418,10 @@
     <script>
         (function () {
             const HOMEPAGE_THEME_KEY = 'homepageTheme';
+            const HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
             const USER_THEME_KEY = 'dashboardThemeByUser';
             const BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
+            const HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY = 'homepageLiquidSmokeEnabledByUser';
             const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
             const THEME_LABELS = {
                 beach: 'Beach',
@@ -4438,13 +4478,21 @@
             };
 
             const getStoredThemeValue = () => {
-                const themeStore = readJson(USER_THEME_KEY);
                 const { isAuthenticated, userKey } = getUserThemeContext();
+                const homepageThemeStore = readJson(HOMEPAGE_THEME_STORE_KEY);
+                const themeStore = readJson(USER_THEME_KEY);
                 const homepageTheme = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
+                const scopedHomepageTheme = String(
+                    (homepageThemeStore && homepageThemeStore[userKey])
+                    || (homepageThemeStore && homepageThemeStore['default-user'])
+                    || ''
+                ).trim().toLowerCase();
                 const storedTheme = String(
-                    isAuthenticated
+                    scopedHomepageTheme
+                    || homepageTheme
+                    || (isAuthenticated
                         ? ((themeStore[userKey] && themeStore[userKey].value) || '')
-                        : (((themeStore['default-user'] && themeStore['default-user'].value) || homepageTheme || ''))
+                        : ((themeStore['default-user'] && themeStore['default-user'].value) || ''))
                 ).trim().toLowerCase();
                 return storedTheme || 'beach';
             };
@@ -4455,20 +4503,16 @@
 
             const saveThemePreference = (theme) => {
                 const normalized = resolveTheme(theme);
-                const themeStore = readJson(USER_THEME_KEY);
                 const { userKey } = getUserThemeContext();
+                const homepageThemeStore = readJson(HOMEPAGE_THEME_STORE_KEY);
                 const themeEntryKey = userKey || 'default-user';
-                const currentEntry = themeStore[themeEntryKey] && typeof themeStore[themeEntryKey] === 'object'
-                    ? themeStore[themeEntryKey]
+                const nextHomepageThemeStore = homepageThemeStore && typeof homepageThemeStore === 'object'
+                    ? homepageThemeStore
                     : {};
 
-                themeStore[themeEntryKey] = {
-                    ...currentEntry,
-                    value: normalized,
-                    updatedAt: Date.now()
-                };
+                nextHomepageThemeStore[themeEntryKey] = normalized;
 
-                localStorage.setItem(USER_THEME_KEY, JSON.stringify(themeStore));
+                localStorage.setItem(HOMEPAGE_THEME_STORE_KEY, JSON.stringify(nextHomepageThemeStore));
                 localStorage.setItem(HOMEPAGE_THEME_KEY, normalized);
                 localStorage.setItem('theme', normalized);
             };
@@ -4572,6 +4616,29 @@
                 return false;
             };
 
+            const isHomepageLiquidSmokeEnabled = () => {
+                const { userKey } = getUserThemeContext();
+                const stored = getUserScopedObject(HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY, userKey);
+
+                if (typeof stored === 'boolean') {
+                    return stored;
+                }
+
+                if (typeof stored === 'string') {
+                    const normalized = stored.trim().toLowerCase();
+                    return normalized === 'true' || normalized === '1' || normalized === 'on';
+                }
+
+                return true;
+            };
+
+            const persistHomepageLiquidSmokeEnabled = (enabled) => {
+                const { userKey } = getUserThemeContext();
+                const normalized = Boolean(enabled);
+                setUserScopedObject(HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY, userKey, normalized);
+                return normalized;
+            };
+
             const persistBlacklightFluidCursorSettings = (settingsLike) => {
                 const { userKey } = getUserThemeContext();
                 const normalized = normalizeBlacklightFluidCursorSettings(settingsLike, getSavedBlacklightFluidCursorSettings());
@@ -4613,9 +4680,11 @@
                 const activeTheme = resolveTheme(themeValue || getHomepageTheme());
                 const config = getBlacklightFluidCursorConfig();
                 const allowAllThemes = isHomepageBlacklightFluidEnabledForAllThemes();
-                const shouldUseLiquidSmoke = HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme) || allowAllThemes;
+                const isLiquidSmokeEnabled = isHomepageLiquidSmokeEnabled();
+                const shouldUseLiquidSmoke = isLiquidSmokeEnabled && (HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme) || allowAllThemes);
                 const nextSignature = JSON.stringify({
                     theme: activeTheme,
+                    enabled: isLiquidSmokeEnabled,
                     allowAllThemes,
                     size: config.splatRadius,
                     velocity: config.splatForce,
@@ -4656,7 +4725,7 @@
 
                 return homepageBlacklightFluidModulePromise.then((module) => {
                     const currentTheme = resolveTheme(getHomepageTheme());
-                    if (!HOMEPAGE_LIQUID_SMOKE_THEMES.has(currentTheme) && !isHomepageBlacklightFluidEnabledForAllThemes()) {
+                    if (!isHomepageLiquidSmokeEnabled() || (!HOMEPAGE_LIQUID_SMOKE_THEMES.has(currentTheme) && !isHomepageBlacklightFluidEnabledForAllThemes())) {
                         return false;
                     }
 
@@ -4742,6 +4811,7 @@
             const homepageBlacklightFluidSize = document.getElementById('homepage-blacklight-fluid-size');
             const homepageBlacklightFluidVelocity = document.getElementById('homepage-blacklight-fluid-velocity');
             const homepageBlacklightFluidColorMode = document.getElementById('homepage-blacklight-fluid-color-mode');
+            const homepageBlacklightFluidEnabled = document.getElementById('homepage-blacklight-fluid-enabled');
             const homepageBlacklightFluidDynamics = document.getElementById('homepage-blacklight-fluid-dynamics');
             const homepageBlacklightFluidBrightness = document.getElementById('homepage-blacklight-fluid-brightness');
             const homepageBlacklightFluidSolidColor = document.getElementById('homepage-blacklight-fluid-solid-color');
@@ -4804,6 +4874,9 @@
 
             const populateHomepageBlacklightControls = () => {
                 const settings = getSavedBlacklightFluidCursorSettings();
+                if (homepageBlacklightFluidEnabled instanceof HTMLInputElement) {
+                    homepageBlacklightFluidEnabled.checked = isHomepageLiquidSmokeEnabled();
+                }
                 if (homepageBlacklightFluidSize) {
                     homepageBlacklightFluidSize.value = String(settings.size);
                 }
@@ -4827,6 +4900,7 @@
             };
 
             const saveHomepageBlacklightControls = () => {
+                persistHomepageLiquidSmokeEnabled(homepageBlacklightFluidEnabled instanceof HTMLInputElement ? homepageBlacklightFluidEnabled.checked : true);
                 persistBlacklightFluidCursorSettings({
                     size: homepageBlacklightFluidSize ? homepageBlacklightFluidSize.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.size,
                     velocity: homepageBlacklightFluidVelocity ? homepageBlacklightFluidVelocity.value : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.velocity,
@@ -5006,6 +5080,12 @@
             if (homepageBlacklightFluidColorMode) {
                 homepageBlacklightFluidColorMode.addEventListener('change', () => {
                     syncHomepageBlacklightControlVisibility();
+                    saveHomepageBlacklightControls();
+                });
+            }
+
+            if (homepageBlacklightFluidEnabled instanceof HTMLInputElement) {
+                homepageBlacklightFluidEnabled.addEventListener('change', () => {
                     saveHomepageBlacklightControls();
                 });
             }
