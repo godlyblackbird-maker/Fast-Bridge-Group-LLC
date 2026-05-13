@@ -8443,7 +8443,7 @@ function initNavbarDateTime() {
                     applyResolvedTheme('beach', { persist: false });
                     saveThemePreference('beach');
                 });
-            });
+            }
         } else {
             syncBlacklightFluidControlVisibility(document.documentElement.getAttribute('data-theme') || getThemePreference());
         }
