@@ -43,7 +43,14 @@
                 root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
 
                 const themeStore = readJson('dashboardThemeByUser');
-                let theme = (themeStore[userKey] && themeStore[userKey].value) || 'beach';
+                const normalizedNameKey = name.toLowerCase().replace(/\s+/g, '-');
+                const candidateThemeKeys = Array.from(new Set([userKey, email, normalizedNameKey, 'default-user'].filter(Boolean)));
+                let theme = String(candidateThemeKeys
+                    .map((key) => {
+                        const entry = themeStore[key];
+                        return entry && typeof entry === 'object' ? entry.value : entry;
+                    })
+                    .find((value) => typeof value === 'string' && value.trim()) || '').trim().toLowerCase() || 'beach';
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }

@@ -114,7 +114,10 @@
                     const storedLegacyTheme = String(localStorage.getItem('theme') || '').trim().toLowerCase();
                     const userKeys = buildUserKeys();
                     const scopedTheme = userKeys
-                        .map((key) => themeStore[key] && themeStore[key].value)
+                        .map((key) => {
+                            const entry = themeStore[key];
+                            return entry && typeof entry === 'object' ? entry.value : entry;
+                        })
                         .find((value) => typeof value === 'string' && value.trim());
 
                     return resolveStoredTheme(scopedTheme || storedLegacyTheme || storedHomepageTheme || 'beach');
@@ -144,7 +147,10 @@
                         const themeStore = readJson('dashboardThemeByUser');
                         const userKeys = buildUserKeys();
                         const scopedTheme = userKeys
-                            .map((key) => themeStore[key] && themeStore[key].value)
+                            .map((key) => {
+                                const entry = themeStore[key];
+                                return entry && typeof entry === 'object' ? entry.value : entry;
+                            })
                             .find((value) => typeof value === 'string' && value.trim());
 
                         if (scopedTheme === 'system' || storedTheme === 'system') {

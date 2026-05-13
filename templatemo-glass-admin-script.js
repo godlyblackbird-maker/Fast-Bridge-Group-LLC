@@ -70,7 +70,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const OFFER_DOCS_DB_NAME = 'fastBridgeOfferDocuments';
     const OFFER_DOCS_DB_STORE = 'documents';
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'blacklight', 'japan', 'holloween', 'christmas'];
+    const ALLOWED_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
     const KNOWN_EMAIL_GROUPS = [
         {
             canonical: 'isaac.haro@fastbridgegroupllc.com',
@@ -2902,6 +2902,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         if (typeof scoped.value === 'string' && scoped.value) {
             return scoped.value;
         }
+        if (typeof scoped === 'string' && scoped) {
+            return scoped;
+        }
 
         const homepageScopedThemeStore = getUserScopedObject(HOMEPAGE_THEME_STORE_KEY, workspaceUser.key);
         if (typeof homepageScopedThemeStore === 'string' && homepageScopedThemeStore) {
@@ -2955,6 +2958,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function resolveTheme(theme) {
         const normalized = String(theme || '').trim().toLowerCase();
+        if (normalized === 'blacklight') {
+            return 'dark';
+        }
         if (normalized === 'system') {
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             return prefersDark ? 'dark' : 'light';
@@ -6583,7 +6589,6 @@ function initNavbarDateTime() {
             swamp: 'Symbols/Beach Mode.svg',
             sunset: 'Symbols/Beach Mode.svg',
             cyberpunk: 'Symbols/Dark Mode.svg',
-            blacklight: 'Symbols/Dark Mode.svg',
             space: 'Symbols/Dark Mode.svg'
         };
         const resolvedTheme = themeSymbols[effectiveTheme] ? effectiveTheme : 'beach';
@@ -6644,7 +6649,7 @@ function initNavbarDateTime() {
         ensureThemeToggleIcons(themeToggle);
 
         const savedTheme = getThemePreference();
-        applyResolvedTheme(savedTheme);
+        applyResolvedTheme(savedTheme, { persist: false });
 
         if (!themeToggle) {
             return;
@@ -6666,9 +6671,7 @@ function initNavbarDateTime() {
                                 ? 'space'
                                 : currentTheme === 'space'
                                     ? 'cyberpunk'
-                                : currentTheme === 'cyberpunk'
-                                    ? 'blacklight'
-                            : 'dark';
+                                : 'dark';
             applyResolvedTheme(nextTheme);
         });
     }
@@ -8371,7 +8374,7 @@ function initNavbarDateTime() {
 
         function syncBlacklightFluidControlVisibility(themeValue) {
             const effectiveTheme = resolveTheme(themeValue || (themeSelect ? themeSelect.value : document.documentElement.getAttribute('data-theme')));
-            const showControls = effectiveTheme === 'blacklight' || Boolean(blacklightFluidAllThemesToggle && blacklightFluidAllThemesToggle.checked);
+            const showControls = Boolean(blacklightFluidAllThemesToggle && blacklightFluidAllThemesToggle.checked);
             const colorMode = blacklightFluidColorMode ? String(blacklightFluidColorMode.value || DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode).trim().toLowerCase() : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode;
 
             blacklightFluidRows.forEach((row) => {
