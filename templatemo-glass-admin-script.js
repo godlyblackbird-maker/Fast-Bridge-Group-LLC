@@ -8249,6 +8249,8 @@ function initNavbarDateTime() {
         }
 
         const themeSelect = document.getElementById('theme-select');
+        const appearanceApplyButton = document.getElementById('appearance-apply-button');
+        const appearanceResetButton = document.getElementById('appearance-reset-button');
         const accentSelect = document.getElementById('accent-color-select');
         const accentGlowToggle = document.getElementById('accent-glow-toggle');
         const blacklightFluidAllThemesToggle = document.getElementById('blacklight-fluid-all-themes-toggle');
@@ -8425,19 +8427,22 @@ function initNavbarDateTime() {
             themeSelect.addEventListener('change', () => {
                 const theme = themeSelect.value;
                 const effectiveTheme = resolveTheme(theme);
-                document.documentElement.setAttribute('data-theme', effectiveTheme);
-                saveThemePreference(effectiveTheme);
+                applyResolvedTheme(effectiveTheme, { persist: false });
+            });
 
-                const themeToggle = document.getElementById('theme-toggle');
-                updateThemeToggleIcons(themeToggle, effectiveTheme);
-                syncThemeLogoImages(effectiveTheme);
-                syncThemeBackgroundMedia(effectiveTheme);
-                notifyThemeUpdated(effectiveTheme);
-                syncBlacklightFluidControlVisibility(effectiveTheme);
-                if (themeToggle) {
-                    const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
-                    themeToggle.title = `Theme: ${modeLabel} Mode`;
-                }
+            if (appearanceApplyButton) {
+                appearanceApplyButton.addEventListener('click', () => {
+                    const selectedTheme = resolveTheme(themeSelect.value);
+                    applyResolvedTheme(selectedTheme);
+                });
+            }
+
+            if (appearanceResetButton) {
+                appearanceResetButton.addEventListener('click', () => {
+                    themeSelect.value = 'beach';
+                    applyResolvedTheme('beach', { persist: false });
+                    saveThemePreference('beach');
+                });
             });
         } else {
             syncBlacklightFluidControlVisibility(document.documentElement.getAttribute('data-theme') || getThemePreference());
