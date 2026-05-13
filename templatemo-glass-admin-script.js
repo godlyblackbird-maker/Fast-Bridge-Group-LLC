@@ -953,16 +953,25 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         const candidateKeys = getScopedStorageCandidateKeys(userKey);
         const merged = {};
+        let primitiveValue;
 
         [...candidateKeys].reverse().forEach((candidateKey) => {
             const scoped = store[candidateKey];
             if (scoped && typeof scoped === 'object' && !Array.isArray(scoped)) {
                 Object.assign(merged, scoped);
+                return;
+            }
+
+            if (typeof scoped === 'string' || typeof scoped === 'number' || typeof scoped === 'boolean') {
+                primitiveValue = scoped;
             }
         });
 
         if (Object.keys(merged).length > 0) {
             return merged;
+        }
+        if (typeof primitiveValue !== 'undefined') {
+            return primitiveValue;
         }
         return {};
     }
@@ -976,7 +985,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             store = {};
         }
 
-        store[userKey] = value && typeof value === 'object' ? value : {};
+        store[userKey] = value;
         localStorage.setItem(storageKey, JSON.stringify(store));
         if (!config.silent) {
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
@@ -6627,6 +6636,8 @@ function initNavbarDateTime() {
     function refreshThemeFromStoredPreference() {
         return applyResolvedTheme(getThemePreference(), { persist: false });
     }
+
+    window.refreshDashboardThemeFromStoredPreference = refreshThemeFromStoredPreference;
 
     function initThemeToggle() {
         const themeToggle = document.getElementById('theme-toggle');

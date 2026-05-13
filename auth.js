@@ -2537,6 +2537,10 @@
         updateUserProfile(user);
       }
 
+      if (typeof window.refreshDashboardThemeFromStoredPreference === 'function') {
+        window.refreshDashboardThemeFromStoredPreference();
+      }
+
       window.dispatchEvent(new CustomEvent('fast-auth-user-synced', {
         detail: {
           user: activeUser || user || null,
