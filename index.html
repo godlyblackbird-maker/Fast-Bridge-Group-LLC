@@ -40,20 +40,30 @@
                 const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
                 const isAuthenticated = Boolean(authToken && (email || name));
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const getThemeCandidateKeys = () => {
+                    const normalizedName = String(name || '').trim().toLowerCase().replace(/\s+/g, '-');
+                    return Array.from(new Set([
+                        userKey,
+                        email,
+                        normalizedName,
+                        'default-user'
+                    ].filter(Boolean)));
+                };
                 const homepageThemeStore = readJson(HOMEPAGE_THEME_STORE_KEY);
                 const themeStore = readJson(USER_THEME_KEY);
                 const publicThemeValue = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
-                const scopedHomepageThemeValue = String(
-                    (homepageThemeStore && homepageThemeStore[userKey])
-                    || (homepageThemeStore && homepageThemeStore['default-user'])
-                    || ''
-                ).trim().toLowerCase();
+                const candidateKeys = getThemeCandidateKeys();
+                const scopedHomepageThemeValue = String(candidateKeys
+                    .map((key) => homepageThemeStore && homepageThemeStore[key])
+                    .find((value) => typeof value === 'string' && value.trim()) || '').trim().toLowerCase();
                 const storedThemeValue = String(
                     scopedHomepageThemeValue
                     || publicThemeValue
                     || (isAuthenticated
-                        ? ((themeStore[userKey] && themeStore[userKey].value) || '')
-                        : ((themeStore['default-user'] && themeStore['default-user'].value) || ''))
+                        ? ((candidateKeys
+                            .map((key) => themeStore[key] && themeStore[key].value)
+                            .find((value) => typeof value === 'string' && value.trim())) || '')
+                        : (((themeStore['default-user'] && themeStore['default-user'].value) || '')))
                 ).trim().toLowerCase();
                 let theme = storedThemeValue || 'beach';
 
@@ -4479,19 +4489,22 @@
 
             const getStoredThemeValue = () => {
                 const { isAuthenticated, userKey } = getUserThemeContext();
+                const normalizedName = String((getUserThemeContext().name) || '').trim().toLowerCase().replace(/\s+/g, '-');
+                const email = String((getUserThemeContext().email) || '').trim().toLowerCase();
+                const candidateKeys = Array.from(new Set([userKey, email, normalizedName, 'default-user'].filter(Boolean)));
                 const homepageThemeStore = readJson(HOMEPAGE_THEME_STORE_KEY);
                 const themeStore = readJson(USER_THEME_KEY);
                 const homepageTheme = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
-                const scopedHomepageTheme = String(
-                    (homepageThemeStore && homepageThemeStore[userKey])
-                    || (homepageThemeStore && homepageThemeStore['default-user'])
-                    || ''
-                ).trim().toLowerCase();
+                const scopedHomepageTheme = String(candidateKeys
+                    .map((key) => homepageThemeStore && homepageThemeStore[key])
+                    .find((value) => typeof value === 'string' && value.trim()) || '').trim().toLowerCase();
                 const storedTheme = String(
                     scopedHomepageTheme
                     || homepageTheme
                     || (isAuthenticated
-                        ? ((themeStore[userKey] && themeStore[userKey].value) || '')
+                        ? ((candidateKeys
+                            .map((key) => themeStore[key] && themeStore[key].value)
+                            .find((value) => typeof value === 'string' && value.trim())) || '')
                         : ((themeStore['default-user'] && themeStore['default-user'].value) || ''))
                 ).trim().toLowerCase();
                 return storedTheme || 'beach';
@@ -4505,14 +4518,27 @@
                 const normalized = resolveTheme(theme);
                 const { userKey } = getUserThemeContext();
                 const homepageThemeStore = readJson(HOMEPAGE_THEME_STORE_KEY);
+                const themeStore = readJson(USER_THEME_KEY);
                 const themeEntryKey = userKey || 'default-user';
                 const nextHomepageThemeStore = homepageThemeStore && typeof homepageThemeStore === 'object'
                     ? homepageThemeStore
                     : {};
+                const nextThemeStore = themeStore && typeof themeStore === 'object'
+                    ? themeStore
+                    : {};
 
                 nextHomepageThemeStore[themeEntryKey] = normalized;
+                const currentThemeEntry = nextThemeStore[themeEntryKey] && typeof nextThemeStore[themeEntryKey] === 'object'
+                    ? nextThemeStore[themeEntryKey]
+                    : {};
+                nextThemeStore[themeEntryKey] = {
+                    ...currentThemeEntry,
+                    value: normalized,
+                    updatedAt: Date.now()
+                };
 
                 localStorage.setItem(HOMEPAGE_THEME_STORE_KEY, JSON.stringify(nextHomepageThemeStore));
+                localStorage.setItem(USER_THEME_KEY, JSON.stringify(nextThemeStore));
                 localStorage.setItem(HOMEPAGE_THEME_KEY, normalized);
                 localStorage.setItem('theme', normalized);
             };

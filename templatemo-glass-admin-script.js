@@ -35,6 +35,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const SOUND_SETTINGS_KEY = 'dashboardSoundSettings';
     const USER_SETTINGS_KEY = 'dashboardSettingsByUser';
     const BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
+    const HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
+    const HOMEPAGE_THEME_KEY = 'homepageTheme';
     const USER_THEME_KEY = 'dashboardThemeByUser';
     const SIDEBAR_STATE_KEY = 'dashboardSidebarStateByUser';
     const DEFAULT_THEME_LOGO_PATH = 'png photos/FAST LOGO 777.png';
@@ -2891,6 +2893,22 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         if (typeof scoped.value === 'string' && scoped.value) {
             return scoped.value;
         }
+
+        const homepageScopedThemeStore = getUserScopedObject(HOMEPAGE_THEME_STORE_KEY, workspaceUser.key);
+        if (typeof homepageScopedThemeStore === 'string' && homepageScopedThemeStore) {
+            return homepageScopedThemeStore;
+        }
+
+        const homepageTheme = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
+        if (homepageTheme) {
+            return homepageTheme;
+        }
+
+        const legacyTheme = String(localStorage.getItem('theme') || '').trim().toLowerCase();
+        if (legacyTheme) {
+            return legacyTheme;
+        }
+
         return 'beach';
     }
 
@@ -2921,6 +2939,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     function saveThemePreference(theme) {
         const workspaceUser = getWorkspaceUserContext();
         setUserScopedObject(USER_THEME_KEY, workspaceUser.key, { value: theme });
+        setUserScopedObject(HOMEPAGE_THEME_STORE_KEY, workspaceUser.key, theme, { silent: true });
+        localStorage.setItem(HOMEPAGE_THEME_KEY, theme);
         localStorage.setItem('theme', theme);
     }
 
