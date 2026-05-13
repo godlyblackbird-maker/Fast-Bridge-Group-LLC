@@ -2924,6 +2924,31 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return 'beach';
     }
 
+    function writeThemeCookie(theme) {
+        const normalizedTheme = String(theme || '').trim().toLowerCase();
+        if (!normalizedTheme) {
+            return;
+        }
+
+        try {
+            document.cookie = `fast_theme=${encodeURIComponent(normalizedTheme)}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+        } catch (error) {
+            // Ignore cookie persistence errors.
+        }
+    }
+
+    function getThemeStorageKeys(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        return Array.from(new Set([
+            String(workspaceUser.key || '').trim(),
+            normalizeUserIdentityValue(workspaceUser.email || ''),
+            normalizeUserNameKey(workspaceUser.name || ''),
+            ...((Array.isArray(workspaceUser.aliases) ? workspaceUser.aliases : []).map((alias) => normalizeUserIdentityValue(alias)))
+        ].filter(Boolean)));
+    }
+
     function formatUserRoleLabel(roleValue) {
         const normalizedRole = String(roleValue || '').trim().toLowerCase();
         if (normalizedRole === 'admin') {
@@ -2950,10 +2975,17 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function saveThemePreference(theme) {
         const workspaceUser = getWorkspaceUserContext();
-        setUserScopedObject(USER_THEME_KEY, workspaceUser.key, { value: theme });
-        setUserScopedObject(HOMEPAGE_THEME_STORE_KEY, workspaceUser.key, theme, { silent: true });
+        const themeStorageKeys = getThemeStorageKeys(workspaceUser);
+
+        themeStorageKeys.forEach((storageKey, index) => {
+            const isLastWrite = index === themeStorageKeys.length - 1;
+            setUserScopedObject(USER_THEME_KEY, storageKey, { value: theme }, { silent: !isLastWrite });
+            setUserScopedObject(HOMEPAGE_THEME_STORE_KEY, storageKey, theme, { silent: true });
+        });
+
         localStorage.setItem(HOMEPAGE_THEME_KEY, theme);
         localStorage.setItem('theme', theme);
+        writeThemeCookie(theme);
     }
 
     function resolveTheme(theme) {
@@ -9702,6 +9734,54 @@ function initNavbarDateTime() {
         localStorage.setItem(getWidgetStateStorageKey(), JSON.stringify(state));
     }
 
+    function normalizeAdminControlsDefaultWidgetState(state) {
+        const pagePath = String(window.location.pathname || '').toLowerCase();
+        if (!/admin-controls\.html$/.test(pagePath)) {
+            return state;
+        }
+
+        const nextState = state && typeof state === 'object' ? { ...state } : {};
+        const migrationKey = `${getWidgetStateStorageKey()}:admin-controls-default-minimize-v1`;
+
+        try {
+            if (localStorage.getItem(migrationKey) === 'true') {
+                return nextState;
+            }
+        } catch (error) {
+            return nextState;
+        }
+
+        const widgets = Array.from(document.querySelectorAll('.widget-card[data-widget-id]'));
+        widgets.forEach((widget) => {
+            const widgetId = String(widget.dataset.widgetId || '').trim();
+            if (!widgetId) {
+                return;
+            }
+
+            nextState[widgetId] = {
+                ...(nextState[widgetId] || {}),
+                minimized: widgetId !== 'property-submissions'
+            };
+        });
+
+        try {
+            localStorage.setItem(migrationKey, 'true');
+        } catch (error) {
+            // Ignore local storage errors.
+        }
+
+        return nextState;
+    }
+
+    function shouldDefaultWidgetToMinimized(widgetId) {
+        const pagePath = String(window.location.pathname || '').toLowerCase();
+        if (!/admin-controls\.html$/.test(pagePath)) {
+            return false;
+        }
+
+        return String(widgetId || '').trim() !== 'property-submissions';
+    }
+
     function ensureWidgetDock() {
         let dock = document.getElementById('widget-dock');
         if (!dock) {
@@ -9740,7 +9820,7 @@ function initNavbarDateTime() {
 
         const dock = ensureWidgetDock();
         const overlay = ensureWidgetOverlay();
-        const widgetState = getWidgetState();
+        const widgetState = normalizeAdminControlsDefaultWidgetState(getWidgetState());
         let expandedWidget = null;
 
         function persist() {
@@ -9898,6 +9978,11 @@ function initNavbarDateTime() {
             });
 
             if (widgetState[widgetId] && widgetState[widgetId].minimized) {
+                minimizeWidget(widget);
+                return;
+            }
+
+            if (!widgetState[widgetId] && shouldDefaultWidgetToMinimized(widgetId)) {
                 minimizeWidget(widget);
             }
         });
@@ -13440,6 +13525,7 @@ function initNavbarDateTime() {
                     propertyKey: assignmentRecord.propertyKey,
                     propertyAddress: assignmentRecord.propertyAddress,
                     propertySnapshot: assignmentRecord.propertySnapshot || {},
+                    assignmentRecord,
                     clickedAt: assignmentRecord.assignedAt || Date.now()
                 }, 'assigned');
             });
@@ -13636,13 +13722,16 @@ function initNavbarDateTime() {
                 : 'No property details match these filters.';
         }
 
-        function reload() {
+        async function reload() {
+            await propertyAssignmentsReady;
             currentItems = collectItems();
             render();
         }
 
         hydrateStatusOptions();
-        refreshButton.addEventListener('click', reload);
+        refreshButton.addEventListener('click', () => {
+            void reload();
+        });
         searchInput.addEventListener('input', () => {
             window.clearTimeout(searchTimer);
             searchTimer = window.setTimeout(render, 180);
@@ -13650,11 +13739,17 @@ function initNavbarDateTime() {
         sourceSelect.addEventListener('change', render);
         assignmentSelect.addEventListener('change', render);
         statusSelect.addEventListener('change', render);
-        window.addEventListener('dashboard-data-updated', reload);
-        window.addEventListener('property-assignment-updated', reload);
-        window.addEventListener('storage', reload);
+        window.addEventListener('dashboard-data-updated', () => {
+            void reload();
+        });
+        window.addEventListener('property-assignment-updated', () => {
+            void reload();
+        });
+        window.addEventListener('storage', () => {
+            void reload();
+        });
 
-        reload();
+        void reload();
     }
 
     function initAgentWorkspaceEmailPrep() {

@@ -43,33 +43,245 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .terms-admin-page {
+            --terms-accent-soft: rgba(var(--accent-rgb), 0.12);
+            --terms-accent-strong: rgba(var(--accent-rgb), 0.24);
+            --terms-outline: rgba(255, 255, 255, 0.08);
+        }
+
+        .terms-hero {
+            padding: 0;
+        }
+
+        .terms-hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+            gap: 18px;
+            padding: 28px;
+            align-items: stretch;
+        }
+
+        .terms-hero-copy {
+            min-width: 0;
+        }
+
+        .terms-hero-copy h1 {
+            max-width: 10ch;
+        }
+
+        .terms-hero-copy p {
+            max-width: 60ch;
+        }
+
+        .terms-hero-panel {
+            display: grid;
+            gap: 14px;
+            align-content: start;
+            padding: 18px;
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+            backdrop-filter: blur(10px);
+        }
+
+        .terms-panel-kicker,
+        .terms-card-kicker,
+        .terms-link-label {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            min-height: 28px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: var(--terms-accent-soft);
+            border: 1px solid var(--terms-accent-strong);
+            color: var(--legal-title-color);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .terms-panel-title {
+            margin: 0;
+            font-size: 20px;
+            color: var(--legal-title-color);
+        }
+
+        .terms-panel-copy,
+        .terms-panel-list {
+            margin: 0;
+            color: var(--legal-panel-text);
+            font-size: 14px;
+            line-height: 1.65;
+        }
+
+        .terms-panel-list {
+            padding-left: 18px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .terms-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin: 24px 0 0;
+        }
+
+        .terms-stat-card {
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid var(--legal-panel-border);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+            box-shadow: var(--legal-panel-shadow);
+        }
+
+        .terms-stat-card strong {
+            display: block;
+            margin-top: 10px;
+            color: var(--legal-title-color);
+            font-size: 17px;
+            line-height: 1.35;
+        }
+
+        .terms-stat-card p {
+            margin: 8px 0 0;
+            color: var(--legal-panel-text);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .terms-links {
+            margin-top: 26px;
+        }
+
+        .terms-links a {
+            display: grid;
+            gap: 8px;
+            min-height: 100%;
+        }
+
+        .terms-links a[aria-current="page"] {
+            border-color: rgba(var(--accent-rgb), 0.42);
+            background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.16), rgba(255, 255, 255, 0.05));
+            box-shadow: var(--legal-panel-shadow), 0 0 0 1px rgba(var(--accent-rgb), 0.14);
+        }
+
+        .terms-links a span:last-child {
+            font-size: 15px;
+            line-height: 1.45;
+        }
+
+        .terms-grid {
+            margin-top: 8px;
+        }
+
+        .terms-card-wide {
+            grid-column: span 2;
+        }
+
+        .terms-card-alert {
+            border-color: rgba(var(--accent-rgb), 0.34);
+            background: linear-gradient(140deg, rgba(var(--accent-rgb), 0.16), rgba(255, 255, 255, 0.04) 48%);
+        }
+
+        .terms-card-tight p + p,
+        .terms-card-tight p + ul,
+        .terms-card-tight ul + p {
+            margin-top: 14px !important;
+        }
+
+        .terms-card-kicker {
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 980px) {
+            .terms-hero-grid,
+            .terms-stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .terms-hero-panel {
+                border-left: 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                padding-top: 18px;
+            }
+
+            .terms-card-wide {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .terms-hero-grid {
+                padding: 22px;
+            }
+
+            .terms-links a {
+                padding: 14px;
+            }
+        }
+    </style>
 </head>
-<body class="legal-page">
+<body class="legal-page terms-admin-page">
     <main class="legal-page-main">
         <header class="legal-page-header">
             <a class="legal-back-link legal-home-link" href="legal.html">Legal Hub</a>
             <a class="legal-back-link legal-login-link" href="index.html">Back to Home</a>
         </header>
-        <section class="legal-hero">
-            <div class="legal-eyebrow">FAST BRIDGE GROUP LLC</div>
-            <h1>Terms of Use</h1>
-            <p>Use of the FAST BRIDGE GROUP website, related platform features, and electronic document workflows is conditioned on lawful, authorized, and professional use.</p>
+        <section class="legal-hero terms-hero">
+            <div class="terms-hero-grid">
+                <div class="terms-hero-copy">
+                    <div class="legal-eyebrow">FAST BRIDGE GROUP LLC</div>
+                    <h1>Terms of Use</h1>
+                    <p>Use of the FAST BRIDGE GROUP website, related platform features, and electronic document workflows is conditioned on lawful, authorized, and professional use.</p>
+                </div>
+                <aside class="terms-hero-panel" aria-label="Terms summary">
+                    <span class="terms-panel-kicker">Admin Snapshot</span>
+                    <h2 class="terms-panel-title">Core operating rules in one pass</h2>
+                    <p class="terms-panel-copy">This page now reads like a real control-room brief: access rules, liability limits, SMS terms, signing workflows, and dispute handling are surfaced up front instead of disappearing into a flat wall of cards.</p>
+                    <ul class="terms-panel-list">
+                        <li>Platform use must stay lawful, authorized, and professional.</li>
+                        <li>SMS consent is separate, optional, and governed by posted terms.</li>
+                        <li>Electronic signatures and projections are supported, but not guaranteed.</li>
+                    </ul>
+                </aside>
+            </div>
         </section>
-        <nav class="legal-top-links" aria-label="Legal pages">
-            <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
-            <a href="legal-california-law-updates.html">California Law Updates</a>
-            <a href="legal-fair-practice-discipline.html">Fair Practice &amp; Discipline</a>
-            <a href="legal-electronic-submissions.html">Electronic Submissions</a>
-            <a href="legal-equal-housing.html">Equal Housing</a>
-            <a href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
-            <a href="legal-copyright.html">Copyright</a>
-            <a href="legal-privacy-policy.html">Privacy Policy</a>
-            <a href="legal-terms-of-use.html">Terms of Use</a>
-            <a href="legal-broker-information.html">Broker Information</a>
-            <a href="legal-2026-law-library.html">2026 Law Library</a>
+        <section class="terms-stat-grid" aria-label="Terms highlights">
+            <article class="terms-stat-card">
+                <span class="terms-link-label">Scope</span>
+                <strong>Platform access, signatures, SMS, projections, and dispute handling</strong>
+                <p>The highest-risk platform topics are elevated first, so admin users can scan the legal surface fast.</p>
+            </article>
+            <article class="terms-stat-card">
+                <span class="terms-link-label">SMS</span>
+                <strong>Consent language aligns with the optional-property-form flow</strong>
+                <p>Terms now sit beside the updated property submission experience where SMS opt-in is optional, not required.</p>
+            </article>
+            <article class="terms-stat-card">
+                <span class="terms-link-label">Use</span>
+                <strong>Clearer hierarchy for admin review and screenshot-proofing</strong>
+                <p>The page is easier to review internally and easier to present when a compliance vendor wants visible policy evidence.</p>
+            </article>
+        </section>
+        <nav class="legal-top-links terms-links" aria-label="Legal pages">
+            <a href="legal-mls-data-disclaimer.html"><span class="terms-link-label">MLS</span><span>MLS Data Disclaimer</span></a>
+            <a href="legal-california-law-updates.html"><span class="terms-link-label">Updates</span><span>California Law Updates</span></a>
+            <a href="legal-fair-practice-discipline.html"><span class="terms-link-label">Conduct</span><span>Fair Practice &amp; Discipline</span></a>
+            <a href="legal-electronic-submissions.html"><span class="terms-link-label">Digital</span><span>Electronic Submissions</span></a>
+            <a href="legal-equal-housing.html"><span class="terms-link-label">Housing</span><span>Equal Housing</span></a>
+            <a href="legal-accuracy-liability.html"><span class="terms-link-label">Risk</span><span>Accuracy &amp; Liability</span></a>
+            <a href="legal-copyright.html"><span class="terms-link-label">Rights</span><span>Copyright</span></a>
+            <a href="legal-privacy-policy.html"><span class="terms-link-label">Privacy</span><span>Privacy Policy</span></a>
+            <a href="legal-terms-of-use.html" aria-current="page"><span class="terms-link-label">Current</span><span>Terms of Use</span></a>
+            <a href="legal-broker-information.html"><span class="terms-link-label">Broker</span><span>Broker Information</span></a>
+            <a href="legal-2026-law-library.html"><span class="terms-link-label">Library</span><span>2026 Law Library</span></a>
         </nav>
-        <section class="legal-grid" aria-label="Terms of use details">
-            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card" tabindex="0">
+        <section class="legal-grid terms-grid" aria-label="Terms of use details">
+            <article class="legal-card legal-card-featured legal-card-shimmer legal-hover-card terms-card-wide terms-card-tight" tabindex="0">
+                <div class="terms-card-kicker">Access Rules</div>
                 <h2>Platform access and use conditions</h2>
                 <p class="legal-card-lead">By accessing FAST, users agree to use the site and platform for legitimate business, informational, and workflow purposes consistent with law, licensing limits, account permissions, and professional duties.</p>
                 <ul class="legal-card-list">
@@ -78,67 +290,81 @@
                     <li>FAST BRIDGE GROUP reserves the right to terminate or suspend access at any time, with or without notice, for violations, risk exposure, or business reasons.</li>
                 </ul>
             </article>
-            <article class="legal-card legal-card-shimmer legal-hover-card" tabindex="0">
+            <article class="legal-card legal-card-shimmer legal-hover-card terms-card-tight" tabindex="0">
+                <div class="terms-card-kicker">Liability</div>
                 <h2>Limitation of liability</h2>
                 <p>FAST BRIDGE GROUP, LLC shall not be liable for any indirect, incidental, consequential, special, or punitive damages, including but not limited to lost profits, missed opportunities, failed transactions, or investment losses arising from use of the platform.</p>
                 <p class="legal-card-lead" style="margin-top:14px;">In all cases, total liability shall not exceed the amount paid, if any, by the user to FAST BRIDGE GROUP within the past twelve (12) months.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Advice</div>
                 <h2>No investment or financial advice</h2>
                 <p>All content, data, projections, and tools provided are for informational and operational purposes only and do not constitute financial, investment, legal, or real estate advice. Users are solely responsible for their decisions and outcomes.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Data</div>
                 <h2>Third-party data disclaimer</h2>
                 <p>Certain data, including MLS, IDX, or VOW content, is provided by third-party sources deemed reliable but not guaranteed. FAST BRIDGE GROUP does not warrant the accuracy, completeness, or timeliness of such data. Use is subject to applicable MLS rules and restrictions.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Availability</div>
                 <h2>Service availability</h2>
                 <p>FAST BRIDGE GROUP does not guarantee uninterrupted or error-free operation. The platform may experience downtime, delays, or system interruptions.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Content</div>
                 <h2>User-generated content</h2>
                 <p>Users retain ownership of content they submit but grant FAST BRIDGE GROUP a non-exclusive, royalty-free license to use, store, process, and display such content for platform operation and improvement.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Retention</div>
                 <h2>Data retention and user backups</h2>
                 <p>FAST BRIDGE GROUP may store certain user-submitted information for platform functionality, but users remain responsible for maintaining appropriate backup copies of any important records, spreadsheets, contact lists, notes, exports, or other business information they wish to preserve.</p>
                 <p style="margin-top:14px;">FAST BRIDGE GROUP shall not be responsible for the loss of information that was not successfully saved, synced, transmitted, or otherwise stored on FAST BRIDGE GROUP systems, including information retained only on a user's local device, browser storage, temporary session, third-party application, or unsaved local file.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Signatures</div>
                 <h2>Electronic signatures and DocuSign workflows</h2>
                 <p>FAST BRIDGE GROUP may offer purchase agreements, disclosures, addenda, and related real-estate documents through DocuSign or another electronic-signature provider. By accessing or using those workflows, you agree that electronic records, electronic signatures, and electronically delivered copies may be used in place of paper records and handwritten signatures to the extent permitted by applicable law.</p>
                 <p style="margin-top:14px;">You are responsible for reviewing each document before signing, confirming that the signer identity, email address, and transaction details are accurate, and ensuring that you have authority to sign on behalf of yourself or any entity you represent. FAST BRIDGE GROUP does not provide legal advice through the signing workflow, and you remain responsible for obtaining independent legal, tax, or brokerage guidance when appropriate.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Providers</div>
                 <h2>Third-party signing services</h2>
                 <p>Electronic-signature workflows may be powered by third-party providers such as DocuSign. FAST BRIDGE GROUP is not responsible for outages, delays, verification failures, delivery issues, or other acts or omissions of those third-party services, except as required by law.</p>
                 <p style="margin-top:14px;">Your use of any third-party signing provider may also be subject to that provider's separate terms, disclosures, and privacy practices. FAST BRIDGE GROUP may rely on the provider's delivery logs, authentication records, certificates of completion, and audit trails as part of its transaction file and business records.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-alert terms-card-tight">
+                <div class="terms-card-kicker">SMS Program</div>
                 <h2>SMS program terms</h2>
                 <p>By checking an SMS consent box on a FAST BRIDGE GROUP property inquiry form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC related to your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates.</p>
                 <p style="margin-top:14px;">Message frequency varies. Message and data rates may apply. Reply STOP to cancel or HELP for help. Consent to receive SMS messages is not a condition of purchase.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Claims</div>
                 <h2>User indemnification</h2>
                 <p>You agree to indemnify and hold harmless FAST BRIDGE GROUP from any claims, damages, or liabilities arising from your use of the platform, violations of these terms, or applicable laws.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Projections</div>
                 <h2>Investment analysis and projections disclaimer</h2>
                 <p>Any investment analysis, projections, estimated returns, profit calculations, ARV estimates, repair estimates, or financial outputs generated by the platform are based on user inputs, assumptions, and automated models.</p>
                 <p style="margin-top:14px;">These outputs are estimates only, are not guaranteed, and may vary significantly from actual results. FAST BRIDGE GROUP does not warrant accuracy or performance of any projections.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-tight">
+                <div class="terms-card-kicker">Inputs</div>
                 <h2>User input responsibility and no reliance</h2>
                 <p>All calculations are dependent on user-provided inputs. You are solely responsible for the accuracy, completeness, and reasonableness of any data entered into the system.</p>
                 <p style="margin-top:14px;">You agree that you will not rely solely on the platform's calculations, projections, or outputs when making investment, purchasing, or financial decisions. FAST BRIDGE GROUP shall not be liable for any losses, damages, or claims arising from reliance on investment analysis tools, projections, or deal evaluations generated by the platform.</p>
             </article>
-            <article class="legal-card">
+            <article class="legal-card terms-card-wide terms-card-tight">
+                <div class="terms-card-kicker">Records</div>
                 <h2>Transaction documents and enforceability</h2>
                 <p>Where permitted by law, electronically signed purchase agreements and related documents completed through an approved FAST BRIDGE GROUP workflow may be maintained as business records and relied upon in the same manner as other transaction records. You agree not to challenge the validity of an electronic signature solely because the document was signed or stored electronically.</p>
                 <p style="margin-top:14px;">Nothing on this website guarantees that any offer, counteroffer, agreement, or transaction will be accepted, completed, funded, or enforceable in every circumstance. Final enforceability depends on the document contents, signer authority, legal compliance, delivery, and applicable state and federal law.</p>
             </article>
-            <article class="legal-card legal-card-featured">
+            <article class="legal-card legal-card-featured terms-card-wide terms-card-tight">
+                <div class="terms-card-kicker">Resolution</div>
                 <h2>Dispute resolution and updates</h2>
                 <p>Any disputes shall be resolved through binding arbitration in California, unless prohibited by law.</p>
                 <p style="margin-top:14px;">FAST BRIDGE GROUP may update these Terms at any time. Continued use constitutes acceptance of updated terms.</p>

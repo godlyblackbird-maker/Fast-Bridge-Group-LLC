@@ -1550,12 +1550,12 @@ async function ensureTwilioConversationAccess(decoded, conversationKey) {
   }
 
   const ownerEmail = await resolveTwilioConversationOwnerEmail(normalizedConversationKey);
-  if (!ownerEmail) {
-    return { allowed: false, statusCode: 404, error: 'Conversation not found.', ownerEmail: '', conversationKey: normalizedConversationKey };
-  }
-
   if (senderAccess.isAdmin) {
     return { allowed: true, statusCode: 200, error: '', ownerEmail, conversationKey: normalizedConversationKey, isAdmin: true };
+  }
+
+  if (!ownerEmail) {
+    return { allowed: false, statusCode: 404, error: 'Conversation not found.', ownerEmail: '', conversationKey: normalizedConversationKey };
   }
 
   const authenticatedEmail = normalizeKnownEmail(decoded?.email || '');

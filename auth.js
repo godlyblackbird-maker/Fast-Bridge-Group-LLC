@@ -162,6 +162,49 @@
     return Array.from(keys).filter(Boolean);
   }
 
+  function mirrorScopedThemePreferences(userLike) {
+    const userKeys = getScopedKeys(userLike);
+    if (!userKeys.length) {
+      return;
+    }
+
+    const themeStores = [
+      { storageKey: 'dashboardThemeByUser', nestedValue: true },
+      { storageKey: 'homepageThemeByUser', nestedValue: false }
+    ];
+
+    themeStores.forEach(({ storageKey, nestedValue }) => {
+      let store = {};
+      try {
+        const parsed = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        store = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch (error) {
+        store = {};
+      }
+
+      const existingValue = userKeys
+        .map((key) => store[key])
+        .find((value) => {
+          if (nestedValue) {
+            return value && typeof value === 'object' && typeof value.value === 'string' && value.value.trim();
+          }
+          return typeof value === 'string' && value.trim();
+        });
+
+      if (!existingValue) {
+        return;
+      }
+
+      userKeys.forEach((key) => {
+        store[key] = nestedValue
+          ? { ...(store[key] && typeof store[key] === 'object' ? store[key] : {}), value: existingValue.value }
+          : existingValue;
+      });
+
+      localStorage.setItem(storageKey, JSON.stringify(store));
+    });
+  }
+
   function buildProfileAvatarImage(avatarUploadId) {
     const normalizedAvatarUploadId = String(avatarUploadId || '').trim();
     if (!normalizedAvatarUploadId) {
@@ -405,6 +448,8 @@
     if (!normalizedUser) {
       return null;
     }
+
+    mirrorScopedThemePreferences(normalizedUser);
 
     const userKeys = getScopedKeys(normalizedUser);
     let scopedProfile = null;
