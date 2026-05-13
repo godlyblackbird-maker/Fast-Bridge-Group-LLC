@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "twilio:recover": "node scripts/recover-twilio-inbox.js",
     "share": "node scripts/share-link.js",
     "desktop:icon": "node scripts/generate-desktop-icon.js",
     "desktop": "electron .",
