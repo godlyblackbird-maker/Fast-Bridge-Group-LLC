@@ -210,6 +210,7 @@ let sqliteBackupInFlight = null;
 let twilioScheduledMessageTimer = null;
 let twilioScheduledMessageRunPromise = null;
 const USER_MESSAGE_EDIT_WINDOW_MS = 60 * 1000;
+const USER_MESSAGE_REACTION_EMOJIS = Object.freeze(['👍', '❤️', '😂', '😮', '😢', '🔥']);
 const revokedSessionIds = new Set();
 const mlsImportPdfJobs = new Map();
 const mlsImportSpreadsheetClearedAtByUser = new Map();
@@ -3153,6 +3154,78 @@ function normalizeTwilioMessageReactions(value) {
       return true;
     })
     .slice(0, 8);
+}
+
+function normalizeUserMessageReactionEntry(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+  if (!source) {
+    return null;
+  }
+
+  const emoji = String(source.emoji || '').trim();
+  const userId = Number(source.userId);
+  if (!USER_MESSAGE_REACTION_EMOJIS.includes(emoji) || !Number.isInteger(userId) || userId <= 0) {
+    return null;
+  }
+
+  return {
+    emoji,
+    userId,
+    createdAt: normalizeApiTimestamp(source.createdAt) || new Date().toISOString()
+  };
+}
+
+function normalizeUserMessageReactions(value) {
+  const parsed = Array.isArray(value) ? value : safeJsonParse(value, []);
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  const seen = new Set();
+  return parsed
+    .map(normalizeUserMessageReactionEntry)
+    .filter(Boolean)
+    .filter((entry) => {
+      const key = `${entry.userId}:${entry.emoji}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.createdAt || '') || 0;
+      const rightTime = Date.parse(right.createdAt || '') || 0;
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      if (left.userId !== right.userId) {
+        return left.userId - right.userId;
+      }
+      return left.emoji.localeCompare(right.emoji, undefined, { sensitivity: 'base' });
+    })
+    .slice(0, 48);
+}
+
+function toggleUserMessageReaction(reactions, emoji, userId) {
+  const normalizedEmoji = String(emoji || '').trim();
+  const normalizedUserId = Number(userId);
+  const current = normalizeUserMessageReactions(reactions);
+  const reactionKey = `${normalizedUserId}:${normalizedEmoji}`;
+  const hasReaction = current.some((entry) => `${entry.userId}:${entry.emoji}` === reactionKey);
+
+  if (hasReaction) {
+    return current.filter((entry) => `${entry.userId}:${entry.emoji}` !== reactionKey);
+  }
+
+  return normalizeUserMessageReactions([
+    ...current,
+    {
+      emoji: normalizedEmoji,
+      userId: normalizedUserId,
+      createdAt: new Date().toISOString()
+    }
+  ]);
 }
 
 function normalizeInboundTwilioReaction(payload) {
@@ -6345,6 +6418,7 @@ function initializeDatabase() {
       body TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       read_at DATETIME,
+      reactions_json TEXT NOT NULL DEFAULT '[]',
       FOREIGN KEY(sender_user_id) REFERENCES users(id),
       FOREIGN KEY(recipient_user_id) REFERENCES users(id)
     )
@@ -6354,6 +6428,7 @@ function initializeDatabase() {
     } else {
       console.log('User messages table ready');
       db.run(`ALTER TABLE user_messages ADD COLUMN edited_at DATETIME`, () => {});
+      db.run("ALTER TABLE user_messages ADD COLUMN reactions_json TEXT NOT NULL DEFAULT '[]'", () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_pair_created ON user_messages(sender_user_id, recipient_user_id, created_at)', () => {});
       db.run('CREATE INDEX IF NOT EXISTS idx_user_messages_recipient_read ON user_messages(recipient_user_id, read_at)', () => {});
     }
@@ -8304,7 +8379,7 @@ async function syncSqliteUserMessagesToPostgres(pool) {
   }
 
   const sqliteRows = await dbAll(
-    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
        FROM user_messages
       ORDER BY id ASC`,
     []
@@ -8312,15 +8387,16 @@ async function syncSqliteUserMessagesToPostgres(pool) {
 
   for (const row of sqliteRows) {
     await pool.query(
-      `INSERT INTO user_messages (id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO user_messages (id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (id) DO UPDATE SET
          sender_user_id = EXCLUDED.sender_user_id,
          recipient_user_id = EXCLUDED.recipient_user_id,
          body = EXCLUDED.body,
          created_at = EXCLUDED.created_at,
          edited_at = EXCLUDED.edited_at,
-         read_at = EXCLUDED.read_at`,
+         read_at = EXCLUDED.read_at,
+         reactions_json = EXCLUDED.reactions_json`,
       [
         Number(row.id) || 0,
         Number(row.sender_user_id) || 0,
@@ -8328,7 +8404,8 @@ async function syncSqliteUserMessagesToPostgres(pool) {
         String(row.body || ''),
         normalizeApiTimestamp(row.created_at) || new Date().toISOString(),
         normalizeApiTimestamp(row.edited_at),
-        normalizeApiTimestamp(row.read_at)
+        normalizeApiTimestamp(row.read_at),
+        safeJsonStringify(normalizeUserMessageReactions(row.reactions_json), '[]')
       ]
     );
   }
@@ -8381,9 +8458,11 @@ async function initializePostgresMessageStore() {
         body TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
         read_at TIMESTAMPTZ,
-        edited_at TIMESTAMPTZ
+        edited_at TIMESTAMPTZ,
+        reactions_json TEXT NOT NULL DEFAULT '[]'
       )
     `);
+    await pool.query("ALTER TABLE user_messages ADD COLUMN IF NOT EXISTS reactions_json TEXT NOT NULL DEFAULT '[]'");
     await pool.query('CREATE INDEX IF NOT EXISTS idx_user_messages_pair_created ON user_messages(sender_user_id, recipient_user_id, created_at)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_user_messages_recipient_read ON user_messages(recipient_user_id, read_at)');
 
@@ -8574,7 +8653,7 @@ async function markConversationMessagesRead(senderUserId, recipientUserId) {
 async function listConversationMessages(userAId, userBId) {
   if (isPostgresMessageStoreEnabled()) {
     const result = await userMessageStorePool.query(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
          FROM user_messages
         WHERE (sender_user_id = $1 AND recipient_user_id = $2)
            OR (sender_user_id = $2 AND recipient_user_id = $1)
@@ -8585,7 +8664,7 @@ async function listConversationMessages(userAId, userBId) {
   }
 
   return dbAll(
-    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
        FROM user_messages
       WHERE (sender_user_id = ? AND recipient_user_id = ?)
          OR (sender_user_id = ? AND recipient_user_id = ?)
@@ -8594,24 +8673,24 @@ async function listConversationMessages(userAId, userBId) {
   );
 }
 
-async function createUserMessageRecord({ senderUserId, recipientUserId, body, createdAt = null, editedAt = null, readAt = null }) {
+async function createUserMessageRecord({ senderUserId, recipientUserId, body, createdAt = null, editedAt = null, readAt = null, reactions = [] }) {
   if (isPostgresMessageStoreEnabled()) {
     const result = await userMessageStorePool.query(
-      `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
-       VALUES ($1, $2, $3, COALESCE($4::timestamptz, CURRENT_TIMESTAMP), $5::timestamptz, $6::timestamptz)
-       RETURNING id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at`,
-      [senderUserId, recipientUserId, body, createdAt, editedAt, readAt]
+      `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json)
+       VALUES ($1, $2, $3, COALESCE($4::timestamptz, CURRENT_TIMESTAMP), $5::timestamptz, $6::timestamptz, $7)
+       RETURNING id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json`,
+      [senderUserId, recipientUserId, body, createdAt, editedAt, readAt, safeJsonStringify(normalizeUserMessageReactions(reactions), '[]')]
     );
     return result.rows?.[0] || null;
   }
 
   const result = await dbRun(
-    `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at)
-     VALUES (?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?)`,
-    [senderUserId, recipientUserId, body, createdAt, editedAt, readAt]
+    `INSERT INTO user_messages (sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json)
+     VALUES (?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?, ?)`,
+    [senderUserId, recipientUserId, body, createdAt, editedAt, readAt, safeJsonStringify(normalizeUserMessageReactions(reactions), '[]')]
   );
   return dbGet(
-    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
        FROM user_messages
       WHERE id = ?`,
     [result.lastID]
@@ -8621,7 +8700,7 @@ async function createUserMessageRecord({ senderUserId, recipientUserId, body, cr
 async function getUserMessageById(messageId) {
   if (isPostgresMessageStoreEnabled()) {
     const result = await userMessageStorePool.query(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
          FROM user_messages
         WHERE id = $1`,
       [messageId]
@@ -8630,7 +8709,7 @@ async function getUserMessageById(messageId) {
   }
 
   return dbGet(
-    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
        FROM user_messages
       WHERE id = ?`,
     [messageId]
@@ -8640,7 +8719,7 @@ async function getUserMessageById(messageId) {
 async function getOwnedUserMessage(messageId, senderUserId, recipientUserId) {
   if (isPostgresMessageStoreEnabled()) {
     const result = await userMessageStorePool.query(
-      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+      `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
          FROM user_messages
         WHERE id = $1
           AND sender_user_id = $2
@@ -8651,7 +8730,7 @@ async function getOwnedUserMessage(messageId, senderUserId, recipientUserId) {
   }
 
   return dbGet(
-    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at
+    `SELECT id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json
        FROM user_messages
       WHERE id = ?
         AND sender_user_id = ?
@@ -8669,7 +8748,7 @@ async function updateOwnedUserMessageBody(messageId, senderUserId, recipientUser
         WHERE id = $2
           AND sender_user_id = $3
           AND recipient_user_id = $4
-      RETURNING id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at`,
+      RETURNING id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json`,
       [body, messageId, senderUserId, recipientUserId]
     );
     return result.rows?.[0] || null;
@@ -8685,6 +8764,34 @@ async function updateOwnedUserMessageBody(messageId, senderUserId, recipientUser
     [body, messageId, senderUserId, recipientUserId]
   );
   return getUserMessageById(messageId);
+}
+
+async function updateUserMessageReactions(messageId, reactions) {
+  const normalizedMessageId = Number(messageId) || 0;
+  if (!normalizedMessageId) {
+    return null;
+  }
+
+  const reactionsJson = safeJsonStringify(normalizeUserMessageReactions(reactions), '[]');
+
+  if (isPostgresMessageStoreEnabled()) {
+    const result = await userMessageStorePool.query(
+      `UPDATE user_messages
+          SET reactions_json = $1
+        WHERE id = $2
+      RETURNING id, sender_user_id, recipient_user_id, body, created_at, edited_at, read_at, reactions_json`,
+      [reactionsJson, normalizedMessageId]
+    );
+    return result.rows?.[0] || null;
+  }
+
+  await dbRun(
+    `UPDATE user_messages
+        SET reactions_json = ?
+      WHERE id = ?`,
+    [reactionsJson, normalizedMessageId]
+  );
+  return getUserMessageById(normalizedMessageId);
 }
 
 async function reassignUserMessages(previousUserId, nextUserId) {
@@ -17272,6 +17379,7 @@ function serializeUserMessage(row, currentUserId) {
     senderUserId,
     recipientUserId,
     body: String(row.body || '').trim(),
+    reactions: normalizeUserMessageReactions(row.reactions_json),
     createdAt,
     editedAt,
     editWindowEndsAt,
@@ -17379,7 +17487,7 @@ function buildMlsImportExtractionSegments(fullText, pageTexts) {
 
     normalizedPages.forEach((pageText, index) => {
       const lines = pageText.split(/\n+/).map((line) => String(line || '').trim()).filter(Boolean);
-      const pageLooksLikeListingStart = lines.slice(0, 8).some((line) => Boolean(extractPropertyAddressCandidateFromLine(line)));
+      const pageLooksLikeListingStart = lines.slice(0, 8).some((_line, lineIndex) => Boolean(extractPropertyAddressCandidateFromLines(lines, lineIndex)));
 
       if (pageLooksLikeListingStart && currentPages.length > 0) {
         flushListingSegment();
@@ -17465,7 +17573,7 @@ function buildMlsImportAiExtractionSegments(fullText, pageTexts) {
 
     normalizedPages.forEach((pageText, index) => {
       const lines = pageText.split(/\n+/).map((line) => String(line || '').trim()).filter(Boolean);
-      const pageLooksLikeListingStart = lines.slice(0, 8).some((line) => Boolean(extractPropertyAddressCandidateFromLine(line)));
+      const pageLooksLikeListingStart = lines.slice(0, 8).some((_line, lineIndex) => Boolean(extractPropertyAddressCandidateFromLines(lines, lineIndex)));
 
       if (pageLooksLikeListingStart && currentPages.length > 0) {
         flushListingChunk();
@@ -18569,9 +18677,9 @@ function isLikelyDirectionalInstructionAddressLine(value) {
   return /\b(?:get\s+off|off\s+[a-z]|take\s+(?:the\s+)?exit|turn|merge|keep\s+(?:left|right)|continue\s+(?:on|onto|straight)|toward(?:s)?|ramp|destination|make\s+a\s+(?:left|right)|left\s+on|right\s+on|head\s+(?:north|south|east|west)|go\s+(?:north|south|east|west)|(?:f(?:ree)?way|frwy|fwy|hwy|highway)\s+(?:north|south|east|west))\b/.test(normalized);
 }
 
-function extractPropertyAddressCandidateFromLine(line) {
+function extractPropertyAddressCandidateFromFragment(fragment) {
   const normalizedLine = normalizePdfPropertyAddressValue(
-    String(line || '')
+    String(fragment || '')
       .replace(/^(?:property address|address|subject property)\s*[:#-]?\s*/i, '')
       .replace(/\s+(?:status|list price|recent|next oh|bed\s*\/\s*bath|sqft\(src\)|price per sqft|lot\(src\)|listing id)\b.*$/i, '')
       .replace(/\s+listing\b.*$/i, '')
@@ -18623,6 +18731,47 @@ function extractPropertyAddressCandidateFromLine(line) {
   return '';
 }
 
+function extractPropertyAddressCandidateFromLine(line) {
+  return extractPropertyAddressCandidateFromFragment(line);
+}
+
+function extractPropertyAddressCandidateFromLines(lines, startIndex) {
+  const normalizedLines = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim())
+    : [];
+  const baseIndex = Number.isInteger(Number(startIndex)) ? Number(startIndex) : 0;
+  const singleLineCandidate = extractPropertyAddressCandidateFromLine(normalizedLines[baseIndex] || '');
+  if (singleLineCandidate) {
+    return singleLineCandidate;
+  }
+
+  const lineParts = normalizedLines.slice(baseIndex, baseIndex + 3).filter(Boolean);
+  if (lineParts.length < 2) {
+    return '';
+  }
+
+  const combinations = [];
+  if (lineParts.length >= 2) {
+    combinations.push(`${lineParts[0]} ${lineParts[1]}`);
+    combinations.push(`${lineParts[0]}, ${lineParts[1]}`);
+  }
+  if (lineParts.length >= 3) {
+    combinations.push(`${lineParts[0]} ${lineParts[1]} ${lineParts[2]}`);
+    combinations.push(`${lineParts[0]} ${lineParts[1]}, ${lineParts[2]}`);
+    combinations.push(`${lineParts[0]}, ${lineParts[1]} ${lineParts[2]}`);
+    combinations.push(`${lineParts[0]}, ${lineParts[1]}, ${lineParts[2]}`);
+  }
+
+  for (const combination of combinations) {
+    const candidate = extractPropertyAddressCandidateFromFragment(combination);
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
 function extractPropertyAddressFromPdfText(text, lines) {
   const labeledValue = extractPdfFieldByLabel(
     lines,
@@ -18640,8 +18789,8 @@ function extractPropertyAddressFromPdfText(text, lines) {
     ? lines.map((line) => String(line || '').trim()).filter(Boolean)
     : [];
 
-  for (const line of normalizedLines) {
-    const candidate = extractPropertyAddressCandidateFromLine(line);
+  for (let index = 0; index < normalizedLines.length; index += 1) {
+    const candidate = extractPropertyAddressCandidateFromLines(normalizedLines, index);
     if (candidate) {
       return candidate;
     }
@@ -19225,7 +19374,7 @@ function extractMlsImportRowFromText(text) {
   };
 
   const hasMeaningfulValue = Object.values(row).some((value) => String(value || '').trim());
-  return hasMeaningfulValue ? row : null;
+  return hasMeaningfulValue && row.propertyAddress ? row : null;
 }
 
 function isLikelyPropertyAddressLine(line) {
@@ -19263,11 +19412,12 @@ function splitMlsImportTextIntoBlocks(text) {
     currentBlockHasAddress = false;
   };
 
-  lines.forEach((line) => {
-    const startsNewBlock = isLikelyPropertyAddressLine(line);
+  lines.forEach((line, index) => {
+    const startsNewBlockAddress = extractPropertyAddressCandidateFromLines(lines, index);
+    const startsNewBlock = Boolean(startsNewBlockAddress);
     const isDuplicateAddressLine = startsNewBlock
       && currentBlockHasAddress
-      && isDuplicatePropertyAddressLine(currentBlock, line);
+      && isDuplicatePropertyAddressLine(currentBlock, startsNewBlockAddress);
 
     if (startsNewBlock && currentBlockHasAddress && !isDuplicateAddressLine) {
       flushBlock();
@@ -19498,9 +19648,8 @@ function consolidateMlsImportRows(rows) {
   });
 
   const addressBackedRows = consolidatedRows.filter((row) => hasMeaningfulMlsImportRowAddress(row));
-  const prioritizedRows = addressBackedRows.length > 0 ? addressBackedRows : consolidatedRows;
 
-  return prioritizedRows.sort((previousRow, nextRow) => {
+  return addressBackedRows.sort((previousRow, nextRow) => {
     const previousScore = countMlsImportRowValues(previousRow);
     const nextScore = countMlsImportRowValues(nextRow);
     return nextScore - previousScore;
@@ -24084,6 +24233,64 @@ app.patch('/api/messages/conversations/:userId/messages/:messageId', async (req,
   } catch (error) {
     console.error('Edit conversation message error:', error);
     return res.status(500).json({ error: 'Unable to edit the message.' });
+  }
+});
+
+app.put('/api/messages/conversations/:userId/messages/:messageId/reactions', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const currentUserId = Number(decoded.id);
+  const otherUserId = Number.parseInt(String(req.params?.userId || ''), 10);
+  const messageId = Number.parseInt(String(req.params?.messageId || ''), 10);
+  const emoji = String(req.body?.emoji || '').trim();
+
+  if (!Number.isInteger(currentUserId) || currentUserId <= 0 || !Number.isInteger(otherUserId) || otherUserId <= 0 || !Number.isInteger(messageId) || messageId <= 0) {
+    return res.status(400).json({ error: 'Valid user ids and message id are required.' });
+  }
+
+  if (!USER_MESSAGE_REACTION_EMOJIS.includes(emoji)) {
+    return res.status(400).json({ error: 'Choose one of the supported message reactions.' });
+  }
+
+  try {
+    const message = await getUserMessageById(messageId);
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    const senderUserId = Number(message.sender_user_id) || 0;
+    const recipientUserId = Number(message.recipient_user_id) || 0;
+    const pairMatches = (
+      (senderUserId === currentUserId && recipientUserId === otherUserId)
+      || (senderUserId === otherUserId && recipientUserId === currentUserId)
+    );
+
+    if (!pairMatches) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    const nextReactions = toggleUserMessageReaction(message.reactions_json, emoji, currentUserId);
+    const updated = await updateUserMessageReactions(messageId, nextReactions);
+    if (!updated) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    try {
+      await archiveUserMessageToS3(updated);
+    } catch (archiveError) {
+      console.error('Failed to archive user reaction update to S3:', archiveError);
+    }
+
+    return res.json({
+      success: true,
+      message: serializeUserMessage(updated, currentUserId)
+    });
+  } catch (error) {
+    console.error('Update conversation message reaction error:', error);
+    return res.status(500).json({ error: 'Unable to update the reaction.' });
   }
 });
 

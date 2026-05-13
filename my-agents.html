@@ -1197,6 +1197,7 @@
 
             const body = document.getElementById('my-agents-sheet-body');
             const countBadge = document.getElementById('my-agents-count');
+            const searchInput = document.querySelector('.search-input');
             const insertVcfBtn = document.getElementById('my-agents-insert-vcf');
             const vcfInput = document.getElementById('my-agents-vcf-input');
             const addRowBtn = document.getElementById('my-agents-add-row');
@@ -2138,10 +2139,62 @@
                     body.appendChild(createRow(row));
                 });
                 updateCount(rows);
+                applySearchFilter();
             }
 
             function updateCount(rows) {
                 const totalRows = Array.isArray(rows) ? rows.filter(isMeaningfulRow).length : 0;
+                countBadge.textContent = `${totalRows} Row${totalRows === 1 ? '' : 's'}`;
+            }
+
+            function getSearchQuery() {
+                return searchInput ? normalizeCellValue(searchInput.value).toLowerCase() : '';
+            }
+
+            function rowMatchesSearch(row, query) {
+                const normalizedQuery = normalizeCellValue(query).toLowerCase();
+                if (!normalizedQuery) {
+                    return true;
+                }
+
+                return [
+                    row && row.importDate,
+                    row && row.propertyAddress,
+                    row && row.laName,
+                    row && row.loPhone,
+                    row && row.offersEmail,
+                    row && row.laCell,
+                    row && row.status,
+                    row && row.pdfFile
+                ].some((value) => normalizeCellValue(value).toLowerCase().includes(normalizedQuery));
+            }
+
+            function applySearchFilter() {
+                const query = getSearchQuery();
+                const rowElements = Array.from(body.querySelectorAll('tr'));
+                let totalRows = 0;
+                let visibleRows = 0;
+
+                rowElements.forEach((rowElement) => {
+                    const rowData = getRowDataFromElement(rowElement);
+                    const isMeaningful = isMeaningfulRow(rowData);
+                    const isVisible = !isMeaningful || rowMatchesSearch(rowData, query);
+
+                    if (isMeaningful) {
+                        totalRows += 1;
+                        if (isVisible) {
+                            visibleRows += 1;
+                        }
+                    }
+
+                    rowElement.hidden = !isVisible;
+                });
+
+                if (query) {
+                    countBadge.textContent = `${visibleRows} of ${totalRows} Row${totalRows === 1 ? '' : 's'}`;
+                    return;
+                }
+
                 countBadge.textContent = `${totalRows} Row${totalRows === 1 ? '' : 's'}`;
             }
 
@@ -2153,6 +2206,7 @@
             function saveRows() {
                 const rows = dedupeRows(getRowsFromDom());
                 persistRows(rows);
+                applySearchFilter();
                 scheduleRowsSaveToServer(rows);
             }
 
@@ -2220,6 +2274,10 @@
 
             exportCsvBtn.addEventListener('click', exportRowsToCsv);
             clearAllBtn.addEventListener('click', clearAllRows);
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applySearchFilter);
+            }
 
             if (copyTemplatesBtn && templateModal && templateStatusSelect && templateIncludeNameToggle && templateIncludeTimeToggle && templateBodyInput && templatePreview && templateSaveBtn && templateResetBtn) {
                 copyTemplatesBtn.addEventListener('click', openTemplateManager);

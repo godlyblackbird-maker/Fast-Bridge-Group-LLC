@@ -33,6 +33,7 @@
         hour: 'numeric',
         minute: '2-digit'
     });
+    const MESSAGE_REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
     let selectedUserId = null;
     let selectedUserRecord = null;
@@ -41,6 +42,22 @@
     let pendingSharedProperty = null;
     let pendingAttachmentItems = [];
     let editingMessageState = null;
+
+    function getCurrentMessagingUserId() {
+        const parseStoredObject = (key) => {
+            try {
+                return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || '{}');
+            } catch (error) {
+                return {};
+            }
+        };
+
+        const user = parseStoredObject('user');
+        const profile = parseStoredObject('userProfile');
+        return Number(user.id || profile.id) || 0;
+    }
+
+    const currentMessagingUserId = getCurrentMessagingUserId();
 
     function escapeHtml(value) {
         return String(value || '')
@@ -112,6 +129,133 @@
     function formatEditDeadline(value) {
         const date = parseMessageTimestamp(value);
         return date ? messageDateTimeFormatter.format(date) : 'about 1 minute';
+    }
+
+    function normalizeMessageReactionEntries(message) {
+        const reactions = Array.isArray(message && message.reactions) ? message.reactions : [];
+        return reactions
+            .map((entry) => {
+                const source = entry && typeof entry === 'object' ? entry : null;
+                if (!source) {
+                    return null;
+                }
+
+                const emoji = String(source.emoji || '').trim();
+                const userId = Number(source.userId) || 0;
+                if (!emoji || !userId) {
+                    return null;
+                }
+
+                return {
+                    emoji,
+                    userId,
+                    createdAt: String(source.createdAt || '').trim()
+                };
+            })
+            .filter(Boolean);
+    }
+
+    function buildMessageReactionGroups(message) {
+        const groups = new Map();
+        normalizeMessageReactionEntries(message).forEach((entry) => {
+            const existing = groups.get(entry.emoji) || {
+                emoji: entry.emoji,
+                count: 0,
+                hasCurrentUser: false
+            };
+            existing.count += 1;
+            if (currentMessagingUserId && entry.userId === currentMessagingUserId) {
+                existing.hasCurrentUser = true;
+            }
+            groups.set(entry.emoji, existing);
+        });
+
+        return Array.from(groups.values()).sort((left, right) => {
+            const leftIndex = MESSAGE_REACTION_OPTIONS.indexOf(left.emoji);
+            const rightIndex = MESSAGE_REACTION_OPTIONS.indexOf(right.emoji);
+            if (leftIndex !== rightIndex) {
+                return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
+            }
+            return left.emoji.localeCompare(right.emoji, undefined, { sensitivity: 'base' });
+        });
+    }
+
+    async function toggleMessageReaction(message, emoji) {
+        if (!selectedUserId || !message || !Number(message.id) || !emoji) {
+            return;
+        }
+
+        setChatStatus('Updating reaction...', false);
+        await apiRequest(`/api/messages/conversations/${selectedUserId}/messages/${message.id}/reactions`, {
+            method: 'PUT',
+            body: JSON.stringify({ emoji })
+        });
+        await openConversation(selectedUserId, { focusInput: false, suppressUserReload: true });
+        setChatStatus('', false);
+    }
+
+    function buildMessageReactionRow(message) {
+        if (!message || !Number(message.id)) {
+            return null;
+        }
+
+        const row = document.createElement('div');
+        row.className = 'messages-chat-reaction-row';
+
+        const list = document.createElement('div');
+        list.className = 'messages-chat-reaction-list';
+        buildMessageReactionGroups(message).forEach((reaction) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'messages-chat-reaction-pill';
+            if (reaction.hasCurrentUser) {
+                button.classList.add('is-active');
+            }
+            button.innerHTML = `<span>${escapeHtml(reaction.emoji)}</span><strong>${reaction.count}</strong>`;
+            button.setAttribute('aria-label', `${reaction.hasCurrentUser ? 'Remove' : 'Add'} ${reaction.emoji} reaction`);
+            button.addEventListener('click', async () => {
+                try {
+                    await toggleMessageReaction(message, reaction.emoji);
+                } catch (error) {
+                    setChatStatus(String(error && error.message || 'Unable to update the reaction.'), true);
+                }
+            });
+            list.appendChild(button);
+        });
+        row.appendChild(list);
+
+        const menu = document.createElement('details');
+        menu.className = 'messages-chat-reaction-menu';
+
+        const trigger = document.createElement('summary');
+        trigger.className = 'messages-chat-reaction-trigger';
+        trigger.setAttribute('aria-label', 'Add emoji reaction');
+        trigger.textContent = '+';
+        menu.appendChild(trigger);
+
+        const picker = document.createElement('div');
+        picker.className = 'messages-chat-reaction-picker';
+        MESSAGE_REACTION_OPTIONS.forEach((emoji) => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'messages-chat-reaction-option';
+            option.textContent = emoji;
+            option.setAttribute('aria-label', `React with ${emoji}`);
+            option.addEventListener('click', async (event) => {
+                event.preventDefault();
+                menu.open = false;
+                try {
+                    await toggleMessageReaction(message, emoji);
+                } catch (error) {
+                    setChatStatus(String(error && error.message || 'Unable to update the reaction.'), true);
+                }
+            });
+            picker.appendChild(option);
+        });
+        menu.appendChild(picker);
+        row.appendChild(menu);
+
+        return row;
     }
 
     function getEditableMessageText(message) {
@@ -691,6 +835,11 @@
                 meta.className = 'messages-chat-bubble-meta';
                 meta.textContent = `${formatDateTime(message.createdAt || '')}${message.editedAt ? ' • edited' : ''}`;
                 article.appendChild(meta);
+
+                const reactions = buildMessageReactionRow(message);
+                if (reactions) {
+                    article.appendChild(reactions);
+                }
             };
 
             if (messageBundle) {
