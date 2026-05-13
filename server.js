@@ -1442,6 +1442,31 @@ function getConfiguredTwilioSenderOwnerEmail(config = getTwilioMessagingConfig()
   return getAssignedTwilioOwnerEmailForNumber(config?.fromNumber || '');
 }
 
+function userHasAssignedTwilioNumber(userLike) {
+  const authenticatedEmail = normalizeKnownEmail(userLike?.email || '');
+  if (!authenticatedEmail) {
+    return false;
+  }
+
+  for (const ownerEmail of getConfiguredTwilioNumberAssignments().values()) {
+    if (normalizeKnownEmail(ownerEmail) === authenticatedEmail) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getUniqueConfiguredTwilioOwnerEmail() {
+  const ownerEmails = Array.from(new Set(
+    Array.from(getConfiguredTwilioNumberAssignments().values())
+      .map((value) => normalizeKnownEmail(value))
+      .filter(Boolean)
+  ));
+
+  return ownerEmails.length === 1 ? ownerEmails[0] : '';
+}
+
 function getAssignedTwilioOwnerEmailForPayload(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
   const candidates = [
@@ -1473,6 +1498,7 @@ function ensureTwilioSenderAccess(userLike, config = getTwilioMessagingConfig())
   const authenticatedEmail = normalizeKnownEmail(userLike?.email || '');
   const adminAccess = isTwilioMessagingAdmin(userLike);
   const ownerEmail = getConfiguredTwilioSenderOwnerEmail(config);
+  const hasAssignedNumber = userHasAssignedTwilioNumber(userLike);
 
   if (adminAccess) {
     return { allowed: true, statusCode: 200, error: '', ownerEmail, isAdmin: true };
@@ -1488,7 +1514,7 @@ function ensureTwilioSenderAccess(userLike, config = getTwilioMessagingConfig())
     };
   }
 
-  if (!ownerEmail) {
+  if (!ownerEmail && !hasAssignedNumber) {
     return {
       allowed: false,
       statusCode: 403,
@@ -1498,7 +1524,7 @@ function ensureTwilioSenderAccess(userLike, config = getTwilioMessagingConfig())
     };
   }
 
-  if (authenticatedEmail !== ownerEmail) {
+  if (ownerEmail && authenticatedEmail !== ownerEmail) {
     return {
       allowed: false,
       statusCode: 403,
@@ -1508,7 +1534,13 @@ function ensureTwilioSenderAccess(userLike, config = getTwilioMessagingConfig())
     };
   }
 
-  return { allowed: true, statusCode: 200, error: '', ownerEmail, isAdmin: false };
+  return {
+    allowed: true,
+    statusCode: 200,
+    error: '',
+    ownerEmail: ownerEmail || authenticatedEmail,
+    isAdmin: false
+  };
 }
 
 function extractTwilioInboxNumber(rowOrPayload) {
@@ -1553,7 +1585,16 @@ async function resolveTwilioConversationOwnerEmail(conversationKey) {
     .map((row) => normalizeKnownEmail(row?.owner_email || ''))
     .find(Boolean);
 
-  return ownerEmail || '';
+  if (ownerEmail) {
+    return ownerEmail;
+  }
+
+  const fallbackOwnerEmail = getUniqueConfiguredTwilioOwnerEmail();
+  if (fallbackOwnerEmail) {
+    return fallbackOwnerEmail;
+  }
+
+  return '';
 }
 
 async function ensureTwilioConversationAccess(decoded, conversationKey) {
