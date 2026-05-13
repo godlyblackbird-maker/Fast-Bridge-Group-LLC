@@ -3530,7 +3530,23 @@
     <script>
         (function () {
             const copyButtons = document.querySelectorAll('[data-copy-target]');
-            const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+            function getCampaignAuthToken() {
+                return String(
+                    (typeof window.getAuthToken === 'function' ? window.getAuthToken() : '')
+                    || localStorage.getItem('authToken')
+                    || sessionStorage.getItem('authToken')
+                    || ''
+                ).trim();
+            }
+
+            function getCampaignAuthHeaders(extraHeaders = {}) {
+                const activeToken = getCampaignAuthToken();
+                return {
+                    ...extraHeaders,
+                    ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {})
+                };
+            }
+
             const campaignStatus = document.getElementById('campaign-twilio-status');
             const campaignWebhookCopy = document.getElementById('campaign-webhook-copy');
             const campaignWebhookTarget = document.getElementById('campaign-webhook-target');
@@ -3844,13 +3860,13 @@
             }
 
             async function fetchCampaignOutreachDashboard() {
-                if (!token || !hasCampaignOutreachPanel) {
+                if (!getCampaignAuthToken() || !hasCampaignOutreachPanel) {
                     return;
                 }
 
                 try {
                     const response = await fetch('/api/outreach-intelligence/dashboard?channel=twilio', {
-                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                        headers: getCampaignAuthHeaders()
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) {
@@ -3976,10 +3992,7 @@
                 const nextFollowUpAt = campaignOutreachFollowUp.value ? new Date(campaignOutreachFollowUp.value).getTime() : 0;
                 const response = await fetch(`/api/outreach-intelligence/contacts/${encodeURIComponent(String(contact.id))}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { Authorization: `Bearer ${token}` } : {})
-                    },
+                    headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         contactName: contact.contactName || '',
                         responseTag: campaignOutreachTag.value,
@@ -4102,16 +4115,13 @@
             }
 
             async function saveTwilioMessageReactions(messageId, reactions) {
-                if (!token) {
+                if (!getCampaignAuthToken()) {
                     throw new Error('Sign in again before reacting to Twilio messages.');
                 }
 
                 const response = await fetch('/api/twilio/inbox/message-reactions', {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { Authorization: `Bearer ${token}` } : {})
-                    },
+                    headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         messageId,
                         reactions: normalizeCampaignReplyReactions(reactions)
@@ -4294,10 +4304,7 @@
                 try {
                     const response = await fetch('/api/twilio/inbox/messages/read', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(token ? { Authorization: `Bearer ${token}` } : {})
-                        },
+                        headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({ conversationKey: normalizedConversationKey })
                     });
                     const data = await response.json().catch(() => ({}));
@@ -4535,10 +4542,7 @@
                 try {
                     const response = await fetch('/api/twilio/inbox/contact-name', {
                         method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(token ? { Authorization: `Bearer ${token}` } : {})
-                        },
+                        headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({
                             conversationKey: activeTwilioConversationKey,
                             contactName: normalizedName
@@ -5283,10 +5287,7 @@
 
                 const response = await fetch('/api/twilio/inbox/reply', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { Authorization: `Bearer ${token}` } : {})
-                    },
+                    headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         conversationKey,
                         body: buildNoRepliesFollowUpMessage(conversation),
@@ -5454,10 +5455,10 @@
                     const removedItem = pendingCampaignMediaItems[index] || null;
                     pendingCampaignMediaItems = pendingCampaignMediaItems.filter((_, itemIndex) => itemIndex !== index);
                     renderPendingCampaignMedia();
-                    if (removedItem?.id && token) {
+                    if (removedItem?.id && getCampaignAuthToken()) {
                         await fetch(`/api/twilio/media-uploads/${encodeURIComponent(removedItem.id)}`, {
                             method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}` }
+                            headers: getCampaignAuthHeaders()
                         }).catch(() => {});
                     }
                 });
@@ -5468,10 +5469,10 @@
                     const removedItem = pendingReplyMediaItems[index] || null;
                     pendingReplyMediaItems = pendingReplyMediaItems.filter((_, itemIndex) => itemIndex !== index);
                     renderPendingReplyMedia();
-                    if (removedItem?.id && token) {
+                    if (removedItem?.id && getCampaignAuthToken()) {
                         await fetch(`/api/twilio/media-uploads/${encodeURIComponent(removedItem.id)}`, {
                             method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}` }
+                            headers: getCampaignAuthHeaders()
                         }).catch(() => {});
                     }
                 });
@@ -5578,10 +5579,7 @@
                 try {
                     const response = await fetch(scheduleAt ? '/api/twilio/send-sms' : '/api/twilio/inbox/reply', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(token ? { Authorization: `Bearer ${token}` } : {})
-                        },
+                        headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify(scheduleAt
                             ? {
                                 campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply',
@@ -5677,10 +5675,7 @@
                     const useRepeatHistoryFollowUp = !scheduleAt;
                     const response = await fetch('/api/twilio/send-sms', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(token ? { Authorization: `Bearer ${token}` } : {})
-                        },
+                        headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({
                             campaignName,
                             body,
@@ -5767,10 +5762,7 @@
                 try {
                     const response = await fetch('/api/twilio/inbox/conversation', {
                         method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(token ? { Authorization: `Bearer ${token}` } : {})
-                        },
+                        headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({ conversationKey: normalizedConversationKey })
                     });
                     const data = await response.json().catch(() => ({}));
@@ -6144,7 +6136,7 @@
                 try {
                     const response = await fetch(`/api/twilio/scheduled-messages/${encodeURIComponent(scheduleId)}`, {
                         method: 'DELETE',
-                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                        headers: getCampaignAuthHeaders()
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok || !data.success) {
@@ -6278,7 +6270,7 @@
                     return;
                 }
 
-                if (!token) {
+                if (!getCampaignAuthToken()) {
                     setCampaignRepliesStatus('Sign in to load Twilio replies', 'offline');
                     publishTwilioUnreadState([]);
                     renderTwilioReplyThread([], null);
@@ -6296,7 +6288,7 @@
 
                 try {
                     const response = await fetch('/api/twilio/inbox/conversations', {
-                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                        headers: getCampaignAuthHeaders()
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) {
@@ -6388,7 +6380,7 @@
             }
 
             async function loadTwilioInboxMessages(conversationKey, options = {}) {
-                if (!conversationKey || !token) {
+                if (!conversationKey || !getCampaignAuthToken()) {
                     renderTwilioReplyThread([], null);
                     return;
                 }
@@ -6400,7 +6392,7 @@
 
                 try {
                     const response = await fetch(`/api/twilio/inbox/messages?conversationKey=${encodeURIComponent(conversationKey)}`, {
-                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                        headers: getCampaignAuthHeaders()
                     });
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok) {
@@ -6413,10 +6405,7 @@
                     if (options.markRead) {
                         await fetch('/api/twilio/inbox/messages/read', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { Authorization: `Bearer ${token}` } : {})
-                            },
+                            headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                             body: JSON.stringify({ conversationKey })
                         });
                         await loadTwilioInboxConversations({ preferredConversationKey: conversationKey, markRead: false });
@@ -6459,7 +6448,7 @@
 
                 try {
                     const response = await fetch('/api/twilio/status', {
-                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                        headers: getCampaignAuthHeaders()
                     });
                     const data = await response.json();
                     setTwilioWebhookUiState(data);
@@ -6874,10 +6863,7 @@
                     try {
                         const response = await fetch('/api/twilio/inbox/contact-block', {
                             method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { Authorization: `Bearer ${token}` } : {})
-                            },
+                            headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
                             body: JSON.stringify({
                                 conversationKey: activeTwilioConversationKey,
                                 blocked: nextBlockedState
