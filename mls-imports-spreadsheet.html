@@ -3689,11 +3689,34 @@
 
                 localStorage.setItem(getMyAgentsStorageKey(), JSON.stringify(mergedRows));
                 return {
+                    rows: mergedRows,
                     existingCount: existingRows.length,
                     totalCount: mergedRows.length,
                     addedCount,
                     enrichedCount
                 };
+            }
+
+            async function persistMyAgentsRows(rows) {
+                const normalizedRows = dedupeRows((Array.isArray(rows) ? rows : []).map(normalizeMyAgentsRow).filter(isMeaningfulRow));
+                localStorage.setItem(getMyAgentsStorageKey(), JSON.stringify(normalizedRows));
+
+                if (!getAuthToken()) {
+                    return { rows: normalizedRows };
+                }
+
+                const payload = await fetchJsonWithAuth('/api/my-agents', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rows: normalizedRows })
+                });
+
+                const sheet = payload && payload.sheet ? payload.sheet : { rows: normalizedRows };
+                const persistedRows = dedupeRows((Array.isArray(sheet.rows) ? sheet.rows : []).map(normalizeMyAgentsRow).filter(isMeaningfulRow));
+                localStorage.setItem(getMyAgentsStorageKey(), JSON.stringify(persistedRows));
+                return { rows: persistedRows, sheet };
             }
 
             async function exportRowsToCsv() {
@@ -3983,6 +4006,7 @@
                     }
 
                     const transferResult = mergeIntoMyAgents(rows);
+                    await persistMyAgentsRows(transferResult.rows);
                     if (transferResult.addedCount === 0 && transferResult.enrichedCount === 0) {
                         showToast('success', 'Already In My Agents', 'Every current MLS import row already matches My Agents. Opening My Agents now.');
                     } else {
