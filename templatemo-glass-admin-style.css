@@ -6520,6 +6520,30 @@ body.analytics-reboot {
     --analytics-text: #f8fafc;
 }
 
+[data-theme="dark"] body.analytics-reboot {
+    --analytics-page-background:
+        radial-gradient(circle at 0% 0%, rgba(var(--accent-rgb), 0.1), transparent 28%),
+        radial-gradient(circle at 100% 0%, rgba(var(--accent-light-rgb), 0.12), transparent 30%),
+        radial-gradient(circle at 50% 100%, rgba(var(--accent-rgb), 0.08), transparent 34%);
+    --analytics-navbar-bg: linear-gradient(135deg, rgba(10, 16, 28, 0.46), rgba(15, 23, 42, 0.34));
+    --analytics-hero-bg: linear-gradient(135deg, rgba(9, 14, 23, 0.52), rgba(18, 28, 45, 0.38));
+    --analytics-panel-bg: linear-gradient(145deg, rgba(10, 17, 29, 0.44), rgba(16, 28, 48, 0.28));
+    --analytics-panel-alt-bg: linear-gradient(145deg, rgba(16, 25, 41, 0.42), rgba(11, 18, 31, 0.26));
+    --analytics-panel-strong-bg: linear-gradient(145deg, rgba(13, 22, 37, 0.5), rgba(19, 32, 51, 0.32));
+    --analytics-panel-soft-bg: linear-gradient(145deg, rgba(16, 22, 36, 0.38), rgba(21, 36, 59, 0.24));
+    --analytics-border: rgba(255, 255, 255, 0.09);
+    --analytics-border-strong: rgba(255, 255, 255, 0.12);
+    --analytics-chip-bg: rgba(255, 255, 255, 0.04);
+    --analytics-chip-border: rgba(255, 255, 255, 0.07);
+    --analytics-card-soft-bg: rgba(255, 255, 255, 0.035);
+    --analytics-card-strong-bg: rgba(7, 18, 29, 0.28);
+    --analytics-card-strong-border: rgba(var(--accent-light-rgb), 0.14);
+    --analytics-button-bg: linear-gradient(135deg, rgba(248, 212, 119, 0.12), rgba(125, 211, 252, 0.08));
+    --analytics-button-bg-hover: linear-gradient(135deg, rgba(248, 212, 119, 0.2), rgba(125, 211, 252, 0.14));
+    --analytics-count-bg: rgba(125, 211, 252, 0.08);
+    --analytics-count-border: rgba(125, 211, 252, 0.16);
+}
+
 [data-theme="beach"] body.analytics-reboot {
     --analytics-page-background:
         radial-gradient(circle at 0% 0%, rgba(34, 211, 238, 0.16), transparent 28%),

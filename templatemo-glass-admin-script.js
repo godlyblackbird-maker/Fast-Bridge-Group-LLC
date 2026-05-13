@@ -8459,13 +8459,13 @@ function initNavbarDateTime() {
 
             themeSelect.addEventListener('change', () => {
                 const selectedTheme = resolveTheme(themeSelect.value);
-                applyResolvedTheme(selectedTheme, { persist: false });
+                applyResolvedTheme(selectedTheme);
             });
 
             if (appearanceApplyButton) {
                 appearanceApplyButton.addEventListener('click', () => {
                     const selectedTheme = resolveTheme(themeSelect.value);
-                    applyResolvedTheme(selectedTheme, { persist: false });
+                    applyResolvedTheme(selectedTheme);
                 });
             }
 

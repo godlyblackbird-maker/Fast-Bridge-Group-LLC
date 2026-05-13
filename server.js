@@ -1442,6 +1442,27 @@ function getConfiguredTwilioSenderOwnerEmail(config = getTwilioMessagingConfig()
   return getAssignedTwilioOwnerEmailForNumber(config?.fromNumber || '');
 }
 
+function getAssignedTwilioOwnerEmailForPayload(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const candidates = [
+    source.To,
+    source.to,
+    source.From,
+    source.from,
+    source.twilioNumber,
+    source.platformIdentity
+  ];
+
+  for (const candidate of candidates) {
+    const ownerEmail = getAssignedTwilioOwnerEmailForNumber(candidate);
+    if (ownerEmail) {
+      return ownerEmail;
+    }
+  }
+
+  return '';
+}
+
 function isTwilioMessagingAdmin(userLike) {
   const normalizedEmail = normalizeKnownEmail(userLike?.email || '');
   const normalizedRole = String(userLike?.role || '').trim().toLowerCase();
@@ -4900,6 +4921,7 @@ async function sendTwilioCampaignMessages({ body, campaignName, recipients, medi
           status: message.status,
           to: payload.to,
           from: payload.from || '',
+          twilioNumber: config.fromNumber || payload.from || '',
           messagingServiceSid: payload.messagingServiceSid || '',
           propertyAddress: String(recipient.area || '').trim(),
           area: String(recipient.area || '').trim(),
@@ -5101,6 +5123,7 @@ async function sendTwilioInboxOutboundMessage({ req, conversationKey, latestRow,
       status: message.status,
       to: payload.to,
       from: payload.from || '',
+      twilioNumber: config.fromNumber || payload.from || '',
       messagingServiceSid: payload.messagingServiceSid || '',
       propertyAddress: getTwilioMessagePropertyAddress(conversationRow),
       offersEmail: getTwilioMessageOffersEmail(conversationRow),
@@ -23200,6 +23223,7 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
     }
 
     const latestRow = await getLatestTwilioConversationRow(details.conversationKey);
+    const assignedOwnerEmail = getAssignedTwilioOwnerEmailForPayload(payload);
     await upsertTwilioInboxMessage({
       messageSid,
       accountSid: String(payload.AccountSid || '').trim(),
@@ -23208,6 +23232,9 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
       contactName: String(payload.ProfileName || latestRow?.contact_name || '').trim(),
       contactPhone: details.contactPhone,
       platformIdentity: details.platformIdentity,
+      ownerUserId: Number(latestRow?.owner_user_id) || null,
+      ownerName: String(latestRow?.owner_name || '').trim(),
+      ownerEmail: String(assignedOwnerEmail || latestRow?.owner_email || '').trim().toLowerCase(),
       direction: 'inbound',
       body,
       status: String(payload.SmsStatus || payload.MessageStatus || 'received').trim(),
