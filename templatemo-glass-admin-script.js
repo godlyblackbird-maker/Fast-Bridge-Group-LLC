@@ -3688,6 +3688,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             syncCyberpunkCursorEffect(event && event.detail ? event.detail.theme : document.documentElement.getAttribute('data-theme'));
         });
 
+        window.addEventListener('fast-auth-user-synced', () => {
+            refreshThemeFromStoredPreference();
+        });
+
         window.addEventListener('beforeunload', () => {
             if (typeof cyberpunkCursorCleanup === 'function') {
                 cyberpunkCursorCleanup();
@@ -6587,28 +6591,49 @@ function initNavbarDateTime() {
     // ============================================
     // Theme Toggle
     // ============================================
+    function applyResolvedTheme(theme, options) {
+        const config = options && typeof options === 'object' ? options : {};
+        const themeToggle = document.getElementById('theme-toggle');
+        const effectiveTheme = resolveTheme(theme);
+        const themeSelect = document.getElementById('theme-select');
+
+        document.documentElement.setAttribute('data-theme', effectiveTheme);
+
+        if (config.persist !== false) {
+            saveThemePreference(theme === 'system' ? 'system' : effectiveTheme);
+        }
+
+        updateThemeToggleIcons(themeToggle, effectiveTheme);
+        syncThemeLogoImages(effectiveTheme);
+        syncThemeBackgroundMedia(effectiveTheme);
+        notifyThemeUpdated(effectiveTheme);
+
+        if (themeToggle) {
+            const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
+            themeToggle.title = `Theme: ${modeLabel} Mode`;
+        }
+
+        if (themeSelect) {
+            themeSelect.value = effectiveTheme;
+        }
+
+        if (typeof syncBlacklightFluidControlVisibility === 'function') {
+            syncBlacklightFluidControlVisibility(effectiveTheme);
+        }
+
+        return effectiveTheme;
+    }
+
+    function refreshThemeFromStoredPreference() {
+        return applyResolvedTheme(getThemePreference(), { persist: false });
+    }
+
     function initThemeToggle() {
         const themeToggle = document.getElementById('theme-toggle');
         ensureThemeToggleIcons(themeToggle);
 
-        function setTheme(theme) {
-            const effectiveTheme = resolveTheme(theme);
-            document.documentElement.setAttribute('data-theme', effectiveTheme);
-            saveThemePreference(theme === 'system' ? 'system' : effectiveTheme);
-
-            updateThemeToggleIcons(themeToggle, effectiveTheme);
-            syncThemeLogoImages(effectiveTheme);
-            syncThemeBackgroundMedia(effectiveTheme);
-            notifyThemeUpdated(effectiveTheme);
-
-            if (themeToggle) {
-                const modeLabel = effectiveTheme.charAt(0).toUpperCase() + effectiveTheme.slice(1);
-                themeToggle.title = `Theme: ${modeLabel} Mode`;
-            }
-        }
-
         const savedTheme = getThemePreference();
-        setTheme(savedTheme);
+        applyResolvedTheme(savedTheme);
 
         if (!themeToggle) {
             return;
@@ -6633,7 +6658,7 @@ function initNavbarDateTime() {
                                 : currentTheme === 'cyberpunk'
                                     ? 'blacklight'
                             : 'dark';
-            setTheme(nextTheme);
+            applyResolvedTheme(nextTheme);
         });
     }
 

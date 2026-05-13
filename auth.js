@@ -2537,6 +2537,13 @@
         updateUserProfile(user);
       }
 
+      window.dispatchEvent(new CustomEvent('fast-auth-user-synced', {
+        detail: {
+          user: activeUser || user || null,
+          hasAuthToken: Boolean(getStoredAuthToken())
+        }
+      }));
+
       await initTwilioVoiceNotifications(activeUser);
     } finally {
       setAuthSyncState(false);
