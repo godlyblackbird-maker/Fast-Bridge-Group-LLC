@@ -3530,7 +3530,7 @@
     <script>
         (function () {
             const copyButtons = document.querySelectorAll('[data-copy-target]');
-            const token = String(localStorage.getItem('authToken') || '').trim();
+            const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             const campaignStatus = document.getElementById('campaign-twilio-status');
             const campaignWebhookCopy = document.getElementById('campaign-webhook-copy');
             const campaignWebhookTarget = document.getElementById('campaign-webhook-target');
