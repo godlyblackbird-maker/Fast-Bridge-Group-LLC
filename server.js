@@ -12,6 +12,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { PDFParse } = require('pdf-parse');
 const { execFile } = require('child_process');
+const { recoverTwilioInbox } = require('./scripts/recover-twilio-inbox');
 const { createWorker, OEM } = require('tesseract.js');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
@@ -23134,6 +23135,26 @@ app.get('/api/twilio/status', async (req, res) => {
       }
       : null
   });
+});
+
+app.post('/api/twilio/recover-inbox', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const normalizedRole = String(decoded.role || '').trim().toLowerCase();
+  if (normalizedRole !== 'admin' && !isKnownAdminEmail(decoded.email || '')) {
+    return res.status(403).json({ error: 'Only admins can recover the Twilio inbox.' });
+  }
+
+  try {
+    const result = await recoverTwilioInbox();
+    return res.json({ success: true, result });
+  } catch (error) {
+    console.error('Failed to recover Twilio inbox history:', error);
+    return res.status(500).json({ error: error.message || 'Unable to recover Twilio inbox history.' });
+  }
 });
 
 app.get('/api/twilio/voice/token', async (req, res) => {

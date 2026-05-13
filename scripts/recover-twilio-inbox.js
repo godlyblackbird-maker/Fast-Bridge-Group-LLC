@@ -394,20 +394,30 @@ async function recoverTwilioInbox() {
     }
 
     const countRow = await dbGet(db, 'SELECT COUNT(*) AS total FROM twilio_inbox_messages');
-    console.log(JSON.stringify({
+    return {
       databasePath: dbPath,
       restoredCount,
       skippedCount,
       totalRows: Number(countRow && countRow.total) || 0,
       configuredNumbers: Array.from(configuredNumbers)
-    }, null, 2));
+    };
   } finally {
     await closeDatabase(db);
   }
 }
 
-recoverTwilioInbox().catch((error) => {
-  console.error('Failed to recover Twilio inbox history.');
-  console.error(error && error.message ? error.message : error);
-  process.exitCode = 1;
-});
+module.exports = {
+  recoverTwilioInbox
+};
+
+if (require.main === module) {
+  recoverTwilioInbox()
+    .then((result) => {
+      console.log(JSON.stringify(result, null, 2));
+    })
+    .catch((error) => {
+      console.error('Failed to recover Twilio inbox history.');
+      console.error(error && error.message ? error.message : error);
+      process.exitCode = 1;
+    });
+}

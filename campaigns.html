@@ -3390,6 +3390,10 @@
                                                 <p id="campaign-status-webhook-url" class="campaign-webhook-url">Loading status webhook...</p>
                                                 <button id="campaign-copy-status-webhook" type="button" class="card-btn">Copy Status URL</button>
                                             </div>
+                                            <div class="campaign-webhook-row">
+                                                <p class="campaign-webhook-url">If the live Twilio inbox was wiped, admins can rebuild it from Twilio history here.</p>
+                                                <button id="campaign-recover-inbox" type="button" class="card-btn" hidden>Recover Inbox</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3555,6 +3559,7 @@
             const campaignStatusWebhookUrl = document.getElementById('campaign-status-webhook-url');
             const campaignCopyInboxWebhookButton = document.getElementById('campaign-copy-inbox-webhook');
             const campaignCopyStatusWebhookButton = document.getElementById('campaign-copy-status-webhook');
+            const campaignRecoverInboxButton = document.getElementById('campaign-recover-inbox');
             const campaignSendStatus = document.getElementById('campaign-send-status');
             const campaignNameInput = document.getElementById('campaign-sms-name');
             const campaignRecipientsInput = document.getElementById('campaign-sms-recipients');
@@ -4629,6 +4634,12 @@
 
                 if (campaignCopyStatusWebhookButton) {
                     campaignCopyStatusWebhookButton.disabled = !statusWebhookUrl;
+                }
+
+                if (campaignRecoverInboxButton) {
+                    const isAdmin = Boolean(data?.access?.isAdmin);
+                    campaignRecoverInboxButton.hidden = !isAdmin;
+                    campaignRecoverInboxButton.disabled = !isAdmin || !configured;
                 }
             }
 
@@ -6765,6 +6776,46 @@
                         campaignSendStatus.textContent = 'Status webhook URL copied.';
                     } catch (error) {
                         campaignSendStatus.textContent = 'Could not copy the status webhook URL.';
+                    }
+                });
+            }
+
+            if (campaignRecoverInboxButton) {
+                campaignRecoverInboxButton.addEventListener('click', async () => {
+                    if (!window.confirm('Recover the live Twilio inbox from Twilio message history? This can take a bit and should only be used when inbox rows are missing.')) {
+                        return;
+                    }
+
+                    const originalLabel = campaignRecoverInboxButton.textContent;
+                    campaignRecoverInboxButton.disabled = true;
+                    campaignRecoverInboxButton.textContent = 'Recovering...';
+                    if (campaignSendStatus) {
+                        campaignSendStatus.textContent = 'Recovering Twilio inbox history...';
+                    }
+
+                    try {
+                        const response = await fetch('/api/twilio/recover-inbox', {
+                            method: 'POST',
+                            headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' })
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'Unable to recover the Twilio inbox.');
+                        }
+
+                        const result = data.result || {};
+                        if (campaignSendStatus) {
+                            campaignSendStatus.textContent = `Recovered ${Number(result.restoredCount) || 0} Twilio row${Number(result.restoredCount) === 1 ? '' : 's'}. Inbox now has ${Number(result.totalRows) || 0} row${Number(result.totalRows) === 1 ? '' : 's'}.`;
+                        }
+                        await loadTwilioStatus();
+                        await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
+                    } catch (error) {
+                        if (campaignSendStatus) {
+                            campaignSendStatus.textContent = error.message || 'Unable to recover the Twilio inbox.';
+                        }
+                    } finally {
+                        campaignRecoverInboxButton.textContent = originalLabel;
+                        campaignRecoverInboxButton.disabled = false;
                     }
                 });
             }
