@@ -8250,6 +8250,7 @@ function initNavbarDateTime() {
 
         const themeSelect = document.getElementById('theme-select');
         const appearanceApplyButton = document.getElementById('appearance-apply-button');
+        const appearanceSetDefaultButton = document.getElementById('appearance-set-default-button');
         const appearanceResetButton = document.getElementById('appearance-reset-button');
         const accentSelect = document.getElementById('accent-color-select');
         const accentGlowToggle = document.getElementById('accent-glow-toggle');
@@ -8425,13 +8426,19 @@ function initNavbarDateTime() {
             syncBlacklightFluidControlVisibility(themeSelect.value);
 
             themeSelect.addEventListener('change', () => {
-                const theme = themeSelect.value;
-                const effectiveTheme = resolveTheme(theme);
-                applyResolvedTheme(effectiveTheme, { persist: false });
+                const selectedTheme = resolveTheme(themeSelect.value);
+                applyResolvedTheme(selectedTheme, { persist: false });
             });
 
             if (appearanceApplyButton) {
                 appearanceApplyButton.addEventListener('click', () => {
+                    const selectedTheme = resolveTheme(themeSelect.value);
+                    applyResolvedTheme(selectedTheme, { persist: false });
+                });
+            }
+
+            if (appearanceSetDefaultButton) {
+                appearanceSetDefaultButton.addEventListener('click', () => {
                     const selectedTheme = resolveTheme(themeSelect.value);
                     applyResolvedTheme(selectedTheme);
                 });
@@ -8439,9 +8446,10 @@ function initNavbarDateTime() {
 
             if (appearanceResetButton) {
                 appearanceResetButton.addEventListener('click', () => {
-                    themeSelect.value = 'beach';
-                    applyResolvedTheme('beach', { persist: false });
-                    saveThemePreference('beach');
+                    const savedTheme = getThemePreference();
+                    const resolvedSavedTheme = resolveTheme(savedTheme);
+                    themeSelect.value = resolvedSavedTheme;
+                    applyResolvedTheme(savedTheme, { persist: false });
                 });
             }
         } else {
