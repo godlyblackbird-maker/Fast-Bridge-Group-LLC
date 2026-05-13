@@ -20,7 +20,7 @@
             try {
                 const HOMEPAGE_THEME_KEY = 'homepageTheme';
                 const USER_THEME_KEY = 'dashboardThemeByUser';
-                const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk', 'blacklight'];
+                const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
                 const readJson = (key) => {
                     try {
                         return JSON.parse(localStorage.getItem(key) || '{}');
@@ -52,11 +52,7 @@
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
-                if (isAuthenticated && !/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|blacklight|japan|holloween|christmas)$/.test(theme)) {
-                    theme = 'beach';
-                }
-
-                if (!isAuthenticated && !PUBLIC_HOMEPAGE_THEMES.includes(theme)) {
+                if (!PUBLIC_HOMEPAGE_THEMES.includes(theme)) {
                     theme = 'beach';
                 }
 
@@ -4129,7 +4125,7 @@
                     <span class="theme-switch-label">Theme</span>
                     <span class="theme-switch-current" id="homepage-theme-label">Beach</span>
                 </button>
-                <button class="theme-switch-btn homepage-blacklight-settings-btn" id="homepage-blacklight-settings-toggle" type="button" aria-label="Open BLACK LIGHT liquid settings" hidden>
+                <button class="theme-switch-btn homepage-blacklight-settings-btn" id="homepage-blacklight-settings-toggle" type="button" aria-label="Open homepage liquid settings" hidden>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.91 4h.09a1.65 1.65 0 0 0 1.51-1V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .66.39 1.26 1 1.51H21a2 2 0 0 1 0 4h-.09c-.61.25-1 .85-1 1.49Z"></path></svg>
                 </button>
                 <a class="login-btn topbar-download-btn" href="https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/releases/latest/download/FAST.BRIDGE.GROUP.Setup.1.4.8.exe">Download App</a>
@@ -4141,16 +4137,16 @@
             <div class="homepage-blacklight-panel" role="dialog" aria-modal="true" aria-labelledby="homepage-blacklight-panel-title">
                 <div class="homepage-blacklight-panel-header">
                     <div>
-                        <h2 class="homepage-blacklight-panel-title" id="homepage-blacklight-panel-title">BLACK LIGHT Liquid Settings</h2>
-                        <p class="homepage-blacklight-panel-copy">Adjust the homepage liquid cursor without leaving the homepage. These controls use the same saved BLACK LIGHT liquid settings as the main app.</p>
+                        <h2 class="homepage-blacklight-panel-title" id="homepage-blacklight-panel-title">Homepage Liquid Settings</h2>
+                        <p class="homepage-blacklight-panel-copy">Adjust the homepage liquid smoke effect without leaving the homepage. These controls use the same saved liquid settings as the main app.</p>
                     </div>
-                    <button class="homepage-blacklight-close" id="homepage-blacklight-close" type="button" aria-label="Close BLACK LIGHT liquid settings">×</button>
+                    <button class="homepage-blacklight-close" id="homepage-blacklight-close" type="button" aria-label="Close homepage liquid settings">×</button>
                 </div>
                 <div class="homepage-blacklight-panel-body">
                     <div class="homepage-blacklight-row">
                         <div class="homepage-blacklight-label">
-                            <strong>BLACK LIGHT Cursor Size</strong>
-                            <span>Controls how wide the liquid trail splashes around the cursor while BLACK LIGHT mode is active.</span>
+                            <strong>Liquid Cursor Size</strong>
+                            <span>Controls how wide the liquid trail splashes around the cursor while the homepage liquid effect is active.</span>
                         </div>
                         <input id="homepage-blacklight-fluid-size" class="homepage-blacklight-slider" type="range" min="0.20" max="0.90" step="0.02" value="0.42">
                         <div class="homepage-blacklight-slider-meta">
@@ -4161,8 +4157,8 @@
                     </div>
                     <div class="homepage-blacklight-row">
                         <div class="homepage-blacklight-label">
-                            <strong>BLACK LIGHT Color Mode</strong>
-                            <span>Choose whether the fluid shifts through the blacklight palette or stays locked to one solid color.</span>
+                            <strong>Liquid Color Mode</strong>
+                            <span>Choose whether the liquid shifts through the saved palette or stays locked to one solid color.</span>
                         </div>
                         <select id="homepage-blacklight-fluid-color-mode" class="homepage-blacklight-select">
                             <option value="dynamic">Dynamic Palette</option>
@@ -4171,8 +4167,8 @@
                     </div>
                     <div class="homepage-blacklight-row" id="homepage-blacklight-fluid-dynamics-row">
                         <div class="homepage-blacklight-label">
-                            <strong>BLACK LIGHT Color Dynamics</strong>
-                            <span>Controls how quickly the fluid shifts between blacklight colors while Dynamic Palette mode is active.</span>
+                            <strong>Liquid Color Dynamics</strong>
+                            <span>Controls how quickly the liquid shifts colors while Dynamic Palette mode is active.</span>
                         </div>
                         <input id="homepage-blacklight-fluid-dynamics" class="homepage-blacklight-slider" type="range" min="0" max="4" step="0.10" value="0.35">
                         <div class="homepage-blacklight-slider-meta">
@@ -4183,8 +4179,8 @@
                     </div>
                     <div class="homepage-blacklight-row">
                         <div class="homepage-blacklight-label">
-                            <strong>BLACK LIGHT Fluid Brightness</strong>
-                            <span>Raises or lowers how bright the liquid glow renders while BLACK LIGHT mode is active.</span>
+                            <strong>Liquid Brightness</strong>
+                            <span>Raises or lowers how bright the liquid glow renders while the homepage liquid effect is active.</span>
                         </div>
                         <input id="homepage-blacklight-fluid-brightness" class="homepage-blacklight-slider" type="range" min="0.20" max="2.20" step="0.10" value="1.00">
                         <div class="homepage-blacklight-slider-meta">
@@ -4195,8 +4191,8 @@
                     </div>
                     <div class="homepage-blacklight-row" id="homepage-blacklight-fluid-solid-color-row" hidden>
                         <div class="homepage-blacklight-label">
-                            <strong>BLACK LIGHT Solid Color</strong>
-                            <span>Choose the exact solid fluid color used when Solid Color mode is active.</span>
+                            <strong>Liquid Solid Color</strong>
+                            <span>Choose the exact solid liquid color used when Solid Color mode is active.</span>
                         </div>
                         <div class="homepage-blacklight-inline-control">
                             <input id="homepage-blacklight-fluid-solid-color" class="homepage-blacklight-color" type="color" value="#ff54c4">
@@ -4205,8 +4201,8 @@
                     </div>
                     <div class="homepage-blacklight-row">
                         <div class="homepage-blacklight-label">
-                            <strong>BLACK LIGHT Cursor Velocity</strong>
-                            <span>Controls how aggressively the liquid throws and stretches when you move the cursor in BLACK LIGHT mode.</span>
+                            <strong>Liquid Cursor Velocity</strong>
+                            <span>Controls how aggressively the liquid throws and stretches when you move the cursor while the homepage liquid effect is active.</span>
                         </div>
                         <input id="homepage-blacklight-fluid-velocity" class="homepage-blacklight-slider" type="range" min="2400" max="9000" step="200" value="5400">
                         <div class="homepage-blacklight-slider-meta">
@@ -4386,12 +4382,11 @@
             const HOMEPAGE_THEME_KEY = 'homepageTheme';
             const USER_THEME_KEY = 'dashboardThemeByUser';
             const BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
-            const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk', 'blacklight'];
+            const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
             const THEME_LABELS = {
                 beach: 'Beach',
                 sunset: 'Sunset',
-                cyberpunk: 'Cyberpunk',
-                blacklight: 'BLACK LIGHT'
+                cyberpunk: 'Cyberpunk'
             };
             const DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS = Object.freeze({
                 size: 0.42,
@@ -4401,6 +4396,7 @@
                 brightness: 1,
                 solidColor: '#ff54c4'
             });
+            const HOMEPAGE_LIQUID_SMOKE_THEMES = new Set(['beach', 'sunset', 'cyberpunk']);
             let homepageBlacklightFluidModulePromise = null;
             let homepageBlacklightFluidCleanup = null;
             let homepageBlacklightFluidSignature = '';
@@ -4607,7 +4603,7 @@
                     themeSwitchButton.setAttribute('aria-label', `Switch homepage theme. Current theme: ${THEME_LABELS[activeTheme] || 'Beach'}`);
                 }
                 if (blacklightSettingsButton) {
-                    const shouldShowBlacklightSettings = activeTheme === 'blacklight';
+                    const shouldShowBlacklightSettings = HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme);
                     blacklightSettingsButton.hidden = !shouldShowBlacklightSettings;
                     blacklightSettingsButton.setAttribute('aria-hidden', shouldShowBlacklightSettings ? 'false' : 'true');
                 }
@@ -4617,6 +4613,7 @@
                 const activeTheme = resolveTheme(themeValue || getHomepageTheme());
                 const config = getBlacklightFluidCursorConfig();
                 const allowAllThemes = isHomepageBlacklightFluidEnabledForAllThemes();
+                const shouldUseLiquidSmoke = HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme) || allowAllThemes;
                 const nextSignature = JSON.stringify({
                     theme: activeTheme,
                     allowAllThemes,
@@ -4628,7 +4625,7 @@
                     solidColor: config.solidColor
                 });
 
-                if (activeTheme !== 'blacklight' && !allowAllThemes) {
+                if (!shouldUseLiquidSmoke) {
                     homepageBlacklightFluidSignature = '';
                     if (typeof homepageBlacklightFluidCleanup === 'function') {
                         homepageBlacklightFluidCleanup();
@@ -4658,7 +4655,8 @@
                 }
 
                 return homepageBlacklightFluidModulePromise.then((module) => {
-                    if (resolveTheme(getHomepageTheme()) !== 'blacklight' && !isHomepageBlacklightFluidEnabledForAllThemes()) {
+                    const currentTheme = resolveTheme(getHomepageTheme());
+                    if (!HOMEPAGE_LIQUID_SMOKE_THEMES.has(currentTheme) && !isHomepageBlacklightFluidEnabledForAllThemes()) {
                         return false;
                     }
 
@@ -4771,12 +4769,12 @@
                 const activeTheme = getHomepageTheme();
                 const colorMode = homepageBlacklightFluidColorMode ? String(homepageBlacklightFluidColorMode.value || DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode).trim().toLowerCase() : DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS.colorMode;
                 if (homepageBlacklightFluidDynamicsRow) {
-                    homepageBlacklightFluidDynamicsRow.hidden = activeTheme !== 'blacklight' || colorMode !== 'dynamic';
+                    homepageBlacklightFluidDynamicsRow.hidden = !HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme) || colorMode !== 'dynamic';
                 }
                 if (homepageBlacklightFluidSolidColorRow) {
-                    homepageBlacklightFluidSolidColorRow.hidden = activeTheme !== 'blacklight' || colorMode !== 'solid';
+                    homepageBlacklightFluidSolidColorRow.hidden = !HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme) || colorMode !== 'solid';
                 }
-                if (homepageBlacklightModal && activeTheme !== 'blacklight') {
+                if (homepageBlacklightModal && !HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme)) {
                     homepageBlacklightModal.classList.remove('is-open');
                     homepageBlacklightModal.setAttribute('aria-hidden', 'true');
                 }
@@ -4841,7 +4839,7 @@
             };
 
             const openHomepageBlacklightModal = () => {
-                if (!homepageBlacklightModal || getHomepageTheme() !== 'blacklight') {
+                if (!homepageBlacklightModal || !HOMEPAGE_LIQUID_SMOKE_THEMES.has(getHomepageTheme())) {
                     return;
                 }
                 populateHomepageBlacklightControls();

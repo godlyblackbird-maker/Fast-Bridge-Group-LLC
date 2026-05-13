@@ -3647,6 +3647,23 @@
                 };
             }
 
+            function dedupeMyAgentsRows(rows) {
+                return (Array.isArray(rows) ? rows : [])
+                    .map(normalizeMyAgentsRow)
+                    .filter(isMeaningfulRow)
+                    .reduce((dedupedRows, row) => {
+                        const matchIndex = findMyAgentsMatchIndex(dedupedRows, row);
+
+                        if (matchIndex >= 0) {
+                            dedupedRows[matchIndex] = mergeMyAgentsRows(dedupedRows[matchIndex], row);
+                            return dedupedRows;
+                        }
+
+                        dedupedRows.push(row);
+                        return dedupedRows;
+                    }, []);
+            }
+
             function loadMyAgentsRows() {
                 try {
                     const stored = JSON.parse(localStorage.getItem(getMyAgentsStorageKey()) || '[]');
@@ -3698,7 +3715,7 @@
             }
 
             async function persistMyAgentsRows(rows) {
-                const normalizedRows = dedupeRows((Array.isArray(rows) ? rows : []).map(normalizeMyAgentsRow).filter(isMeaningfulRow));
+                const normalizedRows = dedupeMyAgentsRows(rows);
                 localStorage.setItem(getMyAgentsStorageKey(), JSON.stringify(normalizedRows));
 
                 if (!getAuthToken()) {
@@ -3714,7 +3731,7 @@
                 });
 
                 const sheet = payload && payload.sheet ? payload.sheet : { rows: normalizedRows };
-                const persistedRows = dedupeRows((Array.isArray(sheet.rows) ? sheet.rows : []).map(normalizeMyAgentsRow).filter(isMeaningfulRow));
+                const persistedRows = dedupeMyAgentsRows(sheet.rows);
                 localStorage.setItem(getMyAgentsStorageKey(), JSON.stringify(persistedRows));
                 return { rows: persistedRows, sheet };
             }
