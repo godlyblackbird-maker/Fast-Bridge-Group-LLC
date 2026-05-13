@@ -3465,6 +3465,27 @@ function getTwilioMessagePropertyAddress(rowOrPayload) {
   return extractPropertyAddressFromTwilioBody(rowOrPayload?.body || source.Body || source.body || '');
 }
 
+function getTwilioMessageOffersEmail(rowOrPayload) {
+  const payload = rowOrPayload && typeof rowOrPayload === 'object' && typeof rowOrPayload.raw_payload_json === 'string'
+    ? safeJsonParse(rowOrPayload.raw_payload_json, {})
+    : rowOrPayload;
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const directValue = extractEmailAddress(
+    source.offersEmail
+      || source.offers_email
+      || source.offerEmail
+      || source.offer_email
+      || source.email
+      || ''
+  );
+
+  if (directValue) {
+    return directValue;
+  }
+
+  return extractEmailAddress(rowOrPayload?.body || source.Body || source.body || '');
+}
+
 function getTwilioConversationDetails({ contactPhone, platformIdentity }) {
   const normalizedContactPhone = normalizeSmsPhone(contactPhone);
   const normalizedPlatformIdentity = normalizeTwilioPlatformIdentity(platformIdentity);
@@ -3496,6 +3517,7 @@ function serializeTwilioInboxMessage(row) {
     conversationKey: String(row.conversation_key || '').trim(),
     campaignName: String(row.campaign_name || '').trim(),
     propertyAddress: getTwilioMessagePropertyAddress(row),
+    offersEmail: getTwilioMessageOffersEmail(row),
     contactName: String(row.contact_name || '').trim(),
     contactPhone: String(row.contact_phone || '').trim(),
     platformIdentity: String(row.platform_identity || '').trim(),
@@ -4789,7 +4811,8 @@ async function sendTwilioCampaignMessages({ body, campaignName, recipients, medi
       : {
           name: String(entry?.name || '').trim(),
           phone: String(entry?.phone || '').trim(),
-          area: String(entry?.area || entry?.market || '').trim()
+          area: String(entry?.area || entry?.market || '').trim(),
+          offersEmail: extractEmailAddress(entry?.offersEmail || entry?.offerEmail || entry?.email || '')
         };
 
     const normalizedPhone = normalizeSmsPhone(recipient.phone);
@@ -4880,6 +4903,7 @@ async function sendTwilioCampaignMessages({ body, campaignName, recipients, medi
           messagingServiceSid: payload.messagingServiceSid || '',
           propertyAddress: String(recipient.area || '').trim(),
           area: String(recipient.area || '').trim(),
+          offersEmail: String(recipient.offersEmail || '').trim(),
           ...mediaPayload.rawPayload
         }
       });
@@ -5079,6 +5103,7 @@ async function sendTwilioInboxOutboundMessage({ req, conversationKey, latestRow,
       from: payload.from || '',
       messagingServiceSid: payload.messagingServiceSid || '',
       propertyAddress: getTwilioMessagePropertyAddress(conversationRow),
+      offersEmail: getTwilioMessageOffersEmail(conversationRow),
       ...mediaPayload.rawPayload
     }
   });
@@ -7598,9 +7623,13 @@ function normalizeMlsImportSpreadsheetDate(value) {
 
 function hasMeaningfulMlsImportSpreadsheetRow(rowLike) {
   const row = rowLike && typeof rowLike === 'object' ? rowLike : {};
+  const propertyAddress = normalizeMlsImportSpreadsheetValue(row.propertyAddress);
+  if (!propertyAddress) {
+    return false;
+  }
+
   return [
     row.importDate,
-    row.propertyAddress,
     row.laName,
     row.loPhone,
     row.offersEmail,
@@ -7756,6 +7785,9 @@ async function persistMlsImportSpreadsheetRowsForUser(ownerUserId, rows, options
   for (const rowLike of sourceRows) {
     const normalizedRow = normalizeMlsImportSpreadsheetRow(rowLike, { pdfFile: defaultPdfFile });
     if (!hasMeaningfulMlsImportSpreadsheetRow(normalizedRow)) {
+      continue;
+    }
+    if (!normalizeMlsImportSpreadsheetValue(normalizedRow.propertyAddress)) {
       continue;
     }
 
@@ -17636,13 +17668,15 @@ function extractRowsFromMlsImportCandidateText(text) {
 
   const blockTexts = splitMlsImportTextIntoBlocks(normalizedText);
   const sourceRows = mergeMlsImportRows(
-    (blockTexts.length > 0 ? blockTexts : [normalizedText])
-      .map((blockText) => extractMlsImportRowFromText(blockText))
+    fillMlsImportMissingAddressesByCorrespondingAgent(
+      (blockTexts.length > 0 ? blockTexts : [normalizedText])
+        .map((blockText) => extractMlsImportRowFieldsFromText(blockText))
+    )
       .filter(Boolean)
   );
 
   if (sourceRows.length > 0) {
-    return sourceRows;
+    return sourceRows.filter((row) => hasMeaningfulMlsImportRowAddress(row));
   }
 
   const wholeTextRow = extractMlsImportRowFromText(normalizedText);
@@ -18735,6 +18769,17 @@ function extractPropertyAddressCandidateFromLine(line) {
   return extractPropertyAddressCandidateFromFragment(line);
 }
 
+function isLikelyPropertyAddressContinuationLine(line) {
+  const normalizedLine = normalizePdfPropertyAddressValue(String(line || ''));
+  if (!normalizedLine) {
+    return false;
+  }
+
+  return /^[A-Za-z .'-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?$/i.test(normalizedLine)
+    || /^[A-Za-z .'-]+\s+\d{5}(?:-\d{4})?$/i.test(normalizedLine)
+    || /^[A-Za-z .'-]+(?:,\s*[A-Z]{2})?$/i.test(normalizedLine);
+}
+
 function extractPropertyAddressCandidateFromLines(lines, startIndex) {
   const normalizedLines = Array.isArray(lines)
     ? lines.map((line) => String(line || '').trim())
@@ -18745,27 +18790,21 @@ function extractPropertyAddressCandidateFromLines(lines, startIndex) {
     return singleLineCandidate;
   }
 
-  const lineParts = normalizedLines.slice(baseIndex, baseIndex + 3).filter(Boolean);
-  if (lineParts.length < 2) {
+  const currentLine = normalizedLines[baseIndex] || '';
+  const nextLine = normalizedLines[baseIndex + 1] || '';
+  if (!currentLine || !nextLine) {
     return '';
   }
 
-  const combinations = [];
-  if (lineParts.length >= 2) {
-    combinations.push(`${lineParts[0]} ${lineParts[1]}`);
-    combinations.push(`${lineParts[0]}, ${lineParts[1]}`);
-  }
-  if (lineParts.length >= 3) {
-    combinations.push(`${lineParts[0]} ${lineParts[1]} ${lineParts[2]}`);
-    combinations.push(`${lineParts[0]} ${lineParts[1]}, ${lineParts[2]}`);
-    combinations.push(`${lineParts[0]}, ${lineParts[1]} ${lineParts[2]}`);
-    combinations.push(`${lineParts[0]}, ${lineParts[1]}, ${lineParts[2]}`);
-  }
+  if (/^\d{2,6}\s+/.test(currentLine) && isLikelyPropertyAddressContinuationLine(nextLine)) {
+    const combinedWithComma = extractPropertyAddressCandidateFromFragment(`${currentLine}, ${nextLine}`);
+    if (combinedWithComma) {
+      return combinedWithComma;
+    }
 
-  for (const combination of combinations) {
-    const candidate = extractPropertyAddressCandidateFromFragment(combination);
-    if (candidate) {
-      return candidate;
+    const combinedWithSpace = extractPropertyAddressCandidateFromFragment(`${currentLine} ${nextLine}`);
+    if (combinedWithSpace) {
+      return combinedWithSpace;
     }
   }
 
@@ -19355,7 +19394,7 @@ function extractMlsStatusFromPdfText(text, lines) {
   return '';
 }
 
-function extractMlsImportRowFromText(text) {
+function extractMlsImportRowFieldsFromText(text) {
   const normalizedText = normalizePdfExtractText(text);
   if (!normalizedText) {
     return null;
@@ -19374,7 +19413,52 @@ function extractMlsImportRowFromText(text) {
   };
 
   const hasMeaningfulValue = Object.values(row).some((value) => String(value || '').trim());
-  return hasMeaningfulValue && row.propertyAddress ? row : null;
+  return hasMeaningfulValue ? row : null;
+}
+
+function extractMlsImportRowFromText(text) {
+  const row = extractMlsImportRowFieldsFromText(text);
+  return row && row.propertyAddress ? row : null;
+}
+
+function countMatchingMlsImportContactFields(previousRowLike, nextRowLike) {
+  const previousRow = normalizeMlsImportRow(previousRowLike);
+  const nextRow = normalizeMlsImportRow(nextRowLike);
+  const comparableFields = ['laName', 'loPhone', 'offersEmail', 'laCell', 'laDirect', 'laEmail'];
+
+  return comparableFields.reduce((total, fieldName) => {
+    const previousValue = String(previousRow[fieldName] || '').trim().toLowerCase();
+    const nextValue = String(nextRow[fieldName] || '').trim().toLowerCase();
+    return previousValue && nextValue && previousValue === nextValue ? total + 1 : total;
+  }, 0);
+}
+
+function fillMlsImportMissingAddressesByCorrespondingAgent(rows) {
+  const normalizedRows = (Array.isArray(rows) ? rows : []).map((row) => normalizeMlsImportRow(row));
+  const addressBackedRows = normalizedRows.filter((row) => row.propertyAddress);
+
+  return normalizedRows.map((row) => {
+    if (!row || row.propertyAddress) {
+      return row;
+    }
+
+    const candidates = addressBackedRows
+      .map((candidate) => ({
+        row: candidate,
+        score: countMatchingMlsImportContactFields(candidate, row)
+      }))
+      .filter((entry) => entry.score >= 2)
+      .sort((left, right) => right.score - left.score);
+
+    if (candidates.length !== 1) {
+      return row;
+    }
+
+    return {
+      ...row,
+      propertyAddress: candidates[0].row.propertyAddress
+    };
+  });
 }
 
 function isLikelyPropertyAddressLine(line) {
@@ -19770,7 +19854,7 @@ async function extractMlsImportPdfFields(pdfSource) {
     laDirect: String(primaryRow.laDirect || '').trim(),
     laEmail: String(primaryRow.laEmail || '').trim(),
     status: String(primaryRow.status || '').trim(),
-    rows: mergedRows.length > 0 ? mergedRows : (Object.values(fallbackRow).some(Boolean) ? [fallbackRow] : [])
+    rows: mergedRows.length > 0 ? mergedRows : (fallbackRow && fallbackRow.propertyAddress ? [fallbackRow] : [])
   };
 }
 
@@ -23134,7 +23218,8 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
       readAt: null,
       rawPayload: {
         ...payload,
-        propertyAddress: getTwilioMessagePropertyAddress(latestRow || payload)
+        propertyAddress: getTwilioMessagePropertyAddress(latestRow || payload),
+        offersEmail: getTwilioMessageOffersEmail(latestRow || payload)
       }
     });
 
@@ -23154,7 +23239,8 @@ app.post('/api/twilio/webhook/incoming', async (req, res) => {
         metadata: {
           messageSid,
           attachmentCount: attachments.length,
-          propertyAddress: getTwilioMessagePropertyAddress(latestRow || payload)
+          propertyAddress: getTwilioMessagePropertyAddress(latestRow || payload),
+          offersEmail: getTwilioMessageOffersEmail(latestRow || payload)
         }
       });
     }
@@ -23243,6 +23329,7 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
         conversationKey: String(row.conversation_key || '').trim(),
         campaignName: String(row.campaign_name || '').trim(),
         propertyAddress: String(serializedLatestMessage?.propertyAddress || '').trim(),
+        offersEmail: String(serializedLatestMessage?.offersEmail || '').trim(),
         contactName: String(row.contact_name || '').trim() || String(row.contact_phone || '').trim(),
         contactPhone: normalizedContactPhone,
         platformIdentity: String(row.platform_identity || '').trim(),

@@ -2875,7 +2875,8 @@
                                 {
                                     name: getSmsRecipientName(rowData),
                                     phone: recipientPhone,
-                                    area: normalizeCellValue(rowData && rowData.propertyAddress)
+                                    area: normalizeCellValue(rowData && rowData.propertyAddress),
+                                    offersEmail: normalizeCellValue(rowData && rowData.offersEmail)
                                 }
                             ]
                         })

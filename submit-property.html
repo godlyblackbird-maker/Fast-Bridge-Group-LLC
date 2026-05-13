@@ -1110,9 +1110,9 @@
                             </div>
                             <div class="submit-field full-width">
                                 <div class="submit-consent-panel">
-                                    <p class="submit-consent-copy">By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is not a condition of purchase.</p>
+                                    <p class="submit-consent-copy">Optional: By checking the box below, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is not a condition of purchase.</p>
                                     <label class="submit-checkbox submit-consent-checkbox">
-                                        <input id="seller-sms-consent" name="smsConsent" type="checkbox" value="yes" required>
+                                        <input id="seller-sms-consent" name="smsConsent" type="checkbox" value="yes">
                                         <span>I agree to receive SMS text messages from FAST BRIDGE GROUP LLC at the phone number provided for property inquiry, offer follow-up, appointment scheduling, and transaction-related communication.</span>
                                     </label>
                                     <div class="submit-consent-links" aria-label="SMS policy links">
@@ -1149,7 +1149,6 @@
                 <div class="submit-footer-note-links" aria-label="Legal and policy links">
                     <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
                     <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <a href="legal-idx-vow-disclaimer.html">IDX/VOW Disclaimer</a>
                     <span class="submit-footer-note-separator" aria-hidden="true">|</span>
                     <a href="legal-equal-housing.html">Equal Housing</a>
                     <span class="submit-footer-note-separator" aria-hidden="true">|</span>
@@ -1392,11 +1391,6 @@
 
                 if (!payload.sellerName || !payload.sellerEmail || !payload.sellerPhone || !payload.propertyAddress) {
                     setFeedback('Name, email, phone, and property address are required.', 'error');
-                    return;
-                }
-
-                if (!payload.smsConsent) {
-                    setFeedback('SMS consent is required before submitting this property inquiry.', 'error');
                     return;
                 }
 

@@ -3239,6 +3239,15 @@
                                                         </svg>
                                                     </button>
                                                 </div>
+                                                <div id="campaign-reply-offers-email-group" class="campaign-reply-address-group" hidden>
+                                                    <input id="campaign-reply-offers-email" class="campaign-reply-address-chip" type="text" placeholder="Offer email" autocomplete="off" spellcheck="false" readonly>
+                                                    <button id="campaign-reply-copy-offers-email" type="button" class="campaign-reply-copy-address" aria-label="Copy offer email" title="Copy offer email">
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <button id="campaign-reply-delete-thread" type="button" class="campaign-reply-delete-thread" aria-label="Delete conversation" title="Delete conversation" disabled>
                                                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -3572,6 +3581,9 @@
             const campaignReplyAddressGroup = document.getElementById('campaign-reply-address-group');
             const campaignReplyAddress = document.getElementById('campaign-reply-address');
             const campaignReplyCopyAddressButton = document.getElementById('campaign-reply-copy-address');
+            const campaignReplyOffersEmailGroup = document.getElementById('campaign-reply-offers-email-group');
+            const campaignReplyOffersEmail = document.getElementById('campaign-reply-offers-email');
+            const campaignReplyCopyOffersEmailButton = document.getElementById('campaign-reply-copy-offers-email');
             const campaignReplySubtitle = document.getElementById('campaign-reply-subtitle');
             const campaignReplyThread = document.getElementById('campaign-reply-thread');
             const campaignReplyForm = document.getElementById('campaign-reply-form');
@@ -4336,6 +4348,24 @@
                 campaignReplyAddressGroup.removeAttribute('hidden');
             }
 
+            function setCampaignReplyOffersEmail(value) {
+                const offersEmail = String(value || '').trim();
+                if (!campaignReplyOffersEmailGroup || !campaignReplyOffersEmail) {
+                    return;
+                }
+
+                if (!offersEmail) {
+                    campaignReplyOffersEmail.value = '';
+                    campaignReplyOffersEmail.dataset.copyValue = '';
+                    campaignReplyOffersEmailGroup.setAttribute('hidden', 'hidden');
+                    return;
+                }
+
+                campaignReplyOffersEmail.value = offersEmail;
+                campaignReplyOffersEmail.dataset.copyValue = offersEmail;
+                campaignReplyOffersEmailGroup.removeAttribute('hidden');
+            }
+
             function normalizeCampaignReplyAddressValue(value) {
                 return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 300);
             }
@@ -4381,6 +4411,10 @@
                     return overrideValue;
                 }
                 return normalizeCampaignReplyAddressValue(conversation?.propertyAddress || '');
+            }
+
+            function getConversationOffersEmail(conversation) {
+                return String(conversation?.offersEmail || '').trim();
             }
 
             function setConversationPropertyAddressOverride(conversationKey, value) {
@@ -6138,6 +6172,7 @@
                 if (!conversation) {
                     campaignReplyTitle.textContent = 'Choose a Twilio thread';
                     setCampaignReplyAddress('');
+                    setCampaignReplyOffersEmail('');
                     campaignReplySubtitle.textContent = 'Open a contact on the left to review replies and send a direct response.';
                     const empty = document.createElement('p');
                     empty.className = 'campaign-reply-thread-empty';
@@ -6151,6 +6186,7 @@
 
                 campaignReplyTitle.textContent = conversation.contactName || conversation.contactPhone || 'Twilio contact';
                 setCampaignReplyAddress(getConversationPropertyAddress(conversation));
+                setCampaignReplyOffersEmail(getConversationOffersEmail(conversation));
                 campaignReplySubtitle.textContent = conversation.campaignName
                     ? `${conversation.contactPhone} • ${conversation.campaignName}${conversation.isBlocked ? ' • Outbound blocked, inbound allowed' : ''}`
                     : `${conversation.contactPhone} • Direct Twilio thread${conversation.isBlocked ? ' • Outbound blocked, inbound allowed' : ''}`;
@@ -6615,7 +6651,8 @@
                             campaignReplyStatus.textContent = 'Choose a date and time before scheduling this Twilio reply.';
                         } else {
                             campaignSendStatus.textContent = 'Choose a date and time before scheduling this Twilio campaign.';
-                        }
+                                    area: conversation.propertyAddress || '',
+                                    offersEmail: getConversationOffersEmail(conversation)
                         return;
                     }
 
@@ -6765,6 +6802,32 @@
                         campaignReplyStatus.textContent = 'Property address copied.';
                     } catch (error) {
                         campaignReplyStatus.textContent = 'Could not copy the property address.';
+                    }
+                });
+            }
+
+            if (campaignReplyCopyOffersEmailButton) {
+                campaignReplyCopyOffersEmailButton.addEventListener('click', async () => {
+                    const activeConversation = twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
+                    const value = String(
+                        getConversationOffersEmail(activeConversation)
+                        || campaignReplyOffersEmail?.dataset.copyValue
+                        || campaignReplyOffersEmail?.value
+                        || ''
+                    ).trim();
+                    if (!value) {
+                        campaignReplyStatus.textContent = 'No offer email is available for this chat.';
+                        return;
+                    }
+
+                    try {
+                        const copied = await copyTextToClipboard(value);
+                        if (!copied) {
+                            throw new Error('Copy command was rejected.');
+                        }
+                        campaignReplyStatus.textContent = 'Offer email copied.';
+                    } catch (error) {
+                        campaignReplyStatus.textContent = 'Could not copy the offer email.';
                     }
                 });
             }
