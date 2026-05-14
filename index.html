@@ -21,7 +21,7 @@
                 const HOMEPAGE_THEME_KEY = 'homepageTheme';
                 const HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
                 const USER_THEME_KEY = 'dashboardThemeByUser';
-                const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
+                const ALLOWED_PUBLIC_PAGE_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
                 const readJson = (key) => {
                     try {
                         return JSON.parse(localStorage.getItem(key) || '{}');
@@ -67,11 +67,15 @@
                 ).trim().toLowerCase();
                 let theme = storedThemeValue || 'beach';
 
+                if (theme === 'blacklight') {
+                    theme = 'dark';
+                }
+
                 if (theme === 'system') {
                     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
-                if (!PUBLIC_HOMEPAGE_THEMES.includes(theme)) {
+                if (!ALLOWED_PUBLIC_PAGE_THEMES.includes(theme)) {
                     theme = 'beach';
                 }
 
@@ -4431,11 +4435,19 @@
             const USER_THEME_KEY = 'dashboardThemeByUser';
             const BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
             const HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY = 'homepageLiquidSmokeEnabledByUser';
-            const PUBLIC_HOMEPAGE_THEMES = ['beach', 'sunset', 'cyberpunk'];
+            const ALLOWED_PUBLIC_PAGE_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
             const THEME_LABELS = {
+                dark: 'Dark',
+                light: 'Light',
                 beach: 'Beach',
+                cloud: 'Cloud',
+                swamp: 'Swamp',
                 sunset: 'Sunset',
-                cyberpunk: 'Cyberpunk'
+                space: 'Space',
+                cyberpunk: 'Cyberpunk',
+                japan: 'Japan',
+                holloween: 'Holloween',
+                christmas: 'Christmas'
             };
             const DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS = Object.freeze({
                 size: 0.42,
@@ -4472,25 +4484,41 @@
                 const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
                 return {
                     userKey,
+                    email,
+                    name,
                     isAuthenticated: Boolean(authToken && (email || name)),
                     hasIdentity: Boolean(email || String(user.name || (canUseProfileIdentity ? profile.name : '') || '').trim())
                 };
             };
 
             const getAvailableHomepageThemes = () => {
-                return PUBLIC_HOMEPAGE_THEMES;
+                return ALLOWED_PUBLIC_PAGE_THEMES;
             };
 
             const resolveTheme = (value) => {
                 const normalized = String(value || '').trim().toLowerCase();
-                return PUBLIC_HOMEPAGE_THEMES.includes(normalized) ? normalized : 'beach';
+                if (normalized === 'blacklight') {
+                    return 'dark';
+                }
+                if (normalized === 'system') {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                return ALLOWED_PUBLIC_PAGE_THEMES.includes(normalized) ? normalized : 'beach';
+            };
+
+            const getThemeLabel = (theme) => {
+                const normalized = resolveTheme(theme);
+                if (THEME_LABELS[normalized]) {
+                    return THEME_LABELS[normalized];
+                }
+                return normalized.replace(/[-_]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()) || 'Beach';
             };
 
             const getStoredThemeValue = () => {
-                const { isAuthenticated, userKey } = getUserThemeContext();
-                const normalizedName = String((getUserThemeContext().name) || '').trim().toLowerCase().replace(/\s+/g, '-');
-                const email = String((getUserThemeContext().email) || '').trim().toLowerCase();
-                const candidateKeys = Array.from(new Set([userKey, email, normalizedName, 'default-user'].filter(Boolean)));
+                const { isAuthenticated, userKey, name, email } = getUserThemeContext();
+                const normalizedName = String(name || '').trim().toLowerCase().replace(/\s+/g, '-');
+                const normalizedEmail = String(email || '').trim().toLowerCase();
+                const candidateKeys = Array.from(new Set([userKey, normalizedEmail, normalizedName, 'default-user'].filter(Boolean)));
                 const homepageThemeStore = readJson(HOMEPAGE_THEME_STORE_KEY);
                 const themeStore = readJson(USER_THEME_KEY);
                 const homepageTheme = String(localStorage.getItem(HOMEPAGE_THEME_KEY) || '').trim().toLowerCase();
@@ -4687,12 +4715,13 @@
                 const themeSwitchLabel = document.getElementById('homepage-theme-label');
                 const themeSwitchButton = document.getElementById('homepage-theme-switch');
                 const blacklightSettingsButton = document.getElementById('homepage-blacklight-settings-toggle');
+                const themeLabel = getThemeLabel(activeTheme);
                 if (themeSwitchLabel) {
-                    themeSwitchLabel.textContent = THEME_LABELS[activeTheme] || 'Beach';
+                    themeSwitchLabel.textContent = themeLabel;
                 }
                 if (themeSwitchButton) {
                     themeSwitchButton.setAttribute('data-theme-choice', activeTheme);
-                    themeSwitchButton.setAttribute('aria-label', `Switch homepage theme. Current theme: ${THEME_LABELS[activeTheme] || 'Beach'}`);
+                    themeSwitchButton.setAttribute('aria-label', `Switch homepage theme. Current theme: ${themeLabel}`);
                 }
                 if (blacklightSettingsButton) {
                     const shouldShowBlacklightSettings = HOMEPAGE_LIQUID_SMOKE_THEMES.has(activeTheme);

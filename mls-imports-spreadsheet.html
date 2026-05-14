@@ -2758,6 +2758,7 @@
                 const source = rowData && typeof rowData === 'object' ? rowData : {};
                 const candidates = [
                     { key: 'laCell', label: 'LA Cell', value: source.laCell },
+                    { key: 'laDirect', label: 'LA Direct', value: source.laDirect },
                     { key: 'loPhone', label: 'LO Phone', value: source.loPhone }
                 ];
                 const seen = new Set();
@@ -2828,6 +2829,7 @@
             function getPreferredSmsPhone(rowData) {
                 const source = rowData && typeof rowData === 'object' ? rowData : {};
                 return normalizeCellValue(source.laCell)
+                    || normalizeCellValue(source.laDirect)
                     || normalizeCellValue(source.loPhone)
                     || '';
             }
@@ -2846,7 +2848,7 @@
                 const phoneOption = chooseSmsPhoneOption(rowData);
                 const recipientPhone = normalizeCellValue(phoneOption && phoneOption.phone);
                 if (!recipientPhone) {
-                    throw new Error('Add the LA Cell or LO Phone before sending a Twilio message.');
+                    throw new Error('Add the LA Cell, LA Direct, or LO Phone before sending a Twilio message.');
                 }
 
                 const hasPriorTwilioHistory = await hasTwilioHistoryForPhone(recipientPhone, authToken);

@@ -24,8 +24,10 @@ const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
 const STEVE_ADMIN_BYPASS_CODE = '123777';
 const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
 const LOGIN_HOMEPAGE_THEME_KEY = 'homepageTheme';
+const LOGIN_HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
 const LOGIN_THEME_STORAGE_KEY = 'dashboardThemeByUser';
 const LOGIN_THEME_OPTIONS = Object.freeze(['beach', 'sunset', 'cyberpunk']);
+const LOGIN_ALLOWED_THEMES = Object.freeze(['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas']);
 const LOGIN_THEME_LABELS = Object.freeze({
   beach: 'Beach',
   sunset: 'Sunset',
@@ -69,10 +71,21 @@ function readLocalJson(key) {
 
 function resolveLoginTheme(theme) {
   const normalizedTheme = String(theme || '').trim().toLowerCase();
-  return LOGIN_THEME_OPTIONS.includes(normalizedTheme) ? normalizedTheme : 'beach';
+  if (normalizedTheme === 'blacklight') {
+    return 'dark';
+  }
+  if (normalizedTheme === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return LOGIN_ALLOWED_THEMES.includes(normalizedTheme) ? normalizedTheme : 'beach';
 }
 
-function getLoginThemeUserKey() {
+function getLoginThemeLabel(theme) {
+  const resolvedTheme = resolveLoginTheme(theme);
+  return LOGIN_THEME_LABELS[resolvedTheme] || resolvedTheme.replace(/[-_]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()) || 'Beach';
+}
+
+function getLoginThemeUserContext() {
   const storedUser = readLocalJson('user');
   const storedProfile = readLocalJson('userProfile');
   const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
@@ -81,21 +94,51 @@ function getLoginThemeUserKey() {
   const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
   const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
   const name = String(storedUser && storedUser.name || (canUseProfileIdentity && storedProfile && storedProfile.name) || 'User').trim();
-  return email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+  return {
+    email,
+    name,
+    userKey: email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user'
+  };
+}
+
+function getLoginThemeStorageKeys() {
+  const context = getLoginThemeUserContext();
+  const normalizedName = String(context.name || '').trim().toLowerCase().replace(/\s+/g, '-');
+  return Array.from(new Set([context.userKey, context.email, normalizedName, 'default-user'].filter(Boolean)));
+}
+
+function getStoredLoginTheme() {
+  const homepageThemeStore = readLocalJson(LOGIN_HOMEPAGE_THEME_STORE_KEY) || {};
+  const themeStore = readLocalJson(LOGIN_THEME_STORAGE_KEY) || {};
+  const candidateKeys = getLoginThemeStorageKeys();
+  const scopedHomepageTheme = candidateKeys
+    .map((key) => homepageThemeStore[key])
+    .find((value) => typeof value === 'string' && value.trim());
+  const scopedDashboardTheme = candidateKeys
+    .map((key) => themeStore[key])
+    .map((entry) => (entry && typeof entry === 'object' ? entry.value : entry))
+    .find((value) => typeof value === 'string' && value.trim());
+
+  return resolveLoginTheme(scopedHomepageTheme || scopedDashboardTheme || localStorage.getItem(LOGIN_HOMEPAGE_THEME_KEY) || localStorage.getItem('theme') || 'beach');
 }
 
 function persistLoginTheme(theme) {
   const resolvedTheme = resolveLoginTheme(theme);
+  const homepageThemeStore = readLocalJson(LOGIN_HOMEPAGE_THEME_STORE_KEY) || {};
   const themeStore = readLocalJson(LOGIN_THEME_STORAGE_KEY) || {};
-  const userKey = getLoginThemeUserKey();
-  const currentEntry = themeStore[userKey] && typeof themeStore[userKey] === 'object'
-    ? themeStore[userKey]
-    : {};
-  themeStore[userKey] = {
-    ...currentEntry,
-    value: resolvedTheme,
-    updatedAt: Date.now()
-  };
+  const userKeys = getLoginThemeStorageKeys();
+  userKeys.forEach((userKey) => {
+    const currentEntry = themeStore[userKey] && typeof themeStore[userKey] === 'object'
+      ? themeStore[userKey]
+      : {};
+    themeStore[userKey] = {
+      ...currentEntry,
+      value: resolvedTheme,
+      updatedAt: Date.now()
+    };
+    homepageThemeStore[userKey] = resolvedTheme;
+  });
+  localStorage.setItem(LOGIN_HOMEPAGE_THEME_STORE_KEY, JSON.stringify(homepageThemeStore));
   localStorage.setItem(LOGIN_THEME_STORAGE_KEY, JSON.stringify(themeStore));
   localStorage.setItem(LOGIN_HOMEPAGE_THEME_KEY, resolvedTheme);
   localStorage.setItem('theme', resolvedTheme);
@@ -117,12 +160,13 @@ function applyLoginTheme(theme) {
 
   const loginThemeLabel = document.getElementById('login-theme-label');
   const loginThemeSwitch = document.getElementById('login-theme-switch');
+  const themeLabel = getLoginThemeLabel(resolvedTheme);
   if (loginThemeLabel) {
-    loginThemeLabel.textContent = LOGIN_THEME_LABELS[resolvedTheme] || 'Beach';
+    loginThemeLabel.textContent = themeLabel;
   }
   if (loginThemeSwitch) {
     loginThemeSwitch.setAttribute('data-theme-choice', resolvedTheme);
-    loginThemeSwitch.setAttribute('aria-label', `Switch login page theme. Current theme: ${LOGIN_THEME_LABELS[resolvedTheme] || 'Beach'}`);
+    loginThemeSwitch.setAttribute('aria-label', `Switch login page theme. Current theme: ${themeLabel}`);
   }
 
   persistLoginTheme(resolvedTheme);
@@ -351,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let pendingTwoFactorChallenge = '';
 
   if (loginThemeSwitchButton) {
-    applyLoginTheme(resolveLoginTheme(document.documentElement.getAttribute('data-theme')));
+    applyLoginTheme(getStoredLoginTheme());
     loginThemeSwitchButton.addEventListener('click', function () {
       const activeTheme = resolveLoginTheme(document.documentElement.getAttribute('data-theme'));
       const activeIndex = LOGIN_THEME_OPTIONS.indexOf(activeTheme);
@@ -360,11 +404,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     window.addEventListener('storage', function (event) {
-      if (!event || (event.key && ![LOGIN_THEME_STORAGE_KEY, 'homepageTheme'].includes(event.key))) {
+      if (!event || (event.key && ![LOGIN_THEME_STORAGE_KEY, LOGIN_HOMEPAGE_THEME_STORE_KEY, LOGIN_HOMEPAGE_THEME_KEY, 'theme'].includes(event.key))) {
         return;
       }
 
-      applyLoginTheme(resolveLoginTheme(document.documentElement.getAttribute('data-theme')));
+      applyLoginTheme(getStoredLoginTheme());
     });
   }
 
