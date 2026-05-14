@@ -7041,9 +7041,14 @@
 
             syncCampaignReplyInputHeight();
 
-            loadTwilioStatus();
-            fetchCampaignOutreachDashboard();
-            loadTwilioInboxConversations({ markRead: true });
+            (async () => {
+                await loadTwilioStatus();
+                fetchCampaignOutreachDashboard();
+                await loadTwilioInboxConversations({ markRead: true });
+            })().catch(() => {
+                fetchCampaignOutreachDashboard();
+                loadTwilioInboxConversations({ markRead: true });
+            });
 
             if (!twilioInboxRefreshHandle) {
                 twilioInboxRefreshHandle = window.setInterval(() => {
