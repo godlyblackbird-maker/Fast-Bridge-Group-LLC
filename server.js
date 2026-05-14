@@ -11647,14 +11647,32 @@ function serializeUser(userLike) {
   }
 
   const avatarUploadId = String(userLike.avatar_upload_id || userLike.avatarUploadId || '').trim();
+  const normalizedEmail = normalizeKnownEmail(userLike.email || '');
 
   return {
     id: userLike.id,
     name: userLike.name,
-    email: userLike.email,
-    role: isKnownAdminEmail(userLike.email) ? 'admin' : String(userLike.role || '').trim().toLowerCase(),
+    email: normalizedEmail || String(userLike.email || '').trim().toLowerCase(),
+    role: isKnownAdminEmail(normalizedEmail || userLike.email) ? 'admin' : String(userLike.role || '').trim().toLowerCase(),
     avatarUploadId,
     avatarImage: buildProfileAvatarContentPath(avatarUploadId)
+  };
+}
+
+function normalizeAuthPayload(userLike) {
+  if (!userLike || typeof userLike !== 'object') {
+    return null;
+  }
+
+  const normalizedEmail = normalizeKnownEmail(userLike.email || '');
+  const normalizedRole = isKnownAdminEmail(normalizedEmail)
+    ? 'admin'
+    : String(userLike.role || '').trim().toLowerCase();
+
+  return {
+    ...userLike,
+    email: normalizedEmail || String(userLike.email || '').trim().toLowerCase(),
+    role: normalizedRole
   };
 }
 
@@ -16083,7 +16101,7 @@ function requireAuth(req, res) {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = normalizeAuthPayload(jwt.verify(token, JWT_SECRET));
     const sessionId = String(decoded?.sessionId || '').trim();
     if (sessionId && revokedSessionIds.has(sessionId)) {
       res.status(401).json({ error: 'Session has expired. Please sign in again.' });
@@ -16111,7 +16129,7 @@ function verifyAuthTokenValue(token) {
   }
 
   try {
-    const decoded = jwt.verify(normalizedToken, JWT_SECRET);
+    const decoded = normalizeAuthPayload(jwt.verify(normalizedToken, JWT_SECRET));
     const sessionId = String(decoded?.sessionId || '').trim();
     if (sessionId && revokedSessionIds.has(sessionId)) {
       return null;
