@@ -3665,6 +3665,7 @@
                 isAdmin: false,
                 ownerEmail: ''
             };
+            let hasAttemptedAutomaticTwilioInboxRecovery = false;
 
             function escapeCampaignReplyCopyHtml(value) {
                 return String(value || '')
@@ -6313,6 +6314,19 @@
                     }
 
                     twilioInboxConversations = Array.isArray(data.conversations) ? data.conversations : [];
+                    if (!twilioInboxConversations.length
+                        && twilioMessagingAccessState.isAdmin
+                        && campaignRecoverInboxButton
+                        && typeof campaignRecoverInboxButton.runTwilioInboxRecovery === 'function'
+                        && !options.skipAutoRecover
+                        && !hasAttemptedAutomaticTwilioInboxRecovery) {
+                        hasAttemptedAutomaticTwilioInboxRecovery = true;
+                        const recoveryResult = await campaignRecoverInboxButton.runTwilioInboxRecovery({ confirm: false });
+                        if (recoveryResult && Number(recoveryResult.totalRows) > 0) {
+                            return;
+                        }
+                    }
+
                     pruneDismissedUnreadConversations();
                     pruneDismissedNoRepliesConversations();
                     publishTwilioUnreadState(twilioInboxConversations);
@@ -6781,16 +6795,19 @@
             }
 
             if (campaignRecoverInboxButton) {
-                campaignRecoverInboxButton.addEventListener('click', async () => {
-                    if (!window.confirm('Recover the live Twilio inbox from Twilio message history? This can take a bit and should only be used when inbox rows are missing.')) {
-                        return;
+                const runTwilioInboxRecovery = async (options = {}) => {
+                    const shouldConfirm = options.confirm !== false;
+                    if (shouldConfirm && !window.confirm('Recover the live Twilio inbox from Twilio message history? This can take a bit and should only be used when inbox rows are missing.')) {
+                        return null;
                     }
 
                     const originalLabel = campaignRecoverInboxButton.textContent;
                     campaignRecoverInboxButton.disabled = true;
                     campaignRecoverInboxButton.textContent = 'Recovering...';
                     if (campaignSendStatus) {
-                        campaignSendStatus.textContent = 'Recovering Twilio inbox history...';
+                        campaignSendStatus.textContent = shouldConfirm
+                            ? 'Recovering Twilio inbox history...'
+                            : 'Inbox is empty. Recovering Twilio history automatically...';
                     }
 
                     try {
@@ -6808,16 +6825,24 @@
                             campaignSendStatus.textContent = `Recovered ${Number(result.restoredCount) || 0} Twilio row${Number(result.restoredCount) === 1 ? '' : 's'}. Inbox now has ${Number(result.totalRows) || 0} row${Number(result.totalRows) === 1 ? '' : 's'}.`;
                         }
                         await loadTwilioStatus();
-                        await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
+                        await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false, skipAutoRecover: true });
+                        return result;
                     } catch (error) {
                         if (campaignSendStatus) {
                             campaignSendStatus.textContent = error.message || 'Unable to recover the Twilio inbox.';
                         }
+                        return null;
                     } finally {
                         campaignRecoverInboxButton.textContent = originalLabel;
                         campaignRecoverInboxButton.disabled = false;
                     }
+                };
+
+                campaignRecoverInboxButton.addEventListener('click', async () => {
+                    await runTwilioInboxRecovery({ confirm: true });
                 });
+
+                campaignRecoverInboxButton.runTwilioInboxRecovery = runTwilioInboxRecovery;
             }
 
             if (campaignReplyCopyAddressButton) {
