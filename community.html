@@ -700,9 +700,14 @@
         .community-bottom-messages-card .messages-chat-reaction-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 8px;
             margin-top: 8px;
+        }
+
+        .community-bottom-messages-card .messages-chat-reaction-row.is-empty {
+            margin-top: 0;
+            min-height: 0;
         }
 
         .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-chat-reaction-row {
@@ -753,8 +758,14 @@
         }
 
         .community-bottom-messages-card .messages-chat-reaction-menu {
-            position: relative;
-            flex-shrink: 0;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            z-index: 4;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble.can-edit .messages-chat-reaction-menu {
+            right: 62px;
         }
 
         .community-bottom-messages-card .messages-chat-reaction-menu summary {
@@ -769,18 +780,31 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             padding: 0;
-            background: rgba(15, 23, 42, 0.12);
+            background: rgba(255, 255, 255, 0.96);
             color: #111827;
-            font-size: 18px;
+            font-size: 15px;
             line-height: 1;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(2px) scale(0.92);
+            transition: opacity 0.16s ease, transform 0.16s ease, background 0.16s ease;
         }
 
         .community-bottom-messages-card .messages-chat-bubble.outgoing .messages-chat-reaction-trigger {
-            background: rgba(255, 255, 255, 0.18);
-            color: #ffffff;
+            background: rgba(247, 249, 252, 0.96);
+            color: #0f172a;
+        }
+
+        .community-bottom-messages-card .messages-chat-bubble:hover .messages-chat-reaction-trigger,
+        .community-bottom-messages-card .messages-chat-bubble:focus-within .messages-chat-reaction-trigger,
+        .community-bottom-messages-card .messages-chat-reaction-menu[open] .messages-chat-reaction-trigger {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
         }
 
         .community-bottom-messages-card .messages-chat-reaction-picker {

@@ -34,6 +34,13 @@
         minute: '2-digit'
     });
     const MESSAGE_REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+    const ISAAC_PREVIEW_USER_ID = 900001;
+    const ISAAC_PREVIEW_FALLBACK_REACTION_USER_ID = 900099;
+    const ISAAC_PREVIEW_ALLOWED_EMAILS = new Set([
+        'isaac.haro@fastbridgegroupllc.com',
+        'isaacs.hesed@fastbridgegroup.com',
+        'isaacs.hesed@gmail.com'
+    ]);
 
     let selectedUserId = null;
     let selectedUserRecord = null;
@@ -43,7 +50,7 @@
     let pendingAttachmentItems = [];
     let editingMessageState = null;
 
-    function getCurrentMessagingUserId() {
+    function getCurrentMessagingUserContext() {
         const parseStoredObject = (key) => {
             try {
                 return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || '{}');
@@ -54,10 +61,136 @@
 
         const user = parseStoredObject('user');
         const profile = parseStoredObject('userProfile');
-        return Number(user.id || profile.id) || 0;
+        return {
+            id: Number(user.id || profile.id) || 0,
+            email: String(user.email || profile.email || '').trim().toLowerCase(),
+            name: String(user.name || profile.name || '').trim(),
+            role: String(user.role || profile.role || '').trim().toLowerCase()
+        };
     }
 
-    const currentMessagingUserId = getCurrentMessagingUserId();
+    const currentMessagingUser = getCurrentMessagingUserContext();
+    const currentMessagingUserId = currentMessagingUser.id;
+
+    function canShowIsaacPreviewConversation() {
+        const normalizedName = String(currentMessagingUser.name || '').trim().toLowerCase();
+        return currentMessagingUser.role === 'admin'
+            && (ISAAC_PREVIEW_ALLOWED_EMAILS.has(currentMessagingUser.email) || normalizedName === 'isaac haro');
+    }
+
+    function getPreviewReactionUserId() {
+        return currentMessagingUserId || ISAAC_PREVIEW_FALLBACK_REACTION_USER_ID;
+    }
+
+    function isIsaacPreviewUserId(userId) {
+        return Number.parseInt(String(userId || ''), 10) === ISAAC_PREVIEW_USER_ID;
+    }
+
+    function createIsaacPreviewUserRecord() {
+        return {
+            id: ISAAC_PREVIEW_USER_ID,
+            name: 'Preview Contact Demo',
+            email: 'preview.demo@fast.local',
+            role: 'preview demo',
+            unreadCount: 2,
+            lastLogin: null,
+            lastMessage: 'This is a fake thread for Isaac only. Test hover reactions here.',
+            lastMessageAt: new Date(Date.now() - (2 * 60000)).toISOString()
+        };
+    }
+
+    function buildIsaacPreviewMessages() {
+        const previewReactionUserId = getPreviewReactionUserId();
+        const previewContactUserId = ISAAC_PREVIEW_USER_ID;
+        const now = Date.now();
+        return [
+            {
+                id: 90000101,
+                senderUserId: previewContactUserId,
+                recipientUserId: previewReactionUserId,
+                body: 'Hey Isaac, this is a fake preview contact so you can test the hover emoji reaction bubble without messaging a real FAST user.',
+                reactions: [
+                    { emoji: '👀', userId: previewContactUserId, createdAt: new Date(now - (44 * 60000)).toISOString() }
+                ],
+                createdAt: new Date(now - (46 * 60000)).toISOString(),
+                editedAt: null,
+                editWindowEndsAt: null,
+                canEdit: false,
+                readAt: new Date(now - (45 * 60000)).toISOString(),
+                direction: 'incoming'
+            },
+            {
+                id: 90000102,
+                senderUserId: previewReactionUserId,
+                recipientUserId: previewContactUserId,
+                body: 'Perfect. I only want this preview thread visible to my Isaac admin session, and I want the reaction bubble to show on hover at the top-right edge.',
+                reactions: [
+                    { emoji: '🔥', userId: previewReactionUserId, createdAt: new Date(now - (31 * 60000)).toISOString() }
+                ],
+                createdAt: new Date(now - (34 * 60000)).toISOString(),
+                editedAt: null,
+                editWindowEndsAt: null,
+                canEdit: false,
+                readAt: new Date(now - (33 * 60000)).toISOString(),
+                direction: 'outgoing'
+            },
+            {
+                id: 90000103,
+                senderUserId: previewContactUserId,
+                recipientUserId: previewReactionUserId,
+                body: 'That is exactly it. Hover any of these bubbles and click the emoji icon to see how reactions feel on a realistic-looking thread.',
+                reactions: [
+                    { emoji: '👍', userId: previewContactUserId, createdAt: new Date(now - (14 * 60000)).toISOString() },
+                    { emoji: '❤️', userId: previewReactionUserId, createdAt: new Date(now - (12 * 60000)).toISOString() }
+                ],
+                createdAt: new Date(now - (16 * 60000)).toISOString(),
+                editedAt: null,
+                editWindowEndsAt: null,
+                canEdit: false,
+                readAt: new Date(now - (15 * 60000)).toISOString(),
+                direction: 'incoming'
+            }
+        ];
+    }
+
+    let isaacPreviewMessages = buildIsaacPreviewMessages();
+
+    function injectIsaacPreviewUser(users) {
+        const safeUsers = Array.isArray(users) ? users.slice() : [];
+        if (!canShowIsaacPreviewConversation()) {
+            return safeUsers;
+        }
+
+        const previewUser = createIsaacPreviewUserRecord();
+        return [previewUser, ...safeUsers.filter((user) => Number(user && user.id) !== ISAAC_PREVIEW_USER_ID)];
+    }
+
+    function toggleIsaacPreviewMessageReaction(message, emoji) {
+        const normalizedMessageId = Number(message && message.id) || 0;
+        const reactingUserId = getPreviewReactionUserId();
+        isaacPreviewMessages = isaacPreviewMessages.map((entry) => {
+            if (Number(entry && entry.id) !== normalizedMessageId) {
+                return entry;
+            }
+
+            const currentReactions = Array.isArray(entry.reactions) ? entry.reactions.slice() : [];
+            const existingIndex = currentReactions.findIndex((reaction) => String(reaction && reaction.emoji || '').trim() === emoji && Number(reaction && reaction.userId) === reactingUserId);
+            if (existingIndex >= 0) {
+                currentReactions.splice(existingIndex, 1);
+            } else {
+                currentReactions.push({
+                    emoji,
+                    userId: reactingUserId,
+                    createdAt: new Date().toISOString()
+                });
+            }
+
+            return {
+                ...entry,
+                reactions: currentReactions
+            };
+        });
+    }
 
     function escapeHtml(value) {
         return String(value || '')
@@ -185,6 +318,13 @@
             return;
         }
 
+        if (isIsaacPreviewUserId(selectedUserId)) {
+            toggleIsaacPreviewMessageReaction(message, emoji);
+            renderConversation(isaacPreviewMessages);
+            setChatStatus('Updated the Isaac-only preview reaction locally.', false);
+            return;
+        }
+
         setChatStatus('Updating reaction...', false);
         await apiRequest(`/api/messages/conversations/${selectedUserId}/messages/${message.id}/reactions`, {
             method: 'PUT',
@@ -198,13 +338,17 @@
         if (!message || !Number(message.id)) {
             return null;
         }
+        const reactionGroups = buildMessageReactionGroups(message);
 
         const row = document.createElement('div');
         row.className = 'messages-chat-reaction-row';
+        if (!reactionGroups.length) {
+            row.classList.add('is-empty');
+        }
 
         const list = document.createElement('div');
         list.className = 'messages-chat-reaction-list';
-        buildMessageReactionGroups(message).forEach((reaction) => {
+        reactionGroups.forEach((reaction) => {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'messages-chat-reaction-pill';
@@ -230,7 +374,7 @@
         const trigger = document.createElement('summary');
         trigger.className = 'messages-chat-reaction-trigger';
         trigger.setAttribute('aria-label', 'Add emoji reaction');
-        trigger.textContent = '+';
+    trigger.textContent = '😊';
         menu.appendChild(trigger);
 
         const picker = document.createElement('div');
@@ -915,7 +1059,7 @@
     async function loadUsers(options) {
         const config = options && typeof options === 'object' ? options : {};
         const payload = await apiRequest('/api/messages/users');
-        renderUsers(payload.users || []);
+        renderUsers(injectIsaacPreviewUser(payload.users || []));
 
         if (!selectedUserId && usersCache.length > 0) {
             await openConversation(usersCache[0].id, { focusInput: false, suppressUserReload: true });
@@ -950,6 +1094,20 @@
             renderUsers(usersCache);
         }
 
+        if (isIsaacPreviewUserId(normalizedUserId) && canShowIsaacPreviewConversation()) {
+            selectedUserRecord = createIsaacPreviewUserRecord();
+            panelTitle.textContent = selectedUserRecord.name;
+            panelSubtitle.textContent = `${selectedUserRecord.email} • ${selectedUserRecord.role}`;
+            clearPendingSharedProperty();
+            pendingAttachmentItems = [];
+            renderPendingAttachments();
+            cancelMessageEdit({ preserveInput: false });
+            setComposerEnabled(false);
+            renderConversation(isaacPreviewMessages);
+            setChatStatus('Preview only. This fake contact and messages are visible only to Isaac and are not saved anywhere.', false);
+            return;
+        }
+
         setChatStatus('Loading conversation...', false);
         const payload = await apiRequest(`/api/messages/conversations/${normalizedUserId}`);
         selectedUserRecord = payload.otherUser || null;
@@ -974,6 +1132,11 @@
 
     async function sendMessage() {
         if (!selectedUserId) {
+            return;
+        }
+
+        if (isIsaacPreviewUserId(selectedUserId)) {
+            setChatStatus('This is an Isaac-only preview thread. It does not send or save messages.', true);
             return;
         }
 
