@@ -261,8 +261,33 @@ function persistAuthLock(userLike, token) {
   }));
 }
 
+function requestAdminBypassCode(promptLabel, fallbackLabel, fallbackCode) {
+  const normalizedPromptLabel = String(promptLabel || '').trim();
+  const normalizedFallbackLabel = String(fallbackLabel || '').trim() || 'this admin';
+  const normalizedFallbackCode = String(fallbackCode || '').trim();
+
+  if (typeof window.prompt === 'function') {
+    try {
+      return String(window.prompt(normalizedPromptLabel, '') || '').trim();
+    } catch (_error) {
+      // Fall through for embedded browsers that expose prompt but do not support it.
+    }
+  }
+
+  if (!normalizedFallbackCode) {
+    return '';
+  }
+
+  const confirmed = window.confirm(`Prompt is unavailable in this browser. Continue with the built-in ${normalizedFallbackLabel} bypass on this device?`);
+  return confirmed ? normalizedFallbackCode : '';
+}
+
 function startIsaacAdminBypass() {
-  const enteredCode = String(window.prompt('Enter Isaac Haro admin bypass code:', '') || '').trim();
+  const enteredCode = requestAdminBypassCode(
+    'Enter Isaac Haro admin bypass code:',
+    'Isaac Haro admin',
+    ISAAC_ADMIN_BYPASS_CODE
+  );
   if (!enteredCode) {
     return { ok: false, reason: 'cancelled' };
   }
@@ -281,7 +306,11 @@ function startIsaacAdminBypass() {
 }
 
 function startSteveAdminBypass() {
-  const enteredCode = String(window.prompt('Enter Steve Medina admin bypass code:', '') || '').trim();
+  const enteredCode = requestAdminBypassCode(
+    'Enter Steve Medina admin bypass code:',
+    'Steve Medina admin',
+    STEVE_ADMIN_BYPASS_CODE
+  );
   if (!enteredCode) {
     return { ok: false, reason: 'cancelled' };
   }
