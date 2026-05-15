@@ -1441,6 +1441,7 @@
                 cameraStream: null,
                 micStream: null,
                 recorder: null,
+                outputStream: null,
                 recordedChunks: [],
                 timerInterval: null,
                 startedAt: 0,
@@ -2373,7 +2374,7 @@
 
             function hasDraggableCameraOverlay() {
                 const hasCamera = Boolean(state.cameraStream && cameraVideo.readyState >= 2);
-                return hasCamera && layoutSelect.value !== 'screen-only';
+                return hasCamera && layoutSelect.value === 'screen-camera';
             }
 
             function getPreviewPointerPosition(event) {
@@ -2631,7 +2632,11 @@
                     stopStream(state.cameraStream);
                     state.cameraStream = stream;
                     await attachVideoStream(cameraVideo, stream);
+                    if (layoutSelect && layoutSelect.value !== 'screen-camera') {
+                        layoutSelect.value = 'screen-camera';
+                    }
                     updateStudioState();
+                    saveStudioSessionSnapshot();
                 } catch (error) {
                     console.error('Unable to start camera.', error);
                     setSourceWarning('Camera access was not granted. Allow camera permissions for this page and try again.');
@@ -2903,17 +2908,11 @@
             }
 
             function stopRecording() {
-                if (!state.recordingActive && !state.recordingPending) {
+                if (!state.recorder) {
                     return;
                 }
 
-                const channel = ensureRecorderChannel();
-                if (channel) {
-                    channel.postMessage({ type: 'stop-recording', sessionId: state.recordingSessionId || '' });
-                }
-                if (state.recordingHostWindow && !state.recordingHostWindow.closed) {
-                    state.recordingHostWindow.postMessage({ type: 'stop-recording', sessionId: state.recordingSessionId || '' }, window.location.origin);
-                }
+                state.recorder.stop();
             }
 
             async function startRecording() {
@@ -2927,24 +2926,74 @@
 
                 try {
                     saveStudioSessionSnapshot();
-                    ensureRecorderChannel();
-                    const payload = getRecorderPayload();
-                    await ensureRecorderHostWindow();
-                    setStoredRecorderStatus({ active: true, sessionId: payload.sessionId, startedAt: payload.startedAt });
-                    setRecorderActiveState(false, {
-                        pending: true,
-                        sessionId: payload.sessionId,
-                        startedAt: payload.startedAt
+                    setRecordingWarning('');
+                    resetAudioMix();
+                    stopRenderLoop();
+                    renderFrame();
+
+                    const startedAt = Date.now();
+                    const sessionId = createRecordingSessionId();
+                    const stream = buildRecordingStream();
+                    const mimeType = getRecordingMimeType();
+
+                    state.recordedChunks = [];
+                    state.outputStream = stream;
+                    state.recorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
+                    state.recorder.addEventListener('dataavailable', (event) => {
+                        if (event.data && event.data.size > 0) {
+                            state.recordedChunks.push(event.data);
+                        }
                     });
-                    state.recordingHostWindow.postMessage({ type: 'start-recording', payload: payload }, window.location.origin);
+                    state.recorder.addEventListener('stop', () => {
+                        const finishedRecorder = state.recorder;
+                        const blob = new Blob(state.recordedChunks, {
+                            type: finishedRecorder ? finishedRecorder.mimeType || 'video/webm' : 'video/webm'
+                        });
+
+                        if (state.outputStream) {
+                            state.outputStream.getTracks().forEach((track) => track.stop());
+                        }
+                        state.outputStream = null;
+                        state.recorder = null;
+                        state.recordedChunks = [];
+                        resetAudioMix();
+                        setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
+                        setRecorderActiveState(false, { pending: false });
+                        addRecording(blob);
+                    }, { once: true });
+                    state.recorder.addEventListener('error', () => {
+                        if (state.outputStream) {
+                            state.outputStream.getTracks().forEach((track) => track.stop());
+                        }
+                        state.outputStream = null;
+                        state.recorder = null;
+                        state.recordedChunks = [];
+                        resetAudioMix();
+                        setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
+                        setRecorderActiveState(false, { pending: false });
+                        setRecordingWarning('Recording could not continue with the current browser settings.');
+                    }, { once: true });
+
+                    state.recorder.start(1000);
+                    setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
+                    setRecorderActiveState(true, {
+                        sessionId: sessionId,
+                        startedAt: startedAt,
+                        pending: false
+                    });
                 } catch (error) {
                     console.error('Unable to start recording.', error);
                     const message = error && error.message
                         ? error.message
                         : 'Recording could not start with the current browser settings.';
-                    setRecordingWarning(message.includes('blocked')
-                        ? 'The recorder helper window was blocked, so recording cannot continue in the background. Allow popups for this page and try again.'
-                        : message);
+                    if (state.outputStream) {
+                        state.outputStream.getTracks().forEach((track) => track.stop());
+                    }
+                    state.outputStream = null;
+                    state.recorder = null;
+                    state.recordedChunks = [];
+                    resetAudioMix();
+                    setRecordingWarning(message);
                     window.alert('Recording could not start with the current browser settings.');
                     setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
                     setRecorderActiveState(false, { pending: false });
@@ -2967,7 +3016,7 @@
                 setBadge(micBadge, hasMic ? 'Mic Live' : 'Mic Off', hasMic);
                 if (backgroundRecordingBadge) {
                     backgroundRecordingBadge.hidden = !isRecording;
-                    backgroundRecordingBadge.textContent = state.recordingPending ? 'Background Recorder Connecting' : 'Background Recording Active';
+                    backgroundRecordingBadge.textContent = 'Recording Active';
                 }
 
                 if (layoutLabel) {
@@ -2982,7 +3031,7 @@
                 stageStatus.textContent = hasScreen || hasCamera
                     ? 'Program view is live. Adjust layout and recording controls from the right panel.'
                     : (isRecording
-                        ? 'Recording is still running from the original studio session. Return here to stop it from this page.'
+                        ? 'Recording is in progress from this page. Stop it here when you are done.'
                         : 'Load a screen or camera source to start building the live program view.');
 
                 screenMeta.textContent = hasScreen ? 'Screen source is active and ready for recording.' : 'No screen is currently shared.';
@@ -3161,16 +3210,7 @@
             });
 
             restoreStudioSessionSnapshot();
-            ensureRecorderChannel();
-            const storedRecorderStatus = getStoredRecorderStatus();
-            if (storedRecorderStatus && storedRecorderStatus.active) {
-                setRecorderActiveState(true, {
-                    sessionId: storedRecorderStatus.sessionId || '',
-                    startedAt: storedRecorderStatus.startedAt || Date.now(),
-                    pending: false
-                });
-                requestRecorderStatus();
-            }
+            setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
 
             void populateMicrophoneDevices();
             setMicSettingsOpen(false);
