@@ -2588,6 +2588,29 @@
 
             async function attachVideoStream(videoNode, stream) {
                 videoNode.srcObject = stream;
+                if (!stream) {
+                    return;
+                }
+
+                if (videoNode.readyState < 2) {
+                    await new Promise((resolve) => {
+                        let settled = false;
+                        const finish = () => {
+                            if (settled) {
+                                return;
+                            }
+                            settled = true;
+                            videoNode.removeEventListener('loadeddata', finish);
+                            videoNode.removeEventListener('loadedmetadata', finish);
+                            resolve();
+                        };
+
+                        videoNode.addEventListener('loadeddata', finish, { once: true });
+                        videoNode.addEventListener('loadedmetadata', finish, { once: true });
+                        window.setTimeout(finish, 800);
+                    });
+                }
+
                 await videoNode.play();
             }
 
@@ -2928,8 +2951,6 @@
                     saveStudioSessionSnapshot();
                     setRecordingWarning('');
                     resetAudioMix();
-                    stopRenderLoop();
-                    renderFrame();
 
                     const startedAt = Date.now();
                     const sessionId = createRecordingSessionId();
