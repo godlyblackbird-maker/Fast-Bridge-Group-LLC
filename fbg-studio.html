@@ -1852,7 +1852,23 @@
             }
 
             function buildRecordingStream() {
-                const videoTrack = previewCanvas.captureStream(30).getVideoTracks()[0];
+                let videoTrack = null;
+                const layout = layoutSelect ? layoutSelect.value : 'screen-camera';
+
+                if (state.screenStream && (!state.cameraStream || layout === 'screen-only')) {
+                    const screenTrack = state.screenStream.getVideoTracks()[0];
+                    videoTrack = screenTrack ? screenTrack.clone() : null;
+                } else if (state.cameraStream && (!state.screenStream || layout === 'camera-only')) {
+                    const cameraTrack = state.cameraStream.getVideoTracks()[0];
+                    videoTrack = cameraTrack ? cameraTrack.clone() : null;
+                } else {
+                    videoTrack = previewCanvas.captureStream(30).getVideoTracks()[0] || null;
+                }
+
+                if (!videoTrack) {
+                    throw new Error('No video source is available for recording.');
+                }
+
                 const tracks = [videoTrack];
                 const audioStreams = [];
 
@@ -2706,7 +2722,23 @@
             }
 
             function buildRecordingStream() {
-                const videoTrack = previewCanvas.captureStream(30).getVideoTracks()[0];
+                let videoTrack = null;
+                const layout = layoutSelect ? layoutSelect.value : 'screen-camera';
+
+                if (state.screenStream && (!state.cameraStream || layout === 'screen-only')) {
+                    const screenTrack = state.screenStream.getVideoTracks()[0];
+                    videoTrack = screenTrack ? screenTrack.clone() : null;
+                } else if (state.cameraStream && (!state.screenStream || layout === 'camera-only')) {
+                    const cameraTrack = state.cameraStream.getVideoTracks()[0];
+                    videoTrack = cameraTrack ? cameraTrack.clone() : null;
+                } else {
+                    videoTrack = previewCanvas.captureStream(30).getVideoTracks()[0] || null;
+                }
+
+                if (!videoTrack) {
+                    throw new Error('No video source is available for recording.');
+                }
+
                 const tracks = [videoTrack];
 
                 const audioStreams = [];
