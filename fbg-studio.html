@@ -1199,6 +1199,14 @@
                                 </div>
                             </div>
                             <div class="studio-record-stack">
+                                <label>
+                                    <span class="studio-source-meta">Recording quality</span>
+                                    <select id="studio-recording-resolution" class="studio-select" aria-label="Recording quality">
+                                        <option value="1920x1080">1920 x 1080</option>
+                                        <option value="1280x720" selected>1280 x 720</option>
+                                        <option value="854x480">854 x 480</option>
+                                    </select>
+                                </label>
                                 <div class="studio-record-row">
                                     <button id="studio-record-toggle" class="studio-primary-button" type="button">Start Recording</button>
                                 </div>
@@ -1394,6 +1402,7 @@
             const micBadge = document.getElementById('studio-mic-badge');
             const stageStatus = document.getElementById('studio-stage-status');
             const backgroundRecordingBadge = document.getElementById('studio-background-recording-badge');
+            const resolutionBadge = document.getElementById('studio-resolution-badge');
             const recorderStatus = document.getElementById('studio-recorder-status');
             const outputFormatLabel = document.getElementById('studio-output-format');
             const recordingNote = document.getElementById('studio-recording-note');
@@ -1432,6 +1441,7 @@
             const micToggle = document.getElementById('studio-mic-toggle');
             const micStop = document.getElementById('studio-mic-stop');
             const recordToggle = document.getElementById('studio-record-toggle');
+            const recordingResolutionSelect = document.getElementById('studio-recording-resolution');
             const layoutSelect = document.getElementById('studio-layout');
             const cameraPositionSelect = document.getElementById('studio-camera-position');
             const cameraSizeSelect = document.getElementById('studio-camera-size');
@@ -1481,6 +1491,11 @@
             const RECORDER_BRIDGE_NAME = 'fbg-studio-recorder-bridge';
             const RECORDER_HOST_WINDOW_NAME = 'fbgStudioRecorderHostWindow';
             const RECORDER_STATUS_TIMEOUT_MS = 1800;
+            const RECORDING_RESOLUTION_PRESETS = {
+                '1920x1080': { width: 1920, height: 1080, label: '1920 x 1080' },
+                '1280x720': { width: 1280, height: 720, label: '1280 x 720' },
+                '854x480': { width: 854, height: 480, label: '854 x 480' }
+            };
 
             function clamp(value, min, max) {
                 return Math.min(Math.max(value, min), max);
@@ -1533,6 +1548,7 @@
                     layout: layoutSelect ? layoutSelect.value : 'screen-camera',
                     cameraPosition: cameraPositionSelect ? cameraPositionSelect.value : 'bottom-right',
                     cameraSize: cameraSizeSelect ? cameraSizeSelect.value : 'medium',
+                    recordingResolution: recordingResolutionSelect ? recordingResolutionSelect.value : '1280x720',
                     micDeviceId: state.micDeviceId || getSelectedMicDeviceId(),
                     micGainValue: state.micGainValue,
                     cameraBoxOverride: state.cameraBoxOverride && typeof state.cameraBoxOverride === 'object'
@@ -1559,6 +1575,9 @@
                 }
                 if (cameraSizeSelect && typeof snapshot.cameraSize === 'string') {
                     cameraSizeSelect.value = snapshot.cameraSize;
+                }
+                if (recordingResolutionSelect && typeof snapshot.recordingResolution === 'string' && RECORDING_RESOLUTION_PRESETS[snapshot.recordingResolution]) {
+                    recordingResolutionSelect.value = snapshot.recordingResolution;
                 }
                 if (typeof snapshot.micDeviceId === 'string') {
                     state.micDeviceId = snapshot.micDeviceId;
@@ -1600,6 +1619,35 @@
                 }
                 sourceWarning.hidden = !state.sourceErrorMessage;
                 sourceWarning.textContent = state.sourceErrorMessage;
+            }
+
+            function getRecordingResolutionPreset() {
+                const resolutionKey = recordingResolutionSelect ? recordingResolutionSelect.value : '1280x720';
+                return RECORDING_RESOLUTION_PRESETS[resolutionKey] || RECORDING_RESOLUTION_PRESETS['1280x720'];
+            }
+
+            function applyRecordingResolution() {
+                const preset = getRecordingResolutionPreset();
+                const previousWidth = previewCanvas.width || preset.width;
+                const previousHeight = previewCanvas.height || preset.height;
+
+                previewCanvas.width = preset.width;
+                previewCanvas.height = preset.height;
+
+                if (state.cameraBoxOverride && previousWidth && previousHeight) {
+                    const scaleX = preset.width / previousWidth;
+                    const scaleY = preset.height / previousHeight;
+                    const scaleWidth = preset.width / previousWidth;
+                    state.cameraBoxOverride = {
+                        x: Math.round(state.cameraBoxOverride.x * scaleX),
+                        y: Math.round(state.cameraBoxOverride.y * scaleY),
+                        width: Math.round(state.cameraBoxOverride.width * scaleWidth)
+                    };
+                }
+
+                if (resolutionBadge) {
+                    resolutionBadge.textContent = preset.label;
+                }
             }
 
             function syncRecordingTimer(startedAt) {
@@ -3184,6 +3232,14 @@
                     void startRecording();
                 });
             }
+            if (recordingResolutionSelect) {
+                recordingResolutionSelect.addEventListener('change', () => {
+                    applyRecordingResolution();
+                    saveStudioSessionSnapshot();
+                    syncPreviewCanvasDragState();
+                    updateStudioState();
+                });
+            }
             layoutSelect.addEventListener('change', () => {
                 saveStudioSessionSnapshot();
                 updateStudioState();
@@ -3263,6 +3319,7 @@
             });
 
             restoreStudioSessionSnapshot();
+            applyRecordingResolution();
             setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
 
             void populateMicrophoneDevices();
