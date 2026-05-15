@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, desktopCapturer, session } = require('electron');
 const { fork } = require('child_process');
 const fs = require('fs/promises');
 const http = require('http');
@@ -15,6 +15,77 @@ const APP_USER_MODEL_ID = 'com.fastbridgegroup.desktop';
 let mainWindow = null;
 let serverProcess = null;
 let serverStartedByDesktop = false;
+
+const isTrustedDesktopUrl = (value) => typeof value === 'string' && value.startsWith(desktopUrl);
+
+const setupDesktopMediaPermissions = () => {
+  const desktopSession = session.defaultSession;
+  if (!desktopSession) {
+    return;
+  }
+
+  desktopSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin, details) => {
+    const candidateUrl = [
+      requestingOrigin,
+      details && details.requestingUrl,
+      details && details.embeddingOrigin,
+      details && details.securityOrigin
+    ].find((value) => typeof value === 'string' && value.trim()) || '';
+
+    if (!isTrustedDesktopUrl(candidateUrl)) {
+      return false;
+    }
+
+    return permission === 'media' || permission === 'display-capture' || permission === 'fullscreen';
+  });
+
+  desktopSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const candidateUrl = [
+      details && details.requestingUrl,
+      details && details.embeddingOrigin,
+      details && details.securityOrigin,
+      webContents && typeof webContents.getURL === 'function' ? webContents.getURL() : ''
+    ].find((value) => typeof value === 'string' && value.trim()) || '';
+
+    const allowed = isTrustedDesktopUrl(candidateUrl)
+      && (permission === 'media' || permission === 'display-capture' || permission === 'fullscreen');
+
+    callback(Boolean(allowed));
+  });
+
+  if (typeof desktopSession.setDisplayMediaRequestHandler === 'function') {
+    desktopSession.setDisplayMediaRequestHandler(async (request, callback) => {
+      const candidateUrl = [
+        request && request.securityOrigin,
+        request && request.frame && typeof request.frame.url === 'string' ? request.frame.url : ''
+      ].find((value) => typeof value === 'string' && value.trim()) || desktopUrl;
+
+      if (!isTrustedDesktopUrl(candidateUrl)) {
+        callback({ video: null, audio: null });
+        return;
+      }
+
+      try {
+        const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
+        const preferredSource = sources.find((source) => String(source.id || '').startsWith('screen:')) || sources[0] || null;
+
+        if (!preferredSource) {
+          callback({ video: null, audio: null });
+          return;
+        }
+
+        callback({
+          video: preferredSource,
+          audio: process.platform === 'win32' ? 'loopback' : null
+        });
+      } catch (_error) {
+        callback({ video: null, audio: null });
+      }
+    }, {
+      useSystemPicker: true
+    });
+  }
+};
 
 ipcMain.handle('fast-desktop:save-file', async (_event, options = {}) => {
   const defaultPath = typeof options.defaultPath === 'string' && options.defaultPath.trim()
@@ -157,6 +228,7 @@ const createMainWindow = async () => {
 app.whenReady().then(async () => {
   try {
     app.setAppUserModelId(APP_USER_MODEL_ID);
+    setupDesktopMediaPermissions();
     await startLocalServer();
     await createMainWindow();
   } catch (error) {

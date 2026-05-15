@@ -90,7 +90,7 @@ export const initFluid = (config) => {
       width: 100%;
       height: 100%;
       pointer-events: none;
-      z-index: -1;
+            z-index: 0;
       opacity: 0.92;
       mix-blend-mode: screen;
       filter: saturate(1.28) contrast(1.06);

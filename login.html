@@ -44,13 +44,13 @@
                 const candidateThemeKeys = Array.from(new Set([userKey, email, normalizedNameKey, 'default-user'].filter(Boolean)));
                 let theme = String(
                     candidateThemeKeys
-                        .map((key) => homepageThemeStore[key])
-                        .find((value) => typeof value === 'string' && value.trim())
-                    || candidateThemeKeys
                         .map((key) => {
                             const entry = themeStore[key];
                             return entry && typeof entry === 'object' ? entry.value : entry;
                         })
+                        .find((value) => typeof value === 'string' && value.trim())
+                    || candidateThemeKeys
+                        .map((key) => homepageThemeStore[key])
                         .find((value) => typeof value === 'string' && value.trim())
                     || localStorage.getItem('homepageTheme')
                     || localStorage.getItem('theme')
@@ -177,6 +177,8 @@
         .login-theme-switch {
             display: flex;
             justify-content: center;
+            align-items: center;
+            gap: 10px;
             margin: 0 0 22px;
         }
 
@@ -241,6 +243,35 @@
             filter: drop-shadow(0 14px 28px rgba(15, 23, 42, 0.18));
         }
 
+        .login-liquid-settings-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            min-width: 42px;
+            height: 42px;
+            padding: 0;
+            border-radius: 16px;
+            flex: 0 0 auto;
+        }
+
+        .login-liquid-settings-btn::before {
+            display: none;
+        }
+
+        .login-liquid-settings-btn svg {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+        }
+
+        .login-page,
+        .login-container,
+        .login-card {
+            position: relative;
+            z-index: 1;
+        }
+
         @media (max-width: 480px) {
             .login-theme-switch {
                 margin-bottom: 18px;
@@ -287,6 +318,9 @@ https://templatemo.com/tm-607-glass-admin
                         <span class="theme-switch-label">Theme</span>
                         <span class="theme-switch-current" id="login-theme-label">Beach</span>
                     </button>
+                    <a class="theme-switch-btn login-liquid-settings-btn" id="login-liquid-settings-link" href="index.html" aria-label="Open liquid settings" title="Open liquid settings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.91 4h.09a1.65 1.65 0 0 0 1.51-1V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .66.39 1.26 1 1.51H21a2 2 0 0 1 0 4h-.09c-.61.25-1 .85-1 1.49Z"></path></svg>
+                    </a>
                 </div>
 
                 <form id="login-form">
@@ -364,7 +398,7 @@ https://templatemo.com/tm-607-glass-admin
                     Access is admin-managed. Contact an administrator for account setup.
                 </p>
                 <p class="login-footer" style="margin-top:8px;font-size:12px;opacity:0.78;">
-                    <a id="login-version-label" href="version-history.html?source=public" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">Version v1.4.9</a>
+                    <a id="login-version-label" href="version-history.html?source=public" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">Version v1.5.0</a>
                 </p>
             </div>
         </div>

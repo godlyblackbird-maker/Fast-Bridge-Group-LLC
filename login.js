@@ -26,10 +26,23 @@ const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
 const LOGIN_HOMEPAGE_THEME_KEY = 'homepageTheme';
 const LOGIN_HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
 const LOGIN_THEME_STORAGE_KEY = 'dashboardThemeByUser';
-const LOGIN_THEME_OPTIONS = Object.freeze(['beach', 'sunset', 'cyberpunk']);
+const LOGIN_USER_SETTINGS_KEY = 'dashboardSettingsByUser';
+const LOGIN_BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
+const LOGIN_HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY = 'homepageLiquidSmokeEnabledByUser';
 const LOGIN_ALLOWED_THEMES = Object.freeze(['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas']);
+const LOGIN_THEME_OPTIONS = LOGIN_ALLOWED_THEMES;
+const LOGIN_LIQUID_SMOKE_THEMES = new Set(LOGIN_ALLOWED_THEMES);
+const DEFAULT_LOGIN_BLACKLIGHT_FLUID_CURSOR_SETTINGS = Object.freeze({
+  size: 0.42,
+  velocity: 5400,
+  colorMode: 'dynamic',
+  colorDynamics: 0.35,
+  brightness: 1,
+  solidColor: '#ff54c4'
+});
 const LOGIN_THEME_LABELS = Object.freeze({
   beach: 'Beach',
+  holloween: 'Fall',
   sunset: 'Sunset',
   cyberpunk: 'Cyberpunk'
 });
@@ -48,6 +61,9 @@ const STEVE_ADMIN_BYPASS_USER = Object.freeze({
   role: 'admin',
   id: 'admin-bypass-steve'
 });
+let loginBlacklightFluidModulePromise = null;
+let loginBlacklightFluidCleanup = null;
+let loginBlacklightFluidSignature = '';
 
 KNOWN_EMAIL_GROUPS.forEach((group) => {
   group.aliases.forEach((alias) => {
@@ -101,25 +117,229 @@ function getLoginThemeUserContext() {
   };
 }
 
+function getLoginLiquidSettingsDestination() {
+  const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+  return authToken ? 'settings.html' : 'index.html';
+}
+
 function getLoginThemeStorageKeys() {
   const context = getLoginThemeUserContext();
   const normalizedName = String(context.name || '').trim().toLowerCase().replace(/\s+/g, '-');
   return Array.from(new Set([context.userKey, context.email, normalizedName, 'default-user'].filter(Boolean)));
 }
 
+function getLoginScopedStoredValue(key) {
+  const store = readLocalJson(key) || {};
+  const candidateKeys = getLoginThemeStorageKeys();
+  for (const candidateKey of candidateKeys) {
+    if (Object.prototype.hasOwnProperty.call(store, candidateKey)) {
+      return store[candidateKey];
+    }
+  }
+  return null;
+}
+
+function readLoginBooleanFlag(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase();
+    if (normalizedValue === 'true' || normalizedValue === '1' || normalizedValue === 'on') {
+      return true;
+    }
+    if (normalizedValue === 'false' || normalizedValue === '0' || normalizedValue === 'off') {
+      return false;
+    }
+  }
+  return null;
+}
+
+function normalizeLoginBlacklightFluidCursorSettings(settingsLike, fallbackSettings) {
+  const source = settingsLike && typeof settingsLike === 'object' ? settingsLike : {};
+  const fallback = fallbackSettings && typeof fallbackSettings === 'object'
+    ? fallbackSettings
+    : DEFAULT_LOGIN_BLACKLIGHT_FLUID_CURSOR_SETTINGS;
+
+  const parseNumber = (value, fallbackValue, min, max) => {
+    const numericValue = Number.parseFloat(String(value ?? '').trim());
+    if (!Number.isFinite(numericValue)) {
+      return fallbackValue;
+    }
+    return Math.min(max, Math.max(min, numericValue));
+  };
+
+  const parseColorMode = (value, fallbackValue) => {
+    const normalizedValue = String(value || '').trim().toLowerCase();
+    return normalizedValue === 'dynamic' || normalizedValue === 'solid' ? normalizedValue : fallbackValue;
+  };
+
+  const parseHexColor = (value, fallbackValue) => {
+    const normalizedValue = String(value || '').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(normalizedValue) ? normalizedValue.toLowerCase() : fallbackValue;
+  };
+
+  return {
+    size: parseNumber(source.size, fallback.size, 0.2, 0.9),
+    velocity: parseNumber(source.velocity, fallback.velocity, 2400, 9000),
+    colorMode: parseColorMode(source.colorMode, fallback.colorMode),
+    colorDynamics: parseNumber(source.colorDynamics, fallback.colorDynamics, 0, 4),
+    brightness: parseNumber(source.brightness, fallback.brightness, 0.2, 2.2),
+    solidColor: parseHexColor(source.solidColor, fallback.solidColor)
+  };
+}
+
+function getLegacyLoginBlacklightFluidCursorSettings() {
+  const rememberedSettings = getLoginScopedStoredValue(LOGIN_USER_SETTINGS_KEY) || {};
+  const controls = rememberedSettings && rememberedSettings.controls && typeof rememberedSettings.controls === 'object'
+    ? rememberedSettings.controls
+    : {};
+
+  return normalizeLoginBlacklightFluidCursorSettings({
+    size: controls['id:blacklight-fluid-size'],
+    velocity: controls['id:blacklight-fluid-velocity'],
+    colorMode: controls['id:blacklight-fluid-color-mode'],
+    colorDynamics: controls['id:blacklight-fluid-dynamics'],
+    brightness: controls['id:blacklight-fluid-brightness'],
+    solidColor: controls['id:blacklight-fluid-solid-color']
+  }, DEFAULT_LOGIN_BLACKLIGHT_FLUID_CURSOR_SETTINGS);
+}
+
+function getSavedLoginBlacklightFluidCursorSettings() {
+  const storedSettings = getLoginScopedStoredValue(LOGIN_BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY);
+  const hasDedicatedSettings = storedSettings
+    && typeof storedSettings === 'object'
+    && (
+      Object.prototype.hasOwnProperty.call(storedSettings, 'size')
+      || Object.prototype.hasOwnProperty.call(storedSettings, 'velocity')
+      || Object.prototype.hasOwnProperty.call(storedSettings, 'colorMode')
+      || Object.prototype.hasOwnProperty.call(storedSettings, 'colorDynamics')
+      || Object.prototype.hasOwnProperty.call(storedSettings, 'brightness')
+      || Object.prototype.hasOwnProperty.call(storedSettings, 'solidColor')
+    );
+
+  if (hasDedicatedSettings) {
+    return normalizeLoginBlacklightFluidCursorSettings(storedSettings, getLegacyLoginBlacklightFluidCursorSettings());
+  }
+
+  return getLegacyLoginBlacklightFluidCursorSettings();
+}
+
+function isLoginLiquidSmokeEnabledFromHomepage() {
+  const storedValue = getLoginScopedStoredValue(LOGIN_HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY);
+  return readLoginBooleanFlag(storedValue) === true;
+}
+
+function isLoginLiquidSmokeEnabledFromSettings() {
+  const rememberedSettings = getLoginScopedStoredValue(LOGIN_USER_SETTINGS_KEY) || {};
+  const controls = rememberedSettings && rememberedSettings.controls && typeof rememberedSettings.controls === 'object'
+    ? rememberedSettings.controls
+    : {};
+  return readLoginBooleanFlag(controls['id:blacklight-fluid-all-themes-toggle']) === true;
+}
+
+function getLoginBlacklightFluidCursorConfig() {
+  const settings = getSavedLoginBlacklightFluidCursorSettings();
+  return {
+    splatRadius: settings.size,
+    splatForce: settings.velocity,
+    colorMode: settings.colorMode,
+    colorUpdateSpeed: settings.colorDynamics,
+    brightness: settings.brightness,
+    solidColor: settings.solidColor
+  };
+}
+
+function syncLoginBlacklightFluidCursor(theme) {
+  const resolvedTheme = resolveLoginTheme(theme || document.documentElement.getAttribute('data-theme'));
+  const enabledOnHomepage = isLoginLiquidSmokeEnabledFromHomepage();
+  const enabledFromSettings = isLoginLiquidSmokeEnabledFromSettings();
+  const fluidConfig = getLoginBlacklightFluidCursorConfig();
+  const shouldUseLiquidSmoke = LOGIN_LIQUID_SMOKE_THEMES.has(resolvedTheme) && (enabledOnHomepage || enabledFromSettings);
+  const nextSignature = JSON.stringify({
+    theme: resolvedTheme,
+    enabledOnHomepage,
+    enabledFromSettings,
+    size: fluidConfig.splatRadius,
+    velocity: fluidConfig.splatForce,
+    colorMode: fluidConfig.colorMode,
+    colorDynamics: fluidConfig.colorUpdateSpeed,
+    brightness: fluidConfig.brightness,
+    solidColor: fluidConfig.solidColor
+  });
+
+  if (!shouldUseLiquidSmoke) {
+    document.documentElement.dataset.loginLiquidSmoke = 'off';
+    loginBlacklightFluidSignature = '';
+    if (typeof loginBlacklightFluidCleanup === 'function') {
+      loginBlacklightFluidCleanup();
+      loginBlacklightFluidCleanup = null;
+    }
+    return Promise.resolve(false);
+  }
+
+  if (!document.body) {
+    return Promise.resolve(false);
+  }
+
+  if (typeof loginBlacklightFluidCleanup === 'function' && loginBlacklightFluidSignature === nextSignature) {
+    document.documentElement.dataset.loginLiquidSmoke = 'on';
+    return Promise.resolve(true);
+  }
+
+  if (typeof loginBlacklightFluidCleanup === 'function') {
+    loginBlacklightFluidCleanup();
+    loginBlacklightFluidCleanup = null;
+  }
+
+  document.documentElement.dataset.loginLiquidSmoke = 'loading';
+
+  if (!loginBlacklightFluidModulePromise) {
+    loginBlacklightFluidModulePromise = import('./temp-smokey-fluid/smokey-fluid-cursor.js').catch((error) => {
+      loginBlacklightFluidModulePromise = null;
+      throw error;
+    });
+  }
+
+  return loginBlacklightFluidModulePromise.then((module) => {
+    const activeTheme = resolveLoginTheme(document.documentElement.getAttribute('data-theme'));
+    if (!LOGIN_LIQUID_SMOKE_THEMES.has(activeTheme) || (!isLoginLiquidSmokeEnabledFromHomepage() && !isLoginLiquidSmokeEnabledFromSettings())) {
+      document.documentElement.dataset.loginLiquidSmoke = 'off';
+      return false;
+    }
+
+    const mountBlacklightFluidCursor = module && typeof module.mountBlacklightFluidCursor === 'function'
+      ? module.mountBlacklightFluidCursor
+      : null;
+
+    if (!mountBlacklightFluidCursor) {
+      document.documentElement.dataset.loginLiquidSmoke = 'failed';
+      return false;
+    }
+
+    loginBlacklightFluidCleanup = mountBlacklightFluidCursor(fluidConfig);
+    loginBlacklightFluidSignature = nextSignature;
+    document.documentElement.dataset.loginLiquidSmoke = typeof loginBlacklightFluidCleanup === 'function' ? 'on' : 'failed';
+    return document.documentElement.dataset.loginLiquidSmoke === 'on';
+  }).catch(() => {
+    document.documentElement.dataset.loginLiquidSmoke = 'failed';
+    return false;
+  });
+}
+
 function getStoredLoginTheme() {
   const homepageThemeStore = readLocalJson(LOGIN_HOMEPAGE_THEME_STORE_KEY) || {};
   const themeStore = readLocalJson(LOGIN_THEME_STORAGE_KEY) || {};
   const candidateKeys = getLoginThemeStorageKeys();
-  const scopedHomepageTheme = candidateKeys
-    .map((key) => homepageThemeStore[key])
-    .find((value) => typeof value === 'string' && value.trim());
   const scopedDashboardTheme = candidateKeys
     .map((key) => themeStore[key])
     .map((entry) => (entry && typeof entry === 'object' ? entry.value : entry))
     .find((value) => typeof value === 'string' && value.trim());
+  const scopedHomepageTheme = candidateKeys
+    .map((key) => homepageThemeStore[key])
+    .find((value) => typeof value === 'string' && value.trim());
 
-  return resolveLoginTheme(scopedHomepageTheme || scopedDashboardTheme || localStorage.getItem(LOGIN_HOMEPAGE_THEME_KEY) || localStorage.getItem('theme') || 'beach');
+  return resolveLoginTheme(scopedDashboardTheme || scopedHomepageTheme || localStorage.getItem(LOGIN_HOMEPAGE_THEME_KEY) || localStorage.getItem('theme') || 'beach');
 }
 
 function persistLoginTheme(theme) {
@@ -170,6 +390,7 @@ function applyLoginTheme(theme) {
   }
 
   persistLoginTheme(resolvedTheme);
+  syncLoginBlacklightFluidCursor(resolvedTheme);
   return resolvedTheme;
 }
 
@@ -375,6 +596,7 @@ function startSteveAdminBypass() {
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
   const loginThemeSwitchButton = document.getElementById('login-theme-switch');
+  const loginLiquidSettingsLink = document.getElementById('login-liquid-settings-link');
   const loginForm = document.getElementById('login-form');
   const loginBtn = document.getElementById('login-btn');
   const twoFactorForm = document.getElementById('two-factor-form');
@@ -394,6 +616,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
   let pendingTwoFactorChallenge = '';
 
+  if (loginLiquidSettingsLink) {
+    const settingsDestination = getLoginLiquidSettingsDestination();
+    const settingsLabel = settingsDestination === 'settings.html' ? 'Open logged-in liquid settings' : 'Open homepage liquid settings';
+    loginLiquidSettingsLink.setAttribute('href', settingsDestination);
+    loginLiquidSettingsLink.setAttribute('aria-label', settingsLabel);
+    loginLiquidSettingsLink.setAttribute('title', settingsLabel);
+  }
+
   if (loginThemeSwitchButton) {
     applyLoginTheme(getStoredLoginTheme());
     loginThemeSwitchButton.addEventListener('click', function () {
@@ -404,7 +634,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     window.addEventListener('storage', function (event) {
-      if (!event || (event.key && ![LOGIN_THEME_STORAGE_KEY, LOGIN_HOMEPAGE_THEME_STORE_KEY, LOGIN_HOMEPAGE_THEME_KEY, 'theme'].includes(event.key))) {
+      if (!event || (event.key && ![
+        LOGIN_THEME_STORAGE_KEY,
+        LOGIN_HOMEPAGE_THEME_STORE_KEY,
+        LOGIN_HOMEPAGE_THEME_KEY,
+        LOGIN_USER_SETTINGS_KEY,
+        LOGIN_BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY,
+        LOGIN_HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY,
+        'theme'
+      ].includes(event.key))) {
         return;
       }
 

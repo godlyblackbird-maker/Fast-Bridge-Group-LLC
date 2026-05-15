@@ -270,6 +270,26 @@
             --primary-cta-end: rgba(255, 213, 100, 0.9);
         }
 
+        .theme-cloud-video {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            pointer-events: none;
+            z-index: -3;
+            opacity: 0;
+            visibility: hidden;
+            filter: saturate(1.04) contrast(1.02) brightness(1.02);
+            transform: scale(1.02);
+            transition: opacity 220ms ease, visibility 220ms ease;
+        }
+
+        html[data-theme='cloud'] .theme-cloud-video {
+            opacity: 0.82;
+            visibility: visible;
+        }
+
         html[data-theme='beach'] body::before {
             content: '';
             position: fixed;
@@ -304,20 +324,8 @@
         }
 
         html[data-theme='cloud'] body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
-            border-radius: 0;
-            background: url("Themes/Cloud%20-%20FAST%20-%20Wallpaper.jpg") no-repeat center center;
-            background-size: cover;
-            opacity: 0.78;
-            filter: blur(1.2px) saturate(1.04) contrast(1.02);
-            transform: scale(1.02);
+            content: none;
+            display: none;
         }
 
         html[data-theme='cloud'] body::after {
@@ -326,6 +334,7 @@
             inset: 0;
             width: 100vw;
             height: 100vh;
+            z-index: -2;
             border-radius: 0;
             background:
                 linear-gradient(180deg, rgba(220, 245, 251, 0.2), rgba(220, 245, 251, 0.06) 28%, rgba(255, 242, 207, 0.18) 100%),
@@ -1713,6 +1722,86 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             box-shadow: var(--shadow);
+        }
+
+        .glass-container.cloud-liquid-homepage-container {
+            position: relative;
+            display: block;
+            width: 100%;
+            padding: 0;
+            gap: 0;
+            isolation: isolate;
+            z-index: 4;
+            box-sizing: border-box;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .glass-container.cloud-liquid-homepage-container::before,
+        .glass-container.cloud-liquid-homepage-container::after {
+            content: '';
+            position: absolute;
+            inset: 1px;
+            border-radius: inherit;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 220ms ease;
+            z-index: 2;
+        }
+
+        .glass-container.cloud-liquid-homepage-container::before {
+            background:
+                linear-gradient(138deg, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.18) 18%, rgba(255, 255, 255, 0.08) 36%, rgba(255, 255, 255, 0.02) 58%, rgba(168, 216, 235, 0.12) 100%);
+            mix-blend-mode: screen;
+        }
+
+        .glass-container.cloud-liquid-homepage-container::after {
+            inset: 0;
+            background:
+                radial-gradient(120% 90% at 8% 4%, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.12) 24%, rgba(255, 255, 255, 0.02) 44%, rgba(255, 255, 255, 0) 62%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 24%, rgba(121, 181, 214, 0.08) 100%);
+        }
+
+        .glass-container.cloud-liquid-homepage-container canvas {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 220ms ease, visibility 220ms ease;
+        }
+
+        .cloud-liquid-js-content {
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1;
+        }
+
+        html[data-theme='cloud'] .glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled canvas {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        html[data-theme='cloud'] .glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled {
+            border-radius: inherit;
+        }
+
+        html[data-theme='cloud'] .glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled::before,
+        html[data-theme='cloud'] .glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled::after {
+            opacity: 1;
+        }
+
+        html[data-theme='cloud'] .glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled > .cloud-liquid-js-content.hero-panel,
+        html[data-theme='cloud'] .glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled > .cloud-liquid-js-content.hero-side,
+        html[data-theme='cloud'] .glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled > .cloud-liquid-js-content.section-card {
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.045) 38%, rgba(255, 255, 255, 0.015) 100%),
+                linear-gradient(135deg, rgba(210, 235, 246, 0.08), rgba(255, 255, 255, 0.02));
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border-color: rgba(255, 255, 255, 0.34);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.34),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+                0 18px 38px rgba(15, 60, 80, 0.14);
         }
 
         .hero-panel {
@@ -4148,6 +4237,7 @@
     </style>
 </head>
 <body>
+    <video class="theme-cloud-video" id="theme-cloud-video" autoplay muted loop playsinline preload="auto" aria-hidden="true" src="Themes/Cloud%20Theme.mov"></video>
     <div class="background"></div>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
@@ -4170,7 +4260,7 @@
                 <button class="theme-switch-btn homepage-blacklight-settings-btn" id="homepage-blacklight-settings-toggle" type="button" aria-label="Open homepage liquid settings" hidden>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.91 4h.09a1.65 1.65 0 0 0 1.51-1V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .66.39 1.26 1 1.51H21a2 2 0 0 1 0 4h-.09c-.61.25-1 .85-1 1.49Z"></path></svg>
                 </button>
-                <a class="login-btn topbar-download-btn" href="https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/releases/latest/download/FAST.BRIDGE.GROUP.Setup.1.4.9.exe">Download App</a>
+                <a class="login-btn topbar-download-btn" href="https://github.com/godlyblackbird-maker/Fast-Bridge-Group-LLC/releases/latest/download/FAST.BRIDGE.GROUP.Setup.1.5.0.exe">Download App</a>
                 <a class="login-btn" href="login.html">Log In</a>
             </div>
         </header>
@@ -4435,6 +4525,10 @@
             const USER_THEME_KEY = 'dashboardThemeByUser';
             const BLACKLIGHT_FLUID_CURSOR_SETTINGS_KEY = 'blacklightFluidCursorSettingsByUser';
             const HOMEPAGE_LIQUID_SMOKE_ENABLED_KEY = 'homepageLiquidSmokeEnabledByUser';
+            const HOMEPAGE_CLOUD_LIQUID_HOST_SELECTOR = '.hero-panel, .hero-side, #platform .section-card';
+            const HOMEPAGE_CLOUD_LIQUID_HTML2CANVAS_PATH = 'Themes/Liquid%20Glass%20Theme/liquidGL-main/liquidGL-main/scripts/html2canvas.min.js';
+            const HOMEPAGE_CLOUD_GLASS_CSS_PATH = 'Themes/Liquid%20Glass%20Theme/liquid-glass-js-main/liquid-glass-js-main/glass.css';
+            const HOMEPAGE_CLOUD_GLASS_SCRIPT_PATH = 'Themes/Liquid%20Glass%20Theme/liquid-glass-js-main/liquid-glass-js-main/container.js';
             const ALLOWED_PUBLIC_PAGE_THEMES = ['dark', 'light', 'beach', 'cloud', 'swamp', 'sunset', 'space', 'cyberpunk', 'japan', 'holloween', 'christmas'];
             const THEME_LABELS = {
                 dark: 'Dark',
@@ -4446,7 +4540,7 @@
                 space: 'Space',
                 cyberpunk: 'Cyberpunk',
                 japan: 'Japan',
-                holloween: 'Holloween',
+                holloween: 'Fall',
                 christmas: 'Christmas'
             };
             const DEFAULT_BLACKLIGHT_FLUID_CURSOR_SETTINGS = Object.freeze({
@@ -4457,12 +4551,187 @@
                 brightness: 1,
                 solidColor: '#ff54c4'
             });
-            const HOMEPAGE_LIQUID_SMOKE_THEMES = new Set(['beach', 'sunset', 'cyberpunk']);
+            const HOMEPAGE_LIQUID_SMOKE_THEMES = new Set(ALLOWED_PUBLIC_PAGE_THEMES);
             let homepageBlacklightFluidModulePromise = null;
             let homepageBlacklightFluidCleanup = null;
             let homepageBlacklightFluidSignature = '';
             let homepageCyberpunkCursorModulePromise = null;
             let homepageCyberpunkCursorCleanup = null;
+            let homepageCloudLiquidAssetsPromise = null;
+            let homepageCloudLiquidContainers = [];
+
+            const loadScriptOnce = (src, globalName) => {
+                if (globalName && typeof window[globalName] !== 'undefined') {
+                    return Promise.resolve(window[globalName]);
+                }
+
+                const existingScript = document.querySelector(`script[data-dynamic-src="${src}"]`);
+                if (existingScript) {
+                    return new Promise((resolve, reject) => {
+                        if (existingScript.dataset.loaded === 'true') {
+                            resolve(globalName ? window[globalName] : true);
+                            return;
+                        }
+
+                        existingScript.addEventListener('load', () => resolve(globalName ? window[globalName] : true), { once: true });
+                        existingScript.addEventListener('error', () => reject(new Error(`Unable to load script: ${src}`)), { once: true });
+                    });
+                }
+
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.async = true;
+                    script.dataset.dynamicSrc = src;
+                    script.addEventListener('load', () => {
+                        script.dataset.loaded = 'true';
+                        resolve(globalName ? window[globalName] : true);
+                    }, { once: true });
+                    script.addEventListener('error', () => reject(new Error(`Unable to load script: ${src}`)), { once: true });
+                    document.body.appendChild(script);
+                });
+            };
+
+            const loadStylesheetOnce = (href) => {
+                const existingLink = document.querySelector(`link[data-dynamic-href="${href}"]`);
+                if (existingLink) {
+                    return Promise.resolve(existingLink);
+                }
+
+                return new Promise((resolve, reject) => {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = href;
+                    link.dataset.dynamicHref = href;
+                    link.addEventListener('load', () => resolve(link), { once: true });
+                    link.addEventListener('error', () => reject(new Error(`Unable to load stylesheet: ${href}`)), { once: true });
+                    document.head.appendChild(link);
+                });
+            };
+
+            const ensureHomepageCloudLiquidHosts = () => {
+                const hosts = Array.from(document.querySelectorAll(HOMEPAGE_CLOUD_LIQUID_HOST_SELECTOR));
+                const containers = [];
+
+                hosts.forEach((host) => {
+                    if (!(host instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (host.parentElement && host.parentElement.classList.contains('cloud-liquid-homepage-container')) {
+                        const existingContainer = host.parentElement.__cloudLiquidJsContainer;
+                        if (existingContainer) {
+                            containers.push(existingContainer);
+                        }
+                        host.classList.add('cloud-liquid-js-content');
+                        return;
+                    }
+
+                    if (typeof window.Container !== 'function') {
+                        return;
+                    }
+
+                    const computedStyle = window.getComputedStyle(host);
+                    const borderRadius = Number.parseFloat(computedStyle.borderTopLeftRadius || '24') || 24;
+                    const container = new window.Container({
+                        borderRadius,
+                        type: 'rounded',
+                        tintOpacity: 0.26
+                    });
+                    const shell = container.element;
+                    shell.classList.add('cloud-liquid-homepage-container');
+                    shell.__cloudLiquidJsContainer = container;
+
+                    const parent = host.parentElement;
+                    if (!parent) {
+                        return;
+                    }
+
+                    parent.insertBefore(shell, host);
+                    host.classList.add('cloud-liquid-js-content');
+                    shell.appendChild(host);
+                    container.updateSizeFromDOM();
+                    containers.push(container);
+                });
+
+                return containers;
+            };
+
+            const teardownHomepageCloudLiquidGlass = () => {
+                document.querySelectorAll('.glass-container.cloud-liquid-homepage-container.cloud-liquid-js-enabled').forEach((host) => {
+                    host.classList.remove('cloud-liquid-js-enabled');
+                });
+            };
+
+            const loadHomepageCloudLiquidAssets = () => {
+                if (!homepageCloudLiquidAssetsPromise) {
+                    homepageCloudLiquidAssetsPromise = loadStylesheetOnce(HOMEPAGE_CLOUD_GLASS_CSS_PATH)
+                        .then(() => loadScriptOnce(HOMEPAGE_CLOUD_LIQUID_HTML2CANVAS_PATH, 'html2canvas'))
+                        .then(() => loadScriptOnce(HOMEPAGE_CLOUD_GLASS_SCRIPT_PATH, 'Container'))
+                        .catch((error) => {
+                            homepageCloudLiquidAssetsPromise = null;
+                            throw error;
+                        });
+                }
+
+                return homepageCloudLiquidAssetsPromise;
+            };
+
+            const syncHomepageCloudLiquidGlass = (themeValue) => {
+                const activeTheme = resolveTheme(themeValue || getHomepageTheme());
+                const shouldEnable = activeTheme === 'cloud';
+
+                if (!shouldEnable) {
+                    teardownHomepageCloudLiquidGlass();
+                    return Promise.resolve(false);
+                }
+
+                return loadHomepageCloudLiquidAssets().then(() => {
+                    if (resolveTheme(getHomepageTheme()) !== 'cloud') {
+                        return false;
+                    }
+
+                    if (typeof window.Container !== 'function') {
+                        return false;
+                    }
+
+                    window.glassControls = {
+                        edgeIntensity: 0.042,
+                        rimIntensity: 0.16,
+                        baseIntensity: 0.024,
+                        edgeDistance: 0.14,
+                        rimDistance: 1.14,
+                        baseDistance: 0.09,
+                        cornerBoost: 0.056,
+                        rippleEffect: 0.1,
+                        blurRadius: 11.5,
+                        tintOpacity: 0.16
+                    };
+
+                    if (homepageCloudLiquidContainers.length === 0) {
+                        homepageCloudLiquidContainers = ensureHomepageCloudLiquidHosts();
+                    }
+
+                    if (!homepageCloudLiquidContainers.length) {
+                        return false;
+                    }
+
+                    homepageCloudLiquidContainers.forEach((container) => {
+                        if (!container || !(container.element instanceof HTMLElement)) {
+                            return;
+                        }
+                        container.element.classList.add('cloud-liquid-js-enabled');
+                        if (typeof container.updateSizeFromDOM === 'function') {
+                            container.updateSizeFromDOM();
+                        }
+                        if (typeof container.render === 'function') {
+                            container.render();
+                        }
+                    });
+
+                    return homepageCloudLiquidContainers.length > 0;
+                }).catch(() => false);
+            };
 
             const readJson = (key) => {
                 try {
@@ -4842,7 +5111,28 @@
                 const { isAuthenticated } = getUserThemeContext();
                 document.documentElement.setAttribute('data-theme', activeTheme);
                 document.documentElement.setAttribute('data-authenticated', isAuthenticated ? 'true' : 'false');
+
+                if (homepageCloudThemeVideo instanceof HTMLVideoElement) {
+                    homepageCloudThemeVideo.muted = true;
+                    homepageCloudThemeVideo.loop = true;
+                    homepageCloudThemeVideo.playsInline = true;
+
+                    if (activeTheme === 'cloud') {
+                        if (!homepageCloudThemeVideo.currentSrc) {
+                            homepageCloudThemeVideo.src = 'Themes/Cloud%20Theme.mov';
+                            homepageCloudThemeVideo.load();
+                        }
+                        const playPromise = homepageCloudThemeVideo.play();
+                        if (playPromise && typeof playPromise.catch === 'function') {
+                            playPromise.catch(() => {});
+                        }
+                    } else {
+                        homepageCloudThemeVideo.pause();
+                    }
+                }
+
                 updateThemeSwitchUi(activeTheme);
+                syncHomepageCloudLiquidGlass(activeTheme);
                 syncHomepageBlacklightFluidCursor(activeTheme);
                 syncHomepageCyberpunkCursor(activeTheme);
             };
@@ -4857,6 +5147,7 @@
             const swayAccessButton = document.getElementById('open-access-request');
             const swayCards = Array.from(document.querySelectorAll('#platform .section-card'));
             const swayOpsItems = Array.from(document.querySelectorAll('.ops-item'));
+            const homepageCloudThemeVideo = document.getElementById('theme-cloud-video');
             const homepageThemeSwitchButton = document.getElementById('homepage-theme-switch');
             const homepageBlacklightSettingsToggle = document.getElementById('homepage-blacklight-settings-toggle');
             const homepageBlacklightModal = document.getElementById('homepage-blacklight-modal');

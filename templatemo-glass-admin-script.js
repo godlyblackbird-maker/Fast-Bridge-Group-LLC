@@ -49,6 +49,35 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     };
     const THEME_LOGO_SELECTOR = 'img.logo-img, img.ecard-logo-image, img.flyer-logo-image';
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
+    const PROPERTY_SUBMISSIONS_BADGE_STATE_KEY = 'propertySubmissionsBadgeStateByUser';
+    const ADMIN_CONTROLS_WIDGET_DOCK_ORDER = [
+        'admin-announcement',
+        'admin-discord-meetings',
+        'unified-inbox-launch',
+        'word-maker-launch',
+        'fbg-studio-launch',
+        'online-users',
+        'requested-access',
+        'smtp-approval-queue',
+        'admin-feature-access',
+        'admin-account-manager',
+        'digital-ecard',
+        'flyer-maker'
+    ];
+    const ADMIN_CONTROLS_WIDGET_DOCK_LABELS = {
+        'admin-announcement': 'Announcements',
+        'admin-discord-meetings': 'Discord Meetings',
+        'unified-inbox-launch': 'Unified Inbox',
+        'word-maker-launch': 'Word Maker',
+        'fbg-studio-launch': 'FBG Studio',
+        'online-users': 'Online Users',
+        'requested-access': 'Requested Access',
+        'smtp-approval-queue': 'Gmail Outbox Approvals',
+        'admin-feature-access': 'Feature Access',
+        'admin-account-manager': 'Account Manager',
+        'digital-ecard': 'Digital E Card',
+        'flyer-maker': 'Flyer Make'
+    };
     const ANALYTICS_DAILY_NUMBERS_GOAL_KEY = 'analyticsDailyNumbersGoalByUser';
     const ANALYTICS_NUMBERS_WINDOW_KEY = 'analyticsNumbersWindowByUser';
     const ANALYTICS_CLOSED_DEAL_DRAFT_KEY = 'analyticsClosedDealDraftByUser';
@@ -9741,7 +9770,8 @@ function initNavbarDateTime() {
         }
 
         const nextState = state && typeof state === 'object' ? { ...state } : {};
-        const migrationKey = `${getWidgetStateStorageKey()}:admin-controls-default-minimize-v1`;
+        const migrationKey = `${getWidgetStateStorageKey()}:admin-controls-bottom-dock-layout-v2`;
+        const minimizedByDefault = new Set(ADMIN_CONTROLS_WIDGET_DOCK_ORDER);
 
         try {
             if (localStorage.getItem(migrationKey) === 'true') {
@@ -9760,7 +9790,7 @@ function initNavbarDateTime() {
 
             nextState[widgetId] = {
                 ...(nextState[widgetId] || {}),
-                minimized: widgetId !== 'property-submissions'
+                minimized: minimizedByDefault.has(widgetId)
             };
         });
 
@@ -9780,6 +9810,21 @@ function initNavbarDateTime() {
         }
 
         return String(widgetId || '').trim() !== 'property-submissions';
+    }
+
+    function isAdminControlsPage() {
+        return /admin-controls\.html$/i.test(String(window.location.pathname || ''));
+    }
+
+    function getAdminControlsDockLabel(widgetId, fallbackTitle) {
+        const normalizedWidgetId = String(widgetId || '').trim();
+        return ADMIN_CONTROLS_WIDGET_DOCK_LABELS[normalizedWidgetId] || fallbackTitle;
+    }
+
+    function getAdminControlsDockOrderIndex(widgetId) {
+        const normalizedWidgetId = String(widgetId || '').trim();
+        const orderIndex = ADMIN_CONTROLS_WIDGET_DOCK_ORDER.indexOf(normalizedWidgetId);
+        return orderIndex >= 0 ? orderIndex : ADMIN_CONTROLS_WIDGET_DOCK_ORDER.length + 1;
     }
 
     function ensureWidgetDock() {
@@ -9820,8 +9865,35 @@ function initNavbarDateTime() {
 
         const dock = ensureWidgetDock();
         const overlay = ensureWidgetOverlay();
+        const adminControlsPage = isAdminControlsPage();
         const widgetState = normalizeAdminControlsDefaultWidgetState(getWidgetState());
         let expandedWidget = null;
+
+        if (adminControlsPage) {
+            dock.classList.add('widget-dock-bottom');
+        } else {
+            dock.classList.remove('widget-dock-bottom');
+        }
+
+        function reorderDockItems() {
+            if (!adminControlsPage) {
+                return;
+            }
+
+            const dockItems = Array.from(dock.querySelectorAll('[data-widget-dock]'));
+            dockItems
+                .sort((left, right) => {
+                    const leftOrder = getAdminControlsDockOrderIndex(left.dataset.widgetDock);
+                    const rightOrder = getAdminControlsDockOrderIndex(right.dataset.widgetDock);
+                    if (leftOrder !== rightOrder) {
+                        return leftOrder - rightOrder;
+                    }
+                    return String(left.dataset.widgetDock || '').localeCompare(String(right.dataset.widgetDock || ''));
+                })
+                .forEach((item) => {
+                    dock.appendChild(item);
+                });
+        }
 
         function persist() {
             saveWidgetState(widgetState);
@@ -9839,6 +9911,7 @@ function initNavbarDateTime() {
             const dockItem = dock.querySelector(`[data-widget-dock="${widgetId}"]`);
             if (dockItem) {
                 dockItem.remove();
+                reorderDockItems();
             }
 
             if (typeof widget.scrollIntoView === 'function') {
@@ -9848,7 +9921,9 @@ function initNavbarDateTime() {
 
         function minimizeWidget(widget) {
             const widgetId = widget.dataset.widgetId;
-            const title = widget.dataset.widgetTitle || 'Widget';
+            const title = adminControlsPage
+                ? getAdminControlsDockLabel(widgetId, widget.dataset.widgetTitle || 'Widget')
+                : (widget.dataset.widgetTitle || 'Widget');
             const expandButton = widget.querySelector('[data-widget-action="expand"]');
             widget.classList.remove('widget-expanded');
             overlay.classList.remove('active');
@@ -9875,6 +9950,8 @@ function initNavbarDateTime() {
                 dockItem.addEventListener('click', () => restoreWidget(widget));
                 dock.appendChild(dockItem);
             }
+
+            reorderDockItems();
         }
 
         function closeExpandedWidget() {
@@ -9911,6 +9988,10 @@ function initNavbarDateTime() {
             }
 
             widget.dataset.widgetTitle = title;
+
+            if (adminControlsPage) {
+                widget.dataset.widgetTitle = getAdminControlsDockLabel(widgetId, title);
+            }
 
             if (!controlsEnabled) {
                 const existingControls = header.querySelector('.widget-controls');
@@ -9986,6 +10067,8 @@ function initNavbarDateTime() {
                 minimizeWidget(widget);
             }
         });
+
+        reorderDockItems();
     }
 
     // ============================================
@@ -16435,9 +16518,19 @@ function initNavbarDateTime() {
             return;
         }
 
+        const submissionsCard = document.getElementById('property-submissions-card');
+        const badgeTargets = [
+            ...Array.from(document.querySelectorAll('.admin-property-submissions-quick-link')),
+            submissionsCard
+        ].filter((element) => element instanceof HTMLElement);
         const subtitle = document.getElementById('property-submissions-subtitle');
         const token = localStorage.getItem('authToken');
+        const workspaceUser = getWorkspaceUserContext();
         let currentUser = null;
+        let hasSubmissionItems = false;
+        let latestSnapshotKey = '';
+        let refreshHandle = 0;
+        let isLoading = false;
 
         try {
             currentUser = JSON.parse(localStorage.getItem('user') || 'null');
@@ -16445,13 +16538,102 @@ function initNavbarDateTime() {
             currentUser = null;
         }
 
+        function applyUnreadState(hasUnread) {
+            badgeTargets.forEach((element) => {
+                element.dataset.hasPropertySubmissionUnread = hasUnread ? 'true' : 'false';
+            });
+        }
+
+        function parseSubmissionTimestamp(value) {
+            const numericValue = Number(value);
+            if (Number.isFinite(numericValue) && numericValue > 0) {
+                return numericValue;
+            }
+
+            const parsedValue = Date.parse(String(value || ''));
+            return Number.isFinite(parsedValue) ? parsedValue : 0;
+        }
+
+        function buildSubmissionSnapshot(items) {
+            const sourceItems = Array.isArray(items) ? items : [];
+            const latestItem = sourceItems.reduce((currentLatest, item) => {
+                const currentTimestamp = parseSubmissionTimestamp(currentLatest && currentLatest.createdAt);
+                const nextTimestamp = parseSubmissionTimestamp(item && item.createdAt);
+                if (nextTimestamp > currentTimestamp) {
+                    return item;
+                }
+
+                if (nextTimestamp === currentTimestamp) {
+                    const currentId = String(currentLatest && currentLatest.id || '');
+                    const nextId = String(item && item.id || '');
+                    if (nextId > currentId) {
+                        return item;
+                    }
+                }
+
+                return currentLatest;
+            }, null);
+
+            return {
+                count: sourceItems.length,
+                latestId: String(latestItem && latestItem.id || ''),
+                latestCreatedAt: parseSubmissionTimestamp(latestItem && latestItem.createdAt),
+                latestStatus: String(latestItem && latestItem.status || '').trim().toLowerCase(),
+                hasItems: sourceItems.length > 0
+            };
+        }
+
+        function syncSubmissionBadge(items) {
+            if (!(workspaceUser && workspaceUser.key)) {
+                applyUnreadState(false);
+                return;
+            }
+
+            const snapshot = buildSubmissionSnapshot(items);
+            hasSubmissionItems = snapshot.hasItems;
+            latestSnapshotKey = JSON.stringify(snapshot);
+            const seenSnapshot = String(getUserScopedValue(PROPERTY_SUBMISSIONS_BADGE_STATE_KEY, workspaceUser.key, '') || '');
+            applyUnreadState(snapshot.hasItems && latestSnapshotKey !== seenSnapshot);
+        }
+
+        function refreshStoredSubmissionBadgeState() {
+            if (!(workspaceUser && workspaceUser.key) || !latestSnapshotKey) {
+                applyUnreadState(false);
+                return;
+            }
+
+            const seenSnapshot = String(getUserScopedValue(PROPERTY_SUBMISSIONS_BADGE_STATE_KEY, workspaceUser.key, '') || '');
+            applyUnreadState(hasSubmissionItems && latestSnapshotKey !== seenSnapshot);
+        }
+
+        function markSubmissionsAsSeen() {
+            if (!(workspaceUser && workspaceUser.key) || !latestSnapshotKey) {
+                return;
+            }
+
+            setUserScopedValueSilently(PROPERTY_SUBMISSIONS_BADGE_STATE_KEY, workspaceUser.key, latestSnapshotKey);
+            applyUnreadState(false);
+        }
+
         if (!currentUser || currentUser.role !== 'admin') {
             if (subtitle) {
                 subtitle.textContent = 'Only admin accounts can review seller submissions.';
             }
             submissionsList.innerHTML = '<p class="outreach-empty">Admin access required.</p>';
+            applyUnreadState(false);
             return;
         }
+
+        badgeTargets.forEach((element) => {
+            if (element.dataset.propertySubmissionsSeenBound === 'true') {
+                return;
+            }
+
+            element.dataset.propertySubmissionsSeenBound = 'true';
+            element.addEventListener('click', () => {
+                window.setTimeout(markSubmissionsAsSeen, 180);
+            });
+        });
 
         function escapeSubmissionText(value) {
             return String(value || '')
@@ -16617,9 +16799,15 @@ function initNavbarDateTime() {
         async function loadSubmissions() {
             if (!token) {
                 submissionsList.innerHTML = '<p class="outreach-empty">Missing auth token. Please sign in again.</p>';
+                applyUnreadState(false);
                 return;
             }
 
+            if (isLoading) {
+                return;
+            }
+
+            isLoading = true;
             try {
                 const response = await fetch('/api/property-submissions', {
                     headers: {
@@ -16630,13 +16818,38 @@ function initNavbarDateTime() {
                 if (!response.ok) {
                     throw new Error(data.error || 'Unable to load property submissions');
                 }
-                renderSubmissions(data.submissions || []);
+                const submissions = Array.isArray(data.submissions) ? data.submissions : [];
+                renderSubmissions(submissions);
+                syncSubmissionBadge(submissions);
             } catch (error) {
                 submissionsList.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load property submissions.')}</p>`;
+            } finally {
+                isLoading = false;
             }
         }
 
         loadSubmissions();
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                loadSubmissions();
+            }
+        });
+        window.addEventListener('focus', loadSubmissions);
+        window.addEventListener('storage', (event) => {
+            if (!event.key || event.key === PROPERTY_SUBMISSIONS_BADGE_STATE_KEY) {
+                refreshStoredSubmissionBadgeState();
+            }
+        });
+        refreshHandle = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                loadSubmissions();
+            }
+        }, 30000);
+        window.addEventListener('beforeunload', () => {
+            if (refreshHandle) {
+                window.clearInterval(refreshHandle);
+            }
+        }, { once: true });
     }
 
     function initAdminSmtpApprovals() {
@@ -30912,6 +31125,9 @@ function initNavbarDateTime() {
                 ];
 
                 if (includeTerms) {
+                    const offerBuyerVestingText = /fast bridge group llc/i.test(entityText)
+                        ? 'Fast Bridge Group, LLC and or assigns'
+                        : entityText;
                     const offerSummaryLines = [
                         '',
                         'Offer Summary',
@@ -30919,7 +31135,7 @@ function initNavbarDateTime() {
                         `• Recipient: ${recipientName || recipientEmail || 'Listing Agent'}`,
                         `• Offer type: ${offerType}`,
                         `• Purchase price: ${purchasePrice}`,
-                        `• Close of escrow: ${closeEscrowDays}${/day/i.test(closeEscrowDays) ? '' : ' days'}`,
+                        `• Close of escrow: ${closeEscrowDays}${/day/i.test(closeEscrowDays) ? '' : ' days'} (Business days)`,
                         `• Deposit (${depositMode}): ${depositAmount}`,
                         `• Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite}`}`,
                         `• Disclosures: ${disclosures}${/day/i.test(disclosures) ? '' : ' days'}`,
@@ -30929,7 +31145,7 @@ function initNavbarDateTime() {
                         `• Title company: ${titleCompany}`,
                         investorProfile?.closingCostSummary ? `• Closing costs: ${investorProfile.closingCostSummary}` : '',
                         `• Additional terms: ${otherTerms}`,
-                        `• Buyer / vesting: ${entityText}`,
+                        `• Buyer / vesting: ${offerBuyerVestingText}`,
                         `• ${signerLabel}: ${signerName}`,
                         sellerCompEnabled
                             ? `• Seller compensation: ${sellerCompPercent ? `${sellerCompPercent}%` : ''}${sellerCompPercent && sellerCompAmount ? ' | ' : ''}${sellerCompAmount ? `$${sellerCompAmount}` : ''}`

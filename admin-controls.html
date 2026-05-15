@@ -520,6 +520,16 @@
             box-shadow: 0 28px 50px rgba(2, 6, 23, 0.2);
         }
 
+        #property-submissions-card {
+            transition: none;
+        }
+
+        #property-submissions-card:hover {
+            transform: none;
+            border-color: rgba(var(--accent-light-rgb), 0.12);
+            box-shadow: 0 22px 38px rgba(2, 6, 23, 0.14);
+        }
+
         .admin-control-panel:nth-child(1),
         .admin-control-panel:nth-child(2),
         .admin-control-panel:nth-child(3),
@@ -1087,7 +1097,7 @@
         }
     </style>
 </head>
-<body>
+<body class="admin-controls-page">
     <div class="background"></div>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
@@ -1146,7 +1156,7 @@
                 <div class="page-title-group">
                     <h1 class="page-title" style="display:flex;align-items:center;gap:16px;">
                         Admin Controls
-                        <a id="build-version-label" href="version-history.html?source=app" style="font-size:13px;font-weight:500;margin-left:16px;color:inherit;text-decoration:underline;text-underline-offset:3px;">v1.4.9</a>
+                        <a id="build-version-label" href="version-history.html?source=app" style="font-size:13px;font-weight:500;margin-left:16px;color:inherit;text-decoration:underline;text-underline-offset:3px;">v1.5.0</a>
                     </h1>
                     <p class="navbar-datetime" id="navbar-datetime" aria-live="polite"></p>
                 </div>
@@ -1161,7 +1171,7 @@
                 <nav class="admin-quick-rail" aria-label="Admin quick navigation">
                     <a class="admin-quick-link" href="#online-users-card" aria-label="Online Users" title="Online Users"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span><span class="admin-quick-link-label">Online Users</span></a>
                     <a class="admin-quick-link" href="#requested-access-card" aria-label="Access Queue" title="Access Queue"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span><span class="admin-quick-link-label">Access Queue</span></a>
-                    <a class="admin-quick-link" href="#property-submissions-card" aria-label="Seller Leads" title="Seller Leads"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span><span class="admin-quick-link-label">Seller Leads</span></a>
+                    <a class="admin-quick-link admin-property-submissions-quick-link" href="#property-submissions-card" aria-label="Seller Leads" title="Seller Leads"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span><span class="admin-quick-link-label">Seller Leads</span><span class="nav-unread-dot" data-property-submissions-dot="true" aria-hidden="true"></span></a>
                     <a class="admin-quick-link" href="unified-conversation-inbox.html" aria-label="Unified Inbox" title="Unified Inbox"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg></span><span class="admin-quick-link-label">Unified Inbox</span></a>
                     <a class="admin-quick-link" href="#admin-announcement-card" aria-label="Announcements" title="Announcements"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l11-5v12L3 13z"></path><path d="M14 8h4a3 3 0 0 1 0 6h-4"></path><path d="M6 13v5a2 2 0 0 0 2 2h1"></path></svg></span><span class="admin-quick-link-label">Announcements</span></a>
                     <a class="admin-quick-link" href="#smtp-approval-card" aria-label="Gmail Approvals" title="Gmail Approvals"><span class="admin-quick-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 6l-10 7L2 6"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M19 11l-5 5-2-2"></path></svg></span><span class="admin-quick-link-label">Gmail Approvals</span></a>
@@ -1262,7 +1272,7 @@
                     <div class="card-header">
                         <div>
                             <div class="admin-panel-eyebrow">Seller Intake</div>
-                            <h2 class="card-title admin-title-with-icon"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span><span>Property Submissions</span></h2>
+                            <h2 class="card-title admin-title-with-icon admin-property-submissions-title"><span class="admin-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span><span>Property Submissions</span><span class="nav-unread-dot" data-property-submissions-dot="true" aria-hidden="true"></span></h2>
                             <p class="card-subtitle" id="property-submissions-subtitle">Seller inquiries submitted from the public homepage form</p>
                         </div>
                     </div>
