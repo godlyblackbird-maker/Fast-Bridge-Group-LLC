@@ -203,6 +203,46 @@
             overflow-x: hidden;
         }
 
+        .studio-page-title-group {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .studio-page-title-group .page-title {
+            margin: 0;
+        }
+
+        .studio-page-title-copy {
+            min-width: 0;
+        }
+
+        .studio-page-logo {
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
+        @media (max-width: 720px) {
+            .studio-page-logo {
+                width: 60px;
+            }
+        }
+
+        .dashboard,
+        .studio-shell,
+        .studio-hero,
+        .studio-workspace,
+        .studio-stage-card,
+        .studio-panel,
+        .studio-metric {
+            position: relative;
+            z-index: 1;
+        }
+
         .studio-shell {
             width: min(1440px, calc(100% - 40px));
             margin: 0 auto;
@@ -341,6 +381,43 @@
             line-height: 1.6;
         }
 
+        .studio-recorder-disclaimer {
+            display: grid;
+            gap: 10px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            margin-top: 22px;
+            border: 1px solid var(--glass-border);
+            background: var(--studio-card-bg);
+            box-shadow: 0 24px 40px rgba(5, 10, 18, 0.16);
+        }
+
+        .studio-recorder-disclaimer-title {
+            margin: 0;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .studio-recorder-disclaimer-copy {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .studio-recorder-disclaimer-link {
+            width: fit-content;
+            color: var(--gold-light);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .studio-recorder-disclaimer-link:hover,
+        .studio-recorder-disclaimer-link:focus-visible {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
         .studio-badge-row {
             display: flex;
             align-items: center;
@@ -411,6 +488,16 @@
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
+        }
+
+        .studio-stage-status-row {
+            gap: 6px;
+        }
+
+        .studio-stage-status-row .studio-badge {
+            min-height: 28px;
+            padding: 0 10px;
+            font-size: 0.78rem;
         }
 
         .studio-panel-stack {
@@ -1153,9 +1240,12 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <div class="page-title-group">
-                    <h1 class="page-title">FBG Studio</h1>
-                    <p class="navbar-datetime">OBS-style browser studio for recording screen, camera, and microphone sources.</p>
+                <div class="page-title-group studio-page-title-group">
+                    <img class="studio-page-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                    <div class="studio-page-title-copy">
+                        <h1 class="page-title">FBG Studio | FAST BRIDGE GROUP LLC</h1>
+                        <p class="navbar-datetime">OBS-style browser studio for recording screen, camera, and microphone sources.</p>
+                    </div>
                 </div>
             </nav>
 
@@ -1163,26 +1253,20 @@
                 <section class="studio-workspace" aria-label="FBG Studio workspace">
                     <div class="studio-main-stack">
                         <div class="studio-stage-card">
-                            <div class="studio-stage-header">
-                                <div>
-                                    <h2 class="studio-stage-title">Program Output</h2>
-                                    <p id="studio-stage-status" class="studio-stage-subtitle">Load a screen or camera source to start building the live program view.</p>
-                                </div>
-                                <div class="studio-badge-row">
-                                    <span id="studio-screen-badge" class="studio-badge">Screen Off</span>
-                                    <span id="studio-camera-badge" class="studio-badge">Camera Off</span>
-                                    <span id="studio-mic-badge" class="studio-badge">Mic Off</span>
-                                    <span id="studio-background-recording-badge" class="studio-badge is-background" hidden>Background Recording Active</span>
-                                </div>
-                            </div>
                             <div class="studio-stage-shell">
-                                <canvas id="studio-preview" class="studio-preview-canvas" width="1280" height="720"></canvas>
+                                <canvas id="studio-preview" class="studio-preview-canvas" width="1920" height="1080"></canvas>
                             </div>
                             <div class="studio-stage-footer">
                                 <div class="studio-stage-info">
-                                    <span id="studio-resolution-badge" class="studio-badge">1280 x 720</span>
+                                    <span id="studio-resolution-badge" class="studio-badge">1920 x 1080</span>
                                     <span id="studio-overlay-badge" class="studio-badge">Camera Overlay On</span>
                                     <span id="studio-audio-badge" class="studio-badge">Audio Mix Ready</span>
+                                </div>
+                                <div class="studio-badge-row studio-stage-status-row">
+                                    <span id="studio-screen-badge" class="studio-badge">Screen Off</span>
+                                    <span id="studio-camera-badge" class="studio-badge">Camera Off</span>
+                                    <span id="studio-mic-badge" class="studio-badge">Mic Off</span>
+                                    <span id="studio-background-recording-badge" class="studio-badge is-background" hidden>Recording Active</span>
                                 </div>
                                 <div id="studio-timer" class="studio-recording-pill" hidden>
                                     <span class="studio-recording-dot" aria-hidden="true"></span>
@@ -1202,8 +1286,8 @@
                                 <label>
                                     <span class="studio-source-meta">Recording quality</span>
                                     <select id="studio-recording-resolution" class="studio-select" aria-label="Recording quality">
-                                        <option value="1920x1080">1920 x 1080</option>
-                                        <option value="1280x720" selected>1280 x 720</option>
+                                        <option value="1920x1080" selected>1920 x 1080</option>
+                                        <option value="1280x720">1280 x 720</option>
                                         <option value="854x480">854 x 480</option>
                                     </select>
                                 </label>
@@ -1264,15 +1348,6 @@
                                     </div>
                                     <div class="studio-source-toggles">
                                         <button id="studio-screen-toggle" class="studio-chip-button" type="button">Share Screen</button>
-                                    </div>
-                                </div>
-                                <div class="studio-source-row">
-                                    <div>
-                                        <span class="studio-source-name">Camera Feed</span>
-                                        <span id="studio-camera-meta" class="studio-source-meta">Camera overlay is available for presenter mode.</span>
-                                    </div>
-                                    <div class="studio-source-toggles">
-                                        <button id="studio-camera-toggle" class="studio-chip-button" type="button">Turn on Camera</button>
                                     </div>
                                 </div>
                                 <div class="studio-source-row">
@@ -1339,6 +1414,15 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="studio-source-row">
+                                    <div>
+                                        <span class="studio-source-name">Camera Feed</span>
+                                        <span id="studio-camera-meta" class="studio-source-meta">Camera overlay is available for presenter mode.</span>
+                                    </div>
+                                    <div class="studio-source-toggles">
+                                        <button id="studio-camera-toggle" class="studio-chip-button" type="button">Turn on Camera</button>
+                                    </div>
+                                </div>
                             </div>
                         </article>
 
@@ -1379,6 +1463,12 @@
                         </article>
 
                     </div>
+                </section>
+                <section class="studio-recorder-disclaimer" aria-label="Recording note">
+                    <p class="studio-recorder-disclaimer-title">Recording note</p>
+                    <p class="studio-recorder-disclaimer-copy">FBG Studio is a solid quick-capture option when you want to record a screen, camera, or mic feed directly in the browser without leaving this page. For longer sessions, heavier production work, or the most dependable screen recording setup, OBS Studio is the better option because it gives you stronger recording controls and a more robust desktop workflow. If you want a simpler browser-first alternative with quick sharing and lightweight recording tools, Screencastify is another solid option to consider.</p>
+                    <a class="studio-recorder-disclaimer-link" href="https://obsproject.com/download" target="_blank" rel="noopener noreferrer">Download OBS Studio</a>
+                    <a class="studio-recorder-disclaimer-link" href="https://chromewebstore.google.com/detail/screencastify-screen-vide/mmeijimgabbpbgpdklnllpncmdofkcpn?hl=en" target="_blank" rel="noopener noreferrer">Get Screencastify</a>
                 </section>
             </div>
         </main>
@@ -1472,11 +1562,6 @@
                 recordingSessionId: '',
                 recordingActive: false,
                 recordingPending: false,
-                recordingHostWindow: null,
-                recordingHostReady: false,
-                recordingChannel: null,
-                awaitingRecorderStatus: false,
-                recordingStatusTimeout: null,
                 preserveCaptureOnUnload: false,
                 recordingErrorMessage: '',
                 sourceErrorMessage: ''
@@ -1486,11 +1571,9 @@
             const CAMERA_BOX_ASPECT_RATIO = 16 / 9;
             const CAMERA_BOX_MIN_WIDTH = 140;
             const CAMERA_HANDLE_RADIUS = 18;
+            const CAMERA_RESIZE_HIT_SIZE = 22;
             const STUDIO_SESSION_KEY = 'fbgStudioSessionState';
             const RECORDER_STATUS_KEY = 'fbgStudioRecorderStatus';
-            const RECORDER_BRIDGE_NAME = 'fbg-studio-recorder-bridge';
-            const RECORDER_HOST_WINDOW_NAME = 'fbgStudioRecorderHostWindow';
-            const RECORDER_STATUS_TIMEOUT_MS = 1800;
             const RECORDING_RESOLUTION_PRESETS = {
                 '1920x1080': { width: 1920, height: 1080, label: '1920 x 1080' },
                 '1280x720': { width: 1280, height: 720, label: '1280 x 720' },
@@ -1548,7 +1631,7 @@
                     layout: layoutSelect ? layoutSelect.value : 'screen-camera',
                     cameraPosition: cameraPositionSelect ? cameraPositionSelect.value : 'bottom-right',
                     cameraSize: cameraSizeSelect ? cameraSizeSelect.value : 'medium',
-                    recordingResolution: recordingResolutionSelect ? recordingResolutionSelect.value : '1280x720',
+                    recordingResolution: recordingResolutionSelect ? recordingResolutionSelect.value : '1920x1080',
                     micDeviceId: state.micDeviceId || getSelectedMicDeviceId(),
                     micGainValue: state.micGainValue,
                     cameraBoxOverride: state.cameraBoxOverride && typeof state.cameraBoxOverride === 'object'
@@ -1622,8 +1705,8 @@
             }
 
             function getRecordingResolutionPreset() {
-                const resolutionKey = recordingResolutionSelect ? recordingResolutionSelect.value : '1280x720';
-                return RECORDING_RESOLUTION_PRESETS[resolutionKey] || RECORDING_RESOLUTION_PRESETS['1280x720'];
+                const resolutionKey = recordingResolutionSelect ? recordingResolutionSelect.value : '1920x1080';
+                return RECORDING_RESOLUTION_PRESETS[resolutionKey] || RECORDING_RESOLUTION_PRESETS['1920x1080'];
             }
 
             function applyRecordingResolution() {
@@ -1705,501 +1788,6 @@
 
             function createRecordingSessionId() {
                 return `studio-recorder-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-            }
-
-            function getRecorderPayload() {
-                return {
-                    sessionId: createRecordingSessionId(),
-                    startedAt: Date.now(),
-                    mimeType: getRecordingMimeType(),
-                    layout: layoutSelect ? layoutSelect.value : 'screen-camera',
-                    cameraBox: getCameraBox(),
-                    micGainValue: state.micGainValue,
-                    screenStream: state.screenStream ? state.screenStream.clone() : null,
-                    cameraStream: state.cameraStream ? state.cameraStream.clone() : null,
-                    micStream: state.micStream ? state.micStream.clone() : null
-                };
-            }
-
-            function getRecorderHostHtml() {
-                return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FBG Studio Recorder</title>
-    <style>
-        :root { color-scheme: dark; }
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            background: #020617;
-            color: #e2e8f0;
-            font: 500 14px/1.6 Outfit, system-ui, sans-serif;
-        }
-        .host-card {
-            width: min(100vw - 24px, 360px);
-            padding: 18px;
-            border-radius: 18px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
-            box-shadow: 0 24px 48px -28px rgba(2, 6, 23, 0.9);
-        }
-        .host-title { margin: 0 0 6px; font-size: 1rem; }
-        .host-copy { margin: 0; color: #94a3b8; }
-        .host-status { margin-top: 12px; color: #f8fafc; font-weight: 700; }
-        canvas, video { display: none; }
-    </style>
-</head>
-<body>
-    <div class="host-card">
-        <h1 class="host-title">FBG Studio Recorder</h1>
-        <p class="host-copy">This helper keeps the current studio recording alive while the main page is away.</p>
-        <div id="host-status" class="host-status">Waiting for recording...</div>
-    </div>
-    <canvas id="host-preview" width="1280" height="720"></canvas>
-    <video id="host-screen-video" autoplay playsinline muted></video>
-    <video id="host-camera-video" autoplay playsinline muted></video>
-    <script>
-        (function () {
-            const RECORDER_BRIDGE_NAME = ${JSON.stringify(RECORDER_BRIDGE_NAME)};
-            const RECORDER_STATUS_KEY = ${JSON.stringify(RECORDER_STATUS_KEY)};
-            const HOST_ORIGIN = ${JSON.stringify(window.location.origin)};
-            const previewCanvas = document.getElementById('host-preview');
-            const previewContext = previewCanvas.getContext('2d');
-            const screenVideo = document.getElementById('host-screen-video');
-            const cameraVideo = document.getElementById('host-camera-video');
-            const hostStatus = document.getElementById('host-status');
-            const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel(RECORDER_BRIDGE_NAME) : null;
-
-            const state = {
-                recorder: null,
-                outputStream: null,
-                audioContext: null,
-                audioDestination: null,
-                frameHandle: 0,
-                recordedChunks: [],
-                startedAt: 0,
-                sessionId: '',
-                screenStream: null,
-                cameraStream: null,
-                micStream: null,
-                layout: 'screen-camera',
-                cameraBox: null,
-                micGainValue: 1,
-                mimeType: ''
-            };
-
-            window.__FBG_STUDIO_RECORDER_HOST__ = true;
-            window.__FBG_STUDIO_RECORDER_HOST_READY__ = true;
-
-            function postBridgeMessage(message) {
-                if (channel) {
-                    channel.postMessage(message);
-                }
-            }
-
-            function writeStatus(active) {
-                try {
-                    localStorage.setItem(RECORDER_STATUS_KEY, JSON.stringify({
-                        active: Boolean(active),
-                        sessionId: state.sessionId,
-                        startedAt: state.startedAt
-                    }));
-                } catch (error) {
-                    // Ignore storage failures.
-                }
-            }
-
-            function stopStream(stream) {
-                if (!stream) {
-                    return;
-                }
-                stream.getTracks().forEach((track) => track.stop());
-            }
-
-            function resetAudioMix() {
-                if (state.audioContext) {
-                    state.audioContext.close().catch(() => {});
-                }
-                state.audioContext = null;
-                state.audioDestination = null;
-            }
-
-            function stopRenderLoop() {
-                if (state.frameHandle) {
-                    window.cancelAnimationFrame(state.frameHandle);
-                }
-                state.frameHandle = 0;
-            }
-
-            function cleanupSources() {
-                stopStream(state.screenStream);
-                stopStream(state.cameraStream);
-                stopStream(state.micStream);
-                state.screenStream = null;
-                state.cameraStream = null;
-                state.micStream = null;
-                screenVideo.srcObject = null;
-                cameraVideo.srcObject = null;
-            }
-
-            function updateHostStatus(label) {
-                hostStatus.textContent = label;
-            }
-
-            async function attachVideo(videoNode, stream) {
-                if (!videoNode) {
-                    return;
-                }
-                videoNode.srcObject = stream || null;
-                if (!stream) {
-                    return;
-                }
-                try {
-                    await videoNode.play();
-                } catch (error) {
-                    // Ignore autoplay failures for hidden helper media.
-                }
-            }
-
-            function getCameraHeight() {
-                const width = state.cameraBox && Number(state.cameraBox.width) ? Number(state.cameraBox.width) : 304;
-                return Math.round(width / (16 / 9));
-            }
-
-            function renderFrame() {
-                previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-                previewContext.fillStyle = '#020617';
-                previewContext.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
-
-                const hasScreen = Boolean(state.screenStream && screenVideo.readyState >= 2);
-                const hasCamera = Boolean(state.cameraStream && cameraVideo.readyState >= 2);
-
-                if (hasScreen && state.layout !== 'camera-only') {
-                    previewContext.drawImage(screenVideo, 0, 0, previewCanvas.width, previewCanvas.height);
-                }
-
-                if (hasCamera) {
-                    if (state.layout === 'camera-only') {
-                        previewContext.drawImage(cameraVideo, 0, 0, previewCanvas.width, previewCanvas.height);
-                    } else if (state.layout !== 'screen-only' && state.cameraBox) {
-                        const width = Number(state.cameraBox.width) || 304;
-                        const height = getCameraHeight();
-                        const x = Number(state.cameraBox.x) || 0;
-                        const y = Number(state.cameraBox.y) || 0;
-                        previewContext.fillStyle = 'rgba(15, 23, 42, 0.65)';
-                        previewContext.fillRect(x - 8, y - 8, width + 16, height + 16);
-                        previewContext.drawImage(cameraVideo, x, y, width, height);
-                    }
-                }
-
-                state.frameHandle = window.requestAnimationFrame(renderFrame);
-            }
-
-            function buildRecordingStream() {
-                let videoTrack = null;
-                const layout = layoutSelect ? layoutSelect.value : 'screen-camera';
-
-                if (state.screenStream && (!state.cameraStream || layout === 'screen-only')) {
-                    const screenTrack = state.screenStream.getVideoTracks()[0];
-                    videoTrack = screenTrack ? screenTrack.clone() : null;
-                } else if (state.cameraStream && (!state.screenStream || layout === 'camera-only')) {
-                    const cameraTrack = state.cameraStream.getVideoTracks()[0];
-                    videoTrack = cameraTrack ? cameraTrack.clone() : null;
-                } else {
-                    videoTrack = previewCanvas.captureStream(30).getVideoTracks()[0] || null;
-                }
-
-                if (!videoTrack) {
-                    throw new Error('No video source is available for recording.');
-                }
-
-                const tracks = [videoTrack];
-                const audioStreams = [];
-
-                if (state.screenStream && state.screenStream.getAudioTracks().length) {
-                    audioStreams.push({ stream: state.screenStream, gainValue: 1 });
-                }
-                if (state.micStream && state.micStream.getAudioTracks().length) {
-                    audioStreams.push({ stream: state.micStream, gainValue: state.micGainValue });
-                }
-
-                if (audioStreams.length) {
-                    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContextCtor) {
-                        state.audioContext = new AudioContextCtor();
-                        state.audioDestination = state.audioContext.createMediaStreamDestination();
-                        audioStreams.forEach((entry) => {
-                            const source = state.audioContext.createMediaStreamSource(entry.stream);
-                            const gain = state.audioContext.createGain();
-                            gain.gain.value = entry.gainValue;
-                            source.connect(gain).connect(state.audioDestination);
-                        });
-                        state.audioDestination.stream.getAudioTracks().forEach((track) => tracks.push(track));
-                    }
-                }
-
-                return new MediaStream(tracks);
-            }
-
-            function postStatus() {
-                postBridgeMessage({
-                    type: 'recording-status',
-                    active: Boolean(state.recorder),
-                    sessionId: state.sessionId,
-                    startedAt: state.startedAt
-                });
-            }
-
-            function finalizeRecording() {
-                if (state.outputStream) {
-                    state.outputStream.getTracks().forEach((track) => track.stop());
-                }
-                state.outputStream = null;
-                state.recorder = null;
-                state.recordedChunks = [];
-                state.startedAt = 0;
-                state.sessionId = '';
-                writeStatus(false);
-                stopRenderLoop();
-                resetAudioMix();
-                cleanupSources();
-                updateHostStatus('Waiting for recording...');
-            }
-
-            async function startRecording(payload) {
-                if (!payload || state.recorder) {
-                    return;
-                }
-
-                state.recordedChunks = [];
-                state.startedAt = Number(payload.startedAt) || Date.now();
-                state.sessionId = String(payload.sessionId || '');
-                state.layout = String(payload.layout || 'screen-camera');
-                state.cameraBox = payload.cameraBox && typeof payload.cameraBox === 'object'
-                    ? {
-                        x: Number(payload.cameraBox.x) || 0,
-                        y: Number(payload.cameraBox.y) || 0,
-                        width: Number(payload.cameraBox.width) || 304
-                    }
-                    : { x: previewCanvas.width - 330, y: previewCanvas.height - 210, width: 304 };
-                state.micGainValue = Number(payload.micGainValue) || 1;
-                state.mimeType = String(payload.mimeType || '');
-                state.screenStream = payload.screenStream || null;
-                state.cameraStream = payload.cameraStream || null;
-                state.micStream = payload.micStream || null;
-
-                await attachVideo(screenVideo, state.screenStream);
-                await attachVideo(cameraVideo, state.cameraStream);
-                stopRenderLoop();
-                renderFrame();
-
-                const stream = buildRecordingStream();
-                state.outputStream = stream;
-                state.recorder = state.mimeType ? new MediaRecorder(stream, { mimeType: state.mimeType }) : new MediaRecorder(stream);
-                state.recorder.addEventListener('dataavailable', (event) => {
-                    if (event.data && event.data.size > 0) {
-                        state.recordedChunks.push(event.data);
-                    }
-                });
-                state.recorder.addEventListener('stop', () => {
-                    const finishedRecorder = state.recorder;
-                    const blob = new Blob(state.recordedChunks, {
-                        type: finishedRecorder ? finishedRecorder.mimeType || 'video/webm' : 'video/webm'
-                    });
-                    postBridgeMessage({ type: 'recording-blob', blob: blob });
-                    postBridgeMessage({ type: 'recording-stopped' });
-                    finalizeRecording();
-                }, { once: true });
-
-                state.recorder.start(1000);
-                writeStatus(true);
-                updateHostStatus('Recording in progress...');
-                postBridgeMessage({
-                    type: 'recording-started',
-                    sessionId: state.sessionId,
-                    startedAt: state.startedAt
-                });
-            }
-
-            function stopRecording() {
-                if (!state.recorder) {
-                    return;
-                }
-                state.recorder.stop();
-            }
-
-            if (channel) {
-                channel.addEventListener('message', (event) => {
-                    const data = event.data || {};
-                    if (data.type === 'request-status') {
-                        postStatus();
-                        return;
-                    }
-                    if (data.type === 'stop-recording') {
-                        if (!data.sessionId || data.sessionId === state.sessionId) {
-                            stopRecording();
-                        }
-                    }
-                });
-            }
-
-            window.addEventListener('message', (event) => {
-                if (event.origin !== HOST_ORIGIN) {
-                    return;
-                }
-                const data = event.data || {};
-                if (data.type === 'start-recording') {
-                    startRecording(data.payload).catch((error) => {
-                        postBridgeMessage({ type: 'recording-error', message: error && error.message ? error.message : 'Recording could not continue in the helper window.' });
-                        finalizeRecording();
-                    });
-                    return;
-                }
-                if (data.type === 'stop-recording') {
-                    stopRecording();
-                }
-                if (data.type === 'request-status') {
-                    postStatus();
-                }
-            });
-
-            window.addEventListener('beforeunload', () => {
-                writeStatus(false);
-                stopRenderLoop();
-                resetAudioMix();
-                cleanupSources();
-            });
-
-            writeStatus(false);
-            updateHostStatus('Waiting for recording...');
-            postBridgeMessage({ type: 'recorder-host-ready' });
-        })();
-    <\/script>
-</body>
-</html>`;
-            }
-
-            function ensureRecorderChannel() {
-                if (state.recordingChannel || typeof BroadcastChannel !== 'function') {
-                    return state.recordingChannel;
-                }
-
-                state.recordingChannel = new BroadcastChannel(RECORDER_BRIDGE_NAME);
-                state.recordingChannel.addEventListener('message', (event) => {
-                    const data = event.data || {};
-                    if (data.type === 'recorder-host-ready') {
-                        state.recordingHostReady = true;
-                        return;
-                    }
-                    if (data.type === 'recording-started') {
-                        state.awaitingRecorderStatus = false;
-                        setStoredRecorderStatus({ active: true, sessionId: data.sessionId || state.recordingSessionId, startedAt: data.startedAt || Date.now() });
-                        setRecorderActiveState(true, {
-                            sessionId: data.sessionId || state.recordingSessionId,
-                            startedAt: data.startedAt || Date.now(),
-                            pending: false
-                        });
-                        return;
-                    }
-                    if (data.type === 'recording-status') {
-                        state.awaitingRecorderStatus = false;
-                        if (data.active) {
-                            setStoredRecorderStatus({ active: true, sessionId: data.sessionId || '', startedAt: data.startedAt || Date.now() });
-                            setRecorderActiveState(true, {
-                                sessionId: data.sessionId || '',
-                                startedAt: data.startedAt || Date.now(),
-                                pending: false
-                            });
-                        } else {
-                            setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
-                            setRecorderActiveState(false, { pending: false });
-                        }
-                        return;
-                    }
-                    if (data.type === 'recording-blob' && data.blob) {
-                        addRecording(data.blob);
-                        return;
-                    }
-                    if (data.type === 'recording-stopped') {
-                        state.awaitingRecorderStatus = false;
-                        setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
-                        setRecorderActiveState(false, { pending: false });
-                        return;
-                    }
-                    if (data.type === 'recording-error') {
-                        state.awaitingRecorderStatus = false;
-                        setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
-                        setRecorderActiveState(false, { pending: false });
-                        setRecordingWarning(data.message || 'Background recording could not continue after leaving the page.');
-                        window.alert(data.message || 'Recording could not continue after leaving the page.');
-                    }
-                });
-
-                return state.recordingChannel;
-            }
-
-            function requestRecorderStatus() {
-                const channel = ensureRecorderChannel();
-                if (!channel) {
-                    return;
-                }
-
-                state.awaitingRecorderStatus = true;
-                channel.postMessage({ type: 'request-status' });
-                if (state.recordingStatusTimeout) {
-                    window.clearTimeout(state.recordingStatusTimeout);
-                }
-                state.recordingStatusTimeout = window.setTimeout(() => {
-                    if (!state.awaitingRecorderStatus) {
-                        return;
-                    }
-                    state.awaitingRecorderStatus = false;
-                    const storedStatus = getStoredRecorderStatus();
-                    if (storedStatus && storedStatus.active) {
-                        setStoredRecorderStatus({ active: false, sessionId: '', startedAt: 0 });
-                        setRecorderActiveState(false, { pending: false });
-                        setRecordingWarning('The background recorder was not found when this page reconnected. If the helper window was closed, start a new recording from this page.');
-                    }
-                }, RECORDER_STATUS_TIMEOUT_MS);
-            }
-
-            function ensureRecorderHostWindow() {
-                const hostWindow = window.open('', RECORDER_HOST_WINDOW_NAME, 'popup=yes,width=420,height=260');
-                if (!hostWindow) {
-                    throw new Error('Recorder helper window was blocked by the browser.');
-                }
-
-                state.recordingHostWindow = hostWindow;
-                if (!hostWindow.__FBG_STUDIO_RECORDER_HOST__) {
-                    hostWindow.document.open();
-                    hostWindow.document.write(getRecorderHostHtml());
-                    hostWindow.document.close();
-                }
-
-                return new Promise((resolve, reject) => {
-                    let attempts = 0;
-                    const waitForHost = () => {
-                        if (!state.recordingHostWindow || state.recordingHostWindow.closed) {
-                            reject(new Error('Recorder helper window was closed.'));
-                            return;
-                        }
-                        if (state.recordingHostWindow.__FBG_STUDIO_RECORDER_HOST_READY__) {
-                            resolve(state.recordingHostWindow);
-                            return;
-                        }
-                        attempts += 1;
-                        if (attempts > 80) {
-                            reject(new Error('Recorder helper window did not finish loading.'));
-                            return;
-                        }
-                        window.setTimeout(waitForHost, 50);
-                    };
-                    waitForHost();
-                });
             }
 
             function setMicDbMeter(decibels) {
@@ -2412,28 +2000,55 @@
                 };
             }
 
+            function getMaxCameraBoxWidth() {
+                const maxWidthByCanvas = previewCanvas.width - (CAMERA_BOX_PADDING * 2);
+                const maxWidthByHeight = Math.floor((previewCanvas.height - (CAMERA_BOX_PADDING * 2)) * CAMERA_BOX_ASPECT_RATIO);
+                return Math.max(CAMERA_BOX_MIN_WIDTH, Math.min(maxWidthByCanvas, maxWidthByHeight));
+            }
+
+            function normalizeCameraBox(box) {
+                const nextWidth = clamp(Math.round(Number(box && box.width) || CAMERA_BOX_MIN_WIDTH), CAMERA_BOX_MIN_WIDTH, getMaxCameraBoxWidth());
+                const nextHeight = Math.round(nextWidth / CAMERA_BOX_ASPECT_RATIO);
+                return {
+                    x: clamp(Math.round(Number(box && box.x) || CAMERA_BOX_PADDING), CAMERA_BOX_PADDING, Math.max(CAMERA_BOX_PADDING, previewCanvas.width - nextWidth - CAMERA_BOX_PADDING)),
+                    y: clamp(Math.round(Number(box && box.y) || CAMERA_BOX_PADDING), CAMERA_BOX_PADDING, Math.max(CAMERA_BOX_PADDING, previewCanvas.height - nextHeight - CAMERA_BOX_PADDING)),
+                    width: nextWidth,
+                    height: nextHeight
+                };
+            }
+
             function getCameraResizeHandle(point, box) {
                 const handles = getCameraResizeHandles(box);
-                return Object.entries(handles).find(([, handle]) => {
+                const cornerMatch = Object.entries(handles).find(([, handle]) => {
                     const deltaX = point.x - handle.x;
                     const deltaY = point.y - handle.y;
                     return Math.hypot(deltaX, deltaY) <= CAMERA_HANDLE_RADIUS;
-                }) || null;
-            }
-
-            function drawCameraResizeHandles(box) {
-                const handles = Object.values(getCameraResizeHandles(box));
-                previewContext.save();
-                handles.forEach((handle) => {
-                    previewContext.beginPath();
-                    previewContext.arc(handle.x, handle.y, 8, 0, Math.PI * 2);
-                    previewContext.fillStyle = '#f8fafc';
-                    previewContext.fill();
-                    previewContext.lineWidth = 3;
-                    previewContext.strokeStyle = 'rgba(15, 23, 42, 0.9)';
-                    previewContext.stroke();
                 });
-                previewContext.restore();
+                if (cornerMatch) {
+                    return cornerMatch[0];
+                }
+
+                const withinVerticalBounds = point.y >= box.y - CAMERA_RESIZE_HIT_SIZE && point.y <= box.y + box.height + CAMERA_RESIZE_HIT_SIZE;
+                const withinHorizontalBounds = point.x >= box.x - CAMERA_RESIZE_HIT_SIZE && point.x <= box.x + box.width + CAMERA_RESIZE_HIT_SIZE;
+                const nearLeft = Math.abs(point.x - box.x) <= CAMERA_RESIZE_HIT_SIZE;
+                const nearRight = Math.abs(point.x - (box.x + box.width)) <= CAMERA_RESIZE_HIT_SIZE;
+                const nearTop = Math.abs(point.y - box.y) <= CAMERA_RESIZE_HIT_SIZE;
+                const nearBottom = Math.abs(point.y - (box.y + box.height)) <= CAMERA_RESIZE_HIT_SIZE;
+
+                if (nearLeft && withinVerticalBounds) {
+                    return 'left';
+                }
+                if (nearRight && withinVerticalBounds) {
+                    return 'right';
+                }
+                if (nearTop && withinHorizontalBounds) {
+                    return 'top';
+                }
+                if (nearBottom && withinHorizontalBounds) {
+                    return 'bottom';
+                }
+
+                return null;
             }
 
             function hasDraggableCameraOverlay() {
@@ -2490,11 +2105,10 @@
                 const box = getCameraBox();
                 const handleMatch = getCameraResizeHandle(point, box);
                 if (handleMatch) {
-                    const [corner] = handleMatch;
                     state.cameraDrag = {
                         pointerId: event.pointerId,
                         mode: 'resize',
-                        corner,
+                        handle: handleMatch,
                         startBox: { ...box }
                     };
                     if (typeof previewCanvas.setPointerCapture === 'function') {
@@ -2540,40 +2154,63 @@
                 const box = getCameraBox();
                 if (state.cameraDrag.mode === 'resize') {
                     const startBox = state.cameraDrag.startBox;
-                    const anchors = {
-                        'top-left': { x: startBox.x + startBox.width, y: startBox.y + startBox.height },
-                        'top-right': { x: startBox.x, y: startBox.y + startBox.height },
-                        'bottom-right': { x: startBox.x, y: startBox.y },
-                        'bottom-left': { x: startBox.x + startBox.width, y: startBox.y }
-                    };
-                    const anchor = anchors[state.cameraDrag.corner] || anchors['bottom-right'];
-                    const widthFromX = Math.abs(point.x - anchor.x);
-                    const widthFromY = Math.abs(point.y - anchor.y) * CAMERA_BOX_ASPECT_RATIO;
-                    const nextWidth = clamp(Math.max(widthFromX, widthFromY), CAMERA_BOX_MIN_WIDTH, previewCanvas.width - (CAMERA_BOX_PADDING * 2));
-                    const nextHeight = Math.round(nextWidth / CAMERA_BOX_ASPECT_RATIO);
-                    let nextX = anchor.x;
-                    let nextY = anchor.y;
+                    const handle = state.cameraDrag.handle;
+                    const startCenterX = startBox.x + (startBox.width / 2);
+                    const startCenterY = startBox.y + (startBox.height / 2);
+                    let nextBox = { ...startBox };
 
-                    if (state.cameraDrag.corner === 'top-left') {
-                        nextX = anchor.x - nextWidth;
-                        nextY = anchor.y - nextHeight;
-                    } else if (state.cameraDrag.corner === 'top-right') {
-                        nextY = anchor.y - nextHeight;
-                    } else if (state.cameraDrag.corner === 'bottom-left') {
-                        nextX = anchor.x - nextWidth;
+                    if (handle === 'top-left' || handle === 'top-right' || handle === 'bottom-right' || handle === 'bottom-left') {
+                        const anchors = {
+                            'top-left': { x: startBox.x + startBox.width, y: startBox.y + startBox.height },
+                            'top-right': { x: startBox.x, y: startBox.y + startBox.height },
+                            'bottom-right': { x: startBox.x, y: startBox.y },
+                            'bottom-left': { x: startBox.x + startBox.width, y: startBox.y }
+                        };
+                        const anchor = anchors[handle] || anchors['bottom-right'];
+                        const widthFromX = Math.abs(point.x - anchor.x);
+                        const widthFromY = Math.abs(point.y - anchor.y) * CAMERA_BOX_ASPECT_RATIO;
+                        const nextWidth = Math.max(widthFromX, widthFromY);
+                        const nextHeight = Math.round(nextWidth / CAMERA_BOX_ASPECT_RATIO);
+                        let nextX = anchor.x;
+                        let nextY = anchor.y;
+
+                        if (handle === 'top-left') {
+                            nextX = anchor.x - nextWidth;
+                            nextY = anchor.y - nextHeight;
+                        } else if (handle === 'top-right') {
+                            nextY = anchor.y - nextHeight;
+                        } else if (handle === 'bottom-left') {
+                            nextX = anchor.x - nextWidth;
+                        }
+
+                        nextBox = { x: nextX, y: nextY, width: nextWidth };
+                    } else if (handle === 'left' || handle === 'right') {
+                        const anchorX = handle === 'left' ? startBox.x + startBox.width : startBox.x;
+                        const nextWidth = Math.abs(point.x - anchorX);
+                        const nextHeight = Math.round(nextWidth / CAMERA_BOX_ASPECT_RATIO);
+                        nextBox = {
+                            x: handle === 'left' ? anchorX - nextWidth : anchorX,
+                            y: startCenterY - (nextHeight / 2),
+                            width: nextWidth
+                        };
+                    } else if (handle === 'top' || handle === 'bottom') {
+                        const anchorY = handle === 'top' ? startBox.y + startBox.height : startBox.y;
+                        const nextHeight = Math.abs(point.y - anchorY);
+                        const nextWidth = nextHeight * CAMERA_BOX_ASPECT_RATIO;
+                        nextBox = {
+                            x: startCenterX - (nextWidth / 2),
+                            y: handle === 'top' ? anchorY - nextHeight : anchorY,
+                            width: nextWidth
+                        };
                     }
 
-                    state.cameraBoxOverride = {
-                        x: nextX,
-                        y: nextY,
-                        width: nextWidth
-                    };
+                    state.cameraBoxOverride = normalizeCameraBox(nextBox);
                 } else {
-                    state.cameraBoxOverride = {
+                    state.cameraBoxOverride = normalizeCameraBox({
                         x: clamp(point.x - state.cameraDrag.offsetX, CAMERA_BOX_PADDING, Math.max(CAMERA_BOX_PADDING, previewCanvas.width - box.width - CAMERA_BOX_PADDING)),
                         y: clamp(point.y - state.cameraDrag.offsetY, CAMERA_BOX_PADDING, Math.max(CAMERA_BOX_PADDING, previewCanvas.height - box.height - CAMERA_BOX_PADDING)),
                         width: box.width
-                    };
+                    });
                 }
                 event.preventDefault();
                 syncPreviewCanvasDragState();
@@ -2640,10 +2277,7 @@
                         previewContext.drawImage(cameraVideo, 0, 0, previewCanvas.width, previewCanvas.height);
                     } else if (layout !== 'screen-only') {
                         const box = getCameraBox();
-                        previewContext.fillStyle = 'rgba(15, 23, 42, 0.65)';
-                        previewContext.fillRect(box.x - 8, box.y - 8, box.width + 16, box.height + 16);
                         drawRoundedVideo(cameraVideo, box.x, box.y, box.width, box.height, 22);
-                        drawCameraResizeHandles(box);
                     }
                 }
 
@@ -3129,11 +2763,9 @@
                 overlayBadge.textContent = layoutSelect.value === 'screen-only' ? 'Camera Overlay Off' : 'Camera Overlay On';
                 audioBadge.textContent = hasMic || (state.screenStream && state.screenStream.getAudioTracks().length) ? 'Audio Mix Ready' : 'No Audio Source';
 
-                stageStatus.textContent = hasScreen || hasCamera
-                    ? 'Program view is live. Adjust layout and recording controls from the right panel.'
-                    : (isRecording
-                        ? 'Recording is in progress from this page. Stop it here when you are done.'
-                        : 'Load a screen or camera source to start building the live program view.');
+                if (stageStatus) {
+                    stageStatus.textContent = '';
+                }
 
                 screenMeta.textContent = hasScreen ? 'Screen source is active and ready for recording.' : 'No screen is currently shared.';
                 cameraMeta.textContent = hasCamera ? 'Camera source is active for picture-in-picture mode.' : 'Camera overlay is available for presenter mode.';

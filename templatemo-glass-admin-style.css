@@ -4667,6 +4667,20 @@ a {
     mask-size: contain;
 }
 
+.nav-icon-fbg-studio {
+    width: 24px;
+    height: 24px;
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/clapperboard-with-play-button-2-svgrepo-com.svg");
+    mask-image: url("Symbols/clapperboard-with-play-button-2-svgrepo-com.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
 .nav-icon-training {
     background-color: currentColor;
     -webkit-mask-image: url("Symbols/knowledge-base-svgrepo-com.svg");
@@ -6756,12 +6770,13 @@ body.analytics-reboot .analytics-navbar {
     top: 0;
     z-index: 12;
     margin-bottom: 22px;
-    padding: 18px 22px;
-    border: 1px solid var(--analytics-border-strong);
-    border-radius: 28px;
-    background: var(--analytics-navbar-bg);
-    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.24);
-    backdrop-filter: blur(20px);
+    padding: 4px 4px 10px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 body.analytics-reboot .analytics-navbar {
@@ -6770,6 +6785,26 @@ body.analytics-reboot .analytics-navbar {
     justify-content: space-between;
     gap: 18px;
     flex-wrap: wrap;
+}
+
+body.analytics-reboot .analytics-navbar .page-header {
+    display: grid;
+    gap: 8px;
+}
+
+body.analytics-reboot .analytics-navbar .page-header::after {
+    content: '';
+    width: 86px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--emerald-light), var(--gold-light));
+    box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.22);
+}
+
+body.analytics-reboot .analytics-navbar .page-title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3rem);
+    letter-spacing: -0.04em;
 }
 
 body.analytics-reboot .analytics-navbar .page-header {

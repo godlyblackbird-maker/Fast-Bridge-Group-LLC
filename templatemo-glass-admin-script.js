@@ -830,7 +830,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 versionLabel.textContent = `v${version}`;
             })
             .catch(() => {
-                versionLabel.textContent = 'v1.4.8';
+                versionLabel.textContent = 'v1.5.0';
             });
     }
 
@@ -4896,11 +4896,20 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             ? scopedStatuses
             : {};
         const safeNotes = Array.isArray(notes) ? notes : [];
+        const offerTermsHistoryStatuses = new Set([
+            'offer-terms-sent',
+            'back-up',
+            'contract-submitted',
+            'in-negotiations',
+            'offer-accepted',
+            'acquired'
+        ]);
+        const offerTermsHistoryRegex = /\boffer\s*terms\s*sent\b|\boffer\s*sent\b|\bsent\s+offer\b/i;
 
         Object.entries(safeStatuses).forEach(([propertyKey, statusValue]) => {
             const normalizedKey = makePropertyStorageKey(propertyKey);
-            const normalizedStatus = String(statusValue || 'none').trim().toLowerCase();
-            if (normalizedKey && normalizedStatus === 'offer-terms-sent') {
+            const normalizedStatus = normalizeAgentStatusValue(statusValue || 'none');
+            if (normalizedKey && offerTermsHistoryStatuses.has(normalizedStatus)) {
                 offerTermsSentSet.add(normalizedKey);
             }
         });
@@ -4919,8 +4928,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 || (note && note.propertySnapshot?.piqAgentStatus)
                 || 'none'
             ).trim().toLowerCase();
+            const normalizedNoteStatus = normalizeAgentStatusValue(noteStatus);
+            const noteText = String(note && note.note || '');
 
-            if (noteStatus === 'offer-terms-sent') {
+            if (offerTermsHistoryStatuses.has(normalizedNoteStatus) || offerTermsHistoryRegex.test(noteText)) {
                 offerTermsSentSet.add(propertyKey);
             }
         });
@@ -4974,7 +4985,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             offersSubmittedEl.textContent = String(offersSubmitted);
 
             if (offerTermsChangeEl) {
-                offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} at offer terms sent`;
+                offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} with offer terms sent`;
             }
             if (offersChangeEl) {
                 offersChangeEl.textContent = `${offersSubmitted} offer event${offersSubmitted === 1 ? '' : 's'}`;
@@ -7119,6 +7130,10 @@ function initNavbarDateTime() {
                 markup: '<a href="fbg-messages.html" class="nav-link"><span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>FBG Messaging</a>'
             },
             {
+                href: 'fbg-studio.html',
+                markup: '<a href="fbg-studio.html" class="nav-link"><span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>FBG Studio</a>'
+            },
+            {
                 href: 'users.html',
                 markup: '<a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent Workspace</a>'
             },
@@ -7147,6 +7162,7 @@ function initNavbarDateTime() {
             'pdf-editor.html',
             'community.html',
             'fbg-messages.html',
+            'fbg-studio.html',
             'users.html',
             'trainings.html'
         ];

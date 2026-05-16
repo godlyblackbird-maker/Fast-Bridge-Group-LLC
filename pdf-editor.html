@@ -178,6 +178,33 @@
             margin-bottom: 24px;
         }
 
+        .pdf-editor-page-title-group {
+            min-width: 0;
+        }
+
+        .pdf-editor-page-brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .pdf-editor-page-title-group .page-title {
+            margin: 0;
+        }
+
+        .pdf-editor-page-logo {
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
+        @media (max-width: 720px) {
+            .pdf-editor-page-logo {
+                width: 60px;
+            }
+        }
+
         [data-theme="blacklight"] .pdf-editor-page .nav-item {
             width: 100%;
         }
@@ -1111,6 +1138,7 @@
                                 <li class="nav-item"><a href="pdf-editor.html" class="nav-link active" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><path d="M9 15h6"/><path d="M9 11h3"/></svg>PDF Editor</a></li>
                                 <li class="nav-item"><a href="community.html" class="nav-link"><span class="nav-icon nav-icon-community" aria-hidden="true"></span>Community</a></li>
                                 <li class="nav-item"><a href="fbg-messages.html" class="nav-link"><span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>FBG Messaging</a></li>
+                                <li class="nav-item"><a href="fbg-studio.html" class="nav-link"><span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>FBG Studio</a></li>
                                 <li class="nav-item"><a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent Workspace</a></li>
                                 <li class="nav-item"><a href="trainings.html" class="nav-link"><span class="nav-icon nav-icon-training" aria-hidden="true"></span>Trainings</a></li>
                             </ul>
@@ -1143,10 +1171,10 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <div class="page-title-group">
-                    <h1 class="page-title">PDF Editor</h1>
-                    <p class="navbar-datetime">Document editor workspace</p>
-                </div>
+                <a class="page-title-group pdf-editor-page-title-group pdf-editor-page-brand-link" href="index.html">
+                    <img class="pdf-editor-page-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                    <h1 class="page-title">PDF Editor | FAST BRIDGE GROUP LLC</h1>
+                </a>
             </nav>
 
             <div class="pdf-editor-shell">

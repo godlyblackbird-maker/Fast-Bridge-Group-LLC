@@ -60,6 +60,10 @@
                         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                     }
 
+                    if (normalizedValue === 'blacklight') {
+                        return 'dark';
+                    }
+
                     return validThemePattern.test(normalizedValue)
                         ? normalizedValue
                         : fallback;
@@ -80,7 +84,11 @@
                     const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
                     const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
                     const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                    const normalizedNameKey = name.toLowerCase().replace(/\s+/g, '-');
+                    const userKey = email || normalizedNameKey || 'default-user';
                     const keys = new Set();
+
+                    keys.add(userKey);
 
                     if (email) {
                         keys.add(email);
@@ -91,7 +99,7 @@
                     }
 
                     if (name) {
-                        keys.add(name.toLowerCase().replace(/\s+/g, '-'));
+                        keys.add(normalizedNameKey);
                     }
 
                     const scopedProfileKeys = Object.keys(profileStore || {}).filter((key) => {
@@ -105,7 +113,64 @@
                     });
 
                     scopedProfileKeys.forEach((key) => keys.add(String(key || '').trim().toLowerCase()));
+                    keys.add('default-user');
                     return Array.from(keys).filter(Boolean);
+                };
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const red = Number.parseInt(value.slice(0, 2), 16);
+                    const green = Number.parseInt(value.slice(2, 4), 16);
+                    const blue = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(red) || !Number.isFinite(green) || !Number.isFinite(blue)) {
+                        return '5, 150, 105';
+                    }
+                    return `${red}, ${green}, ${blue}`;
+                };
+
+                const applyAccentSettings = (userKeys) => {
+                    const settingsStore = readJson('dashboardSettingsByUser');
+                    const activeUserKey = userKeys.find((key) => settingsStore[key] && typeof settingsStore[key] === 'object') || userKeys[0] || 'default-user';
+                    const controls = (settingsStore[activeUserKey] && settingsStore[activeUserKey].controls) || {};
+                    const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+                    const palette = palettes[accentChoice] || palettes.emerald;
+                    const accentGlow = Object.prototype.hasOwnProperty.call(controls, 'id:accent-glow-toggle')
+                        ? Boolean(controls['id:accent-glow-toggle'])
+                        : /^(on|true|1)$/i.test(String(localStorage.getItem('accentGlow') || ''));
+
+                    root.style.setProperty('--emerald', palette.emerald);
+                    root.style.setProperty('--emerald-light', palette.emeraldLight);
+                    root.style.setProperty('--gold', palette.gold);
+                    root.style.setProperty('--gold-light', palette.goldLight);
+                    root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                    root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+                    root.setAttribute('data-accent-color', palettes[accentChoice] ? accentChoice : 'emerald');
+                    root.setAttribute('data-accent-glow', accentGlow ? 'on' : 'off');
                 };
 
                 const getResolvedTheme = () => {
@@ -124,14 +189,16 @@
                 };
 
                 const applyResolvedTheme = () => {
+                    const userKeys = buildUserKeys();
                     root.setAttribute('data-theme', getResolvedTheme());
+                    applyAccentSettings(userKeys);
                 };
 
                 applyResolvedTheme();
 
                 window.addEventListener('storage', (event) => {
                     const changedKey = String(event.key || '').trim();
-                    if (!changedKey || ['dashboardThemeByUser', 'homepageTheme', 'theme', 'user', 'userProfile', 'userProfilesByUser', 'authToken'].includes(changedKey)) {
+                    if (!changedKey || ['dashboardThemeByUser', 'dashboardSettingsByUser', 'homepageTheme', 'theme', 'accentColor', 'accentGlow', 'user', 'userProfile', 'userProfilesByUser', 'authToken'].includes(changedKey)) {
                         applyResolvedTheme();
                     }
                 });
@@ -160,6 +227,8 @@
                 }
             } catch (error) {
                 document.documentElement.setAttribute('data-theme', 'beach');
+                document.documentElement.setAttribute('data-accent-color', 'emerald');
+                document.documentElement.setAttribute('data-accent-glow', 'off');
             }
         })();
     </script>

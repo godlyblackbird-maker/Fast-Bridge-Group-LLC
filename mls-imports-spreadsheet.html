@@ -168,18 +168,29 @@
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <style>
         .mls-sheet-title-group {
+            min-width: 0;
             display: flex;
             align-items: center;
             gap: 14px;
             flex-wrap: wrap;
         }
 
+        .mls-sheet-title-group .page-title {
+            margin: 0;
+        }
+
         .mls-sheet-title-logo {
-                width: clamp(52px, 6vw, 74px);
+            width: clamp(72px, 8vw, 102px);
             height: auto;
             display: block;
-                flex-shrink: 0;
-                object-fit: contain;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
+        @media (max-width: 720px) {
+            .mls-sheet-title-logo {
+                width: 60px;
+            }
         }
 
         .buyers-sheet-wrap {
