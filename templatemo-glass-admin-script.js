@@ -30701,7 +30701,7 @@ function initNavbarDateTime() {
                 }
 
                 const baseAllowedTags = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
-                const signatureAllowedTags = new Set(['HR', 'IMG', 'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR']);
+                const signatureAllowedTags = new Set(['FONT', 'HR', 'IMG', 'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR']);
                 const blockedTags = new Set([
                     'BODY', 'BUTTON', 'FORM', 'HEAD', 'HTML', 'IFRAME', 'INPUT', 'LINK', 'META',
                     'NOSCRIPT', 'OBJECT', 'OPTION', 'SCRIPT', 'SELECT', 'STYLE', 'SVG', 'TEXTAREA', 'TITLE'
@@ -30711,6 +30711,27 @@ function initNavbarDateTime() {
                     .replace(/expression\s*\([^)]*\)/gi, '')
                     .replace(/url\s*\(\s*['"]?\s*javascript:[^)]+\)/gi, '')
                     .trim();
+
+                const sanitizeColorAttribute = (value) => {
+                    const normalized = String(value || '').trim();
+                    if (!normalized) {
+                        return '';
+                    }
+
+                    if (/^#[0-9a-f]{3,8}$/i.test(normalized)) {
+                        return normalized;
+                    }
+
+                    if (/^rgba?\(\s*\d{1,3}(?:\s*,\s*\d{1,3}){2}(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i.test(normalized)) {
+                        return normalized;
+                    }
+
+                    if (/^[a-z]+$/i.test(normalized)) {
+                        return normalized.toLowerCase();
+                    }
+
+                    return '';
+                };
 
                 const sanitizeNode = (node, insideSignature = false) => {
                     if (!node) {
@@ -30765,6 +30786,13 @@ function initNavbarDateTime() {
 
                         ['align', 'cellpadding', 'cellspacing', 'colspan', 'dir', 'height', 'rowspan', 'valign', 'width'].forEach((attributeName) => {
                             const attributeValue = String(node.getAttribute(attributeName) || '').trim();
+                            if (attributeValue) {
+                                cleanNode.setAttribute(attributeName, attributeValue);
+                            }
+                        });
+
+                        ['bgcolor', 'bordercolor', 'color'].forEach((attributeName) => {
+                            const attributeValue = sanitizeColorAttribute(node.getAttribute(attributeName) || '');
                             if (attributeValue) {
                                 cleanNode.setAttribute(attributeName, attributeValue);
                             }
