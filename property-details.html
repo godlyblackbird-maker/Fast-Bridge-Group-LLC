@@ -1295,7 +1295,7 @@
                                 <label>Termite Inspection
                                     <select id="offer-termite-inspection">
                                         <option value="">Select Termite Inspection</option>
-                                        <option value="no-termite" selected>NO Termite Inspection</option>
+                                        <option value="no-termite" selected>No Termite Inspection</option>
                                         <option value="section-1-seller">Section 1 Termite Paid by Seller</option>
                                         <option value="section-1-2-seller">Section 1&2 Termite Paid by Seller</option>
                                     </select>
@@ -1451,14 +1451,15 @@
                                         </select>
                                     </label>
                                     <div class="offer-email-span-2 offer-email-ecard-field">
-                                        <span class="offer-email-field-label">E-Card JPG</span>
+                                        <span class="offer-email-field-label">Gmail Signature</span>
                                         <div class="offer-email-ecard-row">
-                                            <select id="offer-email-ecard" class="form-input offer-email-ecard-select">
-                                                <option value="">Do not include E-card</option>
+                                            <select id="offer-email-ecard" class="form-input offer-email-ecard-select" hidden aria-hidden="true" tabindex="-1">
+                                                <option value="">Use connected Gmail signature</option>
                                             </select>
+                                            <div class="offer-email-static-attachment-note">Uses your connected Gmail default signature and places it at the bottom of the email.</div>
                                             <label class="offer-email-toggle-row offer-email-ecard-toggle" for="offer-email-ecard-toggle">
                                                 <input type="checkbox" id="offer-email-ecard-toggle">
-                                                <span class="offer-email-toggle-text">Include My E-Card</span>
+                                                <span class="offer-email-toggle-text">Add Signature</span>
                                                 <span class="offer-toggle-slider" aria-hidden="true"></span>
                                             </label>
                                         </div>
@@ -1508,7 +1509,7 @@
                                     </div>
                                 </div>
                                 <div id="offer-email-doc-summary" class="offer-email-doc-summary">No offer documents attached yet.</div>
-                                <p class="offer-docs-note" id="offer-email-note">Uploaded files in the Offer Documents section below will be sent automatically with Send To Agent. Browser-based email drafts still cannot auto-attach local files. Send To Agent can also embed the selected E-card JPG inline.</p>
+                                <p class="offer-docs-note" id="offer-email-note">Uploaded files in the Offer Documents section below will be sent automatically with Send To Agent. Browser-based email drafts still cannot auto-attach local files. Add Signature uses your connected Gmail signature at the bottom of the email.</p>
                                 <div class="offer-docs-actions">
                                     <button type="button" class="card-btn" id="offer-email-copy-subject-btn">Copy Subject</button>
                                     <button type="button" class="card-btn" id="offer-email-copy-body-btn">Copy Body</button>

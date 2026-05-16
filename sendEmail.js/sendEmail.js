@@ -45,6 +45,10 @@ function appendSignatureToText(body, smtpSignature) {
 }
 
 function appendSignatureToHtml(html, smtpSignature) {
+  if (String(html || '').includes('data-offer-email-signature="true"')) {
+    return String(html || '').trim();
+  }
+
   const normalizedSignature = normalizeText(smtpSignature);
   if (!normalizedSignature) {
     return String(html || '').trim();

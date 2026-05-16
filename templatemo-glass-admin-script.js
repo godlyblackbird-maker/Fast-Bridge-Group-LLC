@@ -68,8 +68,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         'admin-announcement': 'Announcements',
         'admin-discord-meetings': 'Discord Meetings',
         'unified-inbox-launch': 'Unified Inbox',
-        'word-maker-launch': 'Word Maker',
-        'fbg-studio-launch': 'FBG Studio',
+        'word-maker-launch': 'Page Processor',
+        'fbg-studio-launch': 'Recording Studio',
         'online-users': 'Online Users',
         'requested-access': 'Requested Access',
         'smtp-approval-queue': 'Gmail Outbox Approvals',
@@ -7131,11 +7131,15 @@ function initNavbarDateTime() {
             },
             {
                 href: 'fbg-studio.html',
-                markup: '<a href="fbg-studio.html" class="nav-link"><span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>FBG Studio</a>'
+                markup: '<a href="fbg-studio.html" class="nav-link"><span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>Recording Studio</a>'
             },
             {
                 href: 'users.html',
                 markup: '<a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent Workspace</a>'
+            },
+            {
+                href: 'word-document-maker.html',
+                markup: '<a href="word-document-maker.html" class="nav-link"><span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>Page Processor</a>'
             },
             {
                 href: 'trainings.html',
@@ -7164,6 +7168,7 @@ function initNavbarDateTime() {
             'fbg-messages.html',
             'fbg-studio.html',
             'users.html',
+            'word-document-maker.html',
             'trainings.html'
         ];
         const workspaceGroupHrefSet = new Set(workspaceGroupHrefs);
@@ -21007,7 +21012,9 @@ function initNavbarDateTime() {
         }
 
         function setDealsImportSource(nextSource) {
-            importSource = 'redfin';
+            const normalizedSource = String(nextSource || '').trim().toLowerCase();
+            const supportedSources = ['zillow', 'redfin', 'realtor', 'propwire'];
+            importSource = supportedSources.includes(normalizedSource) ? normalizedSource : 'redfin';
             importSourceButtons.forEach((button) => {
                 const isActive = button.getAttribute('data-import-source') === importSource;
                 button.classList.toggle('is-active', isActive);
@@ -21015,16 +21022,48 @@ function initNavbarDateTime() {
             });
 
             if (importSourceUrlInput) {
-                importSourceUrlInput.placeholder = 'Paste the Redfin property link here';
+                const sourceLabelMap = {
+                    zillow: 'Zillow',
+                    redfin: 'Redfin',
+                    realtor: 'Realtor',
+                    propwire: 'Propwire'
+                };
+                importSourceUrlInput.placeholder = `Paste the ${sourceLabelMap[importSource] || 'property'} property link here`;
             }
         }
 
         function inferDealsImportSourceFromUrl(value) {
             const raw = String(value || '').trim().toLowerCase();
+            if (raw.includes('zillow.com')) {
+                return 'zillow';
+            }
             if (raw.includes('redfin.com')) {
                 return 'redfin';
             }
+            if (raw.includes('realtor.com')) {
+                return 'realtor';
+            }
+            if (raw.includes('propwire.com')) {
+                return 'propwire';
+            }
             return '';
+        }
+
+        function getDealsImportSourceLabel(source) {
+            const normalizedSource = String(source || '').trim().toLowerCase();
+            if (normalizedSource === 'zillow') {
+                return 'Zillow';
+            }
+            if (normalizedSource === 'redfin') {
+                return 'Redfin';
+            }
+            if (normalizedSource === 'realtor') {
+                return 'Realtor';
+            }
+            if (normalizedSource === 'propwire') {
+                return 'Propwire';
+            }
+            return 'Property';
         }
 
         function populateDealsImportForm(listing) {
@@ -21047,12 +21086,18 @@ function initNavbarDateTime() {
             setFieldValue('deals-import-location', listing.location);
             setFieldValue('deals-import-mls-id', listing.mlsId);
             setFieldValue('deals-import-price', listing.price);
+            setFieldValue('deals-import-arv', listing.arv);
             setFieldValue('deals-import-beds', listing.beds);
             setFieldValue('deals-import-baths', listing.baths);
             setFieldValue('deals-import-area', listing.area);
+            setFieldValue('deals-import-garage', listing.garage);
             setFieldValue('deals-import-lot-size', listing.lotSize);
             setFieldValue('deals-import-year-built', listing.yearBuilt);
+            setFieldValue('deals-import-dom', listing.dom);
             setFieldValue('deals-import-image', listing.imageUrl);
+            setFieldValue('deals-import-agent-name', listing.agentName);
+            setFieldValue('deals-import-agent-phone', listing.agentPhone);
+            setFieldValue('deals-import-agent-email', listing.agentEmail);
             setFieldValue('deals-import-notes', listing.notes);
 
             const statusField = document.getElementById('deals-import-status');
@@ -21091,17 +21136,17 @@ function initNavbarDateTime() {
 
             const sourceUrl = String(importSourceUrlInput.value || '').trim();
             if (!sourceUrl) {
-                showDashboardToast('error', 'Link Required', 'Paste a Redfin property link first.');
+                showDashboardToast('error', 'Link Required', 'Paste a Zillow, Redfin, Realtor, or Propwire property link first.');
                 return;
             }
 
             const inferredSource = inferDealsImportSourceFromUrl(sourceUrl);
-            if (inferredSource !== 'redfin') {
-                showDashboardToast('error', 'Invalid Link', 'Only Redfin property links are supported in Import Property.');
+            if (!['zillow', 'redfin', 'realtor', 'propwire'].includes(inferredSource)) {
+                showDashboardToast('error', 'Invalid Link', 'Only Zillow, Redfin, Realtor, and Propwire property links are supported in Import Property.');
                 return;
             }
 
-            setDealsImportSource('redfin');
+            setDealsImportSource(inferredSource);
 
             setDealsImportLookupBusy(true, 'fetch');
 
@@ -21123,7 +21168,7 @@ function initNavbarDateTime() {
                 }
 
                 populateDealsImportForm(payload.listing || {});
-                showDashboardToast('success', 'Property Autofilled', 'Redfin public listing details were added to the import form.');
+                showDashboardToast('success', 'Property Autofilled', `${getDealsImportSourceLabel(inferredSource)} listing details were added to the import form.`);
             } catch (error) {
                 showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not pull the listing details from that link.');
             } finally {
@@ -30355,6 +30400,127 @@ function initNavbarDateTime() {
                 return getECardSignatureLines();
             }
 
+            let offerEmailGmailSignatures = [];
+            let offerEmailDefaultSignatureEmail = '';
+            let offerEmailSignatureLoaded = false;
+
+            function looksLikeOfferEmailHtml(value) {
+                return /<[a-z][\s\S]*>/i.test(String(value || ''));
+            }
+
+            function convertOfferEmailSignatureTextToHtml(value) {
+                return String(value || '')
+                    .split(/\r?\n/)
+                    .map((line) => `<div>${line ? escapeHtml(line) : '<br>'}</div>`)
+                    .join('')
+                    .trim();
+            }
+
+            function getStoredGmailSignatureHtml() {
+                const smtpSettings = getStoredSmtpSettings();
+                const rawSignature = String(smtpSettings.smtpSignature || '').trim();
+                if (!rawSignature) {
+                    const fallbackLines = getPreferredSignatureLines();
+                    return fallbackLines.length > 0
+                        ? convertOfferEmailSignatureTextToHtml(fallbackLines.join('\n'))
+                        : '';
+                }
+
+                return looksLikeOfferEmailHtml(rawSignature)
+                    ? rawSignature
+                    : convertOfferEmailSignatureTextToHtml(rawSignature);
+            }
+
+            async function ensureOfferEmailSignatureLoaded() {
+                if (offerEmailSignatureLoaded) {
+                    return;
+                }
+
+                const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                if (!token) {
+                    offerEmailSignatureLoaded = true;
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/gmail/signatures', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (!response.ok) {
+                        throw new Error('Could not load Gmail signatures.');
+                    }
+
+                    const payload = await response.json();
+                    offerEmailGmailSignatures = Array.isArray(payload && payload.signatures) ? payload.signatures : [];
+                    offerEmailDefaultSignatureEmail = String(payload && payload.defaultSendAsEmail || '').trim();
+                } catch (_error) {
+                    offerEmailGmailSignatures = [];
+                    offerEmailDefaultSignatureEmail = '';
+                }
+
+                offerEmailSignatureLoaded = true;
+            }
+
+            function getDefaultOfferEmailSignatureHtml() {
+                const defaultSignature = offerEmailGmailSignatures.find((entry) => String(entry && entry.sendAsEmail || '').trim() === offerEmailDefaultSignatureEmail)
+                    || offerEmailGmailSignatures.find((entry) => entry && entry.isDefault)
+                    || offerEmailGmailSignatures.find((entry) => entry && entry.isPrimary)
+                    || offerEmailGmailSignatures[0]
+                    || null;
+                const signatureHtml = String(defaultSignature && defaultSignature.signature || '').trim();
+                return signatureHtml || getStoredGmailSignatureHtml();
+            }
+
+            function removeOfferEmailSignatureBlock() {
+                Array.from(bodyInput.querySelectorAll('[data-offer-email-signature="true"]')).forEach((node) => node.remove());
+            }
+
+            function applyOfferEmailSignatureBlock(signatureHtml) {
+                const wrapperMarkup = sanitizeOfferEmailBodyHtml(`
+                    <div data-offer-email-signature="true" style="margin-top:18px;padding-top:12px;border-top:1px solid rgba(209, 213, 219, 0.85);">
+                        ${String(signatureHtml || '')}
+                    </div>
+                `);
+                if (!wrapperMarkup) {
+                    return false;
+                }
+
+                const template = document.createElement('template');
+                template.innerHTML = wrapperMarkup;
+                const wrapper = template.content.firstElementChild;
+                if (!wrapper) {
+                    return false;
+                }
+
+                removeOfferEmailSignatureBlock();
+                bodyInput.appendChild(wrapper);
+                return true;
+            }
+
+            async function syncOfferEmailSignature(options = {}) {
+                removeOfferEmailSignatureBlock();
+                if (!ecardToggle || !ecardToggle.checked) {
+                    return false;
+                }
+
+                await ensureOfferEmailSignatureLoaded();
+                const signatureHtml = getDefaultOfferEmailSignatureHtml();
+                if (!signatureHtml) {
+                    if (!options.silent) {
+                        showDashboardToast('info', 'No Gmail Signature', 'Connect Gmail or save a Gmail signature in your approved outbox settings first.');
+                    }
+                    return false;
+                }
+
+                const applied = applyOfferEmailSignatureBlock(signatureHtml);
+                if (!applied && !options.silent) {
+                    showDashboardToast('error', 'Signature Unavailable', 'The connected Gmail signature could not be inserted into this email.');
+                }
+                return applied;
+            }
+
             function getOfferFieldValue(id) {
                 const element = document.getElementById(id);
                 return element ? String(element.value || '').trim() : '';
@@ -30534,13 +30700,19 @@ function initNavbarDateTime() {
                     return '';
                 }
 
-                const allowedTags = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
+                const baseAllowedTags = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
+                const signatureAllowedTags = new Set(['HR', 'IMG', 'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR']);
                 const blockedTags = new Set([
-                    'BODY', 'BUTTON', 'FORM', 'HEAD', 'HTML', 'IFRAME', 'IMG', 'INPUT', 'LINK', 'META',
+                    'BODY', 'BUTTON', 'FORM', 'HEAD', 'HTML', 'IFRAME', 'INPUT', 'LINK', 'META',
                     'NOSCRIPT', 'OBJECT', 'OPTION', 'SCRIPT', 'SELECT', 'STYLE', 'SVG', 'TEXTAREA', 'TITLE'
                 ]);
 
-                const sanitizeNode = (node) => {
+                const sanitizeInlineStyle = (styleValue) => String(styleValue || '')
+                    .replace(/expression\s*\([^)]*\)/gi, '')
+                    .replace(/url\s*\(\s*['"]?\s*javascript:[^)]+\)/gi, '')
+                    .trim();
+
+                const sanitizeNode = (node, insideSignature = false) => {
                     if (!node) {
                         return null;
                     }
@@ -30554,6 +30726,8 @@ function initNavbarDateTime() {
                     }
 
                     const tagName = String(node.tagName || '').toUpperCase();
+                    const isSignatureNode = insideSignature || String(node.getAttribute('data-offer-email-signature') || '').trim() === 'true';
+                    const allowedTags = new Set([...baseAllowedTags, ...(isSignatureNode ? signatureAllowedTags : [])]);
                     if (!tagName || blockedTags.has(tagName)) {
                         return null;
                     }
@@ -30561,7 +30735,7 @@ function initNavbarDateTime() {
                     if (!allowedTags.has(tagName)) {
                         const fragment = document.createDocumentFragment();
                         Array.from(node.childNodes || []).forEach((childNode) => {
-                            const sanitizedChild = sanitizeNode(childNode);
+                            const sanitizedChild = sanitizeNode(childNode, isSignatureNode);
                             if (sanitizedChild) {
                                 fragment.appendChild(sanitizedChild);
                             }
@@ -30579,8 +30753,38 @@ function initNavbarDateTime() {
                         }
                     }
 
+                    if (isSignatureNode && String(node.getAttribute('data-offer-email-signature') || '').trim() === 'true') {
+                        cleanNode.setAttribute('data-offer-email-signature', 'true');
+                    }
+
+                    if (isSignatureNode) {
+                        const safeStyle = sanitizeInlineStyle(node.getAttribute('style') || '');
+                        if (safeStyle) {
+                            cleanNode.setAttribute('style', safeStyle);
+                        }
+
+                        ['align', 'cellpadding', 'cellspacing', 'colspan', 'dir', 'height', 'rowspan', 'valign', 'width'].forEach((attributeName) => {
+                            const attributeValue = String(node.getAttribute(attributeName) || '').trim();
+                            if (attributeValue) {
+                                cleanNode.setAttribute(attributeName, attributeValue);
+                            }
+                        });
+
+                        if (tagName === 'IMG') {
+                            const src = String(node.getAttribute('src') || '').trim();
+                            if (/^(https?:|data:image\/|cid:)/i.test(src)) {
+                                cleanNode.setAttribute('src', src);
+                            }
+
+                            const alt = String(node.getAttribute('alt') || '').trim();
+                            if (alt) {
+                                cleanNode.setAttribute('alt', alt);
+                            }
+                        }
+                    }
+
                     Array.from(node.childNodes || []).forEach((childNode) => {
-                        const sanitizedChild = sanitizeNode(childNode);
+                        const sanitizedChild = sanitizeNode(childNode, isSignatureNode);
                         if (sanitizedChild) {
                             cleanNode.appendChild(sanitizedChild);
                         }
@@ -30982,6 +31186,8 @@ function initNavbarDateTime() {
                 if (!preserveManualEdits || !bodyWasEdited) {
                     setBodyValue(draft.body);
                 }
+
+                return syncOfferEmailSignature({ silent: true });
             }
 
             function getDocumentSummaryParts() {
@@ -31000,7 +31206,7 @@ function initNavbarDateTime() {
 
                 if (totalPreparedDocuments === 0) {
                     docSummary.textContent = 'No offer documents attached yet.';
-                    emailNote.textContent = 'Uploaded files in the Offer Documents section below will be sent automatically with Send To Agent. Browser-based mail drafts still cannot auto-attach local files.';
+                    emailNote.textContent = 'Uploaded files in the Offer Documents section below will be sent automatically with Send To Agent. Browser-based mail drafts still cannot auto-attach local files. Add Signature uses your connected Gmail signature at the bottom of the email.';
                     return;
                 }
 
@@ -31032,8 +31238,8 @@ function initNavbarDateTime() {
 
                 docSummary.textContent = lines.join('\n');
                 emailNote.textContent = uploads.length > 0 || investorFiles.length > 0 || selectedFbgFiles.length > 0
-                    ? 'Linked documents can be referenced in the body. Uploaded files, selected investor package files, and enabled FBG Offer Terms PDFs are sent automatically with Send To Agent. Open Email Draft still cannot auto-attach local files. Send To Agent can embed the selected E-card JPG inline.'
-                    : 'All prepared documents are link-based and can be referenced directly in the email body. Send To Agent can embed the selected E-card JPG inline.';
+                    ? 'Linked documents can be referenced in the body. Uploaded files, selected investor package files, and enabled FBG Offer Terms PDFs are sent automatically with Send To Agent. Open Email Draft still cannot auto-attach local files. Add Signature uses your connected Gmail signature at the bottom of the email.'
+                    : 'All prepared documents are link-based and can be referenced directly in the email body. Add Signature uses your connected Gmail signature at the bottom of the email.';
             }
 
             function fillOptions(selectEl, options, placeholder) {
@@ -31273,7 +31479,6 @@ function initNavbarDateTime() {
             }
 
             const senderProfile = getSenderProfile();
-            let userECardPath = '';
             senderNameInput.value = senderProfile.name;
             senderEmailInput.value = senderProfile.email;
             recipientNameInput.value = String(savedDraft.recipientName || agentRecord.name || '').trim();
@@ -31287,18 +31492,11 @@ function initNavbarDateTime() {
                 localStorage.setItem('selectedPropertyDetail', JSON.stringify(detailData));
             }
             sendModeSelect.value = savedDraft.sendMode || 'mailto';
-            loadAvailableECardOptions(String(savedDraft.ecard || '').trim()).finally(() => {
-                userECardPath = getUserECardJpgPath();
-                if (userECardPath) {
-                    ensureECardOption(userECardPath);
-                    if (!getSelectedECardPath() && isAllowedECardPath(String(savedDraft.ecard || '').trim())) {
-                        ecardSelect.value = String(savedDraft.ecard || '').trim();
-                    }
-                }
-            });
             if (ecardToggle) {
-                ecardToggle.checked = false;
+                ecardToggle.checked = Boolean(savedDraft.includeECard);
             }
+            ecardSelect.innerHTML = '<option value="">Use connected Gmail signature</option>';
+            void syncOfferEmailSignature({ silent: true });
             syncOpenButtonLabel();
             populateInvestorAttachmentOptions(savedDraft.investorAttachmentFolder || '');
             loadFbgOfferTermsFiles().finally(() => {
@@ -31354,24 +31552,12 @@ function initNavbarDateTime() {
                 syncOpenButtonLabel();
                 saveDraft();
             });
-            ecardSelect.addEventListener('change', () => {
-                refreshPreparedEmail();
-                saveDraft();
-            });
             if (ecardToggle) {
-                ecardToggle.addEventListener('change', () => {
-                    if (ecardToggle.checked) {
-                        if (userECardPath) {
-                            ensureECardOption(userECardPath);
-                            ecardSelect.value = userECardPath;
-                        } else {
-                            showDashboardToast('info', 'Resolving E-Card', 'Your E-card will be resolved from the USERS folder when the email is sent.');
-                        }
-                    } else {
-                        ecardSelect.value = '';
+                ecardToggle.addEventListener('change', async () => {
+                    const applied = await syncOfferEmailSignature({ silent: false });
+                    if (ecardToggle.checked && applied) {
+                        showDashboardToast('success', 'Signature Added', 'Your connected Gmail signature was added to the bottom of the email.');
                     }
-
-                    refreshPreparedEmail();
                     saveDraft();
                 });
             }
@@ -31439,7 +31625,6 @@ function initNavbarDateTime() {
                 try {
                     const attachments = await buildServerEmailAttachments();
                     const investorAttachmentPaths = getSelectedInvestorAttachmentPaths();
-                    const resolvedECardPath = ecardToggle && ecardToggle.checked ? (getSelectedECardPath() || userECardPath || '') : '';
                     const response = await fetch('/api/send-agent-email', {
                         method: 'POST',
                         headers: {
@@ -31454,10 +31639,10 @@ function initNavbarDateTime() {
                             subject,
                             body,
                             htmlBody: buildServerEmailHtml(),
-                            includeECard: Boolean(ecardToggle && ecardToggle.checked),
+                            includeECard: false,
                             includeFbgOfferTerms: Boolean(fbgOfferTermsToggle.checked),
-                            ecardPath: resolvedECardPath,
-                            ecardAttachmentName: resolvedECardPath ? getECardAttachmentName(resolvedECardPath) : '',
+                            ecardPath: '',
+                            ecardAttachmentName: '',
                             attachments,
                             investorAttachmentPaths
                         })

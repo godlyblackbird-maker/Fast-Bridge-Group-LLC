@@ -435,14 +435,17 @@
                         <form id="deals-import-form" class="deals-import-form">
                         <div class="deals-import-link-tools deals-import-span-2">
                             <div class="deals-import-link-source-toggle" aria-label="Listing source selector">
+                                <button type="button" id="deals-import-source-zillow" class="deals-import-source-btn" data-import-source="zillow">Zillow</button>
                                 <button type="button" id="deals-import-source-redfin" class="deals-import-source-btn" data-import-source="redfin">Redfin</button>
+                                <button type="button" id="deals-import-source-realtor" class="deals-import-source-btn" data-import-source="realtor">Realtor</button>
+                                <button type="button" id="deals-import-source-propwire" class="deals-import-source-btn" data-import-source="propwire">Propwire</button>
                             </div>
                             <label class="deals-import-field deals-import-span-2">Listing URL
                                 <div class="deals-import-link-row">
-                                    <input id="deals-import-source-url" name="sourceUrl" class="form-input" type="url" placeholder="Paste the Redfin property link here">
+                                    <input id="deals-import-source-url" name="sourceUrl" class="form-input" type="url" placeholder="Paste the Zillow, Redfin, Realtor, or Propwire property link here">
                                     <button type="button" id="deals-import-source-collect" class="btn-secondary">Autofill</button>
                                 </div>
-                                    <span class="deals-import-link-help">Paste a public Redfin property link, or use the wand after entering the property address so FAST can search Zillow, Redfin, and other public property data for the best match.</span>
+                                    <span class="deals-import-link-help">Paste a public Zillow, Redfin, Realtor, or Propwire property link, or use the wand after entering the property address so FAST can search Zillow, Redfin, Realtor, and other public property data for the best match.</span>
                             </label>
                         </div>
                         <label class="deals-import-field deals-import-span-2">Property Address

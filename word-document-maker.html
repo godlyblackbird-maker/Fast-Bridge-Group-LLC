@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Document Maker - FAST BRIDGE GROUP</title>
+    <title>Page Processor - FAST BRIDGE GROUP</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260327g">
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
     <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
     <link rel="manifest" href="/site.webmanifest?v=20260327g">
-    <meta name="description" content="FAST BRIDGE GROUP Microsoft Word document maker for letters, memos, offers, and client-ready drafts.">
+    <meta name="description" content="FAST BRIDGE GROUP Page Processor workspace for letters, memos, offers, and client-ready drafts.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Merriweather:wght@400;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -142,6 +142,33 @@
 
         .word-maker-page .navbar {
             margin-bottom: 24px;
+        }
+
+        .word-maker-page-title-group {
+            min-width: 0;
+        }
+
+        .word-maker-page-brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .word-maker-page-title-group .page-title {
+            margin: 0;
+        }
+
+        .word-maker-page-logo {
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
+        @media (max-width: 720px) {
+            .word-maker-page-logo {
+                width: 60px;
+            }
         }
 
         .word-maker-shell {
@@ -1260,15 +1287,30 @@
                         <li class="nav-item"><a href="analytics.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Analytics<span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span></a></li>
                         <li class="nav-item"><a href="mls.html" class="nav-link"><span class="nav-icon nav-icon-fire" aria-hidden="true"></span>MLS Hot Deals</a></li>
                         <li class="nav-item"><a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>MLS Search</a></li>
-                        <li class="nav-item"><a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a></li>
-                        <li class="nav-item"><a href="gmail.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Gmail</a></li>
-                        <li class="nav-item"><a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a></li>
-                        <li class="nav-item"><a href="fbg-messages.html" class="nav-link"><span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>FBG Messaging</a></li>
-                        <li class="nav-item"><a href="fbg-studio.html" class="nav-link"><span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>FBG Studio</a></li>
-                        <li class="nav-item"><a href="community.html" class="nav-link"><span class="nav-icon nav-icon-community" aria-hidden="true"></span>Community</a></li>
-                        <li class="nav-item"><a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent workspace</a></li>
-                        <li class="nav-item"><a href="trainings.html" class="nav-link"><span class="nav-icon nav-icon-training" aria-hidden="true"></span>Trainings</a></li>
-                        <li class="nav-item"><a href="pdf-editor.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><path d="M9 15h6"/><path d="M9 11h3"/></svg>PDF Editor</a></li>
+                        <li class="nav-item nav-group" data-collapsed="false">
+                            <button type="button" class="nav-group-toggle" aria-expanded="true" aria-label="Collapse workspace tabs">
+                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
+                                <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </span>
+                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
+                            </button>
+                            <ul class="nav-group-list">
+                                <li class="nav-item"><a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My Agents</a></li>
+                                <li class="nav-item"><a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a></li>
+                                <li class="nav-item"><a href="gmail.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Gmail</a></li>
+                                <li class="nav-item"><a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a></li>
+                                <li class="nav-item"><a href="pdf-editor.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/><path d="M9 15h6"/><path d="M9 11h3"/></svg>PDF Editor</a></li>
+                                <li class="nav-item"><a href="community.html" class="nav-link"><span class="nav-icon nav-icon-community" aria-hidden="true"></span>Community</a></li>
+                                <li class="nav-item"><a href="fbg-messages.html" class="nav-link"><span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>FBG Messaging</a></li>
+                                <li class="nav-item"><a href="fbg-studio.html" class="nav-link"><span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>Recording Studio</a></li>
+                                <li class="nav-item"><a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent Workspace</a></li>
+                                <li class="nav-item"><a href="word-document-maker.html" class="nav-link active" aria-current="page"><span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>Page Processor</a></li>
+                                <li class="nav-item"><a href="trainings.html" class="nav-link"><span class="nav-icon nav-icon-training" aria-hidden="true"></span>Trainings</a></li>
+                            </ul>
+                        </li>
                         <li class="nav-item"><a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
                     </ul>
                 </li>
@@ -1296,17 +1338,17 @@
 
         <main class="main-content">
             <nav class="navbar">
-                <div class="page-title-group">
-                    <h1 class="page-title">Word Document Maker</h1>
-                    <p class="navbar-datetime">Build downloadable Microsoft Word drafts in the browser.</p>
-                </div>
+                <a class="page-title-group word-maker-page-title-group word-maker-page-brand-link" href="index.html">
+                    <img class="word-maker-page-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                    <h1 class="page-title">Page Processor | FAST BRIDGE GROUP LLC</h1>
+                </a>
             </nav>
 
             <div class="word-maker-shell">
-                <section class="word-maker-stage" aria-label="Word maker workspace">
+                <section class="word-maker-stage" aria-label="Page Processor workspace">
                     <div class="word-maker-stage-header">
-                        <h2>Blank Word Workspace</h2>
-                        <p>Starting fresh. This container now holds a clean paper sheet so you can build the document maker from scratch.</p>
+                        <h2>Blank Page Processor Workspace</h2>
+                        <p>Starting fresh. This container now holds a clean paper sheet so you can build the Page Processor document workspace from scratch.</p>
                     </div>
                     <div class="word-maker-toolbar" aria-label="Text formatting toolbar">
                         <details class="word-maker-tool-group" aria-label="Text tools">
@@ -2332,8 +2374,23 @@
             template.innerHTML = rawHtml;
             template.content.querySelectorAll('script').forEach((node) => node.remove());
 
+            const walker = window.document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT);
+            const leakedNodes = [];
+            let currentNode = walker.nextNode();
+            while (currentNode) {
+                const text = String(currentNode.textContent || '').trim();
+                if (text && looksLikeWordMakerScriptLeak(text)) {
+                    leakedNodes.push(currentNode);
+                }
+                currentNode = walker.nextNode();
+            }
+
+            leakedNodes.forEach((node) => {
+                node.textContent = '';
+            });
+
             const textContent = String(template.content.textContent || '').trim();
-            if (!template.content.children.length && looksLikeWordMakerScriptLeak(textContent)) {
+            if ((!template.content.children.length && looksLikeWordMakerScriptLeak(textContent)) || (textContent && looksLikeWordMakerScriptLeak(textContent))) {
                 return '';
             }
 

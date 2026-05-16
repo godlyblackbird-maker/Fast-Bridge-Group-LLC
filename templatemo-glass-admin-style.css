@@ -4681,6 +4681,20 @@ a {
     mask-size: contain;
 }
 
+.nav-icon-fbg-word {
+    width: 24px;
+    height: 24px;
+    background-color: currentColor;
+    -webkit-mask-image: url("Symbols/doc-paper-svgrepo-com.svg");
+    mask-image: url("Symbols/doc-paper-svgrepo-com.svg");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
 .nav-icon-training {
     background-color: currentColor;
     -webkit-mask-image: url("Symbols/knowledge-base-svgrepo-com.svg");

@@ -1905,6 +1905,12 @@ function inferListingSourceFromUrl(rawUrl) {
     if (hostname.includes('redfin.com')) {
       return 'redfin';
     }
+    if (hostname.includes('realtor.com')) {
+      return 'realtor';
+    }
+    if (hostname.includes('propwire.com')) {
+      return 'propwire';
+    }
   } catch (error) {
     return '';
   }
@@ -2128,6 +2134,139 @@ function extractListingFactsFromText(text) {
   };
 }
 
+function extractImportedJsonValue(html, keys) {
+  const source = String(html || '');
+  const candidates = Array.isArray(keys) ? keys : [];
+
+  for (const key of candidates) {
+    const escapedKey = String(key || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const patterns = [
+      new RegExp(`"${escapedKey}"\\s*:\\s*"([^"\\]*(?:\\.[^"\\]*)*)"`, 'i'),
+      new RegExp(`'${escapedKey}'\\s*:\\s*'([^'\\]*(?:\\.[^'\\]*)*)'`, 'i')
+    ];
+
+    for (const pattern of patterns) {
+      const match = source.match(pattern);
+      if (match && match[1]) {
+        return decodeImportedScriptValue(match[1]);
+      }
+    }
+  }
+
+  return '';
+}
+
+function extractListingLabelValue(text, labels, options = {}) {
+  const source = normalizeListingText(text);
+  if (!source) {
+    return '';
+  }
+
+  const stopLabels = Array.isArray(options.stopLabels) ? options.stopLabels : [];
+  const escapedLabels = (Array.isArray(labels) ? labels : [])
+    .map((label) => String(label || '').trim())
+    .filter(Boolean)
+    .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
+
+  if (!escapedLabels.length) {
+    return '';
+  }
+
+  const stopPattern = stopLabels.length
+    ? `(?=\\s+(?:${stopLabels.map((label) => String(label || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|')})\\b|$)`
+    : '(?=$)';
+  const valuePattern = options.valuePattern || '(.{1,120}?)';
+  const pattern = new RegExp(`(?:${escapedLabels.join('|')})\\s*[:#-]?\\s*${valuePattern}${stopPattern}`, 'i');
+  const match = source.match(pattern);
+  return match && match[1] ? normalizeListingText(match[1]) : '';
+}
+
+function extractEnhancedListingDetails(html, requestUrl, source = '') {
+  const sourceText = normalizeListingText(html);
+  const priceFacts = extractListingFactsFromText(sourceText);
+  const normalizedSource = String(source || '').trim().toLowerCase();
+  const agentNameKeys = normalizedSource === 'realtor'
+    ? ['listingAgentName', 'listing_agent_name', 'agentName', 'agent_name', 'listingAgentFullName', 'sellerAgentName', 'seller_agent_name', 'advertiserName']
+    : ['listingAgentName', 'listing_agent_name', 'agentName', 'agent_name', 'listingAgentFullName'];
+  const agentPhoneKeys = normalizedSource === 'realtor'
+    ? ['listingAgentPhone', 'listing_agent_phone', 'agentPhone', 'agent_phone', 'listingAgentCell', 'listing_agent_cell', 'sellerAgentPhone', 'seller_agent_phone', 'advertiserPhone']
+    : ['listingAgentPhone', 'listing_agent_phone', 'agentPhone', 'agent_phone', 'listingAgentCell', 'listing_agent_cell'];
+  const agentEmailKeys = normalizedSource === 'realtor'
+    ? ['listingAgentEmail', 'listing_agent_email', 'agentEmail', 'agent_email', 'listingAgentDirectEmail', 'sellerAgentEmail', 'seller_agent_email', 'advertiserEmail']
+    : ['listingAgentEmail', 'listing_agent_email', 'agentEmail', 'agent_email', 'listingAgentDirectEmail'];
+  const descriptionKeys = normalizedSource === 'realtor'
+    ? ['description', 'propertyDescription', 'property_description', 'publicRemarks', 'public_remarks', 'descriptionText']
+    : ['description', 'propertyDescription', 'property_description', 'publicRemarks', 'public_remarks'];
+  const agentName = cleanPersonName(
+    extractImportedJsonValue(html, agentNameKeys)
+    || extractListingLabelValue(sourceText, ['listing agent name', 'listing agent', 'agent name'], {
+      stopLabels: ['agent phone', 'agent email', 'brokerage', 'company', 'office', 'status', 'price', 'beds', 'baths']
+    })
+  );
+  const agentPhone = extractPhoneNumber(
+    extractImportedJsonValue(html, agentPhoneKeys)
+    || extractListingLabelValue(sourceText, ['listing agent phone', 'agent phone', 'listing agent cell', 'agent cell', 'phone'], {
+      valuePattern: '((?:\\+?1[-.\\s]?)?(?:\\(?\\d{3}\\)?[-.\\s]?)\\d{3}[-.\\s]?\\d{4})',
+      stopLabels: ['agent email', 'email', 'brokerage', 'company', 'status', 'price']
+    })
+  );
+  const agentEmail = extractEmailAddress(
+    extractImportedJsonValue(html, agentEmailKeys)
+    || extractListingLabelValue(sourceText, ['listing agent email', 'agent email', 'email'], {
+      valuePattern: '([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})',
+      stopLabels: ['brokerage', 'company', 'status', 'price']
+    })
+  );
+  const garage = findFirstPatternMatch(sourceText, [
+    /(?:garage(?: spaces?)?|car(?: spaces?)?)\s*[:#-]?\s*(\d{1,2})/i,
+    /(\d{1,2})\s*(?:car garage|garage spaces?)/i
+  ]);
+  const dom = findFirstPatternMatch(sourceText, [/(?:days on market|dom)\s*[:#-]?\s*(\d{1,4})/i]);
+  const arv = normalizeListingCurrency(
+    extractImportedJsonValue(html, ['arv', 'afterRepairValue', 'after_repair_value', 'estimatedValue', 'estimated_value', 'avm', 'valueEstimate'])
+    || extractListingLabelValue(sourceText, ['after repair value', 'arv', 'estimated value', 'est value', 'avm'], {
+      valuePattern: '(\$?\s*[\d,]+(?:\.\d+)?)',
+      stopLabels: ['price', 'beds', 'baths', 'garage', 'status']
+    })
+  );
+  const notes = extractImportedJsonValue(html, descriptionKeys)
+    || extractListingLabelValue(sourceText, ['description', 'property description', 'public remarks', 'remarks'], {
+      valuePattern: '(.{20,800}?)',
+      stopLabels: ['listing agent', 'agent name', 'agent phone', 'agent email', 'status', 'price', 'beds', 'baths']
+    });
+
+  return {
+    url: requestUrl,
+    price: priceFacts.price,
+    beds: priceFacts.beds,
+    baths: priceFacts.baths,
+    area: priceFacts.area,
+    lotSize: priceFacts.lotSize,
+    yearBuilt: priceFacts.yearBuilt,
+    mlsId: priceFacts.mlsId,
+    status: mapListingStatus(priceFacts.status),
+    imageUrl: extractImportedImageCandidate(html, requestUrl, normalizedSource || 'propwire', '', ''),
+    garage,
+    dom,
+    arv,
+    agentName,
+    agentPhone,
+    agentEmail,
+    notes: normalizeListingText(notes)
+  };
+}
+
+function isPropwireAuthResponse(body) {
+  const text = String(body || '').toLowerCase();
+  if (!text) {
+    return false;
+  }
+
+  const authMarkers = ['propwire', 'sign in', 'log in', 'password', 'forgot password', 'continue with google'];
+  const propertyMarkers = ['listing agent', 'beds', 'baths', 'sqft', 'year built', 'days on market'];
+  return authMarkers.every((marker) => text.includes(marker)) && !propertyMarkers.some((marker) => text.includes(marker));
+}
+
 function mapListingStatus(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) {
@@ -2216,6 +2355,9 @@ function extractListingImportData(html, requestUrl, source) {
   const rawLocation = locationLabel || findFirstPatternMatch(rawAddress, [/^[^,]+,\s*(.+)$/]);
   const description = ogDescription || normalizeListingText(structuredListing && structuredListing.description);
   const normalizedImageUrl = extractImportedImageCandidate(html, requestUrl, source, structuredImage, ogImage);
+  const enhancedDetails = ['propwire', 'realtor'].includes(source)
+    ? extractEnhancedListingDetails(html, requestUrl, source)
+    : {};
 
   return {
     source,
@@ -2224,14 +2366,33 @@ function extractListingImportData(html, requestUrl, source) {
     location: rawLocation,
     mlsId: textFacts.mlsId,
     price: structuredPrice || textFacts.price,
+    arv: '',
     beds: structuredBeds || textFacts.beds,
     baths: structuredBaths || textFacts.baths,
     area: structuredArea || textFacts.area,
+    garage: '',
     lotSize: textFacts.lotSize,
     yearBuilt: structuredYearBuilt || textFacts.yearBuilt,
+    dom: '',
     imageUrl: normalizedImageUrl,
+    agentName: '',
+    agentPhone: '',
+    agentEmail: '',
     notes: description,
-    status: mapListingStatus(textFacts.status)
+    status: mapListingStatus(textFacts.status),
+    ...enhancedDetails,
+    address: enhancedDetails.address || rawAddress,
+    location: enhancedDetails.location || rawLocation,
+    mlsId: enhancedDetails.mlsId || textFacts.mlsId,
+    price: enhancedDetails.price || structuredPrice || textFacts.price,
+    beds: enhancedDetails.beds || structuredBeds || textFacts.beds,
+    baths: enhancedDetails.baths || structuredBaths || textFacts.baths,
+    area: enhancedDetails.area || structuredArea || textFacts.area,
+    lotSize: enhancedDetails.lotSize || textFacts.lotSize,
+    yearBuilt: enhancedDetails.yearBuilt || structuredYearBuilt || textFacts.yearBuilt,
+    imageUrl: enhancedDetails.imageUrl || normalizedImageUrl,
+    notes: enhancedDetails.notes || description,
+    status: enhancedDetails.status || mapListingStatus(textFacts.status)
   };
 }
 
@@ -2513,12 +2674,12 @@ async function fetchImportedListingFromUrl(rawUrl, requestedSource = '') {
   const inferredSource = inferListingSourceFromUrl(parsedUrl.href);
   const source = String(requestedSource || inferredSource).trim().toLowerCase();
 
-  if (!source || !['zillow', 'redfin'].includes(source)) {
-    throw new Error('Only Zillow and Redfin property links are supported right now.');
+  if (!source || !['zillow', 'redfin', 'realtor', 'propwire'].includes(source)) {
+    throw new Error('Only Zillow, Redfin, Realtor, and Propwire property links are supported right now.');
   }
 
   if (!inferListingSourceFromUrl(parsedUrl.href)) {
-    throw new Error('The pasted link does not look like a Zillow or Redfin property page.');
+    throw new Error('The pasted link does not look like a Zillow, Redfin, Realtor, or Propwire property page.');
   }
 
   const response = await fetch(parsedUrl.href, {
@@ -2535,18 +2696,25 @@ async function fetchImportedListingFromUrl(rawUrl, requestedSource = '') {
 
   const html = await response.text();
 
+  if (source === 'propwire' && isPropwireAuthResponse(html)) {
+    throw new Error('This Propwire page is behind login. FAST can import public Propwire links, but private Propwire pages require a public/exportable source instead of a protected session link.');
+  }
+
   if (isBotProtectionResponse(html)) {
-    throw new Error(`The ${source === 'zillow' ? 'Zillow' : 'Redfin'} page is blocking automated access right now.`);
+    const sourceLabel = source === 'zillow' ? 'Zillow' : (source === 'redfin' ? 'Redfin' : (source === 'realtor' ? 'Realtor' : 'Propwire'));
+    throw new Error(`The ${sourceLabel} page is blocking automated access right now.`);
   }
 
   if (!response.ok) {
-    throw new Error(`The ${source === 'zillow' ? 'Zillow' : 'Redfin'} page could not be loaded right now.`);
+    const sourceLabel = source === 'zillow' ? 'Zillow' : (source === 'redfin' ? 'Redfin' : (source === 'realtor' ? 'Realtor' : 'Propwire'));
+    throw new Error(`The ${sourceLabel} page could not be loaded right now.`);
   }
 
   const listing = extractListingImportData(html, parsedUrl.href, source);
 
-  if (!listing.address && !listing.price && !listing.imageUrl) {
-    throw new Error(`FAST could not read enough public listing data from this ${source === 'zillow' ? 'Zillow' : 'Redfin'} page.`);
+  if (!listing.address && !listing.price && !listing.imageUrl && !listing.agentName && !listing.agentEmail && !listing.agentPhone) {
+    const sourceLabel = source === 'zillow' ? 'Zillow' : (source === 'redfin' ? 'Redfin' : (source === 'realtor' ? 'Realtor' : 'Propwire'));
+    throw new Error(`FAST could not read enough public listing data from this ${sourceLabel} page.`);
   }
 
   return {
@@ -5828,7 +5996,7 @@ app.post('/api/import-listing-preview', async (req, res) => {
   const requestedSource = String(req.body?.source || '').trim().toLowerCase();
 
   if (!rawUrl) {
-    return res.status(400).json({ error: 'Paste a Zillow or Redfin listing URL first.' });
+    return res.status(400).json({ error: 'Paste a Zillow, Redfin, Realtor, or Propwire listing URL first.' });
   }
 
   try {
