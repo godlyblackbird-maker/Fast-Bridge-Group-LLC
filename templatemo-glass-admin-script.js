@@ -20811,6 +20811,7 @@ function initNavbarDateTime() {
         const importSourceUrlInput = document.getElementById('deals-import-source-url');
         const importSourceCollectButton = document.getElementById('deals-import-source-collect');
         const importSourceFetchButton = document.getElementById('deals-import-source-fetch');
+        const importAgentContactPasteInput = document.getElementById('deals-import-agent-contact-paste');
         const importSourceButtons = Array.from(document.querySelectorAll('[data-import-source]'));
         const importCloseButton = importOverlay
             ? importOverlay.querySelector('.deals-import-close-btn[data-deals-import-close="true"]')
@@ -21106,6 +21107,104 @@ function initNavbarDateTime() {
             }
         }
 
+        function parseAgentContactPasteBlock(rawValue) {
+            const rawText = String(rawValue || '').trim();
+            if (!rawText) {
+                return null;
+            }
+
+            const lines = rawText
+                .split(/\r?\n/)
+                .map(line => String(line || '').replace(/\s+/g, ' ').trim())
+                .filter(Boolean);
+
+            if (!lines.length) {
+                return null;
+            }
+
+            const parsed = {
+                agentName: '',
+                agentPhone: '',
+                agentEmail: ''
+            };
+
+            for (let index = 0; index < lines.length; index += 1) {
+                const currentLine = lines[index];
+                const normalizedLine = currentLine.toLowerCase();
+                const nextLine = index + 1 < lines.length ? lines[index + 1] : '';
+
+                if (!parsed.agentName && normalizedLine === 'listing agent' && nextLine) {
+                    parsed.agentName = nextLine;
+                    continue;
+                }
+
+                if (!parsed.agentEmail && normalizedLine === 'email' && nextLine && /@/.test(nextLine)) {
+                    parsed.agentEmail = nextLine;
+                    continue;
+                }
+
+                if (!parsed.agentPhone && normalizedLine === 'mobile phone' && nextLine) {
+                    parsed.agentPhone = formatPhoneDisplayValue(nextLine) || nextLine;
+                    continue;
+                }
+
+                if (!parsed.agentEmail && /@/.test(currentLine)) {
+                    parsed.agentEmail = currentLine;
+                }
+
+                if (!parsed.agentPhone && normalizedLine.includes('mobile phone')) {
+                    const inlinePhone = String(currentLine.split(/mobile phone/i).pop() || '').trim();
+                    const formattedPhone = formatPhoneDisplayValue(inlinePhone) || inlinePhone;
+                    if (formattedPhone) {
+                        parsed.agentPhone = formattedPhone;
+                    }
+                }
+            }
+
+            if (!parsed.agentName && lines[0] && !/@/.test(lines[0]) && !/phone/i.test(lines[0])) {
+                parsed.agentName = lines[0];
+            }
+
+            return parsed.agentName || parsed.agentPhone || parsed.agentEmail ? parsed : null;
+        }
+
+        function applyParsedAgentContactFields(parsed) {
+            if (!parsed || !(importForm instanceof HTMLFormElement)) {
+                return false;
+            }
+
+            const setIfPresent = (id, value) => {
+                if (!value) {
+                    return false;
+                }
+                const field = document.getElementById(id);
+                if (!field) {
+                    return false;
+                }
+                field.value = String(value || '').trim();
+                return true;
+            };
+
+            return [
+                setIfPresent('deals-import-agent-name', parsed.agentName),
+                setIfPresent('deals-import-agent-phone', parsed.agentPhone),
+                setIfPresent('deals-import-agent-email', parsed.agentEmail)
+            ].some(Boolean);
+        }
+
+        function handleAgentContactPasteAutofill() {
+            if (!(importAgentContactPasteInput instanceof HTMLTextAreaElement)) {
+                return;
+            }
+
+            const parsed = parseAgentContactPasteBlock(importAgentContactPasteInput.value);
+            if (!parsed) {
+                return;
+            }
+
+            applyParsedAgentContactFields(parsed);
+        }
+
         function setDealsImportLookupBusy(isBusy, activeButton = null) {
             if (importSourceCollectButton) {
                 importSourceCollectButton.disabled = isBusy;
@@ -21252,6 +21351,14 @@ function initNavbarDateTime() {
 
         if (importSourceCollectButton) {
             importSourceCollectButton.addEventListener('click', fetchListingPreviewFromSource);
+        }
+
+        if (importAgentContactPasteInput) {
+            importAgentContactPasteInput.addEventListener('paste', () => {
+                window.setTimeout(handleAgentContactPasteAutofill, 0);
+            });
+
+            importAgentContactPasteInput.addEventListener('blur', handleAgentContactPasteAutofill);
         }
 
         if (importCloseButton) {

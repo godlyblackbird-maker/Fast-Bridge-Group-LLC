@@ -21591,10 +21591,11 @@ app.post('/api/property-submissions', async (req, res) => {
   const sellerName = String(req.body?.sellerName || '').trim();
   const sellerEmail = String(req.body?.sellerEmail || '').trim().toLowerCase();
   const rawSellerPhone = String(req.body?.sellerPhone || '').trim();
-  const sellerPhone = normalizeSmsPhone(rawSellerPhone);
+  const normalizedSellerPhone = normalizeSmsPhone(rawSellerPhone);
+  const sellerPhone = normalizedSellerPhone || rawSellerPhone;
   const smsConsent = req.body?.smsConsent === true || String(req.body?.smsConsent || '').trim().toLowerCase() === 'true';
   const smsConsentText = smsConsent
-    ? 'By checking the box below and submitting this form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is not a condition of purchase.'
+    ? 'By choosing optional text updates on the property submission form, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, seller follow-up, missing details, appointment scheduling, and cash-offer review updates. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is optional and is not required to submit your property details.'
     : '';
   const referredBy = String(req.body?.referredBy || '').trim();
   const propertyAddress = String(req.body?.propertyAddress || '').trim();
@@ -21618,20 +21619,16 @@ app.post('/api/property-submissions', async (req, res) => {
     .filter(Boolean)
     .slice(0, 20);
 
-  if (!sellerName || !sellerEmail || !sellerPhone || !propertyAddress) {
-    return res.status(400).json({ error: 'Seller name, seller email, seller phone, and property address are required.' });
+  if (!sellerName || !sellerEmail || !propertyAddress) {
+    return res.status(400).json({ error: 'Seller name, seller email, and property address are required.' });
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerEmail)) {
     return res.status(400).json({ error: 'Enter a valid email address.' });
   }
 
-  if (!sellerPhone) {
-    return res.status(400).json({ error: 'Enter the phone number in E.164 format, for example +15551234567.' });
-  }
-
-  if (!smsConsent) {
-    return res.status(400).json({ error: 'Explicit SMS consent is required for property inquiry messaging.' });
+  if (smsConsent && !normalizedSellerPhone) {
+    return res.status(400).json({ error: 'Enter a valid phone number if you want to receive text updates.' });
   }
 
   if (!['yes', 'no'].includes(propertyPaidOff)) {
@@ -21668,7 +21665,7 @@ app.post('/api/property-submissions', async (req, res) => {
       mortgage_balance,
       condition_issues,
       issue_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
       [
       sellerName,
       sellerEmail,
@@ -21676,6 +21673,7 @@ app.post('/api/property-submissions', async (req, res) => {
       referredBy,
       smsConsent ? 1 : 0,
       smsConsentText,
+      smsConsent ? new Date().toISOString() : null,
       propertyAddress,
       propertyCity,
       propertyState,

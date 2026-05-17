@@ -434,15 +434,9 @@
         }
 
         .submit-brand-tagline {
-            color: var(--submit-copy-muted);
             font-size: 13px;
             font-weight: 600;
             letter-spacing: 0.08em;
-        }
-
-        .submit-back-link {
-            display: inline-flex;
-            align-items: center;
             justify-content: center;
             padding: 11px 18px;
             border-radius: 999px;
@@ -639,6 +633,13 @@
             text-transform: uppercase;
         }
 
+        .submit-field-hint {
+            margin: -2px 0 10px;
+            font-size: 0.8rem;
+            line-height: 1.45;
+            color: color-mix(in srgb, var(--submit-copy) 74%, white 26%);
+        }
+
         .submit-field input,
         .submit-field select,
         .submit-field textarea {
@@ -755,6 +756,13 @@
 
         .submit-consent-checkbox {
             align-items: flex-start;
+        }
+
+        .submit-consent-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
         }
 
         .submit-consent-checkbox span {
@@ -1022,7 +1030,8 @@
                             </div>
                             <div class="submit-field">
                                 <label for="seller-phone">Phone</label>
-                                <input id="seller-phone" name="sellerPhone" type="tel" placeholder="+1 (555) 123-4567" required>
+                                <p class="submit-field-hint">Optional. Add a phone number if you want a call back or if you want to opt in to text updates below.</p>
+                                <input id="seller-phone" name="sellerPhone" type="tel" placeholder="+1 (555) 123-4567">
                             </div>
                                 <div class="submit-field">
                                     <label for="referred-by">Who Referred You?</label>
@@ -1110,11 +1119,17 @@
                             </div>
                             <div class="submit-field full-width">
                                 <div class="submit-consent-panel">
-                                    <p class="submit-consent-copy">Optional: By checking the box below, you agree to receive SMS text messages from FAST BRIDGE GROUP LLC about your property inquiry, offer follow-up, appointment scheduling, and transaction-related updates. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for assistance. Consent to receive SMS messages is not a condition of purchase.</p>
-                                    <label class="submit-checkbox submit-consent-checkbox">
-                                        <input id="seller-sms-consent" name="smsConsent" type="checkbox" value="yes">
-                                        <span>I agree to receive SMS text messages from FAST BRIDGE GROUP LLC at the phone number provided for property inquiry, offer follow-up, appointment scheduling, and transaction-related communication.</span>
-                                    </label>
+                                    <p class="submit-consent-copy">Optional text updates: You can submit this property form without agreeing to SMS. If you choose yes, FAST BRIDGE GROUP LLC may text you about your property inquiry, seller follow-up, missing details, appointment scheduling, and cash-offer review updates. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for assistance.</p>
+                                    <div class="submit-consent-choice-grid" role="group" aria-labelledby="submit-sms-consent-label">
+                                        <label class="submit-checkbox submit-consent-checkbox">
+                                            <input id="seller-sms-consent-yes" name="smsConsent" type="radio" value="yes">
+                                            <span id="submit-sms-consent-label">Yes, I want optional text updates about this property review.</span>
+                                        </label>
+                                        <label class="submit-checkbox submit-consent-checkbox">
+                                            <input id="seller-sms-consent-no" name="smsConsent" type="radio" value="no" checked>
+                                            <span>No, I do not want text messages. I still want to submit my property details.</span>
+                                        </label>
+                                    </div>
                                     <div class="submit-consent-links" aria-label="SMS policy links">
                                         <a href="legal-privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>
                                         <a href="legal-terms-of-use.html" target="_blank" rel="noopener">Terms of Use</a>
@@ -1367,12 +1382,13 @@
                 const normalizedSellerPhone = applySellerPhoneFormatting();
                 const mortgageBalance = syncMortgageBalanceField();
                 const conditionIssues = formData.getAll('conditionIssues').map((item) => String(item || '').trim()).filter(Boolean);
+                const smsConsent = formData.get('smsConsent') === 'yes';
                 const payload = {
                     sellerName: String(formData.get('sellerName') || '').trim(),
                     sellerEmail: String(formData.get('sellerEmail') || '').trim(),
                     sellerPhone: normalizedSellerPhone || String(formData.get('sellerPhone') || '').trim(),
                     referredBy: String(formData.get('referredBy') || '').trim(),
-                    smsConsent: formData.get('smsConsent') === 'yes',
+                    smsConsent,
                     propertyAddress: String(formData.get('propertyAddress') || '').trim(),
                     propertyCity: String(formData.get('propertyCity') || '').trim(),
                     propertyState: String(formData.get('propertyState') || '').trim(),
@@ -1389,13 +1405,13 @@
                     issueNotes: String(formData.get('issueNotes') || '').trim()
                 };
 
-                if (!payload.sellerName || !payload.sellerEmail || !payload.sellerPhone || !payload.propertyAddress) {
-                    setFeedback('Name, email, phone, and property address are required.', 'error');
+                if (!payload.sellerName || !payload.sellerEmail || !payload.propertyAddress) {
+                    setFeedback('Name, email, and property address are required.', 'error');
                     return;
                 }
 
-                if (!normalizedSellerPhone) {
-                    setFeedback('Enter the phone number in E.164 format, for example +15551234567.', 'error');
+                if (payload.smsConsent && !normalizedSellerPhone) {
+                    setFeedback('Enter a valid phone number if you want to receive text updates.', 'error');
                     return;
                 }
 
