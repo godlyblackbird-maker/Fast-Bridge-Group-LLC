@@ -3285,7 +3285,7 @@
                                                     </button>
                                                 </div>
                                                 <div id="campaign-reply-offers-email-group" class="campaign-reply-address-group" hidden>
-                                                    <input id="campaign-reply-offers-email" class="campaign-reply-address-chip" type="text" placeholder="Offer email" autocomplete="off" spellcheck="false" readonly>
+                                                    <input id="campaign-reply-offers-email" class="campaign-reply-address-chip" type="text" placeholder="Offer email" autocomplete="off" spellcheck="false">
                                                     <button id="campaign-reply-copy-offers-email" type="button" class="campaign-reply-copy-address" aria-label="Copy offer email" title="Copy offer email">
                                                         <svg viewBox="0 0 24 24" aria-hidden="true">
                                                             <rect x="9" y="9" width="11" height="11" rx="2"></rect>
@@ -3686,6 +3686,7 @@
             const CAMPAIGN_TEMPLATE_STORAGE_KEY_BASE = 'campaignSmsTemplateSettings';
             const CAMPAIGN_NO_REPLIES_TEMPLATE_STORAGE_KEY_BASE = 'campaignNoRepliesTemplateBody';
             const CAMPAIGN_REPLY_ADDRESS_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyAddressOverrides';
+            const CAMPAIGN_REPLY_OFFERS_EMAIL_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyOffersEmailOverrides';
             const CAMPAIGN_PLANNER_STORAGE_KEY = 'personalTodoGoalsByUser';
             const CAMPAIGN_TEMPLATE_DEFAULTS = {
                 'first-touch': 'Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.',
@@ -3697,6 +3698,7 @@
             let campaignNoRepliesTemplateValue = loadCampaignNoRepliesTemplateBody();
             let campaignNoRepliesTemplateDraft = campaignNoRepliesTemplateValue;
             let campaignReplyAddressOverrides = loadCampaignReplyAddressOverrides();
+            let campaignReplyOffersEmailOverrides = loadCampaignReplyOffersEmailOverrides();
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
             let activeTwilioDraftContact = null;
@@ -4394,11 +4396,21 @@
                     return;
                 }
 
-                if (!propertyAddress) {
+                const hasReplyTarget = Boolean(activeTwilioConversationKey || hasActiveTwilioDraftContact());
+
+                if (!hasReplyTarget) {
                     campaignReplyAddress.value = '';
                     campaignReplyAddress.dataset.copyValue = '';
                     campaignReplyAddress.disabled = true;
                     campaignReplyAddressGroup.setAttribute('hidden', 'hidden');
+                    return;
+                }
+
+                if (!propertyAddress) {
+                    campaignReplyAddress.value = '';
+                    campaignReplyAddress.dataset.copyValue = '';
+                    campaignReplyAddress.disabled = false;
+                    campaignReplyAddressGroup.removeAttribute('hidden');
                     return;
                 }
 
@@ -4414,15 +4426,27 @@
                     return;
                 }
 
+                const hasReplyTarget = Boolean(activeTwilioConversationKey || hasActiveTwilioDraftContact());
+
+                if (!hasReplyTarget) {
+                    campaignReplyOffersEmail.value = '';
+                    campaignReplyOffersEmail.dataset.copyValue = '';
+                    campaignReplyOffersEmail.disabled = true;
+                    campaignReplyOffersEmailGroup.setAttribute('hidden', 'hidden');
+                    return;
+                }
+
                 if (!offersEmail) {
                     campaignReplyOffersEmail.value = '';
                     campaignReplyOffersEmail.dataset.copyValue = '';
-                    campaignReplyOffersEmailGroup.setAttribute('hidden', 'hidden');
+                    campaignReplyOffersEmail.disabled = false;
+                    campaignReplyOffersEmailGroup.removeAttribute('hidden');
                     return;
                 }
 
                 campaignReplyOffersEmail.value = offersEmail;
                 campaignReplyOffersEmail.dataset.copyValue = offersEmail;
+                campaignReplyOffersEmail.disabled = false;
                 campaignReplyOffersEmailGroup.removeAttribute('hidden');
             }
 
@@ -4430,8 +4454,16 @@
                 return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 300);
             }
 
+            function normalizeCampaignReplyOffersEmailValue(value) {
+                return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 320);
+            }
+
             function getCampaignReplyAddressOverridesStorageKey() {
                 return `${CAMPAIGN_REPLY_ADDRESS_OVERRIDES_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
+            }
+
+            function getCampaignReplyOffersEmailOverridesStorageKey() {
+                return `${CAMPAIGN_REPLY_OFFERS_EMAIL_OVERRIDES_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
             }
 
             function normalizeCampaignReplyAddressOverrides(value) {
@@ -4455,10 +4487,38 @@
                 }
             }
 
+            function normalizeCampaignReplyOffersEmailOverrides(value) {
+                const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+                const normalized = {};
+                Object.entries(source).forEach(([conversationKey, offersEmailValue]) => {
+                    const normalizedConversationKey = String(conversationKey || '').trim();
+                    const normalizedOffersEmailValue = normalizeCampaignReplyOffersEmailValue(offersEmailValue);
+                    if (normalizedConversationKey && normalizedOffersEmailValue) {
+                        normalized[normalizedConversationKey] = normalizedOffersEmailValue;
+                    }
+                });
+                return normalized;
+            }
+
+            function loadCampaignReplyOffersEmailOverrides() {
+                try {
+                    return normalizeCampaignReplyOffersEmailOverrides(JSON.parse(localStorage.getItem(getCampaignReplyOffersEmailOverridesStorageKey()) || '{}'));
+                } catch (error) {
+                    return {};
+                }
+            }
+
             function persistCampaignReplyAddressOverrides(value) {
                 localStorage.setItem(
                     getCampaignReplyAddressOverridesStorageKey(),
                     JSON.stringify(normalizeCampaignReplyAddressOverrides(value))
+                );
+            }
+
+            function persistCampaignReplyOffersEmailOverrides(value) {
+                localStorage.setItem(
+                    getCampaignReplyOffersEmailOverridesStorageKey(),
+                    JSON.stringify(normalizeCampaignReplyOffersEmailOverrides(value))
                 );
             }
 
@@ -4474,7 +4534,14 @@
             }
 
             function getConversationOffersEmail(conversation) {
-                return String(conversation?.offersEmail || '').trim();
+                const normalizedConversationKey = String(conversation?.conversationKey || '').trim();
+                const overrideValue = normalizedConversationKey
+                    ? normalizeCampaignReplyOffersEmailValue(campaignReplyOffersEmailOverrides[normalizedConversationKey] || '')
+                    : '';
+                if (overrideValue) {
+                    return overrideValue;
+                }
+                return normalizeCampaignReplyOffersEmailValue(conversation?.offersEmail || '');
             }
 
             function setConversationPropertyAddressOverride(conversationKey, value) {
@@ -4502,6 +4569,31 @@
                     if (campaignNoRepliesTemplateModal && !campaignNoRepliesTemplateModal.hidden) {
                         syncCampaignNoRepliesTemplateEditor();
                     }
+                }
+            }
+
+            function setConversationOffersEmailOverride(conversationKey, value) {
+                const normalizedConversationKey = String(conversationKey || '').trim();
+                if (!normalizedConversationKey) {
+                    return;
+                }
+
+                const normalizedOffersEmailValue = normalizeCampaignReplyOffersEmailValue(value);
+                if (normalizedOffersEmailValue) {
+                    campaignReplyOffersEmailOverrides[normalizedConversationKey] = normalizedOffersEmailValue;
+                } else {
+                    delete campaignReplyOffersEmailOverrides[normalizedConversationKey];
+                }
+                persistCampaignReplyOffersEmailOverrides(campaignReplyOffersEmailOverrides);
+
+                twilioInboxConversations.forEach((conversation) => {
+                    if (String(conversation?.conversationKey || '').trim() === normalizedConversationKey) {
+                        conversation.offersEmail = normalizedOffersEmailValue;
+                    }
+                });
+
+                if (normalizedConversationKey === activeTwilioConversationKey) {
+                    setCampaignReplyOffersEmail(normalizedOffersEmailValue);
                 }
             }
 
@@ -7110,6 +7202,17 @@
                     const nextValue = normalizeCampaignReplyAddressValue(campaignReplyAddress.value || '');
                     campaignReplyAddress.dataset.copyValue = nextValue;
                     setConversationPropertyAddressOverride(activeTwilioConversationKey, nextValue);
+                });
+            }
+
+            if (campaignReplyOffersEmail) {
+                campaignReplyOffersEmail.addEventListener('input', () => {
+                    if (!activeTwilioConversationKey) {
+                        return;
+                    }
+                    const nextValue = normalizeCampaignReplyOffersEmailValue(campaignReplyOffersEmail.value || '');
+                    campaignReplyOffersEmail.dataset.copyValue = nextValue;
+                    setConversationOffersEmailOverride(activeTwilioConversationKey, nextValue);
                 });
             }
 

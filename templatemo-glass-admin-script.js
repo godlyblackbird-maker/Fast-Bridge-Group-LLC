@@ -22876,6 +22876,12 @@ function initNavbarDateTime() {
         await propertyAssignmentsReady;
         const legacyCompsLine = 'Comparable set will include similar bed/bath properties within 1.0 mile radius and the last 6-12 month window.';
         const calculatorToggle = document.getElementById('property-calculator-toggle');
+        const calculatorQuickShell = document.getElementById('property-calculator-quick-shell');
+        const calculatorQuickToggle = document.getElementById('property-calculator-quick-toggle');
+        const calculatorQuickPopover = document.getElementById('property-calculator-quick-popover');
+        const calculatorQuickBase = document.getElementById('property-calculator-quick-base');
+        const calculatorQuick70 = document.getElementById('property-calculator-quick-70');
+        const calculatorQuick75 = document.getElementById('property-calculator-quick-75');
         const calculatorWidget = document.getElementById('property-calculator-widget');
         const calculatorDisplay = document.getElementById('property-calculator-display');
 
@@ -23909,7 +23915,18 @@ function initNavbarDateTime() {
 
         if (calculatorToggle && calculatorWidget && calculatorDisplay) {
             let calculatorExpression = '';
+            let calculatorQuickHoverCount = 0;
+            let calculatorQuickHideTimer = null;
             const calculatorPrimaryKey = calculatorWidget.querySelector('[data-calculator-action="clear"]');
+
+            function getCalculatorListPrice() {
+                const detailListPrice = Math.max(parseMoneyValue(detailData && detailData.listPrice), 0);
+                if (detailListPrice > 0) {
+                    return detailListPrice;
+                }
+
+                return Math.max(parseMoneyValue(document.getElementById('property-list-price')?.textContent || ''), 0);
+            }
 
             function formatCalculatorScientificNotation(value) {
                 const exponentialValue = value.toExponential(6).replace('e', 'E');
@@ -23972,6 +23989,101 @@ function initNavbarDateTime() {
                 if (isOpen && calculatorPrimaryKey) {
                     requestAnimationFrame(() => calculatorPrimaryKey.focus());
                 }
+            }
+
+            function setCalculatorQuickOpenState(isOpen) {
+                if (!calculatorQuickPopover || !calculatorQuickToggle) {
+                    return;
+                }
+
+                const nextIsOpen = Boolean(isOpen);
+                calculatorQuickPopover.hidden = !nextIsOpen;
+                calculatorQuickToggle.setAttribute('aria-expanded', nextIsOpen ? 'true' : 'false');
+                if (calculatorQuickShell) {
+                    calculatorQuickShell.classList.toggle('is-open', nextIsOpen);
+                }
+            }
+
+            function clearCalculatorQuickHideTimer() {
+                if (calculatorQuickHideTimer) {
+                    window.clearTimeout(calculatorQuickHideTimer);
+                    calculatorQuickHideTimer = null;
+                }
+            }
+
+            function setCalculatorQuickVisibleState(isVisible) {
+                if (!calculatorQuickShell) {
+                    return;
+                }
+
+                calculatorQuickShell.classList.toggle('is-visible', Boolean(isVisible));
+            }
+
+            function scheduleCalculatorQuickHide() {
+                if (!calculatorQuickShell || !calculatorQuickPopover) {
+                    return;
+                }
+
+                clearCalculatorQuickHideTimer();
+                if (!calculatorQuickPopover.hidden) {
+                    return;
+                }
+
+                calculatorQuickHideTimer = window.setTimeout(() => {
+                    calculatorQuickHideTimer = null;
+                    if (calculatorQuickHoverCount <= 0 && calculatorQuickPopover.hidden) {
+                        setCalculatorQuickVisibleState(false);
+                    }
+                }, 220);
+            }
+
+            function bindCalculatorQuickHoverTarget(target) {
+                if (!target) {
+                    return;
+                }
+
+                target.addEventListener('mouseenter', () => {
+                    calculatorQuickHoverCount += 1;
+                    clearCalculatorQuickHideTimer();
+                    setCalculatorQuickVisibleState(true);
+                });
+
+                target.addEventListener('mouseleave', () => {
+                    calculatorQuickHoverCount = Math.max(0, calculatorQuickHoverCount - 1);
+                    scheduleCalculatorQuickHide();
+                });
+            }
+
+            function renderCalculatorQuickTargets() {
+                if (!calculatorQuickBase || !calculatorQuick70 || !calculatorQuick75) {
+                    return;
+                }
+
+                const listPrice = getCalculatorListPrice();
+                const hasListPrice = listPrice > 0;
+                const quickTargets = [
+                    { percent: 70, amount: hasListPrice ? Math.round(listPrice * 0.7) : 0, valueEl: calculatorQuick70 },
+                    { percent: 75, amount: hasListPrice ? Math.round(listPrice * 0.75) : 0, valueEl: calculatorQuick75 }
+                ];
+
+                calculatorQuickBase.textContent = hasListPrice
+                    ? `${formatMoney(listPrice)} list price quick targets.`
+                    : 'List price is not available for this property yet.';
+
+                quickTargets.forEach((target) => {
+                    target.valueEl.textContent = hasListPrice ? formatMoney(target.amount) : '$0';
+
+                    const button = calculatorQuickPopover.querySelector(`[data-calculator-quick-percent="${target.percent}"]`);
+                    if (button) {
+                        button.disabled = !hasListPrice;
+                        button.setAttribute(
+                            'title',
+                            hasListPrice
+                                ? `Use ${target.percent}% of list price: ${formatMoney(target.amount)}`
+                                : 'List price unavailable'
+                        );
+                    }
+                });
             }
 
             function normalizeCalculatorExpression(rawValue) {
@@ -24076,6 +24188,61 @@ function initNavbarDateTime() {
                 setCalculatorOpenState(calculatorWidget.hidden);
             });
 
+            if (calculatorQuickToggle && calculatorQuickPopover) {
+                bindCalculatorQuickHoverTarget(calculatorToggle);
+                bindCalculatorQuickHoverTarget(calculatorQuickShell);
+
+                calculatorQuickToggle.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    clearCalculatorQuickHideTimer();
+                    renderCalculatorQuickTargets();
+                    setCalculatorQuickOpenState(calculatorQuickPopover.hidden);
+                    setCalculatorQuickVisibleState(true);
+                });
+
+                calculatorQuickPopover.querySelectorAll('[data-calculator-quick-percent]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const percent = Number.parseFloat(button.getAttribute('data-calculator-quick-percent') || '0');
+                        const listPrice = getCalculatorListPrice();
+                        if (!Number.isFinite(percent) || percent <= 0 || listPrice <= 0) {
+                            return;
+                        }
+
+                        calculatorExpression = String(Math.round(listPrice * (percent / 100)));
+                        renderCalculatorDisplay(calculatorExpression);
+                        setCalculatorOpenState(true);
+                        setCalculatorQuickOpenState(false);
+                        if (calculatorQuickHoverCount <= 0) {
+                            setCalculatorQuickVisibleState(false);
+                        }
+                    });
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (calculatorQuickPopover.hidden) {
+                        return;
+                    }
+
+                    if ((calculatorQuickShell && calculatorQuickShell.contains(event.target)) || (calculatorToggle && calculatorToggle.contains(event.target))) {
+                        return;
+                    }
+
+                    setCalculatorQuickOpenState(false);
+                    if (calculatorQuickHoverCount <= 0) {
+                        setCalculatorQuickVisibleState(false);
+                    }
+                });
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && !calculatorQuickPopover.hidden) {
+                        setCalculatorQuickOpenState(false);
+                        if (calculatorQuickHoverCount <= 0) {
+                            setCalculatorQuickVisibleState(false);
+                        }
+                    }
+                });
+            }
+
             calculatorWidget.querySelectorAll('[data-calculator-value]').forEach(button => {
                 button.addEventListener('click', () => {
                     appendCalculatorValue(button.dataset.calculatorValue || '');
@@ -24112,6 +24279,9 @@ function initNavbarDateTime() {
             });
 
             setCalculatorOpenState(false);
+            renderCalculatorQuickTargets();
+            setCalculatorQuickOpenState(false);
+            setCalculatorQuickVisibleState(false);
             renderCalculatorDisplay('0');
         }
 
@@ -31940,6 +32110,7 @@ function initNavbarDateTime() {
             let investorSummaryMessage = '';
             let strikeZoneTargetOffer = null;
 
+
             function sanitizeIaInvestorDefaults(defaults) {
                 const nextDefaults = defaults && typeof defaults === 'object'
                     ? { ...defaults }
@@ -32496,7 +32667,6 @@ function initNavbarDateTime() {
 
             function recalculate() {
                 syncInvestorDefaultsFromInputs();
-
                 const rawArv = Math.max(asNumber(arvInput, 0), 1);
                 const renovation = Math.max(asNumber(renovationInput, 0), 0);
                 const sellSidePct = Math.max(asNumber(sellSidePercentInput, 0), 0);
@@ -32861,6 +33031,7 @@ function initNavbarDateTime() {
                     recalculate();
                 });
             }
+
 
             [
                 arvInput,
