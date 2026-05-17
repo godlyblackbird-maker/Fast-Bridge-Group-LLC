@@ -991,20 +991,20 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return;
             }
 
-            if (typeof scoped === 'string' || typeof scoped === 'number' || typeof scoped === 'boolean') {
-                primitiveValue = scoped;
+            const importedByNoteEl = document.getElementById('property-imported-by-note');
+            if (importedByNoteEl) {
+                const importedBy = detailData.importedBy && typeof detailData.importedBy === 'object'
+                    ? detailData.importedBy
+                    : null;
+                const importedByName = String(importedBy?.name || detailData.importedByName || '').trim();
+                if (importedByName) {
+                    importedByNoteEl.hidden = false;
+                    importedByNoteEl.textContent = `Imported by ${importedByName}`;
+                } else {
+                    importedByNoteEl.hidden = true;
+                    importedByNoteEl.textContent = '';
+                }
             }
-        });
-
-        if (Object.keys(merged).length > 0) {
-            return merged;
-        }
-        if (typeof primitiveValue !== 'undefined') {
-            return primitiveValue;
-        }
-        return {};
-    }
-
     function setUserScopedObject(storageKey, userKey, value, options) {
         const config = options && typeof options === 'object' ? options : {};
         let store = {};
@@ -1958,6 +1958,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             sourceListingUrl: sanitizeSharedPropertyText(detail.sourceListingUrl, 500),
             sourceListingLabel: sanitizeSharedPropertyText(detail.sourceListingLabel, 80),
             sourceListingLinks: sanitizeSharedPropertyLinks(detail.sourceListingLinks),
+            importedByName: sanitizeSharedPropertyText(detail.importedByName || detail.importedBy?.name, 120),
+            importedBy: detail.importedBy && typeof detail.importedBy === 'object'
+                ? {
+                    name: sanitizeSharedPropertyText(detail.importedBy.name, 120),
+                    email: sanitizeSharedPropertyText(detail.importedBy.email, 160),
+                    key: sanitizeSharedPropertyText(detail.importedBy.key, 160),
+                    role: sanitizeSharedPropertyText(detail.importedBy.role, 80)
+                }
+                : undefined,
             agentRecord: {
                 name: sanitizeSharedPropertyText(agentRecord.name, 120),
                 title: sanitizeSharedPropertyText(agentRecord.title, 120),
@@ -13478,6 +13487,7 @@ function initNavbarDateTime() {
         let searchTimer = 0;
         let currentItems = [];
         let pendingUploadPropertyItem = null;
+        const workspaceUser = getWorkspaceUserContext();
 
         const uploadInput = document.createElement('input');
         uploadInput.type = 'file';
@@ -13514,6 +13524,161 @@ function initNavbarDateTime() {
                 showDashboardToast('error', 'Upload Failed', error && error.message ? error.message : 'These property documents could not be uploaded.');
             }
         });
+
+        function getPropertyFilterAuthToken() {
+            return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+        }
+
+        function normalizeImportedListingStatus(value) {
+            const rawValue = String(value || '').trim().toLowerCase();
+            if (!rawValue) {
+                return 'active';
+            }
+            if (rawValue.includes('closed')) {
+                return 'closed';
+            }
+            if (rawValue.includes('pending') || rawValue.includes('contract')) {
+                return 'pending';
+            }
+            if (rawValue.includes('hold') || rawValue.includes('off-market') || rawValue.includes('off market')) {
+                return 'on-hold';
+            }
+            return 'active';
+        }
+
+        function buildFilterImportedSpreadsheetRecord(row) {
+            const propertyAddress = String(row && row.propertyAddress || '').trim();
+            if (!propertyAddress) {
+                return null;
+            }
+
+            const importDateText = String(row && row.importDate || '').trim();
+            const importedAt = Number(Date.parse(importDateText)) || Date.now();
+            const normalizedStatus = normalizeImportedListingStatus(row && row.status);
+            const statusLabel = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).replace('-', ' ');
+            const marketLabel = extractCityFromPropertyAddress(propertyAddress) || 'MLS Spreadsheet Import';
+            const agentName = String(row && row.laName || '').trim() || 'Listing Agent';
+            const agentPhone = String(row && (row.laCell || row.laDirect || row.loPhone) || '').trim() || 'TBD';
+            const agentEmail = String(row && (row.laEmail || row.offersEmail) || '').trim() || 'TBD';
+            const rowMatchKey = String(row && row.matchKey || '').trim();
+            const rowIdentifier = String(row && row.id || rowMatchKey || propertyAddress).trim();
+            const importedBy = buildUserIdentity(workspaceUser);
+
+            return {
+                id: `mls-row:${rowIdentifier}`,
+                address: propertyAddress,
+                location: marketLabel,
+                status: normalizedStatus,
+                clickedAt: importedAt,
+                importedBy,
+                propertySnapshot: {
+                    address: propertyAddress,
+                    importedBy,
+                    importedByName: String(importedBy.name || importedBy.email || '').trim(),
+                    propertyImages: ['png photos/FAST LOGO 777.png'],
+                    propertyDetails: 'MLS Spreadsheet Import',
+                    listPrice: '',
+                    marketInfo: importDateText ? `Imported ${importDateText} / ${statusLabel}` : statusLabel,
+                    dom: 0,
+                    cdom: 0,
+                    piq: 'Imported from the MLS spreadsheet.',
+                    ia: 'Imported from the MLS spreadsheet.',
+                    recordCreated: importDateText || new Date(importedAt).toLocaleDateString(),
+                    listingDate: importDateText || new Date(importedAt).toLocaleDateString(),
+                    idx: 'MLS Spreadsheet Import',
+                    propertyType: 'Residential',
+                    mlsNumber: rowMatchKey || `MLS-ROW-${rowIdentifier}`,
+                    statusLabel,
+                    autoTracker: importDateText ? `Imported ${importDateText}` : 'Imported MLS Row',
+                    areaLabel: marketLabel,
+                    propertyCover: propertyAddress,
+                    publicComments: rowMatchKey ? `MLS Row ${rowMatchKey}` : 'Imported MLS spreadsheet row',
+                    agentComments: '',
+                    agentRecord: {
+                        name: agentName,
+                        title: 'Agent Record',
+                        phone: agentPhone === 'TBD' ? '' : agentPhone,
+                        email: agentEmail === 'TBD' ? '' : agentEmail,
+                        brokerage: 'MLS Spreadsheet Import'
+                    }
+                }
+            };
+        }
+
+        function mergeImportedFilterItems(serverItems, manualItems) {
+            const mergedByKey = new Map();
+
+            const mergeItems = (items, shouldOverrideExisting) => {
+                (Array.isArray(items) ? items : []).forEach((item) => {
+                    if (!item || typeof item !== 'object') {
+                        return;
+                    }
+
+                    const propertyKey = makePropertyStorageKey(
+                        item.propertySnapshot?.address
+                        || item.address
+                        || item.propertyAddress
+                        || item.id
+                    );
+
+                    if (!propertyKey) {
+                        return;
+                    }
+
+                    if (!mergedByKey.has(propertyKey) || shouldOverrideExisting) {
+                        mergedByKey.set(propertyKey, item);
+                    }
+                });
+            };
+
+            mergeItems(serverItems, false);
+            mergeItems(manualItems, true);
+
+            return Array.from(mergedByKey.values())
+                .sort((left, right) => (Number(right?.clickedAt) || 0) - (Number(left?.clickedAt) || 0))
+                .slice(0, 500);
+        }
+
+        async function hydrateImportedPropertyFilterItems() {
+            const authToken = getPropertyFilterAuthToken();
+            if (!authToken || !workspaceUser.key) {
+                return;
+            }
+
+            try {
+                const [manualResponse, spreadsheetResponse] = await Promise.all([
+                    fetch('/api/my-deals/imported-properties', {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`
+                        }
+                    }),
+                    fetch('/api/mls-imports/rows?offset=0&limit=500', {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`
+                        }
+                    })
+                ]);
+
+                const manualPayload = await manualResponse.json().catch(() => ({}));
+                if (!manualResponse.ok) {
+                    throw new Error(manualPayload && manualPayload.error ? manualPayload.error : 'Unable to load imported properties.');
+                }
+
+                const spreadsheetPayload = await spreadsheetResponse.json().catch(() => ({}));
+                if (!spreadsheetResponse.ok) {
+                    throw new Error(spreadsheetPayload && spreadsheetPayload.error ? spreadsheetPayload.error : 'Unable to load MLS import rows.');
+                }
+
+                const manualItems = Array.isArray(manualPayload.items) ? manualPayload.items.filter(Boolean) : [];
+                const spreadsheetItems = (Array.isArray(spreadsheetPayload.rows) ? spreadsheetPayload.rows : [])
+                    .map((row) => buildFilterImportedSpreadsheetRecord(row))
+                    .filter(Boolean);
+                const nextImportedItems = mergeImportedFilterItems(spreadsheetItems, manualItems);
+                setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextImportedItems, { silent: true });
+            } catch (error) {
+                console.error('Failed to hydrate imported properties for the property filter:', error);
+            }
+        }
 
         function hydrateStatusOptions() {
             const previousValue = String(statusSelect.value || 'all-statuses').trim().toLowerCase() || 'all-statuses';
@@ -13594,7 +13759,6 @@ function initNavbarDateTime() {
         }
 
         function collectItems() {
-            const workspaceUser = getWorkspaceUserContext();
             const itemMap = new Map();
 
             function addResolvedItem(rawItem, sourceKey) {
@@ -13823,6 +13987,7 @@ function initNavbarDateTime() {
 
         async function reload() {
             await propertyAssignmentsReady;
+            await hydrateImportedPropertyFilterItems();
             currentItems = collectItems();
             render();
         }
@@ -20824,6 +20989,7 @@ function initNavbarDateTime() {
         let importBackdropPointerDown = false;
         let importSource = 'redfin';
         let hydratedImportedItems = [];
+        let hasHydratedImportedItems = false;
 
         if (!list || !count || !listPagination || !importedList || !importedCount || !importedPagination || !assignedList || !assignedCount || !assignedPagination) {
             return;
@@ -21527,6 +21693,16 @@ function initNavbarDateTime() {
                 .trim();
         }
 
+        function createImportedBySnapshot() {
+            const importer = buildUserIdentity(activeSessionUser || workspaceUser || getWorkspaceUserContext());
+            return {
+                name: String(importer.name || importer.email || 'Unknown user').trim() || 'Unknown user',
+                email: String(importer.email || '').trim(),
+                key: String(importer.key || '').trim(),
+                role: String(importer.role || '').trim()
+            };
+        }
+
         function createImportedPropertyRecord(formData) {
             const address = String(formData.get('address') || '').trim();
             const location = String(formData.get('location') || '').trim();
@@ -21548,9 +21724,12 @@ function initNavbarDateTime() {
             const agentName = String(formData.get('agentName') || '').trim();
             const agentPhone = String(formData.get('agentPhone') || '').trim();
             const agentEmail = String(formData.get('agentEmail') || '').trim();
+            const importedBy = createImportedBySnapshot();
 
             const propertySnapshot = {
                 address,
+                importedBy,
+                importedByName: importedBy.name,
                 propertyImages: [imageUrl],
                 propertyDetails: `Single Family / ${beds.replace('Beds', 'Br').trim()} / ${baths.replace('Baths', 'Ba').trim()} / ${garageCount} Gar / ${yearBuilt} / ${area.replace('sqft', 'sqft').trim()} / ${lotSize.replace('sqft', 'sqft').trim()} / Pool: Unknown`,
                 listPrice: price,
@@ -21625,6 +21804,7 @@ function initNavbarDateTime() {
                 status,
                 roi: Number.isFinite(roi) ? roi.toFixed(1) : '0.0',
                 imageUrl,
+                importedBy,
                 clickedAt: Date.now(),
                 propertySnapshot
             };
@@ -21651,16 +21831,22 @@ function initNavbarDateTime() {
             }
 
             const savedRecord = payload && payload.record && typeof payload.record === 'object'
-                ? payload.record
+                ? sanitizeImportedPropertyItem(payload.record)
                 : record;
-            const items = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
-            const nextItems = [savedRecord, ...items.filter(item => String(item.id || '') !== savedRecord.id)].slice(0, 120);
+            const items = hasHydratedImportedItems ? hydratedImportedItems : [];
+            const nextItems = mergeImportedItemsByAddress(
+                Array.isArray(items)
+                    ? items.filter(item => String(item?.id || '') !== String(savedRecord?.id || ''))
+                    : [],
+                [savedRecord]
+            ).slice(0, 120);
             hydratedImportedItems = mergeImportedItemsByAddress(
                 Array.isArray(hydratedImportedItems)
                     ? hydratedImportedItems.filter(item => String(item?.id || '') !== savedRecord.id)
                     : [],
                 [savedRecord]
             );
+            hasHydratedImportedItems = true;
             setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, nextItems);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
             return savedRecord;
@@ -21751,6 +21937,16 @@ function initNavbarDateTime() {
             return '';
         }
 
+        function buildImportedPropertyOwnerLabel(item) {
+            const importedBy = item && item.importedBy && typeof item.importedBy === 'object'
+                ? item.importedBy
+                : item?.propertySnapshot?.importedBy && typeof item.propertySnapshot.importedBy === 'object'
+                    ? item.propertySnapshot.importedBy
+                    : null;
+            const importerName = String(importedBy?.name || item?.propertySnapshot?.importedByName || '').trim();
+            return importerName ? `Imported by ${importerName}` : '';
+        }
+
         function normalizeServerImportedStatus(value) {
             const rawValue = String(value || '').trim().toLowerCase();
             if (!rawValue) {
@@ -21773,6 +21969,8 @@ function initNavbarDateTime() {
             if (!propertyAddress) {
                 return null;
             }
+
+            const importedBy = createImportedBySnapshot();
 
             const importDateText = String(row && row.importDate || '').trim();
             const importedAt = Number(Date.parse(importDateText)) || Date.now();
@@ -21805,6 +22003,7 @@ function initNavbarDateTime() {
                 status: normalizedStatus,
                 roi: '',
                 imageUrl: 'png photos/FAST LOGO 777.png',
+                importedBy,
                 clickedAt: importedAt,
                 sourceDetails: {
                     importDate: importDateText,
@@ -21816,6 +22015,8 @@ function initNavbarDateTime() {
                 },
                 propertySnapshot: {
                     address: propertyAddress,
+                    importedBy,
+                    importedByName: importedBy.name,
                     propertyImages: ['png photos/FAST LOGO 777.png'],
                     propertyDetails: 'MLS Spreadsheet Import',
                     listPrice: '',
@@ -21881,12 +22082,23 @@ function initNavbarDateTime() {
             const normalizedSnapshot = normalizedItem.propertySnapshot && typeof normalizedItem.propertySnapshot === 'object'
                 ? { ...normalizedItem.propertySnapshot }
                 : {};
+            const fallbackImportedBy = createImportedBySnapshot();
+            const normalizedImportedBy = normalizedItem.importedBy && typeof normalizedItem.importedBy === 'object'
+                ? { ...fallbackImportedBy, ...normalizedItem.importedBy }
+                : normalizedSnapshot.importedBy && typeof normalizedSnapshot.importedBy === 'object'
+                    ? { ...fallbackImportedBy, ...normalizedSnapshot.importedBy }
+                    : fallbackImportedBy;
             const placeholderImageUrl = 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80';
             const isSpreadsheetImport = String(normalizedSnapshot.idx || '').trim() === 'MLS Spreadsheet Import'
                 || String(normalizedSnapshot.propertyDetails || '').includes('MLS Spreadsheet Import')
                 || String(normalizedSnapshot.taxDelinquency || '').includes('MLS Row ');
 
+            normalizedItem.importedBy = normalizedImportedBy;
+            normalizedSnapshot.importedBy = normalizedImportedBy;
+            normalizedSnapshot.importedByName = String(normalizedImportedBy.name || '').trim();
+
             if (!isSpreadsheetImport) {
+                normalizedItem.propertySnapshot = normalizedSnapshot;
                 return normalizedItem;
             }
 
@@ -22018,6 +22230,8 @@ function initNavbarDateTime() {
             const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             if (!authToken) {
                 hydratedImportedItems = [];
+                hasHydratedImportedItems = true;
+                setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, [], { silent: true });
                 return;
             }
 
@@ -22051,27 +22265,22 @@ function initNavbarDateTime() {
                 const serverItems = (Array.isArray(spreadsheetPayload.rows) ? spreadsheetPayload.rows : [])
                     .map((row) => buildImportedPropertyRecordFromServerRow(row))
                     .filter(Boolean);
-                const persistedItems = mergeImportedItemsByAddress(manualItems, serverItems);
-
-                if (!persistedItems.length) {
-                    hydratedImportedItems = [];
-                    return;
-                }
+                const persistedItems = mergeImportedItemsByAddress(serverItems, manualItems);
+                hydratedImportedItems = persistedItems.slice();
+                hasHydratedImportedItems = true;
 
                 const existingItems = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
-                const mergedItems = mergeImportedItemsByAddress(existingItems, persistedItems);
-                hydratedImportedItems = persistedItems.slice();
-
                 const existingSerialized = JSON.stringify(existingItems);
-                const mergedSerialized = JSON.stringify(mergedItems);
-                if (existingSerialized === mergedSerialized) {
+                const persistedSerialized = JSON.stringify(persistedItems);
+                if (existingSerialized === persistedSerialized) {
                     return;
                 }
 
-                setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, mergedItems, { silent: true });
+                setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, persistedItems, { silent: true });
                 window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
             } catch (error) {
                 hydratedImportedItems = [];
+                hasHydratedImportedItems = true;
                 console.error('Failed to hydrate imported properties from server rows:', error);
             }
         }
@@ -22424,10 +22633,7 @@ function initNavbarDateTime() {
         }
 
         function getImportedItemsForWorkspaceUser() {
-            return mergeImportedItemsByAddress(
-                getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key),
-                hydratedImportedItems
-            )
+            return (hasHydratedImportedItems ? hydratedImportedItems : [])
                 .slice()
                 .sort((a, b) => (Number(b.clickedAt) || 0) - (Number(a.clickedAt) || 0));
         }
@@ -22629,6 +22835,7 @@ function initNavbarDateTime() {
             visibleItems.forEach(item => {
                 const resolvedState = resolveDealsListItemState(item);
                 const supportText = buildImportedPropertySupportText(item);
+                const ownerLabel = buildImportedPropertyOwnerLabel(item);
 
                 const row = document.createElement('div');
                 row.className = 'deals-compact-row';
@@ -22651,6 +22858,7 @@ function initNavbarDateTime() {
                     <div class="deals-compact-main">
                         <p class="deals-compact-address">${String(resolvedState.propertyAddress || item.address || 'Property')}</p>
                         <p class="deals-compact-meta">${buildImportedPropertyMeta(item, resolvedState)}</p>
+                        ${ownerLabel ? `<p class="deals-assigned-by"><strong>${ownerLabel}</strong></p>` : ''}
                         ${supportText ? `<p class="deals-assigned-by"><strong>${supportText}</strong></p>` : ''}
                         ${resolvedState.assignmentSummary ? `<p class="deals-assigned-by"><strong>${resolvedState.assignmentSummary}</strong></p>` : ''}
                     </div>

@@ -157,6 +157,22 @@
             flex-wrap: wrap;
         }
 
+        .property-imported-by-note {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            max-width: 100%;
+            margin: 2px 0 8px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            line-height: 1.2;
+            letter-spacing: 0.02em;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
         .property-page-title-logo {
             width: clamp(72px, 8vw, 102px);
             height: auto;
@@ -422,6 +438,7 @@
         <section class="property-detail-grid">
             <article class="glass-card glass-card-3d property-detail-card">
                 <h2 id="property-details-card-title">Property Details | FAST BRIDGE GROUP LLC</h2>
+                <p id="property-imported-by-note" class="property-imported-by-note" hidden></p>
                 <p id="property-details-line">Single Family / 4 Br / 2 Ba / 3 Gar / 1978 / 2,839 ft² / 170,320 ft² / Pool: None</p>
             </article>
 
