@@ -1101,6 +1101,43 @@
             font-size: 18px;
         }
 
+        .campaign-reply-list-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .campaign-reply-add-thread {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-rgb), 0.22);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(var(--accent-rgb), 0.16) 100%);
+            color: #0f172a;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .campaign-reply-add-thread:hover,
+        .campaign-reply-add-thread:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-rgb), 0.34);
+            box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
+        }
+
+        .campaign-reply-add-thread svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            fill: none;
+        }
+
         .campaign-reply-search {
             display: block;
             width: 100%;
@@ -3188,7 +3225,15 @@
                             <div class="campaign-replies-shell">
                                 <aside class="campaign-replies-list">
                                     <div class="campaign-replies-list-head">
-                                        <h4>Active Threads <span id="campaign-reply-thread-count">(0)</span></h4>
+                                        <div class="campaign-reply-list-title-row">
+                                            <h4>Active Threads <span id="campaign-reply-thread-count">(0)</span></h4>
+                                            <button id="campaign-reply-add-thread" type="button" class="campaign-reply-add-thread" aria-label="Start a new Twilio text" title="Start a new Twilio text">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M12 5v14"></path>
+                                                    <path d="M5 12h14"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
                                         <p>Twilio responses grouped by contact number.</p>
                                         <div id="campaign-reply-filters" class="campaign-reply-filters" role="group" aria-label="Filter active threads">
                                             <button id="campaign-reply-filter-all" type="button" class="campaign-reply-filter-button is-active">All</button>
@@ -3594,6 +3639,7 @@
             const campaignReplyNoRepliesFollowUpButton = document.getElementById('campaign-reply-no-replies-follow-up');
             const campaignReplyNoRepliesCopyTemplateButton = document.getElementById('campaign-reply-no-replies-copy-template');
             const campaignReplySearchInput = document.getElementById('campaign-reply-search-input');
+            const campaignReplyAddThreadButton = document.getElementById('campaign-reply-add-thread');
             const campaignReplyThreadCount = document.getElementById('campaign-reply-thread-count');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
             const campaignReplyEditNameButton = document.getElementById('campaign-reply-edit-name');
@@ -3653,6 +3699,7 @@
             let campaignReplyAddressOverrides = loadCampaignReplyAddressOverrides();
             let twilioInboxConversations = [];
             let activeTwilioConversationKey = '';
+            let activeTwilioDraftContact = null;
             let activeTwilioInboxMessages = [];
             const campaignReplyScheduledStatusByConversationKey = new Map();
             let activeTwilioReactionPickerMessageId = 0;
@@ -4495,6 +4542,8 @@
 
             function syncCampaignReplyBlockState(isBlocked) {
                 const blocked = Boolean(isBlocked);
+                const hasReplyTarget = Boolean(activeTwilioConversationKey || hasActiveTwilioDraftContact());
+                const isDraftConversation = hasActiveTwilioDraftContact() && !activeTwilioConversationKey;
 
                 if (campaignReplyBlockContactButton) {
                     campaignReplyBlockContactButton.classList.toggle('is-blocked', blocked);
@@ -4503,21 +4552,28 @@
                 }
 
                 if (campaignReplyInput) {
-                    campaignReplyInput.disabled = blocked || !activeTwilioConversationKey;
+                    campaignReplyInput.disabled = blocked || !hasReplyTarget;
                     campaignReplyInput.placeholder = blocked
                         ? 'Outbound messages are blocked for this contact. Incoming texts still appear here.'
-                        : campaignReplyDefaultPlaceholder;
+                        : (isDraftConversation ? 'Type the first Twilio text to start this thread...' : campaignReplyDefaultPlaceholder);
                     if (blocked) {
                         campaignReplyInput.value = '';
                     }
                     syncCampaignReplyInputHeight();
                 }
 
-                [campaignReplyAttachButton, campaignReplyNewlineButton, campaignReplyScheduleButton, campaignReplySendButton].forEach((element) => {
-                    if (element) {
-                        element.disabled = blocked || !activeTwilioConversationKey;
-                    }
-                });
+                if (campaignReplyAttachButton) {
+                    campaignReplyAttachButton.disabled = blocked || !hasReplyTarget;
+                }
+                if (campaignReplyNewlineButton) {
+                    campaignReplyNewlineButton.disabled = blocked || !hasReplyTarget;
+                }
+                if (campaignReplyScheduleButton) {
+                    campaignReplyScheduleButton.disabled = blocked || !activeTwilioConversationKey || isDraftConversation;
+                }
+                if (campaignReplySendButton) {
+                    campaignReplySendButton.disabled = blocked || !hasReplyTarget;
+                }
             }
 
             async function promptTwilioContactNameEdit() {
@@ -4903,6 +4959,103 @@
                 }
 
                 return raw;
+            }
+
+            function isValidCampaignPhoneValue(value) {
+                return /^\+[1-9]\d{7,14}$/.test(String(value || '').trim());
+            }
+
+            function hasActiveTwilioDraftContact() {
+                return Boolean(String(activeTwilioDraftContact?.phone || '').trim());
+            }
+
+            function clearActiveTwilioDraftContact() {
+                activeTwilioDraftContact = null;
+            }
+
+            function getActiveTwilioReplyConversation() {
+                return twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
+            }
+
+            function resetCampaignReplyComposerDraft() {
+                if (campaignReplyInput) {
+                    campaignReplyInput.value = '';
+                    syncCampaignReplyInputHeight();
+                }
+                pendingReplyMediaItems = [];
+                renderPendingReplyMedia();
+            }
+
+            async function startTwilioReplyDraft() {
+                if (!getCampaignAuthToken()) {
+                    campaignReplyStatus.textContent = 'Sign in to start a new Twilio text.';
+                    return;
+                }
+
+                if (twilioMessagingAccessState.checked && !twilioMessagingAccessState.allowed) {
+                    campaignReplyStatus.textContent = getTwilioMessagingBlockedMessage();
+                    return;
+                }
+
+                const hasUnsentComposerWork = Boolean(String(campaignReplyInput?.value || '').trim() || pendingReplyMediaItems.length);
+                if (hasUnsentComposerWork && !window.confirm('Start a new Twilio text? This clears the unsent reply currently in the composer.')) {
+                    return;
+                }
+
+                const enteredPhone = window.prompt('Enter the phone number to text.', hasActiveTwilioDraftContact() ? String(activeTwilioDraftContact.phone || '') : '');
+                if (enteredPhone === null) {
+                    return;
+                }
+
+                const normalizedPhone = normalizeCampaignPhoneValue(enteredPhone);
+                if (!isValidCampaignPhoneValue(normalizedPhone)) {
+                    campaignReplyStatus.textContent = 'Enter a valid phone number, including area code.';
+                    return;
+                }
+
+                campaignReplyStatus.textContent = 'Checking Twilio contact history...';
+
+                try {
+                    const historyResponse = await fetch(`/api/twilio/inbox/contact-history?phone=${encodeURIComponent(normalizedPhone)}`, {
+                        headers: getCampaignAuthHeaders()
+                    });
+                    const historyData = await historyResponse.json().catch(() => ({}));
+                    if (!historyResponse.ok) {
+                        throw new Error(historyData.error || 'Unable to check Twilio contact history.');
+                    }
+
+                    const existingConversationKey = String(historyData?.conversation?.conversationKey || '').trim();
+                    if (historyData?.hasHistory && existingConversationKey) {
+                        clearActiveTwilioDraftContact();
+                        resetCampaignReplyComposerDraft();
+                        campaignReplyStatus.textContent = 'Existing Twilio thread found. Opening it now.';
+                        await loadTwilioInboxMessages(existingConversationKey, { markRead: true });
+                        return;
+                    }
+                } catch (error) {
+                    campaignReplyStatus.textContent = error.message || 'Unable to start a new Twilio text.';
+                    return;
+                }
+
+                const enteredName = window.prompt('Optional contact name.', String(activeTwilioDraftContact?.contactName || ''));
+                if (enteredName === null) {
+                    return;
+                }
+
+                resetCampaignReplyComposerDraft();
+                activeTwilioConversationKey = '';
+                activeTwilioInboxMessages = [];
+                activeTwilioDraftContact = {
+                    phone: normalizedPhone,
+                    contactName: String(enteredName || '').trim()
+                };
+                syncCampaignReplyScheduledStatus();
+                renderTwilioReplyConversations();
+                renderTwilioReplyThread([], null);
+                campaignReplyStatus.textContent = 'New Twilio text ready. Send the first message to create the thread.';
+                if (campaignReplyInput) {
+                    campaignReplyInput.focus();
+                }
             }
 
             function normalizeCampaignRecipientLine(line) {
@@ -5338,6 +5491,7 @@
             }
 
             function setCampaignReplyComposerEnabled(enabled) {
+                const isDraftConversation = hasActiveTwilioDraftContact() && !activeTwilioConversationKey;
                 if (campaignReplyInput) {
                     campaignReplyInput.disabled = !enabled;
                     if (!enabled) {
@@ -5346,18 +5500,18 @@
                     syncCampaignReplyInputHeight();
                 }
                 if (campaignReplyTitle) {
-                    campaignReplyTitle.classList.toggle('is-editable', enabled);
-                    if (enabled) {
+                    campaignReplyTitle.classList.toggle('is-editable', enabled && !isDraftConversation);
+                    if (enabled && !isDraftConversation) {
                         campaignReplyTitle.setAttribute('title', 'Click to edit contact name');
                     } else {
                         campaignReplyTitle.removeAttribute('title');
                     }
                 }
                 if (campaignReplyEditNameButton) {
-                    campaignReplyEditNameButton.disabled = !enabled;
+                    campaignReplyEditNameButton.disabled = !enabled || isDraftConversation;
                 }
                 if (campaignReplyBlockContactButton) {
-                    campaignReplyBlockContactButton.disabled = !enabled;
+                    campaignReplyBlockContactButton.disabled = !enabled || isDraftConversation;
                     if (!enabled) {
                         campaignReplyBlockContactButton.classList.remove('is-blocked');
                         campaignReplyBlockContactButton.setAttribute('aria-label', 'Block outbound messages');
@@ -5365,7 +5519,7 @@
                     }
                 }
                 if (campaignReplyDeleteThreadButton) {
-                    campaignReplyDeleteThreadButton.disabled = !enabled;
+                    campaignReplyDeleteThreadButton.disabled = !enabled || isDraftConversation;
                 }
                 if (campaignReplyAttachButton) {
                     campaignReplyAttachButton.disabled = !enabled;
@@ -5374,7 +5528,7 @@
                     campaignReplyNewlineButton.disabled = !enabled;
                 }
                 if (campaignReplyScheduleButton) {
-                    campaignReplyScheduleButton.disabled = !enabled;
+                    campaignReplyScheduleButton.disabled = !enabled || isDraftConversation;
                 }
                 if (campaignReplySendButton) {
                     campaignReplySendButton.disabled = !enabled;
@@ -5569,8 +5723,15 @@
                 const nextFollowUpAt = campaignOutreachFollowUp && campaignOutreachFollowUp.value
                     ? new Date(campaignOutreachFollowUp.value).getTime()
                     : 0;
+                const draftConversation = hasActiveTwilioDraftContact() ? {
+                    conversationKey: '',
+                    contactName: String(activeTwilioDraftContact?.contactName || '').trim(),
+                    contactPhone: String(activeTwilioDraftContact?.phone || '').trim(),
+                    campaignName: campaignNameInput?.value?.trim() || 'Direct Twilio Text',
+                    propertyAddress: ''
+                } : null;
 
-                if (!activeTwilioConversationKey) {
+                if (!activeTwilioConversationKey && !draftConversation) {
                     campaignReplyStatus.textContent = 'Choose a Twilio conversation first.';
                     return;
                 }
@@ -5580,19 +5741,25 @@
                     return;
                 }
 
-                const conversation = twilioInboxConversations.find((item) => item.conversationKey === activeTwilioConversationKey) || null;
+                const conversation = draftConversation || getActiveTwilioReplyConversation();
                 if (!conversation || !String(conversation.contactPhone || '').trim()) {
                     campaignReplyStatus.textContent = 'The active Twilio conversation is missing a phone number.';
+                    return;
+                }
+
+                if (draftConversation && scheduleAt) {
+                    campaignReplyStatus.textContent = 'Send the first text immediately to create the thread before using schedule.';
                     return;
                 }
 
                 campaignReplyStatus.textContent = scheduleAt ? 'Scheduling Twilio reply...' : 'Sending Twilio reply...';
 
                 try {
-                    const response = await fetch(scheduleAt ? '/api/twilio/send-sms' : '/api/twilio/inbox/reply', {
+                    const useDirectSendEndpoint = Boolean(scheduleAt || draftConversation);
+                    const response = await fetch(useDirectSendEndpoint ? '/api/twilio/send-sms' : '/api/twilio/inbox/reply', {
                         method: 'POST',
                         headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
-                        body: JSON.stringify(scheduleAt
+                        body: JSON.stringify(useDirectSendEndpoint
                             ? {
                                 campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply',
                                 body,
@@ -5644,6 +5811,17 @@
 
                     campaignReplyScheduledMessageByConversationKey.delete(activeTwilioConversationKey);
                     campaignReplyScheduledStatusByConversationKey.delete(activeTwilioConversationKey);
+                    if (draftConversation) {
+                        const preferredConversationKey = String(data?.sent?.[0]?.conversationKey || '').trim();
+                        clearActiveTwilioDraftContact();
+                        campaignReplyStatus.textContent = 'Twilio text sent.';
+                        fetchCampaignOutreachDashboard().catch(() => {});
+                        await loadTwilioInboxConversations({ preferredConversationKey, markRead: false });
+                        if (preferredConversationKey) {
+                            await loadTwilioInboxMessages(preferredConversationKey, { markRead: false });
+                        }
+                        return;
+                    }
                     campaignReplyStatus.textContent = 'Twilio reply sent.';
                     fetchCampaignOutreachDashboard().catch(() => {});
                     await loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
@@ -6173,6 +6351,24 @@
 
                 campaignReplyThread.replaceChildren();
 
+                if (!conversation && hasActiveTwilioDraftContact()) {
+                    const draftName = String(activeTwilioDraftContact?.contactName || '').trim();
+                    const draftPhone = String(activeTwilioDraftContact?.phone || '').trim();
+                    campaignReplyTitle.textContent = draftName || 'New Twilio text';
+                    setCampaignReplyAddress('');
+                    setCampaignReplyOffersEmail('');
+                    campaignReplySubtitle.textContent = `${draftPhone} • First outbound Twilio text`;
+                    setCampaignReplyComposerEnabled(true);
+                    syncCampaignReplyBlockState(false);
+                    syncCampaignReplyScheduledStatus();
+
+                    const empty = document.createElement('p');
+                    empty.className = 'campaign-reply-thread-empty';
+                    empty.textContent = 'This number does not have a saved Twilio thread yet. Send the first message to create one.';
+                    campaignReplyThread.appendChild(empty);
+                    return;
+                }
+
                 if (!conversation) {
                     campaignReplyTitle.textContent = 'Choose a Twilio thread';
                     setCampaignReplyAddress('');
@@ -6330,7 +6526,11 @@
                     pruneDismissedUnreadConversations();
                     pruneDismissedNoRepliesConversations();
                     publishTwilioUnreadState(twilioInboxConversations);
-                    if (!activeTwilioConversationKey || !twilioInboxConversations.some((item) => item.conversationKey === activeTwilioConversationKey)) {
+                    if (options.preferredConversationKey) {
+                        clearActiveTwilioDraftContact();
+                    }
+
+                    if (!hasActiveTwilioDraftContact() && (!activeTwilioConversationKey || !twilioInboxConversations.some((item) => item.conversationKey === activeTwilioConversationKey))) {
                         activeTwilioConversationKey = options.preferredConversationKey || (twilioInboxConversations[0]?.conversationKey || '');
                     }
 
@@ -6340,6 +6540,11 @@
                     );
                     renderTwilioReplyConversations();
                     renderCampaignOutreachPanel();
+
+                    if (hasActiveTwilioDraftContact()) {
+                        renderTwilioReplyThread([], null);
+                        return;
+                    }
 
                     if (activeTwilioConversationKey) {
                         await loadTwilioInboxMessages(activeTwilioConversationKey, { markRead: Boolean(options.markRead) });
@@ -6410,6 +6615,7 @@
                     return;
                 }
 
+                clearActiveTwilioDraftContact();
                 activeTwilioConversationKey = conversationKey;
                 syncCampaignReplyScheduledStatus();
                 renderTwilioReplyConversations();
@@ -6913,6 +7119,12 @@
                 });
             }
 
+            if (campaignReplyAddThreadButton) {
+                campaignReplyAddThreadButton.addEventListener('click', async () => {
+                    await startTwilioReplyDraft();
+                });
+            }
+
             if (campaignReplyBlockContactButton) {
                 campaignReplyBlockContactButton.addEventListener('click', async () => {
                     const activeConversation = twilioInboxConversations.find((conversation) => conversation && conversation.conversationKey === activeTwilioConversationKey) || null;
@@ -6991,7 +7203,7 @@
                         queueTwilioMediaFiles(campaignReplyMediaInput.files, {
                             statusElement: campaignReplyStatus,
                             input: campaignReplyMediaInput,
-                            contextKey: activeTwilioConversationKey || 'reply-draft',
+                            contextKey: activeTwilioConversationKey || (hasActiveTwilioDraftContact() ? `reply-draft-${String(activeTwilioDraftContact.phone || '').replace(/[^\d+]/g, '')}` : 'reply-draft'),
                             getItems: () => pendingReplyMediaItems,
                             setItems: (items) => {
                                 pendingReplyMediaItems = items;
