@@ -991,20 +991,19 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 return;
             }
 
-            const importedByNoteEl = document.getElementById('property-imported-by-note');
-            if (importedByNoteEl) {
-                const importedBy = detailData.importedBy && typeof detailData.importedBy === 'object'
-                    ? detailData.importedBy
-                    : null;
-                const importedByName = String(importedBy?.name || detailData.importedByName || '').trim();
-                if (importedByName) {
-                    importedByNoteEl.hidden = false;
-                    importedByNoteEl.textContent = `Imported by ${importedByName}`;
-                } else {
-                    importedByNoteEl.hidden = true;
-                    importedByNoteEl.textContent = '';
-                }
+            if (primitiveValue === undefined && scoped !== undefined) {
+                primitiveValue = scoped;
             }
+
+        });
+
+        if (Object.keys(merged).length > 0) {
+            return merged;
+        }
+
+        return primitiveValue !== undefined ? primitiveValue : {};
+    }
+
     function setUserScopedObject(storageKey, userKey, value, options) {
         const config = options && typeof options === 'object' ? options : {};
         let store = {};
@@ -23883,6 +23882,21 @@ function initNavbarDateTime() {
                 'tab-content-ia': detailData.ia,
                 'agent-current-status': currentStatusLabel,
                 'tab-content-offer': detailData.offer
+
+            const importedByNoteEl = document.getElementById('property-imported-by-note');
+            if (importedByNoteEl) {
+                const importedBy = detailData.importedBy && typeof detailData.importedBy === 'object'
+                    ? detailData.importedBy
+                    : null;
+                const importedByName = String(importedBy?.name || detailData.importedByName || '').trim();
+                if (importedByName) {
+                    importedByNoteEl.hidden = false;
+                    importedByNoteEl.textContent = `Imported by ${importedByName}`;
+                } else {
+                    importedByNoteEl.hidden = true;
+                    importedByNoteEl.textContent = '';
+                }
+            }
             };
 
             Object.keys(idMap).forEach(id => {
