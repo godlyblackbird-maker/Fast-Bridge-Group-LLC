@@ -7118,10 +7118,6 @@ function initNavbarDateTime() {
                 markup: '<a href="mls-imports-spreadsheet.html" class="nav-link"><span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>MLS Spreadsheet</a>'
             },
             {
-                href: 'pdf-editor.html',
-                markup: '<a href="pdf-editor.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="14 3 14 9 20 9"></polyline><path d="M9 15h6"></path><path d="M9 11h3"></path></svg>PDF Editor</a>'
-            },
-            {
                 href: 'community.html',
                 markup: '<a href="community.html" class="nav-link"><span class="nav-icon nav-icon-community" aria-hidden="true"></span>Community</a>'
             },
@@ -7163,7 +7159,6 @@ function initNavbarDateTime() {
             'gmail.html',
             'campaigns.html',
             'mls-imports-spreadsheet.html',
-            'pdf-editor.html',
             'community.html',
             'fbg-messages.html',
             'fbg-studio.html',
