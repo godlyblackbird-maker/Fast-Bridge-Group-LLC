@@ -23,6 +23,10 @@ const ISAAC_ADMIN_BYPASS_CODE = '315598';
 const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
 const STEVE_ADMIN_BYPASS_CODE = '123777';
 const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
+const USER_TEST_BASIC_BYPASS_CODE = '315598';
+const USER_TEST_BASIC_BYPASS_TOKEN = 'userTestBasicBypassToken';
+const PREMIUM_TEST_BYPASS_CODE = '315598';
+const PREMIUM_TEST_BYPASS_TOKEN = 'premiumTestBypassToken';
 const LOGIN_HOMEPAGE_THEME_KEY = 'homepageTheme';
 const LOGIN_HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
 const LOGIN_THEME_STORAGE_KEY = 'dashboardThemeByUser';
@@ -60,6 +64,18 @@ const STEVE_ADMIN_BYPASS_USER = Object.freeze({
   name: 'Steve Medina',
   role: 'admin',
   id: 'admin-bypass-steve'
+});
+const USER_TEST_BASIC_BYPASS_USER = Object.freeze({
+  email: 'user.test.acc@fastbridgegroupllc.com',
+  name: 'USER TEST ACC',
+  role: 'user',
+  id: 'basic-user-bypass-user-test-acc'
+});
+const PREMIUM_TEST_BYPASS_USER = Object.freeze({
+  email: 'premium.acc@fastbridgegroupllc.com',
+  name: 'PREMIUM ACC',
+  role: 'premium user',
+  id: 'premium-user-bypass-premium-acc'
 });
 let loginBlacklightFluidModulePromise = null;
 let loginBlacklightFluidCleanup = null;
@@ -593,6 +609,52 @@ function startSteveAdminBypass() {
   return { ok: true };
 }
 
+function startUserTestBasicBypass() {
+  const enteredCode = requestAdminBypassCode(
+    'Enter USER TEST ACC basic user bypass code:',
+    'USER TEST ACC basic user',
+    USER_TEST_BASIC_BYPASS_CODE
+  );
+  if (!enteredCode) {
+    return { ok: false, reason: 'cancelled' };
+  }
+
+  if (enteredCode !== USER_TEST_BASIC_BYPASS_CODE) {
+    return { ok: false, reason: 'invalid' };
+  }
+
+  localStorage.setItem('authToken', USER_TEST_BASIC_BYPASS_TOKEN);
+  localStorage.setItem('bypassAuth', 'true');
+  localStorage.setItem('bypassProfile', JSON.stringify(USER_TEST_BASIC_BYPASS_USER));
+  persistAuthenticatedUser(USER_TEST_BASIC_BYPASS_USER);
+  persistAuthLock(USER_TEST_BASIC_BYPASS_USER, USER_TEST_BASIC_BYPASS_TOKEN);
+  localStorage.removeItem('registeredEmail');
+  return { ok: true };
+}
+
+function startPremiumTestBypass() {
+  const enteredCode = requestAdminBypassCode(
+    'Enter PREMIUM ACC premium user bypass code:',
+    'PREMIUM ACC premium user',
+    PREMIUM_TEST_BYPASS_CODE
+  );
+  if (!enteredCode) {
+    return { ok: false, reason: 'cancelled' };
+  }
+
+  if (enteredCode !== PREMIUM_TEST_BYPASS_CODE) {
+    return { ok: false, reason: 'invalid' };
+  }
+
+  localStorage.setItem('authToken', PREMIUM_TEST_BYPASS_TOKEN);
+  localStorage.setItem('bypassAuth', 'true');
+  localStorage.setItem('bypassProfile', JSON.stringify(PREMIUM_TEST_BYPASS_USER));
+  persistAuthenticatedUser(PREMIUM_TEST_BYPASS_USER);
+  persistAuthLock(PREMIUM_TEST_BYPASS_USER, PREMIUM_TEST_BYPASS_TOKEN);
+  localStorage.removeItem('registeredEmail');
+  return { ok: true };
+}
+
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
   const loginThemeSwitchButton = document.getElementById('login-theme-switch');
@@ -613,6 +675,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const termsContinueBtn = document.getElementById('terms-continue-btn');
   const isaacAdminBypassLink = document.getElementById('isaac-admin-bypass-link');
   const steveAdminBypassLink = document.getElementById('steve-admin-bypass-link');
+  const userTestBasicBypassLink = document.getElementById('user-test-basic-bypass-link');
+  const premiumTestBypassLink = document.getElementById('premium-test-bypass-link');
   const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
   let pendingTwoFactorChallenge = '';
 
@@ -883,6 +947,36 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!bypassResult.ok) {
         if (bypassResult.reason === 'invalid') {
           showLoginError('Invalid Steve admin bypass code.');
+        }
+        return;
+      }
+
+      window.location.href = '/dashboard.html';
+    });
+  }
+
+  if (userTestBasicBypassLink) {
+    userTestBasicBypassLink.addEventListener('click', function() {
+      clearLoginError();
+      const bypassResult = startUserTestBasicBypass();
+      if (!bypassResult.ok) {
+        if (bypassResult.reason === 'invalid') {
+          showLoginError('Invalid USER TEST ACC basic user bypass code.');
+        }
+        return;
+      }
+
+      window.location.href = '/dashboard.html';
+    });
+  }
+
+  if (premiumTestBypassLink) {
+    premiumTestBypassLink.addEventListener('click', function() {
+      clearLoginError();
+      const bypassResult = startPremiumTestBypass();
+      if (!bypassResult.ok) {
+        if (bypassResult.reason === 'invalid') {
+          showLoginError('Invalid PREMIUM ACC premium user bypass code.');
         }
         return;
       }

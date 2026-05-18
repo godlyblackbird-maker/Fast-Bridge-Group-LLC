@@ -217,6 +217,65 @@
             display: none !important;
         }
 
+        .settings-row.settings-row-locked {
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px dashed rgba(224, 122, 95, 0.24);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .settings-row.settings-row-locked .toggle-switch {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .settings-row.settings-row-locked .toggle-slider {
+            box-shadow: none;
+        }
+
+        .settings-lock-note {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(224, 122, 95, 0.12);
+            color: var(--coral);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .settings-lock-note svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+
+        .settings-nav-link.settings-nav-link-locked {
+            opacity: 0.72;
+            cursor: not-allowed;
+        }
+
+        .settings-nav-lock-badge {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 7px;
+            border-radius: 999px;
+            background: rgba(224, 122, 95, 0.14);
+            color: var(--coral);
+            flex-shrink: 0;
+        }
+
+        .settings-nav-lock-badge svg {
+            width: 12px;
+            height: 12px;
+        }
+
         .cursorlab-preview-card {
             display: grid;
             gap: 14px;
@@ -501,10 +560,12 @@ https://templatemo.com/tm-607-glass-admin
                     <span class="nav-section-title">Main Menu</span>
                     <ul>
                         <li class="nav-item">
-                            <a href="dashboard.html" class="nav-link">
+                            <a href="dashboard.html" class="nav-link active">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="14" width="7" height="7" rx="1"/>
                                 </svg>
                                 Dashboard
                             </a>
@@ -512,7 +573,9 @@ https://templatemo.com/tm-607-glass-admin
                         <li class="nav-item">
                             <a href="analytics.html" class="nav-link">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
                                 </svg>
                                 Analytics
                                 <span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span>
@@ -533,89 +596,76 @@ https://templatemo.com/tm-607-glass-admin
                                 MLS Search
                             </a>
                         </li>
-                        <li class="nav-item nav-group" data-collapsed="false">
-                            <button type="button" class="nav-group-toggle" aria-expanded="true" aria-label="Collapse workspace tabs">
-                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                                <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                </span>
-                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                            </button>
-                            <ul class="nav-group-list">
-                                <li class="nav-item">
-                                    <a href="campaigns.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
-                                        Twilio Messaging
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="my-agents.html" class="nav-link">
-                                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                            <circle cx="9" cy="7" r="4"/>
-                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                        </svg>
-                                        My Agents
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="deals.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
-                                        My Deals
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="gmail.html" class="nav-link">
-                                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                            <path d="M3 7l9 6 9-6"/>
-                                        </svg>
-                                        Gmail
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="community.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
-                                        Community
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="fbg-messages.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
-                                        FBG Messaging
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="fbg-studio.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
-                                        Recording Studio
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="users.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
-                                        Agent Workspace
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="word-document-maker.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
-                                        Page Processor
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="trainings.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
-                                        Trainings
-                                    </a>
-                                </li>
-                            </ul>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My Agents
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a href="settings.html" class="nav-link active">
+                            <a href="deals.html" class="nav-link">
+                                <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="gmail.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                    <path d="M3 7l9 6 9-6"/>
+                                </svg>
+                                Gmail
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
+                                Twilio Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="community.html" class="nav-link">
+                                <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
+                                Community
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-messages.html" class="nav-link">
+                                <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
+                                FBG Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-studio.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
+                                Recording Studio
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="word-document-maker.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
+                                Page Processor
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="trainings.html" class="nav-link">
+                                <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
+                                Trainings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="3"/>
                                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -625,7 +675,6 @@ https://templatemo.com/tm-607-glass-admin
                         </li>
                     </ul>
                 </li>
-
                 <li class="nav-section">
                     <span class="nav-section-title">Account</span>
                     <ul>
@@ -801,7 +850,7 @@ https://templatemo.com/tm-607-glass-admin
                             </div>
                             <div class="profile-info" id="settings-profile-summary">
                                 <h2 id="settings-profile-name">TemplateMo</h2>
-                                <p id="settings-profile-meta">admin@templatemo.com • Administrator</p>
+                                <p id="settings-profile-meta">admin@templatemo.com â€¢ Administrator</p>
                             </div>
                         </div>
 
@@ -837,8 +886,8 @@ https://templatemo.com/tm-607-glass-admin
                                 <p class="smtp-quick-guide-copy">Quick guide: turn on 2-Step Verification first, then create a Google App Password and submit both below for admin approval.</p>
                                 <p class="smtp-quick-guide-copy">Note: Google will not let you create an App Password until 2-Step Verification is turned on first.</p>
                                 <div class="smtp-quick-guide-links">
-                                    <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener noreferrer">2-Step Verification ↗</a>
-                                    <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">Create App Password ↗</a>
+                                    <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener noreferrer">2-Step Verification â†—</a>
+                                    <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">Create App Password â†—</a>
                                 </div>
                             </div>
                             <div class="form-grid">
@@ -1245,7 +1294,7 @@ https://templatemo.com/tm-607-glass-admin
                                 <div class="settings-label">
                                     <span class="settings-label-title">Plan Summary</span>
                                     <span class="settings-label-desc" id="subscription-plan-summary">Basic keeps standard dashboard access active.</span>
-                                    <span class="subscription-summary-pill" id="subscription-summary-pill">Basic · $0 / month</span>
+                                    <span class="subscription-summary-pill" id="subscription-summary-pill">Basic Â· $0 / month</span>
                                 </div>
                                 <div class="subscription-cta-group">
                                     <button class="btn btn-primary" id="subscription-save-btn" type="button" style="width: auto;">Unlock Premium Access - $99</button>
@@ -1651,29 +1700,82 @@ https://templatemo.com/tm-607-glass-admin
         (() => {
             const tabLinks = Array.from(document.querySelectorAll('.settings-nav-link[data-tab]'));
             const tabPanels = Array.from(document.querySelectorAll('.settings-tab-content'));
+            const readCurrentSettingsUser = () => {
+                try {
+                    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+                    return storedUser && typeof storedUser === 'object' ? storedUser : null;
+                } catch (error) {
+                    return null;
+                }
+            };
+            const isBasicUser = String(readCurrentSettingsUser() && readCurrentSettingsUser().role || '').trim().toLowerCase() === 'user';
+            const lockedTabs = isBasicUser ? new Set(['cursorlab']) : new Set();
 
             if (!tabLinks.length || !tabPanels.length) {
                 return;
             }
 
+            tabLinks.forEach((link) => {
+                const tabId = String(link.getAttribute('data-tab') || '').trim().toLowerCase();
+                if (!lockedTabs.has(tabId)) {
+                    return;
+                }
+
+                link.classList.add('settings-nav-link-locked');
+                link.setAttribute('aria-disabled', 'true');
+                link.setAttribute('title', 'upgrade to premium');
+                link.setAttribute('tabindex', '-1');
+
+                if (typeof window.attachPremiumUpgradeTooltip === 'function') {
+                    window.attachPremiumUpgradeTooltip(link);
+                }
+
+                if (!link.querySelector('.settings-nav-lock-badge')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'settings-nav-lock-badge';
+                    badge.setAttribute('aria-hidden', 'true');
+                    badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
+                    link.appendChild(badge);
+                }
+
+                const lockedPanel = document.getElementById(`tab-${tabId}`);
+                if (lockedPanel) {
+                    lockedPanel.classList.remove('active');
+                    lockedPanel.hidden = true;
+                    lockedPanel.setAttribute('aria-hidden', 'true');
+                    lockedPanel.setAttribute('inert', '');
+                }
+            });
+
             const activateTab = (tabId) => {
                 const normalizedTabId = String(tabId || '').trim().toLowerCase() || 'profile';
+                const nextTabId = lockedTabs.has(normalizedTabId) ? 'subscriptions' : normalizedTabId;
 
                 tabLinks.forEach((link) => {
-                    const isActive = String(link.getAttribute('data-tab') || '').trim().toLowerCase() === normalizedTabId;
+                    const isActive = String(link.getAttribute('data-tab') || '').trim().toLowerCase() === nextTabId;
                     link.classList.toggle('active', isActive);
                 });
 
                 tabPanels.forEach((panel) => {
-                    const isActive = panel.id === `tab-${normalizedTabId}`;
+                    const isActive = panel.id === `tab-${nextTabId}`;
                     panel.classList.toggle('active', isActive);
                     panel.hidden = !isActive;
+                    panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+                    if (isActive) {
+                        panel.removeAttribute('inert');
+                    } else {
+                        panel.setAttribute('inert', '');
+                    }
                 });
             };
 
             tabLinks.forEach((link) => {
                 link.addEventListener('click', (event) => {
                     event.preventDefault();
+                    const tabId = String(link.getAttribute('data-tab') || '').trim().toLowerCase();
+                    if (lockedTabs.has(tabId)) {
+                        return;
+                    }
                     activateTab(link.getAttribute('data-tab'));
                 });
             });
@@ -1718,6 +1820,96 @@ https://templatemo.com/tm-607-glass-admin
     </script>
     <script src="auth.js"></script>
     <script src="profile.js"></script>
+    <script>
+        (() => {
+            const LOCKED_SETTINGS_TOGGLE_IDS = ['accent-glow-toggle', 'blacklight-fluid-all-themes-toggle'];
+
+            function readCurrentSettingsUser() {
+                if (typeof window.getCurrentUser === 'function') {
+                    const currentUser = window.getCurrentUser();
+                    if (currentUser && typeof currentUser === 'object') {
+                        return currentUser;
+                    }
+                }
+
+                try {
+                    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+                    return storedUser && typeof storedUser === 'object' ? storedUser : null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function isBasicUserRole(userLike) {
+                return String(userLike && userLike.role || '').trim().toLowerCase() === 'user';
+            }
+
+            function ensureSettingsLockNote(row) {
+                if (!(row instanceof HTMLElement) || row.querySelector('.settings-lock-note')) {
+                    return;
+                }
+
+                const label = row.querySelector('.settings-label');
+                if (!(label instanceof HTMLElement)) {
+                    return;
+                }
+
+                const note = document.createElement('div');
+                note.className = 'settings-lock-note';
+                note.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg><span>Premium only</span>';
+                label.appendChild(note);
+            }
+
+            function forceToggleOff(input) {
+                if (!(input instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                if (input.checked) {
+                    input.checked = false;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+
+            function lockBasicUserAppearanceToggles() {
+                const activeUser = readCurrentSettingsUser();
+                if (!isBasicUserRole(activeUser)) {
+                    return;
+                }
+
+                LOCKED_SETTINGS_TOGGLE_IDS.forEach((inputId) => {
+                    const input = document.getElementById(inputId);
+                    if (!(input instanceof HTMLInputElement)) {
+                        return;
+                    }
+
+                    forceToggleOff(input);
+
+                    const row = input.closest('.settings-row');
+                    const toggle = input.closest('.toggle-switch');
+
+                    if (row instanceof HTMLElement) {
+                        row.classList.add('settings-row-locked');
+                        row.setAttribute('title', 'upgrade to premium');
+                        ensureSettingsLockNote(row);
+                    }
+
+                    if (toggle instanceof HTMLElement && typeof window.attachPremiumUpgradeTooltip === 'function') {
+                        toggle.setAttribute('title', 'upgrade to premium');
+                        window.attachPremiumUpgradeTooltip(toggle);
+                    }
+
+                    input.disabled = true;
+                });
+            }
+
+            if (document.readyState === 'complete') {
+                lockBasicUserAppearanceToggles();
+            } else {
+                window.addEventListener('load', lockBasicUserAppearanceToggles, { once: true });
+            }
+        })();
+    </script>
     <!-- TemplateMo 607 Glass Admin -->
 </body>
 </html>

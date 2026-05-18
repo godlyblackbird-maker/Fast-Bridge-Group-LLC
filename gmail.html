@@ -1847,7 +1847,7 @@
                     <span class="nav-section-title">Main Menu</span>
                     <ul>
                         <li class="nav-item">
-                            <a href="dashboard.html" class="nav-link">
+                            <a href="dashboard.html" class="nav-link active">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="3" width="7" height="7" rx="1"/>
                                     <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -1865,6 +1865,7 @@
                                     <path d="M2 12l10 5 10-5"/>
                                 </svg>
                                 Analytics
+                                <span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -1882,30 +1883,83 @@
                                 MLS Search
                             </a>
                         </li>
-                        <li class="nav-item nav-group" data-collapsed="false">
-                            <button type="button" class="nav-group-toggle" aria-expanded="true" aria-label="Collapse workspace tabs">
-                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                                <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                </span>
-                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                            </button>
-                            <ul class="nav-group-list">
-                                <li class="nav-item"><a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a></li>
-                                <li class="nav-item"><a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>My Agents</a></li>
-                                <li class="nav-item"><a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a></li>
-                                <li class="nav-item"><a href="gmail.html" class="nav-link active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Gmail</a></li>
-                                <li class="nav-item"><a href="community.html" class="nav-link"><span class="nav-icon nav-icon-community" aria-hidden="true"></span>Community</a></li>
-                                <li class="nav-item"><a href="fbg-messages.html" class="nav-link"><span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>FBG Messaging</a></li>
-                                <li class="nav-item"><a href="fbg-studio.html" class="nav-link"><span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>Recording Studio</a></li>
-                                <li class="nav-item"><a href="users.html" class="nav-link"><span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>Agent Workspace</a></li>
-                                <li class="nav-item"><a href="word-document-maker.html" class="nav-link"><span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>Page Processor</a></li>
-                                <li class="nav-item"><a href="trainings.html" class="nav-link"><span class="nav-icon nav-icon-training" aria-hidden="true"></span>Trainings</a></li>
-                            </ul>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My Agents
+                            </a>
                         </li>
-                        <li class="nav-item"><a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a></li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="gmail.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                    <path d="M3 7l9 6 9-6"/>
+                                </svg>
+                                Gmail
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
+                                Twilio Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="community.html" class="nav-link">
+                                <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
+                                Community
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-messages.html" class="nav-link">
+                                <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
+                                FBG Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-studio.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
+                                Recording Studio
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="word-document-maker.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
+                                Page Processor
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="trainings.html" class="nav-link">
+                                <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
+                                Trainings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 <li class="nav-section">
@@ -2269,7 +2323,7 @@
                         <button class="gmail-compose-tool" id="gmail-compose-link-btn" type="button" aria-label="Insert link">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 1 0-7.07-7.07L11.5 4.43"></path><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57"></path></svg>
                         </button>
-                        <button class="gmail-compose-tool" id="gmail-compose-emoji-btn" type="button" aria-label="Insert emoji">☺</button>
+                        <button class="gmail-compose-tool" id="gmail-compose-emoji-btn" type="button" aria-label="Insert emoji">â˜º</button>
                         <button class="gmail-compose-tool" id="gmail-compose-drive-btn" type="button" aria-label="Insert Drive link">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7 3 17 3 22 12 17 21 7 21 2 12 7 3"></polygon></svg>
                         </button>
@@ -2299,11 +2353,11 @@
                     <span class="gmail-compose-status" id="gmail-compose-status">Compose from your connected Gmail account.</span>
                 </div>
                 <div class="gmail-compose-floating-menu" id="gmail-compose-emoji-menu" hidden>
-                    <button type="button" data-compose-emoji="😀">😀 Smile</button>
-                    <button type="button" data-compose-emoji="🔥">🔥 Fire</button>
-                    <button type="button" data-compose-emoji="✅">✅ Check</button>
-                    <button type="button" data-compose-emoji="🎉">🎉 Celebrate</button>
-                    <button type="button" data-compose-emoji="🙏">🙏 Thanks</button>
+                    <button type="button" data-compose-emoji="ðŸ˜€">ðŸ˜€ Smile</button>
+                    <button type="button" data-compose-emoji="ðŸ”¥">ðŸ”¥ Fire</button>
+                    <button type="button" data-compose-emoji="âœ…">âœ… Check</button>
+                    <button type="button" data-compose-emoji="ðŸŽ‰">ðŸŽ‰ Celebrate</button>
+                    <button type="button" data-compose-emoji="ðŸ™">ðŸ™ Thanks</button>
                 </div>
                 <div class="gmail-compose-floating-menu" id="gmail-compose-more-menu" hidden>
                     <button type="button" data-compose-extra="quote">Insert quote block</button>
@@ -2496,7 +2550,7 @@
                 }
 
                 const base = getComposeDefaultStatus();
-                composeStatus.textContent = suffixes.length ? `${base} ${suffixes.join(' • ')}` : base;
+                composeStatus.textContent = suffixes.length ? `${base} ${suffixes.join(' â€¢ ')}` : base;
             }
 
             function normalizeIdentityValue(value) {
@@ -2762,7 +2816,7 @@
                     chips.push(`
                         <span class="gmail-compose-attachment-chip">
                             <span>${escapeHtml(attachment.filename || 'attachment')}</span>
-                            <button type="button" data-compose-remove-attachment="${escapeHtml(attachment.id)}" aria-label="Remove attachment">×</button>
+                            <button type="button" data-compose-remove-attachment="${escapeHtml(attachment.id)}" aria-label="Remove attachment">Ã—</button>
                         </span>
                     `);
                 });
@@ -3572,7 +3626,7 @@
                     state.nextPageToken = String(payload.nextPageToken || '').trim();
                     state.gmailEmail = String(payload.gmailEmail || state.gmailEmail || '').trim();
                     mailboxMeta.textContent = state.searchText
-                        ? `Showing ${state.activeViewLabel.toLowerCase()} results for “${state.searchText}” in ${state.gmailEmail}`
+                        ? `Showing ${state.activeViewLabel.toLowerCase()} results for â€œ${state.searchText}â€ in ${state.gmailEmail}`
                         : `Browsing ${state.activeViewLabel.toLowerCase()} for ${state.gmailEmail}`;
                     publishGmailUnreadState(state.messages);
                     renderMessageList();

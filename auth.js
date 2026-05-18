@@ -803,7 +803,7 @@
 
   function getFeatureNavAccessMode(featureKey, userLike) {
     if (featureKey === 'campaigns') {
-      return isAdminUser(userLike) ? 'show' : 'hidden';
+      return getFeatureAccessRoleKey(userLike) === 'user' ? 'locked' : (isAdminUser(userLike) ? 'show' : 'hidden');
     }
 
     if (isFeatureEnabledForUser(featureKey, userLike)) {
@@ -1134,6 +1134,61 @@
     });
   }
 
+  function applyLockedBasicUserWorkspaceLink(link, options) {
+    if (!link || link.dataset.lockedBasicUserWorkspace === 'true') {
+      return;
+    }
+
+    const config = options && typeof options === 'object' ? options : {};
+    const lockTitle = String(config.title || 'upgrade to premium').trim() || 'upgrade to premium';
+    const usePremiumTooltip = config.usePremiumTooltip !== false;
+
+    link.dataset.lockedBasicUserWorkspace = 'true';
+    link.classList.remove('active');
+    link.classList.add('nav-link-locked');
+    link.classList.add('nav-link-locked-compact');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', lockTitle);
+
+    if (usePremiumTooltip) {
+      attachPremiumUpgradeTooltip(link);
+    }
+
+    if (!link.querySelector('.nav-lock-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-lock-badge';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
+      link.appendChild(badge);
+    }
+
+    bindLockedLinkBlock(link, 'lockedBasicWorkspaceBlockBound');
+  }
+
+  function applyLockedAdminOnlyLink(link) {
+    if (!link || link.dataset.lockedAdminOnly === 'true') {
+      return;
+    }
+
+    link.dataset.lockedAdminOnly = 'true';
+    link.classList.remove('active');
+    link.classList.add('nav-link-locked');
+    link.classList.add('nav-link-locked-compact');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', 'Admin only');
+
+    if (!link.querySelector('.nav-lock-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-lock-badge';
+      badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 11V8a4 4 0 1 1 8 0v3"/><rect x="6" y="11" width="12" height="9" rx="2"/></svg>';
+      link.appendChild(badge);
+    }
+
+    link.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
   function isPdfEditorPath(pathname) {
     const normalizedPath = String(pathname || '').trim().toLowerCase();
     return normalizedPath === '/pdf-editor.html' || normalizedPath.endsWith('/pdf-editor.html');
@@ -1162,7 +1217,51 @@
     return true;
   }
 
+  function isBasicUserPremiumLockedPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return [
+      '/analytics.html',
+      '/campaigns.html',
+      '/mls-imports-spreadsheet.html',
+      '/deals.html',
+      '/fbg-messages.html',
+      '/fbg-studio.html',
+      '/users.html',
+      '/word-document-maker.html',
+      '/admin-controls.html'
+    ].some((lockedPath) => normalizedPath === lockedPath || normalizedPath.endsWith(lockedPath));
+  }
+
+  function applyBasicUserPremiumLockedAccess(userLike) {
+    const hasKnownRole = !!String(userLike && userLike.role || '').trim();
+    if (!hasKnownRole || getFeatureAccessRoleKey(userLike) !== 'user') {
+      return true;
+    }
+
+    if (isBasicUserPremiumLockedPath(window.location.pathname)) {
+      redirectToPremiumSettings();
+      return false;
+    }
+
+    return true;
+  }
+
   function applyAdminControlsAccess(userLike) {
+    const hasKnownRole = !!String(userLike && userLike.role || '').trim();
+    const roleKey = getFeatureAccessRoleKey(userLike);
+    const normalizedPath = String(window.location.pathname || '').trim().toLowerCase();
+    const isAdminControlsPage = normalizedPath === '/admin-controls.html' || normalizedPath.endsWith('/admin-controls.html');
+
+    if (hasKnownRole && roleKey === 'user' && isAdminControlsPage) {
+      redirectToPremiumSettings();
+      return false;
+    }
+
+    if (hasKnownRole && roleKey === 'premium user' && isAdminControlsPage) {
+      window.location.href = '/dashboard.html';
+      return false;
+    }
+
     return true;
   }
 
@@ -1210,6 +1309,48 @@
     link.innerHTML = '<span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>MLS Spreadsheet';
     listItem.appendChild(link);
     return listItem;
+  }
+
+  function normalizeNavHref(value) {
+    return String(value || '').trim().replace(/^\.?\//, '').toLowerCase();
+  }
+
+  function getMainMenuWorkspaceList(menu) {
+    if (!(menu instanceof Element)) {
+      return null;
+    }
+
+    const groupItem = menu.querySelector(':scope > .nav-item.nav-group');
+    if (!groupItem) {
+      return menu;
+    }
+
+    const groupList = groupItem.querySelector(':scope > .nav-group-list');
+    return groupList || menu;
+  }
+
+  function findNavItemByHref(container, hrefs) {
+    if (!(container instanceof Element)) {
+      return null;
+    }
+
+    const normalizedHrefs = new Set([].concat(hrefs || []).map((href) => normalizeNavHref(href)));
+    return Array.from(container.querySelectorAll('.nav-item')).find((item) => {
+      const link = item.querySelector('.nav-link[href]');
+      return normalizedHrefs.has(normalizeNavHref(link && link.getAttribute('href')));
+    }) || null;
+  }
+
+  function findDirectNavItemByHref(container, hrefs) {
+    if (!(container instanceof Element)) {
+      return null;
+    }
+
+    const normalizedHrefs = new Set([].concat(hrefs || []).map((href) => normalizeNavHref(href)));
+    return Array.from(container.querySelectorAll(':scope > .nav-item')).find((item) => {
+      const link = item.querySelector('.nav-link[href]');
+      return normalizedHrefs.has(normalizeNavHref(link && link.getAttribute('href')));
+    }) || null;
   }
 
   function applyMlsSpreadsheetAccess(userLike) {
@@ -1315,30 +1456,12 @@
         return;
       }
 
-      const settingsItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
-        const link = item.querySelector('.nav-link[href="settings.html"], .nav-link[href="/settings.html"]');
-        return Boolean(link);
-      });
-
-      const communityItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
-        const link = item.querySelector('.nav-link[href="community.html"], .nav-link[href="/community.html"]');
-        return Boolean(link);
-      });
-
-      let campaignItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
-        const link = item.querySelector('.nav-link[href="campaigns.html"], .nav-link[href="/campaigns.html"]');
-        return Boolean(link);
-      });
-
-      let fbgMessagesItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
-        const link = item.querySelector('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]');
-        return Boolean(link);
-      });
-
-      let gmailItem = Array.from(menu.querySelectorAll('.nav-item')).find((item) => {
-        const link = item.querySelector('.nav-link[href="gmail.html"], .nav-link[href="/gmail.html"]');
-        return Boolean(link);
-      });
+      const workspaceList = getMainMenuWorkspaceList(menu);
+      const settingsItem = findDirectNavItemByHref(menu, ['settings.html', '/settings.html']);
+      const communityItem = findNavItemByHref(workspaceList, ['community.html', '/community.html']);
+      let campaignItem = findNavItemByHref(workspaceList, ['campaigns.html', '/campaigns.html']);
+      let fbgMessagesItem = findNavItemByHref(workspaceList, ['fbg-messages.html', '/fbg-messages.html']);
+      let gmailItem = findNavItemByHref(workspaceList, ['gmail.html', '/gmail.html']);
 
       if (!campaignItem) {
         campaignItem = createCampaignsNavItem(isCampaignsPage);
@@ -1352,19 +1475,32 @@
         gmailItem = createGmailNavItem(isGmailPage);
       }
 
-      if (communityItem && fbgMessagesItem && !menu.contains(fbgMessagesItem)) {
+      if (communityItem && fbgMessagesItem && workspaceList && !workspaceList.contains(fbgMessagesItem)) {
         if (communityItem.nextSibling) {
-          menu.insertBefore(fbgMessagesItem, communityItem.nextSibling);
+          workspaceList.insertBefore(fbgMessagesItem, communityItem.nextSibling);
         } else {
-          menu.appendChild(fbgMessagesItem);
+          workspaceList.appendChild(fbgMessagesItem);
         }
       }
 
       const orderedItems = [campaignItem, gmailItem].filter(Boolean);
 
+      if (!workspaceList) {
+        return;
+      }
+
+      if (workspaceList !== menu) {
+        orderedItems.forEach((item) => {
+          if (!workspaceList.contains(item)) {
+            workspaceList.appendChild(item);
+          }
+        });
+        return;
+      }
+
       if (settingsItem) {
         orderedItems.forEach((item) => {
-          if (item !== settingsItem && !menu.contains(item)) {
+          if (item !== settingsItem && !workspaceList.contains(item)) {
             menu.insertBefore(item, settingsItem);
           }
         });
@@ -1372,8 +1508,8 @@
       }
 
       orderedItems.forEach((item) => {
-        if (!menu.contains(item)) {
-          menu.appendChild(item);
+        if (!workspaceList.contains(item)) {
+          workspaceList.appendChild(item);
         }
       });
     });
@@ -1691,11 +1827,11 @@
   function positionPremiumUpgradeTooltip(target) {
     const tooltip = ensurePremiumUpgradeTooltip();
     const targetRect = target.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
 
     tooltip.classList.add('is-visible');
     tooltip.setAttribute('aria-hidden', 'false');
 
-    const tooltipRect = tooltip.getBoundingClientRect();
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
     const gutter = 12;
@@ -1782,6 +1918,28 @@
 
   window.attachPremiumUpgradeTooltip = attachPremiumUpgradeTooltip;
 
+  function redirectToPremiumSettings() {
+    hidePremiumUpgradeTooltip();
+    window.location.href = PREMIUM_SETTINGS_URL;
+  }
+
+  function bindLockedLinkBlock(link, datasetKey) {
+    if (!link) {
+      return;
+    }
+
+    const bindingKey = String(datasetKey || 'lockedLinkBlockBound');
+    if (link.dataset[bindingKey] === 'true') {
+      return;
+    }
+
+    link.dataset[bindingKey] = 'true';
+    link.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
   function applyLockedActiveBuyersLink(link) {
     if (!link || link.dataset.lockedActiveBuyers === 'true') {
       return;
@@ -1801,10 +1959,7 @@
       link.appendChild(badge);
     }
 
-    link.addEventListener('click', function(event) {
-      event.preventDefault();
-      event.stopPropagation();
-    });
+    bindLockedLinkBlock(link, 'lockedActiveBuyersBlockBound');
   }
 
   function applyLockedCampaignsLink(link) {
@@ -1826,10 +1981,7 @@
       link.appendChild(badge);
     }
 
-    link.addEventListener('click', function(event) {
-      event.preventDefault();
-      event.stopPropagation();
-    });
+    bindLockedLinkBlock(link, 'lockedCampaignsBlockBound');
   }
 
   function applyLockedAnalyticsLink(link) {
@@ -1851,10 +2003,7 @@
       link.appendChild(badge);
     }
 
-    link.addEventListener('click', function(event) {
-      event.preventDefault();
-      event.stopPropagation();
-    });
+    bindLockedLinkBlock(link, 'lockedAnalyticsBlockBound');
   }
 
   function applyLockedMlsSpreadsheetLink(link) {
@@ -1876,10 +2025,7 @@
       link.appendChild(badge);
     }
 
-    link.addEventListener('click', function(event) {
-      event.preventDefault();
-      event.stopPropagation();
-    });
+    bindLockedLinkBlock(link, 'lockedMlsSpreadsheetBlockBound');
   }
 
   async function syncAuthenticatedUser() {
@@ -2491,6 +2637,9 @@
       if (applyAdminControlsAccess(storedUser) === false) {
         return;
       }
+      if (applyBasicUserPremiumLockedAccess(storedUser) === false) {
+        return;
+      }
 
       const syncedUser = await syncAuthenticatedUser();
       await loadFeatureAccessConfig(true);
@@ -2498,6 +2647,9 @@
 
       const activeUser = syncedUser || getCurrentUser();
       if (applyAdminControlsAccess(activeUser) === false) {
+        return;
+      }
+      if (applyBasicUserPremiumLockedAccess(activeUser) === false) {
         return;
       }
       if (applyMlsSpreadsheetAccess(activeUser) === false) {
@@ -2549,6 +2701,40 @@
           removeNavLink(link);
         }
       });
+
+      if (getFeatureAccessRoleKey(activeUser) === 'user') {
+        document.querySelectorAll('.nav-link[href="deals.html"], .nav-link[href="/deals.html"]').forEach((link) => {
+          applyLockedBasicUserWorkspaceLink(link);
+        });
+
+        document.querySelectorAll('.nav-link[href="fbg-messages.html"], .nav-link[href="/fbg-messages.html"]').forEach((link) => {
+          applyLockedBasicUserWorkspaceLink(link);
+        });
+
+        document.querySelectorAll('.nav-link[href="fbg-studio.html"], .nav-link[href="/fbg-studio.html"]').forEach((link) => {
+          applyLockedBasicUserWorkspaceLink(link);
+        });
+
+        document.querySelectorAll('.nav-link[href="users.html"], .nav-link[href="/users.html"]').forEach((link) => {
+          applyLockedBasicUserWorkspaceLink(link);
+        });
+
+        document.querySelectorAll('.nav-link[href="word-document-maker.html"], .nav-link[href="/word-document-maker.html"]').forEach((link) => {
+          applyLockedBasicUserWorkspaceLink(link);
+        });
+
+        document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]').forEach((link) => {
+          applyLockedBasicUserWorkspaceLink(link, {
+            title: 'upgrade to premium'
+          });
+        });
+      }
+
+      if (getFeatureAccessRoleKey(activeUser) === 'premium user') {
+        document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]').forEach((link) => {
+          applyLockedAdminOnlyLink(link);
+        });
+      }
 
       const mlsSpreadsheetLinks = document.querySelectorAll('.nav-link[href="mls-imports-spreadsheet.html"], .nav-link[href="/mls-imports-spreadsheet.html"]');
       mlsSpreadsheetLinks.forEach(link => {

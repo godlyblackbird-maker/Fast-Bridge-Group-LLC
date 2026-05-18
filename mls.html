@@ -219,7 +219,7 @@
                     <span class="nav-section-title">Main Menu</span>
                     <ul>
                         <li class="nav-item">
-                            <a href="dashboard.html" class="nav-link">
+                            <a href="dashboard.html" class="nav-link active">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="3" width="7" height="7" rx="1"/>
                                     <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -237,10 +237,11 @@
                                     <path d="M2 12l10 5 10-5"/>
                                 </svg>
                                 Analytics
+                                <span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="mls.html" class="nav-link active">
+                            <a href="mls.html" class="nav-link">
                                 <span class="nav-icon nav-icon-fire" aria-hidden="true"></span>
                                 MLS Hot Deals
                             </a>
@@ -254,86 +255,73 @@
                                 MLS Search
                             </a>
                         </li>
-                        <li class="nav-item nav-group" data-collapsed="false">
-                            <button type="button" class="nav-group-toggle" aria-expanded="true" aria-label="Collapse workspace tabs">
-                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                                <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                </span>
-                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                            </button>
-                            <ul class="nav-group-list">
-                                <li class="nav-item">
-                                    <a href="campaigns.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
-                                        Twilio Messaging
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="my-agents.html" class="nav-link">
-                                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                            <circle cx="9" cy="7" r="4"/>
-                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                        </svg>
-                                        My Agents
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="deals.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
-                                        My Deals
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="gmail.html" class="nav-link">
-                                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                            <path d="M3 7l9 6 9-6"/>
-                                        </svg>
-                                        Gmail
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="community.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
-                                        Community
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="fbg-messages.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
-                                        FBG Messaging
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="fbg-studio.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
-                                        Recording Studio
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="users.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
-                                        Agent Workspace
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="word-document-maker.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
-                                        Page Processor
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="trainings.html" class="nav-link">
-                                        <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
-                                        Trainings
-                                    </a>
-                                </li>
-                            </ul>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My Agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="gmail.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                    <path d="M3 7l9 6 9-6"/>
+                                </svg>
+                                Gmail
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
+                                Twilio Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="community.html" class="nav-link">
+                                <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
+                                Community
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-messages.html" class="nav-link">
+                                <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
+                                FBG Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-studio.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
+                                Recording Studio
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="word-document-maker.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
+                                Page Processor
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="trainings.html" class="nav-link">
+                                <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
+                                Trainings
+                            </a>
                         </li>
                         <li class="nav-item">
                             <a href="settings.html" class="nav-link">
@@ -346,7 +334,6 @@
                         </li>
                     </ul>
                 </li>
-
                 <li class="nav-section">
                     <span class="nav-section-title">Account</span>
                     <ul>
@@ -434,7 +421,7 @@
                     <div class="card-header">
                         <div>
                             <h2 class="card-title">Saved Search Snapshot Alerts</h2>
-                            <p class="card-subtitle" id="mls-saved-search-alert-summary">Load your saved searches from MLS Search to compare today’s opportunities against the prior snapshot.</p>
+                            <p class="card-subtitle" id="mls-saved-search-alert-summary">Load your saved searches from MLS Search to compare todayâ€™s opportunities against the prior snapshot.</p>
                         </div>
                         <a href="mls-search.html" class="card-btn">Manage Searches</a>
                     </div>
@@ -509,7 +496,7 @@
                             <span class="mls-roi">ROI 7.3%</span>
                         </div>
                         <h3>1284 Rosemont Ave</h3>
-                        <p class="mls-location">Pasadena, CA · Los Angeles County</p>
+                        <p class="mls-location">Pasadena, CA Â· Los Angeles County</p>
                         <div class="mls-metrics">
                             <span>$1,175,000</span>
                             <span>4 Beds</span>
@@ -540,7 +527,7 @@
                     </div>
                 </div>
             </div>
-            <p class="mls-source-disclaimer mls-hot-deals-source-disclaimer">CRMLS VOW Disclaimer: All information obtained from this Virtual Office Website is intended only for the personal, non-commercial use of consumers who have a bona fide interest in the purchase, sale, or lease of real estate of the type being offered through this VOW. This information is not intended for any other purpose and may not be used except to identify prospective properties consumers may be interested in purchasing or leasing. Displayed information is deemed reliable but is not guaranteed accurate by CRMLS, the listing broker, Loria Rigby Brokerage, or FAST BRIDGE GROUP LLC, and should be independently verified. CRMLS, Participants, and brokers may review, audit, and inspect the VOW and its records for compliance with applicable MLS rules and policies.</p>
+            <p class="mls-source-disclaimer mls-hot-deals-source-disclaimer">CRMLS Data License Notice: Listing information on this website is provided by the California Regional Multiple Listing Service (CRMLS) for consumers' personal, non-commercial use and may not be used for any purpose other than identifying prospective properties consumers may be interested in purchasing or leasing. Information is deemed reliable but is not guaranteed and should be independently verified. Neither CRMLS, FAST BRIDGE GROUP LLC, nor any listing broker shall be responsible for typographical errors, misinformation, misprints, or omissions. Listings are subject to prior sale, change, or withdrawal without notice. Unauthorized reproduction or distribution of this data is prohibited.</p>
 
         <footer class="site-legal-footer">
     <div class="site-legal-footer-inner">
@@ -781,7 +768,7 @@
 
                 if (typeof window.showDashboardToast === 'function') {
                     alertable.forEach((entry) => {
-                        window.showDashboardToast('success', 'MLS Search Alert', `${entry.searchName}: ${entry.newMatches.length} new match${entry.newMatches.length === 1 ? '' : 'es'} in today’s feed.`);
+                        window.showDashboardToast('success', 'MLS Search Alert', `${entry.searchName}: ${entry.newMatches.length} new match${entry.newMatches.length === 1 ? '' : 'es'} in todayâ€™s feed.`);
                     });
                 }
 
@@ -815,7 +802,7 @@
             function renderAlertResults(results) {
                 const items = Array.isArray(results) ? results : [];
                 if (!items.length) {
-                    alertSummaryEl.textContent = 'No saved searches yet. Save filters in MLS Search, then this page will compare today’s cards against the prior snapshot.';
+                    alertSummaryEl.textContent = 'No saved searches yet. Save filters in MLS Search, then this page will compare todayâ€™s cards against the prior snapshot.';
                     alertFeedEl.innerHTML = '<p class="outreach-empty">No saved searches connected to this MLS workspace yet.</p>';
                     return;
                 }
@@ -827,14 +814,14 @@
                     : 'Saved searches are synced. No new matches were found compared with the prior snapshot.';
                 if (alertStatusEl) {
                     alertStatusEl.textContent = searchesWithChanges > 0
-                        ? `Saved-search alerts are active. ${totalNewMatches} new match${totalNewMatches === 1 ? '' : 'es'} were detected in today’s MLS cards compared with the prior snapshot.`
-                        : 'Saved-search alerts are active. Today’s MLS cards match the prior snapshot with no new opportunities detected.';
+                        ? `Saved-search alerts are active. ${totalNewMatches} new match${totalNewMatches === 1 ? '' : 'es'} were detected in todayâ€™s MLS cards compared with the prior snapshot.`
+                        : 'Saved-search alerts are active. Todayâ€™s MLS cards match the prior snapshot with no new opportunities detected.';
                 }
 
                 alertFeedEl.innerHTML = items.map((item) => {
                     const newMatches = Array.isArray(item.newMatches) ? item.newMatches : [];
                     const matchMarkup = newMatches.length
-                        ? `<div style="display:grid;gap:8px;margin-top:10px;">${newMatches.slice(0, 4).map((match) => `<div style="padding:10px 12px;border:1px solid rgba(148,163,184,0.18);border-radius:12px;background:rgba(255,255,255,0.04);"><strong>${match.address || 'New listing'}</strong><div style="margin-top:4px;font-size:13px;opacity:0.82;">${[match.city, match.county, match.price].filter(Boolean).join(' • ')}</div></div>`).join('')}</div>`
+                        ? `<div style="display:grid;gap:8px;margin-top:10px;">${newMatches.slice(0, 4).map((match) => `<div style="padding:10px 12px;border:1px solid rgba(148,163,184,0.18);border-radius:12px;background:rgba(255,255,255,0.04);"><strong>${match.address || 'New listing'}</strong><div style="margin-top:4px;font-size:13px;opacity:0.82;">${[match.city, match.county, match.price].filter(Boolean).join(' â€¢ ')}</div></div>`).join('')}</div>`
                         : '<p class="outreach-item-body">No new matches since the last snapshot.</p>';
                     return `
                         <article class="outreach-item">
@@ -854,7 +841,7 @@
             async function syncSavedSearchAlerts() {
                 if (!getAuthToken()) {
                     alertSummaryEl.textContent = 'Sign in to sync saved searches and market alerts.';
-                    alertFeedEl.innerHTML = '<p class="outreach-empty">Sign in to compare today’s listings against your saved search snapshots.</p>';
+                    alertFeedEl.innerHTML = '<p class="outreach-empty">Sign in to compare todayâ€™s listings against your saved search snapshots.</p>';
                     return;
                 }
 

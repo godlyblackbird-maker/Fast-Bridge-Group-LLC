@@ -382,6 +382,12 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return;
         }
 
+        const existingFooter = document.querySelector('.site-legal-footer');
+        if (existingFooter) {
+            existingFooter.dataset.siteLegalFooter = 'true';
+            return;
+        }
+
         const host = getLegalFooterHost();
         if (!host) {
             return;
@@ -7478,6 +7484,8 @@ function initNavbarDateTime() {
             return;
         }
 
+        // PROTECTED DASHBOARD MAIN MENU CONFIG: Production-stable and immutable.
+        // Do not modify, refactor, rename, remove, or alter this block unless explicitly instructed.
         const canonicalMenuItems = [
             {
                 href: 'dashboard.html',
@@ -7576,6 +7584,7 @@ function initNavbarDateTime() {
         ];
         const workspaceGroupHrefSet = new Set(workspaceGroupHrefs);
         const directMenuItems = Array.from(menuList.children).filter((child) => child instanceof HTMLElement && child.matches('.nav-item'));
+        const candidateMenuItems = [];
         const existingItemsByHref = new Map();
         const duplicateItems = [];
         const canonicalHrefs = new Set(canonicalMenuItems.map((item) => item.href));
@@ -7611,10 +7620,12 @@ function initNavbarDateTime() {
             link.appendChild(badge);
         }
 
-        function setAccountLinkLockedState(link, locked) {
+        function setAccountLinkLockedState(link, locked, lockedLabel) {
             if (!(link instanceof HTMLElement)) {
                 return;
             }
+
+            const resolvedLockedLabel = String(lockedLabel || link.textContent || 'This section').trim() || 'This section';
 
             link.classList.toggle('nav-link-locked', locked);
 
@@ -7622,6 +7633,7 @@ function initNavbarDateTime() {
                 link.setAttribute('aria-disabled', 'true');
                 link.setAttribute('title', 'Admin only');
                 link.dataset.navLocked = 'true';
+                link.dataset.navLockedLabel = resolvedLockedLabel;
                 ensureLockedBadge(link);
                 if (link.dataset.lockHandlerBound !== 'true') {
                     link.dataset.lockHandlerBound = 'true';
@@ -7632,7 +7644,8 @@ function initNavbarDateTime() {
                         event.preventDefault();
                         event.stopPropagation();
                         if (typeof showDashboardToast === 'function') {
-                            showDashboardToast('error', 'Access Locked', 'Active Buyers is locked for admin-only access.');
+                            const label = String(link.dataset.navLockedLabel || 'This section').trim() || 'This section';
+                            showDashboardToast('error', 'Access Locked', `${label} is locked for admin-only access.`);
                         }
                     });
                 }
@@ -7743,7 +7756,11 @@ function initNavbarDateTime() {
                 }
 
                 if (href === 'active-buyers.html') {
-                    setAccountLinkLockedState(link, !isAdminUser);
+                    setAccountLinkLockedState(link, !isAdminUser, 'Active Buyers');
+                }
+
+                if (href === 'admin-controls.html') {
+                    setAccountLinkLockedState(link, !isAdminUser, 'Admin Controls');
                 }
 
                 if (href === 'login.html') {
@@ -7762,7 +7779,19 @@ function initNavbarDateTime() {
         }
 
         directMenuItems.forEach((item) => {
-            const link = item.querySelector('.nav-link[href]');
+            if (item.matches('.nav-group')) {
+                duplicateItems.push(item);
+                Array.from(item.querySelectorAll(':scope > .nav-group-list > .nav-item')).forEach((groupedItem) => {
+                    candidateMenuItems.push(groupedItem);
+                });
+                return;
+            }
+
+            candidateMenuItems.push(item);
+        });
+
+        candidateMenuItems.forEach((item) => {
+            const link = item.querySelector(':scope > .nav-link[href]');
             const href = normalizeHrefValue(link && link.getAttribute('href'));
             if (!href) {
                 duplicateItems.push(item);
@@ -7811,8 +7840,8 @@ function initNavbarDateTime() {
             fragment.appendChild(buildCanonicalItem(config, activeHref));
         });
 
-        directMenuItems.forEach((item) => {
-            const link = item.querySelector('.nav-link[href]');
+        candidateMenuItems.forEach((item) => {
+            const link = item.querySelector(':scope > .nav-link[href]');
             const href = normalizeHrefValue(link && link.getAttribute('href'));
             if (!href || canonicalHrefs.has(href) || href === 'fbg-messages.html' || href === 'mls-imports-spreadsheet.html') {
                 return;

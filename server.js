@@ -269,6 +269,8 @@ const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
 const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
 const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
+const USER_TEST_BASIC_BYPASS_TOKEN = 'userTestBasicBypassToken';
+const PREMIUM_TEST_BYPASS_TOKEN = 'premiumTestBypassToken';
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
 const DEFAULT_TWILIO_NUMBER_ASSIGNMENTS = Object.freeze([
   Object.freeze({
@@ -296,6 +298,12 @@ const CANONICAL_ELSA_NAME = String(process.env.ELSA_TUCKER_NAME || 'ELSA TUCKER'
 const CANONICAL_STEVEN_CASTILLO_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('STEVEN_CASTILLO_EMAIL') || 'steve.castillo@fastbridgegroupllc.com');
 const CANONICAL_STEVEN_CASTILLO_PASSWORD = String(process.env.STEVEN_CASTILLO_PASSWORD || 'Password123').trim() || 'Password123';
 const CANONICAL_STEVEN_CASTILLO_NAME = String(process.env.STEVEN_CASTILLO_NAME || 'Steven Castillo').trim() || 'Steven Castillo';
+const CANONICAL_USER_TEST_ACC_EMAIL = 'user.test.acc@fastbridgegroupllc.com';
+const CANONICAL_USER_TEST_ACC_PASSWORD = '246810';
+const CANONICAL_USER_TEST_ACC_NAME = 'USER TEST ACC';
+const CANONICAL_PREMIUM_ACC_EMAIL = 'premium.acc@fastbridgegroupllc.com';
+const CANONICAL_PREMIUM_ACC_PASSWORD = '315598';
+const CANONICAL_PREMIUM_ACC_NAME = 'PREMIUM ACC';
 const CANONICAL_TEST_EMAIL = 'test@fastbridgegroupllc.com';
 const CANONICAL_TEST_PASSWORD = 'subzero';
 const CANONICAL_TEST_NAME = 'Test';
@@ -6073,6 +6081,8 @@ function initializeDatabase() {
       db.run(`ALTER TABLE users ADD COLUMN access_granted INTEGER DEFAULT 0`, () => {});
       syncIsaacAdminAccount();
       syncSteveAdminAccount();
+      syncUserTestBasicAccount();
+      syncPremiumTestAccount();
       syncLoriaBrokerAccount();
       syncElsaUserAccount();
       syncPublicTestAccount();
@@ -7084,12 +7094,26 @@ async function refreshBuiltInBypassAuthUsers() {
     {
       token: ISAAC_ADMIN_BYPASS_TOKEN,
       email: CANONICAL_ISAAC_EMAIL,
-      fallbackName: 'Isaac Haro'
+      fallbackName: 'Isaac Haro',
+      fallbackRole: 'admin'
     },
     {
       token: STEVE_ADMIN_BYPASS_TOKEN,
       email: CANONICAL_STEVE_EMAIL,
-      fallbackName: 'Steve Medina'
+      fallbackName: 'Steve Medina',
+      fallbackRole: 'admin'
+    },
+    {
+      token: USER_TEST_BASIC_BYPASS_TOKEN,
+      email: CANONICAL_USER_TEST_ACC_EMAIL,
+      fallbackName: CANONICAL_USER_TEST_ACC_NAME,
+      fallbackRole: 'user'
+    },
+    {
+      token: PREMIUM_TEST_BYPASS_TOKEN,
+      email: CANONICAL_PREMIUM_ACC_EMAIL,
+      fallbackName: CANONICAL_PREMIUM_ACC_NAME,
+      fallbackRole: PREMIUM_USER_ROLE
     }
   ];
 
@@ -7105,7 +7129,7 @@ async function refreshBuiltInBypassAuthUsers() {
       id: Number(userRow.id) || 0,
       name: String(userRow.name || config.fallbackName).trim() || config.fallbackName,
       email: String(userRow.email || config.email).trim().toLowerCase() || config.email,
-      role: String(userRow.role || 'admin').trim().toLowerCase() || 'admin',
+      role: String(userRow.role || config.fallbackRole || 'user').trim().toLowerCase() || String(config.fallbackRole || 'user').trim().toLowerCase() || 'user',
       isBypassAuth: true
     });
   }));
@@ -13701,6 +13725,174 @@ async function syncElsaUserAccount() {
   }
 }
 
+async function syncUserTestBasicAccount() {
+  const canonicalEmail = CANONICAL_USER_TEST_ACC_EMAIL;
+  const canonicalName = CANONICAL_USER_TEST_ACC_NAME;
+  const canonicalPassword = CANONICAL_USER_TEST_ACC_PASSWORD;
+  const canonicalRole = 'user';
+  const legacyEmails = [];
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) = ?
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
+      [canonicalEmail, canonicalName, canonicalEmail]
+    );
+
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+
+    if (!account) {
+      await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
+      );
+      console.log('USER TEST ACC basic account created/synced');
+      return;
+    }
+
+    const currentSmtpPass = String(account.smtp_pass || '').trim();
+    const currentSmtpSignature = String(account.smtp_signature || '').trim();
+
+    await dbRun(
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      [
+        canonicalName,
+        canonicalEmail,
+        hash,
+        canonicalRole,
+        account.smtp_user || '',
+        currentSmtpPass,
+        currentSmtpSignature,
+        account.id
+      ]
+    );
+
+    await dbRun('DELETE FROM subscription_profiles WHERE user_id = ?', [account.id]);
+
+    await mergeLegacyConversationUsersIntoCanonicalAccount({
+      canonicalUserId: account.id,
+      canonicalEmail,
+      canonicalName,
+      legacyEmails,
+      logLabel: 'USER TEST ACC basic account'
+    });
+
+    console.log('USER TEST ACC basic account synced');
+  } catch (error) {
+    console.error('Failed to sync USER TEST ACC basic account:', error);
+  }
+}
+
+async function syncPremiumTestAccount() {
+  const canonicalEmail = CANONICAL_PREMIUM_ACC_EMAIL;
+  const canonicalName = CANONICAL_PREMIUM_ACC_NAME;
+  const canonicalPassword = CANONICAL_PREMIUM_ACC_PASSWORD;
+  const legacyEmails = [];
+  const canonicalRole = PREMIUM_USER_ROLE;
+
+  try {
+    const account = await dbGet(
+      `SELECT * FROM users
+       WHERE LOWER(email) = ?
+          OR LOWER(name) = LOWER(?)
+       ORDER BY CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END, id ASC`,
+      [canonicalEmail, canonicalName, canonicalEmail]
+    );
+
+    const hash = await bcrypt.hash(canonicalPassword, 10);
+
+    if (!account) {
+      await dbRun(
+        'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
+      );
+      const createdAccount = await dbGet('SELECT id FROM users WHERE LOWER(email) = ?', [canonicalEmail]);
+      if (createdAccount) {
+        await dbRun(
+          `INSERT INTO subscription_profiles (
+              user_id, plan_key, billing_name, billing_email, subscription_status, amount_cents,
+              currency, activated_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+              plan_key = excluded.plan_key,
+              billing_name = COALESCE(NULLIF(subscription_profiles.billing_name, ''), excluded.billing_name),
+              billing_email = COALESCE(NULLIF(subscription_profiles.billing_email, ''), excluded.billing_email),
+              subscription_status = 'active',
+              amount_cents = excluded.amount_cents,
+              currency = excluded.currency,
+              activated_at = COALESCE(subscription_profiles.activated_at, CURRENT_TIMESTAMP),
+              updated_at = CURRENT_TIMESTAMP`,
+          [
+            createdAccount.id,
+            PREMIUM_PLAN_KEY,
+            canonicalName,
+            canonicalEmail,
+            PREMIUM_PRICE_CENTS,
+            PREMIUM_CURRENCY
+          ]
+        );
+      }
+      console.log('PREMIUM ACC premium account created/synced');
+      return;
+    }
+
+    const currentSmtpPass = String(account.smtp_pass || '').trim();
+    const currentSmtpSignature = String(account.smtp_signature || '').trim();
+
+    await dbRun(
+      'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
+      [
+        canonicalName,
+        canonicalEmail,
+        hash,
+        canonicalRole,
+        account.smtp_user || '',
+        currentSmtpPass,
+        currentSmtpSignature,
+        account.id
+      ]
+    );
+
+    await dbRun(
+      `INSERT INTO subscription_profiles (
+          user_id, plan_key, billing_name, billing_email, subscription_status, amount_cents,
+          currency, activated_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+          plan_key = excluded.plan_key,
+          billing_name = COALESCE(NULLIF(subscription_profiles.billing_name, ''), excluded.billing_name),
+          billing_email = COALESCE(NULLIF(subscription_profiles.billing_email, ''), excluded.billing_email),
+          subscription_status = 'active',
+          amount_cents = excluded.amount_cents,
+          currency = excluded.currency,
+          activated_at = COALESCE(subscription_profiles.activated_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP`,
+      [
+        account.id,
+        PREMIUM_PLAN_KEY,
+        canonicalName,
+        canonicalEmail,
+        PREMIUM_PRICE_CENTS,
+        PREMIUM_CURRENCY
+      ]
+    );
+
+    await mergeLegacyConversationUsersIntoCanonicalAccount({
+      canonicalUserId: account.id,
+      canonicalEmail,
+      canonicalName,
+      legacyEmails,
+      logLabel: 'PREMIUM ACC premium account'
+    });
+
+    console.log('PREMIUM ACC premium account synced');
+  } catch (error) {
+    console.error('Failed to sync PREMIUM ACC premium account:', error);
+  }
+}
+
 async function syncStevenCastilloUserAccount() {
   const canonicalEmail = CANONICAL_STEVEN_CASTILLO_EMAIL;
   const canonicalName = CANONICAL_STEVEN_CASTILLO_NAME;
@@ -15477,6 +15669,14 @@ app.post('/api/login', async (req, res) => {
 
   if (normalizedEmail === CANONICAL_ELSA_EMAIL) {
     await syncElsaUserAccount();
+  }
+
+  if (normalizedEmail === CANONICAL_USER_TEST_ACC_EMAIL) {
+    await syncUserTestBasicAccount();
+  }
+
+  if (normalizedEmail === CANONICAL_PREMIUM_ACC_EMAIL) {
+    await syncPremiumTestAccount();
   }
 
   db.get('SELECT * FROM users WHERE LOWER(email) = ?', [normalizedEmail], async (err, user) => {
@@ -25596,6 +25796,8 @@ app.use((req, res) => {
 // Start server
 async function startServer() {
   await initializePostgresMessageStore();
+  await syncUserTestBasicAccount();
+  await syncPremiumTestAccount();
   await refreshBuiltInBypassAuthUsers();
 
   app.listen(PORT, () => {

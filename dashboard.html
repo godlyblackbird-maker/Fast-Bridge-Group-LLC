@@ -1278,6 +1278,7 @@ https://templatemo.com/tm-607-glass-admin
             </div>
 
             <ul class="nav-menu">
+                <!-- PROTECTED DASHBOARD MAIN MENU BLOCK: Production-stable and immutable. Do not modify, refactor, rename, remove, or alter this section unless explicitly instructed. -->
                 <li class="nav-section">
                     <span class="nav-section-title">Main Menu</span>
                     <ul>
@@ -1397,6 +1398,7 @@ https://templatemo.com/tm-607-glass-admin
                         </li>
                     </ul>
                 </li>
+                <!-- END PROTECTED DASHBOARD MAIN MENU BLOCK -->
 
                 <li class="nav-section">
                     <span class="nav-section-title">Account</span>
@@ -1803,144 +1805,12 @@ https://templatemo.com/tm-607-glass-admin
     <script>
         window.addEventListener('load', () => {
             const sidebar = document.getElementById('sidebar');
-            if (!sidebar) {
-                return;
-            }
-
-            const mainMenuSection = Array.from(sidebar.querySelectorAll('.nav-section')).find((section) => {
+            const mainMenuSection = sidebar ? Array.from(sidebar.querySelectorAll('.nav-section')).find((section) => {
                 const title = section.querySelector('.nav-section-title');
                 return /main menu/i.test(String(title && title.textContent || ''));
-            });
-            const menuList = mainMenuSection ? mainMenuSection.querySelector('ul') : null;
-            if (!menuList) {
-                return;
-            }
+            }) : null;
+            const mainMenuList = mainMenuSection ? mainMenuSection.querySelector('ul') : null;
 
-            const groupedOrder = [
-                'campaigns.html',
-                'my-agents.html',
-                'deals.html',
-                'gmail.html',
-                'community.html',
-                'fbg-messages.html',
-                'fbg-studio.html',
-                'users.html',
-                'word-document-maker.html',
-                'trainings.html'
-            ];
-            const groupedHrefSet = new Set(groupedOrder);
-            const normalizeHref = (value) => String(value || '').trim().replace(/^\.?\//, '').toLowerCase();
-            const itemMap = new Map();
-
-            Array.from(menuList.querySelectorAll('.nav-item')).forEach((item) => {
-                const link = item.querySelector('.nav-link[href]');
-                const href = normalizeHref(link && link.getAttribute('href'));
-                if (!href || itemMap.has(href)) {
-                    return;
-                }
-                itemMap.set(href, item);
-            });
-
-            const spreadsheetItem = itemMap.get('mls-imports-spreadsheet.html');
-            if (spreadsheetItem) {
-                spreadsheetItem.remove();
-                itemMap.delete('mls-imports-spreadsheet.html');
-            }
-
-            const groupedItems = groupedOrder
-                .map((href) => itemMap.get(href))
-                .filter(Boolean);
-
-            if (groupedItems.length < 2) {
-                return;
-            }
-
-            const currentPage = normalizeHref(String(window.location.pathname || '').split('/').pop());
-            const hasActiveItem = groupedItems.some((item) => {
-                const link = item.querySelector('.nav-link[href]');
-                return normalizeHref(link && link.getAttribute('href')) === currentPage;
-            });
-
-            let groupItem = menuList.querySelector(':scope > .nav-group');
-            if (!groupItem) {
-                groupItem = document.createElement('li');
-                groupItem.className = 'nav-item nav-group';
-            }
-
-            let toggleButton = groupItem.querySelector('.nav-group-toggle');
-            if (!toggleButton) {
-                toggleButton = document.createElement('button');
-                toggleButton.type = 'button';
-                toggleButton.className = 'nav-group-toggle';
-                toggleButton.innerHTML = `
-                    <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                    <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </span>
-                    <span class="nav-group-toggle-line" aria-hidden="true"></span>
-                `;
-                groupItem.appendChild(toggleButton);
-            }
-
-            let groupList = groupItem.querySelector('.nav-group-list');
-            if (!groupList) {
-                groupList = document.createElement('ul');
-                groupList.className = 'nav-group-list';
-                groupItem.appendChild(groupList);
-            }
-
-            groupedItems.forEach((item) => {
-                item.remove();
-            });
-            groupList.replaceChildren(...groupedItems);
-
-            const storageKey = 'mainMenuWorkspaceGroupCollapsed';
-            const readCollapsed = () => {
-                try {
-                    return localStorage.getItem(storageKey) === 'true';
-                } catch (error) {
-                    return false;
-                }
-            };
-            const writeCollapsed = (collapsed) => {
-                try {
-                    localStorage.setItem(storageKey, collapsed ? 'true' : 'false');
-                } catch (error) {
-                    // Ignore storage failures.
-                }
-            };
-
-            const setCollapsedState = (collapsed, options = {}) => {
-                const shouldCollapse = Boolean(collapsed);
-                groupItem.dataset.collapsed = shouldCollapse ? 'true' : 'false';
-                groupList.hidden = shouldCollapse;
-                toggleButton.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
-                toggleButton.setAttribute('aria-label', shouldCollapse ? 'Expand workspace tabs' : 'Collapse workspace tabs');
-                if (!options.skipPersist) {
-                    writeCollapsed(shouldCollapse);
-                }
-            };
-
-            if (toggleButton.dataset.dashboardGroupBound !== 'true') {
-                toggleButton.dataset.dashboardGroupBound = 'true';
-                toggleButton.addEventListener('click', () => {
-                    setCollapsedState(groupItem.dataset.collapsed !== 'true');
-                });
-            }
-
-            const settingsItem = itemMap.get('settings.html');
-            if (settingsItem && settingsItem.parentElement === menuList) {
-                menuList.insertBefore(groupItem, settingsItem);
-            } else if (!groupItem.parentElement) {
-                menuList.appendChild(groupItem);
-            }
-            setCollapsedState(readCollapsed() && !hasActiveItem, { skipPersist: true });
-        });
-    </script>
-    <script>
-        window.addEventListener('load', () => {
             const removeLegacySpreadsheetLink = () => {
                 document.querySelectorAll('.sidebar .nav-link[href="mls-imports-spreadsheet.html"]').forEach((link) => {
                     const navItem = link.closest('.nav-item');
@@ -1950,17 +1820,15 @@ https://templatemo.com/tm-607-glass-admin
                 });
             };
 
-            const sidebarNav = document.querySelector('.sidebar-nav');
-
             removeLegacySpreadsheetLink();
             if (typeof window.requestAnimationFrame === 'function') {
                 window.requestAnimationFrame(removeLegacySpreadsheetLink);
             }
-            if (sidebarNav && typeof MutationObserver === 'function') {
+            if (mainMenuList && typeof MutationObserver === 'function') {
                 const legacyLinkObserver = new MutationObserver(() => {
                     removeLegacySpreadsheetLink();
                 });
-                legacyLinkObserver.observe(sidebarNav, { childList: true, subtree: true });
+                legacyLinkObserver.observe(mainMenuList, { childList: true, subtree: true });
             }
 
             const calendarGrid = document.getElementById('calendar-grid');
