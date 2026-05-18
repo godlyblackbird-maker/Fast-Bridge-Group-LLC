@@ -798,16 +798,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.5.0</span>
-                    <span>FBG Studio mic controls</span>
-                    <span>Background recording handoff</span>
-                    <span>Desktop media permission fix</span>
+                    <span>Newest build: 1.5.1</span>
+                    <span>Shared menu sync</span>
+                    <span>Role-based locked tabs</span>
+                    <span>Settings access guards</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>33</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.5.0, including the full 1.2.3 to 1.5.0 release sequence.</span>
+                    <strong>34</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.5.1, including the full 1.2.3 to 1.5.1 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -819,24 +819,24 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.5.0</h2>
-                <p>This release overhauls FBG Studio recording controls with live mic tools, cleaner source toggles, background recording handoff, and desktop capture permission support so recording workflows stay usable across the web app and desktop app.</p>
+                <h2>Version 1.5.1</h2>
+                <p>This release tightens the shared FAST workspace by syncing the main menu across pages, expanding role-aware lock states for basic and premium accounts, and hardening Settings so locked tabs and locked controls behave consistently instead of leaking through.</p>
                 <div class="version-history-meta">
-                    <span>May 15, 2026</span>
-                    <span>FBG Studio controls</span>
-                    <span>Background recording</span>
-                    <span>Desktop media permissions</span>
-                    <span>Version 1.5.0</span>
+                    <span>May 18, 2026</span>
+                    <span>Shared menu sync</span>
+                    <span>Role locks</span>
+                    <span>Settings access guard</span>
+                    <span>Version 1.5.1</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Added direct microphone device selection in FBG Studio so users can pick the exact mic from the hardware available on their current device.</li>
-                    <li>Added a live mic dB meter with color thresholds, plus gain controls tucked behind a compact settings button to keep the studio layout tighter.</li>
-                    <li>Simplified studio source controls so mic, camera, and screen sharing each use a single toggle button instead of separate start and remove actions.</li>
-                    <li>Added background recording handoff with reconnect warnings so active recordings can stay running even if the user leaves the page and returns later.</li>
-                    <li>Updated the Electron desktop shell to allow camera, microphone, and display capture permissions for the FAST app so studio buttons no longer fail silently in desktop usage.</li>
+                    <li>Unified the dashboard-style main menu across the admin and workspace pages so duplicate menu variants, repeated grouping bugs, and footer duplication stop reappearing page by page.</li>
+                    <li>Expanded role-aware lock handling so basic users now see consistent locked states across premium-only workspace links, with blocked direct page access and a shared upgrade tooltip flow.</li>
+                    <li>Locked Admin Controls correctly for both basic and premium accounts, including sidebar lock badges, blocked clicks, and direct-page protection where appropriate.</li>
+                    <li>Hardened Settings for basic users by locking Accent Glow, Smoke Cursor On All Themes, and Cursor Lab so those controls and tabs no longer remain usable behind a visual lock.</li>
+                    <li>Added built-in test bypass accounts for both a basic test user and a premium test user so role-specific access rules can be verified faster from the login screen.</li>
                 </ul>
             </div>
         </section>
@@ -848,6 +848,23 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.5.0</h2>
+                            <span class="version-date">May 15, 2026</span>
+                        </div>
+                        <span class="version-chip">1.5.0</span>
+                    </div>
+                    <ul>
+                        <li>Added direct microphone device selection in FBG Studio so users can pick the exact mic from the hardware available on their current device.</li>
+                        <li>Added a live mic dB meter with color thresholds, plus gain controls tucked behind a compact settings button to keep the studio layout tighter.</li>
+                        <li>Simplified studio source controls so mic, camera, and screen sharing each use a single toggle button instead of separate start and remove actions.</li>
+                        <li>Added background recording handoff with reconnect warnings so active recordings can stay running even if the user leaves the page and returns later.</li>
+                        <li>Updated the Electron desktop shell to allow camera, microphone, and display capture permissions for the FAST app so studio buttons no longer fail silently in desktop usage.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>
