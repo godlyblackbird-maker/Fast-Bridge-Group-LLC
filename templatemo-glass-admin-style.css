@@ -20931,6 +20931,9 @@ body.analytics-reboot .analytics-my-file-count {
 }
 
 .deals-import-nav-btn {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
     width: auto;
     white-space: nowrap;
     background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.92), rgba(var(--accent-light-rgb), 0.9));

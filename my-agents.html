@@ -1062,7 +1062,29 @@
                     </div>
                 </div>
             </div>
-        </main>
+        <footer class="site-legal-footer">
+    <div class="site-legal-footer-inner">
+        <div class="site-legal-footer-brand">FAST BRIDGE GROUP 2026</div>
+        <div class="site-legal-footer-links" aria-label="Legal and policy links">
+            <a class="site-legal-footer-link" href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-equal-housing.html">Equal Housing</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-copyright.html">Copyright</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-privacy-policy.html">Privacy Policy</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-terms-of-use.html">Terms of Use</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-broker-information.html">Broker Information</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-contact-us.html">Contact Us</a>
+        </div>
+    </div>
+</footer>
+</main>
     </div>
 
     <button class="mobile-menu-toggle">
@@ -2074,6 +2096,38 @@
                 }, 400);
             }
 
+            function flushQueuedRowsToServerKeepalive() {
+                if (!getAuthToken() || remoteSaveInFlight) {
+                    return;
+                }
+
+                if (pendingRemoteRows === null && !pendingRemoteSaveTimer) {
+                    return;
+                }
+
+                if (pendingRemoteSaveTimer) {
+                    window.clearTimeout(pendingRemoteSaveTimer);
+                    pendingRemoteSaveTimer = null;
+                }
+
+                const rowsToSave = dedupeRows(Array.isArray(pendingRemoteRows) ? pendingRemoteRows : getRowsFromDom());
+                pendingRemoteRows = rowsToSave;
+
+                try {
+                    fetch('/api/my-agents', {
+                        method: 'PUT',
+                        cache: 'no-store',
+                        keepalive: true,
+                        headers: getAuthorizedHeaders({
+                            'Content-Type': 'application/json'
+                        }),
+                        body: JSON.stringify({ rows: rowsToSave })
+                    }).catch(() => {});
+                } catch (error) {
+                    // Preserve the local cache as fallback if the exit-time sync cannot be sent.
+                }
+            }
+
             async function flushQueuedRowsToServer() {
                 if (!getAuthToken()) {
                     return null;
@@ -2328,6 +2382,13 @@
             if (searchInput) {
                 searchInput.addEventListener('input', applySearchFilter);
             }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    flushQueuedRowsToServerKeepalive();
+                }
+            });
+            window.addEventListener('pagehide', flushQueuedRowsToServerKeepalive);
 
             if (copyTemplatesBtn && templateModal && templateStatusSelect && templateIncludeNameToggle && templateIncludeTimeToggle && templateBodyInput && templatePreview && templateSaveBtn && templateResetBtn) {
                 copyTemplatesBtn.addEventListener('click', openTemplateManager);

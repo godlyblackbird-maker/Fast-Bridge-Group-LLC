@@ -63,8 +63,55 @@
             }
         })();
     </script>
-    <style>
-        :root {
+            .site-legal-footer {
+            margin-top: clamp(32px, 6vw, 72px);
+            padding-top: 18px;
+            padding-bottom: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .site-legal-footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px 20px;
+            flex-wrap: wrap;
+        }
+
+        .site-legal-footer-brand {
+            color: var(--submit-copy);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .site-legal-footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+        }
+
+        .site-legal-footer-link {
+            color: var(--submit-copy-muted);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s ease, opacity 0.2s ease;
+        }
+
+        .site-legal-footer-link:hover,
+        .site-legal-footer-link:focus-visible {
+            color: var(--submit-accent-strong);
+            outline: none;
+        }
+
+        .site-legal-footer-separator {
+            color: rgba(16, 39, 59, 0.22);
+            font-size: 12px;
+        }
+:root {
             color-scheme: light;
             --submit-bg: url("Themes/Wallpaper Beach Mode.jpg") center center / cover no-repeat;
             --submit-backdrop: linear-gradient(180deg, rgba(247, 251, 255, 0.9) 0%, rgba(237, 246, 255, 0.78) 54%, rgba(226, 236, 255, 0.84) 100%);
@@ -1158,27 +1205,28 @@
             </div>
         </section>
 
-        <footer class="submit-footer-note">
-            <div class="submit-footer-note-copy">
-                <span>FAST BRIDGE GROUP is the modern real estate platform built for agents who want sharper systems and stronger results.</span>
-                <div class="submit-footer-note-links" aria-label="Legal and policy links">
-                    <a href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
-                    <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <a href="legal-equal-housing.html">Equal Housing</a>
-                    <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <a href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
-                    <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <a href="legal-copyright.html">Copyright</a>
-                    <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <a href="legal-privacy-policy.html">Privacy Policy</a>
-                    <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <a href="legal-terms-of-use.html">Terms of Use</a>
-                    <span class="submit-footer-note-separator" aria-hidden="true">|</span>
-                    <a href="legal-broker-information.html">Broker Information</a>
-                </div>
-            </div>
-        </footer>
+        <footer class="site-legal-footer">
+    <div class="site-legal-footer-inner">
+        <div class="site-legal-footer-brand">FAST BRIDGE GROUP 2026</div>
+        <div class="site-legal-footer-links" aria-label="Legal and policy links">
+            <a class="site-legal-footer-link" href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-equal-housing.html">Equal Housing</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-copyright.html">Copyright</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-privacy-policy.html">Privacy Policy</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-terms-of-use.html">Terms of Use</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-broker-information.html">Broker Information</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-contact-us.html">Contact Us</a>
+        </div>
+    </div>
+</footer>
     </div>
 
     <script>
@@ -1368,6 +1416,81 @@
                 sellerPhoneInput.addEventListener('change', applySellerPhoneFormatting);
             }
 
+            function getAuthenticatedSubmitUserContext() {
+                const readJson = function (key) {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !token || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+
+                return {
+                    token,
+                    email,
+                    name,
+                    userKey
+                };
+            }
+
+            function persistUserPropertySubmission(submissionLike) {
+                const authContext = getAuthenticatedSubmitUserContext();
+                if (!authContext.token || !authContext.userKey || authContext.userKey === 'default-user') {
+                    return;
+                }
+
+                const submission = submissionLike && typeof submissionLike === 'object' ? submissionLike : null;
+                if (!submission) {
+                    return;
+                }
+
+                let store = {};
+                try {
+                    store = JSON.parse(localStorage.getItem('userPropertySubmissionsByUser') || '{}');
+                } catch (error) {
+                    store = {};
+                }
+
+                if (!store || typeof store !== 'object' || Array.isArray(store)) {
+                    store = {};
+                }
+
+                const nextItem = {
+                    id: String(submission.id || `${String(submission.propertyAddress || '').trim().toLowerCase()}:${Date.now()}`),
+                    sellerName: String(submission.sellerName || '').trim(),
+                    sellerEmail: String(submission.sellerEmail || '').trim().toLowerCase(),
+                    sellerPhone: String(submission.sellerPhone || '').trim(),
+                    propertyAddress: String(submission.propertyAddress || '').trim(),
+                    propertyCity: String(submission.propertyCity || '').trim(),
+                    propertyState: String(submission.propertyState || '').trim(),
+                    propertyZip: String(submission.propertyZip || '').trim(),
+                    propertyType: String(submission.propertyType || '').trim(),
+                    askingPrice: String(submission.askingPrice || '').trim(),
+                    estimatedValue: String(submission.estimatedValue || '').trim(),
+                    timeline: String(submission.timeline || '').trim(),
+                    status: String(submission.status || 'new').trim().toLowerCase(),
+                    createdAt: submission.createdAt || new Date().toISOString(),
+                    source: 'property-submission'
+                };
+
+                const existingItems = Array.isArray(store[authContext.userKey]) ? store[authContext.userKey] : [];
+                store[authContext.userKey] = [nextItem, ...existingItems.filter(function (item) {
+                    return String(item && item.id || '').trim() !== nextItem.id;
+                })];
+                localStorage.setItem('userPropertySubmissionsByUser', JSON.stringify(store));
+                window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
+            }
+
             paidOffInputs.forEach(function (input) {
                 input.addEventListener('change', syncMortgageBalanceField);
             });
@@ -1429,10 +1552,12 @@
                 submitButton.textContent = 'Submitting...';
 
                 try {
+                    const authContext = getAuthenticatedSubmitUserContext();
                     const response = await fetch('/api/property-submissions', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            ...(authContext.token ? { Authorization: `Bearer ${authContext.token}` } : {})
                         },
                         body: JSON.stringify(payload)
                     });
@@ -1448,6 +1573,10 @@
                         } else {
                             routingNote.textContent = 'FAST has routed your submission into the internal review queue.';
                         }
+                    }
+
+                    if (data && data.submission) {
+                        persistUserPropertySubmission(data.submission);
                     }
 
                     form.reset();

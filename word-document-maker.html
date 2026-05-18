@@ -144,6 +144,13 @@
             margin-bottom: 24px;
         }
 
+        .word-maker-page .main-content {
+            background:
+                radial-gradient(circle at 0% 0%, rgba(var(--accent-rgb), 0.12), transparent 28%),
+                radial-gradient(circle at 100% 0%, rgba(var(--accent-light-rgb), 0.16), transparent 30%),
+                radial-gradient(circle at 50% 100%, rgba(var(--accent-rgb), 0.1), transparent 34%);
+        }
+
         .word-maker-page-title-group {
             min-width: 0;
         }
@@ -256,21 +263,21 @@
         [data-theme="sunset"] .word-maker-workspace-switcher {
             border-color: rgba(255, 215, 184, 0.26);
             background:
-                linear-gradient(180deg, rgba(82, 40, 60, 0.92) 0%, rgba(50, 23, 33, 0.9) 100%),
-                linear-gradient(135deg, rgba(255, 167, 134, 0.12), rgba(123, 116, 143, 0.12));
+                linear-gradient(180deg, rgba(255, 245, 239, 0.94) 0%, rgba(255, 232, 220, 0.9) 100%),
+                linear-gradient(135deg, rgba(255, 167, 134, 0.16), rgba(123, 116, 143, 0.1));
             box-shadow:
-                inset 0 1px 0 rgba(255, 240, 226, 0.2),
-                0 14px 28px rgba(28, 14, 27, 0.26);
+                inset 0 1px 0 rgba(255, 255, 255, 0.54),
+                0 14px 28px rgba(126, 72, 74, 0.14);
         }
 
         [data-theme="sunset"] .word-maker-workspace-switcher::before {
             border-color: rgba(255, 220, 195, 0.32);
             background: linear-gradient(135deg, rgba(255, 214, 170, 0.92) 0%, rgba(255, 166, 136, 0.72) 58%, rgba(123, 116, 143, 0.62) 100%);
-            box-shadow: 0 12px 22px rgba(28, 14, 27, 0.24), inset 0 1px 0 rgba(255, 248, 240, 0.58);
+            box-shadow: 0 12px 22px rgba(126, 72, 74, 0.16), inset 0 1px 0 rgba(255, 248, 240, 0.58);
         }
 
         [data-theme="sunset"] .word-maker-workspace-button {
-            color: rgba(255, 233, 213, 0.72);
+            color: rgba(122, 73, 68, 0.78);
         }
 
         [data-theme="sunset"] .word-maker-workspace-button:hover,
@@ -280,17 +287,40 @@
             text-shadow: 0 1px 0 rgba(255, 245, 235, 0.28);
         }
 
+        [data-theme="sunset"] body.word-maker-page::before {
+            background:
+                linear-gradient(180deg, rgba(255, 239, 228, 0.08), rgba(255, 208, 170, 0.06)),
+                url("Themes/Wallpaper%20SUNSET.jpg") no-repeat center center;
+            background-size: cover;
+            opacity: 0.52;
+            filter: saturate(1.04) brightness(1.06);
+        }
+
+        [data-theme="sunset"] body.word-maker-page::after {
+            left: 0;
+            top: 0;
+            width: min(62vw, 720px);
+            height: min(44vh, 420px);
+            background:
+                radial-gradient(circle at 22% 30%, rgba(255, 235, 204, 0.32), transparent 46%),
+                radial-gradient(circle at 76% 24%, rgba(255, 190, 160, 0.24), transparent 42%),
+                radial-gradient(circle at 50% 90%, rgba(255, 214, 170, 0.18), transparent 48%);
+            filter: blur(10px);
+        }
+
         [data-theme="sunset"] .word-maker-stage {
             background:
-                radial-gradient(circle at top, rgba(255, 205, 152, 0.16), transparent 34%),
-                linear-gradient(180deg, rgba(255, 228, 210, 0.08), rgba(123, 116, 143, 0.08)),
+                radial-gradient(circle at top, rgba(255, 205, 152, 0.2), transparent 38%),
+                linear-gradient(180deg, rgba(255, 247, 241, 0.5), rgba(248, 235, 238, 0.3)),
                 var(--glass-bg);
             box-shadow:
-                0 24px 54px rgba(28, 14, 27, 0.38),
-                0 8px 22px rgba(244, 178, 125, 0.12);
+                0 24px 54px rgba(126, 72, 74, 0.18),
+                0 8px 22px rgba(244, 178, 125, 0.14);
         }
 
         .word-maker-stage {
+            position: relative;
+            isolation: isolate;
             padding: 28px;
             border: 1px solid var(--glass-border);
             border-radius: 32px;
@@ -327,45 +357,68 @@
         }
 
         .word-maker-toolbar {
+            position: relative;
+            z-index: 20;
             display: flex;
             align-items: flex-start;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
-            margin-bottom: 16px;
-            padding: 10px 12px;
-            border-radius: 18px;
+            overflow: visible;
+            margin-bottom: 14px;
+            padding: 8px 10px;
+            border-radius: 20px;
             border: 1px solid var(--word-maker-toolbar-border);
             background: var(--word-maker-toolbar-bg);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
         }
 
         .word-maker-tool-group {
             display: block;
-            min-width: 150px;
-            padding: 8px 10px;
-            border-radius: 14px;
+            min-width: 138px;
+            padding: 4px;
+            border-radius: 16px;
             border: 1px solid var(--word-maker-toolbar-border);
-            background: var(--word-maker-group-bg);
+            background: linear-gradient(180deg, color-mix(in srgb, var(--word-maker-group-bg) 90%, rgba(255, 255, 255, 0.08) 10%), color-mix(in srgb, var(--word-maker-group-bg) 94%, rgba(15, 23, 42, 0.05) 6%));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 24px rgba(15, 23, 42, 0.06);
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .word-maker-tool-group:hover {
+            border-color: rgba(var(--accent-light-rgb), 0.24);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 14px 28px rgba(15, 23, 42, 0.1);
+            transform: translateY(-1px);
         }
 
         .word-maker-tool-group[open] {
-            background: var(--word-maker-group-bg-open);
-            border-color: rgba(var(--accent-light-rgb), 0.2);
+            background: linear-gradient(180deg, color-mix(in srgb, var(--word-maker-group-bg-open) 82%, rgba(var(--accent-light-rgb), 0.14) 18%), color-mix(in srgb, var(--word-maker-group-bg-open) 96%, rgba(15, 23, 42, 0.04) 4%));
+            border-color: rgba(var(--accent-light-rgb), 0.28);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 18px 32px rgba(var(--accent-rgb), 0.14);
         }
 
         .word-maker-tool-group-summary {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
+            gap: 10px;
+            min-height: 38px;
+            padding: 4px 8px;
             cursor: pointer;
             list-style: none;
             user-select: none;
+            border-radius: 12px;
+            transition: background 0.18s ease;
+        }
+
+        .word-maker-tool-group-summary:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .word-maker-tool-group-summary-main {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             min-width: 0;
         }
 
@@ -373,19 +426,26 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 10px;
-            background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.1));
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            background: linear-gradient(180deg, rgba(var(--accent-light-rgb), 0.32), rgba(var(--accent-rgb), 0.18));
             border: 1px solid rgba(var(--accent-light-rgb), 0.26);
             color: var(--text-primary);
             flex: 0 0 auto;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 16px rgba(var(--accent-rgb), 0.12);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .word-maker-tool-group:hover .word-maker-tool-group-icon,
+        .word-maker-tool-group[open] .word-maker-tool-group-icon {
+            transform: translateY(-1px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 20px rgba(var(--accent-rgb), 0.18);
         }
 
         .word-maker-tool-group-icon svg {
-            width: 15px;
-            height: 15px;
+            width: 13px;
+            height: 13px;
             stroke: currentColor;
         }
 
@@ -394,83 +454,89 @@
         }
 
         .word-maker-tool-group-summary::after {
-            content: '+';
+            content: '\203A';
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.07);
             color: var(--text-primary);
-            font-size: 0.95rem;
+            font-size: 1rem;
             font-weight: 700;
             flex: 0 0 auto;
+            transform: rotate(0deg);
+            transition: transform 0.18s ease, background 0.18s ease;
         }
 
         .word-maker-tool-group[open] .word-maker-tool-group-summary::after {
-            content: '-';
+            transform: rotate(90deg);
         }
 
         .word-maker-tool-content {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
-            margin-top: 10px;
-            padding-top: 10px;
+            margin-top: 8px;
+            padding: 8px 8px 6px;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .word-maker-toolbar-label {
-            font-size: 11px;
+            font-size: 10px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.14em;
-            color: var(--text-muted);
+            letter-spacing: 0.18em;
+            color: color-mix(in srgb, var(--text-primary) 76%, var(--text-muted));
             white-space: nowrap;
         }
 
         .word-maker-tool-button {
-            min-width: 34px;
-            height: 34px;
-            padding: 0 10px;
+            min-width: 30px;
+            height: 30px;
+            padding: 0 9px;
             border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.06);
+            border-radius: 9px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
             color: var(--text-primary);
             font: inherit;
-            font-size: 0.88rem;
+            font-size: 0.82rem;
             font-weight: 700;
             line-height: 1;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .word-maker-tool-button:hover,
         .word-maker-tool-button:focus-visible {
-            background: rgba(var(--accent-rgb), 0.16);
+            background: linear-gradient(180deg, rgba(var(--accent-light-rgb), 0.24), rgba(var(--accent-rgb), 0.14));
             border-color: rgba(var(--accent-light-rgb), 0.45);
             outline: none;
             transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.16);
         }
 
         .word-maker-tool-button.is-wide {
-            padding: 0 12px;
-            min-width: 58px;
+            padding: 0 11px;
+            min-width: 52px;
         }
 
         .word-maker-tool-select {
-            height: 34px;
-            min-width: 94px;
-            padding: 0 10px;
+            height: 30px;
+            min-width: 88px;
+            padding: 0 9px;
             border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.06);
+            border-radius: 9px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
             color: var(--text-primary);
             font: inherit;
+            font-size: 0.82rem;
             outline: none;
         }
 
@@ -480,12 +546,12 @@
         }
 
         .word-maker-tool-color {
-            width: 38px;
-            height: 34px;
+            width: 34px;
+            height: 30px;
             padding: 4px;
             border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.06);
+            border-radius: 9px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
             cursor: pointer;
         }
 
@@ -526,8 +592,10 @@
             padding: 10px;
             border-radius: 16px;
             border: 1px solid var(--word-maker-toolbar-border);
-            background: var(--word-maker-menu-bg);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+            background: linear-gradient(180deg, rgba(12, 18, 28, 0.94), rgba(20, 28, 40, 0.92));
+            box-shadow: 0 24px 44px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             display: grid;
             gap: 8px;
             z-index: 30;
@@ -543,7 +611,7 @@
             padding: 10px 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08));
             color: var(--text-primary);
             font: inherit;
             text-align: left;
@@ -581,7 +649,7 @@
 
         .word-maker-export-option.is-static:hover,
         .word-maker-export-option.is-static:focus-visible {
-            background: rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08));
             border-color: rgba(255, 255, 255, 0.1);
         }
 
@@ -596,7 +664,7 @@
             padding: 8px 10px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            background: rgba(255, 255, 255, 0.04);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
             color: var(--text-primary);
             font: inherit;
             font-size: 0.82rem;
@@ -612,50 +680,55 @@
             outline: none;
         }
 
-        .word-maker-resource-bar {
+        .word-maker-page-meta {
+            width: 100%;
             display: flex;
-            align-items: center;
-            gap: 10px;
             flex-wrap: wrap;
-            margin-bottom: 16px;
-            padding: 10px 12px;
-            border-radius: 16px;
-            border: 1px solid var(--word-maker-toolbar-border);
-            background: var(--word-maker-group-bg);
+            gap: 8px 18px;
+            align-items: flex-start;
+            justify-content: flex-start;
+            margin: 0 0 10px;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 10px;
+            line-height: 1.2;
+            letter-spacing: 0.03em;
         }
 
-        .word-maker-resource-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            min-height: 32px;
-            padding: 0 12px;
-            border-radius: 999px;
-            border: 1px solid var(--word-maker-toolbar-border);
-            background: var(--word-maker-chip-bg);
+        .word-maker-page-meta-item {
+            display: grid;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .word-maker-page-meta-label {
+            color: color-mix(in srgb, var(--text-primary) 80%, var(--text-muted));
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .word-maker-page-meta-value {
             color: var(--text-secondary);
-            font-size: 0.86rem;
+            font-size: 10px;
+            font-weight: 500;
             white-space: nowrap;
         }
 
-        .word-maker-resource-chip.is-action {
+        .word-maker-page-meta-action {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            text-align: left;
             cursor: pointer;
             font: inherit;
-            transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
         }
 
-        .word-maker-resource-chip.is-action:hover,
-        .word-maker-resource-chip.is-action:focus-visible {
-            background: rgba(var(--accent-rgb), 0.16);
-            border-color: rgba(var(--accent-light-rgb), 0.45);
+        .word-maker-page-meta-action:hover .word-maker-page-meta-value,
+        .word-maker-page-meta-action:focus-visible .word-maker-page-meta-value {
             color: var(--text-primary);
             outline: none;
-            transform: translateY(-1px);
-        }
-
-        .word-maker-resource-chip strong {
-            color: var(--text-primary);
-            font-weight: 700;
         }
 
         .word-maker-import-progress {
@@ -706,6 +779,12 @@
             height: 5px;
             margin-left: -2.5px;
             border-radius: 999px;
+        .word-maker-page .main-content {
+            background:
+                radial-gradient(circle at 0% 0%, rgba(var(--accent-rgb), 0.12), transparent 28%),
+                radial-gradient(circle at 100% 0%, rgba(var(--accent-light-rgb), 0.16), transparent 30%),
+                radial-gradient(circle at 50% 100%, rgba(var(--accent-rgb), 0.1), transparent 34%);
+        }
             background: rgba(var(--accent-light-rgb, 52, 211, 153), 0.98);
             box-shadow: 0 0 10px rgba(var(--accent-light-rgb, 52, 211, 153), 0.45);
         }
@@ -800,6 +879,8 @@
         }
 
         .word-maker-canvas {
+            position: relative;
+            z-index: 1;
             min-height: 820px;
             padding: 20px 0 0;
             display: flex;
@@ -811,7 +892,7 @@
         .word-maker-page-stack {
             width: min(100%, var(--word-paper-width));
             display: grid;
-            gap: 22px;
+            gap: 14px;
             justify-items: center;
         }
 
@@ -825,15 +906,18 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            min-height: 42px;
-            padding: 0 16px;
+            gap: 8px;
+            min-height: 32px;
+            padding: 0 12px;
             border: 1px solid rgba(var(--accent-light-rgb), 0.34);
             border-radius: 999px;
             background: rgba(var(--accent-rgb), 0.18);
             color: var(--text-primary);
             font: inherit;
+            font-size: 10px;
             font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
             cursor: pointer;
             transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
         }
@@ -847,8 +931,8 @@
         }
 
         .word-maker-add-page-button svg {
-            width: 16px;
-            height: 16px;
+            width: 13px;
+            height: 13px;
         }
 
         .word-maker-page-shell {
@@ -869,8 +953,8 @@
             width: 40px;
             height: 40px;
             border: 1px solid rgba(248, 113, 113, 0.4);
-            border-radius: 999px;
-            background: rgba(127, 29, 29, 0.82);
+            gap: 8px 14px;
+            align-items: center;
             color: #ffffff;
             cursor: pointer;
             opacity: 0;
@@ -1698,8 +1782,13 @@
                 margin-left: 0;
             }
 
-            .word-maker-resource-bar {
-                padding: 10px;
+            .word-maker-page-meta {
+                gap: 6px 12px;
+                font-size: 9px;
+            }
+
+            .word-maker-page-meta-value {
+                white-space: normal;
             }
 
             .word-maker-paper::before {
@@ -1721,6 +1810,10 @@
     </style>
 </head>
 <body class="word-maker-page">
+    <div class="background"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
     <div class="dashboard-container">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -1802,7 +1895,6 @@
                     <div class="word-maker-stage-header">
                         <div class="word-maker-stage-header-copy">
                             <h2>Blank Page Processor Workspace</h2>
-                            <p>Starting fresh. This container now holds a clean paper sheet so you can build the Page Processor document workspace from scratch.</p>
                         </div>
                     </div>
                     <div class="word-maker-toolbar" aria-label="Text formatting toolbar">
@@ -1971,34 +2063,9 @@
                             </div>
                         </details>
                     </div>
-                    <div class="word-maker-resource-bar" aria-label="Document resources">
-                        <div class="word-maker-resource-chip"><strong>Page</strong> Letter 8.5 x 11</div>
-                        <button type="button" id="word-maker-margin-guide" class="word-maker-resource-chip is-action" aria-label="Change page margin guide">
-                            <strong>Body</strong>
-                            <span id="word-maker-margin-guide-label">1 in margin guide</span>
-                        </button>
-                        <div class="word-maker-resource-chip"><strong>Draft</strong> <span id="word-maker-draft-status">Ready</span></div>
-                        <div class="word-maker-resource-chip"><strong>Pages</strong> <span id="word-maker-page-count">1</span></div>
-                        <div class="word-maker-resource-chip"><strong>Words</strong> <span id="word-maker-word-count">0</span></div>
-                        <div class="word-maker-resource-chip"><strong>Characters</strong> <span id="word-maker-character-count">0</span></div>
-                        <div class="word-maker-resource-chip"><strong>Paragraphs</strong> <span id="word-maker-paragraph-count">0</span></div>
-                        <div id="word-maker-import-progress" class="word-maker-import-progress" hidden aria-live="polite">
-                            <span class="word-maker-import-progress-spinner" aria-hidden="true"></span>
-                            <div class="word-maker-import-progress-copy">
-                                <div class="word-maker-import-progress-head">
-                                    <span id="word-maker-import-progress-text" class="word-maker-import-progress-text">Preparing document extraction...</span>
-                                    <span id="word-maker-import-progress-percent" class="word-maker-import-progress-percent">0%</span>
-                                </div>
-                                <div class="word-maker-import-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="word-maker-import-progress-text">
-                                    <span id="word-maker-import-progress-fill" class="word-maker-import-progress-fill"></span>
-                                </div>
-                                <div id="word-maker-import-progress-meta" class="word-maker-import-progress-meta">Waiting for Parse Doc to start.</div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="word-maker-canvas">
                         <div id="word-maker-page-stack" class="word-maker-page-stack">
-                            <div class="word-maker-stack-toolbar">
+                            <div class="word-maker-page-meta" aria-label="Document details">
                                 <button type="button" id="word-maker-add-page" class="word-maker-add-page-button" aria-label="Add another page">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -2006,6 +2073,29 @@
                                     </svg>
                                     <span>Add Page</span>
                                 </button>
+                                <div class="word-maker-page-meta-item"><span class="word-maker-page-meta-label">Page</span><span class="word-maker-page-meta-value">Letter 8.5 x 11</span></div>
+                                <button type="button" id="word-maker-margin-guide" class="word-maker-page-meta-item word-maker-page-meta-action" aria-label="Change page margin guide">
+                                    <span class="word-maker-page-meta-label">Body</span>
+                                    <span id="word-maker-margin-guide-label" class="word-maker-page-meta-value">0.42 in margin guide</span>
+                                </button>
+                                <div class="word-maker-page-meta-item"><span class="word-maker-page-meta-label">Draft</span><span id="word-maker-draft-status" class="word-maker-page-meta-value">Auto-saved 11:34 PM</span></div>
+                                <div class="word-maker-page-meta-item"><span class="word-maker-page-meta-label">Pages</span><span id="word-maker-page-count" class="word-maker-page-meta-value">1</span></div>
+                                <div class="word-maker-page-meta-item"><span class="word-maker-page-meta-label">Words</span><span id="word-maker-word-count" class="word-maker-page-meta-value">0</span></div>
+                                <div class="word-maker-page-meta-item"><span class="word-maker-page-meta-label">Characters</span><span id="word-maker-character-count" class="word-maker-page-meta-value">0</span></div>
+                                <div class="word-maker-page-meta-item"><span class="word-maker-page-meta-label">Paragraphs</span><span id="word-maker-paragraph-count" class="word-maker-page-meta-value">0</span></div>
+                            </div>
+                            <div id="word-maker-import-progress" class="word-maker-import-progress" hidden aria-live="polite">
+                                <span class="word-maker-import-progress-spinner" aria-hidden="true"></span>
+                                <div class="word-maker-import-progress-copy">
+                                    <div class="word-maker-import-progress-head">
+                                        <span id="word-maker-import-progress-text" class="word-maker-import-progress-text">Preparing document extraction...</span>
+                                        <span id="word-maker-import-progress-percent" class="word-maker-import-progress-percent">0%</span>
+                                    </div>
+                                    <div class="word-maker-import-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="word-maker-import-progress-text">
+                                        <span id="word-maker-import-progress-fill" class="word-maker-import-progress-fill"></span>
+                                    </div>
+                                    <div id="word-maker-import-progress-meta" class="word-maker-import-progress-meta">Waiting for Parse Doc to start.</div>
+                                </div>
                             </div>
                             <div class="word-maker-page-shell">
                                 <button type="button" class="word-maker-page-delete" data-delete-page="true" aria-label="Delete this extra page" title="Delete this extra page" hidden>
@@ -2054,29 +2144,27 @@
 
     <div class="word-maker-shell">
         <footer class="site-legal-footer">
-            <div class="site-legal-footer-inner">
-                <div class="site-legal-footer-brand">FAST BRIDGE GROUP 2026 <span>Real Estate Platform</span></div>
-                <div class="site-legal-footer-links" aria-label="Legal and policy links">
-                    <a class="site-legal-footer-link" href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="vow-terms-of-use.html">IDX/VOW Disclaimer</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="legal-equal-housing.html">Equal Housing</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="legal-copyright.html">Copyright</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="legal-privacy-policy.html">Privacy Policy</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="legal-terms-of-use.html">Terms of Use</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="legal-broker-information.html">Broker Information</a>
-                    <span class="site-legal-footer-separator" aria-hidden="true">|</span>
-                    <a class="site-legal-footer-link" href="legal-contact-us.html">Contact Us</a>
-                </div>
-            </div>
-        </footer>
+    <div class="site-legal-footer-inner">
+        <div class="site-legal-footer-brand">FAST BRIDGE GROUP 2026</div>
+        <div class="site-legal-footer-links" aria-label="Legal and policy links">
+            <a class="site-legal-footer-link" href="legal-mls-data-disclaimer.html">MLS Data Disclaimer</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-equal-housing.html">Equal Housing</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-accuracy-liability.html">Accuracy &amp; Liability</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-copyright.html">Copyright</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-privacy-policy.html">Privacy Policy</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-terms-of-use.html">Terms of Use</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-broker-information.html">Broker Information</a>
+            <span class="site-legal-footer-separator" aria-hidden="true">|</span>
+            <a class="site-legal-footer-link" href="legal-contact-us.html">Contact Us</a>
+        </div>
+    </div>
+</footer>
     </div>
 
     <button class="mobile-menu-toggle" type="button" aria-label="Toggle navigation menu">
@@ -2389,7 +2477,7 @@
             const activeShell = getActiveWordMakerShell();
             const paper = activeShell ? activeShell.querySelector('.word-maker-paper') : getWordMakerPapers()[0] || null;
             if (!paper) {
-                wordMakerMarginGuideLabel.textContent = '1 in margin guide';
+                wordMakerMarginGuideLabel.textContent = '0.42 in margin guide';
                 return;
             }
 
@@ -3961,7 +4049,20 @@
                     .filter(Boolean)
                     .filter((part) => {
                         const property = String(part.split(':')[0] || '').trim().toLowerCase();
-                        return property && property !== 'font-family' && property !== 'font';
+                        return property
+                            && property !== 'font-family'
+                            && property !== 'font'
+                            && property !== 'text-decoration'
+                            && property !== 'text-decoration-line'
+                            && property !== 'text-decoration-style'
+                            && property !== 'text-decoration-thickness'
+                            && property !== 'border'
+                            && property !== 'border-top'
+                            && property !== 'border-right'
+                            && property !== 'border-bottom'
+                            && property !== 'border-left'
+                            && property !== 'outline'
+                            && property !== 'box-shadow';
                     });
 
                 if (filtered.length) {
@@ -3996,6 +4097,36 @@
 
             stripWordMakerImportedFontStyles(template.content);
 
+            template.content.querySelectorAll('u, ins').forEach((element) => {
+                element.replaceWith(...Array.from(element.childNodes));
+            });
+
+            template.content.querySelectorAll('hr').forEach((element) => {
+                element.remove();
+            });
+
+            template.content.querySelectorAll('table').forEach((table) => {
+                const rows = Array.from(table.querySelectorAll('tr'));
+                const paragraphs = rows
+                    .map((row) => Array.from(row.querySelectorAll('th, td'))
+                        .map((cell) => normalizeWordMakerExtractedText(cell.textContent || ''))
+                        .filter(Boolean)
+                        .join(' '))
+                    .filter(Boolean)
+                    .map((text) => {
+                        const paragraph = window.document.createElement('p');
+                        paragraph.innerHTML = escapeWordMakerHtml(text);
+                        return paragraph;
+                    });
+
+                if (paragraphs.length) {
+                    table.replaceWith(...paragraphs);
+                    return;
+                }
+
+                table.remove();
+            });
+
             if (!template.content.children.length && String(template.content.textContent || '').trim()) {
                 return convertWordMakerPlainTextToHtml(String(template.content.textContent || ''));
             }
@@ -4027,18 +4158,7 @@
                 return '';
             }
 
-            return sourceText
-                .split(/(_{5,})/g)
-                .map((segment) => {
-                    if (!segment) {
-                        return '';
-                    }
-                    if (/^_{5,}$/.test(segment)) {
-                        return createWordMakerFillBlankHtmlFromText(segment);
-                    }
-                    return escapeWordMakerHtml(segment);
-                })
-                .join('');
+            return escapeWordMakerHtml(sourceText);
         }
 
         function isWordMakerImportPageBreakNode(node) {
@@ -4508,233 +4628,7 @@
         }
 
         function detectWordMakerPdfShapeRecords(canvas, viewport) {
-            const context = canvas && typeof canvas.getContext === 'function'
-                ? canvas.getContext('2d', { willReadFrequently: true })
-                : null;
-            if (!context || !canvas || !viewport) {
-                return { lineRecords: [], rectangleRecords: [] };
-            }
-
-            const width = Math.max(1, Number(canvas.width) || 1);
-            const height = Math.max(1, Number(canvas.height) || 1);
-            let pixelData;
-
-            try {
-                pixelData = context.getImageData(0, 0, width, height).data;
-            } catch (_error) {
-                return { lineRecords: [], rectangleRecords: [] };
-            }
-
-            const isDarkPixelAt = (x, y) => {
-                if (x < 0 || x >= width || y < 0 || y >= height) {
-                    return false;
-                }
-
-                const pixelIndex = ((y * width) + x) * 4;
-                const red = pixelData[pixelIndex];
-                const green = pixelData[pixelIndex + 1];
-                const blue = pixelData[pixelIndex + 2];
-                const alpha = pixelData[pixelIndex + 3];
-                const luminance = (red * 0.2126) + (green * 0.7152) + (blue * 0.0722);
-                return alpha > 90 && luminance < 215;
-            };
-
-            const getGroupAverageY = (group) => group.rows.reduce((total, row) => total + row.y, 0) / Math.max(1, group.rows.length);
-
-            const hasVerticalEdgeAtX = (x, startY, endY) => {
-                const safeStartY = Math.max(0, Math.floor(Math.min(startY, endY)));
-                const safeEndY = Math.min(height - 1, Math.ceil(Math.max(startY, endY)));
-                const sampleX = Math.max(1, Math.min(width - 2, Math.round(x)));
-                const sampleHeight = Math.max(1, safeEndY - safeStartY + 1);
-                let darkRowCount = 0;
-
-                for (let sampleY = safeStartY; sampleY <= safeEndY; sampleY += 1) {
-                    const hasDarkEdgePixel = isDarkPixelAt(sampleX, sampleY)
-                        || isDarkPixelAt(sampleX - 1, sampleY)
-                        || isDarkPixelAt(sampleX + 1, sampleY);
-                    if (hasDarkEdgePixel) {
-                        darkRowCount += 1;
-                    }
-                }
-
-                return (darkRowCount / sampleHeight) >= 0.58;
-            };
-
-            const findRectanglePairIndex = (group, groups, groupIndex, reservedIndexes) => {
-                const groupAverageY = getGroupAverageY(group);
-                const groupWidth = Math.max(1, group.right - group.left);
-                return groups.findIndex((candidate, candidateIndex) => {
-                    if (candidateIndex <= groupIndex || reservedIndexes.has(candidateIndex)) {
-                        return false;
-                    }
-
-                    const candidateAverageY = getGroupAverageY(candidate);
-                    const verticalDistance = Math.abs(candidateAverageY - groupAverageY);
-                    return verticalDistance >= Math.max(8, group.rows.length + candidate.rows.length)
-                        && verticalDistance <= Math.max(96, groupWidth * 0.3)
-                        && Math.abs(candidate.left - group.left) <= 8
-                        && Math.abs(candidate.right - group.right) <= 8;
-                });
-            };
-
-            const isRectanglePair = (group, pairedGroup) => {
-                if (!group || !pairedGroup) {
-                    return false;
-                }
-
-                const groupAverageY = getGroupAverageY(group);
-                const pairedAverageY = getGroupAverageY(pairedGroup);
-                const leftEdgeX = Math.max(1, Math.round((group.left + pairedGroup.left) / 2));
-                const rightEdgeX = Math.min(width - 2, Math.round((group.right + pairedGroup.right) / 2));
-                return hasVerticalEdgeAtX(leftEdgeX, groupAverageY, pairedAverageY)
-                    && hasVerticalEdgeAtX(rightEdgeX, groupAverageY, pairedAverageY);
-            };
-
-            const minimumRunLength = Math.max(14, Math.round(width * 0.035));
-            const rowCandidates = [];
-
-            for (let y = 0; y < height; y += 1) {
-                let runStart = -1;
-                let bestStart = -1;
-                let bestEnd = -1;
-                let bestLength = 0;
-
-                for (let x = 0; x < width; x += 1) {
-                    const pixelIndex = ((y * width) + x) * 4;
-                    const red = pixelData[pixelIndex];
-                    const green = pixelData[pixelIndex + 1];
-                    const blue = pixelData[pixelIndex + 2];
-                    const alpha = pixelData[pixelIndex + 3];
-                    const luminance = (red * 0.2126) + (green * 0.7152) + (blue * 0.0722);
-                    const isDarkPixel = alpha > 90 && luminance < 215;
-
-                    if (isDarkPixel) {
-                        if (runStart < 0) {
-                            runStart = x;
-                        }
-                        continue;
-                    }
-
-                    if (runStart >= 0) {
-                        const runLength = x - runStart;
-                        if (runLength > bestLength) {
-                            bestLength = runLength;
-                            bestStart = runStart;
-                            bestEnd = x - 1;
-                        }
-                        runStart = -1;
-                    }
-                }
-
-                if (runStart >= 0) {
-                    const runLength = width - runStart;
-                    if (runLength > bestLength) {
-                        bestLength = runLength;
-                        bestStart = runStart;
-                        bestEnd = width - 1;
-                    }
-                }
-
-                if (bestLength >= minimumRunLength) {
-                    rowCandidates.push({ y, left: bestStart, right: bestEnd });
-                }
-            }
-
-            if (!rowCandidates.length) {
-                return { lineRecords: [], rectangleRecords: [] };
-            }
-
-            const groupedCandidates = [];
-            rowCandidates.forEach((candidate) => {
-                const activeGroup = groupedCandidates[groupedCandidates.length - 1];
-                if (
-                    activeGroup
-                    && candidate.y <= activeGroup.lastY + 2
-                    && Math.abs(candidate.left - activeGroup.left) <= 18
-                    && Math.abs(candidate.right - activeGroup.right) <= 18
-                ) {
-                    activeGroup.rows.push(candidate);
-                    activeGroup.lastY = candidate.y;
-                    activeGroup.left = Math.min(activeGroup.left, candidate.left);
-                    activeGroup.right = Math.max(activeGroup.right, candidate.right);
-                    return;
-                }
-
-                groupedCandidates.push({
-                    rows: [candidate],
-                    lastY: candidate.y,
-                    left: candidate.left,
-                    right: candidate.right
-                });
-            });
-
-            const scaleX = viewport.width / width;
-            const scaleY = viewport.height / height;
-
-            const rectangleRecords = [];
-            const rectangleGroupIndexes = new Set();
-
-            groupedCandidates.forEach((group, groupIndex) => {
-                if (rectangleGroupIndexes.has(groupIndex) || group.rows.length > 8) {
-                    return;
-                }
-
-                const pairIndex = findRectanglePairIndex(group, groupedCandidates, groupIndex, rectangleGroupIndexes);
-                if (pairIndex < 0) {
-                    return;
-                }
-
-                const pairedGroup = groupedCandidates[pairIndex];
-                if (!isRectanglePair(group, pairedGroup)) {
-                    return;
-                }
-
-                const topGroup = getGroupAverageY(group) <= getGroupAverageY(pairedGroup) ? group : pairedGroup;
-                const bottomGroup = topGroup === group ? pairedGroup : group;
-                const left = Math.max(0, Math.min(topGroup.left, bottomGroup.left) * scaleX);
-                const right = Math.max(left, Math.max(topGroup.right, bottomGroup.right) * scaleX);
-                const top = Math.max(0, getGroupAverageY(topGroup) * scaleY);
-                const bottom = Math.max(top, getGroupAverageY(bottomGroup) * scaleY);
-
-                rectangleRecords.push({
-                    left,
-                    top,
-                    width: Math.max(10, right - left),
-                    height: Math.max(10, bottom - top),
-                    strokeWidth: Math.max(1, Math.round(((topGroup.rows.length + bottomGroup.rows.length) / 2) * scaleY)),
-                    renderScale: Math.max(1, Number(viewport && viewport.scale) || 1)
-                });
-
-                rectangleGroupIndexes.add(groupIndex);
-                rectangleGroupIndexes.add(pairIndex);
-            });
-
-            const lineRecords = groupedCandidates
-                .filter((group) => group.rows.length <= 8)
-                .filter((_group, groupIndex) => !rectangleGroupIndexes.has(groupIndex))
-                .map((group) => {
-                    const averageY = group.rows.reduce((total, row) => total + row.y, 0) / group.rows.length;
-                    const lineWidth = Math.max(0, (group.right - group.left) * scaleX);
-                    if (lineWidth < 12) {
-                        return null;
-                    }
-
-                    const text = createWordMakerFillBlankTextFromWidth(lineWidth);
-                    return {
-                        text,
-                        html: createWordMakerFillBlankHtmlFromWidth(lineWidth),
-                        top: Math.max(0, (averageY * scaleY) - 2),
-                        left: Math.max(0, group.left * scaleX),
-                        right: Math.max(0, group.right * scaleX),
-                        height: Math.max(6, group.rows.length * scaleY)
-                    };
-                })
-                .filter(Boolean);
-
-            return {
-                lineRecords,
-                rectangleRecords
-            };
+            return { lineRecords: [], rectangleRecords: [] };
         }
 
         function buildWordMakerPdfRectangleHtml(rectangleRecords) {
@@ -4768,34 +4662,14 @@
                 const overlapLeft = Math.max(matchingTextLine.left, lineRecord.left);
                 const overlapRight = Math.min(matchingTextLine.right, lineRecord.right);
                 const overlapWidth = Math.max(0, overlapRight - overlapLeft);
-                const textWidth = Math.max(1, matchingTextLine.right - matchingTextLine.left);
                 const underlineDistance = lineRecord.top - (matchingTextLine.top + (matchingTextLine.height * 0.72));
                 const trailingGap = lineRecord.left - matchingTextLine.right;
-                const isUnderline = overlapWidth >= Math.min(textWidth * 0.55, lineWidth * 0.85)
-                    && underlineDistance >= -2
-                    && underlineDistance <= Math.max(10, matchingTextLine.height * 0.5)
-                    && lineRecord.left >= matchingTextLine.left - 10
-                    && lineRecord.right <= matchingTextLine.right + 10;
                 const isTrailingBlank = overlapWidth <= 4
                     && trailingGap >= -4
                     && trailingGap <= Math.min(maximumTrailingBlankGap, Math.max(28, matchingTextLine.height * 2.4))
                     && lineWidth >= 16
                     && underlineDistance >= -2
                     && underlineDistance <= Math.max(10, matchingTextLine.height * 0.5);
-
-                if (isUnderline) {
-                    if (applyWordMakerPdfUnderlineToLineItems(matchingTextLine, lineRecord)) {
-                        return;
-                    }
-
-                    matchingTextLine.underline = true;
-                    matchingTextLine.html = buildWordMakerPdfUnderlinedRunHtml(matchingTextLine, lineRecord)
-                        || formatWordMakerPdfTextRun(matchingTextLine.text || '', {
-                            ...(matchingTextLine.style || {}),
-                            underline: true
-                        });
-                    return;
-                }
 
                 if (isTrailingBlank) {
                     matchingTextLine.html = `${matchingTextLine.html || formatWordMakerImportedTextPreservingBlanks(matchingTextLine.text || '')}${trailingGap > 6 && matchingTextLine.text && !matchingTextLine.text.endsWith(' ') ? ' ' : ''}${lineRecord.html}`;
@@ -4897,7 +4771,7 @@
                         }
                         return `<span class="word-maker-import-list-copy">${lineHtml}</span>`;
                     })
-                    .join('<br>');
+                    .join(' ');
                 return `<li class="word-maker-import-list-item">${linesHtml}</li>`;
             }).join('');
 
@@ -5057,7 +4931,7 @@
                     const fontSize = getWordMakerNormalizedImportFontSize(paragraphMedianHeight || paragraph.height, baseLineHeight);
                     const text = paragraph.lines
                         .map((line) => line.html || escapeWordMakerHtml(line.text || ''))
-                        .join('<br>');
+                        .join(' ');
                     const styleParts = [];
                     if (paragraph.alignment && paragraph.alignment !== 'left') {
                         styleParts.push(`text-align:${paragraph.alignment}`);
@@ -6116,6 +5990,24 @@
                 return;
             }
 
+            const countWordMakerBodyParagraphs = (value) => {
+                const normalizedText = String(value || '')
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\r\n?/g, '\n')
+                    .replace(/[ \t]+\n/g, '\n')
+                    .trim();
+
+                if (!normalizedText) {
+                    return 0;
+                }
+
+                return normalizedText
+                    .split(/\n\s*\n+/)
+                    .map((paragraph) => paragraph.replace(/\n+/g, ' ').trim())
+                    .filter(Boolean)
+                    .length;
+            };
+
             const text = shells.map((shell) => {
                 if (getWordMakerPageModeFromShell(shell) === 'spreadsheet') {
                     return collectWordMakerSpreadsheetData(shell)
@@ -6137,10 +6029,7 @@
                 if (!editor) {
                     return count;
                 }
-                return count + Array.from(editor.children).filter((element) => {
-                    const content = String(element.textContent || '').trim();
-                    return content || element.matches('hr, .word-maker-page-break, ul, ol, blockquote, h1, h2, h3, p, div');
-                }).length;
+                return count + countWordMakerBodyParagraphs(editor.innerText || '');
             }, 0) || (trimmed ? 1 : 0);
 
             if (wordMakerPageCount) {

@@ -50,6 +50,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const THEME_LOGO_SELECTOR = 'img.logo-img, img.ecard-logo-image, img.flyer-logo-image';
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
     const PROPERTY_SUBMISSIONS_BADGE_STATE_KEY = 'propertySubmissionsBadgeStateByUser';
+    const USER_PROPERTY_SUBMISSIONS_KEY = 'userPropertySubmissionsByUser';
     const ADMIN_CONTROLS_WIDGET_DOCK_ORDER = [
         'admin-announcement',
         'admin-discord-meetings',
@@ -4291,6 +4292,95 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         localStorage.setItem(storageKey, JSON.stringify(store));
     }
 
+    function normalizeUserPropertySubmission(item) {
+        const source = item && typeof item === 'object' ? item : {};
+        const propertyAddress = String(source.propertyAddress || source.address || '').trim();
+        const propertyCity = String(source.propertyCity || '').trim();
+        const propertyState = String(source.propertyState || '').trim();
+        const propertyZip = String(source.propertyZip || '').trim();
+        const createdAt = source.createdAt || source.created_at || null;
+        const propertyLabel = [propertyAddress, propertyCity, propertyState, propertyZip]
+            .filter(Boolean)
+            .join(', ');
+
+        return {
+            id: String(source.id || `${makePropertyStorageKey(propertyAddress)}:${createdAt || Date.now()}`).trim(),
+            sellerName: String(source.sellerName || '').trim(),
+            sellerEmail: String(source.sellerEmail || '').trim().toLowerCase(),
+            sellerPhone: String(source.sellerPhone || '').trim(),
+            propertyAddress,
+            propertyCity,
+            propertyState,
+            propertyZip,
+            propertyLabel,
+            propertyType: String(source.propertyType || '').trim(),
+            askingPrice: String(source.askingPrice || '').trim(),
+            estimatedValue: String(source.estimatedValue || '').trim(),
+            timeline: String(source.timeline || '').trim(),
+            status: String(source.status || 'submitted').trim().toLowerCase(),
+            createdAt,
+            source: 'property-submission'
+        };
+    }
+
+    function getUserPropertySubmissions(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        collapseUserScopedItemsToPrimaryKey(USER_PROPERTY_SUBMISSIONS_KEY, workspaceUser, { silent: true });
+        return getUserScopedItems(USER_PROPERTY_SUBMISSIONS_KEY, workspaceUser.key)
+            .map((item) => normalizeUserPropertySubmission(item))
+            .filter((item) => item.propertyAddress || item.id)
+            .sort((left, right) => {
+                const rightTimestamp = Date.parse(String(right && right.createdAt || '')) || 0;
+                const leftTimestamp = Date.parse(String(left && left.createdAt || '')) || 0;
+                return rightTimestamp - leftTimestamp;
+            });
+    }
+
+    async function syncUserPropertySubmissionsFromServer(workspaceUserLike) {
+        const workspaceUser = workspaceUserLike && typeof workspaceUserLike === 'object'
+            ? workspaceUserLike
+            : getWorkspaceUserContext();
+        const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+
+        if (!token || !workspaceUser.email) {
+            return getUserPropertySubmissions(workspaceUser);
+        }
+
+        try {
+            const response = await fetch('/api/my-property-submissions', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to recover submitted properties.');
+            }
+
+            const nextItems = (Array.isArray(data.submissions) ? data.submissions : [])
+                .map((item) => normalizeUserPropertySubmission(item))
+                .filter((item) => item.propertyAddress || item.id)
+                .sort((left, right) => {
+                    const rightTimestamp = Date.parse(String(right && right.createdAt || '')) || 0;
+                    const leftTimestamp = Date.parse(String(left && left.createdAt || '')) || 0;
+                    return rightTimestamp - leftTimestamp;
+                });
+            const currentItems = getExactUserScopedItems(USER_PROPERTY_SUBMISSIONS_KEY, workspaceUser.key)
+                .map((item) => normalizeUserPropertySubmission(item));
+
+            if (JSON.stringify(currentItems) !== JSON.stringify(nextItems)) {
+                setUserScopedItems(USER_PROPERTY_SUBMISSIONS_KEY, workspaceUser.key, nextItems);
+            }
+
+            return nextItems;
+        } catch (error) {
+            console.error('Failed to sync user property submissions:', error);
+            return getUserPropertySubmissions(workspaceUser);
+        }
+    }
+
     function parseMoneyValue(value) {
         const numeric = Number(String(value || '').replace(/[^0-9.-]/g, ''));
         return Number.isFinite(numeric) ? numeric : 0;
@@ -4307,7 +4397,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             TODO_GOALS_KEY,
             IA_CALCULATOR_STATE_KEY,
             PIQ_AGENT_STATUS_KEY,
-            CLOSED_DEALS_KEY
+            CLOSED_DEALS_KEY,
+            USER_PROPERTY_SUBMISSIONS_KEY
         ]);
         const offerRegex = /\boffer\b|submitted|sent/i;
 
@@ -4350,6 +4441,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const iaStates = getUserScopedItems(IA_CALCULATOR_STATE_KEY, workspaceUser.key);
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
             const manualClosedDeals = getUserScopedItems(CLOSED_DEALS_KEY, workspaceUser.key);
+            const propertySubmissions = getUserPropertySubmissions(workspaceUser);
             const offerTermsSentSet = collectOfferTermsSentPropertyKeys(scopedStatuses, notes);
             const offerLeadSet = new Set();
             const relevantOfferNotes = [];
@@ -4385,6 +4477,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             });
 
+            propertySubmissions.forEach((item) => {
+                const propertyKey = makePropertyStorageKey(item.propertyAddress || item.propertyLabel || item.id);
+                if (propertyKey) {
+                    offerLeadSet.add(propertyKey);
+                }
+            });
+
             const normalizedStatuses = Object.entries(scopedStatuses)
                 .map(([propertyKey, statusValue]) => {
                     const normalizedKey = String(propertyKey || '').trim().toLowerCase();
@@ -4405,6 +4504,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 offersSubmittedCount: offerLeadSet.size,
                 offerNotesLatest: getLatestTimestamp(relevantOfferNotes, ['updatedAt', 'createdAt']),
                 offerPlannerLatest: getLatestTimestamp(relevantPlannerItems, ['updatedAt', 'completedAt', 'createdAt']),
+                propertySubmissionCount: propertySubmissions.length,
+                propertySubmissionLatest: getLatestTimestamp(propertySubmissions, ['createdAt']),
                 manualClosedCount: manualClosedDeals.length,
                 manualClosedLatest: getLatestTimestamp(manualClosedDeals, ['closeDate', 'createdAt']),
                 autoClosedCount: autoClosedKeys.length,
@@ -4414,6 +4515,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             snapshot.hasActivity = snapshot.iaCount > 0
                 || snapshot.offerTermsSentCount > 0
                 || snapshot.offersSubmittedCount > 0
+                || snapshot.propertySubmissionCount > 0
                 || snapshot.manualClosedCount > 0
                 || snapshot.autoClosedCount > 0;
 
@@ -4443,6 +4545,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         renderBadge();
+        syncUserPropertySubmissionsFromServer();
         window.addEventListener('dashboard-data-updated', renderBadge);
         window.addEventListener('storage', (event) => {
             if (!event.key || watchedKeys.has(event.key) || event.key === ANALYTICS_NAV_BADGE_STATE_KEY) {
@@ -4528,6 +4631,252 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function getCloudUploadAuthToken() {
         return String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    }
+
+    let analyticsStateCacheUserKey = '';
+    let analyticsStateCache = null;
+    let analyticsStateHydrationPromise = null;
+    let analyticsStateSaveTimerId = 0;
+    let analyticsStatePendingOverrides = null;
+
+    function getDefaultAnalyticsStateSnapshot() {
+        return {
+            numbersGoal: '',
+            numbersWindow: 'all',
+            closedDealDraft: null,
+            metrics: {
+                offerTermsSentCount: 0,
+                offersSubmittedCount: 0,
+                updatedAt: 0
+            },
+            updatedAt: 0
+        };
+    }
+
+    function normalizeAnalyticsStateMetrics(value) {
+        const metrics = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        return {
+            offerTermsSentCount: Math.max(Number(metrics.offerTermsSentCount) || 0, 0),
+            offersSubmittedCount: Math.max(Number(metrics.offersSubmittedCount) || 0, 0),
+            updatedAt: Math.max(Number(metrics.updatedAt) || 0, 0)
+        };
+    }
+
+    function hasAnalyticsDraftContent(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return false;
+        }
+
+        return Boolean(
+            String(value.id || '').trim()
+            || String(value.title || '').trim()
+            || String(value.closeDate || '').trim()
+            || String(value.wholesaleFee || '').trim()
+            || String(value.earnedAmount || '').trim()
+            || String(value.note || '').trim()
+            || (Array.isArray(value.documents) && value.documents.length)
+        );
+    }
+
+    function normalizeAnalyticsStatePayload(value) {
+        const state = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        const normalizedWindow = String(state.numbersWindow || 'all').trim().toLowerCase();
+        const normalizedDraft = hasAnalyticsDraftContent(state.closedDealDraft) ? state.closedDealDraft : null;
+
+        return {
+            numbersGoal: String(state.numbersGoal || '').replace(/[^0-9]/g, '').slice(0, 12),
+            numbersWindow: ['q1', 'q2', 'q3', 'q4', 'all'].includes(normalizedWindow) ? normalizedWindow : 'all',
+            closedDealDraft: normalizedDraft,
+            metrics: normalizeAnalyticsStateMetrics(state.metrics),
+            updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
+        };
+    }
+
+    function mergeAnalyticsStateOverrides(baseOverrides, nextOverrides) {
+        const base = baseOverrides && typeof baseOverrides === 'object' && !Array.isArray(baseOverrides) ? baseOverrides : {};
+        const next = nextOverrides && typeof nextOverrides === 'object' && !Array.isArray(nextOverrides) ? nextOverrides : {};
+        const merged = {
+            ...base,
+            ...next
+        };
+
+        if (base.metrics || next.metrics) {
+            merged.metrics = {
+                ...(base.metrics && typeof base.metrics === 'object' ? base.metrics : {}),
+                ...(next.metrics && typeof next.metrics === 'object' ? next.metrics : {})
+            };
+        }
+
+        return merged;
+    }
+
+    function applyAnalyticsStateToLocalCache(workspaceUser, analyticsState) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        const normalizedState = normalizeAnalyticsStatePayload(analyticsState);
+        if (!userKey) {
+            return normalizedState;
+        }
+
+        const currentGoal = String(getUserScopedValue(ANALYTICS_DAILY_NUMBERS_GOAL_KEY, userKey, '') || '').replace(/[^0-9]/g, '');
+        if (!currentGoal && normalizedState.numbersGoal) {
+            setUserScopedValueSilently(ANALYTICS_DAILY_NUMBERS_GOAL_KEY, userKey, normalizedState.numbersGoal);
+        }
+
+        const currentWindow = String(getUserScopedValue(ANALYTICS_NUMBERS_WINDOW_KEY, userKey, 'all') || 'all').trim().toLowerCase();
+        if ((!currentWindow || currentWindow === 'all') && normalizedState.numbersWindow && normalizedState.numbersWindow !== 'all') {
+            setUserScopedValueSilently(ANALYTICS_NUMBERS_WINDOW_KEY, userKey, normalizedState.numbersWindow);
+        }
+
+        const currentDraft = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, userKey, null);
+        if (!hasAnalyticsDraftContent(currentDraft) && normalizedState.closedDealDraft) {
+            setUserScopedValueSilently(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, userKey, normalizedState.closedDealDraft);
+        }
+
+        return normalizedState;
+    }
+
+    async function requestAnalyticsStateApi(pathname, options = {}) {
+        const token = getCloudUploadAuthToken();
+        if (!token) {
+            throw new Error('Sign in is required to sync analytics data across devices.');
+        }
+
+        const method = String(options.method || 'GET').trim().toUpperCase() || 'GET';
+        const headers = {
+            Authorization: `Bearer ${token}`,
+            ...(options.headers || {})
+        };
+
+        if (method !== 'GET' && method !== 'HEAD' && !headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        const response = await fetch(pathname, {
+            ...options,
+            method,
+            headers
+        });
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = null;
+        }
+
+        if (!response.ok) {
+            throw new Error(payload && payload.error ? payload.error : 'Analytics sync failed.');
+        }
+
+        return payload;
+    }
+
+    async function hydrateAnalyticsStateFromServer(workspaceUser) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        const token = getCloudUploadAuthToken();
+
+        if (!userKey || !token) {
+            analyticsStateCacheUserKey = userKey;
+            analyticsStateCache = getDefaultAnalyticsStateSnapshot();
+            return analyticsStateCache;
+        }
+
+        if (analyticsStateCacheUserKey === userKey && analyticsStateCache) {
+            return analyticsStateCache;
+        }
+
+        if (analyticsStateHydrationPromise && analyticsStateCacheUserKey === userKey) {
+            return analyticsStateHydrationPromise;
+        }
+
+        analyticsStateCacheUserKey = userKey;
+        const pendingHydration = (async () => {
+            try {
+                const payload = await requestAnalyticsStateApi('/api/analytics/state');
+                const normalizedState = applyAnalyticsStateToLocalCache(safeUser, payload && payload.state);
+                analyticsStateCache = normalizedState;
+                return normalizedState;
+            } catch (error) {
+                console.error('Failed to load analytics state from server:', error);
+                analyticsStateCache = getDefaultAnalyticsStateSnapshot();
+                return analyticsStateCache;
+            } finally {
+                if (analyticsStateHydrationPromise === pendingHydration) {
+                    analyticsStateHydrationPromise = null;
+                }
+            }
+        })();
+
+        analyticsStateHydrationPromise = pendingHydration;
+        return pendingHydration;
+    }
+
+    function buildLocalAnalyticsStateSnapshot(workspaceUser, overrides = {}) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        const localGoal = String(getUserScopedValue(ANALYTICS_DAILY_NUMBERS_GOAL_KEY, userKey, '') || '').replace(/[^0-9]/g, '');
+        const localWindow = String(getUserScopedValue(ANALYTICS_NUMBERS_WINDOW_KEY, userKey, 'all') || 'all').trim().toLowerCase();
+        const localDraftValue = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, userKey, null);
+        const localDraft = hasAnalyticsDraftContent(localDraftValue) ? localDraftValue : null;
+
+        return normalizeAnalyticsStatePayload({
+            ...(analyticsStateCache || getDefaultAnalyticsStateSnapshot()),
+            numbersGoal: localGoal,
+            numbersWindow: ['q1', 'q2', 'q3', 'q4', 'all'].includes(localWindow) ? localWindow : 'all',
+            closedDealDraft: localDraft,
+            ...overrides,
+            metrics: {
+                ...((analyticsStateCache && analyticsStateCache.metrics) || getDefaultAnalyticsStateSnapshot().metrics),
+                ...((overrides && overrides.metrics) || {})
+            },
+            updatedAt: Date.now()
+        });
+    }
+
+    async function saveAnalyticsStateToServer(workspaceUser, overrides = {}) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        if (!userKey || !getCloudUploadAuthToken()) {
+            return null;
+        }
+
+        const nextState = buildLocalAnalyticsStateSnapshot(safeUser, overrides);
+        analyticsStateCacheUserKey = userKey;
+        analyticsStateCache = nextState;
+
+        try {
+            const payload = await requestAnalyticsStateApi('/api/analytics/state', {
+                method: 'PUT',
+                body: JSON.stringify({ state: nextState })
+            });
+            analyticsStateCache = applyAnalyticsStateToLocalCache(safeUser, payload && payload.state);
+            return analyticsStateCache;
+        } catch (error) {
+            console.error('Failed to save analytics state to server:', error);
+            return null;
+        }
+    }
+
+    function scheduleAnalyticsStateSave(workspaceUser, overrides = {}, options = {}) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        if (!userKey || !getCloudUploadAuthToken()) {
+            return;
+        }
+
+        analyticsStatePendingOverrides = mergeAnalyticsStateOverrides(analyticsStatePendingOverrides, overrides);
+        if (analyticsStateSaveTimerId) {
+            window.clearTimeout(analyticsStateSaveTimerId);
+        }
+
+        analyticsStateSaveTimerId = window.setTimeout(() => {
+            const pendingOverrides = analyticsStatePendingOverrides;
+            analyticsStatePendingOverrides = null;
+            analyticsStateSaveTimerId = 0;
+            void saveAnalyticsStateToServer(safeUser, pendingOverrides || {});
+        }, options.immediate ? 0 : 250);
     }
 
     function buildCloudUploadDocument(documentLike, fallbackLabel = 'Document') {
@@ -4947,7 +5296,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         return offerTermsSentSet;
     }
 
-    function initLiveKpiStats() {
+    async function initLiveKpiStats() {
         const offerTermsSentEl = document.getElementById('kpi-offer-terms-sent');
         const offersSubmittedEl = document.getElementById('kpi-offers-submitted');
 
@@ -4957,12 +5306,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         const offerTermsChangeEl = document.getElementById('kpi-offer-terms-change');
         const offersChangeEl = document.getElementById('kpi-offers-change');
+        const workspaceUser = getWorkspaceUserContext();
+        const hydratedAnalyticsState = await hydrateAnalyticsStateFromServer(workspaceUser);
+        let persistedMetrics = normalizeAnalyticsStateMetrics(hydratedAnalyticsState && hydratedAnalyticsState.metrics);
 
         function refreshKpis() {
-            const workspaceUser = getWorkspaceUserContext();
             const notes = getUserScopedItems(AGENT_NOTES_KEY, workspaceUser.key);
             const plannerItems = getUserScopedItems(TODO_GOALS_KEY, workspaceUser.key);
             const scopedStatuses = getUserScopedObject(PIQ_AGENT_STATUS_KEY, workspaceUser.key);
+            const propertySubmissions = getUserPropertySubmissions(workspaceUser);
             const offerLeadSet = new Set();
             const offerTermsSentSet = collectOfferTermsSentPropertyKeys(scopedStatuses, notes);
             const offerRegex = /\boffer\b|submitted|sent/i;
@@ -4986,26 +5338,58 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
             });
 
+            propertySubmissions.forEach((item) => {
+                const propertyKey = makePropertyStorageKey(item.propertyAddress || item.propertyLabel || item.id);
+                if (propertyKey) {
+                    offerLeadSet.add(propertyKey);
+                }
+            });
+
             const offerTermsSentCount = offerTermsSentSet.size;
             const offersSubmitted = offerLeadSet.size;
+            const hasLocalAnalyticsSignals = Boolean(
+                notes.length
+                || plannerItems.length
+                || propertySubmissions.length
+                || Object.keys(scopedStatuses || {}).length
+            );
+            const shouldUsePersistedMetrics = !hasLocalAnalyticsSignals
+                && (persistedMetrics.offerTermsSentCount > 0 || persistedMetrics.offersSubmittedCount > 0);
+            const displayedOfferTermsSentCount = shouldUsePersistedMetrics ? persistedMetrics.offerTermsSentCount : offerTermsSentCount;
+            const displayedOffersSubmitted = shouldUsePersistedMetrics ? persistedMetrics.offersSubmittedCount : offersSubmitted;
 
-            offerTermsSentEl.textContent = String(offerTermsSentCount);
-            offersSubmittedEl.textContent = String(offersSubmitted);
+            offerTermsSentEl.textContent = String(displayedOfferTermsSentCount);
+            offersSubmittedEl.textContent = String(displayedOffersSubmitted);
 
             if (offerTermsChangeEl) {
-                offerTermsChangeEl.textContent = `${offerTermsSentCount} propert${offerTermsSentCount === 1 ? 'y' : 'ies'} with offer terms sent`;
+                offerTermsChangeEl.textContent = `${displayedOfferTermsSentCount} propert${displayedOfferTermsSentCount === 1 ? 'y' : 'ies'} with offer terms sent`;
             }
             if (offersChangeEl) {
-                offersChangeEl.textContent = `${offersSubmitted} offer event${offersSubmitted === 1 ? '' : 's'}`;
+                offersChangeEl.textContent = `${displayedOffersSubmitted} offer event${displayedOffersSubmitted === 1 ? '' : 's'}`;
+            }
+
+            if (hasLocalAnalyticsSignals && (
+                persistedMetrics.offerTermsSentCount !== offerTermsSentCount
+                || persistedMetrics.offersSubmittedCount !== offersSubmitted
+            )) {
+                persistedMetrics = normalizeAnalyticsStateMetrics({
+                    offerTermsSentCount,
+                    offersSubmittedCount: offersSubmitted,
+                    updatedAt: Date.now()
+                });
+                scheduleAnalyticsStateSave(workspaceUser, { metrics: persistedMetrics });
             }
         }
 
         refreshKpis();
+        void syncUserPropertySubmissionsFromServer(workspaceUser).then(() => {
+            refreshKpis();
+        }).catch(() => {});
         window.addEventListener('dashboard-data-updated', refreshKpis);
         window.addEventListener('storage', refreshKpis);
     }
 
-    function initClosedDealsWidget() {
+    async function initClosedDealsWidget() {
         const closedDealsValueEl = document.getElementById('kpi-closed-deals');
         const closedDealsChangeEl = document.getElementById('kpi-closed-deals-change');
         const numbersTotalEl = document.getElementById('analytics-numbers-total');
@@ -5072,6 +5456,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
             const digitsOnly = String(numbersGoalInputEl.value || '').replace(/[^0-9]/g, '');
             setUserScopedValue(ANALYTICS_DAILY_NUMBERS_GOAL_KEY, workspaceUser.key, digitsOnly);
+            scheduleAnalyticsStateSave(workspaceUser, { numbersGoal: digitsOnly });
             return digitsOnly;
         }
 
@@ -5085,6 +5470,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             const nextWindow = NUMBERS_WINDOW_CONFIG[normalizedWindow] ? normalizedWindow : 'all';
             activeNumbersWindow = nextWindow;
             setUserScopedValue(ANALYTICS_NUMBERS_WINDOW_KEY, workspaceUser.key, nextWindow);
+            scheduleAnalyticsStateSave(workspaceUser, { numbersWindow: nextWindow });
         }
 
         function getManualClosedDeals() {
@@ -5417,7 +5803,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         function saveClosedDealDraft() {
-            setUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, {
+            const nextDraft = {
                 id: ensureClosedDealDraftId(),
                 title: String(dealNameInput && dealNameInput.value || ''),
                 closeDate: String(dealDateInput && dealDateInput.value || ''),
@@ -5425,12 +5811,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 earnedAmount: String(dealEarnedInput && dealEarnedInput.value || ''),
                 note: String(dealNoteInput && dealNoteInput.value || ''),
                 documents: normalizeClosedDealDocuments({ documents: pendingUploads })
-            });
+            };
+            setUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, nextDraft);
+            scheduleAnalyticsStateSave(workspaceUser, { closedDealDraft: nextDraft });
         }
 
         function clearClosedDealDraft() {
             activeClosedDealDraftId = '';
             setUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, workspaceUser.key, null);
+            scheduleAnalyticsStateSave(workspaceUser, { closedDealDraft: null }, { immediate: true });
         }
 
         function applyClosedDealDraft() {
@@ -6311,6 +6700,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
         }
 
+        await hydrateAnalyticsStateFromServer(workspaceUser);
         applyClosedDealDraft();
 
         if (dealDateInput && !dealDateInput.value) {
@@ -10222,7 +10612,9 @@ function initNavbarDateTime() {
     }
 
     // ============================================
-    // Interactive Calendar
+    // PROTECT CODE SECTION: Interactive Calendar
+    // Do NOT modify, refactor, rename, remove, or alter this block unless explicitly instructed.
+    // This section is production-stable and immutable.
     // ============================================
     function initInteractiveCalendar() {
         const calendarStage = document.getElementById('calendar-stage');
@@ -10592,6 +10984,7 @@ function initNavbarDateTime() {
         renderDetailView();
         syncPlannerDateSelection();
     }
+    // END PROTECT CODE SECTION: Interactive Calendar
 
     function initDashboardChatGptWidget() {
         const form = document.getElementById('chatgpt-form');
@@ -15910,6 +16303,10 @@ function initNavbarDateTime() {
             return;
         }
 
+        const knownUsersList = document.getElementById('admin-known-users-list');
+        const knownUsersSubtitle = document.getElementById('admin-known-users-subtitle');
+        const knownUsersRefreshButton = document.getElementById('admin-known-users-refresh');
+
         const panel = document.getElementById('admin-account-panel');
         const subtitle = document.getElementById('account-manager-subtitle');
         const createButton = document.getElementById('admin-create-user-btn');
@@ -15937,8 +16334,56 @@ function initNavbarDateTime() {
             if (subtitle) {
                 subtitle.textContent = 'Only admin accounts can create or manage users.';
             }
+            if (knownUsersSubtitle) {
+                knownUsersSubtitle.textContent = 'Only admin accounts can review active FAST accounts.';
+            }
+            if (knownUsersList) {
+                knownUsersList.innerHTML = '<p class="outreach-empty">Admin access required.</p>';
+            }
             usersList.innerHTML = '<p class="outreach-empty">Admin access required.</p>';
             return;
+        }
+
+        function escapeUserManagerHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderKnownUsers(items) {
+            if (!knownUsersList) {
+                return;
+            }
+
+            knownUsersList.innerHTML = '';
+            if (!Array.isArray(items) || items.length === 0) {
+                if (knownUsersSubtitle) {
+                    knownUsersSubtitle.textContent = 'Showing every known FAST account on this workspace.';
+                }
+                knownUsersList.innerHTML = '<p class="outreach-empty">No active accounts found.</p>';
+                return;
+            }
+
+            if (knownUsersSubtitle) {
+                knownUsersSubtitle.textContent = `${items.length} active account${items.length === 1 ? '' : 's'} known in FAST.`;
+            }
+
+            items.forEach(item => {
+                const row = document.createElement('article');
+                row.className = 'outreach-item';
+                row.innerHTML = `
+                    <div class="outreach-item-head">
+                        <span class="outreach-item-title">${escapeUserManagerHtml(item.name || 'User')}</span>
+                        <span class="outreach-status published">${escapeUserManagerHtml(formatUserRoleLabel(item.role))}</span>
+                    </div>
+                    <p class="outreach-item-body">${escapeUserManagerHtml(item.email || '')}</p>
+                    <p class="outreach-owner">Created: ${escapeUserManagerHtml(item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Unknown')}</p>
+                `;
+                knownUsersList.appendChild(row);
+            });
         }
 
         function renderUsers(items) {
@@ -15959,16 +16404,16 @@ function initNavbarDateTime() {
                 const suggestedEmail = localPart ? `${localPart}@${nextDomain}` : '';
                 row.innerHTML = `
                     <div class="outreach-item-head">
-                        <span class="outreach-item-title">${item.name || 'User'}</span>
-                        <span class="outreach-status ${roleClass}">${formatUserRoleLabel(item.role)}</span>
+                        <span class="outreach-item-title">${escapeUserManagerHtml(item.name || 'User')}</span>
+                        <span class="outreach-status ${roleClass}">${escapeUserManagerHtml(formatUserRoleLabel(item.role))}</span>
                     </div>
-                    <p class="outreach-item-body">${item.email || ''}</p>
-                    <p class="outreach-owner">Created: ${createdAt}</p>
+                    <p class="outreach-item-body">${escapeUserManagerHtml(item.email || '')}</p>
+                    <p class="outreach-owner">Created: ${escapeUserManagerHtml(createdAt)}</p>
                     <div class="outreach-item-actions admin-email-actions">
-                        <input class="form-input admin-user-email-input" type="email" value="${suggestedEmail || currentEmail}" placeholder="username@fastbridgegroupllc.com" data-user-id="${item.id}">
+                        <input class="form-input admin-user-email-input" type="email" value="${escapeUserManagerHtml(suggestedEmail || currentEmail)}" placeholder="username@fastbridgegroupllc.com" data-user-id="${item.id}">
                         <button type="button" class="card-btn admin-suggest-email-btn" data-user-id="${item.id}">Use @${nextDomain}</button>
                         <button type="button" class="card-btn active admin-update-email-btn" data-user-id="${item.id}" data-current-email="${currentEmail}">Update Email</button>
-                        <button type="button" class="card-btn admin-delete-user-btn" data-user-id="${item.id}" data-user-name="${escapeHtml(item.name || 'User')}" data-user-email="${currentEmail}" ${normalizedRole === 'admin' ? 'disabled title="Protected admin accounts cannot be deleted"' : ''}>Delete User</button>
+                        <button type="button" class="card-btn admin-delete-user-btn" data-user-id="${item.id}" data-user-name="${escapeUserManagerHtml(item.name || 'User')}" data-user-email="${escapeUserManagerHtml(currentEmail)}" ${normalizedRole === 'admin' ? 'disabled title="Protected admin accounts cannot be deleted"' : ''}>Delete User</button>
                     </div>
                 `;
                 usersList.appendChild(row);
@@ -16143,8 +16588,12 @@ function initNavbarDateTime() {
                     throw new Error(data.error || 'Unable to load users');
                 }
                 loadedUsers = collapseAliasUsers(Array.isArray(data.users) ? data.users : []);
+                renderKnownUsers(loadedUsers);
                 renderUsers(loadedUsers);
             } catch (error) {
+                if (knownUsersList) {
+                    knownUsersList.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load active accounts.')}</p>`;
+                }
                 usersList.innerHTML = `<p class="outreach-empty">${String(error.message || 'Unable to load users.')}</p>`;
             }
         }
@@ -16229,6 +16678,10 @@ function initNavbarDateTime() {
 
         if (refreshButton) {
             refreshButton.addEventListener('click', loadUsers);
+        }
+
+        if (knownUsersRefreshButton) {
+            knownUsersRefreshButton.addEventListener('click', loadUsers);
         }
 
         if (migrateDomainButton) {
@@ -19251,6 +19704,7 @@ function initNavbarDateTime() {
             return;
         }
 
+        const workspaceUser = getWorkspaceUserContext();
         let html2CanvasLoaderPromise = null;
         let jsPdfLoaderPromise = null;
         let agreementLogoDataUrlPromise = null;
@@ -22083,7 +22537,7 @@ function initNavbarDateTime() {
                 : item?.propertySnapshot?.importedBy && typeof item.propertySnapshot.importedBy === 'object'
                     ? item.propertySnapshot.importedBy
                     : null;
-            const importerName = String(importedBy?.name || item?.propertySnapshot?.importedByName || '').trim();
+            const importerName = String(importedBy?.name || item?.importedByName || item?.propertySnapshot?.importedByName || '').trim();
             return importerName ? `Imported by ${importerName}` : '';
         }
 
@@ -22366,12 +22820,140 @@ function initNavbarDateTime() {
                 .slice(0, 500);
         }
 
+        function getRecoverableImportedPropertyItems() {
+            const candidateKeys = new Set([
+                'default-user',
+                ...getScopedStorageCandidateKeys(workspaceUser.key),
+                ...getScopedStorageCandidateKeys(workspaceUser.email),
+                ...getScopedStorageCandidateKeys(workspaceUser.name),
+                ...getScopedStorageCandidateKeys(activeSessionUser.key),
+                ...getScopedStorageCandidateKeys(activeSessionUser.email),
+                ...getScopedStorageCandidateKeys(activeSessionUser.name)
+            ].filter(Boolean));
+            const mergedItems = [];
+            const seenSignatures = new Set();
+            let importedStore = {};
+            let clickedStore = {};
+
+            try {
+                importedStore = JSON.parse(localStorage.getItem(IMPORTED_PROPERTIES_KEY) || '{}');
+            } catch (error) {
+                importedStore = {};
+            }
+
+            try {
+                clickedStore = JSON.parse(localStorage.getItem(DEALS_CLICKED_KEY) || '{}');
+            } catch (error) {
+                clickedStore = {};
+            }
+
+            const addRecoveredItem = (item) => {
+                const sanitizedItem = sanitizeImportedPropertyItem(item);
+                if (!sanitizedItem) {
+                    return;
+                }
+
+                const signature = getScopedItemSignature(sanitizedItem);
+                if (seenSignatures.has(signature)) {
+                    return;
+                }
+
+                seenSignatures.add(signature);
+                mergedItems.push(sanitizedItem);
+            };
+
+            if (importedStore && typeof importedStore === 'object' && !Array.isArray(importedStore)) {
+                candidateKeys.forEach((candidateKey) => {
+                    const items = importedStore[candidateKey];
+                    if (!Array.isArray(items)) {
+                        return;
+                    }
+
+                    items.forEach(addRecoveredItem);
+                });
+            }
+
+            if (clickedStore && typeof clickedStore === 'object' && !Array.isArray(clickedStore)) {
+                candidateKeys.forEach((candidateKey) => {
+                    const items = clickedStore[candidateKey];
+                    if (!Array.isArray(items)) {
+                        return;
+                    }
+
+                    items.filter((item) => isImportedPropertyItem(item)).forEach(addRecoveredItem);
+                });
+            }
+
+            return mergedItems.sort((left, right) => (Number(right?.clickedAt) || 0) - (Number(left?.clickedAt) || 0));
+        }
+
+        async function syncLocalImportedPropertiesToServer(authToken, serverItems) {
+            const token = String(authToken || '').trim();
+            if (!token) {
+                return Array.isArray(serverItems) ? serverItems.slice() : [];
+            }
+
+            const localItems = getRecoverableImportedPropertyItems();
+            const normalizedServerItems = Array.isArray(serverItems)
+                ? serverItems.map((item) => sanitizeImportedPropertyItem(item)).filter(Boolean)
+                : [];
+
+            if (!localItems.length) {
+                return normalizedServerItems;
+            }
+
+            const serverItemKeys = new Set(normalizedServerItems.map((item) => makePropertyStorageKey(
+                item?.propertySnapshot?.address
+                || item?.address
+                || item?.propertyAddress
+                || item?.id
+            )).filter(Boolean));
+            const unsyncedLocalItems = localItems.filter((item) => {
+                const propertyKey = makePropertyStorageKey(
+                    item?.propertySnapshot?.address
+                    || item?.address
+                    || item?.propertyAddress
+                    || item?.id
+                );
+                return propertyKey && !serverItemKeys.has(propertyKey);
+            });
+
+            if (!unsyncedLocalItems.length) {
+                return normalizedServerItems;
+            }
+
+            const syncedItems = [];
+            for (const item of unsyncedLocalItems) {
+                try {
+                    const response = await fetch('/api/my-deals/imported-properties', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ record: item })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload && payload.error ? payload.error : 'Unable to sync imported property.');
+                    }
+                    const savedRecord = sanitizeImportedPropertyItem(payload && payload.record);
+                    if (savedRecord) {
+                        syncedItems.push(savedRecord);
+                    }
+                } catch (error) {
+                    console.error('Failed to sync local imported property to the database:', error);
+                }
+            }
+
+            return mergeImportedItemsByAddress(normalizedServerItems, syncedItems);
+        }
+
         async function hydrateImportedPropertiesFromServer() {
             const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             if (!authToken) {
-                hydratedImportedItems = [];
+                hydratedImportedItems = getRecoverableImportedPropertyItems();
                 hasHydratedImportedItems = true;
-                setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, [], { silent: true });
                 return;
             }
 
@@ -22402,14 +22984,15 @@ function initNavbarDateTime() {
                 const manualItems = (Array.isArray(manualPayload.items) ? manualPayload.items : [])
                     .map((item) => sanitizeImportedPropertyItem(item))
                     .filter(Boolean);
+                const syncedManualItems = await syncLocalImportedPropertiesToServer(authToken, manualItems);
                 const serverItems = (Array.isArray(spreadsheetPayload.rows) ? spreadsheetPayload.rows : [])
                     .map((row) => buildImportedPropertyRecordFromServerRow(row))
                     .filter(Boolean);
-                const persistedItems = mergeImportedItemsByAddress(serverItems, manualItems);
+                const persistedItems = mergeImportedItemsByAddress(serverItems, syncedManualItems);
                 hydratedImportedItems = persistedItems.slice();
                 hasHydratedImportedItems = true;
 
-                const existingItems = getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key);
+                const existingItems = getRecoverableImportedPropertyItems();
                 const existingSerialized = JSON.stringify(existingItems);
                 const persistedSerialized = JSON.stringify(persistedItems);
                 if (existingSerialized === persistedSerialized) {
@@ -22419,7 +23002,7 @@ function initNavbarDateTime() {
                 setUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key, persistedItems, { silent: true });
                 window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
             } catch (error) {
-                hydratedImportedItems = [];
+                hydratedImportedItems = getRecoverableImportedPropertyItems();
                 hasHydratedImportedItems = true;
                 console.error('Failed to hydrate imported properties from server rows:', error);
             }
@@ -24023,6 +24606,7 @@ function initNavbarDateTime() {
                 'tab-content-ia': detailData.ia,
                 'agent-current-status': currentStatusLabel,
                 'tab-content-offer': detailData.offer
+            };
 
             const importedByNoteEl = document.getElementById('property-imported-by-note');
             if (importedByNoteEl) {
@@ -24038,7 +24622,6 @@ function initNavbarDateTime() {
                     importedByNoteEl.textContent = '';
                 }
             }
-            };
 
             Object.keys(idMap).forEach(id => {
                 const element = document.getElementById(id);

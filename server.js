@@ -6273,6 +6273,20 @@ function initializeDatabase() {
   db.run(`ALTER TABLE property_submissions ADD COLUMN estimated_value TEXT`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN property_paid_off TEXT`, () => {});
   db.run(`ALTER TABLE property_submissions ADD COLUMN mortgage_balance TEXT`, () => {});
+  db.run(`ALTER TABLE property_submissions ADD COLUMN owner_user_id INTEGER`, () => {});
+  db.run('CREATE INDEX IF NOT EXISTS idx_property_submissions_owner_created ON property_submissions(owner_user_id, created_at DESC)', () => {});
+  db.run('CREATE INDEX IF NOT EXISTS idx_property_submissions_seller_email_created ON property_submissions(seller_email, created_at DESC)', () => {});
+  db.run(
+    `UPDATE property_submissions
+       SET owner_user_id = (
+         SELECT users.id
+           FROM users
+          WHERE LOWER(users.email) = LOWER(property_submissions.seller_email)
+          LIMIT 1
+       )
+     WHERE COALESCE(owner_user_id, 0) = 0`,
+    () => {}
+  );
 
   db.run(`
     CREATE TABLE IF NOT EXISTS mls_saved_searches (
@@ -6921,6 +6935,24 @@ function initializeDatabase() {
       console.error('Error creating my_agents_sheets table:', err);
     } else {
       console.log('My agents sheets table ready');
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_analytics_state (
+      owner_user_id INTEGER PRIMARY KEY,
+      numbers_goal TEXT NOT NULL DEFAULT '',
+      numbers_window TEXT NOT NULL DEFAULT 'all',
+      closed_deal_draft_json TEXT NOT NULL DEFAULT 'null',
+      metrics_json TEXT NOT NULL DEFAULT '{}',
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating user_analytics_state table:', err);
+    } else {
+      console.log('User analytics state table ready');
     }
   });
 
@@ -8216,6 +8248,53 @@ function sanitizeMyDealsImportedPropertyRecord(recordLike) {
   };
 }
 
+function buildImportedPropertyOwnerSnapshot(userLike) {
+  const normalizedEmail = normalizeKnownEmail(userLike && userLike.email || '');
+  const normalizedName = String(userLike && userLike.name || normalizedEmail || 'Unknown user').trim() || 'Unknown user';
+  const normalizedRole = String(userLike && userLike.role || '').trim().toLowerCase();
+  return {
+    name: normalizedName,
+    email: normalizedEmail,
+    key: normalizedEmail || normalizedName.toLowerCase().replace(/\s+/g, '-'),
+    role: normalizedRole
+  };
+}
+
+function ensureImportedPropertyOwnerSnapshot(recordLike, ownerLike) {
+  const sanitized = sanitizeMyDealsImportedPropertyRecord(recordLike);
+  if (!sanitized) {
+    return null;
+  }
+
+  const fallbackOwner = buildImportedPropertyOwnerSnapshot(ownerLike);
+  const propertySnapshot = sanitized.propertySnapshot && typeof sanitized.propertySnapshot === 'object'
+    ? { ...sanitized.propertySnapshot }
+    : { address: sanitized.address };
+  const importedBy = sanitized.importedBy && typeof sanitized.importedBy === 'object'
+    ? { ...fallbackOwner, ...sanitized.importedBy }
+    : propertySnapshot.importedBy && typeof propertySnapshot.importedBy === 'object'
+      ? { ...fallbackOwner, ...propertySnapshot.importedBy }
+      : fallbackOwner;
+  const importedByName = String(
+    sanitized.importedByName
+    || propertySnapshot.importedByName
+    || importedBy.name
+    || fallbackOwner.name
+    || ''
+  ).trim();
+
+  return {
+    ...sanitized,
+    importedBy,
+    importedByName,
+    propertySnapshot: {
+      ...propertySnapshot,
+      importedBy,
+      importedByName
+    }
+  };
+}
+
 function mapMyDealsImportedPropertyRow(rowLike) {
   const row = rowLike && typeof rowLike === 'object' ? rowLike : {};
   let payload = null;
@@ -8242,6 +8321,9 @@ function mapMyDealsImportedPropertyRow(rowLike) {
 async function loadMyDealsImportedPropertiesForUser(ownerUserId, options = {}) {
   const normalizedOwnerUserId = Number(ownerUserId) || 0;
   const limit = Math.max(1, Math.min(Number(options.limit) || 500, 500));
+  const ownerRow = normalizedOwnerUserId
+    ? await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [normalizedOwnerUserId])
+    : null;
   const rows = await dbAll(
     `SELECT owner_user_id, record_id, property_key, payload_json, created_at, updated_at
        FROM my_deals_imported_properties
@@ -8252,13 +8334,16 @@ async function loadMyDealsImportedPropertiesForUser(ownerUserId, options = {}) {
   );
 
   return Array.isArray(rows)
-    ? rows.map(mapMyDealsImportedPropertyRow).filter(Boolean)
+    ? rows.map(mapMyDealsImportedPropertyRow).map((item) => ensureImportedPropertyOwnerSnapshot(item, ownerRow)).filter(Boolean)
     : [];
 }
 
 async function saveMyDealsImportedPropertyForUser(ownerUserId, recordLike) {
   const normalizedOwnerUserId = Number(ownerUserId) || 0;
-  const record = sanitizeMyDealsImportedPropertyRecord(recordLike);
+  const ownerRow = normalizedOwnerUserId
+    ? await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [normalizedOwnerUserId])
+    : null;
+  const record = ensureImportedPropertyOwnerSnapshot(recordLike, ownerRow);
   if (!normalizedOwnerUserId || !record) {
     throw new Error('A valid imported property record is required.');
   }
@@ -11807,6 +11892,109 @@ async function saveUserSecuritySettings(userId, settings) {
       settings.appVerifiedAt || null
     ]
   );
+}
+
+function parseAnalyticsStateJson(rawValue, fallbackValue) {
+  if (typeof rawValue !== 'string' || !rawValue.trim()) {
+    return fallbackValue;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    return parsed === undefined ? fallbackValue : parsed;
+  } catch (error) {
+    return fallbackValue;
+  }
+}
+
+function normalizeUserAnalyticsMetrics(value) {
+  const metrics = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const offerTermsSentCount = Math.max(Number(metrics.offerTermsSentCount) || 0, 0);
+  const offersSubmittedCount = Math.max(Number(metrics.offersSubmittedCount) || 0, 0);
+
+  return {
+    offerTermsSentCount,
+    offersSubmittedCount,
+    updatedAt: Math.max(Number(metrics.updatedAt) || 0, 0)
+  };
+}
+
+function normalizeUserAnalyticsState(value) {
+  const state = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const draft = state.closedDealDraft && typeof state.closedDealDraft === 'object' && !Array.isArray(state.closedDealDraft)
+    ? state.closedDealDraft
+    : null;
+  const normalizedWindow = String(state.numbersWindow || 'all').trim().toLowerCase();
+
+  return {
+    numbersGoal: String(state.numbersGoal || '').replace(/[^0-9]/g, '').slice(0, 12),
+    numbersWindow: ['q1', 'q2', 'q3', 'q4', 'all'].includes(normalizedWindow) ? normalizedWindow : 'all',
+    closedDealDraft: draft
+      ? {
+          id: String(draft.id || '').trim().slice(0, 120),
+          title: String(draft.title || '').slice(0, 400),
+          closeDate: String(draft.closeDate || '').slice(0, 40),
+          wholesaleFee: String(draft.wholesaleFee || '').slice(0, 80),
+          earnedAmount: String(draft.earnedAmount || '').slice(0, 80),
+          note: String(draft.note || '').slice(0, 4000),
+          documents: Array.isArray(draft.documents) ? draft.documents : []
+        }
+      : null,
+    metrics: normalizeUserAnalyticsMetrics(state.metrics),
+    updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
+  };
+}
+
+function serializeUserAnalyticsStateRow(row) {
+  if (!row) {
+    return normalizeUserAnalyticsState(null);
+  }
+
+  return normalizeUserAnalyticsState({
+    numbersGoal: row.numbers_goal,
+    numbersWindow: row.numbers_window,
+    closedDealDraft: parseAnalyticsStateJson(row.closed_deal_draft_json, null),
+    metrics: parseAnalyticsStateJson(row.metrics_json, {}),
+    updatedAt: Number(row.updated_at) || 0
+  });
+}
+
+async function getUserAnalyticsState(ownerUserId) {
+  const row = await dbGet(
+    `SELECT numbers_goal, numbers_window, closed_deal_draft_json, metrics_json, updated_at
+       FROM user_analytics_state
+      WHERE owner_user_id = ?`,
+    [ownerUserId]
+  );
+
+  return serializeUserAnalyticsStateRow(row);
+}
+
+async function saveUserAnalyticsState(ownerUserId, nextState) {
+  const normalizedState = normalizeUserAnalyticsState(nextState);
+  const updatedAt = normalizedState.updatedAt || Date.now();
+
+  await dbRun(
+    `INSERT INTO user_analytics_state (
+      owner_user_id, numbers_goal, numbers_window, closed_deal_draft_json, metrics_json, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(owner_user_id) DO UPDATE SET
+      numbers_goal = excluded.numbers_goal,
+      numbers_window = excluded.numbers_window,
+      closed_deal_draft_json = excluded.closed_deal_draft_json,
+      metrics_json = excluded.metrics_json,
+      updated_at = excluded.updated_at`,
+    [
+      ownerUserId,
+      normalizedState.numbersGoal,
+      normalizedState.numbersWindow,
+      JSON.stringify(normalizedState.closedDealDraft),
+      JSON.stringify(normalizedState.metrics),
+      updatedAt
+    ]
+  );
+
+  return getUserAnalyticsState(ownerUserId);
 }
 
 function serializeUser(userLike) {
@@ -15497,20 +15685,9 @@ app.put('/api/admin/feature-access', async (req, res) => {
 
 // Admin-only account creation endpoint.
 app.post('/api/admin/users', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  let decoded;
-  try {
-    decoded = jwt.verify(token, JWT_SECRET);
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-
-  if (decoded.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required' });
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
   }
 
   const { name, email, password, role } = req.body;
@@ -17157,7 +17334,7 @@ app.post('/api/vow/registrants/:id/acceptance-link', async (req, res) => {
       token,
       expiresAt,
       termsVersion: VOW_TERMS_VERSION,
-      acceptanceUrl: buildAbsoluteUrl(req, `/vow-terms-of-use.html?token=${encodeURIComponent(token)}`)
+      acceptanceUrl: null
     });
   } catch (error) {
     console.error('VOW acceptance link error:', error);
@@ -21588,6 +21765,9 @@ app.get('/api/access-requests', (req, res) => {
 });
 
 app.post('/api/property-submissions', async (req, res) => {
+  const optionalAuthToken = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  const optionalDecoded = optionalAuthToken ? verifyAuthTokenValue(optionalAuthToken) : null;
+  const ownerUserId = Math.max(Number(optionalDecoded && optionalDecoded.id) || 0, 0);
   const sellerName = String(req.body?.sellerName || '').trim();
   const sellerEmail = String(req.body?.sellerEmail || '').trim().toLowerCase();
   const rawSellerPhone = String(req.body?.sellerPhone || '').trim();
@@ -21646,6 +21826,7 @@ app.post('/api/property-submissions', async (req, res) => {
       seller_email,
       seller_phone,
       referred_by,
+      owner_user_id,
       sms_consent,
       sms_consent_text,
       sms_consent_at,
@@ -21665,12 +21846,13 @@ app.post('/api/property-submissions', async (req, res) => {
       mortgage_balance,
       condition_issues,
       issue_notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
       [
       sellerName,
       sellerEmail,
       sellerPhone,
       referredBy,
+      ownerUserId > 0 ? ownerUserId : null,
       smsConsent ? 1 : 0,
       smsConsentText,
       smsConsent ? new Date().toISOString() : null,
@@ -21834,6 +22016,117 @@ app.get('/api/property-submissions', async (req, res) => {
   } catch (err) {
     console.error('Failed to load property submissions:', err);
     return res.status(500).json({ error: 'Unable to load property submissions.' });
+  }
+});
+
+app.get('/api/my-property-submissions', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const ownerUserId = Math.max(Number(decoded && decoded.id) || 0, 0);
+    const candidateEmails = Array.from(new Set([
+      String(decoded && decoded.email || '').trim().toLowerCase(),
+      normalizeKnownEmail(decoded && decoded.email || '')
+    ].filter(Boolean)));
+    const whereClauses = [];
+    const params = [];
+
+    if (ownerUserId > 0) {
+      whereClauses.push('owner_user_id = ?');
+      params.push(ownerUserId);
+    }
+
+    if (candidateEmails.length) {
+      whereClauses.push(`LOWER(seller_email) IN (${candidateEmails.map(() => '?').join(', ')})`);
+      params.push(...candidateEmails);
+    }
+
+    if (!whereClauses.length) {
+      return res.json({ submissions: [] });
+    }
+
+    const rows = await dbAll(
+      `SELECT
+        id,
+        seller_name,
+        seller_email,
+        seller_phone,
+        referred_by,
+        sms_consent,
+        sms_consent_text,
+        sms_consent_at,
+        property_address,
+        property_city,
+        property_state,
+        property_zip,
+        property_type,
+        financing_type,
+        bedrooms,
+        bathrooms,
+        square_feet,
+        asking_price,
+        estimated_value,
+        timeline,
+        property_paid_off,
+        mortgage_balance,
+        condition_issues,
+        issue_notes,
+        status,
+        created_at
+       FROM property_submissions
+       WHERE ${whereClauses.join(' OR ')}
+       ORDER BY datetime(created_at) DESC, id DESC`,
+      params
+    );
+
+    const submissions = Array.isArray(rows)
+      ? rows.map((row) => {
+          let conditionIssues = [];
+          try {
+            const parsed = JSON.parse(String(row.condition_issues || '[]'));
+            conditionIssues = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+          } catch (error) {
+            conditionIssues = [];
+          }
+
+          return {
+            id: row.id,
+            sellerName: String(row.seller_name || ''),
+            sellerEmail: String(row.seller_email || ''),
+            sellerPhone: String(row.seller_phone || ''),
+            referredBy: String(row.referred_by || ''),
+            smsConsent: Number(row.sms_consent || 0) === 1,
+            smsConsentText: String(row.sms_consent_text || ''),
+            smsConsentAt: row.sms_consent_at || null,
+            propertyAddress: String(row.property_address || ''),
+            propertyCity: String(row.property_city || ''),
+            propertyState: String(row.property_state || ''),
+            propertyZip: String(row.property_zip || ''),
+            propertyType: String(row.property_type || ''),
+            financingType: String(row.financing_type || ''),
+            bedrooms: String(row.bedrooms || ''),
+            bathrooms: String(row.bathrooms || ''),
+            squareFeet: String(row.square_feet || ''),
+            askingPrice: String(row.asking_price || ''),
+            estimatedValue: String(row.estimated_value || ''),
+            timeline: String(row.timeline || ''),
+            propertyPaidOff: String(row.property_paid_off || ''),
+            mortgageBalance: String(row.mortgage_balance || ''),
+            conditionIssues,
+            issueNotes: String(row.issue_notes || ''),
+            status: String(row.status || 'new'),
+            createdAt: row.created_at
+          };
+        })
+      : [];
+
+    return res.json({ submissions });
+  } catch (error) {
+    console.error('Failed to load user property submissions:', error);
+    return res.status(500).json({ error: 'Unable to load your submitted properties.' });
   }
 });
 
@@ -23010,6 +23303,35 @@ app.delete('/api/profile/avatar', async (req, res) => {
   } catch (error) {
     console.error('Failed to delete profile avatar:', error);
     return res.status(500).json({ error: 'Failed to delete the profile image.' });
+  }
+});
+
+app.get('/api/analytics/state', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    return res.json({ state: await getUserAnalyticsState(Number(decoded.id) || 0) });
+  } catch (error) {
+    console.error('Failed to load analytics state:', error);
+    return res.status(500).json({ error: 'Failed to load analytics state.' });
+  }
+});
+
+app.put('/api/analytics/state', express.json({ limit: '2mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const savedState = await saveUserAnalyticsState(Number(decoded.id) || 0, req.body?.state);
+    return res.json({ state: savedState });
+  } catch (error) {
+    console.error('Failed to save analytics state:', error);
+    return res.status(500).json({ error: 'Failed to save analytics state.' });
   }
 });
 
@@ -24385,26 +24707,20 @@ app.post('/api/send-agent-email', async (req, res) => {
 
 // Get all users for authenticated UI selectors
 app.get('/api/users', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
   }
 
-  try {
-    jwt.verify(token, JWT_SECRET);
-    await syncLoriaBrokerAccount();
-    await purgeSuppressedAccounts();
+  await syncLoriaBrokerAccount();
+  await purgeSuppressedAccounts();
 
-    db.all('SELECT id, name, email, role, created_at, last_login FROM users', (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      return res.json({ users: (rows || []).filter((row) => !isSuppressedAccountIdentity(row)) });
-    });
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  db.all('SELECT id, name, email, role, created_at, last_login FROM users', (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    return res.json({ users: (rows || []).filter((row) => !isSuppressedAccountIdentity(row)) });
+  });
 });
 
 app.get('/api/messages/users', async (req, res) => {
