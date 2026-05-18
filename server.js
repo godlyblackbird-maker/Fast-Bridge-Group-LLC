@@ -3120,6 +3120,25 @@ function normalizeTwilioPlatformIdentity(value) {
   return normalizeSmsPhone(raw) || raw.toUpperCase();
 }
 
+function getCanonicalTwilioPlatformIdentity({ platformIdentity, twilioNumber, fromNumber, toNumber } = {}) {
+  const normalizedTwilioNumber = normalizeSmsPhone(twilioNumber);
+  if (normalizedTwilioNumber) {
+    return normalizedTwilioNumber;
+  }
+
+  const normalizedFromNumber = normalizeSmsPhone(fromNumber);
+  if (normalizedFromNumber) {
+    return normalizedFromNumber;
+  }
+
+  const normalizedToNumber = normalizeSmsPhone(toNumber);
+  if (normalizedToNumber) {
+    return normalizedToNumber;
+  }
+
+  return normalizeTwilioPlatformIdentity(platformIdentity);
+}
+
 function buildTwilioConversationKey(contactPhone, platformIdentity) {
   const normalizedContact = normalizeSmsPhone(contactPhone) || String(contactPhone || '').trim();
   const normalizedPlatform = normalizeTwilioPlatformIdentity(platformIdentity);
@@ -3725,9 +3744,14 @@ function getTwilioMessageOffersEmail(rowOrPayload) {
   return extractEmailAddress(rowOrPayload?.body || source.Body || source.body || '');
 }
 
-function getTwilioConversationDetails({ contactPhone, platformIdentity }) {
+function getTwilioConversationDetails({ contactPhone, platformIdentity, twilioNumber, fromNumber, toNumber }) {
   const normalizedContactPhone = normalizeSmsPhone(contactPhone);
-  const normalizedPlatformIdentity = normalizeTwilioPlatformIdentity(platformIdentity);
+  const normalizedPlatformIdentity = getCanonicalTwilioPlatformIdentity({
+    platformIdentity,
+    twilioNumber,
+    fromNumber,
+    toNumber
+  });
   return {
     contactPhone: normalizedContactPhone,
     platformIdentity: normalizedPlatformIdentity,
@@ -3739,7 +3763,13 @@ function getTwilioConversationDetailsFromPayload(payload, direction) {
   const inbound = String(direction || '').trim().toLowerCase() === 'inbound';
   const contactPhone = inbound ? payload?.From : payload?.To;
   const platformIdentity = payload?.MessagingServiceSid || (inbound ? payload?.To : payload?.From);
-  return getTwilioConversationDetails({ contactPhone, platformIdentity });
+  return getTwilioConversationDetails({
+    contactPhone,
+    platformIdentity,
+    twilioNumber: inbound ? payload?.To : payload?.From,
+    fromNumber: payload?.From,
+    toNumber: payload?.To
+  });
 }
 
 function serializeTwilioInboxMessage(row) {
@@ -4745,24 +4775,68 @@ async function listTwilioInboxConversations() {
 }
 
 async function listTwilioInboxMessages(conversationKey) {
-  return dbAll(
-    `SELECT *
-       FROM twilio_inbox_messages
-      WHERE conversation_key = ?
-      ORDER BY datetime(created_at) ASC, id ASC`,
-    [String(conversationKey || '').trim()]
-  );
-}
+  const normalizedConversationKey = String(conversationKey || '').trim();
+  if (!normalizedConversationKey) {
+    return [];
+  }
 
-async function getLatestTwilioConversationRow(conversationKey) {
-  return dbGet(
-    `SELECT *
+  const seedRow = await dbGet(
+    `SELECT contact_phone
        FROM twilio_inbox_messages
       WHERE conversation_key = ?
       ORDER BY datetime(created_at) DESC, id DESC
       LIMIT 1`,
-    [String(conversationKey || '').trim()]
+    [normalizedConversationKey]
   );
+  const normalizedContactPhone = normalizeSmsPhone(seedRow?.contact_phone || '');
+  if (!normalizedContactPhone) {
+    return dbAll(
+      `SELECT *
+         FROM twilio_inbox_messages
+        WHERE conversation_key = ?
+        ORDER BY datetime(created_at) ASC, id ASC`,
+      [normalizedConversationKey]
+    );
+  }
+
+  const seedConversationRows = await dbAll(
+    `SELECT *
+       FROM twilio_inbox_messages
+      WHERE conversation_key = ?
+      ORDER BY datetime(created_at) ASC, id ASC`,
+    [normalizedConversationKey]
+  );
+  const resolvedOwnerEmail = seedConversationRows
+    .map((row) => normalizeKnownEmail(getAssignedTwilioOwnerEmailForNumber(extractTwilioInboxNumber(row)) || row?.owner_email || ''))
+    .find(Boolean);
+  const phoneRows = await dbAll(
+    `SELECT *
+       FROM twilio_inbox_messages
+      WHERE contact_phone = ?
+      ORDER BY datetime(created_at) ASC, id ASC`,
+    [normalizedContactPhone]
+  );
+
+  if (!resolvedOwnerEmail) {
+    return phoneRows;
+  }
+
+  const filteredRows = phoneRows.filter((row) => {
+    const assignedOwnerEmail = normalizeKnownEmail(getAssignedTwilioOwnerEmailForNumber(extractTwilioInboxNumber(row)));
+    const rowOwnerEmail = normalizeKnownEmail(row?.owner_email || '');
+    return assignedOwnerEmail === resolvedOwnerEmail
+      || rowOwnerEmail === resolvedOwnerEmail
+      || String(row?.conversation_key || '').trim() === normalizedConversationKey;
+  });
+
+  return filteredRows.length
+    ? filteredRows
+    : phoneRows.filter((row) => String(row?.conversation_key || '').trim() === normalizedConversationKey);
+}
+
+async function getLatestTwilioConversationRow(conversationKey) {
+  const rows = await listTwilioInboxMessages(conversationKey);
+  return Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null;
 }
 
 async function findTwilioConversationByPhone(phone) {
@@ -5115,7 +5189,10 @@ async function sendTwilioCampaignMessages({ body, campaignName, recipients, medi
       const message = await client.messages.create(payload);
       const details = getTwilioConversationDetails({
         contactPhone: normalizedPhone,
-        platformIdentity: payload.messagingServiceSid || payload.from || config.messagingServiceSid || config.fromNumber
+        platformIdentity: payload.messagingServiceSid || payload.from || config.messagingServiceSid || config.fromNumber,
+        twilioNumber: config.fromNumber || payload.from || '',
+        fromNumber: payload.from,
+        toNumber: payload.to
       });
       const storedRow = await upsertTwilioInboxMessage({
         messageSid: String(message.sid || '').trim(),
@@ -5259,14 +5336,21 @@ function initializeTwilioScheduledMessageWorker() {
 }
 
 async function markTwilioConversationRead(conversationKey) {
+  const rows = await listTwilioInboxMessages(conversationKey);
+  const conversationKeys = Array.from(new Set((Array.isArray(rows) ? rows : []).map((row) => String(row?.conversation_key || '').trim()).filter(Boolean)));
+  if (!conversationKeys.length) {
+    return;
+  }
+
+  const placeholders = conversationKeys.map(() => '?').join(', ');
   await dbRun(
     `UPDATE twilio_inbox_messages
         SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP),
             updated_at = CURRENT_TIMESTAMP
-      WHERE conversation_key = ?
+      WHERE conversation_key IN (${placeholders})
         AND direction = 'inbound'
         AND read_at IS NULL`,
-    [String(conversationKey || '').trim()]
+    conversationKeys
   );
 }
 
@@ -5319,14 +5403,21 @@ async function sendTwilioInboxOutboundMessage({ req, conversationKey, latestRow,
   }
 
   const message = await client.messages.create(payload);
+  const details = getTwilioConversationDetails({
+    contactPhone: String(conversationRow.contact_phone || '').trim(),
+    platformIdentity: String(conversationRow.platform_identity || '').trim(),
+    twilioNumber: config.fromNumber || payload.from || '',
+    fromNumber: payload.from,
+    toNumber: payload.to
+  });
   const storedRow = await upsertTwilioInboxMessage({
     messageSid: String(message.sid || '').trim(),
     accountSid: String(message.accountSid || config.accountSid || '').trim(),
-    conversationKey: normalizedConversationKey,
+    conversationKey: details.conversationKey || normalizedConversationKey,
     campaignName: String(campaignName || conversationRow.campaign_name || '').trim(),
     contactName: String(conversationRow.contact_name || '').trim(),
-    contactPhone: String(conversationRow.contact_phone || '').trim(),
-    platformIdentity: String(conversationRow.platform_identity || '').trim(),
+    contactPhone: details.contactPhone || String(conversationRow.contact_phone || '').trim(),
+    platformIdentity: details.platformIdentity || String(conversationRow.platform_identity || '').trim(),
     ownerUserId: Number(ownerUser?.id) || null,
     ownerName: String(ownerUser?.name || '').trim(),
     ownerEmail: String(ownerUser?.email || '').trim().toLowerCase(),
@@ -5361,12 +5452,20 @@ async function updateTwilioConversationContactName(conversationKey, contactName)
     return null;
   }
 
+  const rows = await listTwilioInboxMessages(normalizedConversationKey);
+  const conversationKeys = Array.from(new Set((Array.isArray(rows) ? rows : []).map((row) => String(row?.conversation_key || '').trim()).filter(Boolean)));
+  if (!conversationKeys.length) {
+    return null;
+  }
+
+  const placeholders = conversationKeys.map(() => '?').join(', ');
+
   await dbRun(
     `UPDATE twilio_inbox_messages
         SET contact_name = ?,
             updated_at = CURRENT_TIMESTAMP
-      WHERE conversation_key = ?`,
-    [normalizedContactName, normalizedConversationKey]
+      WHERE conversation_key IN (${placeholders})`,
+    [normalizedContactName, ...conversationKeys]
   );
 
   return getLatestTwilioConversationRow(normalizedConversationKey);
@@ -5378,7 +5477,14 @@ async function deleteTwilioConversation(conversationKey) {
     return 0;
   }
 
-  const result = await dbRun('DELETE FROM twilio_inbox_messages WHERE conversation_key = ?', [normalizedConversationKey]);
+  const rows = await listTwilioInboxMessages(normalizedConversationKey);
+  const conversationKeys = Array.from(new Set((Array.isArray(rows) ? rows : []).map((row) => String(row?.conversation_key || '').trim()).filter(Boolean)));
+  if (!conversationKeys.length) {
+    return 0;
+  }
+
+  const placeholders = conversationKeys.map(() => '?').join(', ');
+  const result = await dbRun(`DELETE FROM twilio_inbox_messages WHERE conversation_key IN (${placeholders})`, conversationKeys);
   return Math.max(Number(result?.changes) || 0, 0);
 }
 
@@ -24112,7 +24218,7 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
 
   try {
     const rows = await listTwilioInboxConversations();
-    const conversations = (await Promise.all(rows.map(async (row) => {
+    const accessibleConversations = (await Promise.all(rows.map(async (row) => {
       const access = await ensureTwilioConversationAccess(decoded, String(row.conversation_key || '').trim());
       if (!access.allowed) {
         return null;
@@ -24121,6 +24227,7 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
       const serializedLatestMessage = serializeTwilioInboxMessage(latestRow);
       const normalizedContactPhone = String(row.contact_phone || '').trim();
       return {
+        ownerEmail: String(access.ownerEmail || '').trim().toLowerCase(),
         conversationKey: String(row.conversation_key || '').trim(),
         campaignName: String(row.campaign_name || '').trim(),
         propertyAddress: String(serializedLatestMessage?.propertyAddress || '').trim(),
@@ -24139,6 +24246,46 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
         isBlocked: await isTwilioContactBlockedByPhone(normalizedContactPhone)
       };
     }))).filter(Boolean);
+
+    const mergedConversationMap = new Map();
+    accessibleConversations.forEach((conversation) => {
+      const mergeKey = `${String(conversation.contactPhone || '').trim()}::${String(conversation.ownerEmail || '').trim().toLowerCase()}`;
+      const existing = mergedConversationMap.get(mergeKey);
+      if (!existing) {
+        mergedConversationMap.set(mergeKey, {
+          ...conversation,
+          searchText: String(conversation.searchText || '').trim()
+        });
+        return;
+      }
+
+      const existingTime = Date.parse(String(existing.lastMessageAt || '')) || 0;
+      const nextTime = Date.parse(String(conversation.lastMessageAt || '')) || 0;
+      const preferredConversation = nextTime >= existingTime ? conversation : existing;
+
+      mergedConversationMap.set(mergeKey, {
+        ...existing,
+        ...preferredConversation,
+        unreadCount: Math.max(0, Number(existing.unreadCount) || 0) + Math.max(0, Number(conversation.unreadCount) || 0),
+        hasInboundReplies: Boolean(existing.hasInboundReplies || conversation.hasInboundReplies),
+        isBlocked: Boolean(existing.isBlocked || conversation.isBlocked),
+        searchText: [existing.searchText, conversation.searchText].filter(Boolean).join(' ').trim()
+      });
+    });
+
+    const conversations = Array.from(mergedConversationMap.values())
+      .map((conversation) => {
+        const { ownerEmail, ...rest } = conversation;
+        return rest;
+      })
+      .sort((left, right) => {
+        const rightTime = Date.parse(String(right.lastMessageAt || '')) || 0;
+        const leftTime = Date.parse(String(left.lastMessageAt || '')) || 0;
+        if (rightTime !== leftTime) {
+          return rightTime - leftTime;
+        }
+        return String(left.contactName || '').localeCompare(String(right.contactName || ''), undefined, { sensitivity: 'base' });
+      });
 
     return res.json({ conversations });
   } catch (error) {

@@ -4057,7 +4057,7 @@
                     item.innerHTML = `
                         <div>
                             <strong>${escapeCampaignReplyCopyHtml(row.templateName || row.templateKey || 'Untitled template')}</strong>
-                            <div class="outreach-meta">Sent ${Number(row.sentCount) || 0} Â· Replies ${Number(row.replyCount) || 0}</div>
+                            <div class="outreach-meta">Sent ${Number(row.sentCount) || 0} - Replies ${Number(row.replyCount) || 0}</div>
                         </div>
                         <span class="outreach-meta">${Number(row.replyRate) || 0}% reply rate</span>
                     `;
@@ -4087,7 +4087,7 @@
                     <div class="outreach-item">
                         <div>
                             <strong>${escapeCampaignReplyCopyHtml(conversation.contactName || conversation.contactPhone || 'Contact')}</strong>
-                            <div class="outreach-meta">${escapeCampaignReplyCopyHtml(conversation.contactPhone || '')} Â· ${escapeCampaignReplyCopyHtml(riskLevel)} risk</div>
+                            <div class="outreach-meta">${escapeCampaignReplyCopyHtml(conversation.contactPhone || '')} - ${escapeCampaignReplyCopyHtml(riskLevel)} risk</div>
                         </div>
                         <span class="outreach-meta">${escapeCampaignReplyCopyHtml(formatCampaignOutreachTimestamp(contact?.lastContactedAt))}</span>
                     </div>
@@ -4096,7 +4096,7 @@
                             <strong>Last response</strong>
                             <div class="outreach-meta">${escapeCampaignReplyCopyHtml(formatCampaignOutreachTimestamp(contact?.lastResponseAt))}</div>
                         </div>
-                        <span class="outreach-meta">Sent ${Number(contact?.sentCount) || 0} Â· Replies ${Number(contact?.responseCount) || 0}</span>
+                        <span class="outreach-meta">Sent ${Number(contact?.sentCount) || 0} - Replies ${Number(contact?.responseCount) || 0}</span>
                     </div>
                 `;
                 campaignOutreachTag.value = String(contact?.responseTag || 'new');
@@ -5760,7 +5760,7 @@
 
                     const meta = document.createElement('p');
                     meta.className = 'campaign-media-meta';
-                    meta.textContent = [formatFileSize(item?.fileSize), fileType].filter(Boolean).join(' â€¢ ');
+                    meta.textContent = [formatFileSize(item?.fileSize), fileType].filter(Boolean).join(' - ');
 
                     const removeButton = document.createElement('button');
                     removeButton.type = 'button';
@@ -6202,7 +6202,7 @@
                     const meta = document.createElement('span');
                     meta.className = 'campaign-reply-conversation-meta';
                     meta.textContent = conversation.campaignName
-                        ? `${conversation.contactPhone} â€¢ ${conversation.campaignName}`
+                        ? `${conversation.contactPhone} - ${conversation.campaignName}`
                         : conversation.contactPhone;
 
                     const badge = document.createElement('span');
@@ -6518,7 +6518,7 @@
                     campaignReplyTitle.textContent = draftName || 'New Twilio text';
                     setCampaignReplyAddress('');
                     setCampaignReplyOffersEmail('');
-                    campaignReplySubtitle.textContent = `${draftPhone} â€¢ First outbound Twilio text`;
+                    campaignReplySubtitle.textContent = `${draftPhone} - First outbound Twilio text`;
                     setCampaignReplyComposerEnabled(true);
                     syncCampaignReplyBlockState(false);
                     syncCampaignReplyScheduledStatus();
@@ -6549,8 +6549,8 @@
                 setCampaignReplyAddress(getConversationPropertyAddress(conversation));
                 setCampaignReplyOffersEmail(getConversationOffersEmail(conversation));
                 campaignReplySubtitle.textContent = conversation.campaignName
-                    ? `${conversation.contactPhone} â€¢ ${conversation.campaignName}${conversation.isBlocked ? ' â€¢ Outbound blocked, inbound allowed' : ''}`
-                    : `${conversation.contactPhone} â€¢ Direct Twilio thread${conversation.isBlocked ? ' â€¢ Outbound blocked, inbound allowed' : ''}`;
+                    ? `${conversation.contactPhone} - ${conversation.campaignName}${conversation.isBlocked ? ' - Outbound blocked, inbound allowed' : ''}`
+                    : `${conversation.contactPhone} - Direct Twilio thread${conversation.isBlocked ? ' - Outbound blocked, inbound allowed' : ''}`;
                 setCampaignReplyComposerEnabled(true);
                 syncCampaignReplyBlockState(Boolean(conversation.isBlocked));
                 syncCampaignReplyScheduledStatus();
@@ -6614,7 +6614,7 @@
 
                     const meta = document.createElement('span');
                     meta.className = 'campaign-reply-thread-meta';
-                    meta.textContent = `${message.isScheduledPending ? 'Scheduled' : (message.direction === 'outgoing' ? 'Sent' : 'Reply')} â€¢ ${formatCampaignReplyTimestamp(message.createdAt)}`;
+                    meta.textContent = `${message.isScheduledPending ? 'Scheduled' : (message.direction === 'outgoing' ? 'Sent' : 'Reply')} - ${formatCampaignReplyTimestamp(message.createdAt)}`;
 
                     foot.appendChild(meta);
 
@@ -6622,7 +6622,7 @@
                         const status = document.createElement('span');
                         status.className = 'campaign-reply-status-tag';
                         status.textContent = message.errorMessage
-                            ? `${message.status || 'error'} â€¢ ${message.errorMessage}`
+                            ? `${message.status || 'error'} - ${message.errorMessage}`
                             : (message.status || 'queued');
                         foot.appendChild(status);
                     }
@@ -6692,7 +6692,10 @@
                     }
 
                     if (!hasActiveTwilioDraftContact() && (!activeTwilioConversationKey || !twilioInboxConversations.some((item) => item.conversationKey === activeTwilioConversationKey))) {
-                        activeTwilioConversationKey = options.preferredConversationKey || (twilioInboxConversations[0]?.conversationKey || '');
+                        const preferredConversation = options.preferredConversationKey
+                            ? twilioInboxConversations.find((item) => item.conversationKey === options.preferredConversationKey)
+                            : null;
+                        activeTwilioConversationKey = preferredConversation?.conversationKey || (twilioInboxConversations[0]?.conversationKey || '');
                     }
 
                     setCampaignRepliesStatus(

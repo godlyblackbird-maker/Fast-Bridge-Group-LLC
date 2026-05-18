@@ -1114,6 +1114,11 @@
             const COPIED_STORAGE_KEY_BASE = 'myAgentsSheetCopiedRows';
             const PHONE_COPIED_STORAGE_KEY_BASE = 'myAgentsSheetPhoneCopiedRows';
             const LEGACY_STORAGE_KEY = STORAGE_KEY_BASE;
+            const ISAAC_MY_AGENTS_EMAILS = new Set([
+                'isaac.haro@fastbridgegroupllc.com',
+                'isaacs.hesed@gmail.com',
+                'isaacs.hesed@fastbridgegroup.com'
+            ]);
 
             function safeReadJson(key) {
                 try {
@@ -1140,21 +1145,19 @@
                 return `${STORAGE_KEY_BASE}:${getUserContext().userKey}`;
             }
 
+            function canUseLegacyMyAgentsSheet() {
+                const userContext = getUserContext();
+                const normalizedName = String(userContext.name || '').trim().toLowerCase();
+                return ISAAC_MY_AGENTS_EMAILS.has(String(userContext.email || '').trim().toLowerCase())
+                    || normalizedName === 'isaac haro';
+            }
+
             function getAllMyAgentsStorageKeys() {
-                const keys = [getStorageKey(), LEGACY_STORAGE_KEY];
-
-                try {
-                    for (let index = 0; index < localStorage.length; index += 1) {
-                        const storageKey = String(localStorage.key(index) || '');
-                        if (storageKey === LEGACY_STORAGE_KEY || storageKey.startsWith(`${STORAGE_KEY_BASE}:`)) {
-                            keys.push(storageKey);
-                        }
-                    }
-                } catch (error) {
-                    // Ignore localStorage enumeration failures and fall back to the current key set.
+                const keys = [getStorageKey()];
+                if (canUseLegacyMyAgentsSheet()) {
+                    keys.push(LEGACY_STORAGE_KEY);
                 }
-
-                return Array.from(new Set(keys.filter(Boolean)));
+                return keys.filter(Boolean);
             }
 
             function getCopiedStorageKey() {
@@ -2183,8 +2186,6 @@
 
             function loadRows() {
                 const storageCandidates = getAllMyAgentsStorageKeys();
-                let bestRecoveredRows = null;
-
                 for (const storageKey of storageCandidates) {
                     try {
                         const stored = localStorage.getItem(storageKey);
@@ -2199,25 +2200,18 @@
 
                         const normalized = dedupeRows(parsed.map(normalizeStoredRow).filter(Boolean));
                         if (normalized.length > 0) {
-                            if (storageKey === getStorageKey() || storageKey === LEGACY_STORAGE_KEY) {
-                                if (storageKey !== getStorageKey()) {
-                                    localStorage.setItem(getStorageKey(), JSON.stringify(normalized));
-                                }
+                            if (storageKey === getStorageKey()) {
                                 return normalized;
                             }
 
-                            if (!bestRecoveredRows || normalized.length > bestRecoveredRows.length) {
-                                bestRecoveredRows = normalized;
+                            if (storageKey === LEGACY_STORAGE_KEY && canUseLegacyMyAgentsSheet()) {
+                                localStorage.setItem(getStorageKey(), JSON.stringify(normalized));
+                                return normalized;
                             }
                         }
                     } catch (error) {
                         // Ignore invalid stored values.
                     }
-                }
-
-                if (bestRecoveredRows && bestRecoveredRows.length > 0) {
-                    localStorage.setItem(getStorageKey(), JSON.stringify(bestRecoveredRows));
-                    return bestRecoveredRows;
                 }
 
                 return DEFAULT_ROWS.slice();

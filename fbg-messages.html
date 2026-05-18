@@ -2365,7 +2365,7 @@
                             <div class="messages-pending-attachment-top">
                                 <p class="messages-pending-attachment-name">${escapeHtml(attachment.fileName || 'Attachment')}</p>
                             </div>
-                            <p class="messages-pending-attachment-meta">${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` â€¢ ${escapeHtml(attachment.fileType)}` : ''}</p>
+                            <p class="messages-pending-attachment-meta">${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` - ${escapeHtml(attachment.fileType)}` : ''}</p>
                         </div>
                     `;
                     const pendingTop = chip.querySelector('.messages-pending-attachment-top');
@@ -2450,7 +2450,7 @@
                     String(pendingSharedProperty.listPrice || '').trim(),
                     String(pendingSharedProperty.marketInfo || '').trim(),
                     String(pendingSharedProperty.propertyDetails || '').trim()
-                ].filter(Boolean).join(' â€¢ ') || 'This property will send as a clickable item in the thread.';
+                ].filter(Boolean).join(' - ') || 'This property will send as a clickable item in the thread.';
             }
 
             function syncPendingSharedPropertyFromUrl() {
@@ -2570,7 +2570,7 @@
 
                 const meta = document.createElement('p');
                 meta.className = 'messages-shared-property-meta';
-                meta.textContent = [property.listPrice || '', property.marketInfo || ''].filter(Boolean).join(' â€¢ ') || 'Open this property in FAST.';
+                meta.textContent = [property.listPrice || '', property.marketInfo || ''].filter(Boolean).join(' - ') || 'Open this property in FAST.';
                 linkButton.appendChild(meta);
 
                 if (property.propertyDetails) {
@@ -2736,7 +2736,7 @@
                     const appendMeta = () => {
                         const meta = document.createElement('div');
                         meta.className = 'messages-chat-bubble-meta';
-                        meta.textContent = `${formatDateTime(message.createdAt || '')}${message.editedAt ? ' â€¢ edited' : ''}`;
+                        meta.textContent = `${formatDateTime(message.createdAt || '')}${message.editedAt ? ' - edited' : ''}`;
                         article.appendChild(meta);
 
                         const reactions = buildMessageReactionRow(message);
@@ -2782,7 +2782,7 @@
                                         <div class="messages-chat-attachment-head">
                                             <strong>${escapeHtml(attachment.fileName || 'Attachment')}</strong>
                                         </div>
-                                        <span>${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` â€¢ ${escapeHtml(attachment.fileType)}` : ''}</span>
+                                        <span>${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` - ${escapeHtml(attachment.fileType)}` : ''}</span>
                                     </div>
                                 `;
                                 const attachmentHead = link.querySelector('.messages-chat-attachment-head');
@@ -2859,7 +2859,7 @@
                         panelTitle.textContent = selectedUserRecord.name;
                     }
                     if (panelSubtitle) {
-                        panelSubtitle.textContent = `${selectedUserRecord.email} â€¢ ${selectedUserRecord.role}`;
+                        panelSubtitle.textContent = `${selectedUserRecord.email} - ${selectedUserRecord.role}`;
                     }
 
                     clearPendingSharedProperty();
@@ -2881,7 +2881,7 @@
                 }
                 if (panelSubtitle) {
                     panelSubtitle.textContent = selectedUserRecord && selectedUserRecord.email
-                        ? `${selectedUserRecord.email} â€¢ ${selectedUserRecord.role || 'user'}`
+                        ? `${selectedUserRecord.email} - ${selectedUserRecord.role || 'user'}`
                         : 'Direct messages inside FAST.';
                 }
 

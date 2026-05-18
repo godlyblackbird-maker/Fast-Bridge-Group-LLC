@@ -1262,6 +1262,11 @@
       return false;
     }
 
+    if (hasKnownRole && !isAdminUser(userLike) && isAdminControlsPage) {
+      window.location.href = '/dashboard.html';
+      return false;
+    }
+
     return true;
   }
 
@@ -2730,7 +2735,7 @@
         });
       }
 
-      if (getFeatureAccessRoleKey(activeUser) === 'premium user') {
+      if (['premium user', 'broker', TEST_USER_ROLE].includes(getFeatureAccessRoleKey(activeUser))) {
         document.querySelectorAll('.nav-link[href="admin-controls.html"], .nav-link[href="/admin-controls.html"]').forEach((link) => {
           applyLockedAdminOnlyLink(link);
         });
