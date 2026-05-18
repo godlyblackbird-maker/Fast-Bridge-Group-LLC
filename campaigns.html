@@ -3073,38 +3073,86 @@
                                 MLS Search
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a href="deals.html" class="nav-link">
-                                <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
-                                My Deals
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="gmail.html" class="nav-link">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                    <path d="M3 7l9 6 9-6"/>
-                                </svg>
-                                Gmail
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="campaigns.html" class="nav-link active">
-                                <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
-                                Twilio Messaging
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="users.html" class="nav-link">
-                                <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
-                                Agent workspace
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="trainings.html" class="nav-link">
-                                <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
-                                Trainings
-                            </a>
+                        <li class="nav-item nav-group" data-collapsed="false">
+                            <button type="button" class="nav-group-toggle" aria-expanded="true" aria-label="Collapse workspace tabs">
+                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
+                                <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </span>
+                                <span class="nav-group-toggle-line" aria-hidden="true"></span>
+                            </button>
+                            <ul class="nav-group-list">
+                                <li class="nav-item">
+                                    <a href="campaigns.html" class="nav-link active">
+                                        <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
+                                        Twilio Messaging
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="my-agents.html" class="nav-link">
+                                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                            <circle cx="9" cy="7" r="4"/>
+                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                        </svg>
+                                        My Agents
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="deals.html" class="nav-link">
+                                        <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
+                                        My Deals
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="gmail.html" class="nav-link">
+                                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                            <path d="M3 7l9 6 9-6"/>
+                                        </svg>
+                                        Gmail
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="community.html" class="nav-link">
+                                        <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
+                                        Community
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="fbg-messages.html" class="nav-link">
+                                        <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
+                                        FBG Messaging
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="fbg-studio.html" class="nav-link">
+                                        <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
+                                        Recording Studio
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="users.html" class="nav-link">
+                                        <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
+                                        Agent Workspace
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="word-document-maker.html" class="nav-link">
+                                        <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
+                                        Page Processor
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="trainings.html" class="nav-link">
+                                        <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
+                                        Trainings
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                         <li class="nav-item">
                             <a href="settings.html" class="nav-link">
@@ -3562,7 +3610,31 @@
         </svg>
     </button>
 
-    <script src="templatemo-glass-admin-script.js?v=20260503c"></script>
+    <script src="templatemo-glass-admin-script.js?v=20260517b"></script>
+    <script>
+        window.addEventListener('load', () => {
+            const removeLegacySpreadsheetLink = () => {
+                document.querySelectorAll('.sidebar .nav-link[href="mls-imports-spreadsheet.html"]').forEach((link) => {
+                    const navItem = link.closest('.nav-item');
+                    if (navItem) {
+                        navItem.remove();
+                    }
+                });
+            };
+
+            const sidebarNav = document.querySelector('.sidebar .nav-menu');
+            removeLegacySpreadsheetLink();
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(removeLegacySpreadsheetLink);
+            }
+            if (sidebarNav && typeof MutationObserver === 'function') {
+                const legacyLinkObserver = new MutationObserver(() => {
+                    removeLegacySpreadsheetLink();
+                });
+                legacyLinkObserver.observe(sidebarNav, { childList: true, subtree: true });
+            }
+        });
+    </script>
     <script src="auth.js"></script>
     <script src="profile.js"></script>
     <script>

@@ -1319,6 +1319,17 @@ https://templatemo.com/tm-607-glass-admin
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My Agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="deals.html" class="nav-link">
                                 <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
                                 My Deals
@@ -1346,9 +1357,27 @@ https://templatemo.com/tm-607-glass-admin
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="fbg-messages.html" class="nav-link">
+                                <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
+                                FBG Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-studio.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
+                                Recording Studio
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="users.html" class="nav-link">
                                 <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
                                 Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="word-document-maker.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
+                                Page Processor
                             </a>
                         </li>
                         <li class="nav-item">
@@ -1380,17 +1409,6 @@ https://templatemo.com/tm-607-glass-admin
                                     <path d="M12 16v4"/>
                                 </svg>
                                 Admin Controls
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="my-agents.html" class="nav-link">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="9" cy="7" r="4"/>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                </svg>
-                                My agents
                             </a>
                         </li>
                         <li class="nav-item">
@@ -1754,24 +1772,914 @@ https://templatemo.com/tm-607-glass-admin
         </div>
     </div>
 
-    <script src="templatemo-glass-admin-script.js?v=20260503c"></script>
+    <script src="templatemo-glass-admin-script.js?v=20260517b"></script>
     <script src="auth.js"></script>
     <script src="profile.js"></script>
-    <!-- TemplateMo 607 Glass Admin -->
-</body>
-        <!-- Auto-update for live site -->
-        <script>
-            // Poll for changes every 2 seconds and reload if content changes
-            setInterval(() => {
-                fetch(window.location.href, { cache: 'no-store' })
-                    .then(resp => resp.ok ? resp.text() : null)
-                    .then(html => {
-                        if (html && window.__lastPageSnapshot && html !== window.__lastPageSnapshot) {
-                            window.location.reload();
+    <script>
+        window.addEventListener('load', () => {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) {
+                return;
+            }
+
+            const mainMenuSection = Array.from(sidebar.querySelectorAll('.nav-section')).find((section) => {
+                const title = section.querySelector('.nav-section-title');
+                return /main menu/i.test(String(title && title.textContent || ''));
+            });
+            const menuList = mainMenuSection ? mainMenuSection.querySelector('ul') : null;
+            if (!menuList) {
+                return;
+            }
+
+            const groupedOrder = [
+                'campaigns.html',
+                'my-agents.html',
+                'deals.html',
+                'gmail.html',
+                'community.html',
+                'fbg-messages.html',
+                'fbg-studio.html',
+                'users.html',
+                'word-document-maker.html',
+                'trainings.html'
+            ];
+            const groupedHrefSet = new Set(groupedOrder);
+            const normalizeHref = (value) => String(value || '').trim().replace(/^\.?\//, '').toLowerCase();
+            const itemMap = new Map();
+
+            Array.from(menuList.querySelectorAll('.nav-item')).forEach((item) => {
+                const link = item.querySelector('.nav-link[href]');
+                const href = normalizeHref(link && link.getAttribute('href'));
+                if (!href || itemMap.has(href)) {
+                    return;
+                }
+                itemMap.set(href, item);
+            });
+
+            const spreadsheetItem = itemMap.get('mls-imports-spreadsheet.html');
+            if (spreadsheetItem) {
+                spreadsheetItem.remove();
+                itemMap.delete('mls-imports-spreadsheet.html');
+            }
+
+            const groupedItems = groupedOrder
+                .map((href) => itemMap.get(href))
+                .filter(Boolean);
+
+            if (groupedItems.length < 2) {
+                return;
+            }
+
+            const currentPage = normalizeHref(String(window.location.pathname || '').split('/').pop());
+            const hasActiveItem = groupedItems.some((item) => {
+                const link = item.querySelector('.nav-link[href]');
+                return normalizeHref(link && link.getAttribute('href')) === currentPage;
+            });
+
+            let groupItem = menuList.querySelector(':scope > .nav-group');
+            if (!groupItem) {
+                groupItem = document.createElement('li');
+                groupItem.className = 'nav-item nav-group';
+            }
+
+            let toggleButton = groupItem.querySelector('.nav-group-toggle');
+            if (!toggleButton) {
+                toggleButton = document.createElement('button');
+                toggleButton.type = 'button';
+                toggleButton.className = 'nav-group-toggle';
+                toggleButton.innerHTML = `
+                    <span class="nav-group-toggle-line" aria-hidden="true"></span>
+                    <span class="nav-icon nav-group-toggle-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </span>
+                    <span class="nav-group-toggle-line" aria-hidden="true"></span>
+                `;
+                groupItem.appendChild(toggleButton);
+            }
+
+            let groupList = groupItem.querySelector('.nav-group-list');
+            if (!groupList) {
+                groupList = document.createElement('ul');
+                groupList.className = 'nav-group-list';
+                groupItem.appendChild(groupList);
+            }
+
+            groupedItems.forEach((item) => {
+                item.remove();
+            });
+            groupList.replaceChildren(...groupedItems);
+
+            const storageKey = 'mainMenuWorkspaceGroupCollapsed';
+            const readCollapsed = () => {
+                try {
+                    return localStorage.getItem(storageKey) === 'true';
+                } catch (error) {
+                    return false;
+                }
+            };
+            const writeCollapsed = (collapsed) => {
+                try {
+                    localStorage.setItem(storageKey, collapsed ? 'true' : 'false');
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+            };
+
+            const setCollapsedState = (collapsed, options = {}) => {
+                const shouldCollapse = Boolean(collapsed);
+                groupItem.dataset.collapsed = shouldCollapse ? 'true' : 'false';
+                groupList.hidden = shouldCollapse;
+                toggleButton.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
+                toggleButton.setAttribute('aria-label', shouldCollapse ? 'Expand workspace tabs' : 'Collapse workspace tabs');
+                if (!options.skipPersist) {
+                    writeCollapsed(shouldCollapse);
+                }
+            };
+
+            if (toggleButton.dataset.dashboardGroupBound !== 'true') {
+                toggleButton.dataset.dashboardGroupBound = 'true';
+                toggleButton.addEventListener('click', () => {
+                    setCollapsedState(groupItem.dataset.collapsed !== 'true');
+                });
+            }
+
+            const settingsItem = itemMap.get('settings.html');
+            if (settingsItem && settingsItem.parentElement === menuList) {
+                menuList.insertBefore(groupItem, settingsItem);
+            } else if (!groupItem.parentElement) {
+                menuList.appendChild(groupItem);
+            }
+            setCollapsedState(readCollapsed() && !hasActiveItem, { skipPersist: true });
+        });
+    </script>
+    <script>
+        window.addEventListener('load', () => {
+            const removeLegacySpreadsheetLink = () => {
+                document.querySelectorAll('.sidebar .nav-link[href="mls-imports-spreadsheet.html"]').forEach((link) => {
+                    const navItem = link.closest('.nav-item');
+                    if (navItem) {
+                        navItem.remove();
+                    }
+                });
+            };
+
+            const sidebarNav = document.querySelector('.sidebar-nav');
+
+            removeLegacySpreadsheetLink();
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(removeLegacySpreadsheetLink);
+            }
+            if (sidebarNav && typeof MutationObserver === 'function') {
+                const legacyLinkObserver = new MutationObserver(() => {
+                    removeLegacySpreadsheetLink();
+                });
+                legacyLinkObserver.observe(sidebarNav, { childList: true, subtree: true });
+            }
+
+            const calendarGrid = document.getElementById('calendar-grid');
+            const monthLabel = document.getElementById('calendar-month-label');
+            const selectedSummary = document.getElementById('calendar-selected-summary');
+            const selectedDateLabel = document.getElementById('calendar-selected-date');
+            const detailSummary = document.getElementById('calendar-detail-summary');
+            const calendarStage = document.getElementById('calendar-stage');
+            const prevMonthButton = document.getElementById('calendar-prev-month');
+            const nextMonthButton = document.getElementById('calendar-next-month');
+            const backButton = document.getElementById('calendar-back-btn');
+
+            if (!calendarGrid || !monthLabel || !selectedDateLabel || calendarGrid.children.length > 0 || monthLabel.textContent.trim() !== 'Calendar') {
+                return;
+            }
+
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const plannerStorageKey = 'personalTodoGoalsByUser';
+            const today = new Date();
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            let currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            let selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+            const formatMonth = (date) => new Intl.DateTimeFormat('en-US', {
+                month: 'long',
+                year: 'numeric'
+            }).format(date);
+
+            const formatHeading = (date) => new Intl.DateTimeFormat('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+            }).format(date);
+
+            const sameDay = (left, right) => left.getFullYear() === right.getFullYear()
+                && left.getMonth() === right.getMonth()
+                && left.getDate() === right.getDate();
+
+            const getPlannerDateKey = (value) => {
+                if (!value) {
+                    return '';
+                }
+
+                if (value instanceof Date) {
+                    if (Number.isNaN(value.getTime())) {
+                        return '';
+                    }
+                    const year = value.getFullYear();
+                    const month = String(value.getMonth() + 1).padStart(2, '0');
+                    const day = String(value.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+
+                const normalized = String(value).trim();
+                const matched = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                return matched ? `${matched[1]}-${matched[2]}-${matched[3]}` : '';
+            };
+
+            const getWorkspaceUserKey = () => {
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                return email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+            };
+
+            const getWorkspaceUserName = () => {
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                return String(user.name || (canUseProfileIdentity ? profile.name : '') || 'You').trim() || 'You';
+            };
+
+            const getPlannerItems = () => {
+                try {
+                    const store = JSON.parse(localStorage.getItem(plannerStorageKey) || '{}');
+                    const userKey = getWorkspaceUserKey();
+                    return Array.isArray(store[userKey]) ? store[userKey] : [];
+                } catch (error) {
+                    return [];
+                }
+            };
+
+            const setPlannerItems = (items) => {
+                try {
+                    const store = JSON.parse(localStorage.getItem(plannerStorageKey) || '{}');
+                    store[getWorkspaceUserKey()] = Array.isArray(items) ? items : [];
+                    localStorage.setItem(plannerStorageKey, JSON.stringify(store));
+                } catch (error) {
+                    return;
+                }
+
+                window.dispatchEvent(new CustomEvent('dashboard-planner-updated', {
+                    detail: {
+                        userKey: getWorkspaceUserKey()
+                    }
+                }));
+            };
+
+            const getPlannerItemsForDate = (date) => {
+                try {
+                    const dateKey = getPlannerDateKey(date);
+                    const items = getPlannerItems();
+                    return items.filter((item) => getPlannerDateKey(item && item.dueDate) === dateKey);
+                } catch (error) {
+                    return [];
+                }
+            };
+
+            const getPlannerPriorityRank = (priority) => ({ p1: 1, p2: 2, p3: 3, p4: 4 })[String(priority || '').toLowerCase()] || 99;
+
+            const getCalendarDayPriority = (plannerItems) => {
+                const items = Array.isArray(plannerItems) ? plannerItems.filter(Boolean) : [];
+                if (!items.length) {
+                    return '';
+                }
+                return items
+                    .slice()
+                    .sort((left, right) => getPlannerPriorityRank(left.priority) - getPlannerPriorityRank(right.priority))[0]?.priority || 'p2';
+            };
+
+            const getCalendarPreviewLabel = (plannerItems) => {
+                const items = Array.isArray(plannerItems) ? plannerItems.filter(Boolean) : [];
+                if (!items.length) {
+                    return '';
+                }
+                const titles = items
+                    .slice(0, 3)
+                    .map((item) => String(item.title || 'Task').trim() || 'Task');
+                const suffix = items.length > 3 ? `, and ${items.length - 3} more` : '';
+                return `${items.length} planner task${items.length === 1 ? '' : 's'}: ${titles.join(', ')}${suffix}`;
+            };
+
+            const syncPlannerDateSelection = () => {
+                window.dispatchEvent(new CustomEvent('calendar-planner-date-change', {
+                    detail: {
+                        date: new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()),
+                        dateKey: getPlannerDateKey(selectedDate)
+                    }
+                }));
+            };
+
+            const updateSelectedDateSummary = () => {
+                const plannerItems = getPlannerItemsForDate(selectedDate);
+                const total = plannerItems.length;
+                if (selectedSummary) {
+                    selectedSummary.textContent = total === 0
+                        ? 'No planner items scheduled for this date'
+                        : `${total} planner item${total === 1 ? '' : 's'} scheduled for this date`;
+                }
+                if (detailSummary) {
+                    detailSummary.textContent = total === 0
+                        ? 'Add planner tasks for this day.'
+                        : `${total} planner item${total === 1 ? '' : 's'} tied to this date.`;
+                }
+            };
+
+            const openDetailView = () => {
+                if (calendarStage) {
+                    calendarStage.classList.add('detail-open');
+                }
+                selectedDateLabel.textContent = formatHeading(selectedDate);
+                updateSelectedDateSummary();
+                syncPlannerDateSelection();
+            };
+
+            const closeDetailView = () => {
+                if (calendarStage) {
+                    calendarStage.classList.remove('detail-open');
+                }
+                if (selectedSummary) {
+                    selectedSummary.textContent = 'Select a date to add notes or reminders';
+                }
+                syncPlannerDateSelection();
+            };
+
+            const initDashboardPlannerFallback = () => {
+                const ownerLabel = document.getElementById('todo-goal-owner-label');
+                const input = document.getElementById('planner-task-input');
+                const dateInput = document.getElementById('planner-task-date');
+                const prioritySelect = document.getElementById('planner-task-priority');
+                const reminderSelect = document.getElementById('planner-task-reminder');
+                const addButton = document.getElementById('planner-add-btn');
+                const list = document.getElementById('planner-task-list');
+                const countToday = document.getElementById('planner-count-today');
+                const countUpcoming = document.getElementById('planner-count-upcoming');
+                const countDone = document.getElementById('planner-count-done');
+                const filterButtons = Array.from(document.querySelectorAll('.planner-filter-btn[data-filter]'));
+
+                if (!ownerLabel || !input || !dateInput || !prioritySelect || !reminderSelect || !addButton || !list || filterButtons.length === 0) {
+                    return;
+                }
+
+                const ownerText = String(ownerLabel.textContent || '').trim();
+                const sharedPlannerReady = ownerText && !/^Workspace owner:\s*You$/i.test(ownerText) && dateInput.value;
+                if (sharedPlannerReady) {
+                    return;
+                }
+
+                ownerLabel.textContent = `Workspace owner: ${getWorkspaceUserName()}`;
+
+                let activeFilter = (filterButtons.find((button) => button.classList.contains('active')) || {}).dataset?.filter || 'selected-date';
+
+                const classifyItem = (item, todayKey) => {
+                    if (item && item.completed) {
+                        return 'done';
+                    }
+                    if (!item || !item.dueDate || item.dueDate <= todayKey) {
+                        return 'selected-date';
+                    }
+                    return 'upcoming';
+                };
+
+                const syncSelectedDateInput = (dateKey) => {
+                    const normalized = getPlannerDateKey(dateKey) || getPlannerDateKey(selectedDate);
+                    dateInput.value = normalized;
+                };
+
+                const renderPlannerList = () => {
+                    const todayKey = getPlannerDateKey(todayStart);
+                    const selectedDateKey = getPlannerDateKey(selectedDate);
+                    const items = getPlannerItems()
+                        .slice()
+                        .sort((left, right) => {
+                            const leftCompleted = Boolean(left && left.completed);
+                            const rightCompleted = Boolean(right && right.completed);
+                            if (leftCompleted !== rightCompleted) {
+                                return leftCompleted ? 1 : -1;
+                            }
+                            const priorityRank = { p1: 1, p2: 2, p3: 3, p4: 4 };
+                            const leftPriority = priorityRank[String(left && left.priority || '').toLowerCase()] || 5;
+                            const rightPriority = priorityRank[String(right && right.priority || '').toLowerCase()] || 5;
+                            if (leftPriority !== rightPriority) {
+                                return leftPriority - rightPriority;
+                            }
+                            return String(left && left.dueDate || '').localeCompare(String(right && right.dueDate || ''));
+                        });
+
+                    let selectedCount = 0;
+                    let upcomingCount = 0;
+                    let doneCount = 0;
+
+                    const visible = items.filter((item) => {
+                        const dueDateKey = getPlannerDateKey(item && item.dueDate);
+                        const bucket = classifyItem(item, todayKey);
+                        const isSelectedDateItem = !Boolean(item && item.completed) && dueDateKey === selectedDateKey;
+
+                        if (isSelectedDateItem) selectedCount += 1;
+                        if (bucket === 'upcoming') upcomingCount += 1;
+                        if (bucket === 'done') doneCount += 1;
+
+                        if (activeFilter === 'selected-date') {
+                            return isSelectedDateItem;
                         }
-                        window.__lastPageSnapshot = html;
+                        return bucket === activeFilter;
                     });
-            }, 2000);
-        </script>
+
+                    if (countToday) countToday.textContent = String(selectedCount);
+                    if (countUpcoming) countUpcoming.textContent = String(upcomingCount);
+                    if (countDone) countDone.textContent = String(doneCount);
+
+                    list.innerHTML = '';
+                    if (!visible.length) {
+                        list.innerHTML = '<p class="outreach-empty">No planner items yet.</p>';
+                        return;
+                    }
+
+                    visible.forEach((item) => {
+                        const card = document.createElement('article');
+                        card.className = 'planner-task-item';
+                        if (item && item.completed) {
+                            card.classList.add('is-complete');
+                        }
+                        if (item && item.dueDate && !item.completed && item.dueDate < todayKey) {
+                            card.classList.add('is-overdue');
+                        }
+
+                        const bubble = document.createElement('button');
+                        bubble.type = 'button';
+                        bubble.className = 'planner-check-bubble';
+                        bubble.setAttribute('aria-label', item && item.completed ? 'Mark task as incomplete' : 'Mark task as complete');
+                        bubble.innerHTML = '<span class="planner-check-dot"></span>';
+                        bubble.addEventListener('click', () => {
+                            const updated = getPlannerItems().map((entry) => {
+                                if (!entry || entry.id !== item.id) {
+                                    return entry;
+                                }
+
+                                return {
+                                    ...entry,
+                                    completed: !Boolean(entry.completed),
+                                    updatedAt: Date.now()
+                                };
+                            });
+                            setPlannerItems(updated);
+                            renderPlannerList();
+                        });
+
+                        const content = document.createElement('div');
+                        content.className = 'planner-task-content';
+
+                        const head = document.createElement('div');
+                        head.className = 'planner-task-head';
+
+                        const title = document.createElement('p');
+                        title.className = 'planner-task-title';
+                        title.textContent = String(item && item.title || 'Task').trim() || 'Task';
+
+                        const meta = document.createElement('div');
+                        meta.className = 'planner-task-meta';
+
+                        const priority = document.createElement('span');
+                        priority.className = `planner-priority planner-priority-${String(item && item.priority || 'p2').toLowerCase()}`;
+                        meta.appendChild(priority);
+
+                        const date = document.createElement('span');
+                        date.className = 'planner-task-time';
+                        date.textContent = String(item && item.dueDate || '').trim() || 'No due date';
+                        meta.appendChild(date);
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.type = 'button';
+                        deleteButton.className = 'planner-delete-btn';
+                        deleteButton.setAttribute('aria-label', 'Delete task');
+                        deleteButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>';
+                        deleteButton.addEventListener('click', () => {
+                            const updated = getPlannerItems().filter((entry) => !entry || entry.id !== item.id);
+                            setPlannerItems(updated);
+                            renderPlannerList();
+                        });
+
+                        head.appendChild(title);
+                        head.appendChild(meta);
+                        content.appendChild(head);
+                        card.appendChild(bubble);
+                        card.appendChild(content);
+                        card.appendChild(deleteButton);
+                        list.appendChild(card);
+                    });
+                };
+
+                const addPlannerItem = () => {
+                    const title = String(input.value || '').trim();
+                    const dueDate = getPlannerDateKey(dateInput.value) || getPlannerDateKey(selectedDate);
+                    const priority = ['p1', 'p2', 'p3', 'p4'].includes(prioritySelect.value) ? prioritySelect.value : 'p2';
+                    const reminderLead = dueDate && ['none', 'day-of', '1-day', '3-day'].includes(reminderSelect.value)
+                        ? reminderSelect.value
+                        : 'none';
+
+                    if (!title) {
+                        if (typeof window.showDashboardToast === 'function') {
+                            window.showDashboardToast('error', 'Task Required', 'Add a task title first.');
+                        }
+                        return;
+                    }
+
+                    const items = getPlannerItems();
+                    items.push({
+                        id: `tg-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                        title,
+                        dueDate,
+                        priority,
+                        completed: false,
+                        updatedAt: Date.now(),
+                        reminderLead,
+                        notifications: {}
+                    });
+
+                    setPlannerItems(items);
+                    input.value = '';
+                    syncSelectedDateInput(dueDate);
+                    prioritySelect.value = 'p2';
+                    reminderSelect.value = 'day-of';
+                    renderPlannerList();
+                };
+
+                if (addButton.dataset.dashboardPlannerFallbackBound !== 'true') {
+                    addButton.dataset.dashboardPlannerFallbackBound = 'true';
+                    addButton.addEventListener('click', addPlannerItem);
+                }
+
+                if (input.dataset.dashboardPlannerFallbackBound !== 'true') {
+                    input.dataset.dashboardPlannerFallbackBound = 'true';
+                    input.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            addPlannerItem();
+                        }
+                    });
+                }
+
+                filterButtons.forEach((button) => {
+                    if (button.dataset.dashboardPlannerFallbackBound === 'true') {
+                        return;
+                    }
+                    button.dataset.dashboardPlannerFallbackBound = 'true';
+                    button.addEventListener('click', () => {
+                        activeFilter = button.dataset.filter || 'selected-date';
+                        filterButtons.forEach((candidate) => candidate.classList.toggle('active', candidate === button));
+                        renderPlannerList();
+                    });
+                });
+
+                if (window.__dashboardPlannerFallbackBound !== true) {
+                    window.__dashboardPlannerFallbackBound = true;
+                    window.addEventListener('calendar-planner-date-change', (event) => {
+                        syncSelectedDateInput(event && event.detail && event.detail.dateKey);
+                        renderPlannerList();
+                    });
+                    window.addEventListener('dashboard-planner-updated', () => {
+                        syncSelectedDateInput(getPlannerDateKey(selectedDate));
+                        renderPlannerList();
+                    });
+                }
+
+                syncSelectedDateInput(getPlannerDateKey(selectedDate));
+                renderPlannerList();
+            };
+
+            const createDayButton = (date, inCurrentMonth) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'calendar-day';
+                const plannerItems = getPlannerItemsForDate(date);
+                const completedItems = plannerItems.filter((item) => item && item.completed);
+                const hasCompletedItems = completedItems.length > 0;
+                const allItemsCompleted = plannerItems.length > 0 && completedItems.length === plannerItems.length;
+                const accessiblePreviewLabel = getCalendarPreviewLabel(plannerItems);
+
+                if (accessiblePreviewLabel) {
+                    button.setAttribute('aria-label', `${formatHeading(date)}. ${accessiblePreviewLabel}`);
+                } else {
+                    button.setAttribute('aria-label', formatHeading(date));
+                }
+
+                if (!inCurrentMonth) {
+                    button.classList.add('other-month');
+                }
+                if (inCurrentMonth && date < todayStart) {
+                    button.classList.add('past-day');
+                }
+                if (sameDay(date, todayStart)) {
+                    button.classList.add('today');
+                }
+                if (sameDay(date, selectedDate)) {
+                    button.classList.add('selected');
+                }
+
+                if (plannerItems.length > 0) {
+                    button.classList.add('has-event');
+                    if (hasCompletedItems) {
+                        button.classList.add('has-completed-event');
+                    }
+                    if (allItemsCompleted) {
+                        button.classList.add('calendar-day-all-complete');
+                    }
+                    const dayPriority = getCalendarDayPriority(plannerItems);
+                    if (dayPriority) {
+                        button.classList.add(`calendar-day-priority-${dayPriority}`);
+                    }
+
+                    const preview = document.createElement('div');
+                    preview.className = 'calendar-day-preview';
+
+                    const previewTitle = document.createElement('p');
+                    previewTitle.className = 'calendar-day-preview-title';
+                    previewTitle.textContent = `${plannerItems.length} task${plannerItems.length === 1 ? '' : 's'}`;
+                    preview.appendChild(previewTitle);
+
+                    const previewList = document.createElement('ul');
+                    previewList.className = 'calendar-day-preview-list';
+                    plannerItems.forEach((item) => {
+                        const previewItem = document.createElement('li');
+                        previewItem.className = `calendar-day-preview-item${item && item.completed ? ' is-complete' : ''}`;
+                        previewItem.textContent = String(item && item.title || 'Task').trim() || 'Task';
+                        previewList.appendChild(previewItem);
+                    });
+
+                    preview.appendChild(previewList);
+                    button.appendChild(preview);
+                }
+
+                const dayNumber = document.createElement('span');
+                dayNumber.className = 'calendar-day-number';
+                dayNumber.textContent = String(date.getDate());
+                button.appendChild(dayNumber);
+
+                if (hasCompletedItems) {
+                    const completedBadge = document.createElement('span');
+                    completedBadge.className = 'calendar-day-complete-badge';
+                    completedBadge.setAttribute('aria-hidden', 'true');
+                    button.appendChild(completedBadge);
+                }
+
+                button.addEventListener('click', () => {
+                    if (!inCurrentMonth) {
+                        currentMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+                    }
+                    selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                    renderCalendar();
+                    openDetailView();
+                });
+
+                return button;
+            };
+
+            const renderCalendar = () => {
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth();
+                monthLabel.textContent = formatMonth(currentMonth);
+                calendarGrid.innerHTML = '';
+
+                dayNames.forEach((dayName) => {
+                    const label = document.createElement('span');
+                    label.className = 'calendar-day-name';
+                    label.textContent = dayName;
+                    calendarGrid.appendChild(label);
+                });
+
+                const firstDay = new Date(year, month, 1);
+                const firstWeekday = firstDay.getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const daysInPreviousMonth = new Date(year, month, 0).getDate();
+
+                for (let index = firstWeekday - 1; index >= 0; index -= 1) {
+                    const date = new Date(year, month - 1, daysInPreviousMonth - index);
+                    calendarGrid.appendChild(createDayButton(date, false));
+                }
+
+                for (let day = 1; day <= daysInMonth; day += 1) {
+                    calendarGrid.appendChild(createDayButton(new Date(year, month, day), true));
+                }
+
+                const visibleCells = calendarGrid.querySelectorAll('.calendar-day').length;
+                const trailingDays = (7 - (visibleCells % 7)) % 7;
+                for (let day = 1; day <= trailingDays; day += 1) {
+                    calendarGrid.appendChild(createDayButton(new Date(year, month + 1, day), false));
+                }
+            };
+
+            if (prevMonthButton && prevMonthButton.dataset.calendarFallbackBound !== 'true') {
+                prevMonthButton.dataset.calendarFallbackBound = 'true';
+                prevMonthButton.addEventListener('click', () => {
+                    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+                    renderCalendar();
+                });
+            }
+
+            if (nextMonthButton && nextMonthButton.dataset.calendarFallbackBound !== 'true') {
+                nextMonthButton.dataset.calendarFallbackBound = 'true';
+                nextMonthButton.addEventListener('click', () => {
+                    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+                    renderCalendar();
+                });
+            }
+
+            if (backButton && backButton.dataset.calendarFallbackBound !== 'true') {
+                backButton.dataset.calendarFallbackBound = 'true';
+                backButton.addEventListener('click', closeDetailView);
+            }
+
+            if (window.__dashboardCalendarFallbackPlannerBound !== true) {
+                window.__dashboardCalendarFallbackPlannerBound = true;
+                window.addEventListener('dashboard-planner-updated', () => {
+                    renderCalendar();
+                    if (calendarStage && calendarStage.classList.contains('detail-open')) {
+                        updateSelectedDateSummary();
+                    }
+                });
+            }
+
+            initDashboardPlannerFallback();
+            renderCalendar();
+        });
+    </script>
+    <script>
+        window.addEventListener('load', () => {
+            const form = document.getElementById('chatgpt-form');
+            const input = document.getElementById('chatgpt-input');
+            const chat = document.getElementById('chatgpt-chat');
+            const status = document.getElementById('chatgpt-status');
+
+            if (!form || !input || !chat) {
+                return;
+            }
+
+            window.setTimeout(() => {
+                if (form.dataset.chatgptBound === 'true' || form.dataset.chatgptFallbackBound === 'true') {
+                    return;
+                }
+
+                const escapeHtml = (value) => String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+
+                const plainTextToMessageHtml = (text) => {
+                    const safe = escapeHtml(text).trim();
+                    if (!safe) {
+                        return '<p>I could not generate a response right now.</p>';
+                    }
+
+                    const paragraphs = safe
+                        .split(/\n{2,}/)
+                        .map((block) => `<p>${block.replace(/\n/g, '<br>')}</p>`)
+                        .join('');
+
+                    return paragraphs || '<p>I could not generate a response right now.</p>';
+                };
+
+                const pushMessage = (role, html) => {
+                    const message = document.createElement('div');
+                    message.className = `chatgpt-msg ${role}`;
+                    message.innerHTML = html;
+                    chat.appendChild(message);
+                    chat.scrollTop = chat.scrollHeight;
+                    return message;
+                };
+
+                const setStatus = (text, mode) => {
+                    if (!status) {
+                        return;
+                    }
+
+                    status.textContent = text;
+                    status.classList.remove('live', 'fallback');
+                    status.classList.add(mode === 'fallback' ? 'fallback' : 'live');
+                };
+
+                const showTyping = () => {
+                    const el = document.createElement('div');
+                    el.className = 'chatgpt-msg assistant chatgpt-typing';
+                    el.innerHTML = '<span></span><span></span><span></span>';
+                    chat.appendChild(el);
+                    chat.scrollTop = chat.scrollHeight;
+                    return el;
+                };
+
+                const requestAiResponse = async (question) => {
+                    const token = localStorage.getItem('authToken');
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+
+                    if (token) {
+                        headers.Authorization = `Bearer ${token}`;
+                    }
+
+                    const response = await fetch('/api/ai/chat', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ question })
+                    });
+
+                    if (!response.ok) {
+                        const fallbackError = await response.json().catch(() => ({}));
+                        throw new Error(fallbackError.error || 'AI request failed');
+                    }
+
+                    const payload = await response.json();
+                    const answer = String(payload && payload.answer || '').trim();
+                    if (!answer) {
+                        throw new Error('AI response was empty');
+                    }
+
+                    return {
+                        answer,
+                        model: String(payload && payload.model || '').trim()
+                    };
+                };
+
+                const ask = async (question) => {
+                    const text = String(question || '').trim();
+                    if (!text) {
+                        return;
+                    }
+
+                    pushMessage('user', `<p>${escapeHtml(text)}</p>`);
+                    const typingEl = showTyping();
+
+                    try {
+                        const aiResponse = await requestAiResponse(text);
+                        typingEl.remove();
+                        const modelLabel = aiResponse.model || 'AI model live';
+                        setStatus(`Live model: ${modelLabel}`, 'live');
+                        pushMessage('assistant', `<p class="chatgpt-msg-meta">${escapeHtml(modelLabel)}</p>${plainTextToMessageHtml(aiResponse.answer)}`);
+                        return;
+                    } catch (error) {
+                        typingEl.remove();
+                        setStatus('Local FAST backup guidance active', 'fallback');
+                        pushMessage('assistant', '<p>I could not reach the live AI service right now. Please try again in a moment.</p>');
+                    }
+                };
+
+                form.dataset.chatgptFallbackBound = 'true';
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    const question = input.value;
+                    input.value = '';
+                    input.focus();
+                    ask(question);
+                });
+            }, 200);
+        });
+    </script>
+    <!-- Auto-update for live site -->
+    <script>
+        // Poll for changes every 2 seconds and reload if content changes
+        setInterval(() => {
+            fetch(window.location.href, { cache: 'no-store' })
+                .then(resp => resp.ok ? resp.text() : null)
+                .then(html => {
+                    if (html && window.__lastPageSnapshot && html !== window.__lastPageSnapshot) {
+                        window.location.reload();
+                    }
+                    window.__lastPageSnapshot = html;
+                });
+        }, 2000);
+    </script>
 </body>
 </html>

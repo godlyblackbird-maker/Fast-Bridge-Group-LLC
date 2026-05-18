@@ -11678,6 +11678,7 @@ body.analytics-reboot .analytics-my-file-count {
 
 .planner-task-content {
     min-width: 0;
+    overflow: hidden;
 }
 
 .planner-task-head {
@@ -11808,6 +11809,9 @@ body.analytics-reboot .analytics-my-file-count {
     align-items: center;
     justify-content: center;
     padding: 0;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
 }
 
 .planner-delete-btn:hover {

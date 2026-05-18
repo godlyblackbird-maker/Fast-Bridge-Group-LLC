@@ -7106,8 +7106,8 @@ function initNavbarDateTime() {
                 markup: '<a href="mls-search.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>MLS Search</a>'
             },
             {
-                href: 'my-agents.html',
-                markup: '<a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>My Agents</a>'
+                href: 'campaigns.html',
+                markup: '<a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a>'
             },
             {
                 href: 'deals.html',
@@ -7118,12 +7118,8 @@ function initNavbarDateTime() {
                 markup: '<a href="gmail.html" class="nav-link"><span class="nav-icon nav-icon-gmail" aria-hidden="true"></span>Gmail</a>'
             },
             {
-                href: 'campaigns.html',
-                markup: '<a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a>'
-            },
-            {
-                href: 'mls-imports-spreadsheet.html',
-                markup: '<a href="mls-imports-spreadsheet.html" class="nav-link"><span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>MLS Spreadsheet</a>'
+                href: 'my-agents.html',
+                markup: '<a href="my-agents.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>My Agents</a>'
             },
             {
                 href: 'community.html',
@@ -7154,19 +7150,33 @@ function initNavbarDateTime() {
                 markup: '<a href="settings.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Settings</a>'
             }
         ];
+        const canonicalAccountItems = [
+            {
+                href: 'admin-controls.html',
+                markup: '<a href="admin-controls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>Admin Controls</a>'
+            },
+            {
+                href: 'active-buyers.html',
+                markup: '<a href="active-buyers.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"></path><path d="M3 12h18"></path><path d="M3 19h18"></path></svg>Active Buyers</a>'
+            },
+            {
+                href: 'login.html',
+                markup: '<a href="login.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>Logout</a>'
+            }
+        ];
         const activeHrefByPage = {
             'gmail.html': 'gmail.html',
-            'mls-imports-spreadsheet.html': 'mls-imports-spreadsheet.html',
             'my-agents.html': 'my-agents.html',
             'property-details.html': 'mls.html',
-            'fbg-messages.html': 'fbg-messages.html'
+            'fbg-messages.html': 'fbg-messages.html',
+            'admin-controls.html': 'admin-controls.html',
+            'active-buyers.html': 'active-buyers.html'
         };
         const workspaceGroupHrefs = [
+            'campaigns.html',
             'my-agents.html',
             'deals.html',
             'gmail.html',
-            'campaigns.html',
-            'mls-imports-spreadsheet.html',
             'community.html',
             'fbg-messages.html',
             'fbg-studio.html',
@@ -7179,6 +7189,9 @@ function initNavbarDateTime() {
         const existingItemsByHref = new Map();
         const duplicateItems = [];
         const canonicalHrefs = new Set(canonicalMenuItems.map((item) => item.href));
+        const canonicalAccountHrefs = new Set(canonicalAccountItems.map((item) => item.href));
+        const currentUser = getStoredCurrentUserIdentity();
+        const isAdminUser = String(currentUser && currentUser.role || '').trim().toLowerCase() === 'admin';
 
         function normalizeHrefValue(value) {
             return String(value || '').trim().replace(/^\.?\//, '').toLowerCase();
@@ -7189,6 +7202,60 @@ function initNavbarDateTime() {
             listItem.className = 'nav-item';
             listItem.innerHTML = markup;
             return listItem;
+        }
+
+        function ensureLockedBadge(link) {
+            if (!(link instanceof HTMLElement)) {
+                return;
+            }
+
+            let badge = link.querySelector('.nav-lock-badge');
+            if (badge) {
+                return;
+            }
+
+            badge = document.createElement('span');
+            badge.className = 'nav-lock-badge';
+            badge.setAttribute('aria-hidden', 'true');
+            badge.innerHTML = '<svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>';
+            link.appendChild(badge);
+        }
+
+        function setAccountLinkLockedState(link, locked) {
+            if (!(link instanceof HTMLElement)) {
+                return;
+            }
+
+            link.classList.toggle('nav-link-locked', locked);
+
+            if (locked) {
+                link.setAttribute('aria-disabled', 'true');
+                link.setAttribute('title', 'Admin only');
+                link.dataset.navLocked = 'true';
+                ensureLockedBadge(link);
+                if (link.dataset.lockHandlerBound !== 'true') {
+                    link.dataset.lockHandlerBound = 'true';
+                    link.addEventListener('click', (event) => {
+                        if (link.dataset.navLocked !== 'true') {
+                            return;
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (typeof showDashboardToast === 'function') {
+                            showDashboardToast('error', 'Access Locked', 'Active Buyers is locked for admin-only access.');
+                        }
+                    });
+                }
+                return;
+            }
+
+            link.removeAttribute('aria-disabled');
+            link.removeAttribute('title');
+            link.dataset.navLocked = 'false';
+            const badge = link.querySelector('.nav-lock-badge');
+            if (badge) {
+                badge.remove();
+            }
         }
 
         function readWorkspaceGroupCollapsed() {
@@ -7271,6 +7338,39 @@ function initNavbarDateTime() {
             return item;
         }
 
+        function buildCanonicalAccountItem(config, activeHref) {
+            const item = createMenuItem(config.markup);
+            const link = item.querySelector('.nav-link[href]');
+            const href = normalizeHrefValue(link && link.getAttribute('href'));
+            const isActive = href === activeHref;
+
+            if (link) {
+                link.classList.toggle('active', isActive);
+                if (isActive) {
+                    link.setAttribute('aria-current', 'page');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+
+                if (href === 'active-buyers.html') {
+                    setAccountLinkLockedState(link, !isAdminUser);
+                }
+
+                if (href === 'login.html') {
+                    link.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        if (typeof window.logout === 'function') {
+                            window.logout();
+                            return;
+                        }
+                        window.location.href = 'login.html';
+                    });
+                }
+            }
+
+            return item;
+        }
+
         directMenuItems.forEach((item) => {
             const link = item.querySelector('.nav-link[href]');
             const href = normalizeHrefValue(link && link.getAttribute('href'));
@@ -7295,21 +7395,6 @@ function initNavbarDateTime() {
         duplicateItems.forEach((item) => {
             item.remove();
         });
-
-        if (accountSection) {
-            const accountLinks = Array.from(accountSection.querySelectorAll('.nav-link[href]'));
-            accountLinks.forEach((link) => {
-                const href = normalizeHrefValue(link.getAttribute('href'));
-                if (!href || !canonicalHrefs.has(href)) {
-                    return;
-                }
-
-                const navItem = link.closest('.nav-item');
-                if (navItem) {
-                    navItem.remove();
-                }
-            });
-        }
 
         const activeHref = activeHrefByPage[currentPage] || currentPage;
         const fragment = document.createDocumentFragment();
@@ -7339,13 +7424,34 @@ function initNavbarDateTime() {
         directMenuItems.forEach((item) => {
             const link = item.querySelector('.nav-link[href]');
             const href = normalizeHrefValue(link && link.getAttribute('href'));
-            if (!href || canonicalHrefs.has(href) || href === 'fbg-messages.html') {
+            if (!href || canonicalHrefs.has(href) || href === 'fbg-messages.html' || href === 'mls-imports-spreadsheet.html') {
                 return;
             }
             fragment.appendChild(item);
         });
 
         menuList.replaceChildren(fragment);
+
+        if (accountSection) {
+            const accountList = accountSection.querySelector('ul');
+            if (accountList) {
+                const accountFragment = document.createDocumentFragment();
+                canonicalAccountItems.forEach((config) => {
+                    accountFragment.appendChild(buildCanonicalAccountItem(config, activeHref));
+                });
+
+                Array.from(accountList.children).forEach((item) => {
+                    const link = item.querySelector && item.querySelector('.nav-link[href]');
+                    const href = normalizeHrefValue(link && link.getAttribute('href'));
+                    if (!href || canonicalAccountHrefs.has(href) || canonicalHrefs.has(href)) {
+                        return;
+                    }
+                    accountFragment.appendChild(item);
+                });
+
+                accountList.replaceChildren(accountFragment);
+            }
+        }
     }
 
     function initFbgMessagesNavUnreadIndicator() {
@@ -9893,6 +9999,26 @@ function initNavbarDateTime() {
         const widgetState = normalizeAdminControlsDefaultWidgetState(getWidgetState());
         let expandedWidget = null;
 
+        if (/dashboard\.html$/i.test(String(window.location.pathname || ''))) {
+            const migrationKey = `${getWidgetStateStorageKey()}:dashboard-essential-widgets-v1`;
+            try {
+                if (localStorage.getItem(migrationKey) !== 'true') {
+                    ['calendar'].forEach((widgetId) => {
+                        if (widgetState[widgetId] && widgetState[widgetId].minimized) {
+                            widgetState[widgetId] = {
+                                ...(widgetState[widgetId] || {}),
+                                minimized: false
+                            };
+                        }
+                    });
+                    localStorage.setItem(migrationKey, 'true');
+                    saveWidgetState(widgetState);
+                }
+            } catch (error) {
+                // Ignore local storage recovery errors.
+            }
+        }
+
         if (adminControlsPage) {
             dock.classList.add('widget-dock-bottom');
         } else {
@@ -10118,6 +10244,15 @@ function initNavbarDateTime() {
         let selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         let detailOpen = false;
 
+        function safeGetPlannerItemsForDate(date) {
+            try {
+                return getPlannerItemsForDate(date);
+            } catch (error) {
+                console.error('Calendar planner lookup failed', error);
+                return [];
+            }
+        }
+
         function formatDateKey(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -10275,7 +10410,7 @@ function initNavbarDateTime() {
         }
 
         function renderDetailView() {
-            const items = getPlannerItemsForDate(selectedDate);
+            const items = safeGetPlannerItemsForDate(selectedDate);
             selectedDateLabel.textContent = formatDateHeading(selectedDate);
             const total = items.length;
             const openCount = items.filter((item) => !item.completed).length;
@@ -10294,7 +10429,7 @@ function initNavbarDateTime() {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'calendar-day';
-            const plannerItems = getPlannerItemsForDate(date);
+            const plannerItems = safeGetPlannerItemsForDate(date);
             const completedItems = plannerItems.filter((item) => item && item.completed);
             const hasCompletedItems = completedItems.length > 0;
             const allItemsCompleted = plannerItems.length > 0 && completedItems.length === plannerItems.length;
@@ -10448,7 +10583,11 @@ function initNavbarDateTime() {
             }
         });
 
-        migrateLegacyCalendarEventsIntoPlanner();
+        try {
+            migrateLegacyCalendarEventsIntoPlanner();
+        } catch (error) {
+            console.error('Calendar migration failed', error);
+        }
         renderCalendar();
         renderDetailView();
         syncPlannerDateSelection();
@@ -10464,6 +10603,8 @@ function initNavbarDateTime() {
         if (!form || !input || !chat) {
             return;
         }
+
+        form.dataset.chatgptBound = 'true';
 
         function pushMessage(role, html) {
             const message = document.createElement('div');
@@ -33938,5 +34079,9 @@ function initNavbarDateTime() {
     } else {
         init();
     }
+
+    window.addEventListener('load', () => {
+        safelyRunInitializer('initSharedSidebarLinks(load)', initSharedSidebarLinks);
+    }, { once: true });
 
 })(); // End of main IIFE
