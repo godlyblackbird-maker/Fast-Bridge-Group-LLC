@@ -1194,14 +1194,25 @@
     return normalizedPath === '/pdf-editor.html' || normalizedPath.endsWith('/pdf-editor.html');
   }
 
+  function isMyAgentsPath(pathname) {
+    const normalizedPath = String(pathname || '').trim().toLowerCase();
+    return normalizedPath === '/my-agents.html' || normalizedPath.endsWith('/my-agents.html');
+  }
+
   function isRestrictedTestUserWorkspacePath(pathname) {
-    return isGmailPath(pathname) || isPdfEditorPath(pathname) || isFbgMessagesPath(pathname);
+    return isGmailPath(pathname) || isPdfEditorPath(pathname) || isFbgMessagesPath(pathname) || isMyAgentsPath(pathname);
   }
 
   function applyTestUserRestrictedWorkspaceAccess(userLike) {
     if (!isTestUser(userLike)) {
       return true;
     }
+
+    document.querySelectorAll(
+      'a[href="my-agents.html"], a[href="/my-agents.html"]'
+    ).forEach((link) => {
+      removeNavLink(link);
+    });
 
     document.querySelectorAll(
       'a[href="gmail.html"], a[href="/gmail.html"], a[href="pdf-editor.html"], a[href="/pdf-editor.html"], a[href="fbg-messages.html"], a[href="/fbg-messages.html"]'
