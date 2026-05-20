@@ -32623,7 +32623,7 @@ function initNavbarDateTime() {
 
                 if (includeTerms) {
                     const offerBuyerVestingText = /fast bridge group llc/i.test(entityText)
-                        ? 'Fast Bridge Group, LLC and or assigns'
+                        ? 'Fast Bridge Group, LLC'
                         : entityText;
                     const offerSummaryLines = [
                         '',

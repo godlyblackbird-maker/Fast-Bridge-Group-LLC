@@ -85,6 +85,50 @@ app.get('/api/build-version', (req, res) => {
     res.json({ version: null });
   }
 });
+
+app.get('/api/mls/listings', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const requestedLimit = Number.parseInt(String(req.query?.limit || MLS_BOARD_DEFAULT_LIMIT), 10);
+  const limit = Math.max(1, Math.min(MLS_BOARD_MAX_LIMIT, Number.isFinite(requestedLimit) ? requestedLimit : MLS_BOARD_DEFAULT_LIMIT));
+  const statusFilter = normalizeMlsBoardStatus(req.query?.status || 'all');
+  const cacheKey = JSON.stringify({ limit, statusFilter });
+  const cached = trestleListingsCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return res.json(cached.payload);
+  }
+
+  try {
+    const rawPayload = await fetchTrestlePropertyFeed({ limit });
+    const sourceRows = Array.isArray(rawPayload?.value) ? rawPayload.value : [];
+    const listings = sourceRows
+      .map((row) => normalizeTrestleListing(row))
+      .filter((row) => row && row.address && row.price > 0)
+      .filter((row) => statusFilter === 'all' || row.status === statusFilter);
+
+    const payload = {
+      fetchedAt: new Date().toISOString(),
+      source: 'CRMLS / Trestle Web API',
+      count: listings.length,
+      listings
+    };
+
+    trestleListingsCache.set(cacheKey, {
+      expiresAt: Date.now() + TRESTLE_MLS_CACHE_TTL_MS,
+      payload
+    });
+
+    res.json(payload);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode) || 502;
+    const message = String(error?.message || 'Unable to load MLS listings from Trestle.').trim();
+    res.status(statusCode).json({ error: message });
+  }
+});
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
@@ -188,6 +232,11 @@ const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
 const MLS_IMPORT_PDF_JOB_TTL_MS = 2 * 60 * 60 * 1000;
 const MLS_IMPORT_PDF_WORKER_TIMEOUT_MS = 90 * 60 * 1000;
 const MLS_IMPORT_TEMP_DIR = path.join(__dirname, 'temp', 'mls-imports');
+const MLS_BOARD_DEFAULT_LIMIT = 120;
+const MLS_BOARD_MAX_LIMIT = 500;
+const TRESTLE_MLS_DEFAULT_BASE_URL = 'https://api.cotality.com/trestle/odata';
+const TRESTLE_MLS_REQUEST_TIMEOUT_MS = 20000;
+const TRESTLE_MLS_CACHE_TTL_MS = 60 * 1000;
 const USER_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
 const USER_UPLOADS_LOCAL_ROOT = resolveUserUploadsLocalRoot();
 
@@ -210,6 +259,12 @@ let sqliteBackupTimer = null;
 let sqliteBackupInFlight = null;
 let twilioScheduledMessageTimer = null;
 let twilioScheduledMessageRunPromise = null;
+let trestleAccessTokenCache = {
+  token: '',
+  expiresAt: 0,
+  fingerprint: ''
+};
+const trestleListingsCache = new Map();
 const USER_MESSAGE_EDIT_WINDOW_MS = 60 * 1000;
 const USER_MESSAGE_REACTION_EMOJIS = Object.freeze(['👍', '❤️', '😂', '😮', '😢', '🔥']);
 const revokedSessionIds = new Set();
@@ -327,6 +382,400 @@ function getFirstConfiguredEnvValue(...names) {
   }
 
   return '';
+}
+
+function normalizeMlsBoardStatus(value) {
+  const normalized = String(value || 'all').trim().toLowerCase();
+  if (['all', 'active', 'pending', 'on-hold', 'closed'].includes(normalized)) {
+    return normalized;
+  }
+  return 'all';
+}
+
+function buildTrestleMlsConfig() {
+  const baseUrl = String(
+    getFirstConfiguredEnvValue(
+      'TRESTLE_BASE_URL',
+      'TRESTLE_ODATA_BASE_URL',
+      'IDXPLUS_BASE_URL',
+      'CRMLS_TRESTLE_BASE_URL'
+    ) || TRESTLE_MLS_DEFAULT_BASE_URL
+  ).trim().replace(/\/+$/g, '');
+
+  return {
+    baseUrl,
+    tokenUrl: String(getFirstConfiguredEnvValue('TRESTLE_TOKEN_URL', 'TRESTLE_AUTH_URL', 'IDXPLUS_TOKEN_URL', 'CRMLS_TRESTLE_TOKEN_URL')).trim(),
+    accessToken: String(getFirstConfiguredEnvValue('TRESTLE_ACCESS_TOKEN', 'TRESTLE_BEARER_TOKEN', 'IDXPLUS_ACCESS_TOKEN', 'CRMLS_TRESTLE_ACCESS_TOKEN')).trim(),
+    credentialId: String(getFirstConfiguredEnvValue('TRESTLE_CREDENTIAL_ID', 'TRESTLE_CLIENT_ID', 'IDXPLUS_CREDENTIAL_ID', 'IDXPLUS_CLIENT_ID', 'CRMLS_TRESTLE_CREDENTIAL_ID')).trim(),
+    credentialPassword: String(getFirstConfiguredEnvValue('TRESTLE_CREDENTIAL_PASSWORD', 'TRESTLE_CLIENT_SECRET', 'IDXPLUS_CREDENTIAL_PASSWORD', 'IDXPLUS_CLIENT_SECRET', 'CRMLS_TRESTLE_CREDENTIAL_PASSWORD')).trim(),
+    scope: String(getFirstConfiguredEnvValue('TRESTLE_SCOPE', 'IDXPLUS_SCOPE', 'CRMLS_TRESTLE_SCOPE')).trim(),
+    audience: String(getFirstConfiguredEnvValue('TRESTLE_AUDIENCE', 'IDXPLUS_AUDIENCE', 'CRMLS_TRESTLE_AUDIENCE')).trim(),
+    resource: String(getFirstConfiguredEnvValue('TRESTLE_RESOURCE', 'IDXPLUS_RESOURCE', 'CRMLS_TRESTLE_RESOURCE')).trim(),
+    authMode: String(getFirstConfiguredEnvValue('TRESTLE_AUTH_MODE', 'IDXPLUS_AUTH_MODE')).trim().toLowerCase()
+  };
+}
+
+function buildTrestleMlsFingerprint(config) {
+  return [
+    config.baseUrl,
+    config.tokenUrl,
+    config.credentialId,
+    config.scope,
+    config.audience,
+    config.resource,
+    config.authMode,
+    config.accessToken ? 'token' : '',
+    config.credentialPassword ? 'secret' : ''
+  ].join('|');
+}
+
+function buildTrestleError(message, statusCode = 500) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function parseNumericMlsValue(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number.parseFloat(String(value || '').replace(/[^\d.-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function pickFirstDefinedValue(source, candidateKeys) {
+  if (!source || typeof source !== 'object' || !Array.isArray(candidateKeys)) {
+    return '';
+  }
+
+  for (const key of candidateKeys) {
+    const value = source[key];
+    if (value === null || value === undefined) {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      const nested = value.find((entry) => entry !== null && entry !== undefined && String(entry).trim());
+      if (nested !== undefined) {
+        return nested;
+      }
+      continue;
+    }
+    if (typeof value === 'string' && !value.trim()) {
+      continue;
+    }
+    return value;
+  }
+
+  return '';
+}
+
+function buildTrestleAddress(row) {
+  const explicit = String(pickFirstDefinedValue(row, [
+    'UnparsedAddress',
+    'UnparsedFirstLineAddress',
+    'PropertyAddressFull',
+    'AddressLine1'
+  ]) || '').trim();
+
+  if (explicit) {
+    return explicit;
+  }
+
+  const parts = [
+    pickFirstDefinedValue(row, ['StreetNumber', 'StreetNumberNumeric']),
+    pickFirstDefinedValue(row, ['StreetDirPrefix', 'StreetDirectionPrefix']),
+    pickFirstDefinedValue(row, ['StreetName']),
+    pickFirstDefinedValue(row, ['StreetSuffixModifier', 'StreetSuffix']),
+    pickFirstDefinedValue(row, ['StreetDirSuffix', 'StreetDirectionSuffix']),
+    pickFirstDefinedValue(row, ['UnitNumber'])
+  ].map((value) => String(value || '').trim()).filter(Boolean);
+
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeTrestleListingStatus(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return 'active';
+  }
+  if (/closed|sold|leased|rented|expired|canceled|cancelled|withdrawn/.test(normalized)) {
+    return 'closed';
+  }
+  if (/hold|delayed|temporar/.test(normalized)) {
+    return 'on-hold';
+  }
+  if (/pending|contingent|under contract|active under contract/.test(normalized)) {
+    return 'pending';
+  }
+  return 'active';
+}
+
+function computeTrestleHotScore(price, area, daysOnMarket, status) {
+  const normalizedPrice = Number(price) || 0;
+  const normalizedArea = Number(area) || 0;
+  const normalizedDays = Math.max(0, Number(daysOnMarket) || 0);
+  const pricePerSqft = normalizedPrice > 0 && normalizedArea > 0 ? normalizedPrice / normalizedArea : 0;
+  const freshnessScore = Math.max(0, 5.5 - Math.min(5.5, normalizedDays / 12));
+  const valueScore = pricePerSqft > 0 ? Math.max(0.8, 4.2 - Math.min(3.4, pricePerSqft / 300)) : 1.4;
+  const statusScore = status === 'active' ? 1.3 : status === 'pending' ? 0.8 : 0.4;
+  return Math.max(1, Number((freshnessScore + valueScore + statusScore).toFixed(1)));
+}
+
+function normalizeTrestleListing(row) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  const address = buildTrestleAddress(row);
+  const city = String(pickFirstDefinedValue(row, ['City', 'CityName', 'PostalCity']) || '').trim();
+  const county = String(pickFirstDefinedValue(row, ['CountyOrParish', 'County']) || '').trim();
+  const listPrice = parseNumericMlsValue(pickFirstDefinedValue(row, ['ListPrice', 'CurrentPrice', 'ClosePrice']));
+  const beds = parseNumericMlsValue(pickFirstDefinedValue(row, ['BedroomsTotal', 'BedsTotal', 'BedRoomsTotal']));
+  const baths = parseNumericMlsValue(pickFirstDefinedValue(row, ['BathroomsTotalInteger', 'BathroomsTotalDecimal', 'BathroomsFull', 'BathsTotal']));
+  const area = parseNumericMlsValue(pickFirstDefinedValue(row, ['LivingArea', 'BuildingAreaTotal', 'AboveGradeFinishedArea', 'LotSizeSquareFeet']));
+  const rawStatus = pickFirstDefinedValue(row, ['StandardStatus', 'MlsStatus', 'ListingStatus', 'Status']);
+  const status = normalizeTrestleListingStatus(rawStatus);
+  const listedAtRaw = pickFirstDefinedValue(row, ['OnMarketDate', 'ListingContractDate', 'ModificationTimestamp', 'ListingKeyModificationTimestamp']);
+  const listedAt = String(listedAtRaw || '').trim();
+  const listedDate = listedAt ? new Date(listedAt) : null;
+  const normalizedListedAt = listedDate && !Number.isNaN(listedDate.getTime()) ? listedDate.toISOString() : new Date().toISOString();
+  const daysOnMarket = Math.max(0, parseNumericMlsValue(pickFirstDefinedValue(row, ['DaysOnMarket', 'DOM'])) || Math.floor((Date.now() - new Date(normalizedListedAt).getTime()) / 86400000));
+  const remarks = String(pickFirstDefinedValue(row, ['PublicRemarks', 'PublicRemarksText', 'SyndicationRemarks', 'MarketingRemarks']) || '').replace(/\s+/g, ' ').trim();
+  const propertyType = String(pickFirstDefinedValue(row, ['PropertySubType', 'PropertyType', 'PropertyTypeLabel']) || 'Residential').trim();
+  const media = Array.isArray(row.Media) ? row.Media : [];
+  const imageUrl = String(
+    pickFirstDefinedValue(row, ['MediaURL', 'MediaURLText'])
+    || pickFirstDefinedValue(media[0] || {}, ['MediaURL', 'MediaURLText', 'Uri'])
+    || ''
+  ).trim();
+  const mlsId = String(pickFirstDefinedValue(row, ['ListingId', 'ListingKey', 'MLSNumber', 'MlsNumber', 'OriginatingSystemKey']) || '').trim();
+  const agentName = String(pickFirstDefinedValue(row, ['ListAgentFullName', 'ListAgentName', 'ListingAgentName']) || '').trim();
+  const agentPhone = String(pickFirstDefinedValue(row, ['ListAgentPreferredPhone', 'ListAgentDirectPhone', 'ListAgentCellPhone', 'ListOfficePhone']) || '').trim();
+  const agentEmail = String(pickFirstDefinedValue(row, ['ListAgentEmail', 'ListOfficeEmail']) || '').trim();
+  const agentBrokerage = String(pickFirstDefinedValue(row, ['ListOfficeName', 'BuyerOfficeName', 'ListCompanyName']) || '').trim();
+  const searchText = [address, city, county, propertyType, remarks, String(rawStatus || ''), mlsId].filter(Boolean).join(' ').toLowerCase();
+  const hotScore = computeTrestleHotScore(listPrice, area, daysOnMarket, status);
+
+  if (!address || listPrice <= 0) {
+    return null;
+  }
+
+  return {
+    address,
+    city,
+    county,
+    price: Math.round(listPrice),
+    beds,
+    baths,
+    area: Math.round(area),
+    status,
+    listedAt: normalizedListedAt,
+    daysOnMarket,
+    note: remarks || `${propertyType} listing from the CRMLS Trestle feed.`,
+    propertyType,
+    searchText,
+    hotScore,
+    imageUrl,
+    mlsId,
+    agentName,
+    agentPhone,
+    agentEmail,
+    agentBrokerage
+  };
+}
+
+async function requestTrestleAccessToken(config) {
+  if (config.accessToken) {
+    return config.accessToken;
+  }
+
+  if (!config.tokenUrl || !config.credentialId || !config.credentialPassword) {
+    return '';
+  }
+
+  const fingerprint = buildTrestleMlsFingerprint(config);
+  if (trestleAccessTokenCache.token && trestleAccessTokenCache.fingerprint === fingerprint && trestleAccessTokenCache.expiresAt > Date.now()) {
+    return trestleAccessTokenCache.token;
+  }
+
+  const payloadAttempts = [];
+  const baseFields = [];
+  if (config.scope) {
+    baseFields.push(['scope', config.scope]);
+  }
+  if (config.audience) {
+    baseFields.push(['audience', config.audience]);
+  }
+  if (config.resource) {
+    baseFields.push(['resource', config.resource]);
+  }
+
+  payloadAttempts.push([
+    ['grant_type', 'client_credentials'],
+    ['client_id', config.credentialId],
+    ['client_secret', config.credentialPassword],
+    ...baseFields
+  ]);
+  payloadAttempts.push([
+    ['grant_type', 'password'],
+    ['username', config.credentialId],
+    ['password', config.credentialPassword],
+    ['client_id', config.credentialId],
+    ...baseFields
+  ]);
+
+  let lastError = null;
+  for (const fields of payloadAttempts) {
+    try {
+      const body = new URLSearchParams();
+      fields.forEach(([key, value]) => {
+        if (value) {
+          body.set(key, value);
+        }
+      });
+
+      const response = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json'
+        },
+        body,
+        signal: AbortSignal.timeout(TRESTLE_MLS_REQUEST_TIMEOUT_MS)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        lastError = buildTrestleError(String(payload?.error_description || payload?.error || `Trestle token request failed (${response.status}).`).trim(), response.status);
+        continue;
+      }
+
+      const token = String(payload?.access_token || '').trim();
+      if (!token) {
+        lastError = buildTrestleError('Trestle token response did not include an access token.', 502);
+        continue;
+      }
+
+      const expiresInSeconds = Math.max(60, Number.parseInt(String(payload?.expires_in || 3600), 10) || 3600);
+      trestleAccessTokenCache = {
+        token,
+        expiresAt: Date.now() + Math.max(30, expiresInSeconds - 60) * 1000,
+        fingerprint
+      };
+      return token;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+  return '';
+}
+
+function buildTrestleAuthHeaderAttempts(config, token) {
+  const attempts = [];
+  const normalizedMode = config.authMode;
+  const credentialId = String(config.credentialId || '').trim();
+  const credentialPassword = String(config.credentialPassword || '').trim();
+
+  const pushAttempt = (headers) => {
+    const filteredHeaders = Object.entries(headers || {}).reduce((accumulator, [key, value]) => {
+      if (value) {
+        accumulator[key] = value;
+      }
+      return accumulator;
+    }, {});
+    if (Object.keys(filteredHeaders).length > 0) {
+      attempts.push(filteredHeaders);
+    }
+  };
+
+  if (token) {
+    pushAttempt({ Authorization: `Bearer ${token}` });
+  }
+  if (normalizedMode === 'bearer' && credentialPassword) {
+    pushAttempt({ Authorization: `Bearer ${credentialPassword}` });
+  }
+  if ((!normalizedMode || normalizedMode === 'basic') && credentialId && credentialPassword) {
+    pushAttempt({ Authorization: `Basic ${Buffer.from(`${credentialId}:${credentialPassword}`).toString('base64')}` });
+  }
+  if (!normalizedMode || normalizedMode === 'api-key') {
+    if (credentialPassword) {
+      pushAttempt({ 'x-api-key': credentialPassword });
+      pushAttempt({ apikey: credentialPassword });
+      pushAttempt({ Authorization: `Bearer ${credentialPassword}` });
+    }
+    if (credentialId) {
+      pushAttempt({ 'x-api-key': credentialId });
+      pushAttempt({ apikey: credentialId });
+      pushAttempt({ 'x-client-id': credentialId, 'x-client-secret': credentialPassword });
+    }
+  }
+
+  return attempts;
+}
+
+async function fetchTrestleJson(url) {
+  const config = buildTrestleMlsConfig();
+  if (!config.accessToken && !config.credentialPassword && !config.credentialId) {
+    throw buildTrestleError('MLS feed is not configured in Render yet. Add Trestle credentials or a Trestle access token to the server environment.', 500);
+  }
+
+  let token = '';
+  try {
+    token = await requestTrestleAccessToken(config);
+  } catch (error) {
+    if (config.tokenUrl) {
+      throw error;
+    }
+  }
+
+  const authAttempts = buildTrestleAuthHeaderAttempts(config, token);
+  if (!authAttempts.length) {
+    throw buildTrestleError('MLS feed credentials are incomplete. Add a Trestle access token, or configure token URL plus credential ID/password.', 500);
+  }
+
+  let lastError = null;
+  for (const authHeaders of authAttempts) {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          ...authHeaders
+        },
+        signal: AbortSignal.timeout(TRESTLE_MLS_REQUEST_TIMEOUT_MS)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) {
+        return payload;
+      }
+
+      const message = String(payload?.error_description || payload?.error || payload?.message || `Trestle request failed (${response.status}).`).trim();
+      lastError = buildTrestleError(message, response.status);
+      if (response.status !== 401 && response.status !== 403) {
+        throw lastError;
+      }
+    } catch (error) {
+      lastError = error;
+      if (Number(error?.statusCode) && ![401, 403].includes(Number(error.statusCode))) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || buildTrestleError('Unable to authenticate against the Trestle MLS feed.', 502);
+}
+
+async function fetchTrestlePropertyFeed(options = {}) {
+  const config = buildTrestleMlsConfig();
+  const limit = Math.max(1, Math.min(MLS_BOARD_MAX_LIMIT, Number.parseInt(String(options.limit || MLS_BOARD_DEFAULT_LIMIT), 10) || MLS_BOARD_DEFAULT_LIMIT));
+  const url = new URL(`${config.baseUrl.replace(/\/+$/g, '')}/Property`);
+  url.searchParams.set('$top', String(limit));
+  url.searchParams.set('$count', 'true');
+  return fetchTrestleJson(url.toString());
 }
 
 function sanitizeCommunityVoiceRoomName(value) {
