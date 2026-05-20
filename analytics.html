@@ -166,6 +166,277 @@
         })();
     </script>
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
+    <style>
+        .mls-page-title-group {
+            min-width: 0;
+        }
+
+        .mls-page-brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .mls-page-title-group .page-title {
+            margin: 0;
+        }
+
+        .mls-page-logo {
+            width: clamp(72px, 8vw, 102px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+
+        @media (max-width: 720px) {
+            .mls-page-logo {
+                width: 60px;
+            }
+        }
+
+        .analytics-whiteboard-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .analytics-whiteboard-card {
+            display: grid;
+            gap: 18px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            background:
+                radial-gradient(circle at top left, rgba(255, 245, 205, 0.22), transparent 38%),
+                linear-gradient(180deg, rgba(128, 90, 37, 0.18), rgba(255, 255, 255, 0.08));
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            width: 100%;
+            max-width: none;
+        }
+
+        .analytics-whiteboard-card::before {
+            content: '';
+            position: absolute;
+            top: 78px;
+            right: 14px;
+            bottom: 14px;
+            left: 14px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(255, 252, 244, 0.96), rgba(248, 250, 252, 0.92));
+            box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.06);
+            z-index: 0;
+        }
+
+        .analytics-whiteboard-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .analytics-whiteboard-header {
+            align-items: flex-start;
+            gap: 12px;
+            padding: 4px 2px 0;
+        }
+
+        .analytics-whiteboard-header .card-title {
+            color: #152238;
+            letter-spacing: 0.08em;
+        }
+
+        .analytics-whiteboard-header .card-subtitle {
+            color: rgba(21, 34, 56, 0.72);
+        }
+
+        .analytics-whiteboard-add-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            border: 2px solid rgba(15, 23, 42, 0.1);
+            background: linear-gradient(180deg, #fb7185, #e11d48);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(225, 29, 72, 0.28);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        }
+
+        .analytics-whiteboard-add-btn:hover,
+        .analytics-whiteboard-add-btn:focus-visible {
+            transform: translateY(-2px) rotate(-4deg);
+            box-shadow: 0 14px 26px rgba(225, 29, 72, 0.36);
+            filter: saturate(1.08);
+            outline: none;
+        }
+
+        .analytics-whiteboard-add-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .analytics-whiteboard-surface {
+            display: grid;
+            gap: 16px;
+            padding: 18px;
+            border-radius: 24px;
+            background:
+                linear-gradient(transparent 31px, rgba(59, 130, 246, 0.12) 32px),
+                linear-gradient(90deg, rgba(251, 113, 133, 0.16) 0, rgba(251, 113, 133, 0.16) 3px, transparent 3px),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+            background-size: 100% 32px, 32px 100%, 100% 100%;
+            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08), 0 12px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        @media (min-width: 980px) {
+            .analytics-whiteboard-surface {
+                grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.5fr);
+                align-items: start;
+            }
+
+            .analytics-whiteboard-editor {
+                position: sticky;
+                top: 16px;
+            }
+        }
+
+        .analytics-whiteboard-editor {
+            display: grid;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 250, 240, 0.92));
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .analytics-whiteboard-input {
+            width: 100%;
+            min-height: 84px;
+            resize: vertical;
+            border: none;
+            background: transparent;
+            color: #162033;
+            font-size: 15px;
+            line-height: 1.7;
+            box-shadow: none;
+        }
+
+        .analytics-whiteboard-input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        .analytics-whiteboard-input::placeholder {
+            color: rgba(22, 32, 51, 0.48);
+        }
+
+        .analytics-whiteboard-hint {
+            margin: 0;
+            font-size: 12px;
+            color: rgba(22, 32, 51, 0.62);
+            font-style: italic;
+        }
+
+        .analytics-whiteboard-hint-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            margin: 0 4px;
+            border-radius: 999px;
+            background: #e11d48;
+            color: #fff;
+            font-style: normal;
+            font-weight: 700;
+            font-size: 12px;
+            line-height: 1;
+            vertical-align: text-bottom;
+            box-shadow: 0 4px 10px rgba(225, 29, 72, 0.2);
+        }
+
+        .analytics-whiteboard-list {
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 12px;
+            list-style: none;
+        }
+
+        .analytics-whiteboard-item {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .analytics-whiteboard-item-text {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
+            color: #162033;
+            position: relative;
+            padding-left: 22px;
+        }
+
+        .analytics-whiteboard-item-text::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.62em;
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+        }
+
+        .analytics-whiteboard-remove-btn {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            opacity: 0.7;
+            cursor: pointer;
+            padding: 2px;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .analytics-whiteboard-remove-btn:hover,
+        .analytics-whiteboard-remove-btn:focus-visible {
+            opacity: 1;
+            color: #e11d48;
+            outline: none;
+        }
+
+        .analytics-whiteboard-list .outreach-empty {
+            margin: 0;
+            padding: 18px;
+            border-radius: 18px;
+            text-align: center;
+            color: rgba(22, 32, 51, 0.62);
+            background: rgba(255, 255, 255, 0.62);
+            border: 1px dashed rgba(15, 23, 42, 0.16);
+        }
+
+        @media (max-width: 720px) {
+            .analytics-whiteboard-surface {
+                padding: 14px;
+            }
+
+            .analytics-whiteboard-card::before {
+                top: 96px;
+                right: 10px;
+                bottom: 10px;
+                left: 10px;
+            }
+        }
+    </style>
     <!--
 
 TemplateMo 607 Glass Admin
@@ -363,9 +634,10 @@ https://templatemo.com/tm-607-glass-admin
         <main class="main-content">
             <!-- Top Navbar -->
             <nav class="navbar analytics-navbar">
-                <div class="page-header">
-                    <h1 class="page-title">Analytics</h1>
-                </div>
+                <a class="page-title-group mls-page-title-group mls-page-brand-link" href="index.html">
+                    <img class="mls-page-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
+                    <h1 class="page-title">Analytics | FAST BRIDGE GROUP LLC</h1>
+                </a>
                 <div class="navbar-right">
                     <div class="search-box">
                         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -540,6 +812,32 @@ https://templatemo.com/tm-607-glass-admin
                     </div>
                     <div class="analytics-my-file-list" id="analytics-my-file-list">
                         <p class="outreach-empty">No closed-deal files saved yet.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="outreach-workspace-grid analytics-whiteboard-grid">
+                <div class="glass-card widget-card outreach-card analytics-whiteboard-card" data-widget-id="analytics-whiteboard" data-widget-title="MY WHITE BOARD/GOALS">
+                    <div class="card-header analytics-whiteboard-header">
+                        <div>
+                            <h2 class="card-title">MY WHITE BOARD/GOALS</h2>
+                            <p class="card-subtitle">Add bullet-point goals, reminders, and vision-board notes for this user.</p>
+                        </div>
+                        <button type="button" class="analytics-whiteboard-add-btn" id="analytics-whiteboard-add-btn" aria-label="Add white board bullet point" title="Add bullet point">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M12 5v14"></path>
+                                <path d="M5 12h14"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="analytics-whiteboard-surface">
+                        <div class="analytics-whiteboard-editor">
+                            <textarea id="analytics-whiteboard-input" class="form-input analytics-whiteboard-input" placeholder="Type a goal, reminder, or vision-board bullet point..."></textarea>
+                            <p class="analytics-whiteboard-hint">Click the <span class="analytics-whiteboard-hint-icon" aria-hidden="true">+</span> icon or press Ctrl/Cmd + Enter to add a new bullet point.</p>
+                        </div>
+                        <ul class="analytics-whiteboard-list" id="analytics-whiteboard-list">
+                            <li class="outreach-empty">No white board goals yet. Add your first bullet point above.</li>
+                        </ul>
                     </div>
                 </div>
             </section>

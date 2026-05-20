@@ -7509,6 +7509,7 @@ function initializeDatabase() {
       numbers_goal TEXT NOT NULL DEFAULT '',
       numbers_window TEXT NOT NULL DEFAULT 'all',
       closed_deal_draft_json TEXT NOT NULL DEFAULT 'null',
+      whiteboard_items_json TEXT NOT NULL DEFAULT '[]',
       metrics_json TEXT NOT NULL DEFAULT '{}',
       updated_at INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY(owner_user_id) REFERENCES users(id)
@@ -7518,6 +7519,11 @@ function initializeDatabase() {
       console.error('Error creating user_analytics_state table:', err);
     } else {
       console.log('User analytics state table ready');
+      db.run('ALTER TABLE user_analytics_state ADD COLUMN whiteboard_items_json TEXT NOT NULL DEFAULT \'[]\'', (alterErr) => {
+        if (alterErr && !/duplicate column name/i.test(String(alterErr.message || ''))) {
+          console.error('Error ensuring user_analytics_state.whiteboard_items_json column:', alterErr);
+        }
+      });
     }
   });
 
@@ -12498,6 +12504,29 @@ function normalizeUserAnalyticsMetrics(value) {
   };
 }
 
+function normalizeUserAnalyticsWhiteboardItems(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      const safeItem = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+      const text = String(safeItem.text || '').trim().slice(0, 2000);
+      if (!text) {
+        return null;
+      }
+
+      return {
+        id: String(safeItem.id || '').trim().slice(0, 120) || `whiteboard-${Date.now()}`,
+        text,
+        createdAt: Math.max(Number(safeItem.createdAt) || 0, 0) || Date.now()
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 200);
+}
+
 function normalizeUserAnalyticsState(value) {
   const state = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const draft = state.closedDealDraft && typeof state.closedDealDraft === 'object' && !Array.isArray(state.closedDealDraft)
@@ -12519,6 +12548,7 @@ function normalizeUserAnalyticsState(value) {
           documents: Array.isArray(draft.documents) ? draft.documents : []
         }
       : null,
+    whiteboardItems: normalizeUserAnalyticsWhiteboardItems(state.whiteboardItems),
     metrics: normalizeUserAnalyticsMetrics(state.metrics),
     updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
   };
@@ -12533,6 +12563,7 @@ function serializeUserAnalyticsStateRow(row) {
     numbersGoal: row.numbers_goal,
     numbersWindow: row.numbers_window,
     closedDealDraft: parseAnalyticsStateJson(row.closed_deal_draft_json, null),
+    whiteboardItems: parseAnalyticsStateJson(row.whiteboard_items_json, []),
     metrics: parseAnalyticsStateJson(row.metrics_json, {}),
     updatedAt: Number(row.updated_at) || 0
   });
@@ -12540,7 +12571,7 @@ function serializeUserAnalyticsStateRow(row) {
 
 async function getUserAnalyticsState(ownerUserId) {
   const row = await dbGet(
-    `SELECT numbers_goal, numbers_window, closed_deal_draft_json, metrics_json, updated_at
+    `SELECT numbers_goal, numbers_window, closed_deal_draft_json, whiteboard_items_json, metrics_json, updated_at
        FROM user_analytics_state
       WHERE owner_user_id = ?`,
     [ownerUserId]
@@ -12555,12 +12586,13 @@ async function saveUserAnalyticsState(ownerUserId, nextState) {
 
   await dbRun(
     `INSERT INTO user_analytics_state (
-      owner_user_id, numbers_goal, numbers_window, closed_deal_draft_json, metrics_json, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?)
+      owner_user_id, numbers_goal, numbers_window, closed_deal_draft_json, whiteboard_items_json, metrics_json, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(owner_user_id) DO UPDATE SET
       numbers_goal = excluded.numbers_goal,
       numbers_window = excluded.numbers_window,
       closed_deal_draft_json = excluded.closed_deal_draft_json,
+      whiteboard_items_json = excluded.whiteboard_items_json,
       metrics_json = excluded.metrics_json,
       updated_at = excluded.updated_at`,
     [
@@ -12568,6 +12600,7 @@ async function saveUserAnalyticsState(ownerUserId, nextState) {
       normalizedState.numbersGoal,
       normalizedState.numbersWindow,
       JSON.stringify(normalizedState.closedDealDraft),
+      JSON.stringify(normalizedState.whiteboardItems),
       JSON.stringify(normalizedState.metrics),
       updatedAt
     ]

@@ -51,6 +51,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const ANALYTICS_NAV_BADGE_STATE_KEY = 'analyticsNavBadgeStateByUser';
     const PROPERTY_SUBMISSIONS_BADGE_STATE_KEY = 'propertySubmissionsBadgeStateByUser';
     const USER_PROPERTY_SUBMISSIONS_KEY = 'userPropertySubmissionsByUser';
+    const ANALYTICS_WHITEBOARD_ITEMS_KEY = 'analyticsWhiteboardItemsByUser';
     const ADMIN_CONTROLS_WIDGET_DOCK_ORDER = [
         'admin-announcement',
         'admin-discord-meetings',
@@ -4650,6 +4651,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             numbersGoal: '',
             numbersWindow: 'all',
             closedDealDraft: null,
+            whiteboardItems: [],
             metrics: {
                 offerTermsSentCount: 0,
                 offersSubmittedCount: 0,
@@ -4666,6 +4668,29 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             offersSubmittedCount: Math.max(Number(metrics.offersSubmittedCount) || 0, 0),
             updatedAt: Math.max(Number(metrics.updatedAt) || 0, 0)
         };
+    }
+
+    function normalizeAnalyticsWhiteboardItems(value) {
+        if (!Array.isArray(value)) {
+            return [];
+        }
+
+        return value
+            .map((item) => {
+                const safeItem = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+                const text = String(safeItem.text || '').trim().slice(0, 2000);
+                if (!text) {
+                    return null;
+                }
+
+                return {
+                    id: String(safeItem.id || '').trim().slice(0, 120) || `whiteboard-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                    text,
+                    createdAt: Math.max(Number(safeItem.createdAt) || 0, 0) || Date.now()
+                };
+            })
+            .filter(Boolean)
+            .slice(0, 200);
     }
 
     function hasAnalyticsDraftContent(value) {
@@ -4693,6 +4718,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             numbersGoal: String(state.numbersGoal || '').replace(/[^0-9]/g, '').slice(0, 12),
             numbersWindow: ['q1', 'q2', 'q3', 'q4', 'all'].includes(normalizedWindow) ? normalizedWindow : 'all',
             closedDealDraft: normalizedDraft,
+            whiteboardItems: normalizeAnalyticsWhiteboardItems(state.whiteboardItems),
             metrics: normalizeAnalyticsStateMetrics(state.metrics),
             updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
         };
@@ -4737,6 +4763,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const currentDraft = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, userKey, null);
         if (!hasAnalyticsDraftContent(currentDraft) && normalizedState.closedDealDraft) {
             setUserScopedValueSilently(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, userKey, normalizedState.closedDealDraft);
+        }
+
+        const currentWhiteboardItems = normalizeAnalyticsWhiteboardItems(getUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, userKey));
+        if (!currentWhiteboardItems.length && normalizedState.whiteboardItems.length) {
+            setUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, userKey, normalizedState.whiteboardItems, { silent: true });
         }
 
         return normalizedState;
@@ -4826,12 +4857,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const localWindow = String(getUserScopedValue(ANALYTICS_NUMBERS_WINDOW_KEY, userKey, 'all') || 'all').trim().toLowerCase();
         const localDraftValue = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, userKey, null);
         const localDraft = hasAnalyticsDraftContent(localDraftValue) ? localDraftValue : null;
+        const localWhiteboardItems = normalizeAnalyticsWhiteboardItems(getUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, userKey));
 
         return normalizeAnalyticsStatePayload({
             ...(analyticsStateCache || getDefaultAnalyticsStateSnapshot()),
             numbersGoal: localGoal,
             numbersWindow: ['q1', 'q2', 'q3', 'q4', 'all'].includes(localWindow) ? localWindow : 'all',
             closedDealDraft: localDraft,
+            whiteboardItems: localWhiteboardItems,
             ...overrides,
             metrics: {
                 ...((analyticsStateCache && analyticsStateCache.metrics) || getDefaultAnalyticsStateSnapshot().metrics),
@@ -6978,6 +7011,100 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         void Promise.allSettled([loadManualClosedDealsFromServer(), loadClosedDealUploadsFromServer()]);
         window.addEventListener('dashboard-data-updated', renderClosedDeals);
         window.addEventListener('storage', renderClosedDeals);
+    }
+
+    function initAnalyticsWhiteboardWidget() {
+        const listEl = document.getElementById('analytics-whiteboard-list');
+        const inputEl = document.getElementById('analytics-whiteboard-input');
+        const addButton = document.getElementById('analytics-whiteboard-add-btn');
+
+        if (!listEl || !inputEl || !addButton) {
+            return;
+        }
+
+        const workspaceUser = getWorkspaceUserContext();
+
+        function getWhiteboardItems() {
+            return getUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, workspaceUser.key)
+                .filter((item) => item && typeof item === 'object')
+                .map((item) => ({
+                    id: String(item.id || '').trim(),
+                    text: String(item.text || '').trim(),
+                    createdAt: Number(item.createdAt) || Date.now()
+                }))
+                .filter((item) => item.id && item.text);
+        }
+
+        function setWhiteboardItems(items) {
+            setUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, workspaceUser.key, Array.isArray(items) ? items : []);
+            scheduleAnalyticsStateSave(workspaceUser, {
+                whiteboardItems: normalizeAnalyticsWhiteboardItems(items)
+            });
+        }
+
+        function renderWhiteboard() {
+            const items = getWhiteboardItems();
+            if (!items.length) {
+                listEl.innerHTML = '<li class="outreach-empty">No white board goals yet. Add your first bullet point above.</li>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            items.forEach((item) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'analytics-whiteboard-item';
+
+                const text = document.createElement('span');
+                text.className = 'analytics-whiteboard-item-text';
+                text.textContent = item.text;
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'analytics-whiteboard-remove-btn';
+                removeButton.setAttribute('aria-label', `Remove ${item.text}`);
+                removeButton.textContent = '×';
+                removeButton.addEventListener('click', () => {
+                    const nextItems = getWhiteboardItems().filter((entry) => entry.id !== item.id);
+                    setWhiteboardItems(nextItems);
+                    renderWhiteboard();
+                });
+
+                listItem.append(text, removeButton);
+                listEl.appendChild(listItem);
+            });
+        }
+
+        function addWhiteboardItem() {
+            const text = String(inputEl.value || '').trim();
+            if (!text) {
+                inputEl.focus();
+                return;
+            }
+
+            const nextItems = [
+                ...getWhiteboardItems(),
+                {
+                    id: `whiteboard-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+                    text,
+                    createdAt: Date.now()
+                }
+            ];
+            setWhiteboardItems(nextItems);
+            inputEl.value = '';
+            renderWhiteboard();
+        }
+
+        addButton.addEventListener('click', addWhiteboardItem);
+        inputEl.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                addWhiteboardItem();
+            }
+        });
+
+        window.addEventListener('dashboard-data-updated', renderWhiteboard);
+        window.addEventListener('storage', renderWhiteboard);
+        renderWhiteboard();
     }
 
 function initNavbarDateTime() {
@@ -9737,7 +9864,7 @@ function initNavbarDateTime() {
 
             const premiumRole = 'premium user';
             const adminRole = 'admin';
-            const premiumPriceLabel = '$99';
+            const premiumPriceLabel = '$99 / month + $500 setup';
             const billingFields = {
                 billingName: document.getElementById('subscription-billing-name'),
                 billingEmail: document.getElementById('subscription-billing-email'),
@@ -9772,10 +9899,10 @@ function initNavbarDateTime() {
                 },
                 premium: {
                     label: 'Premium',
-                    summary: 'Premium costs $99 and unlocks analysis, calculator tools, ROI visibility, comps, analytics, campaigns, and the full Premium User workspace.',
+                    summary: 'Premium costs $99 per month plus a $500 setup fee and unlocks analysis, calculator tools, ROI visibility, comps, analytics, campaigns, and the full Premium User workspace.',
                     cta: 'Get the full investor workspace with analysis, ROI visibility, comps, campaigns, and premium-only tools.',
-                    price: '$99 / month',
-                    recap: 'Premium is the fast path for users who want analysis, comps, ROI visibility, analytics, and campaigns working together in one account.',
+                    price: '$99 / month + $500 setup',
+                    recap: 'Premium is the fast path for users who want analysis, comps, ROI visibility, analytics, and campaigns working together in one account, with a one-time $500 setup fee to get started.',
                     access: 'Premium investor stack ready',
                     nextStep: 'Next step: complete billing to turn on Premium access for this account.'
                 }
@@ -9857,7 +9984,7 @@ function initNavbarDateTime() {
                 brokerageTotalAccounts.textContent = String(agentCount);
                 brokerageIncluded.textContent = 'Broker access is included at no extra charge.';
                 brokerageSummaryTitle.textContent = `${agentCount} agent account${agentCount === 1 ? '' : 's'}`;
-                brokerageSummaryCopy.textContent = `${formatBrokerageCurrency(price)} per month for ${agentCount} agent account${agentCount === 1 ? '' : 's'}. Broker access is included.`;
+                brokerageSummaryCopy.textContent = `${formatBrokerageCurrency(price)} per month plus a $500 setup fee for ${agentCount} agent account${agentCount === 1 ? '' : 's'}. Broker access is included.`;
 
                 brokerageAnchors.forEach((anchor) => {
                     const anchorCount = Number(anchor.getAttribute('data-broker-anchor') || 0);
@@ -32636,8 +32763,7 @@ function initNavbarDateTime() {
                         `• Deposit (${depositMode}): ${depositAmount}`,
                         `• Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite}`}`,
                         `• Disclosures: ${disclosures}${/day/i.test(disclosures) ? '' : ' days'}`,
-                        `• Escrow fees: ${escrowFees}`,
-                        `• Title fees: ${titleFees}`,
+                        `• Escrow fees / title fees: Buyer to pay escrow and title fees when using Buyer's preferred escrow / title company. If Seller selects escrow and/or title company, related fees to be split 50/50 between Buyer and Seller.`,
                         `• Escrow: ${escrow}`,
                         `• Title company: ${titleCompany}`,
                         investorProfile?.closingCostSummary ? `• Closing costs: ${investorProfile.closingCostSummary}` : '',
@@ -34652,6 +34778,7 @@ function initNavbarDateTime() {
             ['initAnalyticsNavBadge', initAnalyticsNavBadge],
             ['initLiveKpiStats', initLiveKpiStats],
             ['initClosedDealsWidget', initClosedDealsWidget],
+            ['initAnalyticsWhiteboardWidget', initAnalyticsWhiteboardWidget],
             ['initWidgetControls', initWidgetControls],
             ['initInteractiveCalendar', initInteractiveCalendar],
             ['initDashboardChatGptWidget', initDashboardChatGptWidget],

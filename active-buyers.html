@@ -356,6 +356,181 @@
             color: var(--buyers-note);
         }
 
+        .buyers-coverage-map-wrap {
+            margin-top: 18px;
+        }
+
+        .buyers-coverage-card {
+            display: grid;
+            gap: 18px;
+            padding: 20px;
+            border-radius: 24px;
+            border: 1px solid rgba(var(--accent-light-rgb), 0.18);
+            background: radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.18), transparent 28%), linear-gradient(145deg, rgba(6, 78, 59, 0.32), rgba(15, 23, 42, 0.5));
+            box-shadow: 0 20px 48px rgba(2, 6, 23, 0.24);
+        }
+
+        .buyers-coverage-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .buyers-coverage-title-wrap {
+            min-width: 0;
+        }
+
+        .buyers-coverage-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .buyers-coverage-stat {
+            min-width: 122px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .buyers-coverage-stat-label {
+            display: block;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(248, 250, 252, 0.72);
+        }
+
+        .buyers-coverage-stat-value {
+            display: block;
+            margin-top: 6px;
+            font-size: 22px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .buyers-coverage-map-shell {
+            display: grid;
+            grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+            gap: 18px;
+            align-items: stretch;
+        }
+
+        .buyers-coverage-legend {
+            display: grid;
+            gap: 12px;
+            padding: 18px;
+            border-radius: 20px;
+            background: rgba(7, 14, 24, 0.34);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .buyers-coverage-status {
+            margin: 0;
+            font-size: 13px;
+            color: rgba(248, 250, 252, 0.72);
+        }
+
+        .buyers-coverage-chip-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .buyers-coverage-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .buyers-coverage-chip strong {
+            color: rgba(var(--accent-light-rgb), 1);
+            font-weight: 700;
+        }
+
+        .buyers-coverage-empty {
+            margin: 0;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px dashed rgba(255, 255, 255, 0.14);
+            color: rgba(248, 250, 252, 0.78);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .buyers-coverage-empty[hidden] {
+            display: none;
+        }
+
+        .buyers-coverage-map-frame {
+            position: relative;
+            min-height: 420px;
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(160deg, rgba(9, 16, 28, 0.92), rgba(5, 10, 18, 0.84));
+        }
+
+        .buyers-coverage-map-canvas {
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+        }
+
+        .buyers-coverage-map-overlay {
+            position: absolute;
+            inset: 18px auto auto 18px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: rgba(9, 16, 28, 0.72);
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 1;
+        }
+
+        .buyers-coverage-map-empty {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            color: rgba(248, 250, 252, 0.8);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .buyers-coverage-map-empty[hidden] {
+            display: none;
+        }
+
+        @media (max-width: 960px) {
+            .buyers-coverage-map-shell {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .buyers-coverage-map-frame,
+            .buyers-coverage-map-canvas {
+                min-height: 340px;
+            }
+        }
+
         .buyers-sheet-meta {
             display: flex;
             flex-wrap: wrap;
@@ -761,6 +936,41 @@
                     <p class="buyers-sheet-note">Tip: Only admins can use this list. Changes save to one shared admin sheet and refresh across admin sessions automatically. Use comma-separated ZIPs, asset classes, and financing types to power buyer-match automation.</p>
                 </div>
             </section>
+
+            <section class="buyers-coverage-map-wrap">
+                <div class="glass-card buyers-coverage-card">
+                    <div class="buyers-coverage-head">
+                        <div class="buyers-coverage-title-wrap">
+                            <h2 class="card-title">Active Buyer Buy Box Map</h2>
+                            <p class="card-subtitle">Separate from the buyer list, this map shows the ZIP areas your active buyers say they want to buy in.</p>
+                        </div>
+                        <div class="buyers-coverage-stats">
+                            <div class="buyers-coverage-stat">
+                                <span class="buyers-coverage-stat-label">Mapped ZIPs</span>
+                                <strong class="buyers-coverage-stat-value" id="buyers-map-zip-count">0</strong>
+                            </div>
+                            <div class="buyers-coverage-stat">
+                                <span class="buyers-coverage-stat-label">Buyers With Areas</span>
+                                <strong class="buyers-coverage-stat-value" id="buyers-map-buyer-count">0</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="buyers-coverage-map-shell">
+                        <div class="buyers-coverage-legend">
+                            <p class="buyers-coverage-status" id="buyers-map-status">Reading buy box ZIPs from the active buyers sheet...</p>
+                            <div class="buyers-coverage-chip-list" id="buyers-map-zip-chips"></div>
+                            <p class="buyers-coverage-empty" id="buyers-map-empty-copy">Add ZIP codes in the Buy Box ZIPs column to build this active buyer coverage map.</p>
+                        </div>
+
+                        <div class="buyers-coverage-map-frame">
+                            <div class="buyers-coverage-map-overlay">ZIP coverage by active buyers</div>
+                            <div class="buyers-coverage-map-canvas" id="buyers-coverage-map-canvas" aria-label="Active buyers buy box map"></div>
+                            <div class="buyers-coverage-map-empty" id="buyers-coverage-map-empty">Map coverage will appear here after FAST finds valid buyer ZIP targets.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         <footer class="site-legal-footer">
     <div class="site-legal-footer-inner">
         <div class="site-legal-footer-brand">FAST BRIDGE GROUP 2026</div>
@@ -1135,8 +1345,15 @@
             const saveCsvBtn = document.getElementById('buyers-save-csv');
             const syncStatus = document.getElementById('buyers-sync-status');
             const lastEdited = document.getElementById('buyers-last-edited');
+            const buyersCoverageMapCanvas = document.getElementById('buyers-coverage-map-canvas');
+            const buyersCoverageMapEmpty = document.getElementById('buyers-coverage-map-empty');
+            const buyersMapStatus = document.getElementById('buyers-map-status');
+            const buyersMapZipCount = document.getElementById('buyers-map-zip-count');
+            const buyersMapBuyerCount = document.getElementById('buyers-map-buyer-count');
+            const buyersMapZipChips = document.getElementById('buyers-map-zip-chips');
+            const buyersMapEmptyCopy = document.getElementById('buyers-map-empty-copy');
 
-            if (!body || !addRowBtn || !saveCsvBtn || !syncStatus || !lastEdited) {
+            if (!body || !addRowBtn || !saveCsvBtn || !syncStatus || !lastEdited || !buyersCoverageMapCanvas || !buyersCoverageMapEmpty || !buyersMapStatus || !buyersMapZipCount || !buyersMapBuyerCount || !buyersMapZipChips || !buyersMapEmptyCopy) {
                 return;
             }
 
@@ -1147,6 +1364,13 @@
             let pendingPollPromise = null;
             let isDirty = false;
             let pollingHandle = null;
+            let buyersCoverageMapInstance = null;
+            let buyersCoverageInfoWindow = null;
+            let buyersCoverageMapRenderToken = 0;
+            let buyersCoverageMapRenderTimer = null;
+            let buyersMapsConfigPromise = null;
+            let buyersMapsScriptPromise = null;
+            const buyersZipGeocodeCache = new Map();
 
             const CSV_HEADERS = [
                 'Active Buyer?',
@@ -1447,11 +1671,320 @@
                 return JSON.stringify(Array.isArray(rows) ? rows : []);
             }
 
+            function setBuyersMapStatus(message) {
+                buyersMapStatus.textContent = String(message || '').trim();
+            }
+
+            function parseBuyerZipTargets(rows) {
+                const zipMap = new Map();
+                let buyersWithTargets = 0;
+
+                (Array.isArray(rows) ? rows : []).forEach((row) => {
+                    const buyBoxValue = String(row && row.buyBoxZips || '').trim();
+                    if (!buyBoxValue) {
+                        return;
+                    }
+
+                    const buyerName = String(row && row.name || '').trim() || 'Unnamed buyer';
+                    const zipMatches = Array.from(new Set((buyBoxValue.match(/\b\d{5}(?:-\d{4})?\b/g) || []).map((zip) => zip.slice(0, 5))));
+                    if (!zipMatches.length) {
+                        return;
+                    }
+
+                    buyersWithTargets += 1;
+                    zipMatches.forEach((zip) => {
+                        const existing = zipMap.get(zip) || { zip, buyers: [] };
+                        existing.buyers.push(buyerName);
+                        zipMap.set(zip, existing);
+                    });
+                });
+
+                return {
+                    buyersWithTargets,
+                    zipTargets: Array.from(zipMap.values()).sort((left, right) => right.buyers.length - left.buyers.length || left.zip.localeCompare(right.zip))
+                };
+            }
+
+            function updateBuyerCoverageSummary(summary) {
+                const zipTargets = Array.isArray(summary && summary.zipTargets) ? summary.zipTargets : [];
+                const buyersWithTargets = Number(summary && summary.buyersWithTargets) || 0;
+
+                buyersMapZipCount.textContent = String(zipTargets.length);
+                buyersMapBuyerCount.textContent = String(buyersWithTargets);
+                buyersMapZipChips.innerHTML = '';
+
+                if (!zipTargets.length) {
+                    buyersMapZipChips.hidden = true;
+                    buyersMapEmptyCopy.hidden = false;
+                    buyersCoverageMapEmpty.hidden = false;
+                    buyersCoverageMapCanvas.setAttribute('aria-hidden', 'true');
+                    return;
+                }
+
+                buyersMapZipChips.hidden = false;
+                buyersMapEmptyCopy.hidden = true;
+                buyersCoverageMapEmpty.hidden = true;
+                buyersCoverageMapCanvas.removeAttribute('aria-hidden');
+
+                zipTargets.slice(0, 16).forEach((entry) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'buyers-coverage-chip';
+                    chip.innerHTML = `<strong>${entry.zip}</strong> ${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'}`;
+                    buyersMapZipChips.appendChild(chip);
+                });
+            }
+
+            async function getBuyersMapsConfig() {
+                if (!buyersMapsConfigPromise) {
+                    buyersMapsConfigPromise = fetch('/api/maps/google-config', {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache'
+                        }
+                    }).then(async (response) => {
+                        if (!response.ok) {
+                            throw new Error(`Google Maps config failed with status ${response.status}.`);
+                        }
+
+                        const payload = await response.json().catch(() => ({}));
+                        return payload && typeof payload === 'object' ? payload : {};
+                    }).catch((error) => {
+                        buyersMapsConfigPromise = null;
+                        throw error;
+                    });
+                }
+
+                return buyersMapsConfigPromise;
+            }
+
+            async function loadBuyersGoogleMaps() {
+                const config = await getBuyersMapsConfig();
+                const apiKey = String(config && config.apiKey || '').trim();
+                const mapId = String(config && (config.mapId || config.earthMapId) || '').trim();
+
+                if (!apiKey) {
+                    throw new Error('Google Maps is not configured on the server yet.');
+                }
+
+                if (window.google && window.google.maps) {
+                    return { maps: window.google.maps, config };
+                }
+
+                if (!buyersMapsScriptPromise) {
+                    buyersMapsScriptPromise = new Promise((resolve, reject) => {
+                        const existing = document.getElementById('buyers-coverage-google-maps-script');
+                        if (existing) {
+                            existing.addEventListener('load', () => resolve(window.google.maps), { once: true });
+                            existing.addEventListener('error', () => reject(new Error('Google Maps could not finish loading.')), { once: true });
+                            return;
+                        }
+
+                        const callbackName = '__buyersCoverageGoogleMapsReady';
+                        window[callbackName] = () => {
+                            resolve(window.google.maps);
+                            try {
+                                delete window[callbackName];
+                            } catch (_error) {
+                                window[callbackName] = undefined;
+                            }
+                        };
+
+                        const script = document.createElement('script');
+                        script.id = 'buyers-coverage-google-maps-script';
+                        const params = new URLSearchParams({
+                            key: apiKey,
+                            libraries: 'marker',
+                            callback: callbackName,
+                            v: 'weekly'
+                        });
+                        if (mapId) {
+                            params.set('map_ids', mapId);
+                        }
+                        script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
+                        script.async = true;
+                        script.defer = true;
+                        script.onerror = () => reject(new Error('Google Maps could not finish loading.'));
+                        document.head.appendChild(script);
+                    }).catch((error) => {
+                        buyersMapsScriptPromise = null;
+                        throw error;
+                    });
+                }
+
+                const maps = await buyersMapsScriptPromise;
+                return { maps, config };
+            }
+
+            async function geocodeBuyerZip(zip) {
+                const normalizedZip = String(zip || '').trim();
+                if (!normalizedZip) {
+                    return null;
+                }
+
+                if (buyersZipGeocodeCache.has(normalizedZip)) {
+                    return buyersZipGeocodeCache.get(normalizedZip);
+                }
+
+                const { maps } = await loadBuyersGoogleMaps();
+                const geocoder = new maps.Geocoder();
+                const result = await new Promise((resolve) => {
+                    geocoder.geocode({ address: `${normalizedZip}, USA`, region: 'US' }, (responses, status) => {
+                        if (status === 'OK' && Array.isArray(responses) && responses[0] && responses[0].geometry && responses[0].geometry.location) {
+                            const location = responses[0].geometry.location;
+                            resolve({ zip: normalizedZip, lat: location.lat(), lng: location.lng() });
+                            return;
+                        }
+                        resolve(null);
+                    });
+                });
+
+                buyersZipGeocodeCache.set(normalizedZip, result);
+                return result;
+            }
+
+            async function renderBuyerCoverageMap(rows) {
+                const currentToken = ++buyersCoverageMapRenderToken;
+                const summary = parseBuyerZipTargets(rows);
+                const zipTargets = summary.zipTargets;
+
+                updateBuyerCoverageSummary(summary);
+
+                if (!zipTargets.length) {
+                    setBuyersMapStatus('No buyer ZIP targets found yet. Add ZIPs in the sheet to build this map.');
+                    return;
+                }
+
+                setBuyersMapStatus(`Mapping ${zipTargets.length} ZIP target${zipTargets.length === 1 ? '' : 's'} from ${summary.buyersWithTargets} buyer${summary.buyersWithTargets === 1 ? '' : 's'}...`);
+
+                try {
+                    const mapBundle = await loadBuyersGoogleMaps();
+                    if (currentToken !== buyersCoverageMapRenderToken) {
+                        return;
+                    }
+
+                    const maps = mapBundle.maps;
+                    const config = mapBundle.config;
+                    const geocodedTargets = (await Promise.all(zipTargets.map(async (entry) => {
+                        const point = await geocodeBuyerZip(entry.zip);
+                        return point ? { ...entry, ...point } : null;
+                    }))).filter(Boolean);
+
+                    if (currentToken !== buyersCoverageMapRenderToken) {
+                        return;
+                    }
+
+                    if (!geocodedTargets.length) {
+                        buyersCoverageMapEmpty.hidden = false;
+                        buyersCoverageMapCanvas.setAttribute('aria-hidden', 'true');
+                        setBuyersMapStatus('FAST could not geocode the current buyer ZIP targets yet.');
+                        return;
+                    }
+
+                    buyersCoverageMapEmpty.hidden = true;
+                    buyersCoverageMapCanvas.removeAttribute('aria-hidden');
+
+                    if (!buyersCoverageMapInstance) {
+                        buyersCoverageMapInstance = new maps.Map(buyersCoverageMapCanvas, {
+                            center: { lat: geocodedTargets[0].lat, lng: geocodedTargets[0].lng },
+                            zoom: 7,
+                            mapTypeId: 'roadmap',
+                            disableDefaultUI: true,
+                            zoomControl: true,
+                            fullscreenControl: true,
+                            gestureHandling: 'cooperative',
+                            mapId: String(config && (config.mapId || config.earthMapId) || '').trim() || undefined,
+                            styles: [
+                                { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
+                                { elementType: 'labels.text.fill', stylers: [{ color: '#cbd5f5' }] },
+                                { elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }] },
+                                { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#1e293b' }] },
+                                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+                                { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e3a5f' }] },
+                                { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#e2e8f0' }] },
+                                { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f766e' }] }
+                            ]
+                        });
+                        buyersCoverageInfoWindow = new maps.InfoWindow();
+                    }
+
+                    if (Array.isArray(buyersCoverageMapInstance.__fastMarkers)) {
+                        buyersCoverageMapInstance.__fastMarkers.forEach((marker) => {
+                            if (marker && typeof marker.setMap === 'function') {
+                                marker.setMap(null);
+                            }
+                        });
+                    }
+
+                    const bounds = new maps.LatLngBounds();
+                    const markers = geocodedTargets.map((entry) => {
+                        const marker = new maps.Marker({
+                            map: buyersCoverageMapInstance,
+                            position: { lat: entry.lat, lng: entry.lng },
+                            title: `${entry.zip} • ${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'}`,
+                            label: {
+                                text: String(entry.buyers.length),
+                                color: '#ffffff',
+                                fontWeight: '700'
+                            },
+                            icon: {
+                                path: maps.SymbolPath.CIRCLE,
+                                scale: 16,
+                                fillColor: '#10b981',
+                                fillOpacity: 0.92,
+                                strokeColor: '#f8fafc',
+                                strokeWeight: 2
+                            }
+                        });
+
+                        marker.addListener('click', () => {
+                            buyersCoverageInfoWindow.setContent(`
+                                <div style="min-width:190px;color:#0f172a;">
+                                    <strong>${entry.zip}</strong>
+                                    <div style="margin-top:6px;font-size:12px;color:#334155;">${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'} target this ZIP.</div>
+                                    <div style="margin-top:8px;font-size:12px;line-height:1.5;">${entry.buyers.slice(0, 8).join(', ')}${entry.buyers.length > 8 ? ', ...' : ''}</div>
+                                </div>
+                            `);
+                            buyersCoverageInfoWindow.open({ anchor: marker, map: buyersCoverageMapInstance });
+                        });
+
+                        bounds.extend(marker.getPosition());
+                        return marker;
+                    });
+
+                    buyersCoverageMapInstance.__fastMarkers = markers;
+
+                    if (geocodedTargets.length === 1) {
+                        buyersCoverageMapInstance.setCenter({ lat: geocodedTargets[0].lat, lng: geocodedTargets[0].lng });
+                        buyersCoverageMapInstance.setZoom(9);
+                    } else {
+                        buyersCoverageMapInstance.fitBounds(bounds, 56);
+                    }
+
+                    setBuyersMapStatus(`Showing ${geocodedTargets.length} mapped ZIP areas across your active buyers.`);
+                } catch (error) {
+                    buyersCoverageMapEmpty.hidden = false;
+                    buyersCoverageMapCanvas.setAttribute('aria-hidden', 'true');
+                    setBuyersMapStatus(error && error.message ? error.message : 'FAST could not load the active buyer coverage map.');
+                }
+            }
+
+            function scheduleBuyerCoverageMapRender(rows) {
+                const snapshot = Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
+                if (buyersCoverageMapRenderTimer) {
+                    window.clearTimeout(buyersCoverageMapRenderTimer);
+                }
+                buyersCoverageMapRenderTimer = window.setTimeout(() => {
+                    buyersCoverageMapRenderTimer = null;
+                    void renderBuyerCoverageMap(snapshot);
+                }, 120);
+            }
+
             function renderRows(rows) {
                 body.innerHTML = '';
                 rows.forEach((row) => {
                     body.appendChild(createRow(row));
                 });
+                scheduleBuyerCoverageMapRender(rows);
             }
 
             function escapeCsvValue(value) {
@@ -1609,6 +2142,7 @@
             function scheduleSaveRows() {
                 isDirty = true;
                 setSyncStatus('Waiting to save changes...', 'info');
+                scheduleBuyerCoverageMapRender(getRowsFromDom());
                 if (pendingSaveTimer) {
                     window.clearTimeout(pendingSaveTimer);
                 }
