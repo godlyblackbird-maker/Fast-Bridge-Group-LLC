@@ -2190,7 +2190,7 @@
                     return '#f97316';
                 }
                 if (buyerCount >= 3) {
-                    return '#22c55e';
+                    return '#eab308';
                 }
                 return '#38bdf8';
             }
@@ -2372,7 +2372,7 @@
                         fillColor,
                         fillOpacity: isHovered || isSelected ? 0.18 : 0.08,
                         strokeColor: fillColor,
-                        strokeOpacity: 0.95,
+                        strokeOpacity: isHovered || isSelected ? 0.62 : 0.42,
                         strokeWeight: isHovered || isSelected ? 4.5 : 3,
                         zIndex: 2
                     };
@@ -2390,6 +2390,7 @@
                         buyersCoverageMapInstance.data.revertStyle();
                         buyersCoverageMapInstance.data.overrideStyle(event.feature, {
                             fillOpacity: 0.18,
+                            strokeOpacity: 0.62,
                             strokeWeight: 4.5
                         });
                     });
@@ -2405,6 +2406,7 @@
                         buyersCoverageMapInstance.data.revertStyle();
                         buyersCoverageMapInstance.data.overrideStyle(event.feature, {
                             fillOpacity: 0.18,
+                            strokeOpacity: 0.62,
                             strokeWeight: 4.5
                         });
                         buyersCoverageInfoWindow.setPosition(event.latLng);
