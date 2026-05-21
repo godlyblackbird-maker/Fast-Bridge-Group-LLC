@@ -32761,7 +32761,7 @@ function initNavbarDateTime() {
                         `• Purchase price: ${purchasePrice}`,
                         `• Close of escrow: ${closeEscrowDays}${/day/i.test(closeEscrowDays) ? '' : ' days'} (Business days)`,
                         `• Deposit (${depositMode}): ${depositAmount}`,
-                        `• Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite}`}`,
+                        `• Contingencies: ${investorProfile?.contingencySummary ? investorProfile.contingencySummary : `${inspection} inspection | ${appraisal} | ${termite} | No loan contingencies`}`,
                         `• Disclosures: ${disclosures}${/day/i.test(disclosures) ? '' : ' days'}`,
                         `• Escrow fees / title fees: Buyer to pay escrow and title fees when using Buyer's preferred escrow / title company. If Seller selects escrow and/or title company, related fees to be split 50/50 between Buyer and Seller.`,
                         `• Escrow: ${escrow}`,
