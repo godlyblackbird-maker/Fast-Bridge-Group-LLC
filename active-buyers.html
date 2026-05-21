@@ -1395,6 +1395,7 @@
             let buyersMapsConfigPromise = null;
             let buyersMapsScriptPromise = null;
             const buyersZipGeocodeCache = new Map();
+            const buyersZipBoundarySourceCache = new Map();
 
             const CSV_HEADERS = [
                 'Active Buyer?',
@@ -1855,11 +1856,15 @@
                     geocoder.geocode({ address: `${normalizedZip}, USA`, region: 'US' }, (responses, status) => {
                         if (status === 'OK' && Array.isArray(responses) && responses[0] && responses[0].geometry && responses[0].geometry.location) {
                             const location = responses[0].geometry.location;
+                            const addressComponents = Array.isArray(responses[0].address_components) ? responses[0].address_components : [];
+                            const stateComponent = addressComponents.find((component) => Array.isArray(component && component.types) && component.types.includes('administrative_area_level_1'));
                             resolve({
                                 zip: normalizedZip,
                                 lat: location.lat(),
                                 lng: location.lng(),
-                                placeId: String(responses[0].place_id || '').trim()
+                                placeId: String(responses[0].place_id || '').trim(),
+                                stateCode: String(stateComponent && stateComponent.short_name || '').trim().toUpperCase(),
+                                stateName: String(stateComponent && stateComponent.long_name || '').trim()
                             });
                             return;
                         }
@@ -1881,50 +1886,195 @@
                 return '#38bdf8';
             }
 
-            function applyBuyerCoverageBoundaryStyles(geocodedTargets) {
-                if (!buyersCoverageMapInstance || typeof buyersCoverageMapInstance.getFeatureLayer !== 'function') {
-                    return false;
+            function slugifyBuyerBoundaryStateName(stateName) {
+                return String(stateName || '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '_')
+                    .replace(/^_+|_+$/g, '');
+            }
+
+            function buildBuyerBoundarySourceUrl(stateCode, stateName) {
+                const normalizedCode = String(stateCode || '').trim().toLowerCase();
+                const normalizedName = slugifyBuyerBoundaryStateName(stateName);
+                if (!normalizedCode || !normalizedName) {
+                    return '';
                 }
 
-                const postalLayer = buyersCoverageMapInstance.getFeatureLayer('POSTAL_CODE');
-                if (!postalLayer) {
-                    return false;
+                return `https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/${normalizedCode}_${normalizedName}_zip_codes_geo.min.json`;
+            }
+
+            function getBuyerBoundaryZipFromFeature(feature) {
+                if (feature && typeof feature.getProperty === 'function') {
+                    return String(
+                        feature.getProperty('ZCTA5CE10')
+                        || feature.getProperty('zip')
+                        || feature.getProperty('ZIP')
+                        || feature.getProperty('postalCode')
+                        || feature.getProperty('POSTCODE')
+                        || ''
+                    ).trim().slice(0, 5);
                 }
 
-                const targetsByPlaceId = new Map();
+                const properties = feature && feature.properties && typeof feature.properties === 'object' ? feature.properties : {};
+                return String(
+                    properties.ZCTA5CE10
+                    || properties.zip
+                    || properties.ZIP
+                    || properties.postalCode
+                    || properties.POSTCODE
+                    || ''
+                ).trim().slice(0, 5);
+            }
+
+            async function getBuyerBoundarySourceForState(stateCode, stateName) {
+                const sourceUrl = buildBuyerBoundarySourceUrl(stateCode, stateName);
+                if (!sourceUrl) {
+                    return null;
+                }
+
+                if (!buyersZipBoundarySourceCache.has(sourceUrl)) {
+                    buyersZipBoundarySourceCache.set(sourceUrl, fetch(sourceUrl, {
+                        cache: 'force-cache'
+                    }).then(async (response) => {
+                        if (!response.ok) {
+                            throw new Error(`ZIP boundary source failed with status ${response.status}.`);
+                        }
+
+                        const payload = await response.json();
+                        return payload && payload.type === 'FeatureCollection' && Array.isArray(payload.features)
+                            ? payload
+                            : null;
+                    }).catch(() => null));
+                }
+
+                return buyersZipBoundarySourceCache.get(sourceUrl);
+            }
+
+            function clearBuyerCoverageGeoJson() {
+                if (!buyersCoverageMapInstance || !buyersCoverageMapInstance.data) {
+                    return;
+                }
+
+                const featuresToRemove = [];
+                buyersCoverageMapInstance.data.forEach((feature) => {
+                    featuresToRemove.push(feature);
+                });
+                featuresToRemove.forEach((feature) => {
+                    buyersCoverageMapInstance.data.remove(feature);
+                });
+                buyersCoverageMapInstance.data.setStyle(null);
+            }
+
+            function clearBuyerCoverageMarkers() {
+                if (!Array.isArray(buyersCoverageMapInstance && buyersCoverageMapInstance.__fastMarkers)) {
+                    return;
+                }
+
+                buyersCoverageMapInstance.__fastMarkers.forEach((marker) => {
+                    if (marker && typeof marker.setMap === 'function') {
+                        marker.setMap(null);
+                    }
+                });
+                buyersCoverageMapInstance.__fastMarkers = [];
+            }
+
+            async function applyBuyerCoverageBoundaryStyles(geocodedTargets) {
+                if (!buyersCoverageMapInstance || !buyersCoverageMapInstance.data) {
+                    return 0;
+                }
+
+                clearBuyerCoverageGeoJson();
+
+                const targetsByZip = new Map();
+                const boundaryRequests = new Map();
                 geocodedTargets.forEach((entry) => {
-                    const placeId = String(entry && entry.placeId || '').trim();
-                    if (!placeId) {
+                    const zip = String(entry && entry.zip || '').trim().slice(0, 5);
+                    const stateCode = String(entry && entry.stateCode || '').trim().toUpperCase();
+                    const stateName = String(entry && entry.stateName || '').trim();
+                    if (!zip) {
                         return;
                     }
-                    targetsByPlaceId.set(placeId, entry);
+
+                    targetsByZip.set(zip, entry);
+                    if (!stateCode || !stateName || boundaryRequests.has(stateCode)) {
+                        return;
+                    }
+
+                    boundaryRequests.set(stateCode, getBuyerBoundarySourceForState(stateCode, stateName));
                 });
 
-                if (!targetsByPlaceId.size) {
-                    postalLayer.style = null;
-                    return false;
+                if (!targetsByZip.size || !boundaryRequests.size) {
+                    return 0;
                 }
 
-                postalLayer.style = (options) => {
-                    const feature = options && options.feature ? options.feature : null;
-                    const placeId = String(feature && feature.placeId || '').trim();
-                    const entry = targetsByPlaceId.get(placeId);
+                const boundaryCollections = await Promise.all(Array.from(boundaryRequests.values()));
+                const matchingFeatures = [];
+
+                boundaryCollections.forEach((collection) => {
+                    if (!collection || !Array.isArray(collection.features)) {
+                        return;
+                    }
+
+                    collection.features.forEach((feature) => {
+                        const zip = getBuyerBoundaryZipFromFeature(feature);
+                        if (zip && targetsByZip.has(zip)) {
+                            matchingFeatures.push(feature);
+                        }
+                    });
+                });
+
+                if (!matchingFeatures.length) {
+                    return 0;
+                }
+
+                buyersCoverageMapInstance.__fastZipTargetsByZip = targetsByZip;
+                buyersCoverageMapInstance.data.addGeoJson({
+                    type: 'FeatureCollection',
+                    features: matchingFeatures
+                });
+
+                buyersCoverageMapInstance.data.setStyle((feature) => {
+                    const zip = getBuyerBoundaryZipFromFeature(feature);
+                    const entry = buyersCoverageMapInstance.__fastZipTargetsByZip && buyersCoverageMapInstance.__fastZipTargetsByZip.get(zip);
                     if (!entry) {
-                        return null;
+                        return { visible: false };
                     }
 
                     const fillColor = getBuyerCoverageFillColor(entry.buyers.length);
                     return {
+                        clickable: true,
+                        fillColor,
+                        fillOpacity: 0.2,
                         strokeColor: fillColor,
                         strokeOpacity: 0.95,
-                        strokeWeight: 2.5,
-                        fillColor,
-                        fillOpacity: 0.18
+                        strokeWeight: 3,
+                        zIndex: 2
                     };
-                };
+                });
 
-                buyersCoverageMapInstance.__fastPostalLayer = postalLayer;
-                return true;
+                if (!buyersCoverageMapInstance.__fastZipClickListenerReady) {
+                    buyersCoverageMapInstance.data.addListener('click', (event) => {
+                        const zip = getBuyerBoundaryZipFromFeature(event && event.feature);
+                        const entry = buyersCoverageMapInstance.__fastZipTargetsByZip && buyersCoverageMapInstance.__fastZipTargetsByZip.get(zip);
+                        if (!entry || !buyersCoverageInfoWindow) {
+                            return;
+                        }
+
+                        buyersCoverageInfoWindow.setPosition(event.latLng);
+                        buyersCoverageInfoWindow.setContent(`
+                            <div style="min-width:190px;color:#0f172a;">
+                                <strong>${entry.zip}</strong>
+                                <div style="margin-top:6px;font-size:12px;color:#334155;">${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'} target this ZIP.</div>
+                                <div style="margin-top:8px;font-size:12px;line-height:1.5;">${entry.buyers.slice(0, 8).join(', ')}${entry.buyers.length > 8 ? ', ...' : ''}</div>
+                            </div>
+                        `);
+                        buyersCoverageInfoWindow.open({ map: buyersCoverageMapInstance });
+                    });
+                    buyersCoverageMapInstance.__fastZipClickListenerReady = true;
+                }
+
+                return matchingFeatures.length;
             }
 
             async function renderBuyerCoverageMap(rows) {
@@ -1992,15 +2142,8 @@
                         buyersCoverageInfoWindow = new maps.InfoWindow();
                     }
 
-                    const hasZipBoundaries = applyBuyerCoverageBoundaryStyles(geocodedTargets);
-
-                    if (Array.isArray(buyersCoverageMapInstance.__fastMarkers)) {
-                        buyersCoverageMapInstance.__fastMarkers.forEach((marker) => {
-                            if (marker && typeof marker.setMap === 'function') {
-                                marker.setMap(null);
-                            }
-                        });
-                    }
+                    const renderedZipBoundaries = await applyBuyerCoverageBoundaryStyles(geocodedTargets);
+                    clearBuyerCoverageMarkers();
 
                     const bounds = new maps.LatLngBounds();
                     const markers = geocodedTargets.map((entry) => {
@@ -2047,9 +2190,9 @@
                         buyersCoverageMapInstance.fitBounds(bounds, 56);
                     }
 
-                    setBuyersMapStatus(hasZipBoundaries
-                        ? `Showing ${geocodedTargets.length} mapped ZIP areas with ZIP code borders across your active buyers.`
-                        : `Showing ${geocodedTargets.length} mapped ZIP areas across your active buyers.`);
+                    setBuyersMapStatus(renderedZipBoundaries > 0
+                        ? `Showing ${renderedZipBoundaries} ZIP code border${renderedZipBoundaries === 1 ? '' : 's'} across ${geocodedTargets.length} mapped buyer area${geocodedTargets.length === 1 ? '' : 's'}.`
+                        : `Showing ${geocodedTargets.length} mapped buyer area${geocodedTargets.length === 1 ? '' : 's'} while ZIP borders continue loading.`);
                 } catch (error) {
                     buyersCoverageMapEmpty.hidden = false;
                     buyersCoverageMapCanvas.setAttribute('aria-hidden', 'true');
