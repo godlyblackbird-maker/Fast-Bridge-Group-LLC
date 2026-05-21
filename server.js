@@ -7715,11 +7715,16 @@ function normalizeMlsImportSpreadsheetValue(value) {
 }
 
 function normalizeActiveBuyersSheetCell(value, maxLength = 4000) {
-  return String(value || '')
+  const normalizedValue = String(value || '')
     .replace(/\u00a0/g, ' ')
     .replace(/\r\n?/g, '\n')
-    .slice(0, maxLength)
     .trim();
+
+  if (Number.isFinite(maxLength) && maxLength > 0) {
+    return normalizedValue.slice(0, maxLength);
+  }
+
+  return normalizedValue;
 }
 
 function normalizeActiveBuyersSheetRow(row) {
@@ -7733,7 +7738,7 @@ function normalizeActiveBuyersSheetRow(row) {
     contact: normalizeActiveBuyersSheetCell(source.contact, 300),
     comments: normalizeActiveBuyersSheetCell(source.comments, 4000),
     notes: normalizeActiveBuyersSheetCell(source.notes, 4000),
-    buyBoxZips: normalizeActiveBuyersSheetCell(source.buyBoxZips, 600),
+    buyBoxZips: normalizeActiveBuyersSheetCell(source.buyBoxZips, null),
     minPrice: normalizeActiveBuyersSheetCell(source.minPrice, 80),
     maxPrice: normalizeActiveBuyersSheetCell(source.maxPrice, 80),
     assetClasses: normalizeActiveBuyersSheetCell(source.assetClasses, 300),
