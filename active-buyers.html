@@ -1638,7 +1638,7 @@
 
             function getBuyerCustomZipAliasEntries(token) {
                 const normalizedToken = normalizeBuyerCityLookupKey(token);
-                if (!normalizedToken || !californiaCountyZipLookup) {
+                if (!normalizedToken || !californiaCountyZipLookup || !californiaCityZipLookup) {
                     return [];
                 }
 
@@ -1652,11 +1652,27 @@
                     'west coast': ['los angeles county'],
                     'the west coast': ['los angeles county']
                 };
+                const cityAliasesByRegion = {
+                    'antelope valley': ['lancaster', 'palmdale', 'rosamond', 'acton'],
+                    'the antelope valley': ['lancaster', 'palmdale', 'rosamond', 'acton'],
+                    'lancaster area': ['lancaster', 'palmdale', 'rosamond', 'acton']
+                };
+                const zipAliasesByRegion = {
+                    'west la': ['90024', '90025', '90034', '90035', '90045', '90046', '90048', '90049', '90064', '90066', '90067', '90069', '90210', '90211', '90212', '90230', '90232', '90291', '90292', '90401', '90402', '90403', '90404', '90405'],
+                    'west los angeles': ['90024', '90025', '90034', '90035', '90045', '90046', '90048', '90049', '90064', '90066', '90067', '90069', '90210', '90211', '90212', '90230', '90232', '90291', '90292', '90401', '90402', '90403', '90404', '90405']
+                };
 
                 const countyKeys = countyAliasesByRegion[normalizedToken] || [];
-                return countyKeys
+                const countyEntries = countyKeys
                     .map((countyKey) => californiaCountyZipLookup[countyKey])
                     .filter((entry) => entry && Array.isArray(entry.zips) && entry.zips.length);
+                const cityKeys = cityAliasesByRegion[normalizedToken] || [];
+                const cityEntries = cityKeys
+                    .map((cityKey) => californiaCityZipLookup[cityKey])
+                    .filter((entry) => entry && Array.isArray(entry.zips) && entry.zips.length);
+                const zipEntries = (zipAliasesByRegion[normalizedToken] || []).length ? [{ city: token, zips: zipAliasesByRegion[normalizedToken] }] : [];
+
+                return countyEntries.concat(cityEntries, zipEntries);
             }
 
             async function getCaliforniaCityZipLookup() {
@@ -1725,7 +1741,13 @@
                 }
 
                 const cityAliasesByToken = {
-                    la: 'los angeles'
+                    la: 'los angeles',
+                    oc: 'orange county',
+                    sb: 'san bernardino',
+                    epd: 'palmdale',
+                    'east palm dale': 'palmdale',
+                    'east palmdale': 'palmdale',
+                    'land caster': 'lancaster'
                 };
 
                 const normalizedParts = [];
