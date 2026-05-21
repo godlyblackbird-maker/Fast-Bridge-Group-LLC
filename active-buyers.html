@@ -2183,6 +2183,9 @@
             }
 
             function getBuyerCoverageFillColor(buyerCount) {
+                if (buyerCount >= 10) {
+                    return '#ef4444';
+                }
                 if (buyerCount >= 5) {
                     return '#f97316';
                 }
@@ -2363,13 +2366,14 @@
 
                     const fillColor = getBuyerCoverageFillColor(entry.buyers.length);
                     const isHovered = String(buyersCoverageMapInstance.__fastHoveredZip || '') === zip;
+                    const isSelected = String(buyersCoverageMapInstance.__fastSelectedZip || '') === zip;
                     return {
                         clickable: true,
                         fillColor,
-                        fillOpacity: isHovered ? 0.26 : 0.15,
+                        fillOpacity: isHovered || isSelected ? 0.18 : 0.08,
                         strokeColor: fillColor,
                         strokeOpacity: 0.95,
-                        strokeWeight: isHovered ? 4.5 : 3,
+                        strokeWeight: isHovered || isSelected ? 4.5 : 3,
                         zIndex: 2
                     };
                 });
@@ -2378,14 +2382,29 @@
                     buyersCoverageMapInstance.data.addListener('mouseover', (event) => {
                         const zip = getBuyerBoundaryZipFromFeature(event && event.feature);
                         const entry = buyersCoverageMapInstance.__fastZipTargetsByZip && buyersCoverageMapInstance.__fastZipTargetsByZip.get(zip);
-                        if (!entry || !buyersCoverageInfoWindow) {
+                        if (!entry) {
                             return;
                         }
 
                         buyersCoverageMapInstance.__fastHoveredZip = zip;
                         buyersCoverageMapInstance.data.revertStyle();
                         buyersCoverageMapInstance.data.overrideStyle(event.feature, {
-                            fillOpacity: 0.26,
+                            fillOpacity: 0.18,
+                            strokeWeight: 4.5
+                        });
+                    });
+
+                    buyersCoverageMapInstance.data.addListener('click', (event) => {
+                        const zip = getBuyerBoundaryZipFromFeature(event && event.feature);
+                        const entry = buyersCoverageMapInstance.__fastZipTargetsByZip && buyersCoverageMapInstance.__fastZipTargetsByZip.get(zip);
+                        if (!entry || !buyersCoverageInfoWindow) {
+                            return;
+                        }
+
+                        buyersCoverageMapInstance.__fastSelectedZip = zip;
+                        buyersCoverageMapInstance.data.revertStyle();
+                        buyersCoverageMapInstance.data.overrideStyle(event.feature, {
+                            fillOpacity: 0.18,
                             strokeWeight: 4.5
                         });
                         buyersCoverageInfoWindow.setPosition(event.latLng);
@@ -2396,9 +2415,6 @@
                     buyersCoverageMapInstance.data.addListener('mouseout', () => {
                         buyersCoverageMapInstance.__fastHoveredZip = '';
                         buyersCoverageMapInstance.data.revertStyle();
-                        if (buyersCoverageInfoWindow) {
-                            buyersCoverageInfoWindow.close();
-                        }
                     });
                     buyersCoverageMapInstance.__fastZipHoverListenerReady = true;
                 }
@@ -2469,6 +2485,14 @@
                             ]
                         });
                         buyersCoverageInfoWindow = new maps.InfoWindow();
+                        buyersCoverageInfoWindow.addListener('closeclick', () => {
+                            if (!buyersCoverageMapInstance) {
+                                return;
+                            }
+
+                            buyersCoverageMapInstance.__fastSelectedZip = '';
+                            buyersCoverageMapInstance.data.revertStyle();
+                        });
                     }
 
                     const renderedZipBoundaries = await applyBuyerCoverageBoundaryStyles(geocodedTargets);
