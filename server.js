@@ -331,6 +331,10 @@ const DEFAULT_TWILIO_NUMBER_ASSIGNMENTS = Object.freeze([
   Object.freeze({
     phoneNumber: '+18448755968',
     email: CANONICAL_ISAAC_EMAIL
+  }),
+  Object.freeze({
+    phoneNumber: '+18337581538',
+    email: CANONICAL_STEVE_EMAIL
   })
 ]);
 const LEGACY_EMAIL_ALIASES = new Map([

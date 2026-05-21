@@ -17,6 +17,10 @@ const DEFAULT_TWILIO_NUMBER_ASSIGNMENTS = [
   {
     phoneNumber: '+18448755968',
     email: 'isaac.haro@fastbridgegroupllc.com'
+  },
+  {
+    phoneNumber: '+18337581538',
+    email: 'steve.medina@fastbridgegroupllc.com'
   }
 ];
 

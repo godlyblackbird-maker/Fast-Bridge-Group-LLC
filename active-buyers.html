@@ -350,6 +350,16 @@
             background: var(--buyers-focus-bg);
         }
 
+        .buyers-sheet-table thead th:nth-child(9),
+        .buyers-sheet-table tbody td:nth-child(9) {
+            width: 320px;
+            min-width: 320px;
+            max-width: 320px;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
         .buyers-sheet-note {
             margin-top: 10px;
             font-size: 12px;
@@ -953,7 +963,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <p class="buyers-sheet-note">Tip: Only admins can use this list. Changes save to one shared admin sheet and refresh across admin sessions automatically. In Buy Box ZIPs, you can enter California city names like Los Angeles and FAST will expand them into ZIP codes when you save.</p>
+                    <p class="buyers-sheet-note">Tip: Only admins can use this list. Changes save to one shared admin sheet and refresh across admin sessions automatically. In Buy Box ZIPs, you can enter California city names like Los Angeles or county names like Orange County and FAST will expand them into ZIP codes when you save.</p>
                 </div>
             </section>
 
@@ -980,7 +990,7 @@
                         <div class="buyers-coverage-legend">
                             <div class="buyers-coverage-legend-copy">
                                 <p class="buyers-coverage-status" id="buyers-map-status">Reading buy box ZIPs from the active buyers sheet...</p>
-                                <p class="buyers-coverage-empty" id="buyers-map-empty-copy">Add ZIP codes or California city names in the Buy Box ZIPs column to build this active buyer coverage map.</p>
+                                <p class="buyers-coverage-empty" id="buyers-map-empty-copy">Add ZIP codes, California city names, or California county names in the Buy Box ZIPs column to build this active buyer coverage map.</p>
                             </div>
                             <div class="buyers-coverage-legend-side">
                                 <div class="buyers-coverage-chip-list" id="buyers-map-zip-chips"></div>
@@ -1396,9 +1406,12 @@
             let buyersMapsScriptPromise = null;
             let californiaCityZipLookup = null;
             let californiaCityZipLookupPromise = null;
+            let californiaCountyZipLookup = null;
+            let californiaCountyZipLookupPromise = null;
             const buyersZipGeocodeCache = new Map();
             const buyersZipBoundarySourceCache = new Map();
             const BUYER_CA_CITY_ZIP_LOOKUP_PATH = '/california-city-zips.json';
+            const BUYER_CA_COUNTY_ZIP_LOOKUP_PATH = '/california-county-zips.json';
 
             const CSV_HEADERS = [
                 'Active Buyer?',
@@ -1571,6 +1584,23 @@
                     .trim();
             }
 
+            function normalizeBuyerCountyLookupKey(value) {
+                const normalized = String(value || '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s*,\s*(ca|california)$/i, '')
+                    .replace(/\b(ca|california)\b$/i, '')
+                    .replace(/[^a-z0-9]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (!normalized) {
+                    return '';
+                }
+
+                return /\bcounty$/i.test(normalized) ? normalized : `${normalized} county`;
+            }
+
             async function getCaliforniaCityZipLookup() {
                 if (californiaCityZipLookup) {
                     return californiaCityZipLookup;
@@ -1596,6 +1626,31 @@
                 return californiaCityZipLookupPromise;
             }
 
+            async function getCaliforniaCountyZipLookup() {
+                if (californiaCountyZipLookup) {
+                    return californiaCountyZipLookup;
+                }
+
+                if (!californiaCountyZipLookupPromise) {
+                    californiaCountyZipLookupPromise = fetch(BUYER_CA_COUNTY_ZIP_LOOKUP_PATH, {
+                        cache: 'force-cache'
+                    }).then(async (response) => {
+                        if (!response.ok) {
+                            throw new Error(`California county ZIP lookup failed with status ${response.status}.`);
+                        }
+
+                        const payload = await response.json().catch(() => ({}));
+                        californiaCountyZipLookup = payload && typeof payload === 'object' ? payload : {};
+                        return californiaCountyZipLookup;
+                    }).catch((error) => {
+                        californiaCountyZipLookupPromise = null;
+                        throw error;
+                    });
+                }
+
+                return californiaCountyZipLookupPromise;
+            }
+
             function splitBuyerBuyBoxTokens(value) {
                 const tokens = String(value || '')
                     .split(/[\n,;|]+/)
@@ -1607,7 +1662,7 @@
 
             function expandBuyerBuyBoxValue(value) {
                 const rawValue = String(value || '').trim();
-                if (!rawValue || !californiaCityZipLookup) {
+                if (!rawValue || !californiaCityZipLookup || !californiaCountyZipLookup) {
                     return { value: rawValue, didExpand: false };
                 }
 
@@ -1639,6 +1694,14 @@
                         return;
                     }
 
+                    const countyLookupKey = normalizeBuyerCountyLookupKey(token);
+                    const countyLookupEntry = countyLookupKey ? californiaCountyZipLookup[countyLookupKey] : null;
+                    if (countyLookupEntry && Array.isArray(countyLookupEntry.zips) && countyLookupEntry.zips.length) {
+                        countyLookupEntry.zips.forEach((zip) => pushPart(String(zip || '').trim().slice(0, 5)));
+                        didExpand = true;
+                        return;
+                    }
+
                     pushPart(token);
                 });
 
@@ -1654,7 +1717,10 @@
                 }
 
                 try {
-                    await getCaliforniaCityZipLookup();
+                    await Promise.all([
+                        getCaliforniaCityZipLookup(),
+                        getCaliforniaCountyZipLookup()
+                    ]);
                 } catch (_error) {
                     return String(cell.textContent || '').trim();
                 }
@@ -2106,6 +2172,20 @@
                 buyersCoverageMapInstance.__fastMarkers = [];
             }
 
+            function buildBuyerCoverageInfoWindowContent(entry) {
+                if (!entry) {
+                    return '';
+                }
+
+                return `
+                    <div style="min-width:190px;color:#0f172a;">
+                        <strong>${entry.zip}</strong>
+                        <div style="margin-top:6px;font-size:12px;color:#334155;">${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'} target this ZIP.</div>
+                        <div style="margin-top:8px;font-size:12px;line-height:1.5;">${entry.buyers.slice(0, 8).join(', ')}${entry.buyers.length > 8 ? ', ...' : ''}</div>
+                    </div>
+                `;
+            }
+
             async function applyBuyerCoverageBoundaryStyles(geocodedTargets) {
                 if (!buyersCoverageMapInstance || !buyersCoverageMapInstance.data) {
                     return 0;
@@ -2169,36 +2249,45 @@
                     }
 
                     const fillColor = getBuyerCoverageFillColor(entry.buyers.length);
+                    const isHovered = String(buyersCoverageMapInstance.__fastHoveredZip || '') === zip;
                     return {
                         clickable: true,
                         fillColor,
-                        fillOpacity: 0.2,
+                        fillOpacity: isHovered ? 0.32 : 0.2,
                         strokeColor: fillColor,
                         strokeOpacity: 0.95,
-                        strokeWeight: 3,
+                        strokeWeight: isHovered ? 4.5 : 3,
                         zIndex: 2
                     };
                 });
 
-                if (!buyersCoverageMapInstance.__fastZipClickListenerReady) {
-                    buyersCoverageMapInstance.data.addListener('click', (event) => {
+                if (!buyersCoverageMapInstance.__fastZipHoverListenerReady) {
+                    buyersCoverageMapInstance.data.addListener('mouseover', (event) => {
                         const zip = getBuyerBoundaryZipFromFeature(event && event.feature);
                         const entry = buyersCoverageMapInstance.__fastZipTargetsByZip && buyersCoverageMapInstance.__fastZipTargetsByZip.get(zip);
                         if (!entry || !buyersCoverageInfoWindow) {
                             return;
                         }
 
+                        buyersCoverageMapInstance.__fastHoveredZip = zip;
+                        buyersCoverageMapInstance.data.revertStyle();
+                        buyersCoverageMapInstance.data.overrideStyle(event.feature, {
+                            fillOpacity: 0.32,
+                            strokeWeight: 4.5
+                        });
                         buyersCoverageInfoWindow.setPosition(event.latLng);
-                        buyersCoverageInfoWindow.setContent(`
-                            <div style="min-width:190px;color:#0f172a;">
-                                <strong>${entry.zip}</strong>
-                                <div style="margin-top:6px;font-size:12px;color:#334155;">${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'} target this ZIP.</div>
-                                <div style="margin-top:8px;font-size:12px;line-height:1.5;">${entry.buyers.slice(0, 8).join(', ')}${entry.buyers.length > 8 ? ', ...' : ''}</div>
-                            </div>
-                        `);
+                        buyersCoverageInfoWindow.setContent(buildBuyerCoverageInfoWindowContent(entry));
                         buyersCoverageInfoWindow.open({ map: buyersCoverageMapInstance });
                     });
-                    buyersCoverageMapInstance.__fastZipClickListenerReady = true;
+
+                    buyersCoverageMapInstance.data.addListener('mouseout', () => {
+                        buyersCoverageMapInstance.__fastHoveredZip = '';
+                        buyersCoverageMapInstance.data.revertStyle();
+                        if (buyersCoverageInfoWindow) {
+                            buyersCoverageInfoWindow.close();
+                        }
+                    });
+                    buyersCoverageMapInstance.__fastZipHoverListenerReady = true;
                 }
 
                 return matchingFeatures.length;
@@ -2273,42 +2362,10 @@
                     clearBuyerCoverageMarkers();
 
                     const bounds = new maps.LatLngBounds();
-                    const markers = geocodedTargets.map((entry) => {
-                        const marker = new maps.Marker({
-                            map: buyersCoverageMapInstance,
-                            position: { lat: entry.lat, lng: entry.lng },
-                            title: `${entry.zip} • ${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'}`,
-                            label: {
-                                text: String(entry.buyers.length),
-                                color: '#ffffff',
-                                fontWeight: '700'
-                            },
-                            icon: {
-                                path: maps.SymbolPath.CIRCLE,
-                                scale: 16,
-                                fillColor: '#10b981',
-                                fillOpacity: 0.92,
-                                strokeColor: '#f8fafc',
-                                strokeWeight: 2
-                            }
-                        });
-
-                        marker.addListener('click', () => {
-                            buyersCoverageInfoWindow.setContent(`
-                                <div style="min-width:190px;color:#0f172a;">
-                                    <strong>${entry.zip}</strong>
-                                    <div style="margin-top:6px;font-size:12px;color:#334155;">${entry.buyers.length} buyer${entry.buyers.length === 1 ? '' : 's'} target this ZIP.</div>
-                                    <div style="margin-top:8px;font-size:12px;line-height:1.5;">${entry.buyers.slice(0, 8).join(', ')}${entry.buyers.length > 8 ? ', ...' : ''}</div>
-                                </div>
-                            `);
-                            buyersCoverageInfoWindow.open({ anchor: marker, map: buyersCoverageMapInstance });
-                        });
-
-                        bounds.extend(marker.getPosition());
-                        return marker;
+                    geocodedTargets.forEach((entry) => {
+                        bounds.extend({ lat: entry.lat, lng: entry.lng });
                     });
-
-                    buyersCoverageMapInstance.__fastMarkers = markers;
+                    buyersCoverageMapInstance.__fastMarkers = [];
 
                     if (geocodedTargets.length === 1) {
                         buyersCoverageMapInstance.setCenter({ lat: geocodedTargets[0].lat, lng: geocodedTargets[0].lng });
@@ -2417,35 +2474,7 @@
             }
 
             function getInitialRowsFallback() {
-                let rows = getStoredFallbackRows();
-
-                if (!Array.isArray(rows) || rows.length === 0) {
-                    rows = SEEDED_ROWS;
-                }
-
-                if (rows.length === 1) {
-                    const single = rows[0] || {};
-                    const isSingleEmpty = !String(single.activeBuyer || '').trim()
-                        && !String(single.name || '').trim()
-                        && !String(single.emailCategories || '').trim()
-                        && !String(single.cellPhone || '').trim()
-                        && !String(single.companyName || '').trim()
-                        && !String(single.contact || '').trim()
-                        && !String(single.comments || '').trim()
-                        && !String(single.notes || '').trim()
-                        && !String(single.buyBoxZips || '').trim()
-                        && !String(single.minPrice || '').trim()
-                        && !String(single.maxPrice || '').trim()
-                        && !String(single.assetClasses || '').trim()
-                        && !String(single.financingTypes || '').trim()
-                        && !String(single.targetSpreadPercent || '').trim();
-
-                    if (isSingleEmpty) {
-                        rows = SEEDED_ROWS;
-                    }
-                }
-
-                return mergeMissingSeedRows(rows);
+                return mergeMissingSeedRows(SEEDED_ROWS);
             }
 
             function canApplyRemoteSheet() {
@@ -2574,6 +2603,8 @@
             lastAppliedSignature = getRowSignature(getRowsFromDom());
             setSyncStatus('Syncing shared admin sheet...', 'info');
             void getCaliforniaCityZipLookup().then(() => {
+                return getCaliforniaCountyZipLookup();
+            }).then(() => {
                 scheduleBuyerCoverageMapRender(getRowsFromDom());
             }).catch(() => null);
 
