@@ -1724,6 +1724,10 @@
                     return { value: rawValue, didExpand: false };
                 }
 
+                const cityAliasesByToken = {
+                    la: 'los angeles'
+                };
+
                 const normalizedParts = [];
                 const seenParts = new Set();
                 let didExpand = false;
@@ -1745,7 +1749,8 @@
                     }
 
                     const lookupKey = normalizeBuyerCityLookupKey(token);
-                    const lookupEntry = lookupKey ? californiaCityZipLookup[lookupKey] : null;
+                    const cityLookupKey = lookupKey ? (cityAliasesByToken[lookupKey] || lookupKey) : '';
+                    const lookupEntry = cityLookupKey ? californiaCityZipLookup[cityLookupKey] : null;
                     if (lookupEntry && Array.isArray(lookupEntry.zips) && lookupEntry.zips.length) {
                         lookupEntry.zips.forEach((zip) => pushPart(String(zip || '').trim().slice(0, 5)));
                         didExpand = true;
@@ -2339,7 +2344,7 @@
                     return {
                         clickable: true,
                         fillColor,
-                        fillOpacity: isHovered ? 0.32 : 0.2,
+                        fillOpacity: isHovered ? 0.26 : 0.15,
                         strokeColor: fillColor,
                         strokeOpacity: 0.95,
                         strokeWeight: isHovered ? 4.5 : 3,
@@ -2358,7 +2363,7 @@
                         buyersCoverageMapInstance.__fastHoveredZip = zip;
                         buyersCoverageMapInstance.data.revertStyle();
                         buyersCoverageMapInstance.data.overrideStyle(event.feature, {
-                            fillOpacity: 0.32,
+                            fillOpacity: 0.26,
                             strokeWeight: 4.5
                         });
                         buyersCoverageInfoWindow.setPosition(event.latLng);
