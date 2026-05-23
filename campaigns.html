@@ -1697,9 +1697,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex: 0 0 34px;
             width: 34px;
             height: 34px;
-            border-radius: 999px;
+            padding: 0;
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
             border: 1px solid rgba(148, 163, 184, 0.26);
             background: rgba(255, 255, 255, 0.96);
             box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
@@ -1718,9 +1721,13 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex: 0 0 34px;
             width: 34px;
             height: 34px;
-            border-radius: 999px;
+            padding: 0;
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            appearance: none;
             border: 1px solid rgba(248, 113, 113, 0.28);
             background: rgba(255, 255, 255, 0.96);
             box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
@@ -3763,6 +3770,7 @@
             const CAMPAIGN_NO_REPLIES_TEMPLATE_STORAGE_KEY_BASE = 'campaignNoRepliesTemplateBody';
             const CAMPAIGN_REPLY_ADDRESS_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyAddressOverrides';
             const CAMPAIGN_REPLY_OFFERS_EMAIL_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyOffersEmailOverrides';
+            const CAMPAIGN_REPLY_SCHEDULED_MESSAGES_STORAGE_KEY_BASE = 'campaignReplyScheduledMessages';
             const CAMPAIGN_PLANNER_STORAGE_KEY = 'personalTodoGoalsByUser';
             const CAMPAIGN_TEMPLATE_DEFAULTS = {
                 'first-touch': 'Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.',
@@ -3781,7 +3789,7 @@
             let activeTwilioInboxMessages = [];
             const campaignReplyScheduledStatusByConversationKey = new Map();
             let activeTwilioReactionPickerMessageId = 0;
-            const campaignReplyScheduledMessageByConversationKey = new Map();
+            const campaignReplyScheduledMessageByConversationKey = new Map(Object.entries(loadCampaignReplyScheduledMessages()));
             let outreachDashboard = null;
             let twilioMessagingAccessState = {
                 allowed: true,
@@ -4542,6 +4550,10 @@
                 return `${CAMPAIGN_REPLY_OFFERS_EMAIL_OVERRIDES_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
             }
 
+            function getCampaignReplyScheduledMessagesStorageKey() {
+                return `${CAMPAIGN_REPLY_SCHEDULED_MESSAGES_STORAGE_KEY_BASE}:${getCampaignUserContext().userKey}`;
+            }
+
             function normalizeCampaignReplyAddressOverrides(value) {
                 const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
                 const normalized = {};
@@ -4573,7 +4585,53 @@
                         normalized[normalizedConversationKey] = normalizedOffersEmailValue;
                     }
                 });
+
                 return normalized;
+            }
+
+            function normalizeCampaignReplyScheduledMessage(value) {
+                const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+                const scheduledFor = String(source.scheduledFor || '').trim();
+                const body = String(source.body || '').trim();
+                const scheduleId = Number(source.id) || 0;
+                if (!scheduledFor || !body || !scheduleId) {
+                    return null;
+                }
+
+                return {
+                    ...source,
+                    id: scheduleId,
+                    body,
+                    scheduledFor,
+                    status: String(source.status || 'queued').trim().toLowerCase() || 'queued',
+                    errorMessage: String(source.errorMessage || '').trim(),
+                    campaignName: String(source.campaignName || '').trim(),
+                    senderName: String(source.senderName || '').trim(),
+                    createdAt: String(source.createdAt || '').trim(),
+                    updatedAt: String(source.updatedAt || '').trim(),
+                    sentAt: String(source.sentAt || '').trim()
+                };
+            }
+
+            function normalizeCampaignReplyScheduledMessages(value) {
+                const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+                const normalized = {};
+                Object.entries(source).forEach(([conversationKey, scheduledMessage]) => {
+                    const normalizedConversationKey = String(conversationKey || '').trim();
+                    const normalizedScheduledMessage = normalizeCampaignReplyScheduledMessage(scheduledMessage);
+                    if (normalizedConversationKey && normalizedScheduledMessage) {
+                        normalized[normalizedConversationKey] = normalizedScheduledMessage;
+                    }
+                });
+                return normalized;
+            }
+
+            function loadCampaignReplyScheduledMessages() {
+                try {
+                    return normalizeCampaignReplyScheduledMessages(JSON.parse(localStorage.getItem(getCampaignReplyScheduledMessagesStorageKey()) || '{}'));
+                } catch (error) {
+                    return {};
+                }
             }
 
             function loadCampaignReplyOffersEmailOverrides() {
@@ -4596,6 +4654,49 @@
                     getCampaignReplyOffersEmailOverridesStorageKey(),
                     JSON.stringify(normalizeCampaignReplyOffersEmailOverrides(value))
                 );
+            }
+
+            function persistCampaignReplyScheduledMessages() {
+                try {
+                    localStorage.setItem(
+                        getCampaignReplyScheduledMessagesStorageKey(),
+                        JSON.stringify(normalizeCampaignReplyScheduledMessages(Object.fromEntries(campaignReplyScheduledMessageByConversationKey.entries())))
+                    );
+                } catch (error) {
+                    // Ignore localStorage write failures for scheduled ghost replies.
+                }
+            }
+
+            function getCampaignReplyScheduledStatusMessage(scheduledMessage) {
+                const normalizedScheduledMessage = normalizeCampaignReplyScheduledMessage(scheduledMessage);
+                if (!normalizedScheduledMessage) {
+                    return '';
+                }
+
+                return `Reply scheduled for ${formatCampaignScheduledAt(normalizedScheduledMessage.scheduledFor)}.`;
+            }
+
+            function setCampaignReplyScheduledMessage(conversationKey, scheduledMessage) {
+                const normalizedConversationKey = String(conversationKey || '').trim();
+                const normalizedScheduledMessage = normalizeCampaignReplyScheduledMessage(scheduledMessage);
+                if (!normalizedConversationKey || !normalizedScheduledMessage) {
+                    return;
+                }
+
+                campaignReplyScheduledMessageByConversationKey.set(normalizedConversationKey, normalizedScheduledMessage);
+                campaignReplyScheduledStatusByConversationKey.set(normalizedConversationKey, getCampaignReplyScheduledStatusMessage(normalizedScheduledMessage));
+                persistCampaignReplyScheduledMessages();
+            }
+
+            function clearCampaignReplyScheduledMessage(conversationKey) {
+                const normalizedConversationKey = String(conversationKey || '').trim();
+                if (!normalizedConversationKey) {
+                    return;
+                }
+
+                campaignReplyScheduledMessageByConversationKey.delete(normalizedConversationKey);
+                campaignReplyScheduledStatusByConversationKey.delete(normalizedConversationKey);
+                persistCampaignReplyScheduledMessages();
             }
 
             function getConversationPropertyAddress(conversation) {
@@ -5709,7 +5810,11 @@
                 }
 
                 const scopedStatus = activeTwilioConversationKey
-                    ? String(campaignReplyScheduledStatusByConversationKey.get(activeTwilioConversationKey) || '').trim()
+                    ? String(
+                        campaignReplyScheduledStatusByConversationKey.get(activeTwilioConversationKey)
+                        || getCampaignReplyScheduledStatusMessage(campaignReplyScheduledMessageByConversationKey.get(activeTwilioConversationKey))
+                        || ''
+                    ).trim()
                     : '';
 
                 if (scopedStatus) {
@@ -5968,17 +6073,16 @@
                     renderPendingReplyMedia();
 
                     if (scheduleAt && data.scheduled && data.scheduledMessage) {
-                        campaignReplyScheduledMessageByConversationKey.set(activeTwilioConversationKey, data.scheduledMessage);
-                        const scheduledStatusMessage = `Reply scheduled for ${formatCampaignScheduledAt(data.scheduledMessage.scheduledFor || scheduleAt)}.`;
-                        campaignReplyScheduledStatusByConversationKey.set(activeTwilioConversationKey, scheduledStatusMessage);
+                        setCampaignReplyScheduledMessage(activeTwilioConversationKey, data.scheduledMessage);
+                        const scheduledStatusMessage = getCampaignReplyScheduledStatusMessage(data.scheduledMessage)
+                            || `Reply scheduled for ${formatCampaignScheduledAt(data.scheduledMessage.scheduledFor || scheduleAt)}.`;
                         campaignReplyStatus.textContent = scheduledStatusMessage;
                         renderTwilioReplyThread(activeTwilioInboxMessages, conversation);
                         closeCampaignScheduleModal();
                         return;
                     }
 
-                    campaignReplyScheduledMessageByConversationKey.delete(activeTwilioConversationKey);
-                    campaignReplyScheduledStatusByConversationKey.delete(activeTwilioConversationKey);
+                    clearCampaignReplyScheduledMessage(activeTwilioConversationKey);
                     if (draftConversation) {
                         const preferredConversationKey = String(data?.sent?.[0]?.conversationKey || '').trim();
                         clearActiveTwilioDraftContact();
@@ -6461,7 +6565,7 @@
                 });
 
                 if (hasMatchingSentMessage) {
-                    campaignReplyScheduledMessageByConversationKey.delete(conversationKey);
+                    clearCampaignReplyScheduledMessage(conversationKey);
                     return [];
                 }
 
@@ -6501,8 +6605,7 @@
                         throw new Error(data.error || 'Unable to cancel the scheduled reply.');
                     }
 
-                    campaignReplyScheduledMessageByConversationKey.delete(conversationKey);
-                    campaignReplyScheduledStatusByConversationKey.delete(conversationKey);
+                    clearCampaignReplyScheduledMessage(conversationKey);
                     campaignReplyStatus.textContent = 'Scheduled reply cancelled.';
                     renderTwilioReplyThread(activeTwilioInboxMessages, conversation);
                 } catch (error) {

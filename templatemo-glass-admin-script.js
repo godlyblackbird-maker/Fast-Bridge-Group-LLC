@@ -26450,8 +26450,17 @@ function initNavbarDateTime() {
             return `https://www.google.com/maps/@?${params.toString()}`;
         }
 
+        function resolveCurrentCompsSubjectAddress() {
+            return String(
+                detailData.address
+                || detailData.propertyAddress
+                || propertyAddress
+                || ''
+            ).trim();
+        }
+
         function getStreetViewAddressQuery(fallbackAddress = '') {
-            const baseAddress = String(getCurrentCompsSubjectAddress() || detailData.address || fallbackAddress || '').trim();
+            const baseAddress = String(resolveCurrentCompsSubjectAddress() || detailData.address || fallbackAddress || '').trim();
             const propertyCity = String(detailData.city || '').trim();
             const normalizedBaseAddress = baseAddress.toLowerCase();
             const hasState = /\bca\b|california/.test(normalizedBaseAddress);
@@ -27710,7 +27719,7 @@ function initNavbarDateTime() {
             }
 
             function getStreetViewTargetLabel() {
-                return String(getCurrentCompsSubjectAddress() || detailData.address || 'Subject property').trim() || 'Subject property';
+                return String(resolveCurrentCompsSubjectAddress() || detailData.address || 'Subject property').trim() || 'Subject property';
             }
 
             function resolveEarthSubjectLocation(subjectLocation = null) {
@@ -29018,7 +29027,7 @@ function initNavbarDateTime() {
             }
 
             async function ensureSubjectCoordinates() {
-                const currentAddressKey = normalizeCoordinateCacheAddress(getCurrentCompsSubjectAddress());
+                const currentAddressKey = normalizeCoordinateCacheAddress(resolveCurrentCompsSubjectAddress());
                 const storedSubjectLocation = getValidPropertyCoordinate(detailData.subjectLat, detailData.subjectLng);
                 const subjectAddressKey = normalizeCoordinateCacheAddress(detailData.subjectCoordinateAddress);
                 const storedLocation = currentAddressKey
@@ -29027,7 +29036,7 @@ function initNavbarDateTime() {
                     ? storedSubjectLocation
                     : null;
 
-                const address = getStreetViewAddressQuery(getCurrentCompsSubjectAddress());
+                const address = getStreetViewAddressQuery(resolveCurrentCompsSubjectAddress());
                 if (address) {
                     try {
                         if (window.google && window.google.maps) {
@@ -29634,16 +29643,11 @@ function initNavbarDateTime() {
             }
 
             function getCurrentCompsSubjectAddress() {
-                return String(
-                    detailData.address
-                    || detailData.propertyAddress
-                    || propertyAddress
-                    || ''
-                ).trim();
+                return resolveCurrentCompsSubjectAddress();
             }
 
             function getStoredSubjectLocation() {
-                const currentAddressKey = normalizeCoordinateCacheAddress(getCurrentCompsSubjectAddress());
+                const currentAddressKey = normalizeCoordinateCacheAddress(resolveCurrentCompsSubjectAddress());
                 const storedSubjectLocation = getValidPropertyCoordinate(detailData.subjectLat, detailData.subjectLng);
                 const subjectAddressKey = normalizeCoordinateCacheAddress(detailData.subjectCoordinateAddress);
                 if (currentAddressKey && subjectAddressKey === currentAddressKey && storedSubjectLocation) {
@@ -29665,7 +29669,7 @@ function initNavbarDateTime() {
                     return false;
                 }
 
-                const resolvedAddress = String(addressLike || getCurrentCompsSubjectAddress()).trim();
+                const resolvedAddress = String(addressLike || resolveCurrentCompsSubjectAddress()).trim();
                 detailData.subjectLat = resolvedLocation.lat;
                 detailData.subjectLng = resolvedLocation.lng;
                 detailData.subjectCoordinateAddress = resolvedAddress;
@@ -29673,7 +29677,7 @@ function initNavbarDateTime() {
             }
 
             async function maybeAutoSearchSubjectOnCompsOpen() {
-                const propertyAddress = getCurrentCompsSubjectAddress();
+                const propertyAddress = resolveCurrentCompsSubjectAddress();
                 const normalizedPropertyAddress = normalizeAddressForAutoSearch(propertyAddress);
                 if (!normalizedPropertyAddress) {
                     return;
